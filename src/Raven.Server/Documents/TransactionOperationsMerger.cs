@@ -45,9 +45,7 @@ namespace Raven.Server.Documents
     /// </summary>
     public class TransactionOperationsMerger : IDisposable
     {
-        private const string TypeKey = "@type";
-        private const string CommandKey = "Command";
-        private const string DateTimeKey = "DateTime";
+
         private const string StartRecordingType = "StartRecording";
         private readonly DocumentDatabase _parent;
         private readonly CancellationToken _shutdown;
@@ -110,7 +108,7 @@ namespace Raven.Server.Documents
 
             public virtual int Execute(DocumentsOperationContext context, RecordingState recordingState)
             {
-                recordingState?.Record(this);
+                recordingState?.Record(context, this);
 
                 return ExecuteCmd(context);
             }
@@ -160,17 +158,30 @@ namespace Raven.Server.Documents
 
         public abstract class RecordingState : IDisposable
         {
-            public abstract void Record(MergedTransactionCommand cmd);
+            public abstract void Record(DocumentsOperationContext context, MergedTransactionCommand cmd);
 
-            public abstract void Record(TxInstruction tx, bool doRecord = true);
+            public abstract void Record(DocumentsOperationContext context, TxInstruction tx, bool doRecord = true);
 
             public abstract void Prepare(ref RecordingState state);
+
+            private static BlittableJsonReaderObject SerializeRecordingCommandDetails(JsonOperationContext context, RecordingCommandDetails commandDetails)
+            {
+                using (var writer = new BlittableJsonWriter(context))
+                {
+                    var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+
+                    jsonSerializer.Serialize(writer, commandDetails);
+                    writer.FinalizeDocument();
+
+                    return writer.CreateReader();
+                }
+            }
 
             protected class EnabledRecordingState : RecordingState
             {
                 private readonly TransactionOperationsMerger _txOpMerger;
                 private readonly Stream _recordingFileStream;
-                private bool isDisposed = false;
+                private bool _isDisposed = false;
 
                 public EnabledRecordingState(TransactionOperationsMerger txOpMerger, Stream recordingFileStream)
                 {
@@ -178,59 +189,56 @@ namespace Raven.Server.Documents
                     _recordingFileStream = recordingFileStream;
                 }
 
-                public override void Record(MergedTransactionCommand operation)
+                public override void Record(DocumentsOperationContext context, MergedTransactionCommand operation)
                 {
-                    using (_txOpMerger._parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                    using (var textWriter = new BlittableJsonTextWriter(ctx, _recordingFileStream))
+                    var obj = new RecordingCommandDetails
                     {
+                        Type = operation.GetType().Name,
+                    };
 
-                        var obj = new DynamicJsonValue
+                    if (operation is IRecordableCommand recordableCommand)
+                    {
+                        var dto = recordableCommand.ToDto();
+                        using (var writer = new BlittableJsonWriter(context))
                         {
-                            [TypeKey] = operation.GetType().Name,
-                        };
+                            var jsonSerializer = DocumentConventions.Default.CreateSerializer();
 
-                        if (operation is IRecordableCommand recordableCommand)
-                        {
-                            var dto = recordableCommand.ToDto();
-                            using (var writer = new BlittableJsonWriter(ctx))
-                            {
-                                var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+                            jsonSerializer.Serialize(writer, dto);
+                            writer.FinalizeDocument();
 
-                                jsonSerializer.Serialize(writer, dto);
-                                writer.FinalizeDocument();
-
-                                var reader = writer.CreateReader();
-                                obj[CommandKey] = reader;
-                            }
+                            var reader = writer.CreateReader();
+                            obj.Command = reader;
                         }
-
-                        Record(obj, ctx, textWriter);
                     }
+
+                    Record(obj, context);
                 }
 
-                public override void Record(TxInstruction tx, bool doRecord = true)
+                public override void Record(DocumentsOperationContext ctx, TxInstruction tx, bool doRecord = true)
                 {
                     if (doRecord == false)
                     {
                         return;
                     }
 
-                    using (_txOpMerger._parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                    using (var writer = new BlittableJsonTextWriter(ctx, _recordingFileStream))
+                    var commandDetails = new RecordingCommandDetails
                     {
-                        Record(new DynamicJsonValue
-                        {
-                            [TypeKey] = tx.ToString(),
-                        }, ctx, writer);
-                    }
+                        Type = tx.ToString(),
+                    };
+
+                    Record(commandDetails, ctx);
                 }
 
-                private void Record(DynamicJsonValue obj, DocumentsOperationContext ctx, BlittableJsonTextWriter writer)
+                private void Record(RecordingCommandDetails commandDetails, JsonOperationContext context)
                 {
-                    obj[DateTimeKey] = DateTime.Now;
+                    commandDetails.DateTime = DateTime.Now;
+                    var commandDetailsReader = SerializeRecordingCommandDetails(context, commandDetails);
 
-                    writer.WriteComma();
-                    ctx.Write(writer, obj);
+                    using (var writer = new BlittableJsonTextWriter(context, _recordingFileStream))
+                    {
+                        writer.WriteComma();
+                        context.Write(writer, commandDetailsReader);
+                    }
                 }
 
                 public override void Prepare(ref RecordingState state)
@@ -245,12 +253,12 @@ namespace Raven.Server.Documents
 
                 public override void Dispose()
                 {
-                    if (isDisposed)
+                    if (_isDisposed)
                     {
                         return;
                     }
 
-                    isDisposed = true;
+                    _isDisposed = true;
 
                     using (_txOpMerger._parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     {
@@ -274,12 +282,12 @@ namespace Raven.Server.Documents
                     _filePath = filePath;
                 }
 
-                public override void Record(MergedTransactionCommand cmd)
+                public override void Record(DocumentsOperationContext context, MergedTransactionCommand cmd)
                 {
 
                 }
 
-                public override void Record(TxInstruction tx, bool doRecord = true)
+                public override void Record(DocumentsOperationContext context, TxInstruction tx, bool doRecord = true)
                 {
 
                 }
@@ -301,11 +309,14 @@ namespace Raven.Server.Documents
                     {
                         writer.WriteStartArray();
 
-                        context.Write(writer, new DynamicJsonValue
+                        var commandDetails = new RecordingCommandDetails
                         {
-                            [TypeKey] = StartRecordingType,
-                            [DateTimeKey] = DateTime.Now
-                        });
+                            Type = StartRecordingType,
+                            DateTime = DateTime.Now
+                        };
+                        var commandDetailsReader = SerializeRecordingCommandDetails(context, commandDetails);
+
+                        context.Write(writer, commandDetailsReader);
                     }
 
                     state = new EnabledRecordingState(_txOpMerger, recordingFileStream);
@@ -503,7 +514,7 @@ namespace Raven.Server.Documents
                 {
                     try
                     {
-                        _recordingStatus?.Record(TxInstruction.BeginTx);
+                        _recordingStatus?.Record(context, TxInstruction.BeginTx);
                         tx = context.OpenWriteTransaction();
                     }
                     catch (Exception e)
@@ -521,7 +532,7 @@ namespace Raven.Server.Documents
                         {
                             if (tx != null)
                             {
-                                _recordingStatus?.Record(TxInstruction.DisposeTx, tx.Disposed == false);
+                                _recordingStatus?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
                                 tx.Dispose();
                             }
                         }
@@ -552,7 +563,7 @@ namespace Raven.Server.Documents
                         // need to dispose here since we are going to open new tx for each operation
                         if (tx != null)
                         {
-                            _recordingStatus?.Record(TxInstruction.DisposeTx, tx.Disposed == false);
+                            _recordingStatus?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
                             tx.Dispose();
                         }
 
@@ -567,11 +578,11 @@ namespace Raven.Server.Documents
                             {
                                 tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
 
-                                _recordingStatus?.Record(TxInstruction.Commit);
+                                _recordingStatus?.Record(context, TxInstruction.Commit);
                                 tx.Commit();
 
                                 SlowWriteNotification.Notify(stats, _parent);
-                                _recordingStatus?.Record(TxInstruction.DisposeTx, tx.Disposed == false);
+                                _recordingStatus?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
                                 tx.Dispose();
                             }
                             catch (Exception e)
@@ -599,7 +610,10 @@ namespace Raven.Server.Documents
             {
                 if (tx != null)
                 {
-                    _recordingStatus?.Record(TxInstruction.DisposeTx, tx.Disposed == false);
+                    using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        _recordingStatus?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
+                    }
                     tx.Dispose();
                 }
             }
@@ -655,7 +669,7 @@ namespace Raven.Server.Documents
                     {
                         previous.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out commitStats);
 
-                        _recordingStatus?.Record(TxInstruction.BeginAsyncCommitAndStartNewTransaction);
+                        _recordingStatus?.Record(context, TxInstruction.BeginAsyncCommitAndStartNewTransaction);
                         context.Transaction = previous.BeginAsyncCommitAndStartNewTransaction();
                     }
                     catch (Exception e)
@@ -671,7 +685,7 @@ namespace Raven.Server.Documents
                             try
                             {
                                 //already throwing, attempt to complete previous tx
-                                CompletePreviousTransaction(previous, commitStats, ref previousPendingOps, throwOnError: false);
+                                CompletePreviousTransaction(context, previous, commitStats, ref previousPendingOps, throwOnError: false);
                             }
                             finally
                             {
@@ -702,7 +716,7 @@ namespace Raven.Server.Documents
                                 transactionMeter.Dispose();
                             }
                             calledCompletePreviousTx = true;
-                            CompletePreviousTransaction(previous, commitStats, ref previousPendingOps, throwOnError: true);
+                            CompletePreviousTransaction(context, previous, commitStats, ref previousPendingOps, throwOnError: true);
                         }
                         catch (Exception e)
                         {
@@ -718,7 +732,9 @@ namespace Raven.Server.Documents
                             {
                                 if (calledCompletePreviousTx == false)
                                 {
-                                    CompletePreviousTransaction(previous,
+                                    CompletePreviousTransaction(
+                                        context,
+                                        previous,
                                         commitStats,
                                         ref previousPendingOps,
                                         // if this previous threw, it won't throw again
@@ -743,12 +759,12 @@ namespace Raven.Server.Documents
                                 {
                                     context.Transaction.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
 
-                                    _recordingStatus?.Record(TxInstruction.Commit);
+                                    _recordingStatus?.Record(context, TxInstruction.Commit);
                                     context.Transaction.Commit();
 
                                     SlowWriteNotification.Notify(stats, _parent);
 
-                                    _recordingStatus?.Record(TxInstruction.DisposeTx, context.Transaction.Disposed == false);
+                                    _recordingStatus?.Record(context, TxInstruction.DisposeTx, context.Transaction.Disposed == false);
                                     context.Transaction.Dispose();
                                 }
                                 catch (Exception e)
@@ -775,7 +791,7 @@ namespace Raven.Server.Documents
                     {
                         if (context.Transaction != null)
                         {
-                            _recordingStatus?.Record(TxInstruction.DisposeTx, context.Transaction.Disposed == false);
+                            _recordingStatus?.Record(context, TxInstruction.DisposeTx, context.Transaction.Disposed == false);
                             context.Transaction.Dispose();
                         }
                     }
@@ -783,12 +799,13 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                _recordingStatus?.Record(TxInstruction.DisposeTx, previous.Disposed == false);
+                _recordingStatus?.Record(context, TxInstruction.DisposeTx, previous.Disposed == false);
                 previous.Dispose();
             }
         }
 
         private void CompletePreviousTransaction(
+            DocumentsOperationContext context,
             RavenTransaction previous,
             CommitStats commitStats,
             ref List<MergedTransactionCommand> previousPendingOps,
@@ -796,7 +813,7 @@ namespace Raven.Server.Documents
         {
             try
             {
-                _recordingStatus?.Record(TxInstruction.EndAsyncCommit);
+                _recordingStatus?.Record(context, TxInstruction.EndAsyncCommit);
                 previous.EndAsyncCommit();
 
                 //not sure about this 'if'
@@ -1035,7 +1052,7 @@ namespace Raven.Server.Documents
                         {
                             using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                             {
-                                _recordingStatus?.Record(TxInstruction.BeginTx);
+                                _recordingStatus?.Record(context, TxInstruction.BeginTx);
                                 using (var tx = context.OpenWriteTransaction())
                                 {
 
@@ -1045,7 +1062,7 @@ namespace Raven.Server.Documents
 
                                     tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
 
-                                    _recordingStatus?.Record(TxInstruction.Commit);
+                                    _recordingStatus?.Record(context, TxInstruction.Commit);
                                     tx.Commit();
                                     SlowWriteNotification.Notify(stats, _parent);
                                 }
@@ -1162,7 +1179,7 @@ namespace Raven.Server.Documents
                 {
                     using (item)
                     {
-                        if (item.TryGet(TypeKey, out string strType) == false)
+                        if (item.TryGet(nameof(RecordingCommandDetails.Type), out string strType) == false)
                             continue;
 
                         if (strType == StartRecordingType)
@@ -1209,18 +1226,18 @@ namespace Raven.Server.Documents
         private MergedTransactionCommand DeserializeCommand(string type, BlittableJsonReaderObject wrapCmdReader, JsonOperationContext context,
             PeepingTomStream peepingTomStream)
         {
-            if (!wrapCmdReader.TryGet(CommandKey, out BlittableJsonReaderObject commandReader))
+            if (!wrapCmdReader.TryGet(nameof(RecordingCommandDetails.Command), out BlittableJsonReaderObject commandReader))
             {
                 return null;
                 //Todo To remove after all MergedTransactionCommand driven class include in switch
-                throw new Exception("Can't read MergedTransactionCommand for replay");
+                throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
             }
             var jsonSerializer = DocumentConventions.Default.CreateSerializer();
             using (var reader = new BlittableJsonReader(context))
             {
                 reader.Init(commandReader);
                 var dto = DeserializeCommandDto(type, jsonSerializer, reader, peepingTomStream);
-                return dto.ToCommand(context, _parent);
+                return dto?.ToCommand(context, _parent);
             }
         }
 
@@ -1240,6 +1257,8 @@ namespace Raven.Server.Documents
                     return jsonSerializer.Deserialize<MergedPutCommand.MergedPutCommandDto>(reader);
                 case nameof(BulkInsertHandler.MergedInsertBulkCommand):
                     return jsonSerializer.Deserialize<MergedInsertBulkCommandDto>(reader);
+                case nameof(HiLoHandler.MergedNextHiLoCommand):
+                    return null;
                 default:
                     throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
             }
@@ -1262,6 +1281,13 @@ namespace Raven.Server.Documents
                 }
 
             }
+        }
+
+        class RecordingCommandDetails
+        {
+            public string Type;
+            public BlittableJsonReaderObject Command;
+            public DateTime DateTime;
         }
     }
 }

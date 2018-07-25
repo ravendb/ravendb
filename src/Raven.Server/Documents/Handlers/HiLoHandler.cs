@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private class MergedNextHiLoCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class MergedNextHiLoCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             public string Key;
             public DocumentDatabase Database;

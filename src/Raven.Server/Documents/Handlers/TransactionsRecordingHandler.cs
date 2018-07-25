@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Handlers
                     _databaseTxMerger.StopRecording();
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentOutOfRangeException($"The value {_instruction} was out of the range of valid values");
             }
             return 0;
         }

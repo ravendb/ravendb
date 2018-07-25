@@ -26,8 +26,6 @@ namespace FastTests.Server.Basic
 
                 }
 
-                WaitForUserToContinueTheTest(store);
-
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = await session.LoadAsync<User>("users/1-A");
