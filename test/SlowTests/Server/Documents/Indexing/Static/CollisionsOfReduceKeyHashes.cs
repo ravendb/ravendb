@@ -16,6 +16,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 using Xunit;
 
 namespace SlowTests.Server.Documents.Indexing.Static
@@ -45,6 +46,8 @@ namespace SlowTests.Server.Documents.Indexing.Static
                         Storage = FieldStorage.Yes
                     },
                 }), database);
+
+                index._threadAllocations = NativeMemory.ThreadAllocations.Value;
 
                 var mapReduceContext = new MapReduceIndexingContext();
                 using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))
@@ -79,6 +82,8 @@ namespace SlowTests.Server.Documents.Indexing.Static
                         {"Count", new IndexFieldOptions {Storage = FieldStorage.Yes}}
                     }
                 }, database);
+
+                index._threadAllocations = NativeMemory.ThreadAllocations.Value;
 
                 var mapReduceContext = new MapReduceIndexingContext();
                 using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))
