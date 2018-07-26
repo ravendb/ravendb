@@ -90,20 +90,12 @@
 
 .toggle {
     height: 37px;
+    display: flex;
+    align-items: center;
 
     &.input-sm {
         height: 29px;
         padding: 0;
-
-        label {
-            &:before {
-                top: 6px;
-            }
-
-            &:after {
-                top: 0px;
-            }
-        }
     }
 
     &:hover {
@@ -118,7 +110,7 @@
         vertical-align: middle;
         position: relative;
         padding-left: 8px;
-        min-height: 27px;
+        line-height: 27px;
         margin-bottom: 0;
         font-weight: normal;
         cursor: pointer;
@@ -162,8 +154,8 @@
         width: 32px;
         height: 19px;
         position: relative;
-        top: 5px;
         cursor: pointer;
+        flex-shrink: 0;
 
         &:focus + label::before {
         }
@@ -221,6 +213,7 @@
 
 .checkbox {
     padding-left: 20px;
+    flex-shrink: 0;
 
     label {
         display: inline-block;
@@ -406,6 +399,7 @@
 
 .radio {
     padding-left: 20px;
+    flex-shrink: 0;
 
     label {
         display: inline-block;
