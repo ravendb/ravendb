@@ -106,19 +106,31 @@
                             </div>
                         </div>
                         <div data-bind="collapse: $root.showAdvancedOptions">
-                            <div class="panel-body"> 
-                                <div class="toggle">
-                                    <input id="parameterizedDeletes" class="styled" type="checkbox" data-bind="checked: parameterizedDeletes">
-                                    <label for="parameterizedDeletes">Parameterized deletes</label>
+                            <div class="panel-body">
+                                <div class="form-group" data-bind="validationElement: taskName">
+                                    <label for="commandTimeout" class="control-label">Command Timeout</label>
+                                    <div class="flex-grow">
+                                        <input type="text" class="form-control" id="commandTimeout" autocomplete="off">
+                                    </div>
                                 </div>
-                                <div class="toggle">
-                                    <input id="forceRecompileQuery" class="styled" type="checkbox" data-bind="checked: forceRecompileQuery">
-                                    <label for="forceRecompileQuery">Force recompile query</label>
+                                <div class="form-group">
+                                    <label class="control-label"></label>
+                                    <div class="flex-grow">
+                                        <div class="toggle">
+                                            <input id="parameterizedDeletes" class="styled" type="checkbox" data-bind="checked: parameterizedDeletes">
+                                            <label for="parameterizedDeletes">Parameterized deletes</label>
+                                        </div>
+                                        <div class="toggle">
+                                            <input id="forceRecompileQuery" class="styled" type="checkbox" data-bind="checked: forceRecompileQuery">
+                                            <label for="forceRecompileQuery">Force recompile query</label>
+                                        </div>
+                                        <div class="toggle">
+                                            <input id="tableQuotation" class="styled" type="checkbox" data-bind="checked: tableQuotation">
+                                            <label for="tableQuotation">Table quotation</label>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="toggle">
-                                    <input id="tableQuotation" class="styled" type="checkbox" data-bind="checked: tableQuotation">
-                                    <label for="tableQuotation">Table quotation</label>
-                                </div>
+                                
                             </div>
                         </div>
                     </div>
@@ -218,7 +230,7 @@
                                         <span data-bind="text: name"></span>
                                         <span class="text-warning" data-bind="visible: dirtyFlag().isDirty">*</span>
                                     </div>
-                                    <div class="collections">Collection:<span
+                                    <div class="collections">Collection: <span
                                         data-bind="text: collection, attr: { class: 'collection-color-' + getCollectionEntry(collection) }"></span>                                      
                                     </div>
                                 </div>
@@ -279,10 +291,12 @@
                         </div>
                         
                         <div class="flex-horizontal">
-                            <button type="button" class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') +  ' this transformation script' }">
-                                <i class="icon-tick"></i> <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
-                            </button>
-                            <button type="button" title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i> <span>Cancel</span></button>
+                            <div>
+                                <button type="button" class="btn btn-success" data-bind="click: $root.saveEditedTransformation, attr: { title : (isNew() ? 'Add' : 'Update') +  ' this transformation script' }">
+                                    <i class="icon-tick"></i> <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
+                                </button>
+                                <button type="button" title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTransformation"><i class="icon-cancel"></i> <span>Cancel</span></button>
+                            </div>
                             <div class="flex-separator"></div>
                             <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea, visible: !$root.enableTestArea()">
                                 <i class="icon-rocket"></i> <span>Test script</span>
