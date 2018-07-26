@@ -968,7 +968,7 @@ namespace Raven.Server.ServerWide
                             || slice.Content.Match(CompareExchange.Content)
                             || slice.Content.Match(Identities.Content);
 
-            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= 410_000)
+            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= ClusterCommandsVersionManager.Base41CommandsVersion)
                 return baseVersion
                        || slice.Content.Match(TransactionCommands.Content)
                        || slice.Content.Match(TransactionCommandsIndex.Content);
@@ -1590,7 +1590,7 @@ namespace Raven.Server.ServerWide
 
         public override async Task OnSnapshotInstalledAsync(long lastIncludedIndex, ServerStore serverStore)
         {
-            using(serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction())
             {
                 // lets read all the certificate keys from the cluster, and delete the matching ones from the local state

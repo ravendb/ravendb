@@ -810,9 +810,9 @@ namespace Raven.Server.Rachis
 
         private static int GetFollowerVersion(LogLengthNegotiationResponse llr)
         {
-            var version = llr.CommandsVersion ?? ClusterCommandsVersionManager.BaseCommandsVersion;
+            var version = llr.CommandsVersion ?? ClusterCommandsVersionManager.Base40CommandsVersion;
             if (version == 400)
-                return ClusterCommandsVersionManager.BaseCommandsVersion;
+                return ClusterCommandsVersionManager.Base40CommandsVersion;
             return version;
         }
 
