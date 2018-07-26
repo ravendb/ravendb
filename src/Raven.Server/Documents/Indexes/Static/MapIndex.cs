@@ -8,6 +8,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
 using Voron;
 
@@ -98,10 +99,11 @@ namespace Raven.Server.Documents.Indexes.Static
             _mre.Set();
         }
 
-        protected override unsafe long CalculateIndexEtag(bool isStale, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        protected override unsafe long CalculateIndexEtag(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext,
+            QueryMetadata query, bool isStale)
         {
             if (_referencedCollections.Count == 0)
-                return base.CalculateIndexEtag(isStale, documentsContext, indexContext);
+                return base.CalculateIndexEtag(documentsContext, indexContext, query, isStale);
 
             var minLength = MinimumSizeForCalculateIndexEtagLength();
             var length = minLength +
@@ -110,6 +112,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var indexEtagBytes = stackalloc byte[length];
 
             CalculateIndexEtagInternal(indexEtagBytes, isStale, State, documentsContext, indexContext);
+            UseAllDocumentsEtag(documentsContext, query, length, indexEtagBytes);
 
             var writePos = indexEtagBytes + minLength;
 

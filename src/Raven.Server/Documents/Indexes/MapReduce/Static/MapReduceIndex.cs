@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -294,10 +295,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return StaticIndexHelper.IsStale(this, databaseContext, indexContext, cutoff, stalenessReasons) || isStale;
         }
 
-        protected override unsafe long CalculateIndexEtag(bool isStale, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
+        protected override unsafe long CalculateIndexEtag(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext,
+            QueryMetadata query, bool isStale)
         {
             if (_referencedCollections.Count == 0)
-                return base.CalculateIndexEtag(isStale, documentsContext, indexContext);
+                return base.CalculateIndexEtag(documentsContext, indexContext, query, isStale);
 
             var minLength = MinimumSizeForCalculateIndexEtagLength();
             var length = minLength +
@@ -306,6 +308,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             var indexEtagBytes = stackalloc byte[length];
 
             CalculateIndexEtagInternal(indexEtagBytes, isStale, State, documentsContext, indexContext);
+
+            UseAllDocumentsEtag(documentsContext, query, length, indexEtagBytes);
 
             var writePos = indexEtagBytes + minLength;
 
