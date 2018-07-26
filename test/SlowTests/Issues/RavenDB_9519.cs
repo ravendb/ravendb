@@ -30,7 +30,7 @@ namespace SlowTests.Issues
                 }
 
                 var client = new HttpClient();
-                var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=From%20companies&format=csv");               
+                var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=From%20companies&format=csv");
 
                 using (var commands = store.Commands())
                 {
@@ -50,7 +50,7 @@ namespace SlowTests.Issues
                 }
 
                 using (var session = store.OpenSession())
-                {                    
+                {
                     var res = session.Load<Company>(id);
                     Assert.NotEqual(session.Advanced.GetChangeVectorFor(res), cv);
                     Assert.Equal(res, _testCompany);
@@ -66,7 +66,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Store(_testCompany, "companies/1");
-                    session.Store(new{Query= "From%20companies" },"queries/1");
+                    session.Store(new { Query = "From%20companies" }, "queries/1");
                     session.SaveChanges();
                 }
 
@@ -78,23 +78,19 @@ namespace SlowTests.Issues
                     var getOperationIdCommand = new GetNextOperationIdCommand();
                     await commands.RequestExecutor.ExecuteAsync(getOperationIdCommand, commands.Context);
                     var operationId = getOperationIdCommand.Result;
+                    var csvImportCommand = new CsvImportCommand(stream, null, operationId);
 
-                    {
-                        var csvImportCommand = new CsvImportCommand(stream, null, operationId);
+                    await commands.ExecuteAsync(csvImportCommand);
 
-                        await commands.ExecuteAsync(csvImportCommand);
+                    var operation = new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId);
 
-                        var operation = new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId);
-
-                        await operation.WaitForCompletionAsync();
-                    }
+                    await operation.WaitForCompletionAsync();
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var res = session.Query<Company>().ToList();
-                    Assert.Equal(2, res.Count);
-                    Assert.Equal(res[0], res[1]);
+                    Assert.Equal(1, res.Count);
                 }
             }
         }
