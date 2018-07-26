@@ -342,6 +342,12 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private long? CleanUpDatabaseValues(string database, DatabaseRecord record, Dictionary<string, ClusterNodeStatusReport> stats)
         {
+            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion <
+                ClusterCommandsVersionManager.ClusterCommandsVersions[nameof(CleanUpClusterStateCommand)])
+            {
+                return null;
+            }
+
             if (record.Topology.Count != stats.Count)
                 return null;
 
