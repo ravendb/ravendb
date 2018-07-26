@@ -46,13 +46,18 @@ function Assert-AssemblyVersion () {
         throw "Assembly file $AssemblyPath does not exist."
     }
 
+    if ($IsWindows -eq $False) {
+        return
+    }
+
     $cmd = '[string]::Join(".", $([System.Reflection.Assembly]::LoadFrom("' + $AssemblyPath.Replace("\", "\\") + '").GetName().Version.ToString().Split(".") | Select-Object -First 3));'
     $bytes = [System.Text.Encoding]::Unicode.GetBytes($cmd)
     $encodedCommand = [Convert]::ToBase64String($bytes)
 
     # Need to run this in another AppDomain, otherwise it locks the assembly
     # Hence we run that on another PS process instance
-    $assemblyVersion = Powershell -EncodedCommand $encodedCommand
+    $pwsh = if ($IsWindows -eq $False) { "pwsh" } else { "Powershell" }
+    $assemblyVersion = & "$pwsh" -EncodedCommand $encodedCommand
     if ($ExpectedVersion -ne $assemblyVersion) {
         throw "Invalid assembly version. Expected: $ExpectedVersion Actual: $assemblyVersion"
     }
