@@ -121,11 +121,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.Settings = new Dictionary<string, string>();
 
                 var runInMemoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.RunInMemory);
-                if (databaseRecord.Settings.ContainsKey(runInMemoryConfigurationKey) || _serverStore.Configuration.Core.RunInMemory)
+                databaseRecord.Settings.Remove(runInMemoryConfigurationKey);
+                if (_serverStore.Configuration.Core.RunInMemory)
                     databaseRecord.Settings[runInMemoryConfigurationKey] = "false";
 
+                var dataDirectoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
+                databaseRecord.Settings.Remove(dataDirectoryConfigurationKey); // removing because we want to restore to given location, not to serialized in backup one
                 if (_restoringToDefaultDataDirectory == false)
-                    databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = _restoreConfiguration.DataDirectory;
+                    databaseRecord.Settings[dataDirectoryConfigurationKey] = _restoreConfiguration.DataDirectory;
 
                 if (_hasEncryptionKey)
                 {
