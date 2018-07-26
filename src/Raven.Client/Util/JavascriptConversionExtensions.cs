@@ -18,6 +18,8 @@ namespace Raven.Client.Util
 {
     internal class JavascriptConversionExtensions
     {
+        internal const string TransparentIdentifier = "<>h__TransparentIdentifier";
+
         public class CustomMethods : JavascriptConversionExtension
         {
             public readonly Dictionary<string, object> Parameters = new Dictionary<string, object>();
@@ -1040,7 +1042,7 @@ namespace Raven.Client.Util
             {
                 if (context.Node is LambdaExpression lambdaExpression
                     && lambdaExpression.Parameters.Count > 0
-                    && lambdaExpression.Parameters[0].Name.StartsWith("<>h__TransparentIdentifier"))
+                    && lambdaExpression.Parameters[0].Name.StartsWith(TransparentIdentifier))
                 {
                     DoNotIgnore = true;
 
@@ -1061,7 +1063,7 @@ namespace Raven.Client.Util
                 }
 
                 if (context.Node is ParameterExpression p &&
-                    p.Name.StartsWith("<>h__TransparentIdentifier") &&
+                    p.Name.StartsWith(TransparentIdentifier) &&
                     DoNotIgnore)
                 {
                     context.PreventDefault();
@@ -1076,7 +1078,7 @@ namespace Raven.Client.Util
                     return;
 
                 if (member.Expression is MemberExpression innerMember
-                    && innerMember.Member.Name.StartsWith("<>h__TransparentIdentifier"))
+                    && innerMember.Member.Name.StartsWith(TransparentIdentifier))
                 {
                     context.PreventDefault();
 
@@ -1087,20 +1089,25 @@ namespace Raven.Client.Util
                         {
                             context.Visitor.Visit(member.Expression);
                             writer.Write(".");
-
                         }
 
                         var name = member.Member.Name;
-                        if (ReservedWordsSupport.JsReservedWords.Contains(name))
+
+                        if (DoNotIgnore && name.StartsWith(TransparentIdentifier))
+                        {
+                            name = name.Substring(2);
+                        }
+                        else if (ReservedWordsSupport.JsReservedWords.Contains(name))
                         {
                             name = "_" + name;
                         }
+
                         writer.Write(name);
                     }
 
                 }
 
-                if (member.Expression is ParameterExpression parameter && parameter.Name.StartsWith("<>h__TransparentIdentifier"))
+                if (member.Expression is ParameterExpression parameter && parameter.Name.StartsWith(TransparentIdentifier))
                 {
                     context.PreventDefault();
 
@@ -1113,7 +1120,7 @@ namespace Raven.Client.Util
                         {
                             writer.Write(parameter.Name.Substring(2));
                             writer.Write(".");
-                            name = name.Replace("<>h__TransparentIdentifier", "h__TransparentIdentifier");
+                            name = name.Replace(TransparentIdentifier, "h__TransparentIdentifier");
                         }
 
                         if (ReservedWordsSupport.JsReservedWords.Contains(name))
@@ -1638,7 +1645,7 @@ namespace Raven.Client.Util
                                     resultWriter.Write(',');
 
                                 string name = member.Name;
-                                if (member.Name.StartsWith("<>h__TransparentIdentifier"))
+                                if (member.Name.StartsWith(TransparentIdentifier))
                                 {
                                     name = name.Substring(2);
                                 }
@@ -2114,7 +2121,7 @@ namespace Raven.Client.Util
 
                 var p = GetParameter(innerMember)?.Name;
 
-                if (p != null && p.StartsWith("<>h__TransparentIdentifier")
+                if (p != null && p.StartsWith(TransparentIdentifier)
                     && _conventions.GetIdentityProperty(member.Member.DeclaringType) == member.Member)
                 {
                     var writer = context.GetWriter();
