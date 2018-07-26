@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
             {
-                var etag = index.GetIndexEtag();
+                var etag = index.GetIndexEtag(query.Metadata);
                 if (etag == existingResultEtag)
                     return DocumentQueryResult.NotModifiedResult;
             }
@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             if (existingResultEtag.HasValue)
             {
-                var etag = index.GetIndexEtag();
+                var etag = index.GetIndexEtag(query.Metadata);
                 if (etag == existingResultEtag)
                     return IndexEntriesQueryResult.NotModifiedResult;
             }
