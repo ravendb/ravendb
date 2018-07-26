@@ -2,21 +2,21 @@
 @external-replication-color-dark: @brand-primary-dark;
 @external-replication-color-light: @brand-primary-light;
 
-@sql-etl-color: @brand-info;
-@sql-etl-color-dark: @brand-info-dark;
-@sql-etl-color-light: @brand-info-light;
+@sql-etl-color: @color-4;
+@sql-etl-color-dark: darken(@color-4, 10%);
+@sql-etl-color-light: lighten(@color-4, 5%);
 
-@ravendb-etl-color: @brand-warning;
-@ravendb-etl-color-dark: @brand-warning-dark;
-@ravendb-etl-color-light: @brand-warning-light;
+@ravendb-etl-color: @color-2;
+@ravendb-etl-color-dark: darken(@color-2, 10%);
+@ravendb-etl-color-light: lighten(@color-2, 5%);
 
-@backup-color: #a010b8;
-@backup-color-dark: darken(@backup-color,10%);
-@backup-color-light: @backup-color;
+@backup-color: @color-5;
+@backup-color-dark: darken(@color-5, 10%);
+@backup-color-light: lighten(@color-5, 5%);
 
-@subscription-color: @brand-success;
-@subscription-color-dark: @brand-success-dark;
-@subscription-color-light: @brand-success-light;
+@subscription-color: @color-3;
+@subscription-color-dark: darken(@color-3, 10%);
+@subscription-color-light: lighten(@color-3, 10%);
 
 .bigbtn-variant(@color, @color-dark) {
     background-color: fadeout(@color-dark,80%);
