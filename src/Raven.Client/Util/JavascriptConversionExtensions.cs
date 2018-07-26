@@ -20,6 +20,8 @@ namespace Raven.Client.Util
     internal class JavascriptConversionExtensions
     {
         internal const string TransparentIdentifier = "<>h__TransparentIdentifier";
+        internal const string TransparentIdentifierPrefix = "<>";
+        internal const string TransparentIdentifierWithoutPrefix = "h__TransparentIdentifier";
 
         public class CustomMethods : JavascriptConversionExtension
         {
@@ -994,7 +996,7 @@ namespace Raven.Client.Util
                     using (writer.Operation(lambdaExpression))
                     {
                         writer.Write("function(");
-                        writer.Write(lambdaExpression.Parameters[0].Name.Substring(2));
+                        writer.Write(lambdaExpression.Parameters[0].Name.Substring(TransparentIdentifierPrefix.Length));
                         writer.Write("){return ");
                         context.Visitor.Visit(lambdaExpression.Body);
                         writer.Write(";}");
@@ -1012,7 +1014,7 @@ namespace Raven.Client.Util
                     var writer = context.GetWriter();
                     using (writer.Operation(p))
                     {
-                        writer.Write(p.Name.Substring(2));
+                        writer.Write(p.Name.Substring(TransparentIdentifierPrefix.Length));
                     }
                 }
 
@@ -1037,7 +1039,7 @@ namespace Raven.Client.Util
 
                         if (DoNotIgnore && name.StartsWith(TransparentIdentifier))
                         {
-                            name = name.Substring(2);
+                            name = name.Substring(TransparentIdentifierPrefix.Length);
                         }
                         else if (ReservedWordsSupport.JsReservedWords.Contains(name))
                         {
@@ -1060,9 +1062,9 @@ namespace Raven.Client.Util
 
                         if (DoNotIgnore)
                         {
-                            writer.Write(parameter.Name.Substring(2));
+                            writer.Write(parameter.Name.Substring(TransparentIdentifierPrefix.Length));
                             writer.Write(".");
-                            name = name.Replace(TransparentIdentifier, "h__TransparentIdentifier");
+                            name = name.Replace(TransparentIdentifier, TransparentIdentifierWithoutPrefix);
                         }
 
                         if (ReservedWordsSupport.JsReservedWords.Contains(name))
@@ -1589,7 +1591,7 @@ namespace Raven.Client.Util
                                 string name = member.Name;
                                 if (member.Name.StartsWith(TransparentIdentifier))
                                 {
-                                    name = name.Substring(2);
+                                    name = name.Substring(TransparentIdentifierPrefix.Length);
                                 }
 
                                 if (Regex.IsMatch(name, @"^\w[\d\w]*$"))
