@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Queries.Parser
             Scanner.Init(q);
         }
 
-        public Query Parse(QueryType queryType = QueryType.Select)
+        public Query Parse(QueryType queryType = QueryType.Select, bool recursive = false)
         {
             var q = new Query
             {
@@ -45,13 +45,28 @@ namespace Raven.Server.Documents.Queries.Parser
                     ThrowParseException(name + " function was declared multiple times");
             }
 
-            q.From = FromClause();
+            while (Scanner.TryScan("WITH"))
+            {
+                if (recursive == true)
+                    ThrowParseException("With clause is not allow inside inner query");
 
-            if (Scanner.TryScan("GROUP BY"))
-                q.GroupBy = GroupBy();
+                (var success, var error) = q.TryAddWithClause(With());
+                if (success == false)
+                {
+                    ThrowParseException($"Error adding with clause, error:{error}");
+                }
+            }
+            //TODO:Need to agree on what we support for graph queries
+            if (q.WithClauses == null)
+            {
+                q.From = FromClause();
 
-            if (Scanner.TryScan("WHERE") && Expression(out q.Where) == false)
-                ThrowParseException("Unable to parse WHERE clause");
+                if (Scanner.TryScan("GROUP BY"))
+                    q.GroupBy = GroupBy();
+
+                if (Scanner.TryScan("WHERE") && Expression(out q.Where) == false)
+                    ThrowParseException("Unable to parse WHERE clause");
+            }
 
             if (Scanner.TryScan("ORDER BY"))
                 q.OrderBy = OrderBy();
@@ -91,10 +106,25 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
             }
 
-            if (Scanner.AtEndOfInput() == false)
+            if (recursive == false && Scanner.AtEndOfInput() == false)
                 ThrowParseException("Expected end of query");
 
             return q;
+        }
+
+        private WithClause With()
+        {
+            if (Scanner.TryScan('{') == false)
+                throw new InvalidQueryException("With clause contains invalid body", Scanner.Input, null);
+            var query = Parse(recursive:true);
+            if (Scanner.TryScan('}') == false)
+                throw new InvalidQueryException("With clause contains invalid body", Scanner.Input, null);
+            if(Alias(true, out var allias) == false)
+                throw new InvalidQueryException("With clause must contain allias but none was provided", Scanner.Input, null);
+            var with = new WithClause();
+            query.From.Alias = allias;
+            with.Query = query;
+            return with;
         }
 
         private static Esprima.Ast.Program ValidateScript(string script)
@@ -355,7 +385,7 @@ namespace Raven.Server.Documents.Queries.Parser
         }
 
 
-        private (FieldExpression From, StringSegment? Alias, QueryExpression Filter, bool Index) FromClause()
+        private FromClause FromClause()
         {
             if (Scanner.TryScan("FROM") == false)
                 ThrowParseException("Expected FROM clause");
@@ -389,7 +419,13 @@ namespace Raven.Server.Documents.Queries.Parser
 
             Alias(false, out var alias);
 
-            return (field, alias, filter, index);
+            return new FromClause
+            {
+                From = field,
+                Alias = alias,
+                Filter = filter,
+                Index = index
+            };
         }
 
         private static readonly string[] AliasKeywords =

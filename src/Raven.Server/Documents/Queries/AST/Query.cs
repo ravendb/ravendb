@@ -8,7 +8,9 @@ namespace Raven.Server.Documents.Queries.AST
     {
         public bool IsDistinct;
         public QueryExpression Where;
-        public (FieldExpression From, StringSegment? Alias, QueryExpression Filter, bool Index) From;
+        public FromClause From;
+        public List<WithClause> WithClauses;
+        public List<MatchClause> MatchClauses { get; set; }
         public List<(QueryExpression Expression, StringSegment? Alias)> Select;
         public List<(QueryExpression Expression, StringSegment? Alias)> Load;
         public List<QueryExpression> Include;
@@ -34,6 +36,23 @@ namespace Raven.Server.Documents.Queries.AST
             var sb = new StringBuilder();
             new StringQueryVisitor(sb).Visit(this);
             return sb.ToString();
+        }
+
+        public (bool Success, string Error) TryAddWithClause(WithClause with)
+        {
+            if (WithClauses == null)
+            {
+                WithClauses = new List<WithClause>();
+            }
+
+            foreach (var w in WithClauses)
+            {
+                if (w.Query.From.Alias == with.Query.From.Alias)
+                    return (false, $"Allias {with.Query.From.Alias} is already in use on a diffrent 'With' clause");
+            }
+
+            WithClauses.Add(with);
+            return (true, null);
         }
     }
 }
