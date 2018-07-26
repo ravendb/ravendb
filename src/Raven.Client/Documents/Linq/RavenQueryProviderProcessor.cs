@@ -1688,7 +1688,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             var parameterName = lambdaExpression.Parameters[0].Name;
 
-            if (parameterName.StartsWith(LinqPathProvider.TransparentIdentifier))
+            if (parameterName.StartsWith(JavascriptConversionExtensions.TransparentIdentifier))
             {
                 _insideLet++;
                 return;
