@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     index = GetIndex(indexName);
 
-                    var etag = index.GetIndexEtag();
+                    var etag = index.GetIndexEtag(null);
                     if (etag == existingResultEtag)
                         return TermsQueryResultServerSide.NotModifiedResult;
 
@@ -189,7 +189,7 @@ namespace Raven.Server.Documents.Queries
 
                     if (existingResultEtag.HasValue)
                     {
-                        var etag = index.GetIndexEtag();
+                        var etag = index.GetIndexEtag(query.Metadata);
                         if (etag == existingResultEtag.Value)
                             return SuggestionQueryResult.NotModifiedResult;
                     }
