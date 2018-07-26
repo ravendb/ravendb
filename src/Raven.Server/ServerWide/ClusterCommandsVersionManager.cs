@@ -15,6 +15,8 @@ namespace Raven.Server.ServerWide
 {
     public static class ClusterCommandsVersionManager
     {
+        public const int BaseCommandsVersion = 40_000;
+
         public static readonly int MyCommandsVersion;
 
         public static int CurrentClusterMinimalVersion => _currentClusterMinimalVersion;
@@ -24,60 +26,60 @@ namespace Raven.Server.ServerWide
 
         public static readonly IReadOnlyDictionary<string, int> ClusterCommandsVersions = new Dictionary<string, int>
         {
-            [nameof(AddDatabaseCommand)] = 400_000,
-            [nameof(RemoveCompareExchangeCommand)] = 400_000,
-            [nameof(AddOrUpdateCompareExchangeCommand)] = 400_000,
-            [nameof(DeleteCertificateCollectionFromClusterCommand)] = 400_000,
-            [nameof(DeleteCertificateFromClusterCommand)] = 400_000,
-            [nameof(DeleteDatabaseCommand)] = 400_000,
-            [nameof(DeleteMultipleValuesCommand)] = 400_000,
-            [nameof(DeleteOngoingTaskCommand)] = 400_000,
-            [nameof(DeleteValueCommand)] = 400_000,
-            [nameof(EditExpirationCommand)] = 400_000,
-            [nameof(EditRevisionsConfigurationCommand)] = 400_000,
-            [nameof(IncrementClusterIdentitiesBatchCommand)] = 400_000,
-            [nameof(IncrementClusterIdentityCommand)] = 400_000,
-            [nameof(InstallUpdatedServerCertificateCommand)] = 400_000,
-            [nameof(ConfirmReceiptServerCertificateCommand)] = 400_000,
-            [nameof(RecheckStatusOfServerCertificateCommand)] = 400_000,
-            [nameof(ModifyConflictSolverCommand)] = 400_000,
-            [nameof(PromoteDatabaseNodeCommand)] = 400_000,
-            [nameof(PutCertificateCommand)] = 400_000,
-            [nameof(PutClientConfigurationCommand)] = 400_000,
-            [nameof(PutLicenseCommand)] = 400_000,
-            [nameof(PutLicenseLimitsCommand)] = 400_000,
-            [nameof(RemoveNodeFromClusterCommand)] = 400_000,
-            [nameof(RemoveNodeFromDatabaseCommand)] = 400_000,
-            [nameof(ToggleTaskStateCommand)] = 400_000,
-            [nameof(UpdateClusterIdentityCommand)] = 400_000,
-            [nameof(UpdateExternalReplicationCommand)] = 400_000,
-            [nameof(UpdateExternalReplicationStateCommand)] = 400_000,
-            [nameof(UpdateTopologyCommand)] = 400_000,
-            [nameof(AcknowledgeSubscriptionBatchCommand)] = 400_000,
-            [nameof(DeleteSubscriptionCommand)] = 400_000,
-            [nameof(PutSubscriptionCommand)] = 400_000,
-            [nameof(ToggleSubscriptionStateCommand)] = 400_000,
-            [nameof(UpdateSubscriptionClientConnectionTime)] = 400_000,
-            [nameof(UpdatePeriodicBackupCommand)] = 400_000,
-            [nameof(UpdatePeriodicBackupStatusCommand)] = 400_000,
-            [nameof(UpdateSnmpDatabaseIndexesMappingCommand)] = 400_000,
-            [nameof(UpdateSnmpDatabasesMappingCommand)] = 400_000,
-            [nameof(DeleteIndexCommand)] = 400_000,
-            [nameof(PutAutoIndexCommand)] = 400_000,
-            [nameof(PutIndexCommand)] = 400_000,
-            [nameof(SetIndexLockCommand)] = 400_000,
-            [nameof(SetIndexPriorityCommand)] = 400_000,
-            [nameof(AddRavenEtlCommand)] = 400_000,
-            [nameof(AddSqlEtlCommand)] = 400_000,
-            [nameof(RemoveEtlProcessStateCommand)] = 400_000,
-            [nameof(UpdateRavenEtlCommand)] = 400_000,
-            [nameof(UpdateSqlEtlCommand)] = 400_000,
-            [nameof(UpdateEtlProcessStateCommand)] = 400_000,
-            [nameof(PutRavenConnectionStringCommand)] = 400_000,
-            [nameof(PutSqlConnectionStringCommand)] = 400_000,
-            [nameof(RemoveRavenConnectionStringCommand)] = 400_000,
-            [nameof(RemoveSqlConnectionStringCommand)] = 400_000,
-            [nameof(AddOrUpdateCompareExchangeBatchCommand)] = 400_000
+            [nameof(AddDatabaseCommand)] = BaseCommandsVersion,
+            [nameof(RemoveCompareExchangeCommand)] = BaseCommandsVersion,
+            [nameof(AddOrUpdateCompareExchangeCommand)] = BaseCommandsVersion,
+            [nameof(DeleteCertificateCollectionFromClusterCommand)] = BaseCommandsVersion,
+            [nameof(DeleteCertificateFromClusterCommand)] = BaseCommandsVersion,
+            [nameof(DeleteDatabaseCommand)] = BaseCommandsVersion,
+            [nameof(DeleteMultipleValuesCommand)] = BaseCommandsVersion,
+            [nameof(DeleteOngoingTaskCommand)] = BaseCommandsVersion,
+            [nameof(DeleteValueCommand)] = BaseCommandsVersion,
+            [nameof(EditExpirationCommand)] = BaseCommandsVersion,
+            [nameof(EditRevisionsConfigurationCommand)] = BaseCommandsVersion,
+            [nameof(IncrementClusterIdentitiesBatchCommand)] = BaseCommandsVersion,
+            [nameof(IncrementClusterIdentityCommand)] = BaseCommandsVersion,
+            [nameof(InstallUpdatedServerCertificateCommand)] = BaseCommandsVersion,
+            [nameof(ConfirmReceiptServerCertificateCommand)] = BaseCommandsVersion,
+            [nameof(RecheckStatusOfServerCertificateCommand)] = BaseCommandsVersion,
+            [nameof(ModifyConflictSolverCommand)] = BaseCommandsVersion,
+            [nameof(PromoteDatabaseNodeCommand)] = BaseCommandsVersion,
+            [nameof(PutCertificateCommand)] = BaseCommandsVersion,
+            [nameof(PutClientConfigurationCommand)] = BaseCommandsVersion,
+            [nameof(PutLicenseCommand)] = BaseCommandsVersion,
+            [nameof(PutLicenseLimitsCommand)] = BaseCommandsVersion,
+            [nameof(RemoveNodeFromClusterCommand)] = BaseCommandsVersion,
+            [nameof(RemoveNodeFromDatabaseCommand)] = BaseCommandsVersion,
+            [nameof(ToggleTaskStateCommand)] = BaseCommandsVersion,
+            [nameof(UpdateClusterIdentityCommand)] = BaseCommandsVersion,
+            [nameof(UpdateExternalReplicationCommand)] = BaseCommandsVersion,
+            [nameof(UpdateExternalReplicationStateCommand)] = BaseCommandsVersion,
+            [nameof(UpdateTopologyCommand)] = BaseCommandsVersion,
+            [nameof(AcknowledgeSubscriptionBatchCommand)] = BaseCommandsVersion,
+            [nameof(DeleteSubscriptionCommand)] = BaseCommandsVersion,
+            [nameof(PutSubscriptionCommand)] = BaseCommandsVersion,
+            [nameof(ToggleSubscriptionStateCommand)] = BaseCommandsVersion,
+            [nameof(UpdateSubscriptionClientConnectionTime)] = BaseCommandsVersion,
+            [nameof(UpdatePeriodicBackupCommand)] = BaseCommandsVersion,
+            [nameof(UpdatePeriodicBackupStatusCommand)] = BaseCommandsVersion,
+            [nameof(UpdateSnmpDatabaseIndexesMappingCommand)] = BaseCommandsVersion,
+            [nameof(UpdateSnmpDatabasesMappingCommand)] = BaseCommandsVersion,
+            [nameof(DeleteIndexCommand)] = BaseCommandsVersion,
+            [nameof(PutAutoIndexCommand)] = BaseCommandsVersion,
+            [nameof(PutIndexCommand)] = BaseCommandsVersion,
+            [nameof(SetIndexLockCommand)] = BaseCommandsVersion,
+            [nameof(SetIndexPriorityCommand)] = BaseCommandsVersion,
+            [nameof(AddRavenEtlCommand)] = BaseCommandsVersion,
+            [nameof(AddSqlEtlCommand)] = BaseCommandsVersion,
+            [nameof(RemoveEtlProcessStateCommand)] = BaseCommandsVersion,
+            [nameof(UpdateRavenEtlCommand)] = BaseCommandsVersion,
+            [nameof(UpdateSqlEtlCommand)] = BaseCommandsVersion,
+            [nameof(UpdateEtlProcessStateCommand)] = BaseCommandsVersion,
+            [nameof(PutRavenConnectionStringCommand)] = BaseCommandsVersion,
+            [nameof(PutSqlConnectionStringCommand)] = BaseCommandsVersion,
+            [nameof(RemoveRavenConnectionStringCommand)] = BaseCommandsVersion,
+            [nameof(RemoveSqlConnectionStringCommand)] = BaseCommandsVersion,
+            [nameof(AddOrUpdateCompareExchangeBatchCommand)] = BaseCommandsVersion
         };
 
         public static bool CanPutCommand(string command)
@@ -145,7 +147,7 @@ namespace Raven.Server.ServerWide
             }
 
             if (minVersion == 400)
-                return 400_000;
+                return BaseCommandsVersion;
 
             return minVersion;
         }
