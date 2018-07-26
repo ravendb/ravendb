@@ -153,6 +153,10 @@ if ($JustStudio -eq $False) {
     $studioZipPath = [io.path]::combine($STUDIO_OUT_DIR, "Raven.Studio.zip")
     BuildEmbeddedNuget $PROJECT_DIR $OUT_DIR $SERVER_SRC_DIR $studioZipPath $Debug
     $embeddedDir = [io.path]::combine($OUT_DIR, "RavenDB.Embedded")
+    if ($target.Name -eq "windows-x64") {
+        Validate-AssemblyVersion $(Join-Path -Path $embeddedDir -ChildPath "lib/netstandard2.0/Raven.Embedded.dll" ) $versionObj
+    }
+
     $nupkgs = Join-Path $embeddedDir -ChildPath "*.nupkg"
     Move-Item -Path $nupkgs -Destination $OUT_DIR
     Remove-Item -Recurse $embeddedDir
