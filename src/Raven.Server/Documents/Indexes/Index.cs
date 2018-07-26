@@ -2633,13 +2633,13 @@ namespace Raven.Server.Documents.Indexes
         {
             if (q?.HasIncludeOrLoad == true)
             {
-                Debug.Assert(length > sizeof(long) * 3);
+                Debug.Assert(length > sizeof(long) * 4);
 
                 long* buffer = (long*)indexEtagBytes;
-                var numberOfDocuments = documentsContext.DocumentDatabase.DocumentsStorage.GetNumberOfDocuments(documentsContext);
                 buffer[0] = DocumentsStorage.ReadLastDocumentEtag(documentsContext.Transaction.InnerTransaction);
                 buffer[1] = DocumentsStorage.ReadLastTombstoneEtag(documentsContext.Transaction.InnerTransaction);
-                buffer[2] = numberOfDocuments;
+                //buffer[2] - last processed doc etag
+                //buffer[3] - last process tombstone etag
             }
         }
 
