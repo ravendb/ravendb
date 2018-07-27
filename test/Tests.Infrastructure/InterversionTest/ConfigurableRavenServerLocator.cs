@@ -1,12 +1,8 @@
-﻿using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.IO;
 using Raven.TestDriver;
 using Sparrow.Platform;
-using Tests.Infrastructure.InterversionTest;
 
-namespace Tests.Infrastructure
+namespace Tests.Infrastructure.InterversionTest
 {
     public class ConfigurableRavenServerLocator : RavenServerLocator
     {
@@ -17,16 +13,9 @@ namespace Tests.Infrastructure
             _serverDirPath = serverDirPath;
         }
 
-        public override string ServerPath
-        {
-            get
-            {
-                return Path.Combine(
-                    _serverDirPath, 
-                    "Server", 
-                    PlatformDetails.RunningOnPosix ? "Raven.Server" : "Raven.Server.exe");
-            }
-        }
-
+        public override string ServerPath => Path.Combine(
+            _serverDirPath,
+            "Server",
+            PlatformDetails.RunningOnPosix ? "Raven.Server" : "Raven.Server.exe");
     }
 }

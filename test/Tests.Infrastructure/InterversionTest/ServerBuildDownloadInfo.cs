@@ -1,16 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+﻿using System.IO;
 using Sparrow.Platform;
 
 namespace Tests.Infrastructure.InterversionTest
 {
     public class ServerBuildDownloadInfo
     {
-        public string Platform {get;set;}
+        public string Platform { get; set; }
 
-        public string Version {get;set;}
+        public string Version { get; set; }
 
         public string PackageName => $"RavenDB-{Version}-{Platform}";
 
@@ -35,13 +32,13 @@ namespace Tests.Infrastructure.InterversionTest
 
         public static ServerBuildDownloadInfo Create(string version)
         {
-            return new ServerBuildDownloadInfo()
+            return new ServerBuildDownloadInfo
             {
                 Version = version,
                 Platform = GetPlatformString()
             };
         }
-        
+
         private static string GetPlatformString()
         {
             if (PlatformDetails.RunningOnLinux
