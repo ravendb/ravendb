@@ -2,51 +2,42 @@
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.TestDriver;
+using SlowTests;
 using Xunit;
 
-namespace SlowTests.TestDriver
+namespace EmbeddedTests.TestDriver
 {
-    public class RavenServerInDebugDllLocator : RavenServerLocator
+    public class TestDriverExampleTest : RavenTestDriver
     {
-        public override string ServerPath
+        static TestDriverExampleTest()
         {
-            get
+            ConfigureServer(new TestServerOptions
             {
-                var testAssemblyLocation = typeof(RavenTestDriver<>).Assembly.Location;
-                var testDllFile = new FileInfo(testAssemblyLocation);
-
-#if DEBUG
-                var serverDllPath = @"../../../../../src/Raven.Server/bin/x64/Debug/netcoreapp2.1/Raven.Server.dll";
-                if (File.Exists(serverDllPath) == false) // this can happen when running directly from CLI e.g. dotnet xunit
-                    serverDllPath = @"../../../../../src/Raven.Server/bin/Debug/netcoreapp2.1/Raven.Server.dll";
-#else
-                var serverDllPath = @"../../../../../src/Raven.Server/bin/x64/Release/netcoreapp2.1/Raven.Server.dll";
-                if (File.Exists(serverDllPath) == false) // this can happen when running directly from CLI e.g. dotnet xunit
-                    serverDllPath = @"../../../../../src/Raven.Server/bin/Release/netcoreapp2.1/Raven.Server.dll";
-#endif
-
-                var serverPath = Path.Combine(
-                    testDllFile.DirectoryName,
-                    serverDllPath);
-                return serverPath;
-            }
+                ServerDirectory = GetServerPath()
+            });
         }
 
-        public override string Command => "dotnet";
+        private static string GetServerPath()
+        {
+            var testAssemblyLocation = typeof(RavenTestDriver).Assembly.Location;
+            var testDllFile = new FileInfo(testAssemblyLocation);
 
-        public override string CommandArguments => ServerPath;
-    }
+#if DEBUG
+            var serverDirectory = @"../../../../../src/Raven.Server/bin/x64/Debug/netcoreapp2.1";
+            if (Directory.Exists(serverDirectory) == false) // this can happen when running directly from CLI e.g. dotnet xunit
+                serverDirectory = @"../../../../../src/Raven.Server/bin/Debug/netcoreapp2.1";
+#else
+            var serverDirectory = @"../../../../../src/Raven.Server/bin/x64/Release/netcoreapp2.1";
+            if (Directory.Exists(serverDirectory) == false) // this can happen when running directly from CLI e.g. dotnet xunit
+                serverDirectory = @"../../../../../src/Raven.Server/bin/Release/netcoreapp2.1";
+#endif
 
-    public class TestDriverExampleTest : RavenTestDriver<RavenServerInDebugDllLocator>
-    {
+            return Path.Combine(testDllFile.DirectoryName, serverDirectory);
+        }
+
         private const string ExampleDocId = "TestDriver/Item";
 
         private const string DocFromDumpId = "Test/1";
-
-        //public TestDriverExampleTest()
-        //{
-        //    Debug = true;
-        //}
 
         private class TestDoc
         {
@@ -64,14 +55,14 @@ namespace SlowTests.TestDriver
             Name = "Test",
             Email = "test@local"
         };
-        
+
         private readonly TestDoc _doc = new TestDoc
         {
             Name = "Test"
         };
 
         protected override Stream DatabaseDumpFileStream =>
-            typeof(RavenServerInDebugDllLocator)
+            typeof(FacetTestBase)
             .Assembly
             .GetManifestResourceStream("SlowTests.Data.testing.ravendbdump");
 

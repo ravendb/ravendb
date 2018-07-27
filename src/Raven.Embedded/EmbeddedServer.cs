@@ -23,7 +23,6 @@ namespace Raven.Embedded
 
         internal EmbeddedServer()
         {
-
         }
 
         private readonly Logger _logger = LoggingSource.Instance.GetLogger<EmbeddedServer>("Embedded");
