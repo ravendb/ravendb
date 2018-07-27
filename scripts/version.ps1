@@ -266,12 +266,9 @@ function Validate-AssemblyVersion($assemblyPath, $versionInfo) {
     #     BuiltAtString = $builtAtString;
     #     BuildType = $buildType;
     # }
-
-    # TODO http://issues.hibernatingrhinos.com/issue/RavenDB-11330
-    # 
-    # Assert-AssemblyVersion `
-    #     -ExpectedVersion $versionInfo.VersionPrefix `
-    #     -AssemblyPath $assemblyPath
+    Assert-AssemblyVersion `
+        -ExpectedVersion $versionInfo.VersionPrefix `
+        -AssemblyPath $assemblyPath
     
     Assert-AssemblyFileVersion `
         -ExpectedFileVersion "$($versionInfo.VersionPrefix).$($versionInfo.BuildNumber)" `
