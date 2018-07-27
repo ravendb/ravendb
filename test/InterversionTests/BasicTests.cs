@@ -1,27 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Client.Documents;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace SlowTests.Interversion
+namespace InterversionTests
 {
-    public class InterversionTest : InterversionTestBase
+    public class BasicTests : InterversionTestBase
     {
         [Fact]
         public async Task Test()
         {
             var getStoreTask405 = GetDocumentStoreAsync("4.0.5");
-            var getStoreTask406patch = GetDocumentStoreAsync("4.0.6-patch-40047");
+            var getStoreTask406Patch = GetDocumentStoreAsync("4.0.6-patch-40047");
 
-            await Task.WhenAll(getStoreTask405, getStoreTask406patch);
+            await Task.WhenAll(getStoreTask405, getStoreTask406Patch);
 
             AssertStore(await getStoreTask405);
-            AssertStore(await getStoreTask406patch);
+            AssertStore(await getStoreTask406Patch);
             AssertStore(GetDocumentStore());
         }
 
@@ -31,7 +27,7 @@ namespace SlowTests.Interversion
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Company()
+                    session.Store(new Company
                     {
                         Name = "HR"
                     }, "companies/1");

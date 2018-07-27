@@ -3,9 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Net.Http;
 using System.Runtime.CompilerServices;
-using System.Runtime.Loader;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,18 +17,16 @@ using Raven.Server.Config;
 using Raven.Server.Utils;
 using Raven.TestDriver;
 using Tests.Infrastructure.InterversionTest;
-using Xunit;
-using Raven.Client.Util;
 
 namespace Tests.Infrastructure
 {
     public abstract class InterversionTestBase : RavenTestBase
     {
-        private static ConcurrentBag<Process> _allLaunchedServerProcesses = new ConcurrentBag<Process>();
+        private static readonly ConcurrentBag<Process> _allLaunchedServerProcesses = new ConcurrentBag<Process>();
 
-        private HashSet<Process> _testInstanceServerProcesses = new HashSet<Process>();
+        private readonly HashSet<Process> _testInstanceServerProcesses = new HashSet<Process>();
 
-        private static ServerBuildRetriever _serverBuildRetriever = new ServerBuildRetriever();
+        private static readonly ServerBuildRetriever _serverBuildRetriever = new ServerBuildRetriever();
 
         protected DocumentStore GetDocumentStore(
             string serverVersion,
@@ -44,11 +40,11 @@ namespace Tests.Infrastructure
             string serverVersion,
             InterversionTestOptions options = null,
             [CallerMemberName] string database = null,
-            CancellationToken token = default(CancellationToken))
+            CancellationToken token = default)
         {
 
             var serverBuildInfo = ServerBuildDownloadInfo.Create(serverVersion);
-            var serverPath = await _serverBuildRetriever.GetServerPath(serverBuildInfo);
+            var serverPath = await _serverBuildRetriever.GetServerPath(serverBuildInfo, token);
             var testServerPath = NewDataPath(prefix: serverVersion);
             CopyFilesRecursively(new DirectoryInfo(serverPath), new DirectoryInfo(testServerPath));
 
@@ -61,14 +57,13 @@ namespace Tests.Infrastructure
             if (options.ModifyDatabaseName != null)
                 name = options.ModifyDatabaseName(name) ?? name;
 
-            var runInMemory = true;
             var doc = new DatabaseRecord(name)
             {
                 Settings =
                         {
                             [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1",
                             [RavenConfiguration.GetKey(x => x.Replication.RetryReplicateAfter)] = "1",
-                            [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString(),
+                            [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "true",
                             [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexCannotBeOpened)] = "true",
                             [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString()
                         }
@@ -87,21 +82,9 @@ namespace Tests.Infrastructure
             store.Initialize();
 
             if (options.CreateDatabase)
-            {
-                var dbs = await store.Maintenance.Server.SendAsync(new GetDatabaseNamesOperation(0, 10));
-                foreach (var db in dbs)
-                {
-                    if (db == name)
-                    {
-                        throw new InvalidOperationException($"Database '{name}' already exists.");
-                    }
-                }
+                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, options.ReplicationFactor), token);
 
-                DatabasePutResult result;
-                result = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, options.ReplicationFactor));
-            }
-
-            store.AfterDispose += (object sender, EventArgs e) =>
+            store.AfterDispose += (sender, e) =>
             {
                 KillSlavedServerProcess(serverProcess);
             };
@@ -177,7 +160,7 @@ namespace Tests.Infrastructure
             return sb.ToString();
         }
 
-        private void KillSlavedServerProcess(Process process)
+        private static void KillSlavedServerProcess(Process process)
         {
             if (process == null || process.HasExited)
                 return;

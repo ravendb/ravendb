@@ -63,6 +63,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Raven.TestDriver", "src\Rav
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "rvn", "tools\rvn\rvn.csproj", "{579E2927-4840-4E36-8D12-01878EFB53E4}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "InterversionTests", "test\InterversionTests\InterversionTests.csproj", "{05BFE4EC-2AF3-4A24-9B82-3515C5C78E52}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -208,6 +210,12 @@ Global
 		{579E2927-4840-4E36-8D12-01878EFB53E4}.Release|Any CPU.Build.0 = Release|Any CPU
 		{579E2927-4840-4E36-8D12-01878EFB53E4}.Validate|Any CPU.ActiveCfg = Release|Any CPU
 		{579E2927-4840-4E36-8D12-01878EFB53E4}.Validate|Any CPU.Build.0 = Release|Any CPU
+		{05BFE4EC-2AF3-4A24-9B82-3515C5C78E52}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05BFE4EC-2AF3-4A24-9B82-3515C5C78E52}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05BFE4EC-2AF3-4A24-9B82-3515C5C78E52}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05BFE4EC-2AF3-4A24-9B82-3515C5C78E52}.Release|Any CPU.Build.0 = Release|Any CPU
+		{05BFE4EC-2AF3-4A24-9B82-3515C5C78E52}.Validate|Any CPU.ActiveCfg = Debug|Any CPU
+		{05BFE4EC-2AF3-4A24-9B82-3515C5C78E52}.Validate|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -236,6 +244,7 @@ Global
 		{FDEE0521-0CD9-4CCB-96A8-73C06CE19E72} = {C3388268-F662-4D76-A25D-FC4F31CE6AA1}
 		{EFAA52C9-63F1-4DBA-BDD3-E2BFCF6D7968} = {02838C57-DE0E-465D-9FBB-248DA87BEAAE}
 		{579E2927-4840-4E36-8D12-01878EFB53E4} = {FAAED88A-1C25-4853-9A1B-C41BCF9BED1F}
+		{05BFE4EC-2AF3-4A24-9B82-3515C5C78E52} = {764C36EA-83A0-4BA3-BA36-53A6808C13A9}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {032D6274-16A5-43ED-920F-D37BBD4B9628}
