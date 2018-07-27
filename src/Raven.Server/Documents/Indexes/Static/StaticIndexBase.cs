@@ -18,8 +18,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
     public abstract class StaticIndexBase
     {
-        private LuceneDocumentConverter _createFieldsConverter;
-
         private readonly Dictionary<string, CollectionName> _collectionsCache = new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
 
         public readonly Dictionary<string, List<IndexingFunc>> Maps = new Dictionary<string, List<IndexingFunc>>(StringComparer.OrdinalIgnoreCase);
@@ -135,11 +133,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 Indexing = index
             }, null);
 
-            if (_createFieldsConverter == null)
-                _createFieldsConverter = new LuceneDocumentConverter(new IndexField[] { });
+            if (CurrentIndexingScope.Current.CreateFieldConverter == null)
+                CurrentIndexingScope.Current.CreateFieldConverter = new LuceneDocumentConverter(new IndexField[] { });
 
             var result = new List<AbstractField>();
-            _createFieldsConverter.GetRegularFields(new StaticIndexLuceneDocumentWrapper(result), field, value, CurrentIndexingScope.Current.IndexContext);
+            CurrentIndexingScope.Current.CreateFieldConverter.GetRegularFields(new StaticIndexLuceneDocumentWrapper(result), field, value, CurrentIndexingScope.Current.IndexContext);
             return result;
         }
 
