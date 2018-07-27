@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using Sparrow.Utils;
 
-namespace Raven.TestDriver
+namespace Tests.Infrastructure.InterversionTest
 {
     internal class RavenServerRunner<TLocator> where TLocator : RavenServerLocator
     {
