@@ -1,19 +1,26 @@
-<div id="databaseSettingsContainer" class="content-margin">
-    <div data-bind="visible: isForbidden" class="text-center">
+<div id="databaseSettingsContainer" class="content-margin flex-vertical">
+    <!-- ko if: isForbidden-->
+    <div class="text-center">
         <h4 class="page-header text-info">You are not authorized to view this page!</h4>
     </div>
+    <!-- /ko -->
+    <!-- ko if: !isForbidden() -->
+    <form class="flex-grow flex-vertical">
+        <div>
+            <button type="button" class="btn btn-default" data-bind="click: refreshFromServer" title="Refresh from server, discarding any unsaved changes">
+                <i class="icon-refresh"></i>
+                <span>Refresh</span>
+            </button>
+        </div>
+        <div class="flex-horizontal">
 
-    <form data-bind="visible: !isForbidden()">
-        <div class="panel panel-default">
-            <div class="panel-heading">
-                <button type="button" class="btn btn-default" data-bind="click: refreshFromServer" title="Refresh from server, discarding any unsaved changes">
-                    <i class="icon-refresh"></i>
-                    <span>Refresh</span>
-                </button>
-            </div>
-            <div class="panel-body">
-                <pre id="dbDocEditor" class="form-control" data-bind="aceEditor: { code: documentText, lang: 'ace/mode/json', readOnly: true }" style="height: 500px"></pre>
+            <div class="flex-grow"></div>
+            <div class="btn-group btn-group-sm pull-right" role="group">
+                <button type="button" class="btn btn-default" data-toggle="button" data-bind=""><span class="icon-collapse"></span> <span>Toggle collapse</span></button>
+                <button type="button" class="btn btn-default" data-toggle="button" data-bind=""><span class="icon-newline"></span> <span>Toggle new lines</span></button>
             </div>
         </div>
+        <pre id="dbDocEditor" class="form-control flex-grow" data-bind="aceEditor: { code: documentText, lang: 'ace/mode/json', readOnly: true }" style="height: 500px"></pre>
     </form>
+    <!-- /ko -->
 </div>
