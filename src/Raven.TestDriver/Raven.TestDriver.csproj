@@ -30,6 +30,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Raven.Client\Raven.Client.csproj" />
+    <ProjectReference Include="..\Raven.Embedded\Raven.Embedded.csproj" />
   </ItemGroup>
   
 

@@ -9,3 +9,4 @@
 [assembly: InternalsVisibleTo("TypingsGenerator")]
 [assembly: InternalsVisibleTo("Voron.Recovery")]
 [assembly: InternalsVisibleTo("rvn")]
+[assembly: InternalsVisibleTo("Raven.TestDriver")]

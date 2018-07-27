@@ -6,12 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-#if NETSTANDARD2_0
-using System.Runtime.Loader;
-#endif
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -23,21 +18,37 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
+using Raven.Embedded;
+using Sparrow.Utils;
 
 namespace Raven.TestDriver
 {
-    public class RavenTestDriver<TServerLocator> : IDisposable
-        where TServerLocator : RavenServerLocator, new()
+    public class RavenTestDriver : IDisposable
     {
-        private static readonly Lazy<IDocumentStore> GlobalServer =
-            new Lazy<IDocumentStore>(RunServer, LazyThreadSafetyMode.ExecutionAndPublication);
+        private static readonly EmbeddedServer TestServer = new EmbeddedServer();
 
-        private static Process _globalServerProcess;
+        private static readonly Lazy<IDocumentStore> TestServerStore = new Lazy<IDocumentStore>(RunServer, LazyThreadSafetyMode.ExecutionAndPublication);
 
-        private readonly ConcurrentDictionary<DocumentStore, object> _documentStores =
-            new ConcurrentDictionary<DocumentStore, object>();
+        private readonly ConcurrentDictionary<DocumentStore, object> _documentStores = new ConcurrentDictionary<DocumentStore, object>();
 
         private static int _index;
+        private static ServerOptions _globalServerOptions;
+
+        private static FileInfo _emptySettingsFile;
+
+        private static FileInfo EmptySettingsFile
+        {
+            get
+            {
+                if (_emptySettingsFile == null)
+                {
+                    _emptySettingsFile = new FileInfo(Path.GetTempFileName());
+                    File.WriteAllText(_emptySettingsFile.FullName, "{}");
+                }
+
+                return _emptySettingsFile;
+            }
+        }
 
         protected virtual string DatabaseDumpFilePath => null;
 
@@ -45,16 +56,19 @@ namespace Raven.TestDriver
 
         protected bool IsDisposed { get; private set; }
 
-        public static bool Debug { get; set; }
+        public static void ConfigureServer(TestServerOptions options)
+        {
+            if (TestServerStore.IsValueCreated)
+                throw new InvalidOperationException($"Cannot configure server after it was started. Please call '{nameof(ConfigureServer)}' method before any '{nameof(GetDocumentStore)}' is called.");
 
-        public static Process GlobalServerProcess => _globalServerProcess;
+            _globalServerOptions = options;
+        }
 
-        public IDocumentStore GetDocumentStore(GetDocumentStoreOptions options = null, [CallerMemberName] string database = null)
+        protected IDocumentStore GetDocumentStore(GetDocumentStoreOptions options = null, [CallerMemberName] string database = null)
         {
             options = options ?? GetDocumentStoreOptions.Default;
             var name = database + "_" + Interlocked.Increment(ref _index);
-            ReportInfo($"GetDocumentStore for db ${ database }.");
-            var documentStore = GlobalServer.Value;
+            var documentStore = TestServerStore.Value;
 
             var createDatabaseOperation = new CreateDatabaseOperation(new DatabaseRecord(name));
             documentStore.Maintenance.Server.Send(createDatabaseOperation);
@@ -76,7 +90,7 @@ namespace Raven.TestDriver
 
                 try
                 {
-                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(store.Database, true));
+                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(store.Database, hardDelete: true));
                 }
                 catch (DatabaseDoesNotExistException)
                 {
@@ -108,151 +122,7 @@ namespace Raven.TestDriver
 
         protected event EventHandler DriverDisposed;
 
-        private void ImportDatabase(DocumentStore docStore, string database)
-        {
-            var options = new DatabaseSmugglerImportOptions();
-            if (DatabaseDumpFilePath != null)
-            {
-                AsyncHelpers.RunSync(() => docStore.Smuggler.ForDatabase(database)
-                    .ImportAsync(options, DatabaseDumpFilePath));
-            }
-            else if (DatabaseDumpFileStream != null)
-            {
-                AsyncHelpers.RunSync(() => docStore.Smuggler.ForDatabase(database)
-                    .ImportAsync(options, DatabaseDumpFileStream));
-            }
-        }
-
-        private static IDocumentStore RunServer()
-        {
-            var process = _globalServerProcess = RavenServerRunner<TServerLocator>.Run(new TServerLocator());
-
-            ReportInfo($"Starting global server: { _globalServerProcess.Id }");
-
-            var domainBind = false;
-
-#if NETSTANDARD2_0
-            AssemblyLoadContext.Default.Unloading += c =>
-            {
-                KillGlobalServerProcess();
-            };
-
-            domainBind = true;
-#endif
-
-#if NET461
-            AppDomain.CurrentDomain.DomainUnload += (s, args) =>
-            {
-                KillGlobalServerProcess();
-            };
-
-            domainBind = true;
-#endif
-
-            if (domainBind == false)
-                throw new InvalidOperationException("Should not happen!");
-
-            string url = null;
-            var output = process.StandardOutput;
-            var sb = new StringBuilder();
-
-            var startupDuration = Stopwatch.StartNew();
-
-            Task<string> readLineTask = null;
-            while (true)
-            {
-                if (readLineTask == null)
-                    readLineTask = output.ReadLineAsync();
-
-                var task = Task.WhenAny(readLineTask, Task.Delay(TimeSpan.FromSeconds(5))).Result;
-
-                if (startupDuration.Elapsed > TimeSpan.FromMinutes(1))
-                    break;
-
-                if (task != readLineTask)
-                    continue;
-
-                var line = readLineTask.Result;
-
-                readLineTask = null;
-
-                sb.AppendLine(line);
-
-                if (line == null)
-                {
-                    try
-                    {
-                        process.Kill();
-                    }
-                    catch (Exception e)
-                    {
-                        ReportError(e);
-                    }
-
-                    throw new InvalidOperationException("Unable to start server, log is: " + Environment.NewLine + sb);
-                }
-                const string prefix = "Server available on: ";
-                if (line.StartsWith(prefix))
-                {
-                    url = line.Substring(prefix.Length);
-                    break;
-                }
-            }
-
-            if (url == null)
-            {
-                var log = sb.ToString();
-                ReportInfo(log);
-                try
-                {
-                    process.Kill();
-                }
-                catch (Exception e)
-                {
-                    ReportError(e);
-                }
-
-                throw new InvalidOperationException("Unable to start server, log is: " + Environment.NewLine + log);
-            }
-
-            output.ReadToEndAsync()
-                .ContinueWith(x =>
-                {
-                    ReportError(x.Exception);
-                    GC.KeepAlive(x.Exception);
-                }); // just discard any other output
-
-            var store = new DocumentStore
-            {
-                Urls = new[] { url },
-                Database = "test.manager"
-            };
-
-            return store.Initialize();
-        }
-
-        private static void KillGlobalServerProcess()
-        {
-            var p = _globalServerProcess;
-            _globalServerProcess = null;
-            if (p != null && p.HasExited == false)
-            {
-                ReportInfo($"Kill global server PID { p.Id }.");
-
-                try
-                {
-                    p.Kill();
-                }
-                catch (Exception e)
-                {
-                    ReportError(e);
-                }
-            }
-
-            RavenServerRunner<TServerLocator>.CleanupTempFiles();
-        }
-
-        public void WaitForIndexing(IDocumentStore store, string database = null, TimeSpan? timeout = null)
+        protected void WaitForIndexing(IDocumentStore store, string database = null, TimeSpan? timeout = null)
         {
             var admin = store.Maintenance.ForDatabase(database);
 
@@ -297,7 +167,7 @@ namespace Raven.TestDriver
             throw new TimeoutException($"The indexes stayed stale for more than {timeout.Value}.{ allIndexErrorsText }");
         }
 
-        public void WaitForUserToContinueTheTest(IDocumentStore store)
+        protected void WaitForUserToContinueTheTest(IDocumentStore store)
         {
             var databaseNameEncoded = Uri.EscapeDataString(store.Database);
             var documentsPage = store.Urls[0] + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
@@ -326,56 +196,16 @@ namespace Raven.TestDriver
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at studio\" \"{url}\"")); // Works ok on windows
-                return;
+                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at Studio\" \"{url}\"")); // Works ok on windows
             }
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 Process.Start("xdg-open", url); // Works ok on linux
-                return;
             }
-
-            throw new NotImplementedException("Implement your own browser opening mechanism.");
-        }
-
-        private static void ReportError(Exception e)
-        {
-            if (Debug == false)
-                return;
-
-            if (e == null)
-                throw new ArgumentNullException(nameof(e));
-
-            var msg = $"{DateTime.Now}: {e}\r\n";
-            try
+            else
             {
-                File.AppendAllText("raven_testdriver.log", msg);
+                throw new PlatformNotSupportedException("Cannot open browser with Studio on your current platform");
             }
-            catch (Exception)
-            {
-            }
-            Console.WriteLine(msg);
-        }
-
-        private static void ReportInfo(string message)
-        {
-            if (Debug == false)
-                return;
-
-            if (string.IsNullOrWhiteSpace(message))
-                throw new ArgumentNullException(nameof(message));
-
-            var msg = $"{DateTime.Now}: {message}\r\n";
-            try
-            {
-                File.AppendAllText("raven_testdriver.log", msg);
-
-            }
-            catch (Exception)
-            {
-            }
-            Console.WriteLine(msg);
         }
 
         public virtual void Dispose()
@@ -405,6 +235,41 @@ namespace Raven.TestDriver
 
             if (exceptions.Count > 0)
                 throw new AggregateException(exceptions);
+        }
+
+        private void ImportDatabase(DocumentStore docStore, string database)
+        {
+            var options = new DatabaseSmugglerImportOptions();
+            if (DatabaseDumpFilePath != null)
+            {
+                AsyncHelpers.RunSync(() => docStore.Smuggler.ForDatabase(database)
+                    .ImportAsync(options, DatabaseDumpFilePath));
+            }
+            else if (DatabaseDumpFileStream != null)
+            {
+                AsyncHelpers.RunSync(() => docStore.Smuggler.ForDatabase(database)
+                    .ImportAsync(options, DatabaseDumpFileStream));
+            }
+        }
+
+        private static IDocumentStore RunServer()
+        {
+            var options = _globalServerOptions ?? new TestServerOptions();
+            options.CommandLineArgs.Insert(0, $"-c {CommandLineArgumentEscaper.EscapeSingleArg(EmptySettingsFile.FullName)}");
+            options.CommandLineArgs.Add("--RunInMemory=true");
+
+            TestServer.StartServer(options);
+
+            var url = AsyncHelpers.RunSync(() => TestServer.GetServerUriAsync());
+
+            var store = new DocumentStore
+            {
+                Urls = new[] { url.AbsoluteUri }
+            };
+
+            store.Initialize();
+
+            return store;
         }
     }
 }
