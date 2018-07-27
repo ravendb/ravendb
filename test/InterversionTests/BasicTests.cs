@@ -4,9 +4,9 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace SlowTests.Interversion
+namespace InterversionTests
 {
-    public class InterversionTest : InterversionTestBase
+    public class BasicTests : InterversionTestBase
     {
         [Fact]
         public async Task Test()
