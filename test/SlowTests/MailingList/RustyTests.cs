@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.MailingList
 {
-    public class Rusty : RavenTestBase
+    public class RustyTests : RavenTestBase
     {
         [Fact]
         public void Projection_With_Multiple_Nested_Loads_Should_Not_Throw_Exception()
