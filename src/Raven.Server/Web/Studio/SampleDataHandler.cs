@@ -58,7 +58,8 @@ namespace Raven.Server.Web.Studio
                             options: new DatabaseSmugglerOptionsServerSide
                             {
                                 OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments |
-                                                 DatabaseItemType.Indexes
+                                                 DatabaseItemType.Indexes,
+                                SkipRevisionCreation = true
                             });
 
                         smuggler.Execute();
