@@ -18,22 +18,22 @@ namespace Raven.Server.Documents.ETL
         public DocumentDatabase Database { get; }
         protected readonly DocumentsOperationContext Context;
         private readonly PatchRequest _mainScript;
-        private readonly PatchRequest _counterBehaviors;
+        private readonly PatchRequest _behaviorFunctions;
         protected ScriptRunner.SingleRun DocumentScript;
-        protected ScriptRunner.SingleRun LoadCounterBehaviorScript;
+        protected ScriptRunner.SingleRun BehaviorsScript;
 
         protected TExtracted Current;
 
         private ScriptRunner.ReturnRun _returnMainRun;
-        private ScriptRunner.ReturnRun _counterBehaviorsRun;
+        private ScriptRunner.ReturnRun _behaviorFunctionsRun;
 
         protected EtlTransformer(DocumentDatabase database, DocumentsOperationContext context,
-            PatchRequest mainScript, PatchRequest counterBehaviors)
+            PatchRequest mainScript, PatchRequest behaviorFunctions)
         {
             Database = database;
             Context = context;
             _mainScript = mainScript;
-            _counterBehaviors = counterBehaviors;
+            _behaviorFunctions = behaviorFunctions;
         }
 
         public virtual void Initalize(bool debugMode)
@@ -66,8 +66,8 @@ namespace Raven.Server.Documents.ETL
 
             DocumentScript.ScriptEngine.SetValue("hasCounter", new ClrFunctionInstance(DocumentScript.ScriptEngine, HasCounter));
 
-            if (_counterBehaviors != null)
-                _counterBehaviorsRun = Database.Scripts.GetScriptRunner(_counterBehaviors, true, out LoadCounterBehaviorScript);
+            if (_behaviorFunctions != null)
+                _behaviorFunctionsRun = Database.Scripts.GetScriptRunner(_behaviorFunctions, true, out BehaviorsScript);
         }
 
         private JsValue LoadToFunctionTranslator(JsValue self, JsValue[] args)
@@ -276,7 +276,7 @@ namespace Raven.Server.Documents.ETL
         public void Dispose()
         {
             using (_returnMainRun)
-            using (_counterBehaviorsRun)
+            using (_behaviorFunctionsRun)
             {
 
             }

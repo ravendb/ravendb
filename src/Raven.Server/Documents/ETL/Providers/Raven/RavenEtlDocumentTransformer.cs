@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private RavenEtlScriptRun _currentRun;
 
         public RavenEtlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ScriptInput script)
-            : base(database, context, script.Transformation, script.LoadCounterBehaviors)
+            : base(database, context, script.Transformation, script.BehaviorFunctions)
         {
             _transformation = transformation;
             _script = script;
@@ -209,7 +209,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                             {
                                 foreach (var counter in GetCountersFor(Current))
                                 {
-                                    using (var result = LoadCounterBehaviorScript.Run(Context, Context, function, new object[] { item.DocumentId, counter.Name }))
+                                    using (var result = BehaviorsScript.Run(Context, Context, function, new object[] { item.DocumentId, counter.Name }))
                                     {
                                         if (result.BooleanValue == true)
                                             _currentRun.AddCounter(item.DocumentId, counter.Name, counter.Value);
@@ -232,7 +232,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                             if (_script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out var function) == false)
                                 break;
 
-                            using (var result = LoadCounterBehaviorScript.Run(Context, Context, function, new object[] {item.DocumentId, item.CounterName}))
+                            using (var result = BehaviorsScript.Run(Context, Context, function, new object[] {item.DocumentId, item.CounterName}))
                             {
                                 if (result.BooleanValue == true)
                                     _currentRun.AddCounter(item.DocumentId, item.CounterName, item.CounterValue);
@@ -255,7 +255,19 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         {
                             Debug.Assert(item.IsAttachmentTombstone == false, "attachment tombstones are tracked only if script is empty");
 
-                            ApplyDeleteCommands(item, OperationType.Delete);
+                            bool shouldDelete = true;
+
+                            if (_script.HasDeleteDocumentsBehaviors && _script.TryGetDeleteDocumentBehaviorFunctionFor(item.Collection, out var function))
+                            {
+                                using (var result = BehaviorsScript.Run(Context, Context, function, new object[] { item.DocumentId }))
+                                {
+                                    shouldDelete = result.BooleanValue == true;
+                                }
+                            }
+                               
+                            if (shouldDelete)
+                                ApplyDeleteCommands(item, OperationType.Delete);
+
                         }
                         else
                         {
@@ -283,7 +295,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                             if (_script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out var function) == false)
                                 break;
 
-                            using (var result = LoadCounterBehaviorScript.Run(Context, Context, function, new object[] { docId, counterName }))
+                            using (var result = BehaviorsScript.Run(Context, Context, function, new object[] { docId, counterName }))
                             {
                                 if (result.BooleanValue == true)
                                     _currentRun.DeleteCounter(docId, counterName);
@@ -397,7 +409,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             public readonly PatchRequest Transformation;
 
-            public readonly PatchRequest LoadCounterBehaviors;
+            public readonly PatchRequest BehaviorFunctions;
 
             public readonly HashSet<string> DefaultCollections;
 
@@ -405,9 +417,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             private readonly Dictionary<string, string> _collectionToLoadCounterBehaviorFunction;
 
+            private readonly Dictionary<string, string> _collectionToDeleteDocumentBehaviorFunction;
+
             public bool HasTransformation => Transformation != null;
 
-            public bool HasLoadCounterBehaviors => LoadCounterBehaviors != null;
+            public bool HasLoadCounterBehaviors => _collectionToLoadCounterBehaviorFunction != null;
+
+            public bool HasDeleteDocumentsBehaviors => _collectionToDeleteDocumentBehaviorFunction != null;
 
             public ScriptInput(Transformation transformation)
             {
@@ -419,10 +435,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 Transformation = new PatchRequest(transformation.Script, PatchRequestType.RavenEtl);
 
                 if (transformation.CollectionToLoadCounterBehaviorFunction != null)
-                {
                     _collectionToLoadCounterBehaviorFunction = transformation.CollectionToLoadCounterBehaviorFunction;
-                    LoadCounterBehaviors = new PatchRequest(transformation.Script, PatchRequestType.EtlLoadCounterBehaviorFunctions);
-                }
+
+                if (transformation.CollectionToDeleteDocumentsBehaviorFunction != null)
+                    _collectionToDeleteDocumentBehaviorFunction = transformation.CollectionToDeleteDocumentsBehaviorFunction;
+
+                if (HasLoadCounterBehaviors || HasDeleteDocumentsBehaviors)
+                    BehaviorFunctions = new PatchRequest(transformation.Script, PatchRequestType.EtlBehaviorFunctions);
 
                 LoadToCollections = transformation.GetCollectionsFromScript();
 
@@ -450,6 +469,11 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             public bool TryGetLoadCounterBehaviorFunctionFor(string collection, out string functionName)
             {
                 return _collectionToLoadCounterBehaviorFunction.TryGetValue(collection, out functionName);
+            }
+
+            public bool TryGetDeleteDocumentBehaviorFunctionFor(string collection, out string functionName)
+            {
+                return _collectionToDeleteDocumentBehaviorFunction.TryGetValue(collection, out functionName);
             }
 
             public bool IsLoadedToDefaultCollection(RavenEtlItem item, string loadToCollection)
