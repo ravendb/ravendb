@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -45,7 +44,9 @@ namespace Raven.Server.Utils
             // will send the appropriate signers.
             // At least on Linux, this is done by looking at the _issuers_ of certs in the 
             // root store
-            using (var store = new X509Store(StoreName.Root, StoreLocation.CurrentUser))
+
+            var storeName = PlatformDetails.RunningOnMacOsx ? StoreName.My : StoreName.Root;
+            using (var store = new X509Store(storeName, StoreLocation.CurrentUser))
             {
                 store.Open(OpenFlags.ReadWrite);
 
@@ -71,7 +72,6 @@ namespace Raven.Server.Utils
                 false,
                 5,
                 out certBytes);
-
 
             ValidateNoPrivateKeyInServerCert(serverCertBytes);
 
