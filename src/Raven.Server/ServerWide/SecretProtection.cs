@@ -535,7 +535,8 @@ namespace Raven.Server.ServerWide
             else
                 collection.Import(rawBytes, password, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
 
-            using (var userIntermediateStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser, 
+            var storeName = PlatformDetails.RunningOnMacOsx ? StoreName.My : StoreName.Root;
+            using (var userIntermediateStore = new X509Store(storeName, StoreLocation.CurrentUser, 
                 System.Security.Cryptography.X509Certificates.OpenFlags.ReadWrite))
             {
                 foreach (var cert in collection)
