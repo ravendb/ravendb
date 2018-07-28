@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -19,6 +18,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Embedded;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Raven.TestDriver
@@ -194,18 +194,19 @@ namespace Raven.TestDriver
         {
             Console.WriteLine(url);
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (PlatformDetails.RunningOnPosix == false)
             {
-                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at Studio\" \"{url}\"")); // Works ok on windows
+                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at Studio\" \"{url}\""));
+                return;
             }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+
+            if (PlatformDetails.RunningOnMacOsx)
             {
-                Process.Start("xdg-open", url); // Works ok on linux
+                Process.Start("open", url);
+                return;
             }
-            else
-            {
-                throw new PlatformNotSupportedException("Cannot open browser with Studio on your current platform");
-            }
+
+            Process.Start("xdg-open", url);
         }
 
         public virtual void Dispose()
