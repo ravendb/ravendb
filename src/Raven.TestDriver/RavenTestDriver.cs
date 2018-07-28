@@ -23,6 +23,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
+using Sparrow.Platform;
 
 namespace Raven.TestDriver
 {
@@ -333,19 +334,19 @@ namespace Raven.TestDriver
         {
             Console.WriteLine(url);
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (PlatformDetails.RunningOnPosix == false)
             {
-                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at studio\" \"{url}\"")); // Works ok on windows
+                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at studio\" \"{url}\""));
                 return;
             }
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            if (PlatformDetails.RunningOnMacOsx)
             {
-                Process.Start("xdg-open", url); // Works ok on linux
+                Process.Start("open", url);
                 return;
             }
 
-            throw new NotImplementedException("Implement your own browser opening mechanism.");
+            Process.Start("xdg-open", url);
         }
 
         private static void ReportError(Exception e)

@@ -24,7 +24,6 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
-using Sparrow.Platform;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
 using SizeClient = Raven.Client.Util.Size;
@@ -127,6 +126,7 @@ namespace Raven.Server.Utils.Cli
             CreateDb,
             Logout,
             Print,
+            OpenBrowser,
 
             UnknownCommand
         }
@@ -271,6 +271,26 @@ namespace Raven.Server.Utils.Cli
             WriteText("", TextColor, cli);
 
             return char.ToLower(k).Equals('y');
+        }
+
+        private static bool CommandOpenBrowser(List<string> args, RavenCli cli)
+        {
+            if (cli._consoleColoring == false)
+            {
+                WriteText("'openBrowser' command not supported on remote pipe connection", WarningColor, cli);
+                return true;
+            }
+
+            var url = cli._server.ServerStore.GetNodeHttpServerUrl();
+            WriteText("Openning Studio at: ", TextColor, cli, newLine: false);
+            WriteText(url, UserInputColor, cli);
+
+            if (BrowserHelper.OpenStudioInBrowser(url, out var errorMessage) == false)
+            {
+                WriteError($"Failed to open browser: {errorMessage}", cli);
+            }
+
+            return true;
         }
 
         private static bool CommandResetServer(List<string> args, RavenCli cli)
@@ -1030,6 +1050,7 @@ namespace Raven.Server.Utils.Cli
                 new[] {"experimental <on|off>", "Set if to allow experimental cli commands. WARNING: Use with care!"},
                 new[] {"script <server|database> [database]", "Execute script on server or specified database. WARNING: Use with care!"},
                 new[] {"logout", "Logout (applicable only on piped connection)"},
+                new[] {"openBrowser", "Open the RavenDB Studio using the default browser"},
                 new[] {"resetServer", "Restarts the server (shutdown and re-run)"},
                 new[] {"shutdown", "Shutdown the server"},
                 new[] {"help", "This help screen"},
@@ -1093,6 +1114,7 @@ namespace Raven.Server.Utils.Cli
             [Command.Script] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandScript },
             [Command.LowMem] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLowMem },
             [Command.Timer] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandTimer },
+            [Command.OpenBrowser] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandOpenBrowser },
             [Command.ResetServer] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandResetServer },
             [Command.Logout] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogout },
             [Command.Shutdown] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandShutdown },
@@ -1380,7 +1402,6 @@ namespace Raven.Server.Utils.Cli
                     break;
             }
 
-
             return cmd;
         }
 
@@ -1424,9 +1445,12 @@ namespace Raven.Server.Utils.Cli
                 }
                 if (words.Count == 0)
                 {
-                    if (_actions[parsedLine.ParsedCommands.Last().Command].NumOfArgs > 0)
+                    var numOfArgs = _actions[parsedLine.ParsedCommands.Last().Command].NumOfArgs;
+                    if (numOfArgs > 0)
                     {
-                        parsedLine.ErrorMsg = $"Missing argument(s) after command : {parsedLine.ParsedCommands.Last().Command} (should get at least {_actions[parsedLine.ParsedCommands.Last().Command].NumOfArgs} arguments but got none)";
+                        parsedLine.ErrorMsg = $"Missing argument(s) after command : " +
+                                              $"{parsedLine.ParsedCommands.Last().Command} " +
+                                              $"(should get at least {numOfArgs} argument{(numOfArgs > 1 ? "s" : string.Empty)} but got none)";
                         return false;
                     }
                     return true;
@@ -1487,9 +1511,12 @@ namespace Raven.Server.Utils.Cli
                 parsedLine.ParsedCommands.Last().Args = args;
                 if (lastAction == null)
                 {
-                    if (args.Count < _actions[parsedLine.ParsedCommands.Last().Command].NumOfArgs)
+                    var numOfArgs = _actions[parsedLine.ParsedCommands.Last().Command].NumOfArgs;
+                    if (args.Count < numOfArgs)
                     {
-                        parsedLine.ErrorMsg = $"Missing argument(s) after command : {parsedLine.ParsedCommands.Last().Command} (should get at least {_actions[parsedLine.ParsedCommands.Last().Command].NumOfArgs} arguments but got {args.Count})";
+                        parsedLine.ErrorMsg = $"Missing argument(s) after command : " +
+                                              $"{parsedLine.ParsedCommands.Last().Command} " +
+                                              $"(should get at least {numOfArgs} argument{(numOfArgs > 1 ? "s" : string.Empty)} but got {args.Count})";
                         return false;
                     }
                     return true;

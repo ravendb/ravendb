@@ -21,6 +21,7 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Cli;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -375,18 +376,19 @@ namespace FastTests
         {
             Console.WriteLine(url);
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (PlatformDetails.RunningOnPosix == false)
             {
-                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at studio\" \"{url}\"")); // Works ok on windows
+                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at studio\" \"{url}\""));
+                return;
             }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+
+            if (PlatformDetails.RunningOnMacOsx)
             {
-                Process.Start("xdg-open", url); // Works ok on linux
+                Process.Start("open", url);
+                return;
             }
-            else
-            {
-                Console.WriteLine("Do it yourself!");
-            }
+
+            Process.Start("xdg-open", url);
         }
 
         protected string NewDataPath([CallerMemberName] string prefix = null, string suffix = null, bool forceCreateDir = false)
