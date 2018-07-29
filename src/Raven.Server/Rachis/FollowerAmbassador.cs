@@ -115,7 +115,7 @@ namespace Raven.Server.Rachis
             Interlocked.Exchange(ref _lastReplyFromFollower, DateTime.UtcNow.Ticks);
         }
 
-        public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, X509Certificate2 certificate, RemoteConnection connection = null)
+        public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, RemoteConnection connection = null)
         {
             _engine = engine;
             _term = leader.Term;
@@ -123,7 +123,6 @@ namespace Raven.Server.Rachis
             _wakeLeader = wakeLeader;
             _tag = tag;
             _url = url;
-            _certificate = certificate;
             _connection = connection;
             Status = AmbassadorStatus.Started;
             StatusMessage = $"Started Follower Ambassador for {_engine.Tag} > {_tag} in term {_term}";
@@ -178,7 +177,7 @@ namespace Raven.Server.Rachis
                                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 {
                                     _engine.RemoveAndDispose(_leader, _connection);
-                                    var connection = _engine.ConnectToPeer(_url, _certificate, context).Result;
+                                    var connection = _engine.ConnectToPeer(_url, _engine.ClusterCertificate, context).Result;
                                     var stream = connection.Stream;
                                     var disconnect = connection.Disconnect;
                                     var con = new RemoteConnection(_tag, _engine.Tag, _term, stream, disconnect);
