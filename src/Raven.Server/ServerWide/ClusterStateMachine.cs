@@ -1542,7 +1542,7 @@ namespace Raven.Server.ServerWide
                     Database = null,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Cluster,
                     Version = TcpConnectionHeaderMessage.ClusterTcpVersion,
-                    ReadResponseAndGetVersion = ClusterReadResponseAndGetVersion,
+                    ReadResponseAndGetVersionCallback = ClusterReadResponseAndGetVersion,
                     Url = info.Url
                 };
 
