@@ -69,6 +69,108 @@ namespace Raven.Server.ServerWide.Commands
             AssertClusterAdmin(isClusterAdmin);
         }
     }
-    
-    
+
+    public class InstallUpdatedServerCertificateCommand_V2 : CommandBase
+    {
+        public string Certificate { get; set; }
+        public bool ReplaceImmediately { get; set; }
+
+        public InstallUpdatedServerCertificateCommand_V2()
+        {
+            // for deserialization
+        }
+
+        public InstallUpdatedServerCertificateCommand_V2(string certificate, bool replaceImmediately)
+        {
+            Certificate = certificate;
+            ReplaceImmediately = replaceImmediately;
+        }
+
+        public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
+        {
+            AssertClusterAdmin(isClusterAdmin);
+        }
+
+        public override DynamicJsonValue ToJson(JsonOperationContext context)
+        {
+            var json = base.ToJson(context);
+            json[nameof(Certificate)] = Certificate;
+            json[nameof(ReplaceImmediately)] = ReplaceImmediately;
+            return json;
+        }
+    }
+
+    public class ConfirmReceiptServerCertificateCommand_V2 : CommandBase
+    {
+        public string Thumbprint { get; set; }
+
+        public ConfirmReceiptServerCertificateCommand_V2()
+        {
+            // for deserialization
+        }
+
+        public ConfirmReceiptServerCertificateCommand_V2(string thumbprint)
+        {
+            Thumbprint = thumbprint;
+        }
+
+        public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
+        {
+            AssertClusterAdmin(isClusterAdmin);
+        }
+
+        public override DynamicJsonValue ToJson(JsonOperationContext context)
+        {
+            var json = base.ToJson(context);
+            json[nameof(Thumbprint)] = Thumbprint;
+            return json;
+        }
+    }
+
+    public class RecheckStatusOfServerCertificateCommand_V2 : CommandBase
+    {
+
+        public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
+        {
+            AssertClusterAdmin(isClusterAdmin);
+        }
+    }
+
+    public class ConfirmServerCertificateReplacedCommand_V2 : CommandBase
+    {
+        public string Thumbprint { get; set; }
+        public string OldThumbprint { get; set; }
+
+        public ConfirmServerCertificateReplacedCommand_V2()
+        {
+            // for deserialization
+        }
+
+        public ConfirmServerCertificateReplacedCommand_V2(string thumbprint, string oldThumbprint)
+        {
+            Thumbprint = thumbprint;
+            OldThumbprint = oldThumbprint;
+        }
+
+        public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
+        {
+            AssertClusterAdmin(isClusterAdmin);
+        }
+
+        public override DynamicJsonValue ToJson(JsonOperationContext context)
+        {
+            var json = base.ToJson(context);
+            json[nameof(Thumbprint)] = Thumbprint;
+            json[nameof(OldThumbprint)] = OldThumbprint;
+            return json;
+        }
+    }
+
+    public class RecheckStatusOfServerCertificateReplacementCommand_V2 : CommandBase
+    {
+        public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
+        {
+            AssertClusterAdmin(isClusterAdmin);
+        }
+    }
 }
