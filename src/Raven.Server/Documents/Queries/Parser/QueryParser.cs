@@ -67,6 +67,15 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (Scanner.TryScan("WHERE") && Expression(out q.Where) == false)
                     ThrowParseException("Unable to parse WHERE clause");
             }
+            else
+            {
+                if (Scanner.TryScan("MATCH") == false)
+                {
+                    ThrowParseException("Missing a 'match' clause after 'with' caluse");
+                }
+
+                q.MatchClauses = GraphMatch();
+            }
 
             if (Scanner.TryScan("ORDER BY"))
                 q.OrderBy = OrderBy();
@@ -112,10 +121,18 @@ namespace Raven.Server.Documents.Queries.Parser
             return q;
         }
 
+        private MatchClause GraphMatch()
+        {
+            while (true)
+            {
+
+            }
+        }
+
         private WithClause With()
         {
             if (Scanner.TryScan('{') == false)
-                throw new InvalidQueryException("With clause contains invalid body", Scanner.Input, null);
+                throw new InvalidQueryException("With keyword should be followed with either 'edges' or '{' ", Scanner.Input, null);
             var query = Parse(recursive:true);
             if (Scanner.TryScan('}') == false)
                 throw new InvalidQueryException("With clause contains invalid body", Scanner.Input, null);
