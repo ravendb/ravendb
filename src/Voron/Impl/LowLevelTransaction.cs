@@ -146,7 +146,6 @@ namespace Voron.Impl
             var env = previous._env;
             env.Options.AssertNoCatastrophicFailure();
 
-            FlushInProgressLockTaken = previous.FlushInProgressLockTaken;
             CurrentTransactionHolder = previous.CurrentTransactionHolder;
             TxStartTime = DateTime.UtcNow;
             DataPager = env.Options.DataPager;
@@ -1069,7 +1068,6 @@ namespace Voron.Impl
         private bool _isLazyTransaction;
 
         internal ActiveTransactions.Node ActiveTransactionNode;
-        internal bool FlushInProgressLockTaken;
         private ByteString _txHeaderMemory;
         internal ImmutableAppendOnlyList<JournalFile> JournalFiles;
         internal bool AlreadyAllowedDisposeWithLazyTransactionRunning;

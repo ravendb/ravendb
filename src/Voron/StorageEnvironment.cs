@@ -83,7 +83,6 @@ namespace Voron
         private readonly SemaphoreSlim _transactionWriter = new SemaphoreSlim(1, 1);
         private NativeMemory.ThreadStats _currentWriteTransactionHolder;
         private readonly AsyncManualResetEvent _writeTransactionRunning = new AsyncManualResetEvent();
-        internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
         private readonly CountdownEvent _envDispose = new CountdownEvent(1);
 
         private readonly IFreeSpaceHandling _freeSpaceHandling;
@@ -625,7 +624,6 @@ namespace Voron
             _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
             bool txLockTaken = false;
-            bool flushInProgressReadLockTaken = false;
             try
             {
                 IncrementUsageOnNewTransaction();
@@ -633,16 +631,6 @@ namespace Voron
                 if (flags == TransactionFlags.ReadWrite)
                 {
                     var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
-
-                    if (FlushInProgressLock.IsWriteLockHeld == false)
-                    {
-                        flushInProgressReadLockTaken = FlushInProgressLock.TryEnterReadLock(wait);
-                        if (flushInProgressReadLockTaken == false)
-                        {
-                            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
-                            ThrowOnTimeoutWaitingForReadFlushingInProgressLock(wait);
-                        }
-                    }
 
                     ThrowOnWriteTransactionOpenedByTheSameThread();
 
@@ -677,7 +665,6 @@ namespace Voron
                 tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling,
                     context)
                 {
-                    FlushInProgressLockTaken = flushInProgressReadLockTaken,
                 };
 
                 if (flags == TransactionFlags.ReadWrite)
@@ -698,10 +685,6 @@ namespace Voron
                     {
                         _currentWriteTransactionHolder = null;
                         _transactionWriter.Release();
-                    }
-                    if (flushInProgressReadLockTaken)
-                    {
-                        FlushInProgressLock.ExitReadLock();
                     }
                 }
                 finally
@@ -764,22 +747,6 @@ namespace Voron
 
             throw new TimeoutException(message);
         }
-
-        private void ThrowOnTimeoutWaitingForReadFlushingInProgressLock(TimeSpan wait)
-        {
-            var copy = Journal.CurrentFlushingInProgressHolder;
-            if (copy == NativeMemory.ThreadAllocations.Value)
-            {
-                throw new InvalidOperationException("Flushing is already being performed by this thread");
-            }
-
-            var message = $"Waited for {wait} for read access of the flushing in progress lock, but could not get it";
-            if (copy != null)
-                message += $", the flushing in progress lock is currently owned by thread {copy.Id} - {copy.Name}";
-
-            throw new TimeoutException(message);
-        }
-
         public long CurrentReadTransactionId => State.TransactionCounter;
         public long NextWriteTransactionId => CurrentReadTransactionId + 1;
 
@@ -859,9 +826,6 @@ namespace Voron
                 _currentWriteTransactionHolder = null;
                 _writeTransactionRunning.Reset();
                 _transactionWriter.Release();
-
-                if (tx.FlushInProgressLockTaken)
-                    FlushInProgressLock.ExitReadLock();
             }
             finally
             {
