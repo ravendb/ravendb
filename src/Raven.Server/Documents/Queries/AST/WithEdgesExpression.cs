@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using JetBrains.Annotations;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
 {
@@ -8,15 +10,18 @@ namespace Raven.Server.Documents.Queries.AST
     {
         public QueryExpression Where;
 
+        public StringSegment EdgeType;
+
         public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> OrderBy;
 
-        public WithEdgesExpression(QueryExpression @where, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy)
+        public WithEdgesExpression(QueryExpression @where, [NotNull] string edgeType, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy)
         {
             if(@where == null && orderBy == null)
                 throw new ArgumentNullException($"{nameof(WithEdgesExpression)} should have either Where or OrderBy clauses.");
 
             Where = @where;
             OrderBy = orderBy;
+            EdgeType = edgeType ?? throw new ArgumentNullException(nameof(edgeType));
             Type = ExpressionType.WithEdge;
         }
 

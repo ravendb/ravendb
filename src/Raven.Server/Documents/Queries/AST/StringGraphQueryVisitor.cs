@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Queries.AST
         {
             foreach (var withEdgesClause in expression)
             {
-                Sb.Append("WITH EDGE { ");
+                Sb.Append($"WITH EDGES({withEdgesClause.Value.EdgeType}) {{ ");
                     VisitWithEdgesExpression(withEdgesClause.Value);
                 Sb.AppendLine($" }} AS {withEdgesClause.Key}");
             }
@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override void VisitPatternMatchClause(PatternMatchExpression expression)
         {
-            Sb.AppendLine(expression.ToString());
+            Sb.AppendLine($"MATCH {expression}");
         }
 
         public override void VisitInclude(List<QueryExpression> includes)
