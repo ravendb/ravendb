@@ -86,6 +86,11 @@ namespace Raven.Server.Documents
             {
                 lazyStringValueFromParserState.EscapePositions = state.EscapePositions.ToArray();
             }
+            else
+            {
+                lazyStringValueFromParserState.EscapePositions = Array.Empty<int>();
+            }
+
             return lazyStringValueFromParserState;
         }
 
