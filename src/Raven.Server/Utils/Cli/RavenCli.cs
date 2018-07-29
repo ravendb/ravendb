@@ -285,10 +285,7 @@ namespace Raven.Server.Utils.Cli
             WriteText("Openning Studio at: ", TextColor, cli, newLine: false);
             WriteText(url, UserInputColor, cli);
 
-            if (BrowserHelper.OpenStudioInBrowser(url, out var errorMessage) == false)
-            {
-                WriteError($"Failed to open browser: {errorMessage}", cli);
-            }
+            BrowserHelper.OpenStudioInBrowser(url, onError: errorMessage => WriteError($"{errorMessage}", cli));
 
             return true;
         }
