@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Queries.AST
                 return $"({Alias})";
 
             if (!Alias.HasValue && VertexType.HasValue)
-                return $"(:{VertexType})";
+                return $"({VertexType})";
 
             return $"({Alias}:{VertexType})";
         }
