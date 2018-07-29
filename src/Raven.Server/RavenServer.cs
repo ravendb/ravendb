@@ -460,11 +460,10 @@ namespace Raven.Server
 
                         ServerStore.NotificationCenter.Add(AlertRaised.Create(
                             null,
-                            "Server certificate",
+                            Constants.Certificates.CertReplaceAlertTitle,
                             msg,
                             AlertType.Certificates_ReplaceError,
-                            NotificationSeverity.Error,
-                            "Cluster.Certificate.Replace.Error"));
+                            NotificationSeverity.Error));
                         return;
                     }
                 }
@@ -518,7 +517,7 @@ namespace Raven.Server
                     msg = "It's time to renew your Let's Encrypt server certificate but automatic renewal is turned off when using the developer license. Go to the certificate page in the studio and trigger the renewal manually.";
                     ServerStore.NotificationCenter.Add(AlertRaised.Create(
                         null,
-                        "Server certificate",
+                        Constants.Certificates.CertReplaceAlertTitle,
                         msg,
                         AlertType.Certificates_DeveloperLetsEncryptRenewal,
                         NotificationSeverity.Warning));
@@ -548,12 +547,11 @@ namespace Raven.Server
 
                 ServerStore.NotificationCenter.Add(AlertRaised.Create(
                     null,
-                    "Server certificate",
+                    Constants.Certificates.CertReplaceAlertTitle,
                     msg,
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
-                    "Cluster.Certificate.Replace.Error",
-                    new ExceptionDetails(e)));
+                    details: new ExceptionDetails(e)));
             }
         }
 
@@ -608,12 +606,11 @@ namespace Raven.Server
 
                 ServerStore.NotificationCenter.Add(AlertRaised.Create(
                     null,
-                    "Server certificate",
+                    Constants.Certificates.CertReplaceAlertTitle,
                     msg,
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
-                    "Cluster.Certificate.Replace.Error",
-                    new ExceptionDetails(e)));
+                    details: new ExceptionDetails(e)));
             }
         }
 
