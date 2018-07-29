@@ -358,23 +358,23 @@ namespace Raven.Server.ServerWide
                 {
                     if (cmd.TryGet(nameof(ConfirmReceiptServerCertificateCommand.Thumbprint), out string thumbprint) == false)
                     {
-                        throw new ArgumentException($"Thumbprint property didn't exist in {nameof(ConfirmReceiptServerCertificateCommand)}");
+                        throw new ArgumentException($"{nameof(ConfirmReceiptServerCertificateCommand.Thumbprint)} property didn't exist in {nameof(ConfirmReceiptServerCertificateCommand)}");
                     }
                     var certInstallation = GetItem(context, "server/cert");
                     if (certInstallation == null)
                         return; // already applied? 
 
-                    if (certInstallation.TryGet("Thumbprint", out string storedThumbprint) == false)
-                        throw new ArgumentException("Thumbprint property didn't exist in 'server/cert' value");
+                    if (certInstallation.TryGet(Constants.Certificates.Thumbprint, out string storedThumbprint) == false)
+                        throw new ArgumentException($"{Constants.Certificates.Thumbprint} property didn't exist in 'server/cert' value");
 
                     if (storedThumbprint != thumbprint)
                         return; // confirmation for a different cert, ignoring
 
-                    certInstallation.TryGet("Confirmations", out int confirmations);
+                    certInstallation.TryGet(Constants.Certificates.Confirmations, out int confirmations);
 
                     certInstallation.Modifications = new DynamicJsonValue(certInstallation)
                     {
-                        ["Confirmations"] = confirmations + 1
+                        [Constants.Certificates.Confirmations] = confirmations + 1
                     };
 
                     certInstallation = context.ReadObject(certInstallation, "server.cert.update");
@@ -395,12 +395,11 @@ namespace Raven.Server.ServerWide
 
                 serverStore.NotificationCenter.Add(AlertRaised.Create(
                     null,
-                    "Server certificate",
+                    Constants.Certificates.CertReplaceAlertTitle,
                     "Failed to confirm receipt of the new certificate.",
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
-                    "Cluster.Certificate.Replace.Error",
-                    new ExceptionDetails(e)));
+                    details: new ExceptionDetails(e)));
             }
         }
 
@@ -412,7 +411,7 @@ namespace Raven.Server.ServerWide
             {
                 if (cmd.TryGet(nameof(InstallUpdatedServerCertificateCommand.Certificate), out string cert) == false || string.IsNullOrEmpty(cert))
                 {
-                    throw new ArgumentException($"Certificate property didn't exist in {nameof(InstallUpdatedServerCertificateCommand)}");
+                    throw new ArgumentException($"{nameof(InstallUpdatedServerCertificateCommand.Certificate)} property didn't exist in {nameof(InstallUpdatedServerCertificateCommand)}");
                 }
 
                 cmd.TryGet(nameof(InstallUpdatedServerCertificateCommand.ReplaceImmediately), out bool replaceImmediately);
@@ -423,10 +422,10 @@ namespace Raven.Server.ServerWide
                 {
                     var djv = new DynamicJsonValue
                     {
-                        ["Certificate"] = cert,
-                        ["Thumbprint"] = x509Certificate.Thumbprint,
-                        ["Confirmations"] = 0,
-                        ["ReplaceImmediately"] = replaceImmediately
+                        [Constants.Certificates.Certificate] = cert,
+                        [Constants.Certificates.Thumbprint] = x509Certificate.Thumbprint,
+                        [Constants.Certificates.Confirmations] = 0,
+                        [Constants.Certificates.ReplaceImmediately] = replaceImmediately
                     };
 
                     var json = context.ReadObject(djv, "server.cert.update.info");
@@ -444,12 +443,11 @@ namespace Raven.Server.ServerWide
 
                 serverStore.NotificationCenter.Add(AlertRaised.Create(
                     null,
-                    "Server certificate",
+                    Constants.Certificates.CertReplaceAlertTitle,
                     $"{nameof(InstallUpdatedServerCertificate)} failed.",
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
-                    "Cluster.Certificate.Replace.Error",
-                    new ExceptionDetails(e)));
+                    details: new ExceptionDetails(e)));
             }
         }
 
