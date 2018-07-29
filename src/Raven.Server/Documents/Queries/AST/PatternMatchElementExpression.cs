@@ -8,7 +8,7 @@
             Right
         }
 
-        public PatternMatchVertexExpression From;
+        public PatternMatchExpression From;
 
         public Direction EdgeDirection;
 
@@ -21,6 +21,6 @@
         public override string GetText(IndexQueryServerSide parent) => GetText();
         
         public string GetText() => 
-            EdgeDirection == Direction.Right ? $"{From} -{Edge}-> {To}" : $"{To} <-{Edge}- {From}";
+            EdgeDirection == Direction.Right ? $"{From}-{Edge}->{To}" : $"{To}<-{Edge}-{From}";
     }
 }
