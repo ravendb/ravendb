@@ -484,6 +484,9 @@ namespace Raven.Server
                 if (ServerStore.IsLeader() == false)
                     return;
 
+                if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion < ClusterCommandsVersionManager.ClusterCommandsVersions[nameof(ConfirmServerCertificateReplacedCommand_V2)])
+                    throw new ClusterNodesVersionMismatchException("You are trying to replace the cluster certificate. The majority of nodes in the cluster are running an older server version than this command requires. ");
+
                 // we need to see if there is already an ongoing process
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
@@ -491,11 +494,30 @@ namespace Raven.Server
                     var certUpdate = ServerStore.Cluster.GetItem(context, "server/cert");
                     if (certUpdate != null)
                     {
-                        // we are already in the process of updating the certificate, so we need
-                        // to nudge all the nodes in the cluster to check the replacement state.
-                        // If a node confirmed but failed with the actual replacement (e.g. file permissions)
-                        // this will make sure it will try again in the next round (1 hour).
-                        await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateCommand());
+                        if (certUpdate.TryGet(Constants.Certificates.Confirmations, out int confirmations) == false)
+                            throw new InvalidOperationException($"Expected to get '{Constants.Certificates.Confirmations}' count");
+
+                        var nodesInCluster = ServerStore.GetClusterTopology(context).AllNodes.Count;
+                        if (nodesInCluster > confirmations)
+                        {
+                            // we are already in the process of updating the certificate, so we need
+                            // to nudge all the nodes in the cluster to check the replacement state.
+                            // If a node confirmed but failed with the actual replacement (e.g. file permissions)
+                            // this will make sure it will try again in the next round (1 hour).
+                            await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateCommand());
+                            return;
+                        }
+
+                        if (certUpdate.TryGet(Constants.Certificates.Replaced, out int replaced) == false)
+                            replaced = 0;
+
+                        if (nodesInCluster > replaced)
+                        {
+                            // This is for the case where all nodes confirmed they received the replacement cert but
+                            // not all nodes have made the actual change yet.
+                            await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateReplacementCommand_V2());
+                        }
+
                         return;
                     }
                 }
@@ -555,12 +577,11 @@ namespace Raven.Server
 
         public async Task StartCertificateReplicationAsync(string base64Cert, string name, bool replaceImmediately)
         {
-            // the process of updating a new certificate is the same as deleting database
-            // we first send the certificate to all the nodes, then we get aknowledgments
-            // about that from them, and we replace only when they are are confirmed
-            // to have been successful.
-            // However, if we have less than 3 days for renewing the cert or if 
-            // replaceImmediately is true, we'll replace immediately.
+            // the process of updating a new certificate is the same as deleting a database
+            // we first send the certificate to all the nodes, then we get acknowledgments
+            // about that from them, and we replace only when they are confirmed to have been
+            // successful. However, if we have less than 3 days for renewing the cert or if 
+            // replaceImmediately is true, we'll replace immediately
 
             try
             {
@@ -584,13 +605,34 @@ namespace Raven.Server
                     throw new InvalidOperationException("Failed to load the new certificate.", e);
                 }
 
-                // we first register it as a valid cluster node certificate in the cluster
-                await ServerStore.RegisterServerCertificateInCluster(newCertificate, name);
-
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations("Got new certificate from Lets Encrypt! Starting certificate replication.");
 
-                await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand
+                // During replacement of a cluster certificate, we must have both the new and the old server certificates registered in the server store.
+                // This is needed for trust in the case where a node replaced its own certificate while another node still runs with the old certificate.
+                // Since both nodes use different certificates, they will only trust each other if the certs are registered in the server store.
+                // When the certificate replacement is finished throughout the cluster, we will delete both these entries.
+                await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + newCertificate.Thumbprint, new CertificateDefinition
+                {
+                    Certificate = Convert.ToBase64String(Certificate.Certificate.Export(X509ContentType.Cert)),
+                    Thumbprint = Certificate.Certificate.Thumbprint,
+                    NotAfter = Certificate.Certificate.NotAfter,
+                    Name = "OldServerCert-TemporaryForReplacement",
+                    SecurityClearance = SecurityClearance.ClusterNode
+                }));
+
+                var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + newCertificate.Thumbprint, new CertificateDefinition
+                {
+                    Certificate = Convert.ToBase64String(newCertificate.Export(X509ContentType.Cert)),
+                    Thumbprint = newCertificate.Thumbprint,
+                    NotAfter = newCertificate.NotAfter,
+                    Name = "NewServerCert-TemporaryForReplacement",
+                    SecurityClearance = SecurityClearance.ClusterNode
+                }));
+
+                await ServerStore.Cluster.WaitForIndexNotification(res.Index);
+
+                await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand_V2
                 {
                     Certificate = base64Cert, // includes the private key
                     ReplaceImmediately = replaceImmediately
