@@ -1,8 +1,7 @@
 ﻿using System.Collections.Generic;
-using Raven.Server.Documents.Queries.AST;
 using Sparrow;
 
-namespace Tryouts.GraphAPI
+namespace Raven.Server.Documents.Queries.AST
 {
     public class GraphQuery
     {

@@ -1,8 +1,7 @@
 ﻿using System;
-using Raven.Server.Documents.Queries;
 using Sparrow;
 
-namespace Tryouts.GraphAPI
+namespace Raven.Server.Documents.Queries.AST
 {
     public class PatternMatchExpressEdge : PatternMatchExpression
     {
