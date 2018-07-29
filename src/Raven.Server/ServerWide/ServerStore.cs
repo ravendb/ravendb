@@ -1621,17 +1621,6 @@ namespace Raven.Server.ServerWide
                     }
                 }
             }
-
-            EnsureServerCertificateIsInClusterState($"Server Certificate for Node {_engine.Tag}");
-        }
-
-        public void EnsureServerCertificateIsInClusterState(string name)
-        {
-            if (Server.Certificate?.Certificate == null)
-                return;
-
-            // Also need to register my own certificate in the cluster, for other nodes to trust me
-            AsyncHelpers.RunSync(() => RegisterServerCertificateInCluster(Server.Certificate.Certificate, name));
         }
 
         public Task RegisterServerCertificateInCluster(X509Certificate2 certificateCertificate, string name)
