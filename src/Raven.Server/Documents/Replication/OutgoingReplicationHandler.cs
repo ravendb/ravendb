@@ -470,7 +470,7 @@ namespace Raven.Server.Documents.Replication
                     Database = Destination.Database,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Replication,
                     NodeTag = _parent._server.NodeTag,
-                    ReadResponseAndGetVersion = ReadHeaderResponseAndThrowIfUnAuthorized,
+                    ReadResponseAndGetVersionCallback = ReadHeaderResponseAndThrowIfUnAuthorized,
                     Version = TcpConnectionHeaderMessage.ReplicationTcpVersion
                 };
                 //This will either throw or return acceptable protocol version.
@@ -495,9 +495,10 @@ namespace Raven.Server.Documents.Replication
                 writer.Flush();
             }
         }
-        private int ReadHeaderResponseAndThrowIfUnAuthorized(JsonOperationContext jsonContext, BlittableJsonTextWriter writer, Stream stream, string url)
+        private int ReadHeaderResponseAndThrowIfUnAuthorized(JsonOperationContext context, BlittableJsonTextWriter writer, Stream stream, string url)
         {
             const int timeout = 2 * 60 * 1000;
+
             using (var replicationTcpConnectReplyMessage = _interruptibleRead.ParseToMemory(
                 _connectionDisposed,
                 "replication acknowledge response",
@@ -526,20 +527,26 @@ namespace Raven.Server.Documents.Replication
                             return headerResponse.Version;
                         }
                         //Kindly request the server to drop the connection
-                        jsonContext.Write(writer, new DynamicJsonValue
-                        {
-                            [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database,
-                            [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop.ToString(),
-                            [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
-                            [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.GetOperationTcpVersion(TcpConnectionHeaderMessage.OperationTypes.Drop),
-                            [nameof(TcpConnectionHeaderMessage.Info)] = $"Couldn't agree on replication tcp version ours:{TcpConnectionHeaderMessage.ReplicationTcpVersion} theirs:{headerResponse.Version}"
-                        });
-                        writer.Flush();
+                        SendDropMessage(context, writer, headerResponse);
                         throw new InvalidOperationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     default:
                         throw new InvalidOperationException($"{Destination.FromString()} replied with unknown status {headerResponse.Status}, message:{headerResponse.Message}");
                 }
             }
+        }
+
+        private void SendDropMessage(JsonOperationContext context, BlittableJsonTextWriter writer, TcpConnectionHeaderResponse headerResponse)
+        {
+            context.Write(writer, new DynamicJsonValue
+            {
+                [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database,
+                [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop.ToString(),
+                [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
+                [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.GetOperationTcpVersion(TcpConnectionHeaderMessage.OperationTypes.Drop),
+                [nameof(TcpConnectionHeaderMessage.Info)] =
+                    $"Couldn't agree on replication TCP version ours:{TcpConnectionHeaderMessage.ReplicationTcpVersion} theirs:{headerResponse.Version}"
+            });
+            writer.Flush();
         }
 
         private bool WaitForChanges(int timeout, CancellationToken token)
