@@ -18,7 +18,8 @@ namespace Tryouts
                 with { from Movies } as recommendedMovie
                 with edges(HasGenre) { order by Weight desc limit 1 } as dominantGenre
                 match (lovedMovie)-[dominantGenre]->(Genre)<-[HasGenre(Weight > 0.8)]-(recommendedMovie)
-                select recommendedMovie             
+                select recommendedMovie           
+                
              */
             var queryParser = new QueryParser();
             queryParser.Init("from Movies where Name = 'Star Wars Episode 1'");
@@ -45,6 +46,7 @@ namespace Tryouts
                     {"dominantGenre",
                         new WithEdgesExpression(
                             null,
+                            "HasGenre",
                             new List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)>
                             {
                                 (new FieldExpression(new List<StringSegment>{"Weight"}),OrderByFieldType.Double,false)
@@ -55,14 +57,14 @@ namespace Tryouts
                         new WithEdgesExpression(
                             new BinaryExpression(new FieldExpression(new List<StringSegment>{"Weight"}),
                                                  new ValueExpression("0.8",ValueTokenType.Double),
-                                                 OperatorType.GreaterThan), null
+                                                 OperatorType.GreaterThan),"HasGenre", null
                         )
                     },
                     {"highRating",
                         new WithEdgesExpression(
                             new BinaryExpression(new FieldExpression(new List<StringSegment>{"Rating"}),
                                 new ValueExpression("4",ValueTokenType.Long),
-                                OperatorType.GreaterThanEqual), null
+                                OperatorType.GreaterThanEqual), "HasRating",null
                         )
                     }
 
