@@ -68,7 +68,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(TxInfoResult.ThreadName)] = lowLevelTransaction.CurrentTransactionHolder?.Name,
                 [nameof(TxInfoResult.StartTime)] = lowLevelTransaction.TxStartTime.GetDefaultRavenFormat(isUtc: true),
                 [nameof(TxInfoResult.TotalTime)] = $"{(DateTime.UtcNow - lowLevelTransaction.TxStartTime).TotalMilliseconds} mSecs",
-                [nameof(TxInfoResult.FlushInProgressLockTaken)] = lowLevelTransaction.FlushInProgressLockTaken,
                 [nameof(TxInfoResult.Flags)] = lowLevelTransaction.Flags,
                 [nameof(TxInfoResult.IsLazyTransaction)] = lowLevelTransaction.IsLazyTransaction,
                 [nameof(TxInfoResult.NumberOfModifiedPages)] = lowLevelTransaction.NumberOfModifiedPages,
@@ -84,7 +83,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public string ThreadName;
         public int StartTime;
         public int TotalTime;
-        public bool FlushInProgressLockTaken;
         public TransactionFlags Flags;
         public bool IsLazyTransaction;
         public long NumberOfModifiedPages;
