@@ -17,6 +17,7 @@ namespace Raven.Server.Documents.Queries.AST
 
             Where = @where;
             OrderBy = orderBy;
+            Type = ExpressionType.WithEdge;
         }
 
         public override string ToString() => GetText();
