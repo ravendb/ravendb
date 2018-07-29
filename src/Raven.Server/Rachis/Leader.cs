@@ -196,8 +196,7 @@ namespace Raven.Server.Rachis
                     }
                     RemoteConnection connection = null;
                     connections?.TryGetValue(voter.Key, out connection);
-                    var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value,
-                        _engine.ClusterCertificate, connection);
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value, connection);
                     _voters[voter.Key] = ambasaddor;
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
@@ -218,8 +217,7 @@ namespace Raven.Server.Rachis
                     }
                     RemoteConnection connection = null;
                     connections?.TryGetValue(promotable.Key, out connection);
-                    var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value,
-                        _engine.ClusterCertificate, connection);
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value, connection);
                     _promotables[promotable.Key] = ambasaddor;
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
@@ -241,8 +239,7 @@ namespace Raven.Server.Rachis
                     }
                     RemoteConnection connection = null;
                     connections?.TryGetValue(nonVoter.Key, out connection);
-                    var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter.Key, nonVoter.Value,
-                        _engine.ClusterCertificate, connection);
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter.Key, nonVoter.Value, connection);
                     _nonVoters[nonVoter.Key] = ambasaddor;
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
