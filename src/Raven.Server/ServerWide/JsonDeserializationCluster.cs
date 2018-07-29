@@ -73,6 +73,12 @@ namespace Raven.Server.ServerWide
         public static Func<BlittableJsonReaderObject, ConfirmReceiptServerCertificateCommand> ConfirmReceiptServerCertificateCommand = GenerateJsonDeserializationRoutine<ConfirmReceiptServerCertificateCommand>();
         public static Func<BlittableJsonReaderObject, RecheckStatusOfServerCertificateCommand> RecheckStatusOfServerCertificateCommand = GenerateJsonDeserializationRoutine<RecheckStatusOfServerCertificateCommand>();
 
+        public static Func<BlittableJsonReaderObject, InstallUpdatedServerCertificateCommand_V2> InstallUpdatedServerCertificateCommand_V2 = GenerateJsonDeserializationRoutine<InstallUpdatedServerCertificateCommand_V2>();
+        public static Func<BlittableJsonReaderObject, ConfirmReceiptServerCertificateCommand_V2> ConfirmReceiptServerCertificateCommand_V2 = GenerateJsonDeserializationRoutine<ConfirmReceiptServerCertificateCommand_V2>();
+        public static Func<BlittableJsonReaderObject, ConfirmServerCertificateReplacedCommand_V2> ConfirmServerCertificateReplacedCommand_V2 = GenerateJsonDeserializationRoutine<ConfirmServerCertificateReplacedCommand_V2>();
+        public static Func<BlittableJsonReaderObject, RecheckStatusOfServerCertificateCommand_V2> RecheckStatusOfServerCertificateCommand_V2 = GenerateJsonDeserializationRoutine<RecheckStatusOfServerCertificateCommand_V2>();
+        public static Func<BlittableJsonReaderObject, RecheckStatusOfServerCertificateReplacementCommand_V2> RecheckStatusOfServerCertificateReplacementCommand_V2 = GenerateJsonDeserializationRoutine<RecheckStatusOfServerCertificateReplacementCommand_V2>();
+
         public static Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>> Commands = new Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>>
         {
             [nameof(AddOrUpdateCompareExchangeBatchCommand)] = GenerateJsonDeserializationRoutine<AddOrUpdateCompareExchangeBatchCommand>(),
@@ -81,6 +87,11 @@ namespace Raven.Server.ServerWide
             [nameof(InstallUpdatedServerCertificateCommand)] = GenerateJsonDeserializationRoutine<InstallUpdatedServerCertificateCommand>(),
             [nameof(ConfirmReceiptServerCertificateCommand)] = GenerateJsonDeserializationRoutine<ConfirmReceiptServerCertificateCommand>(),
             [nameof(RecheckStatusOfServerCertificateCommand)] = GenerateJsonDeserializationRoutine<RecheckStatusOfServerCertificateCommand>(),
+            [nameof(InstallUpdatedServerCertificateCommand_V2)] = GenerateJsonDeserializationRoutine<InstallUpdatedServerCertificateCommand_V2>(),
+            [nameof(ConfirmReceiptServerCertificateCommand_V2)] = GenerateJsonDeserializationRoutine<ConfirmReceiptServerCertificateCommand_V2>(),
+            [nameof(ConfirmServerCertificateReplacedCommand_V2)] = GenerateJsonDeserializationRoutine<ConfirmServerCertificateReplacedCommand_V2>(),
+            [nameof(RecheckStatusOfServerCertificateCommand_V2)] = GenerateJsonDeserializationRoutine<RecheckStatusOfServerCertificateCommand_V2>(),
+            [nameof(RecheckStatusOfServerCertificateReplacementCommand_V2)] = GenerateJsonDeserializationRoutine<RecheckStatusOfServerCertificateReplacementCommand_V2>(),
             [nameof(AddOrUpdateCompareExchangeCommand)] = GenerateJsonDeserializationRoutine<AddOrUpdateCompareExchangeCommand>(),
             [nameof(RemoveCompareExchangeCommand)] = GenerateJsonDeserializationRoutine<RemoveCompareExchangeCommand>(),
             [nameof(EditRevisionsConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditRevisionsConfigurationCommand>(),
