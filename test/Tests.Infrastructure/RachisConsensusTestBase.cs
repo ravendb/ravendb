@@ -379,7 +379,7 @@ namespace Tests.Infrastructure
                 {
                     Stream = tcpClient.GetStream(),
 
-                    SupportedFeatures = new TcpConnectionHeaderMessage.SupportedFeatures(TcpConnectionHeaderMessage.NoneBaseLine40000),
+                    SupportedFeatures = new TcpConnectionHeaderMessage.SupportedFeatures(TcpConnectionHeaderMessage.NoneBaseLine),
                     Disconnect = () => tcpClient.Client.Disconnect(false)
                 };
             }
