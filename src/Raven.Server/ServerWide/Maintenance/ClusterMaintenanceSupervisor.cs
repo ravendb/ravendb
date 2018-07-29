@@ -314,7 +314,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }
 
-
             private ClusterMaintenanceConnection ConnectToClientNode(TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout)
             {
                 return AsyncHelpers.RunSync(() => ConnectToClientNodeAsync(tcpConnectionInfo, timeout));
@@ -333,12 +332,11 @@ namespace Raven.Server.ServerWide.Maintenance
                         Database = null,
                         Operation = TcpConnectionHeaderMessage.OperationTypes.Heartbeats,
                         Version = TcpConnectionHeaderMessage.HeartbeatsTcpVersion,
-                        ReadResponseAndGetVersionAsync = SupervisorReadResponseAndGetVersionAsync,
+                        ReadResponseAndGetVersionCallback = SupervisorReadResponseAndGetVersion,
                         Url = tcpConnectionInfo.Url
                     };
-                    supportedFeatures = await TcpNegotiation.NegotiateProtocolVersionAsync(ctx, connection, paramaters).ConfigureAwait(false);
-                    
 
+                    supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(ctx, connection, paramaters);
                     WriteClusterMaintenanceConnectionHeader(writer);
                 }
 
@@ -350,9 +348,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 };
             }
 
-            private async Task<int> SupervisorReadResponseAndGetVersionAsync(JsonOperationContext ctx, BlittableJsonTextWriter writer, Stream stream, string url, CancellationToken ct)
+            private int SupervisorReadResponseAndGetVersion(JsonOperationContext ctx, BlittableJsonTextWriter writer, Stream stream, string url)
             {
-                using (var responseJson = await ctx.ReadForMemoryAsync(stream, _readStatusUpdateDebugString + "/Read-Handshake-Response"))
+                using (var responseJson = ctx.ReadForMemory(stream, _readStatusUpdateDebugString + "/Read-Handshake-Response"))
                 {
                     var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
                     switch (headerResponse.Status)
