@@ -11,6 +11,7 @@ namespace Raven.Server.Documents.Queries.AST
         Method,
         True,
         Negated,
-        Pattern       
+        Pattern,
+        WithEdge
     }
 }

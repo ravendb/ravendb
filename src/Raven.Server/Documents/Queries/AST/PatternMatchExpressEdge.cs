@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Queries.AST
         public StringSegment? EdgeType;
 
         //this is the predicate inside the []
-        //for example, for an edge  -[:HasRating(rating >= 3)]-> 
+        //for example, for an edge  -[HasRating(rating >= 3)]-> 
         //the predicate will have "rating >= 3"
 
         public PatternMatchExpressEdge(StringSegment? @alias, StringSegment? edgeType)
@@ -28,13 +28,11 @@ namespace Raven.Server.Documents.Queries.AST
 
         private string GetText()
         {
-            if (Alias.HasValue && !EdgeType.HasValue)
+            if (Alias.HasValue && EdgeType.HasValue ||
+                Alias.HasValue && !EdgeType.HasValue)
                 return $"[{Alias}]";
 
-            if (!Alias.HasValue && EdgeType.HasValue)
-                return $"[:{EdgeType}]";
-
-            return $"[{Alias}:{EdgeType}]";
+            return $"[{EdgeType}]";
         }
     }
 }

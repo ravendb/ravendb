@@ -1,59 +1,85 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using JetBrains.Annotations;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
 {
-    public class StringQueryVisitor : QueryVisitor
+    public class StringGraphQueryVisitor : GraphQueryVisitor
     {
-        protected readonly StringBuilder _sb;
+        [NotNull]
+        protected readonly StringBuilder Sb;
 
-        public StringQueryVisitor(StringBuilder sb)
+        public StringGraphQueryVisitor([NotNull] StringBuilder sb)
         {
-            _sb = sb;
+            Sb = sb ?? throw new ArgumentNullException(nameof(sb));
         }
-        
-        
+
+        public override void VisitWithClauses(Dictionary<StringSegment, Query> expression)
+        {
+            foreach (var withClause in expression)
+            {
+                Sb.Append("WITH { ");
+                    Visit(withClause.Value);
+                Sb.AppendLine($" }} AS {withClause.Key}");
+            }
+        }
+
+        public override void VisitWithEdgePredicates(Dictionary<StringSegment, WithEdgesExpression> expression)
+        {
+            foreach (var withEdgesClause in expression)
+            {
+                Sb.Append("WITH EDGE { ");
+                    VisitWithEdgesExpression(withEdgesClause.Value);
+                Sb.AppendLine($" }} AS {withEdgesClause.Key}");
+            }
+        }
+
+        public override void VisitPatternMatchClause(PatternMatchExpression expression)
+        {
+            Sb.AppendLine(expression.ToString());
+        }
+
         public override void VisitInclude(List<QueryExpression> includes)
         {
             EnsureLine();
-            _sb.Append("INCLUDE ");
+            Sb.Append("INCLUDE ");
             for (int i = 0; i < includes.Count; i++)
             {
                 if (i != 0)
-                    _sb.Append(", ");
+                    Sb.Append(", ");
                 VisitExpression(includes[i]);
             }
-            _sb.AppendLine();
+            Sb.AppendLine();
         }
 
         public override void VisitUpdate(StringSegment update)
         {
             EnsureLine();
-            _sb.Append("UPDATE { ");
-            _sb.AppendLine(update.Value);
-            _sb.AppendLine("}");
+            Sb.Append("UPDATE { ");
+            Sb.AppendLine(update.Value);
+            Sb.AppendLine("}");
         }
 
         public override void VisitSelectFunctionBody(StringSegment func)
         {
             EnsureLine();
-            _sb.AppendLine("SELECT { ");
-            _sb.AppendLine(func.Value);
-            _sb.AppendLine("}");
+            Sb.AppendLine("SELECT { ");
+            Sb.AppendLine(func.Value);
+            Sb.AppendLine("}");
         }
 
         public override void VisitSelect(List<(QueryExpression Expression, StringSegment? Alias)> @select, bool isDistinct)
         {
             EnsureLine();
-            _sb.Append("SELECT ");
+            Sb.Append("SELECT ");
 
             if (isDistinct)
-                _sb.Append("DISTINCT ");
+                Sb.Append("DISTINCT ");
             
             VisitExpressionList(select);
-            _sb.AppendLine();
+            Sb.AppendLine();
         }
 
         private void VisitExpressionList(List<(QueryExpression Expression, StringSegment? Alias)> expressions)
@@ -61,12 +87,12 @@ namespace Raven.Server.Documents.Queries.AST
             for (int i = 0; i < expressions.Count; i++)
             {
                 if (i != 0)
-                    _sb.Append(", ");
+                    Sb.Append(", ");
                 VisitExpression(expressions[i].Expression);
                 if (expressions[i].Alias != null)
                 {
-                    _sb.Append(" AS ");
-                    _sb.Append(expressions[i].Alias.Value);
+                    Sb.Append(" AS ");
+                    Sb.Append(expressions[i].Alias.Value);
                 }
             }
         }
@@ -74,37 +100,37 @@ namespace Raven.Server.Documents.Queries.AST
         public override void VisitLoad(List<(QueryExpression Expression, StringSegment? Alias)> load)
         {
             EnsureLine();
-            _sb.Append("LOAD ");
+            Sb.Append("LOAD ");
             VisitExpressionList(load);
         }
 
         public override void VisitOrderBy(List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy)
         {
             EnsureLine();
-            _sb.Append("ORDER BY ");
+            Sb.Append("ORDER BY ");
             for (int i = 0; i < orderBy.Count; i++)
             {
                 if (i != 0)
-                    _sb.Append(", ");
+                    Sb.Append(", ");
                 VisitExpression(orderBy[i].Expression);
                 switch (orderBy[i].FieldType)
                 {
                     case OrderByFieldType.String:
-                        _sb.Append(" AS string");
+                        Sb.Append(" AS string");
                         break;
                     case OrderByFieldType.Long:
-                        _sb.Append(" AS long");
+                        Sb.Append(" AS long");
                         break;
                     case OrderByFieldType.Double:
-                        _sb.Append(" AS double");
+                        Sb.Append(" AS double");
                         break;
                     case OrderByFieldType.AlphaNumeric:
-                        _sb.Append(" AS alphanumeric");
+                        Sb.Append(" AS alphanumeric");
                         break;
                 }
                 if (orderBy[i].Ascending == false)
                 {
-                    _sb.Append(" DESC");
+                    Sb.Append(" DESC");
                 }
             }
         }
@@ -112,38 +138,38 @@ namespace Raven.Server.Documents.Queries.AST
         public override void VisitDeclaredFunction(StringSegment name, string func)
         {
             EnsureLine();
-            _sb.Append("DECLARE function ").Append(name).AppendLine(func).AppendLine();
+            Sb.Append("DECLARE function ").Append(name).AppendLine(func).AppendLine();
         }
 
         public override void VisitWhereClause(QueryExpression where)
         {
             EnsureSpace();
-            _sb.Append("WHERE ");
+            Sb.Append("WHERE ");
             base.VisitWhereClause(where);
-            _sb.AppendLine();
+            Sb.AppendLine();
         }
 
-        public override void VisitNegatedExpression(NegatedExpression expr)
+        public override void VisitNegatedExpresson(NegatedExpression expr)
         {
-            _sb.Append("NOT (");
+            Sb.Append("NOT (");
             VisitExpression(expr.Expression);
-            _sb.Append(")");
+            Sb.Append(")");
         }
 
         public override void VisitCompoundWhereExpression(BinaryExpression where)
         {
             EnsureSpace();
-            _sb.Append("(");
+            Sb.Append("(");
 
             VisitExpression(where.Left);
 
             switch (where.Operator)
             {
                 case OperatorType.And:
-                    _sb.Append(" AND ");
+                    Sb.Append(" AND ");
                     break;
                 case OperatorType.Or:
-                    _sb.Append(" OR ");
+                    Sb.Append(" OR ");
                     break;
                 default:
                     InvalidOperatorTypeForWhere(where);
@@ -152,7 +178,7 @@ namespace Raven.Server.Documents.Queries.AST
 
             VisitExpression(where.Right);
 
-            _sb.Append(")");
+            Sb.Append(")");
         }
 
         private static void InvalidOperatorTypeForWhere(BinaryExpression where)
@@ -163,30 +189,30 @@ namespace Raven.Server.Documents.Queries.AST
         public override void VisitMethod(MethodExpression expr)
         {
             EnsureSpace();
-            _sb.Append(expr.Name.Value);
-            _sb.Append("(");
+            Sb.Append(expr.Name.Value);
+            Sb.Append("(");
             for (var index = 0; index < expr.Arguments.Count; index++)
             {
                 if (index != 0)
-                    _sb.Append(", ");
+                    Sb.Append(", ");
                 VisitExpression(expr.Arguments[index]);
             }
-            _sb.Append(")");
+            Sb.Append(")");
         }
 
         public override void VisitValue(ValueExpression expr)
         {
             EnsureSpace();
             if (expr.Value == ValueTokenType.String)
-                _sb.Append("'");
+                Sb.Append("'");
 
             if (expr.Value == ValueTokenType.Parameter)
-                _sb.Append("$");
+                Sb.Append("$");
             
-            _sb.Append(expr.Token.Value.Replace("'", "\\'"));
+            Sb.Append(expr.Token.Value.Replace("'", "\\'"));
 
             if (expr.Value == ValueTokenType.String)
-                _sb.Append("'");
+                Sb.Append("'");
         }
 
         public override void VisitIn(InExpression expr)
@@ -195,16 +221,16 @@ namespace Raven.Server.Documents.Queries.AST
 
             VisitExpression(expr.Source);
 
-            _sb.Append(" IN (");
+            Sb.Append(" IN (");
 
             for (var index = 0; index < expr.Values.Count; index++)
             {
                 if (index != 0)
-                    _sb.Append(", ");
+                    Sb.Append(", ");
                 VisitExpression(expr.Values[index]);
             }
 
-            _sb.Append(")");
+            Sb.Append(")");
         }
 
         public override void VisitBetween(BetweenExpression expr)
@@ -213,33 +239,33 @@ namespace Raven.Server.Documents.Queries.AST
 
             VisitExpression(expr.Source);
 
-            _sb.Append(" BETWEEN ");
+            Sb.Append(" BETWEEN ");
 
             VisitExpression(expr.Min);
 
-            _sb.Append(" AND ");
+            Sb.Append(" AND ");
 
             VisitExpression(expr.Max);
         }
 
         private void EnsureSpace()
         {
-            if (_sb.Length == 0)
+            if (Sb.Length == 0)
                 return;
-            var c = _sb[_sb.Length - 1];
+            var c = Sb[Sb.Length - 1];
             if (char.IsWhiteSpace(c) || c == '(')
                 return;
-            _sb.Append(" ");
+            Sb.Append(" ");
         }
 
         private void EnsureLine()
         {
-            if (_sb.Length == 0)
+            if (Sb.Length == 0)
                 return;
-            if (_sb[_sb.Length - 1] == '\n')
+            if (Sb[Sb.Length - 1] == '\n')
                 return;
             
-            _sb.AppendLine();
+            Sb.AppendLine();
         }
 
         public override void VisitField(FieldExpression field)
@@ -251,23 +277,23 @@ namespace Raven.Server.Documents.Queries.AST
 
                 if (quote)
                 {
-                    _sb.Append("'");
-                    _sb.Append(field.Compound[i].Value.Replace("'", "\\'"));
-                    _sb.Append("'");
+                    Sb.Append("'");
+                    Sb.Append(field.Compound[i].Value.Replace("'", "\\'"));
+                    Sb.Append("'");
                 }
                 else
                 {
-                    _sb.Append(field.Compound[i].Value);
+                    Sb.Append(field.Compound[i].Value);
                 }
                 if (i + 1 != field.Compound.Count)
-                    _sb.Append(".");
+                    Sb.Append(".");
             }
         }
 
         public override void VisitTrue()
         {
             EnsureSpace();
-            _sb.Append("true");
+            Sb.Append("true");
         }
 
         public override void VisitSimpleWhereExpression(BinaryExpression expr)
@@ -278,22 +304,22 @@ namespace Raven.Server.Documents.Queries.AST
             switch (expr.Operator)
             {
                 case OperatorType.Equal:
-                    _sb.Append(" = ");
+                    Sb.Append(" = ");
                     break;
                 case OperatorType.NotEqual:
-                    _sb.Append(" ~= ");
+                    Sb.Append(" ~= ");
                     break;
                 case OperatorType.LessThan:
-                    _sb.Append(" < ");
+                    Sb.Append(" < ");
                     break;
                 case OperatorType.GreaterThan:
-                    _sb.Append(" > ");
+                    Sb.Append(" > ");
                     break;
                 case OperatorType.LessThanEqual:
-                    _sb.Append(" <= ");
+                    Sb.Append(" <= ");
                     break;
                 case OperatorType.GreaterThanEqual:
-                    _sb.Append(" >= ");
+                    Sb.Append(" >= ");
                     break;
                 default:
                     InvalidOperatorTypeForWhere(expr);
@@ -306,7 +332,7 @@ namespace Raven.Server.Documents.Queries.AST
         public override void VisitGroupByExpression(List<(QueryExpression Expression, StringSegment? Alias)> expressions)
         {
             EnsureLine();
-            _sb.Append("GROUP BY ");
+            Sb.Append("GROUP BY ");
 
             VisitExpressionList(expressions);
         }
@@ -331,21 +357,22 @@ namespace Raven.Server.Documents.Queries.AST
         public override void VisitFromClause(FieldExpression from, StringSegment? alias, QueryExpression filter, bool index)
         {
              EnsureLine();
-            _sb.Append("FROM ");
+            Sb.Append("FROM ");
 
             if (index)
-                _sb.Append("INDEX ");
+                Sb.Append("INDEX ");
 
             VisitField(from);
 
             if (filter != null)
             {
-                _sb.Append("(");
+                Sb.Append("(");
                 
                 VisitExpression(filter);
                 
-                _sb.Append(")");
+                Sb.Append(")");
             }
         }
+
     }
 }
