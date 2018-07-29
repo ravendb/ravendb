@@ -5,7 +5,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
 {
-    public class FromClause
+    public struct FromClause
     {
         public FieldExpression From { get; set; }
         public StringSegment? Alias { get; set; }
