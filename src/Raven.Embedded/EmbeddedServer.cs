@@ -31,10 +31,13 @@ namespace Raven.Embedded
         private readonly ConcurrentDictionary<string, Lazy<Task<IDocumentStore>>> _documentStores = new ConcurrentDictionary<string, Lazy<Task<IDocumentStore>>>();
         private X509Certificate2 _certificate;
 
+        private int _gracefullyExitTimeout;
+
         public void StartServer(ServerOptions options = null)
         {
             options = options ?? ServerOptions.Default;
 
+            _gracefullyExitTimeout = options.GracefullyExitTimeout;
             var startServer = new Lazy<Task<(Uri ServerUrl, Process ServerProcess)>>(() => RunServer(options));
             if (Interlocked.CompareExchange(ref _serverTask, startServer, null) != null)
                 throw new InvalidOperationException("The server was already started");
@@ -79,6 +82,19 @@ namespace Raven.Embedded
         public Task<IDocumentStore> GetDocumentStoreAsync(string database, CancellationToken token = default)
         {
             return GetDocumentStoreAsync(new DatabaseOptions(database), token);
+        }
+
+        public void Quit()
+        {
+            var (s, process) = _serverTask.Value.Result;
+            using (var stream = process.StandardInput)
+            {
+                stream.Write("q\ny\n");
+                //stream.Write("y\n");
+                //stream.Flush();
+            }
+            Console.ReadLine();
+
         }
 
         public async Task<IDocumentStore> GetDocumentStoreAsync(DatabaseOptions options, CancellationToken token = default)
@@ -144,10 +160,22 @@ namespace Raven.Embedded
                 return;
 
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Killing global server PID { process.Id }.");
+                _logger.Info($"Try shutdown server PID { process.Id } gracefully.");
+
+            using (var inputStream = process.StandardInput)
+            {
+                inputStream.WriteAsync($"q{Environment.NewLine}y{Environment.NewLine}");
+            }
+
+            process.WaitForExit(_gracefullyExitTimeout * 1000);
+            if (process.HasExited)
+                return;
 
             try
             {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Killing global server PID { process.Id }.");
+
                 process.Kill();
             }
             catch (Exception e)

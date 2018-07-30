@@ -30,6 +30,7 @@ namespace Raven.Embedded
 
             options.CommandLineArgs.Add($"--License.Eula.Accepted={options.AcceptEula}");
             options.CommandLineArgs.Add("--Setup.Mode=None");
+            options.CommandLineArgs.Add("--non-console");
             options.CommandLineArgs.Add($"--DataDir={CommandLineArgumentEscaper.EscapeSingleArg(options.DataDirectory)}");
 
             if (options.Security != null)
