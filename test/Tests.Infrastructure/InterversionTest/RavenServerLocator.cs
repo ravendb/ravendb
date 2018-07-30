@@ -1,4 +1,4 @@
-namespace Raven.TestDriver
+namespace Tests.Infrastructure.InterversionTest
 {
     public abstract class RavenServerLocator
     {

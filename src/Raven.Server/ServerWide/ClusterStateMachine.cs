@@ -964,11 +964,16 @@ namespace Raven.Server.ServerWide
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
-            return slice.Content.Match(Items.Content)
-                    || slice.Content.Match(CompareExchange.Content)
-                    || slice.Content.Match(Identities.Content)
-                    || slice.Content.Match(TransactionCommands.Content) 
-                    || slice.Content.Match(TransactionCommandsIndex.Content);
+            var baseVersion = slice.Content.Match(Items.Content)
+                            || slice.Content.Match(CompareExchange.Content)
+                            || slice.Content.Match(Identities.Content);
+
+            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= ClusterCommandsVersionManager.Base41CommandsVersion)
+                return baseVersion
+                       || slice.Content.Match(TransactionCommands.Content)
+                       || slice.Content.Match(TransactionCommandsIndex.Content);
+
+            return baseVersion;
         }
 
         public override void Initialize(RachisConsensus parent, TransactionOperationContext context)
@@ -1585,7 +1590,7 @@ namespace Raven.Server.ServerWide
 
         public override async Task OnSnapshotInstalledAsync(long lastIncludedIndex, ServerStore serverStore)
         {
-            using(serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction())
             {
                 // lets read all the certificate keys from the cluster, and delete the matching ones from the local state

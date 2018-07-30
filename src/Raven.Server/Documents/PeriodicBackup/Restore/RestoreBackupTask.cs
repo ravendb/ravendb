@@ -26,6 +26,7 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
 using DatabaseSmuggler = Raven.Client.Documents.Smuggler.DatabaseSmuggler;
@@ -42,6 +43,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private readonly OperationCancelToken _operationCancelToken;
         private List<string> _filesToRestore;
         private bool _hasEncryptionKey;
+        private readonly bool _restoringToDefaultDataDirectory;
 
         public RestoreBackupTask(ServerStore serverStore,
             RestoreBackupConfiguration restoreConfiguration,
@@ -53,7 +55,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             _nodeTag = nodeTag;
             _operationCancelToken = operationCancelToken;
 
-            ValidateArguments();
+            ValidateArguments(out _restoringToDefaultDataDirectory);
         }
 
         public async Task<IOperationResult> Execute(Action<IOperationProgress> onProgress)
@@ -118,8 +120,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 if (databaseRecord.Settings == null)
                     databaseRecord.Settings = new Dictionary<string, string>();
 
-                databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false";
-                databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = _restoreConfiguration.DataDirectory;
+                var runInMemoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.RunInMemory);
+                databaseRecord.Settings.Remove(runInMemoryConfigurationKey);
+                if (_serverStore.Configuration.Core.RunInMemory)
+                    databaseRecord.Settings[runInMemoryConfigurationKey] = "false";
+
+                var dataDirectoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.DataDirectory);
+                databaseRecord.Settings.Remove(dataDirectoryConfigurationKey); // removing because we want to restore to given location, not to serialized in backup one
+                if (_restoringToDefaultDataDirectory == false)
+                    databaseRecord.Settings[dataDirectoryConfigurationKey] = _restoreConfiguration.DataDirectory;
 
                 if (_hasEncryptionKey)
                 {
@@ -318,7 +327,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             result.CompareExchange.Processed = true;
         }
 
-        private void ValidateArguments()
+        private void ValidateArguments(out bool restoringToDefaultDataDirectory)
         {
             if (string.IsNullOrWhiteSpace(_restoreConfiguration.BackupLocation))
                 throw new ArgumentException("Backup location can't be null or empty");
@@ -335,6 +344,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             if (hasRestoreDataDirectory == false)
                 _restoreConfiguration.DataDirectory = GetDataDirectory();
 
+            restoringToDefaultDataDirectory = IsDefaultDataDirectory(_restoreConfiguration.DataDirectory, _restoreConfiguration.DatabaseName);
+
             _filesToRestore = GetFilesForRestore(_restoreConfiguration.BackupLocation);
             if (_filesToRestore.Count == 0)
                 throw new ArgumentException("No files to restore from the backup location, " +
@@ -347,6 +358,18 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 if (key.Length != 256 / 8)
                     throw new InvalidOperationException($"The size of the encryption key must be 256 bits, but was {key.Length * 8} bits.");
             }
+        }
+
+        private bool IsDefaultDataDirectory(string dataDirectory, string databaseName)
+        {
+            var defaultDataDirectory = RavenConfiguration.GetDataDirectoryPath(
+                _serverStore.Configuration.Core,
+                databaseName,
+                ResourceType.Database);
+
+            return PlatformDetails.RunningOnPosix == false
+                ? string.Equals(defaultDataDirectory, dataDirectory, StringComparison.OrdinalIgnoreCase)
+                : string.Equals(defaultDataDirectory, dataDirectory, StringComparison.Ordinal);
         }
 
         private string GetDataDirectory()

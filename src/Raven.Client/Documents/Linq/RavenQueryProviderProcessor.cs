@@ -1688,7 +1688,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             var parameterName = lambdaExpression.Parameters[0].Name;
 
-            if (parameterName.StartsWith(LinqPathProvider.TransparentIdentifier))
+            if (parameterName.StartsWith(JavascriptConversionExtensions.TransparentIdentifier))
             {
                 _insideLet++;
                 return;
@@ -2351,7 +2351,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 // if memberExpression is <>h__TransparentIdentifierN...TransparentIdentifier1.TransparentIdentifier0.something
                 // then the load-argument is 'something' which is not a real path (a real path should be 'x.something')
-                // but a name of a variable that was previously defined in a 'let' statment.
+                // but a name of a variable that was previously defined in a 'let' statement.
 
                 var param = memberExpression.Expression is ParameterExpression parameter
                     ? parameter.Name
@@ -2361,15 +2361,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                 if (param == "<>h__TransparentIdentifier0" || _fromAlias.StartsWith(DefaultAliasPrefix) || _aliasKeywords.Contains(param))
                 {
-                    // (1) the load argument was defined in a previous let statment, i.e :
+                    // (1) the load argument was defined in a previous let statement, i.e :
                     //     let detailId = "details/1-A" 
-                    //     let deatil = session.Load<Detail>(detailId)
+                    //     let detail = session.Load<Detail>(detailId)
                     //     ...
-                    // (2) OR the from-alias was a reserved word and we have a let statment,
+                    // (2) OR the from-alias was a reserved word and we have a let statement,
                     //     so we changed it to "__ravenDefaultAlias".
                     //     the load-argument might be a path with respect to the original from-alias name.
                     // (3) OR the parameter name of the load argument is a reserved word
-                    //     that was defined in a previous let statment, i.e : 
+                    //     that was defined in a previous let statement, i.e : 
                     //     let update = session.Load<Order>("orders/1-A")
                     //     let employee = session.Load<Employee>(update.Employee)
 

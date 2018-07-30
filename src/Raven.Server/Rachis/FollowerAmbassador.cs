@@ -9,6 +9,7 @@ using System.Threading;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -51,7 +52,7 @@ namespace Raven.Server.Rachis
             {
                 if (_statusMessage == value)
                     return;
-                
+
                 _statusMessage = value;
                 _engine.NotifyTopologyChange();
             }
@@ -113,7 +114,7 @@ namespace Raven.Server.Rachis
         {
             Interlocked.Exchange(ref _lastReplyFromFollower, DateTime.UtcNow.Ticks);
         }
-        
+
         public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, X509Certificate2 certificate, RemoteConnection connection = null)
         {
             _engine = engine;
@@ -130,7 +131,7 @@ namespace Raven.Server.Rachis
             _debugName = $"Follower Ambassador for {_tag} in term {_term} (id:{id})";
             _debugRecorder = _engine.InMemoryDebug.GetNewRecorder(_debugName);
         }
-        
+
         public void UpdateLeaderWake(ManualResetEvent wakeLeader)
         {
             _wakeLeader = wakeLeader;
@@ -721,7 +722,9 @@ namespace Raven.Server.Rachis
                 _connection.Send(context, lln);
 
                 var llr = _connection.Read<LogLengthNegotiationResponse>(context);
-                FollowerCommandsVersion = llr.CommandsVersion ?? 400;
+
+                FollowerCommandsVersion = GetFollowerVersion(llr);
+                ClusterCommandsVersionManager.SetMinimalClusterVersion(FollowerCommandsVersion);
 
                 if (_engine.Log.IsInfoEnabled)
                 {
@@ -804,7 +807,15 @@ namespace Raven.Server.Rachis
                 } while (true);
             }
         }
-        
+
+        private static int GetFollowerVersion(LogLengthNegotiationResponse llr)
+        {
+            var version = llr.CommandsVersion ?? ClusterCommandsVersionManager.Base40CommandsVersion;
+            if (version == 400)
+                return ClusterCommandsVersionManager.Base40CommandsVersion;
+            return version;
+        }
+
         private void SendHello(TransactionOperationContext context, ClusterTopology clusterTopology)
         {
             UpdateLastSend("Hello");
@@ -829,7 +840,7 @@ namespace Raven.Server.Rachis
         {
             UpdateLastMatchFromFollower(0);
             _followerAmbassadorLongRunningOperation =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, ToString()); 
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, ToString());
         }
 
         public override string ToString()
@@ -852,7 +863,7 @@ namespace Raven.Server.Rachis
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"{ToString()}: Waited for a full second for thread {_followerAmbassadorLongRunningOperation.ManagedThreadId} ({(_followerAmbassadorLongRunningOperation.Join(0)?"Running":"Finished")}) to close, disposing connection and trying");
+                        _engine.Log.Info($"{ToString()}: Waited for a full second for thread {_followerAmbassadorLongRunningOperation.ManagedThreadId} ({(_followerAmbassadorLongRunningOperation.Join(0) ? "Running" : "Finished")}) to close, disposing connection and trying");
                     }
                     // the thread may have create a new connection, so need
                     // to dispose that as well

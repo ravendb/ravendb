@@ -1,12 +1,7 @@
-﻿using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using Raven.TestDriver;
+﻿using System.IO;
 using Sparrow.Platform;
-using Tests.Infrastructure.InterversionTest;
 
-namespace Tests.Infrastructure
+namespace Tests.Infrastructure.InterversionTest
 {
     public class ConfigurableRavenServerLocator : RavenServerLocator
     {

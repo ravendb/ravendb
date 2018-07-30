@@ -29,20 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Raven.Client\Raven.Client.csproj" />
-  </ItemGroup>
-  
-
-  <ItemGroup>
-    <ProjectReference Include="..\Sparrow\Sparrow.csproj" PrivateAssets="All" />
-  </ItemGroup>
-
-  <ItemGroup Condition="$(TargetFramework) == 'netstandard1.3'">
-    <PackageReference Include="System.AppDomain" Version="2.0.11" />
-  </ItemGroup>
-
-  <ItemGroup Condition="$(TargetFramework) == 'netstandard2.0'">
-    <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
+    <ProjectReference Include="..\Raven.Embedded\Raven.Embedded.csproj" />
   </ItemGroup>
 
 </Project>
