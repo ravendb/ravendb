@@ -50,14 +50,22 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (recursive == true)
                     ThrowParseException("With clause is not allow inside inner query");
 
-                (var success, var error) = q.TryAddWithClause(With());
-                if (success == false)
+                if (Scanner.TryScan("EDGES"))
                 {
-                    ThrowParseException($"Error adding with clause, error:{error}");
+                    
                 }
+                else
+                {
+                    (var success, var error) = q.TryAddWithClause(With());
+                    if (success == false)
+                    {
+                        ThrowParseException($"Error adding with clause, error:{error}");
+                    }
+                }
+                
             }
-            //TODO:Need to agree on what we support for graph queries
-            if (q.WithClauses == null)
+
+            if (q.GraphQuery == null)
             {
                 q.From = FromClause();
 
@@ -74,7 +82,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     ThrowParseException("Missing a 'match' clause after 'with' caluse");
                 }
 
-                q.MatchClauses = GraphMatch();
+                q.GraphQuery.MatchClause = GraphMatch();
             }
 
             if (Scanner.TryScan("ORDER BY"))
@@ -121,27 +129,30 @@ namespace Raven.Server.Documents.Queries.Parser
             return q;
         }
 
-        private MatchClause GraphMatch()
+        private PatternMatchExpression GraphMatch()
         {
-            while (true)
+            throw new NotImplementedException();
+        }
+
+        private (Query Query, StringSegment Allias) With()
+        {
+            if (Scanner.TryScan("edges"))
             {
 
             }
-        }
 
-        private WithClause With()
-        {
             if (Scanner.TryScan('{') == false)
                 throw new InvalidQueryException("With keyword should be followed with either 'edges' or '{' ", Scanner.Input, null);
+
             var query = Parse(recursive:true);
+
             if (Scanner.TryScan('}') == false)
                 throw new InvalidQueryException("With clause contains invalid body", Scanner.Input, null);
-            if(Alias(true, out var allias) == false)
+
+            if (Alias(true, out var allias) == false || allias.HasValue == false)
                 throw new InvalidQueryException("With clause must contain allias but none was provided", Scanner.Input, null);
-            var with = new WithClause();
-            query.From.Alias = allias;
-            with.Query = query;
-            return with;
+
+            return (query, allias.Value);
         }
 
         private static Esprima.Ast.Program ValidateScript(string script)
