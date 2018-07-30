@@ -41,7 +41,11 @@ namespace Raven.Server.Documents.Queries.AST
         {
             if (GraphQuery == null)
             {
-                GraphQuery = new GraphQuery();
+                GraphQuery = new GraphQuery();                
+            }
+
+            if (GraphQuery.WithDocumentQueries == null)
+            {
                 GraphQuery.WithDocumentQueries = new Dictionary<StringSegment, Query>();
             }
 
@@ -49,6 +53,25 @@ namespace Raven.Server.Documents.Queries.AST
                     return (false, $"Allias {withClause.Allias} is already in use on a diffrent 'With' clause");
 
             GraphQuery.WithDocumentQueries.Add(withClause.Allias, withClause.Query);
+            return (true, null);
+        }
+
+        public (bool Success, string Error) TryAddWithEdgePredicates((WithEdgesExpression Expression, StringSegment Allias) WithEdges)
+        {
+            if (GraphQuery == null)
+            {
+                GraphQuery = new GraphQuery();               
+            }
+
+            if (GraphQuery.WithEdgePredicates == null)
+            {
+                GraphQuery.WithEdgePredicates = new Dictionary<StringSegment, WithEdgesExpression>();
+            }
+
+            if (GraphQuery.WithEdgePredicates.ContainsKey(WithEdges.Allias))
+                return (false, $"Allias {WithEdges.Allias} is already in use on a diffrent 'With' clause");
+
+            GraphQuery.WithEdgePredicates.Add(WithEdges.Allias, WithEdges.Expression);
             return (true, null);
         }
     }
