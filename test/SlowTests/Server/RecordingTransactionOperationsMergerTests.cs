@@ -8,11 +8,14 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Voron.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
@@ -54,43 +57,49 @@ namespace SlowTests.Server
         }
 
         [Fact]
-        public void Attachments()
+        public async Task RecordingPutAttachmentCommand()
         {
-            //Todo To remove after the test pass
-            //            var dateString = Path.GetFileName(NewDataPath($"record") + ".json");
-            //            var filePath = Path.Combine(@"C:\Records", dateString);
+            //Arrange
+            var recordFilePath = NewDataPath();
 
-            var filePath = NewDataPath();
+            const string bufferContent = "Menahem";
+            var expected = Encoding.ASCII.GetBytes(bufferContent);
+            var attachmentStream = new MemoryStream(expected);
 
-            var album = new Album
-            {
-                Name = "Holidays",
-                Description = "Holidays travel pictures of the all family",
-                Tags = new[] { "Holidays Travel", "All Family" },
-            };
+            var user = new User { Name = "Gershon" };
+            const string id = "users/1";
 
+            const string fileName = "someFileName";
+
+            //Recording
             using (var store = GetDocumentStore())
             {
-                store.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
 
-                using (var session = store.OpenSession())
-                using (var picture = File.Open(@"C:\Records\Igal.jpg", FileMode.Open))
+                await store.Commands().PutAsync(id, null, user, new Dictionary<string, object>
                 {
-                    session.Store(album, "albums/1");
+                    {"@collection", "Users"}
+                });
 
-                    session.Advanced.Attachments.Store("albums/1", "Igal.jpg", picture, "image/jpeg");
+                store.Operations.Send(new PutAttachmentOperation(id, fileName, attachmentStream, "application/pdf"));
 
-                    session.SaveChanges();
-
-                }
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
 
+            //Replay
             using (var store = GetDocumentStore())
-            using (var replayStream = new FileStream(filePath, FileMode.Open))
+            using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
+
+//                WaitForUserToContinueTheTest(store);
+                var attachmentResult = store.Operations.Send(new GetAttachmentOperation(id, fileName, AttachmentType.Document, null));
+                var actual = attachmentResult.Stream.ReadData();
+
+                //Assert
+                Assert.Equal(actual, expected);
             }
+
         }
 
         [Fact]

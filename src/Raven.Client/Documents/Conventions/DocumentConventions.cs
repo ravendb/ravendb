@@ -707,6 +707,7 @@ namespace Raven.Client.Documents.Conventions
             jsonSerializer.Converters.Add(JsonIMetadataDictionaryConverter.Instance);
             jsonSerializer.Converters.Add(BlittableJsonConverter.Instance);
             jsonSerializer.Converters.Add(LazyStringValueJsonConverter.Instance);
+            jsonSerializer.Converters.Add(StreamConverter.Instance);
 
             return jsonSerializer;
         }

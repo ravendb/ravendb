@@ -304,7 +304,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        public class MergedPutAttachmentCommand : TransactionOperationsMerger.MergedTransactionCommand
+        public class MergedPutAttachmentCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
         {
             public string DocumentId;
             public string Name;
@@ -329,6 +329,19 @@ namespace Raven.Server.Documents.Handlers
                 }
                 return 1;
             }
+
+            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto()
+            {
+                return new MergedPutAttachmentCommandDto
+                {
+                    DocumentId = DocumentId,
+                    Name = Name,
+                    ExpectedChangeVector = ExpectedChangeVector,
+                    ContentType = ContentType,
+                    Stream = Stream,
+                    Hash = Hash
+                };
+            }
         }
 
         private class MergedDeleteAttachmentCommand : TransactionOperationsMerger.MergedTransactionCommand
@@ -351,6 +364,30 @@ namespace Raven.Server.Documents.Handlers
                 }
                 return 1;
             }
+        }
+    }
+
+    public class MergedPutAttachmentCommandDto : TransactionOperationsMerger.IReplayableCommandDto<AttachmentHandler.MergedPutAttachmentCommand>
+    {
+        public string DocumentId;
+        public string Name;
+        public LazyStringValue ExpectedChangeVector;
+        public string ContentType;
+        public Stream Stream;
+        public string Hash;
+
+        public AttachmentHandler.MergedPutAttachmentCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
+        {
+            return new AttachmentHandler.MergedPutAttachmentCommand
+            {
+                DocumentId = DocumentId,
+                Name = Name,
+                ExpectedChangeVector = ExpectedChangeVector,
+                ContentType = ContentType,
+                Stream = Stream,
+                Hash = Hash,
+                Database = database
+            };
         }
     }
 }
