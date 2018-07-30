@@ -485,7 +485,7 @@ namespace Raven.Server
                     return;
 
                 if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion < ClusterCommandsVersionManager.ClusterCommandsVersions[nameof(ConfirmServerCertificateReplacedCommand_V2)])
-                    throw new ClusterNodesVersionMismatchException("You are trying to replace the cluster certificate. The majority of nodes in the cluster are running an older server version than this command requires. ");
+                    throw new ClusterNodesVersionMismatchException("It is not possible to refresh/replace the cluster certificate. Please make sure all the nodes of the cluster run the same version.");
 
                 // we need to see if there is already an ongoing process
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
