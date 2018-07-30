@@ -179,8 +179,8 @@ namespace Raven.Client.Documents.Operations.ETL
                             if (deleteBehaviorFunction.Groups.Count != 2)
                             {
                                 errors.Add(
-                                    "Invalid load counters behavior function. It is expected to have the following signature: " +
-                                    "loadCountersOf<CollectionName>Behavior(docId, counterName) and return 'true' if counter should be loaded to a destination");
+                                    "Invalid delete documents behavior function. It is expected to have the following signature: " +
+                                    "deleteDocumentsOf<CollectionName>Behavior(docId) and return 'true' if document deletion should be sent to a destination");
                             }
 
                             var function = deleteBehaviorFunction.Groups[0].Value;
