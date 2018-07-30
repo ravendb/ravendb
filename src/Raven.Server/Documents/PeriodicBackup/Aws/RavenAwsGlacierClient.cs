@@ -226,7 +226,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 return number;
             }
 
-            return Bits.NextPowerOf2(number);
+            return Bits.PowerOf2(number);
         }
 
         private async Task<string> CompleteMultiUpload(

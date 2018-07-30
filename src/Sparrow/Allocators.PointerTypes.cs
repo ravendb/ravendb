@@ -87,9 +87,14 @@ namespace Sparrow
         public string Describe()
         {
             if (this.IsValid)
-                return $"{{{(long)this.Ptr:X64}|{this.Size}}}";
+                return $"{{{(long)this.Ptr:X32}|{this.Size}}}";
 
             return "{null}";
+        }
+
+        public override string ToString()
+        {
+            return Describe();
         }
     }
 
@@ -203,9 +208,14 @@ namespace Sparrow
         public string Describe()
         {
             if (this.IsValid)
-                return $"{{{(long)this.Ptr:X64}|{this.Size}|{this.SizeAsBytes}b}}";
+                return $"{{{(long)this.Ptr:X32}|{this.Size}|{this.SizeAsBytes}b}}";
 
             return "{null}";
+        }
+
+        public override string ToString()
+        {
+            return Describe();
         }
 
         [Conditional("DEBUG")]
@@ -310,9 +320,14 @@ namespace Sparrow
         public string Describe()
         {
             if (this.IsValid)
-                return $"{{{(long)this.Ptr:X64}|{this.Size}|{this.BlockSize}}}";
+                return $"{{{(long)this.Ptr:X32}|{this.Size}|{this.BlockSize}}}";
 
             return "{null}";
+        }
+
+        public override string ToString()
+        {
+            return Describe();
         }
 
         public static implicit operator BlockPointer(Pointer ptr)
@@ -451,6 +466,11 @@ namespace Sparrow
                 return $"{{{(long)this.Ptr:X64}|{this.Size}|{this.BlockSize}|{this.SizeAsBytes}b}}";
 
             return "{null}";
+        }
+
+        public override string ToString()
+        {
+            return Describe();
         }
 
         public static implicit operator BlockPointer(BlockPointer<T> ptr)

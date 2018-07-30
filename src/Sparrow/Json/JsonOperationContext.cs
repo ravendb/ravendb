@@ -1169,7 +1169,7 @@ namespace Sparrow.Json
 
         private unsafe string InitializeStringBufferForNumberParsing(byte* ptr, int length)
         {
-            var lengthsNextPowerOf2 = Sparrow.Binary.Bits.NextPowerOf2(length);
+            var lengthsNextPowerOf2 = Sparrow.Binary.Bits.PowerOf2(length);
 
             var actualPowerOf2 = (int)Math.Pow(lengthsNextPowerOf2, 0.5);
             string stringBuffer;

@@ -113,6 +113,7 @@ namespace Sparrow
             get { return _allocator.Allocated; }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Pointer Allocate(int size)
         {
             unsafe
@@ -125,6 +126,7 @@ namespace Sparrow
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Pointer<TType> Allocate<TType>(int size) where TType : struct
         {
             unsafe
@@ -139,6 +141,7 @@ namespace Sparrow
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Release<TType>(ref Pointer<TType> ptr) where TType : struct
         {
             unsafe
@@ -154,6 +157,7 @@ namespace Sparrow
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Release(ref Pointer ptr)
         {
             unsafe
@@ -168,7 +172,6 @@ namespace Sparrow
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Renew()
         {
             if (_allocator is IRenewable<TAllocator> a)
@@ -177,7 +180,6 @@ namespace Sparrow
                 throw new NotSupportedException($".{nameof(Renew)}() is not supported for this allocator type.");
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Reset()
         {
             _allocator.Reset(ref _allocator);
@@ -191,14 +193,12 @@ namespace Sparrow
             GC.SuppressFinalize(this);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void LowMemory()
         {
             if (_allocator is ILowMemoryHandler<TAllocator> a)
                 a.NotifyLowMemory(ref _allocator);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void LowMemoryOver()
         {
             if (_allocator is ILowMemoryHandler<TAllocator> a)
@@ -244,6 +244,7 @@ namespace Sparrow
             get { return _allocator.Allocated; }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public BlockPointer Allocate(int size)
         {
             unsafe
@@ -256,6 +257,7 @@ namespace Sparrow
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public BlockPointer<TType> Allocate<TType>(int size) where TType : struct
         {
             unsafe
@@ -270,6 +272,7 @@ namespace Sparrow
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Release<TType>(ref BlockPointer<TType> ptr) where TType : struct
         {
             unsafe
@@ -285,6 +288,7 @@ namespace Sparrow
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Release(ref BlockPointer ptr)
         {
             unsafe
@@ -299,7 +303,6 @@ namespace Sparrow
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Renew()
         {
             if (_allocator is IRenewable<TAllocator> a)
@@ -308,7 +311,6 @@ namespace Sparrow
                 throw new NotSupportedException($".{nameof(Renew)}() is not supported for this allocator type.");
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Reset()
         {
             _allocator.Reset(ref _allocator);
@@ -322,14 +324,12 @@ namespace Sparrow
             GC.SuppressFinalize(this);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void LowMemory()
         {
             if (_allocator is ILowMemoryHandler<TAllocator> a)
                 a.NotifyLowMemory(ref _allocator);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void LowMemoryOver()
         {
             if (_allocator is ILowMemoryHandler<TAllocator> a)
@@ -380,6 +380,7 @@ namespace Sparrow
             get { return _allocator.Allocated; }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Pointer Allocate()
         {
             unsafe
@@ -392,6 +393,7 @@ namespace Sparrow
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Pointer<TType> Allocate<TType>() where TType : struct
         {
             unsafe
@@ -406,6 +408,7 @@ namespace Sparrow
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Release<TType>(ref Pointer<TType> ptr) where TType : struct
         {
             unsafe
@@ -421,6 +424,7 @@ namespace Sparrow
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Release(ref Pointer ptr)
         {
             unsafe
@@ -435,7 +439,6 @@ namespace Sparrow
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Renew()
         {
             if (_allocator is IRenewable<TAllocator> a)
@@ -444,7 +447,6 @@ namespace Sparrow
                 throw new NotSupportedException($".{nameof(Renew)}() is not supported for this allocator type.");
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Reset()
         {
             _allocator.Reset(ref _allocator);
@@ -458,14 +460,12 @@ namespace Sparrow
             GC.SuppressFinalize(this);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void LowMemory()
         {
             if (_allocator is ILowMemoryHandler<TAllocator> a)
                 a.NotifyLowMemory(ref _allocator);
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        
         public void LowMemoryOver()
         {
             if (_allocator is ILowMemoryHandler<TAllocator> a)

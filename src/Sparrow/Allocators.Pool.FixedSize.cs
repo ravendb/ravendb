@@ -15,7 +15,7 @@ namespace Sparrow
             public bool Zeroed => false;
 
             public int MaxBlockSize => 1 * Constants.Size.Megabyte;
-            public int MaxPoolSizeInBytes => 256 * Constants.Size.Megabyte;
+            public int MaxPoolSizeInBytes => 32 * Constants.Size.Megabyte;
 
             public bool HasOwnership => true;
 
@@ -40,7 +40,7 @@ namespace Sparrow
         private TOptions _options;
         private Pointer _freed;
 
-        // PERF: This should be devirtualized. 
+        // PERF: This should be devirtualized.        
         private IAllocatorComposer<Pointer> _internalAllocator;
 
         public long Allocated { get; private set; }

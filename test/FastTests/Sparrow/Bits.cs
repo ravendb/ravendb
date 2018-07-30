@@ -95,14 +95,33 @@ namespace FastTests.Sparrow
             for (int i = 1; i < 31; i++)
             {
                 int v = 1 << i;
-                Assert.Equal(v << 1, Bits.NextPowerOf2(v + 1));
+                Assert.Equal(v << 1, Bits.PowerOf2(v + 1));
             }
 
             for (int i = 1; i < 62; i++)
             {
                 long v = 1L << i;
-                Assert.Equal(v << 1, Bits.NextPowerOf2(v + 1));
+                Assert.Equal(v << 1, Bits.PowerOf2(v + 1));
             }
+        }
+
+
+        [Fact]
+        public void Bits_PowerOf2Fixed()
+        {
+            Assert.Equal(1, Bits.PowerOf2(1));
+            Assert.Equal(2, Bits.PowerOf2(2));
+            Assert.Equal(4, Bits.PowerOf2(3));
+            Assert.Equal(4, Bits.PowerOf2(4));
+            Assert.Equal(256, Bits.PowerOf2(129));
+            Assert.Equal(256, Bits.PowerOf2(255));
+
+            Assert.Equal(1, Bits.PowerOf2((long)1));
+            Assert.Equal(2, Bits.PowerOf2((long)2));
+            Assert.Equal(4, Bits.PowerOf2((long)3));
+            Assert.Equal(4, Bits.PowerOf2((long)4));
+            Assert.Equal(256, Bits.PowerOf2((long)129));
+            Assert.Equal(256, Bits.PowerOf2((long)255));
         }
 
         [Fact]

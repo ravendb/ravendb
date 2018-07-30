@@ -78,7 +78,7 @@ namespace Sparrow.Json
                 return false;
 
             // we need to keep the total allocation size as power of 2
-            sizeIncrease = Bits.NextPowerOf2(allocation.SizeInBytes + sizeIncrease) - allocation.SizeInBytes;
+            sizeIncrease = Bits.PowerOf2(allocation.SizeInBytes + sizeIncrease) - allocation.SizeInBytes;
 
             if (_used + sizeIncrease > _allocated)
                 return false;
@@ -106,7 +106,7 @@ namespace Sparrow.Json
                 SizeInBytes = size
             };
 #else
-            size = Bits.NextPowerOf2(Math.Max(sizeof(FreeSection), size));
+            size = Bits.PowerOf2(Math.Max(sizeof(FreeSection), size));
 
             AllocatedMemoryData allocation;
 
@@ -198,12 +198,12 @@ namespace Sparrow.Json
         private int GetPreferredSize(int requestedSize)
         {
             if (AvoidOverAllocation)
-                return Bits.NextPowerOf2(requestedSize);
+                return Bits.PowerOf2(requestedSize);
             
             // we need the next allocation to cover at least the next expansion (also doubling)
             // so we'll allocate 3 times as much as was requested, or as much as we already have
             // the idea is that a single allocation can server for multiple (increasing in size) calls
-            return Math.Max(Bits.NextPowerOf2(requestedSize) * 3, _initialSize);
+            return Math.Max(Bits.PowerOf2(requestedSize) * 3, _initialSize);
         }
 
         public void RenewArena()
@@ -342,7 +342,7 @@ namespace Sparrow.Json
                 // note that this fragmentation will be healed by the call to ResetArena
                 // trying to do this on the fly is too expensive. 
 
-                Debug.Assert(Bits.NextPowerOf2(allocation.SizeInBytes) == allocation.SizeInBytes,
+                Debug.Assert(Bits.PowerOf2(allocation.SizeInBytes) == allocation.SizeInBytes,
                     "Allocation size must always be a power of two"
                 );
                 Debug.Assert(allocation.SizeInBytes >= sizeof(FreeSection));

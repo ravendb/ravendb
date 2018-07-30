@@ -6,7 +6,7 @@ using Sparrow.Global;
 
 namespace Sparrow
 {
-    public interface IPoolAllocatorOptions : IComposableAllocator<Pointer>
+    public interface IPoolAllocatorOptions : IAllocatorOptions, IComposableAllocator<Pointer>
     {
         int MaxBlockSize { get; }
         int MaxPoolSizeInBytes { get; }
@@ -73,9 +73,9 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public BlockPointer Allocate(ref PoolAllocator<TOptions> allocator, int size)
         {
-            int vsize = Bits.NextPowerOf2(Math.Max(sizeof(BlockPointer), size));
+            int vsize = Bits.PowerOf2(Math.Max(sizeof(BlockPointer), size));
 
-            var index = Bits.MostSignificantBit(vsize) - 1;
+            var index = Bits.MostSignificantBit(vsize) - 2; // We use -2 because we are not starting at 0. 
             if (index < allocator._freed.Length && allocator._freed[index].IsValid)
             {
                 // Stack copy of the pointer itself.
@@ -89,9 +89,9 @@ namespace Sparrow
             }
 
             allocator.Used += size;
-            allocator.Allocated += vsize;
+            allocator.Allocated += size;
 
-            var ptr = _internalAllocator.Allocate(vsize);
+            var ptr = _internalAllocator.Allocate(size);
             return new BlockPointer(ptr.Ptr, size, size);
         }
 
@@ -103,8 +103,11 @@ namespace Sparrow
 
             int originalSize = ptr.Size;
 
-            int size = Bits.NextPowerOf2(ptr.BlockSize);
-            var index = Bits.MostSignificantBit(size) - 1;
+            int size = ptr.BlockSize;
+            if (!Bits.IsPowerOfTwo(size))
+                size = Bits.PowerOf2(size) >> 1;
+            
+            var index = Bits.MostSignificantBit(size) - 2; // We use -2 because we are not starting at 0. 
 
             // Retaining chunks bigger than the max chunk size could clutter the allocator, so we reroute it to the backing allocator.
             if (index >= allocator._freed.Length)
@@ -116,8 +119,12 @@ namespace Sparrow
                 // Copy the section pointer that is already freed to the current memory. 
                 *(BlockPointer*)ptr.Ptr = section;
             }
+            else
+            {
+                // Put a copy of the currently released memory block on the front. 
+                *(BlockPointer*)ptr.Ptr = new BlockPointer();
+            }
 
-            // Put a copy of the currently released memory block on the front. 
             allocator._freed[index] = ptr;
 
             allocator.Used -= originalSize;

@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Documents.Queries.Parser;
+using FastTests.Sparrow;
 using FastTests.Voron.Backups;
 using FastTests.Voron.Compaction;
 using Raven.Client.Documents.Queries;

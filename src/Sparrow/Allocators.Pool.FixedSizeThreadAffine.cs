@@ -42,7 +42,29 @@ namespace Sparrow
                 var allocator = new Allocator<NativeAllocator<PoolAllocator.Default>>();
                 allocator.Initialize(default(PoolAllocator.Default));
                 return allocator;
-            }            
+            }
+        }
+
+        public struct DefaultAcceptArbitratySize : IFixedSizeThreadAffinePoolOptions, INativeOptions
+        {
+            public bool UseSecureMemory => false;
+            public bool ElectricFenceEnabled => false;
+            public bool Zeroed => false;
+
+            public int BlockSize => 1 * Constants.Size.Megabyte;
+            public int ItemsPerLane => 4;
+
+            public bool AcceptOnlyBlocks => false;
+
+            public ThreadAffineWorkload Workload => ThreadAffineWorkload.Default;
+
+            public bool HasOwnership => true;
+            public IAllocatorComposer<Pointer> CreateAllocator()
+            {
+                var allocator = new Allocator<NativeAllocator<PoolAllocator.Default>>();
+                allocator.Initialize(default(PoolAllocator.Default));
+                return allocator;
+            }
         }
     }
 

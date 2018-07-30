@@ -112,7 +112,7 @@ namespace Sparrow.Logging
                 // We take the easy way of just allocating a large buffer rather than encoding
                 // in a loop since large replies here are very rare.
                 if (maxBytes > arraySegment.Count)
-                    arraySegment = new ArraySegment<byte>(new byte[Bits.NextPowerOf2(maxBytes)]);
+                    arraySegment = new ArraySegment<byte>(new byte[Bits.PowerOf2(maxBytes)]);
 
                 var numberOfBytes = Encodings.Utf8.GetBytes(commandResult, 0,
                     commandResult.Length,

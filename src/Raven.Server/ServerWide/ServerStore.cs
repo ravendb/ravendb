@@ -1459,7 +1459,6 @@ namespace Raven.Server.ServerWide
                         _env,
                         _clusterRequestExecutor,
                         ContextPool,
-                        ByteStringMemoryCache.Cleaner
                     };
 
                     var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {nameof(ServerStore)}.");

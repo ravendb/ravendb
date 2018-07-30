@@ -264,7 +264,7 @@ namespace Sparrow.Json
                 hash = Hashing.HashCombiner.CombineInline(hash, properties[i].Property.HashCode);
             }
 
-            Debug.Assert(_cachedSorts.Length == CachedSortsSize && Bits.NextPowerOf2(CachedSortsSize) == CachedSortsSize); 
+            Debug.Assert(_cachedSorts.Length == CachedSortsSize && Bits.PowerOf2(CachedSortsSize) == CachedSortsSize); 
 
             hash &= (CachedSortsSize-1); // % CachedSortsSize 
             return hash;

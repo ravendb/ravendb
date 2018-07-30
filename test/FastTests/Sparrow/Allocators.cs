@@ -169,6 +169,7 @@ namespace FastTests.Sparrow
                 var ptr = allocator.Allocate(size);
                 Assert.Equal(size, ptr.Size);
                 Assert.True(ptr.IsValid);
+                Assert.Equal(1024, ptr.BlockSize);
 
                 pointers[i] = ptr;
                 addresses[i] = (long)ptr.Ptr;
@@ -246,7 +247,7 @@ namespace FastTests.Sparrow
         public struct FragmentFixedSize : IFragmentAllocatorOptions
         {
             public int ReuseBlocksBiggerThan => 1 * Constants.Size.Kilobyte;
-            public int AllocationBlockSizeInBytes => 10 * Constants.Size.Kilobyte;
+            public int BlockSize => 10 * Constants.Size.Kilobyte;
             public IAllocatorComposer<Pointer> CreateAllocator() => new Allocator<NativeAllocator<FixedSize>>();
         }
 

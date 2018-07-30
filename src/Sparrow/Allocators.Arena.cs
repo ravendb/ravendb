@@ -63,7 +63,7 @@ namespace Sparrow
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int GetGrowthSize(long allocated, long used)
             {
-                return Bits.NextPowerOf2((int)used + 1);              
+                return Bits.PowerOf2((int)used + 1);              
             }
         }
 
