@@ -7,10 +7,9 @@ namespace Raven.Server.Documents.Queries.AST
     public class Query
     {
         public bool IsDistinct;
+        public GraphQuery GraphQuery;
         public QueryExpression Where;
         public FromClause From;
-        public Dictionary<StringSegment, WithClause> WithClauses;
-        public MatchClause MatchClauses { get; set; }
         public List<(QueryExpression Expression, StringSegment? Alias)> Select;
         public List<(QueryExpression Expression, StringSegment? Alias)> Load;
         public List<QueryExpression> Include;
@@ -38,22 +37,18 @@ namespace Raven.Server.Documents.Queries.AST
             return sb.ToString();
         }
 
-        public (bool Success, string Error) TryAddWithClause(WithClause with)
+        public (bool Success, string Error) TryAddWithClause((Query Query, StringSegment Allias) withClause)
         {
-            if (WithClauses == null)
+            if (GraphQuery == null)
             {
-                WithClauses = new Dictionary<StringSegment, WithClause>();
+                GraphQuery = new GraphQuery();
+                GraphQuery.WithDocumentQueries = new Dictionary<StringSegment, Query>();
             }
 
-            var allias = with.Query.From.Alias;
+            if (GraphQuery.WithDocumentQueries.ContainsKey(withClause.Allias)  )
+                    return (false, $"Allias {withClause.Allias} is already in use on a diffrent 'With' clause");
 
-            if (allias.HasValue == false)
-                return (false, "'With' clause must contain an allias.");
-
-            if (WithClauses.ContainsKey(allias.Value)  )
-                    return (false, $"Allias {with.Query.From.Alias} is already in use on a diffrent 'With' clause");
-            
-            WithClauses.Add(allias.Value, with);
+            GraphQuery.WithDocumentQueries.Add(withClause.Allias, withClause.Query);
             return (true, null);
         }
     }
