@@ -29,7 +29,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Raven.Embedded\Raven.Embedded.csproj" />
+    <ProjectReference Include="..\Raven.Embedded\Raven.Embedded.csproj">
+      <PrivateAssets>analyzers;build</PrivateAssets>
+    </ProjectReference>
   </ItemGroup>
 
 </Project>
