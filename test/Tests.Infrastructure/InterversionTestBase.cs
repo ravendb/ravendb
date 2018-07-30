@@ -253,12 +253,12 @@ namespace Tests.Infrastructure
             }
         }
 
-        protected async Task<bool> WaitForDocumentInClusterAsync<T>(string docId, Func<T, bool> predicate, TimeSpan timeout, List<DocumentStore> stores)
+        protected async Task<bool> WaitForDocumentInClusterAsync<T>(string docId, Func<T, bool> predicate, TimeSpan timeout, List<DocumentStore> stores, string database = null)
         {
             var tasks = new List<Task<bool>>();
 
             foreach (var store in stores)
-                tasks.Add(Task.Run(() => WaitForDocument(store, docId, predicate, (int)timeout.TotalMilliseconds)));
+                tasks.Add(Task.Run(() => WaitForDocument(store, docId, predicate, (int)timeout.TotalMilliseconds, database)));
 
             await Task.WhenAll(tasks);
 
@@ -269,7 +269,8 @@ namespace Tests.Infrastructure
         protected bool WaitForDocument<T>(IDocumentStore store,
             string docId,
             Func<T, bool> predicate,
-            int timeout = 10000)
+            int timeout = 10000,
+            string database = null)
         {
             if (DebuggerAttachedTimeout.DisableLongTimespan == false &&
                 Debugger.IsAttached)
@@ -279,7 +280,8 @@ namespace Tests.Infrastructure
             Exception ex = null;
             while (sw.ElapsedMilliseconds < timeout)
             {
-                using (var session = store.OpenSession())
+                database = database ?? store.Database;
+                using (var session = store.OpenSession(database))
                 {
                     try
                     {
