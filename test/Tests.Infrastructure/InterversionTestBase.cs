@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -42,14 +43,7 @@ namespace Tests.Infrastructure
             [CallerMemberName] string database = null,
             CancellationToken token = default)
         {
-
-            var serverBuildInfo = ServerBuildDownloadInfo.Create(serverVersion);
-            var serverPath = await _serverBuildRetriever.GetServerPath(serverBuildInfo, token);
-            var testServerPath = NewDataPath(prefix: serverVersion);
-            CopyFilesRecursively(new DirectoryInfo(serverPath), new DirectoryInfo(testServerPath));
-
-            var locator = new ConfigurableRavenServerLocator(testServerPath);
-            var (serverUrl, serverProcess) = await RunServer(locator);
+            var (serverUrl, serverProcess) = await GetServerAsync(serverVersion, options, database, token);
 
             options = options ?? InterversionTestOptions.Default;
             var name = GetDatabaseName(database);
@@ -90,6 +84,22 @@ namespace Tests.Infrastructure
             };
 
             return store;
+        }
+
+
+        protected async Task<(Uri ServerUrl, Process ServerProcess)> GetServerAsync(
+            string serverVersion,
+            InterversionTestOptions options = null,
+            [CallerMemberName] string database = null,
+            CancellationToken token = default(CancellationToken))
+        {
+            var serverBuildInfo = ServerBuildDownloadInfo.Create(serverVersion);
+            var serverPath = await _serverBuildRetriever.GetServerPath(serverBuildInfo);
+            var testServerPath = NewDataPath(prefix: serverVersion);
+            CopyFilesRecursively(new DirectoryInfo(serverPath), new DirectoryInfo(testServerPath));
+
+            var locator = new ConfigurableRavenServerLocator(testServerPath);
+            return await RunServer(locator);
         }
 
         public static void CopyFilesRecursively(DirectoryInfo source, DirectoryInfo target)
@@ -160,7 +170,7 @@ namespace Tests.Infrastructure
             return sb.ToString();
         }
 
-        private static void KillSlavedServerProcess(Process process)
+        protected static void KillSlavedServerProcess(Process process)
         {
             if (process == null || process.HasExited)
                 return;
@@ -242,6 +252,70 @@ namespace Tests.Infrastructure
                         serverProcess.Kill();
                 });
             }
+        }
+
+        protected async Task<bool> WaitForDocumentInClusterAsync<T>(string docId, Func<T, bool> predicate, TimeSpan timeout, List<DocumentStore> stores)
+        {
+            var tasks = new List<Task<bool>>();
+
+            foreach (var store in stores)
+                tasks.Add(Task.Run(() => WaitForDocument(store, docId, predicate, (int)timeout.TotalMilliseconds)));
+
+            await Task.WhenAll(tasks);
+
+            return tasks.All(x => x.Result);
+        }
+
+
+        protected bool WaitForDocument<T>(IDocumentStore store,
+            string docId,
+            Func<T, bool> predicate,
+            int timeout = 10000)
+        {
+            if (DebuggerAttachedTimeout.DisableLongTimespan == false &&
+                Debugger.IsAttached)
+                timeout *= 100;
+
+            var sw = Stopwatch.StartNew();
+            Exception ex = null;
+            while (sw.ElapsedMilliseconds < timeout)
+            {
+                using (var session = store.OpenSession())
+                {
+                    try
+                    {
+                        var doc = session.Load<T>(docId);
+                        if (doc != null)
+                        {
+                            if (predicate == null || predicate(doc))
+                                return true;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        ex = e;
+                        // expected that we might get conflict, ignore and wait
+                    }
+                }
+
+                Thread.Sleep(100);
+            }
+
+            using (var session = store.OpenSession())
+            {
+                //one last try, and throw if there is still a conflict
+                var doc = session.Load<T>(docId);
+                if (doc != null)
+                {
+                    if (predicate == null || predicate(doc))
+                        return true;
+                }
+            }
+            if (ex != null)
+            {
+                throw ex;
+            }
+            return false;
         }
 
         public class InterversionTestOptions
