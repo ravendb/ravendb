@@ -428,35 +428,37 @@ namespace Raven.Server.Web.Authentication
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var certificateList = new List<(string ItemName, BlittableJsonReaderObject Value)>();
+                var certificateList = new Dictionary<string, BlittableJsonReaderObject>();
+
                 try
                 {
                     if (string.IsNullOrEmpty(thumbprint))
                     {
+                        // The server cert is not part of the local state or the cluster certificates, we add it to the list separately
+                        var serverCertKey = Constants.Certificates.Prefix + Server.Certificate.Certificate?.Thumbprint;
+                        if (Server.Certificate.Certificate != null)
+                        {
+                            var serverCertDef = new CertificateDefinition
+                            {
+                                Name = "Server Certificate",
+                                Certificate = Convert.ToBase64String(Server.Certificate.Certificate.Export(X509ContentType.Cert)),
+                                Permissions = new Dictionary<string, DatabaseAccess>(),
+                                SecurityClearance = SecurityClearance.ClusterNode,
+                                Thumbprint = Server.Certificate.Certificate.Thumbprint,
+                                NotAfter = Server.Certificate.Certificate.NotAfter
+                            };
+
+                            var serverCert = context.ReadObject(serverCertDef.ToJson(), "Server/Certificate/Definition");
+
+                            certificateList.TryAdd(serverCertKey, serverCert);
+                        }
+
+                        // If we are passive, we take the certs from the local state
                         if (ServerStore.CurrentRachisState == RachisState.Passive)
                         {
                             List<string> localCertKeys;
                             using (context.OpenReadTransaction())
                                 localCertKeys = ServerStore.Cluster.GetCertificateKeysFromLocalState(context).ToList();
-                            
-                            // The server cert is not part of the local state certificates, we add it to the list separately
-                            var serverCertKey = Constants.Certificates.Prefix + Server.Certificate.Certificate?.Thumbprint;
-                            if (Server.Certificate.Certificate != null)
-                            {                            
-                                var serverCertDef = new CertificateDefinition
-                                {
-                                    Name = "Server Certificate",
-                                    Certificate = Convert.ToBase64String(Server.Certificate.Certificate.Export(X509ContentType.Cert)),
-                                    Permissions = new Dictionary<string, DatabaseAccess>(),
-                                    SecurityClearance = SecurityClearance.ClusterNode,
-                                    Thumbprint = Server.Certificate.Certificate.Thumbprint,
-                                    NotAfter = Server.Certificate.Certificate.NotAfter
-                                };
-
-                                var serverCert = context.ReadObject(serverCertDef.ToJson(), "Server/Certificate/Definition");
-                                
-                                certificateList.Add((serverCertKey, serverCert));
-                            }
 
                             foreach (var localCertKey in localCertKeys)
                             {
@@ -470,22 +472,22 @@ namespace Raven.Server.Web.Authentication
                                 var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
 
                                 if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
-                                    certificateList.Add((localCertKey, localCertificate));
+                                    certificateList.TryAdd(localCertKey, localCertificate);
                                 else
                                     localCertificate.Dispose();
                             }
                         }
+                        // If we are not passive, we take the certs from the cluster
                         else
                         {
                             using (context.OpenReadTransaction())
                             {
-                                // Since we're not passive, the server cert is part of the cluster certificates
                                 foreach (var item in ServerStore.Cluster.ItemsStartingWith(context, Constants.Certificates.Prefix, start, pageSize))
                                 {
                                     var def = JsonDeserializationServer.CertificateDefinition(item.Value);
 
                                     if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
-                                        certificateList.Add(item);
+                                        certificateList.TryAdd(item.ItemName, item.Value);
                                     else
                                         item.Value.Dispose();
                                 }
@@ -519,7 +521,7 @@ namespace Raven.Server.Web.Authentication
                                 }
                             }
 
-                            certificateList.Add((key, certificate));
+                            certificateList.TryAdd(key, certificate);
                         }
                     }
 
