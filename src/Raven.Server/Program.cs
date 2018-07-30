@@ -277,7 +277,13 @@ namespace Raven.Server
             //stop dumping logs
             LoggingSource.Instance.DisableConsoleLogging();
 
-            return new RavenCli().Start(server, Console.Out, Console.In, true);
+            bool consoleColoring = true;
+            if (server.Configuration.Embedded.ParentProcessId.HasValue)
+                //When opening an embedded server we must disable console coloring to avoid exceptions,
+                //due to the fact, we redirect standard input from the console.
+                consoleColoring = false;
+
+            return new RavenCli().Start(server, Console.Out, Console.In, consoleColoring);
         }
 
         public static void WriteServerStatsAndWaitForEsc(RavenServer server)
