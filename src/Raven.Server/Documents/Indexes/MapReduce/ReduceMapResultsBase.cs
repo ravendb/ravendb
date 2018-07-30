@@ -340,7 +340,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                         var parentPage = tree.GetParentPageOf(page);
 
-                        using (var result = AggregateBranchPage(page, table, indexContext, branchesToAggregate, compressedEmptyLeafs, failedAggregatedLeafs, token))
+                        using (var result = AggregateBranchPage(page, table, indexContext, branchesToAggregate, compressedEmptyLeafs, failedAggregatedLeafs, tree, token))
                         {
                             if (parentPage == -1)
                             {
@@ -432,6 +432,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             HashSet<long> remainingBranchesToAggregate,
             HashSet<long> compressedEmptyLeafs,
             Dictionary<long, Exception> failedAggregatedLeafs,
+            Tree tree,
             CancellationToken token)
         {
             using (_treeReductionStats.BranchAggregation.Start())
@@ -444,7 +445,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     {
                         if (table.ReadByKey(childPageNumberSlice, out TableValueReader tvr) == false)
                         {
-                            if (TryAggregateChildPageOrThrow(pageNumber, table, indexContext, remainingBranchesToAggregate, compressedEmptyLeafs, failedAggregatedLeafs, token))
+                            if (TryAggregateChildPageOrThrow(pageNumber, table, indexContext, remainingBranchesToAggregate, compressedEmptyLeafs, failedAggregatedLeafs, tree, token))
                             {
                                 table.ReadByKey(childPageNumberSlice, out tvr);
                             }
@@ -510,6 +511,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             HashSet<long> remainingBranchesToAggregate,
             HashSet<long> compressedEmptyLeafs,
             Dictionary<long, Exception> failedAggregatatedLeafs,
+            Tree tree,
             CancellationToken token)
         {
             if (remainingBranchesToAggregate.Contains(pageNumber))
@@ -523,7 +525,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     var unaggregatedBranch = new TreePage(page.Pointer, Constants.Storage.PageSize);
 
                     using (var result = AggregateBranchPage(unaggregatedBranch, table, indexContext, remainingBranchesToAggregate, compressedEmptyLeafs,
-                        failedAggregatatedLeafs, token))
+                        failedAggregatatedLeafs, tree, token))
                     {
                         StoreAggregationResult(unaggregatedBranch, table, result);
                     }
@@ -545,12 +547,37 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             var relatedPage = indexContext.Transaction.InnerTransaction.LowLevelTransaction.GetPage(pageNumber);
             var relatedTreePage = new TreePage(relatedPage.Pointer, Constants.Storage.PageSize);
-            
-            var message = $"Couldn't find a pre-computed aggregation result for the existing page: {relatedTreePage}.";
+
+            string decompressedDebug = null;
+
+            if (relatedTreePage.IsCompressed)
+            {
+                // let's try to decompress it and check if it's empty
+                // we decompress it for validation purposes only although it's very rare case
+
+                using (var decompressed = tree.DecompressPage(relatedTreePage, skipCache: true))
+                {
+                    if (decompressed.NumberOfEntries == 0)
+                    {
+                        // it's empty so there is no related aggregation result, we can safely skip it
+
+                        return false;
+                    }
+
+                    decompressedDebug = decompressed.ToString();
+                }
+            }
+
+            var message = $"Couldn't find a pre-computed aggregation result for the existing page: {relatedTreePage}. ";
+
+            if (decompressedDebug != null)
+                message += $"Decompressed: {decompressedDebug}). ";
+
+            message += $"Tree state: {tree.State}. ";
 
             if (failedAggregatatedLeafs != null && failedAggregatatedLeafs.TryGetValue(pageNumber, out var exception))
             {
-                message += $" The aggregation of this leaf (#{pageNumber}) has failed so the relevant result doesn't exist. " +
+                message += $"The aggregation of this leaf (#{pageNumber}) has failed so the relevant result doesn't exist. " +
                            "Check the inner exception for leaf aggregation error details";
 
                 throw new AggregationResultNotFoundException(message, exception);
