@@ -50,19 +50,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (recursive == true)
                     ThrowParseException("With clause is not allow inside inner query");
 
-                if (Scanner.TryScan("EDGES"))
-                {
-                    
-                }
-                else
-                {
-                    (var success, var error) = q.TryAddWithClause(With());
-                    if (success == false)
-                    {
-                        ThrowParseException($"Error adding with clause, error:{error}");
-                    }
-                }
-                
+                WithClause(q);
             }
 
             if (q.GraphQuery == null)
@@ -129,6 +117,73 @@ namespace Raven.Server.Documents.Queries.Parser
             return q;
         }
 
+        private void WithClause(Query q)
+        {
+            if (Scanner.TryScan("EDGES"))
+            {
+                Scanner.Identifier();
+
+                (var success, var error) = q.TryAddWithEdgePredicates(WithEdges());
+
+                if (success == false)
+                {
+                    ThrowParseException($"Error adding with edges clause, error:{error}");
+                }
+
+            }
+            else
+            {
+                (var success, var error) = q.TryAddWithClause(With());
+                if (success == false)
+                {
+                    ThrowParseException($"Error adding with clause, error:{error}");
+                }
+            }
+        }
+
+        private StringSegment EdgeType()
+        {
+            StringSegment edgeType = null;
+            if (Scanner.TryScan('('))
+            {
+                if (Scanner.Identifier() == true)
+                {
+                    edgeType = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength);
+                }
+                if (Scanner.TryScan(')') == false)
+                    ThrowParseException("With edges(<identifier>) was not closed with ')'");
+            }
+
+            return edgeType;
+        }
+
+        private (WithEdgesExpression Expression, StringSegment Allias) WithEdges()
+        {
+            StringSegment edgeType = EdgeType();
+
+            if (Scanner.TryScan('{') == false)
+                throw new InvalidQueryException("With edges should be followed with '{' ", Scanner.Input, null);
+
+            QueryExpression qe = null;
+            if (Scanner.TryScan("WHERE") && Expression(out qe) == false|| qe == null)
+                ThrowParseException("Unable to parse WHERE clause of an 'With Edges' clause");
+
+            List<(QueryExpression Expression, OrderByFieldType OrderingType, bool Ascending)> orderBy = null;
+            if (Scanner.TryScan("ORDER BY"))
+            {
+                orderBy = OrderBy();
+            }
+
+            if (Scanner.TryScan('}') == false)
+                throw new InvalidQueryException("With clause contains invalid body", Scanner.Input, null);
+
+            if (Alias(true, out var allias) == false || allias.HasValue == false)
+                throw new InvalidQueryException("With clause must contain allias but none was provided", Scanner.Input, null);
+
+            var wee = new WithEdgesExpression(qe, edgeType, orderBy);
+            return (wee, allias.Value);
+        }
+
         private PatternMatchExpression GraphMatch()
         {
             throw new NotImplementedException();
@@ -136,11 +191,6 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private (Query Query, StringSegment Allias) With()
         {
-            if (Scanner.TryScan("edges"))
-            {
-
-            }
-
             if (Scanner.TryScan('{') == false)
                 throw new InvalidQueryException("With keyword should be followed with either 'edges' or '{' ", Scanner.Input, null);
 

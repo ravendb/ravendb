@@ -14,14 +14,15 @@ namespace Raven.Server.Documents.Queries.AST
 
         public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> OrderBy;
 
-        public WithEdgesExpression(QueryExpression @where, [NotNull] string edgeType, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy)
+        public WithEdgesExpression(QueryExpression @where, string edgeType, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy)
         {
             if(@where == null && orderBy == null)
                 throw new ArgumentNullException($"{nameof(WithEdgesExpression)} should have either Where or OrderBy clauses.");
 
             Where = @where;
             OrderBy = orderBy;
-            EdgeType = edgeType ?? throw new ArgumentNullException(nameof(edgeType));
+            //null edges means all edges 
+            EdgeType = edgeType;
             Type = ExpressionType.WithEdge;
         }
 
