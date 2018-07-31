@@ -42,6 +42,8 @@ namespace Raven.Server.ServerWide
             [nameof(InstallUpdatedServerCertificateCommand)] = BaseCommandsVersion,
             [nameof(ConfirmReceiptServerCertificateCommand)] = BaseCommandsVersion,
             [nameof(RecheckStatusOfServerCertificateCommand)] = BaseCommandsVersion,
+            [nameof(ConfirmServerCertificateReplacedCommand)] = 40_006,
+            [nameof(RecheckStatusOfServerCertificateReplacementCommand)] = 40_006,
             [nameof(ModifyConflictSolverCommand)] = BaseCommandsVersion,
             [nameof(PromoteDatabaseNodeCommand)] = BaseCommandsVersion,
             [nameof(PutCertificateCommand)] = BaseCommandsVersion,

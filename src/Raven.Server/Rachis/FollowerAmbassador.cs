@@ -42,7 +42,6 @@ namespace Raven.Server.Rachis
         private ManualResetEvent _wakeLeader;
         private readonly string _tag;
         private readonly string _url;
-        private readonly X509Certificate2 _certificate;
         private string _statusMessage;
 
         public string StatusMessage
@@ -115,7 +114,7 @@ namespace Raven.Server.Rachis
             Interlocked.Exchange(ref _lastReplyFromFollower, DateTime.UtcNow.Ticks);
         }
 
-        public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, X509Certificate2 certificate, RemoteConnection connection = null)
+        public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, RemoteConnection connection = null)
         {
             _engine = engine;
             _term = leader.Term;
@@ -123,7 +122,6 @@ namespace Raven.Server.Rachis
             _wakeLeader = wakeLeader;
             _tag = tag;
             _url = url;
-            _certificate = certificate;
             _connection = connection;
             Status = AmbassadorStatus.Started;
             StatusMessage = $"Started Follower Ambassador for {_engine.Tag} > {_tag} in term {_term}";
@@ -178,7 +176,7 @@ namespace Raven.Server.Rachis
                                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 {
                                     _engine.RemoveAndDispose(_leader, _connection);
-                                    var connection = _engine.ConnectToPeer(_url, _certificate, context).Result;
+                                    var connection = _engine.ConnectToPeer(_url, _engine.ClusterCertificate, context).Result;
                                     var stream = connection.Stream;
                                     var disconnect = connection.Disconnect;
                                     var con = new RemoteConnection(_tag, _engine.Tag, _term, stream, disconnect);
@@ -271,7 +269,8 @@ namespace Raven.Server.Rachis
                                             TruncateLogBefore = _leader.LowestIndexInEntireCluster,
                                             PrevLogTerm = _engine.GetTermFor(context, _followerMatchIndex) ?? 0,
                                             PrevLogIndex = _followerMatchIndex,
-                                            TimeAsLeader = _leader.LeaderShipDuration
+                                            TimeAsLeader = _leader.LeaderShipDuration,
+                                            MinClusterCommandVersion = ClusterCommandsVersionManager.CurrentClusterMinimalVersion
                                         };
                                     }
                                 }
@@ -724,7 +723,9 @@ namespace Raven.Server.Rachis
                 var llr = _connection.Read<LogLengthNegotiationResponse>(context);
 
                 FollowerCommandsVersion = GetFollowerVersion(llr);
-                ClusterCommandsVersionManager.SetMinimalClusterVersion(FollowerCommandsVersion);
+                _engine.CurrentLeader.PeersVersion[_tag] = FollowerCommandsVersion;
+                var minimalVersion = ClusterCommandsVersionManager.GetClusterMinimalVersion(_engine.CurrentLeader.PeersVersion.Values.ToList(), _engine.MaximalVersion);
+                ClusterCommandsVersionManager.SetClusterVersion(minimalVersion);
 
                 if (_engine.Log.IsInfoEnabled)
                 {

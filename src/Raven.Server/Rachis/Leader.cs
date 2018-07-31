@@ -55,6 +55,8 @@ namespace Raven.Server.Rachis
         private readonly Dictionary<string, FollowerAmbassador> _nonVoters =
             new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
 
+        public ConcurrentDictionary<string, int> PeersVersion = new ConcurrentDictionary<string, int>();
+
         private PoolOfThreads.LongRunningWork _leaderLongRunningWork;
 
         private int _previousPeersWereDisposed;
@@ -190,8 +192,7 @@ namespace Raven.Server.Rachis
                     }
                     RemoteConnection connection = null;
                     connections?.TryGetValue(voter.Key, out connection);
-                    var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value,
-                        _engine.ClusterCertificate, connection);
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value, connection);
                     _voters.Add(voter.Key, ambasaddor);
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
@@ -212,8 +213,7 @@ namespace Raven.Server.Rachis
                     }
                     RemoteConnection connection = null;
                     connections?.TryGetValue(promotable.Key, out connection);
-                    var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value,
-                        _engine.ClusterCertificate, connection);
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value, connection);
                     _promotables.Add(promotable.Key, ambasaddor);
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
@@ -235,8 +235,7 @@ namespace Raven.Server.Rachis
                     }
                     RemoteConnection connection = null;
                     connections?.TryGetValue(nonVoter.Key, out connection);
-                    var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter.Key, nonVoter.Value,
-                        _engine.ClusterCertificate, connection);
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter.Key, nonVoter.Value, connection);
                     _nonVoters.Add(nonVoter.Key, ambasaddor);
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
@@ -850,6 +849,7 @@ namespace Raven.Server.Rachis
                             newNonVotes[nodeTag] = nodeUrl;
                             break;
                         case TopologyModification.Remove:
+                            PeersVersion.TryRemove(nodeTag, out _);
                             if (clusterTopology.Contains(nodeTag) == false)
                             {
                                 throw new InvalidOperationException($"Was requested to remove node={nodeTag} from the topology " +

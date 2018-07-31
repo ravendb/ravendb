@@ -417,35 +417,37 @@ namespace Raven.Server.Web.Authentication
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var certificateList = new List<(string ItemName, BlittableJsonReaderObject Value)>();
+                var certificateList = new Dictionary<string, BlittableJsonReaderObject>();
+
                 try
                 {
                     if (string.IsNullOrEmpty(thumbprint))
                     {
+                        // The server cert is not part of the local state or the cluster certificates, we add it to the list separately
+                        var serverCertKey = Constants.Certificates.Prefix + Server.Certificate.Certificate?.Thumbprint;
+                        if (Server.Certificate.Certificate != null)
+                        {
+                            var serverCertDef = new CertificateDefinition
+                            {
+                                Name = "Server Certificate",
+                                Certificate = Convert.ToBase64String(Server.Certificate.Certificate.Export(X509ContentType.Cert)),
+                                Permissions = new Dictionary<string, DatabaseAccess>(),
+                                SecurityClearance = SecurityClearance.ClusterNode,
+                                Thumbprint = Server.Certificate.Certificate.Thumbprint,
+                                NotAfter = Server.Certificate.Certificate.NotAfter
+                            };
+
+                            var serverCert = context.ReadObject(serverCertDef.ToJson(), "Server/Certificate/Definition");
+
+                            certificateList.TryAdd(serverCertKey, serverCert);
+                        }
+
+                        // If we are passive, we take the certs from the local state
                         if (ServerStore.CurrentRachisState == RachisState.Passive)
                         {
                             List<string> localCertKeys;
                             using (context.OpenReadTransaction())
                                 localCertKeys = ServerStore.Cluster.GetCertificateKeysFromLocalState(context).ToList();
-                            
-                            // The server cert is not part of the local state certificates, we add it to the list separately
-                            var serverCertKey = Constants.Certificates.Prefix + Server.Certificate.Certificate?.Thumbprint;
-                            if (Server.Certificate.Certificate != null)
-                            {                            
-                                var serverCertDef = new CertificateDefinition
-                                {
-                                    Name = "Server Certificate",
-                                    Certificate = Convert.ToBase64String(Server.Certificate.Certificate.Export(X509ContentType.Cert)),
-                                    Permissions = new Dictionary<string, DatabaseAccess>(),
-                                    SecurityClearance = SecurityClearance.ClusterNode,
-                                    Thumbprint = Server.Certificate.Certificate.Thumbprint,
-                                    NotAfter = Server.Certificate.Certificate.NotAfter
-                                };
-
-                                var serverCert = context.ReadObject(serverCertDef.ToJson(), "Server/Certificate/Definition");
-                                
-                                certificateList.Add((serverCertKey, serverCert));
-                            }
 
                             foreach (var localCertKey in localCertKeys)
                             {
@@ -459,22 +461,22 @@ namespace Raven.Server.Web.Authentication
                                 var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
 
                                 if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
-                                    certificateList.Add((localCertKey, localCertificate));
+                                    certificateList.TryAdd(localCertKey, localCertificate);
                                 else
                                     localCertificate.Dispose();
                             }
                         }
+                        // If we are not passive, we take the certs from the cluster
                         else
                         {
                             using (context.OpenReadTransaction())
                             {
-                                // Since we're not passive, the server cert is part of the cluster certificates
                                 foreach (var item in ServerStore.Cluster.ItemsStartingWith(context, Constants.Certificates.Prefix, start, pageSize))
                                 {
                                     var def = JsonDeserializationServer.CertificateDefinition(item.Value);
 
                                     if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
-                                        certificateList.Add(item);
+                                        certificateList.TryAdd(item.ItemName, item.Value);
                                     else
                                         item.Value.Dispose();
                                 }
@@ -508,7 +510,7 @@ namespace Raven.Server.Web.Authentication
                                 }
                             }
 
-                            certificateList.Add((key, certificate));
+                            certificateList.TryAdd(key, certificate);
                         }
                     }
 
@@ -780,6 +782,67 @@ namespace Raven.Server.Web.Authentication
                     writer.WriteEndArray();
 
                     writer.WriteEndObject();
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/certificates/replacement/reset", "POST", AuthorizationStatus.ClusterAdmin)]
+        public Task ReplacementReset()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                ServerStore.Cluster.DeleteItem(context, "server/cert");
+                tx.Commit();
+            }
+
+            return NoContent();
+        }
+
+        [RavenAction("/admin/certificates/replacement/status", "GET", AuthorizationStatus.ClusterAdmin)]
+        public Task ReplacementStatus()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                BlittableJsonReaderObject certStatus;
+                using (context.OpenReadTransaction())
+                {
+                    certStatus = ServerStore.Cluster.GetItem(context, "server/cert");
+                }
+
+                if (certStatus != null)
+                {
+                    certStatus.TryGet(Constants.Certificates.Confirmations, out int confirmations);
+                    certStatus.TryGet(Constants.Certificates.Thumbprint, out string thumbprint);
+                    certStatus.TryGet(Constants.Certificates.OldThumbprint, out string oldThumbprint);
+                    certStatus.TryGet(Constants.Certificates.ReplaceImmediately, out bool replaceImmediately);
+                    certStatus.TryGet(Constants.Certificates.Replaced, out int replaced);
+
+                    // Not writing the certificate itself, because it has the private key
+                    writer.WriteStartObject();
+                    writer.WritePropertyName(Constants.Certificates.Confirmations);
+                    writer.WriteInteger(confirmations);
+                    writer.WriteComma();
+                    writer.WritePropertyName(Constants.Certificates.Thumbprint);
+                    writer.WriteString(thumbprint);
+                    writer.WriteComma();
+                    writer.WritePropertyName(Constants.Certificates.OldThumbprint);
+                    writer.WriteString(oldThumbprint);
+                    writer.WriteComma();
+                    writer.WritePropertyName(Constants.Certificates.ReplaceImmediately);
+                    writer.WriteBool(replaceImmediately);
+                    writer.WriteComma();
+                    writer.WritePropertyName(Constants.Certificates.Replaced);
+                    writer.WriteInteger(replaced);
+                    writer.WriteComma();
+                    writer.WriteEndObject();
+                }
+                else
+                {
+                    return NoContent();
                 }
             }
 

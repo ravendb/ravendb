@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -83,7 +84,9 @@ namespace Raven.Server.Rachis
 
                         return;
                     }
-                    
+
+                    ClusterCommandsVersionManager.SetClusterVersion(appendEntries.MinClusterCommandVersion);
+
                     _debugRecorder.Record("Got entries");
                     _engine.Timeout.Defer(_connection.Source);
                     if (appendEntries.EntriesCount != 0)

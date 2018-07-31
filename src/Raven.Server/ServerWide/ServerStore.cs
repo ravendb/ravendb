@@ -12,6 +12,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
+using NCrontab.Advanced.Extensions;
 using Raven.Client;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -758,11 +759,11 @@ namespace Raven.Server.ServerWide
                                 cert = Cluster.GetItem(context, "server/cert");
                                 if (cert == null)
                                     return; // was already processed?
-                                if (cert.TryGet("Confirmations", out confirmations) == false)
-                                    throw new InvalidOperationException("Expected to get confirmations count");
+                                if (cert.TryGet(Constants.Certificates.Confirmations, out confirmations) == false)
+                                    throw new InvalidOperationException($"Expected to get '{Constants.Certificates.Confirmations}' count");
 
-                                if (cert.TryGet("ReplaceImmediately", out replaceImmediately) == false)
-                                    throw new InvalidOperationException("Expected to get `ReplaceImmediately` property");
+                                if (cert.TryGet(Constants.Certificates.ReplaceImmediately, out replaceImmediately) == false)
+                                    throw new InvalidOperationException($"Expected to get `{Constants.Certificates.ReplaceImmediately}` property");
 
                                 nodesInCluster = GetClusterTopology(context).AllNodes.Count;
                             }
@@ -775,41 +776,27 @@ namespace Raven.Server.ServerWide
                                     var msg = $"Not all nodes have confirmed the certificate replacement. Confirmation count: {confirmations}. " +
                                               $"We still have {(Server.Certificate.Certificate.NotAfter - Server.Time.GetUtcNow().ToLocalTime()).Days} days until expiration. " +
                                               "The update will happen when all nodes confirm the replacement or we have less than 3 days left for expiration." +
-                                              "If you wish to force replacing the certificate just for the nodes that are up, please set 'ReplaceImmediately' to true.";
+                                              $"If you wish to force replacing the certificate just for the nodes that are up, please set '{Constants.Certificates.ReplaceImmediately}' to true.";
 
                                     if (Logger.IsOperationsEnabled)
                                         Logger.Operations(msg);
 
                                     NotificationCenter.Add(AlertRaised.Create(
                                         null,
-                                        "Server Certificate",
+                                        Constants.Certificates.CertReplaceAlertTitle,
                                         msg,
                                         AlertType.Certificates_ReplacePending,
-                                        NotificationSeverity.Warning,
-                                        "Cluster.Certificate.Replace.Pending"));
+                                        NotificationSeverity.Warning));
                                     return; // we still have time for all the nodes to update themselves 
                                 }
                             }
 
-                            if (cert.TryGet("Certificate", out string certBase64) == false ||
-                                cert.TryGet("Thumbprint", out string certThumbprint) == false)
-                                throw new InvalidOperationException("Invalid 'server/cert' value, expected to get Certificate and Thumbprint properties");
+                            if (cert.TryGet(Constants.Certificates.Certificate, out string certBase64) == false ||
+                                cert.TryGet(Constants.Certificates.Thumbprint, out string certThumbprint) == false)
+                                throw new InvalidOperationException($"Invalid 'server/cert' value, expected to get '{Constants.Certificates.Certificate}' and '{Constants.Certificates.Thumbprint}' properties");
 
                             if (certThumbprint == Server.Certificate?.Certificate?.Thumbprint)
-                            {
-                                if (nodesInCluster > confirmations)
-                                    // I already replaced it, but not all nodes confirmed
-                                    // we'll keep it around for now and retry in one hour
-                                    return;
-
-                                // I replaced it as did everyone else, we can safely delete the "server/cert" doc now
-                                using (var tx = context.OpenWriteTransaction())
-                                {
-                                    Cluster.DeleteItem(context, "server/cert");
-                                    tx.Commit();
-                                }
-                                return;
-                            }
+                                return; // I already replaced it
 
                             // and now we have to replace the cert...
                             if (string.IsNullOrEmpty(Configuration.Security.CertificatePath))
@@ -820,11 +807,10 @@ namespace Raven.Server.ServerWide
 
                                 NotificationCenter.Add(AlertRaised.Create(
                                     null,
-                                    "Server certificate",
+                                    Constants.Certificates.CertReplaceAlertTitle,
                                     msg,
                                     AlertType.Certificates_ReplaceError,
-                                    NotificationSeverity.Error,
-                                    "Cluster.Certificate.Replace.Error"));
+                                    NotificationSeverity.Error));
                                 return;
                             }
 
@@ -858,16 +844,33 @@ namespace Raven.Server.ServerWide
 
                             Server.SetCertificate(newClusterCertificate, bytesToSave, Configuration.Security.CertificatePassword);
 
+                            NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_ReplaceError, null));
+                            NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_ReplacePending, null));
+
                             NotificationCenter.Add(AlertRaised.Create(
                                 null,
-                                "Server certificate",
+                                Constants.Certificates.CertReplaceAlertTitle,
                                 $"The server certificate was successfully replaced on node {NodeTag}.",
                                 AlertType.Certificates_ReplaceSuccess,
-                                NotificationSeverity.Success,
-                                "Cluster.Certificate.Replace.Success"));
+                                NotificationSeverity.Success));
 
                             if (Logger.IsOperationsEnabled)
                                 Logger.Operations($"The server certificate was successfully replaced on node {NodeTag}.");
+
+                            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion < ClusterCommandsVersionManager.ClusterCommandsVersions[nameof(ConfirmServerCertificateReplacedCommand)])
+                            {
+                                // If some nodes run the old version of the command, this node (newer version) will finish here and delete 'server/cert'
+                                // because the last stage of the new version (ConfirmServerCertificateReplacedCommand where we delete 'server/cert') will not happen 
+                                using (var tx = context.OpenWriteTransaction())
+                                {
+                                    Cluster.DeleteItem(context, "server/cert");
+                                    tx.Commit();
+                                }
+
+                                return;
+                            }
+                            
+                            SendToLeaderAsync(new ConfirmServerCertificateReplacedCommand(newClusterCertificate.Thumbprint, oldThumbprint));
                         }
                     }
                     catch (Exception e)
@@ -877,12 +880,11 @@ namespace Raven.Server.ServerWide
 
                         NotificationCenter.Add(AlertRaised.Create(
                             null,
-                            "Server certificate",
+                            Constants.Certificates.CertReplaceAlertTitle,
                             $"Failed to process {t.Type}.",
                             AlertType.Certificates_ReplaceError,
-                            NotificationSeverity.Error,
-                            "Cluster.Certificate.Replace.Error",
-                            new ExceptionDetails(e)));
+                            NotificationSeverity.Error, 
+                            details: new ExceptionDetails(e)));
                     }
                     break;
                 case nameof(InstallUpdatedServerCertificateCommand):
@@ -894,11 +896,11 @@ namespace Raven.Server.ServerWide
                             var cert = Cluster.GetItem(context, "server/cert");
                             if (cert == null)
                                 return; // was already processed?
-                            if (cert.TryGet("Thumbprint", out string certThumbprint) == false)
-                                throw new InvalidOperationException("Invalid 'server/cert' value, expected to get Thumbprint property");
+                            if (cert.TryGet(Constants.Certificates.Thumbprint, out string certThumbprint) == false)
+                                throw new InvalidOperationException($"Invalid 'server/cert' value, expected to get '{Constants.Certificates.Thumbprint}' property");
 
-                            if (cert.TryGet("Certificate", out string base64Cert) == false)
-                                throw new InvalidOperationException("Invalid 'server/cert' value, expected to get Certificate property");
+                            if (cert.TryGet(Constants.Certificates.Certificate, out string base64Cert) == false)
+                                throw new InvalidOperationException($"Invalid 'server/cert' value, expected to get '{Constants.Certificates.Certificate}' property");
 
                             var certificate = new X509Certificate2(Convert.FromBase64String(base64Cert), (string)null, X509KeyStorageFlags.MachineKeySet);
 
@@ -913,11 +915,10 @@ namespace Raven.Server.ServerWide
 
                                 NotificationCenter.Add(AlertRaised.Create(
                                     null,
-                                    "Server certificate",
+                                    Constants.Certificates.CertReplaceAlertTitle,
                                     msg,
                                     AlertType.Certificates_ReplaceError,
-                                    NotificationSeverity.Error,
-                                    "Cluster.Certificate.Replace.Error"));
+                                    NotificationSeverity.Error));
                                 return;
                             }
 
@@ -932,12 +933,94 @@ namespace Raven.Server.ServerWide
 
                         NotificationCenter.Add(AlertRaised.Create(
                             null,
-                            "Server certificate",
+                            Constants.Certificates.CertReplaceAlertTitle,
                             $"Failed to process {t.Type}.",
                             AlertType.Certificates_ReplaceError,
                             NotificationSeverity.Error,
-                            "Cluster.Certificate.Replace.Error",
-                            new ExceptionDetails(e)));
+                            details: new ExceptionDetails(e)));
+                    }
+                    break;
+                case nameof(RecheckStatusOfServerCertificateReplacementCommand):
+                case nameof(ConfirmServerCertificateReplacedCommand):
+                    try
+                    {
+                        using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        {
+                            int nodesInCluster;
+                            int replaced;
+                            string thumbprint;
+                            string oldThumbprint;
+
+                            using (context.OpenReadTransaction())
+                            {
+                                var cert = Cluster.GetItem(context, "server/cert");
+                                if (cert == null)
+                                    return; // was already processed?
+
+                                if (cert.TryGet(Constants.Certificates.Thumbprint, out thumbprint) == false)
+                                    throw new InvalidOperationException($"Expected to get `{Constants.Certificates.Thumbprint}` property");
+
+                                if (cert.TryGet(Constants.Certificates.Replaced, out replaced) == false)
+                                    throw new InvalidOperationException($"Expected to get '{Constants.Certificates.Replaced}' count");
+
+                                if (cert.TryGet(Constants.Certificates.OldThumbprint, out oldThumbprint) == false)
+                                    throw new InvalidOperationException($"Expected to get `{Constants.Certificates.OldThumbprint}` property");
+
+                                nodesInCluster = GetClusterTopology(context).AllNodes.Count;
+                            }
+                            
+                            if (thumbprint == Server.Certificate?.Certificate?.Thumbprint)
+                            {
+                                if (nodesInCluster > replaced)
+                                {
+                                    // I already replaced it, but not all nodes did
+                                    if (Logger.IsOperationsEnabled)
+                                        Logger.Operations($"The server certificate was successfully replaced in {replaced} nodes out of {nodesInCluster}.");
+
+                                    return;
+                                }
+
+                                // I replaced it as did everyone else, we can safely delete the "server/cert" doc
+                                // as well as the old and new server certs from the server store trusted certificates
+                                using (var tx = context.OpenWriteTransaction())
+                                {
+                                    Cluster.DeleteItem(context, "server/cert");
+                                    Cluster.DeleteItem(context, Constants.Certificates.Prefix + thumbprint);
+
+                                    if (oldThumbprint.IsNullOrWhiteSpace() == false)
+                                        Cluster.DeleteItem(context, Constants.Certificates.Prefix + oldThumbprint);
+
+                                    tx.Commit();
+                                }
+
+                                if (Logger.IsOperationsEnabled)
+                                    Logger.Operations("The server certificate was successfully replaced in the entire cluster.");
+
+                                NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_ReplaceSuccess, null));
+                                NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_ReplaceError, null));
+                                NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_ReplacePending, null));
+
+                                NotificationCenter.Add(AlertRaised.Create(
+                                    null,
+                                    Constants.Certificates.CertReplaceAlertTitle,
+                                    "The server certificate was successfully replaced in the entire cluster.",
+                                    AlertType.Certificates_EntireClusterReplaceSuccess,
+                                    NotificationSeverity.Success));
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations($"Failed to process {t.Type}.", e);
+
+                        NotificationCenter.Add(AlertRaised.Create(
+                            null,
+                            Constants.Certificates.CertReplaceAlertTitle,
+                            $"Failed to process {t.Type}.",
+                            AlertType.Certificates_ReplaceError,
+                            NotificationSeverity.Error,
+                            details: new ExceptionDetails(e)));
                     }
                     break;
                 case nameof(PutClientConfigurationCommand):
@@ -1614,31 +1697,6 @@ namespace Raven.Server.ServerWide
                     }
                 }
             }
-
-            EnsureServerCertificateIsInClusterState($"Server Certificate for Node {_engine.Tag}");
-        }
-
-        public void EnsureServerCertificateIsInClusterState(string name)
-        {
-            if (Server.Certificate?.Certificate == null)
-                return;
-
-            // Also need to register my own certificate in the cluster, for other nodes to trust me
-            AsyncHelpers.RunSync(() => RegisterServerCertificateInCluster(Server.Certificate.Certificate, name));
-        }
-
-        public Task RegisterServerCertificateInCluster(X509Certificate2 certificateCertificate, string name)
-        {
-            var myCertificate = new CertificateDefinition
-            {
-                Certificate = Convert.ToBase64String(certificateCertificate.Export(X509ContentType.Cert)),
-                Thumbprint = certificateCertificate.Thumbprint,
-                NotAfter = certificateCertificate.NotAfter,
-                Name = name,
-                SecurityClearance = SecurityClearance.ClusterNode
-            };
-
-            return PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + myCertificate.Thumbprint, myCertificate));
         }
 
         public bool IsLeader()
