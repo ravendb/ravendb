@@ -86,7 +86,7 @@ namespace Tests.Infrastructure
         }
 
 
-        protected async Task<(Uri ServerUrl, Process ServerProcess)> GetServerAsync(
+        protected async Task<(string ServerUrl, Process ServerProcess)> GetServerAsync(
             string serverVersion,
             InterversionTestOptions options = null,
             [CallerMemberName] string database = null,
@@ -94,6 +94,7 @@ namespace Tests.Infrastructure
         {
             var serverBuildInfo = ServerBuildDownloadInfo.Create(serverVersion);
             var serverPath = await _serverBuildRetriever.GetServerPath(serverBuildInfo);
+            Console.WriteLine(serverPath);
             var testServerPath = NewDataPath(prefix: serverVersion);
             CopyFilesRecursively(new DirectoryInfo(serverPath), new DirectoryInfo(testServerPath));
 
@@ -109,7 +110,7 @@ namespace Tests.Infrastructure
                 file.CopyTo(Path.Combine(target.FullName, file.Name));
         }
 
-        private async Task<(Uri ServerUrl, Process ServerProcess)> RunServer(ConfigurableRavenServerLocator locator)
+        private async Task<(string ServerUrl, Process ServerProcess)> RunServer(ConfigurableRavenServerLocator locator)
         {
             var process = RunServerProcess(locator);
 
@@ -146,7 +147,7 @@ namespace Tests.Infrastructure
                 throw new InvalidOperationException(BuildStartupExceptionMessage(outputString, errorString));
             }
 
-            return (new Uri(url), process);
+            return (url, process);
         }
 
         private static string BuildStartupExceptionMessage(string outputString, string errorString)
@@ -302,7 +303,7 @@ namespace Tests.Infrastructure
                 Thread.Sleep(100);
             }
 
-            using (var session = store.OpenSession())
+            using (var session = store.OpenSession(database))
             {
                 //one last try, and throw if there is still a conflict
                 var doc = session.Load<T>(docId);
