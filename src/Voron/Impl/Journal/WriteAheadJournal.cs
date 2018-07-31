@@ -305,13 +305,13 @@ namespace Voron.Impl.Journal
         }
 
 
-        public Page? ReadPage(LowLevelTransaction tx, long pageNumber, ReadOnlyDictionary<int, PagerState> scratchPagerStates)
+        public Page? ReadPage(LowLevelTransaction tx, long pageNumber, Dictionary<int, PagerState> scratchPagerStates)
         {
             // read transactions have to read from journal snapshots
             if (tx.Flags == TransactionFlags.Read)
             {
                 // read log snapshots from the back to get the most recent version of a page
-                for (var i = tx.JournalSnapshots.Count - 1; i >= 0; i--)
+                for (var i = tx.JournalSnapshots.Length - 1; i >= 0; i--)
                 {
                     PagePosition value;
                     if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
@@ -358,7 +358,8 @@ namespace Voron.Impl.Journal
 
         public void UpdateCacheForJournalSnapshots(StorageEnvironmentState state)
         {
-            var items = new List<JournalSnapshot>(_files.Count);
+            int index = 0;
+            var items = new JournalSnapshot[_files.Count];
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var journalFile in _files)
             {
@@ -366,13 +367,13 @@ namespace Voron.Impl.Journal
                 // we have to hold a reference to the journals for the lifetime of the cache
                 // this call is prevented from running concurrently with GetSnapshots()
                 journalSnapshot.FileInstance.AddRef();
-                items.Add(journalSnapshot);
+                items[index++] = journalSnapshot;
             }
 
             ValidateNoDuplicateJournals(items);
 
             var old = state.SnapshotCache;
-            state.SnapshotCache = new System.Collections.ObjectModel.ReadOnlyCollection<JournalSnapshot>(items);
+            state.SnapshotCache = items;
 
             if (old == null)
                 return;
@@ -384,11 +385,11 @@ namespace Voron.Impl.Journal
         }
 
         [Conditional("DEBUG")]
-        private static void ValidateNoDuplicateJournals(List<JournalSnapshot> items)
+        private static void ValidateNoDuplicateJournals(JournalSnapshot[] items)
         {
-            for (int i = 0; i < items.Count; i++)
+            for (int i = 0; i < items.Length; i++)
             {
-                for (int j = i + 1; j < items.Count; j++)
+                for (int j = i + 1; j < items.Length; j++)
                 {
                     if (items[i].Number == items[j].Number)
                     {

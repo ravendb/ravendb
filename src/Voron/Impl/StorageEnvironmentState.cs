@@ -12,8 +12,8 @@ namespace Voron.Impl
         public StorageEnvironmentOptions Options;
         
         public long TransactionCounter;
-        public ReadOnlyCollection<JournalSnapshot> SnapshotCache;
-        public ReadOnlyDictionary<int, PagerState> PagerStatesAllScratchesCache;
+        public JournalSnapshot[] SnapshotCache;
+        public Dictionary<int, PagerState> PagerStatesAllScratchesCache;
         public object ExternalState;
 
         public long NextPageNumber;
@@ -27,8 +27,8 @@ namespace Voron.Impl
             if (root != null)
                 Root = root.State;
             NextPageNumber = nextPageNumber;
-            SnapshotCache = new List<JournalSnapshot>().AsReadOnly();
-            PagerStatesAllScratchesCache = new ReadOnlyDictionary<int, PagerState>(new Dictionary<int, PagerState>());
+            SnapshotCache = Array.Empty<JournalSnapshot>();
+            PagerStatesAllScratchesCache = new Dictionary<int, PagerState>();
         }
 
         public StorageEnvironmentState Clone()

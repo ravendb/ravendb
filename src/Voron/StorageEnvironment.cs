@@ -289,7 +289,7 @@ namespace Voron
                 NextPageNumber = nextPageNumber,
                 Options = Options,
                 TransactionCounter = header->TransactionId == 0 ? entry.TransactionId : header->TransactionId,
-                SnapshotCache = new List<JournalSnapshot>().AsReadOnly()
+                SnapshotCache = Array.Empty<JournalSnapshot>()
             };
 
             var transactionPersistentContext = new TransactionPersistentContext(true);
@@ -782,7 +782,8 @@ namespace Voron
         {
             if (ActiveTransactions.Contains(tx) == false)
                 return;
-            
+
+            Journal.Applicator.OnTransactionCommitted(tx);
             ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches(tx.State);
             Journal.UpdateCacheForJournalSnapshots(tx.State);
 

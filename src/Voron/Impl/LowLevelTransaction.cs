@@ -45,7 +45,7 @@ namespace Voron.Impl
         public long NumberOfModifiedPages => _numberOfModifiedPages;
 
         private readonly WriteAheadJournal _journal;
-        internal readonly ReadOnlyCollection<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>().AsReadOnly();
+        internal readonly JournalSnapshot[] JournalSnapshots = Array.Empty<JournalSnapshot>();
 
         bool IPagerLevelTransactionState.IsWriteTransaction => Flags == TransactionFlags.ReadWrite;
 
@@ -86,7 +86,7 @@ namespace Voron.Impl
         private readonly Stack<long> _pagesToFreeOnCommit;
         private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable;
         private readonly HashSet<PagerState> _pagerStates;
-        private readonly ReadOnlyDictionary<int, PagerState> _scratchPagerStates;
+        private readonly Dictionary<int, PagerState> _scratchPagerStates;
         // END: Structures that are safe to pool.
 
 
