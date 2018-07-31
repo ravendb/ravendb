@@ -7,7 +7,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 {
     public class SchemaCreator
     {
-        public const string SchemaVersion = "0.8";
+        public const string SchemaVersion = "0.9";
         private readonly Session session;
 
         public SchemaCreator(Session session)
@@ -27,7 +27,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
                     CreateFilesTable(dbid);
                     CreateConfigTable(dbid);
                     CreateUsageTable(dbid, "usage", session);
-                    CreatePagesTable(dbid);
+                    CreatePagesTable(dbid, "pages", session);
                     CreateSignaturesTable(dbid);
                     tx.Commit(CommitTransactionGrbit.None);
                 }
@@ -78,15 +78,15 @@ namespace Raven.Database.FileSystem.Storage.Esent
             }
         }
 
-        private void CreatePagesTable(JET_DBID dbid)
+        public static void CreatePagesTable(JET_DBID dbid, string tableName, Session session)
         {
             JET_TABLEID tableid;
-            Api.JetCreateTable(session, dbid, "pages", 1, 80, out tableid);
+            Api.JetCreateTable(session, dbid, tableName, 1, 80, out tableid);
             JET_COLUMNID columnid;
 
             Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
             {
-                coltyp = JET_coltyp.Long,
+                coltyp = JET_coltyp.Currency,
                 grbit = ColumndefGrbit.ColumnAutoincrement | ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
             }, null, 0, out columnid);
 
@@ -206,7 +206,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
             Api.JetAddColumn(session, tableid, "page_id", new JET_COLUMNDEF
             {
-                coltyp = JET_coltyp.Long,
+                coltyp = JET_coltyp.Currency,
                 grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
             }, null, 0, out columnid);
 

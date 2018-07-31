@@ -288,6 +288,7 @@
     <Compile Include="DocumentConflictResolver.cs" />
     <Compile Include="FileSystem\Controllers\BaseAdminFileSystemApiController.cs" />
     <Compile Include="FileSystem\Controllers\SynchronizationTopologyController.cs" />
+    <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From08To09.cs" />
     <Compile Include="FileSystem\Storage\Esent\Schema\Updates\From07To08.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationTopologyNode.cs" />
     <Compile Include="FileSystem\Synchronization\SynchronizationTopologyDiscoverer.cs" />
