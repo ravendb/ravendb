@@ -1786,7 +1786,6 @@ namespace Raven.Server.ServerWide
         }
 
         public const string SnapshotInstalled = "SnapshotInstalled";
-        public const string InstallUpdatedServerCertificateCommandType = "InstallUpdatedServerCertificateCommand";
 
         public override async Task OnSnapshotInstalledAsync(long lastIncludedIndex, ServerStore serverStore)
         {
@@ -1823,7 +1822,7 @@ namespace Raven.Server.ServerWide
                 {
                     TaskExecutor.Execute(_ =>
                     {
-                        onValueChanged.Invoke(this, (lastIncludedIndex, InstallUpdatedServerCertificateCommandType));
+                        onValueChanged.Invoke(this, (lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand)));
                     }, null);
                 }
                 context.Transaction.Commit();
