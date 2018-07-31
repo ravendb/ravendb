@@ -469,7 +469,9 @@ namespace Raven.Server.Documents.Replication
                 {
                     Database = Destination.Database,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Replication,
-                    NodeTag = _parent._server.NodeTag,
+                    SourceNodeTag = _parent._server.NodeTag,
+                    DestinationNodeTag = GetNode(),
+                    DestinationUrl = Destination.Url,
                     ReadResponseAndGetVersionCallback = ReadHeaderResponseAndThrowIfUnAuthorized,
                     Version = TcpConnectionHeaderMessage.ReplicationTcpVersion
                 };
@@ -522,7 +524,7 @@ namespace Raven.Server.Documents.Replication
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
-                        if (headerResponse.Version != -1)
+                        if (headerResponse.Version != (int)TcpNegotiation.SpecialTcpStatus.OutOfRange)
                         {
                             return headerResponse.Version;
                         }
@@ -821,11 +823,6 @@ namespace Raven.Server.Documents.Replication
                     break;
                 case ReplicationMessageReply.ReplyType.MissingAttachments:
                     break;
-                default:
-                    var msg = $"Received error from remote replication destination. Error received: {replicationBatchReply.Exception}";
-                    if (_log.IsInfoEnabled)
-                        _log.Info(msg);
-                    break;
             }
 
             if (_log.IsInfoEnabled)
@@ -846,8 +843,8 @@ namespace Raven.Server.Documents.Replication
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(replicationBatchReply),
-                            "Received reply for replication batch with unrecognized type... got " +
-                            replicationBatchReply.Type);
+                            $"Received reply for replication batch with unrecognized type {replicationBatchReply.Type}" +
+                            $"raw: {replicationBatchReplyMessage}");
                 }
             }
             return replicationBatchReply;
