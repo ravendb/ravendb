@@ -437,15 +437,46 @@ namespace Raven.Database.FileSystem.Synchronization
             return SynchronizePendingFilesAsync(destinationSyncClient, forceSyncingAll);
         }
 
+        private ConcurrentDictionary<string, LastReplicatedEtagRecord> _lastReplicatedEtags = new ConcurrentDictionary<string, LastReplicatedEtagRecord>();
+
+        private class LastReplicatedEtagRecord
+        {
+            public Etag Etag;
+            public int Seen;
+        }
+
         private async Task<bool> EnqueueMissingUpdatesAsync(ISynchronizationServerClient destinationSyncClient,
                                                       SourceSynchronizationInformation synchronizationInfo,
                                                       IList<FileHeader> needSyncingAgain)
         {
             LogFilesInfo("There were {0} file(s) that needed synchronization because the previous one went wrong: {1}",
                          needSyncingAgain);
-            
+
+            var lastReplicatedEtagRecord = _lastReplicatedEtags.AddOrUpdate(destinationSyncClient.BaseUrl, x => new LastReplicatedEtagRecord()
+            {
+                Etag = Etag.Empty,
+                Seen = 0
+            }, (x, last) => last);
+
+
+            var forceIncrementingEtag = false;
+
+            if (lastReplicatedEtagRecord.Etag.Equals(synchronizationInfo.LastSourceFileEtag))
+            {
+                lastReplicatedEtagRecord.Seen++;
+
+                if (lastReplicatedEtagRecord.Seen >= 5)
+                {
+                    // to prevent replication looping and effectively got stuck when dealing with very old rename tombstones (we didn't touch a renamed file
+                    // in the past so a renamed file etag so will be smaller than its related tombstone)
+
+                    // let's do it _only_ if we saw the same etag multiple times
+
+                    forceIncrementingEtag = true;
+                }
+            }
+ 
             var toSynchronization = GetFilesToSynchronization(synchronizationInfo.LastSourceFileEtag, NumberOfFilesToCheckForSynchronization);
-                
 
             var filesToSynchronization = new HashSet<FileHeader>(FileHeaderNameEqualityComparer.Instance);
 
@@ -589,9 +620,14 @@ namespace Raven.Database.FileSystem.Synchronization
                 }
             }
 
-            if (enqueued == false && EtagUtil.IsGreaterThan(maxEtagOfFilteredDoc, synchronizationInfo.LastSourceFileEtag))
+            if ((enqueued == false || forceIncrementingEtag) && EtagUtil.IsGreaterThan(maxEtagOfFilteredDoc, synchronizationInfo.LastSourceFileEtag))
             {
                 await destinationSyncClient.IncrementLastETagAsync(storage.Id, FileSystemUrl, maxEtagOfFilteredDoc).ConfigureAwait(false);
+
+                if (forceIncrementingEtag)
+                {
+                    lastReplicatedEtagRecord.Seen = 0;
+                }
 
                 return false; // we bumped the last synced etag on a destination server, let it know it need to repeat the operation
             }
