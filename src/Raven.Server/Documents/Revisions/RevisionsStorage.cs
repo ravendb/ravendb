@@ -635,15 +635,17 @@ namespace Raven.Server.Documents.Revisions
                 flags &= ~DocumentFlags.HasAttachments;
             }
 
+            var fromReplication = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication);
+
             var configuration = GetRevisionsConfiguration(collectionName.Name, flags);
-            if (configuration.Disabled)
+            if (configuration.Disabled && fromReplication == false)
                 return;
 
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
-            if (configuration.PurgeOnDelete)
+            if (configuration.Disabled == false && configuration.PurgeOnDelete)
             {
-                using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
+                using (GetKeyPrefix(context, lowerId, out var prefixSlice))
                 {
                     DeleteRevisions(context, table, prefixSlice, collectionName, long.MaxValue, null, changeVector, lastModifiedTicks);
                     DeleteCountOfRevisions(context, prefixSlice);
@@ -652,7 +654,6 @@ namespace Raven.Server.Documents.Revisions
                 return;
             }
 
-            var fromReplication = (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) == NonPersistentDocumentFlags.FromReplication;
             if (fromReplication)
             {
                 void DeleteFromRevisionIfChangeVectorIsGreater()

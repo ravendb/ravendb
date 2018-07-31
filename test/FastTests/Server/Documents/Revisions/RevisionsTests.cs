@@ -444,7 +444,7 @@ namespace FastTests.Server.Documents.Revisions
         {
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, false);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
 
                 var deletedRevisions = await store.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);
                 Assert.Equal(0, deletedRevisions.Count);
@@ -519,7 +519,7 @@ namespace FastTests.Server.Documents.Revisions
         {
             using (var store = GetDocumentStore())
             {
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, false);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, modifyConfiguration: configuration => configuration.Collections["Users"].PurgeOnDelete = false);
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(-1);

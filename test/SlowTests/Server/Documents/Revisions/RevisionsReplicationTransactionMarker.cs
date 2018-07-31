@@ -25,14 +25,20 @@ namespace SlowTests.Server.Documents.Revisions
                 database1.Configuration.Replication.MaxItemsCount = 1;
                 database1.ReplicationLoader.DebugWaitAndRunReplicationOnce = new ManualResetEventSlim();
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false);
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, false);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, configuration =>
+                {
+                    configuration.Collections["Users"].PurgeOnDelete = false;
+                });
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, configuration =>
+                {
+                    configuration.Collections["Users"].PurgeOnDelete = false;
+                });
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Id = "users/oren", Name = "Oren", Balance = 10});
-                    await session.StoreAsync(new User {Id = "users/fitzchak", Name = "Fitzchak", Balance = 10});
-                    await session.StoreAsync(new User {Id = "users/michael", Name = "Michael", Balance = 10});
+                    await session.StoreAsync(new User { Id = "users/oren", Name = "Oren", Balance = 10 });
+                    await session.StoreAsync(new User { Id = "users/fitzchak", Name = "Fitzchak", Balance = 10 });
+                    await session.StoreAsync(new User { Id = "users/michael", Name = "Michael", Balance = 10 });
                     await session.SaveChangesAsync();
                 }
 
