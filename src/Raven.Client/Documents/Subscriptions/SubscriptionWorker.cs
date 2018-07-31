@@ -188,7 +188,7 @@ namespace Raven.Client.Documents.Subscriptions
 
                 var databaseName = _dbName ?? _store.Database;
 
-                var parameters = new TcpNegotiateParamaters
+                var parameters = new TcpNegotiateParameters
                 {
                     Database = databaseName,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
@@ -231,7 +231,7 @@ namespace Raven.Client.Documents.Subscriptions
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"Cannot access database {_dbName} because " + reply.Message);
                     case TcpConnectionStatus.TcpVersionMismatch:
-                        if (reply.Version != (int)TcpNegotiation.SpecialTcpStatus.OutOfRange)
+                        if (reply.Version != TcpNegotiation.OutOfRangeStatus)
                         {
                             return reply.Version;
                         }

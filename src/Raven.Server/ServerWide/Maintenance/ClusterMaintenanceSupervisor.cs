@@ -327,7 +327,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 using (var writer = new BlittableJsonTextWriter(ctx, connection))
                 {
-                    var paramaters = new TcpNegotiateParamaters
+                    var paramaters = new TcpNegotiateParameters
                     {
                         Database = null,
                         Operation = TcpConnectionHeaderMessage.OperationTypes.Heartbeats,
@@ -363,7 +363,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             throw new AuthorizationException(
                                 $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
                         case TcpConnectionStatus.TcpVersionMismatch:
-                            if (headerResponse.Version != (int)TcpNegotiation.SpecialTcpStatus.OutOfRange)
+                            if (headerResponse.Version != TcpNegotiation.OutOfRangeStatus)
                             {
                                 return headerResponse.Version;
                             }
