@@ -484,8 +484,8 @@ namespace Raven.Server
                 if (ServerStore.IsLeader() == false)
                     return;
 
-                if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion < ClusterCommandsVersionManager.ClusterCommandsVersions[nameof(ConfirmServerCertificateReplacedCommand_V2)])
-                    throw new ClusterNodesVersionMismatchException("It is not possible to refresh/replace the cluster certificate. Please make sure all the nodes of the cluster run the same version.");
+                if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion < ClusterCommandsVersionManager.ClusterCommandsVersions[nameof(ConfirmServerCertificateReplacedCommand)])
+                    throw new ClusterNodesVersionMismatchException("It is not possible to refresh/replace the cluster certificate in the current cluster topology. Please make sure that all the cluster nodes run the same version.");
 
                 // we need to see if there is already an ongoing process
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -515,19 +515,19 @@ namespace Raven.Server
                         {
                             // This is for the case where all nodes confirmed they received the replacement cert but
                             // not all nodes have made the actual change yet.
-                            await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateReplacementCommand_V2());
+                            await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateReplacementCommand());
                         }
 
                         return;
                     }
                 }
 
-                // same certificate, but now we need to see if we are need to auto update it
+                // same certificate, but now we need to see if we need to auto update it
                 var remainingDays = (currentCertificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
                 if (remainingDays > 30 && forceRenew == false)
                     return; // nothing to do, the certs are the same and we have enough time
 
-                // we want to setup all the renewals for Saturday so we'll have reduce the amount of cert renwals that are counted against our renewals
+                // we want to setup all the renewals for Saturday so we'll have reduced the amount of cert renewals that are counted against our renewals
                 // but if we have less than 20 days, we'll try anyway
                 if (DateTime.Today.DayOfWeek != DayOfWeek.Saturday && remainingDays > 20 && forceRenew == false)
                     return;
@@ -617,7 +617,7 @@ namespace Raven.Server
                     Certificate = Convert.ToBase64String(Certificate.Certificate.Export(X509ContentType.Cert)),
                     Thumbprint = Certificate.Certificate.Thumbprint,
                     NotAfter = Certificate.Certificate.NotAfter,
-                    Name = "OldServerCert-TemporaryForReplacement",
+                    Name = "Old Server Certificate - can delete",
                     SecurityClearance = SecurityClearance.ClusterNode
                 }));
 
@@ -626,13 +626,13 @@ namespace Raven.Server
                     Certificate = Convert.ToBase64String(newCertificate.Export(X509ContentType.Cert)),
                     Thumbprint = newCertificate.Thumbprint,
                     NotAfter = newCertificate.NotAfter,
-                    Name = "NewServerCert-TemporaryForReplacement",
+                    Name = "Server Certificate",
                     SecurityClearance = SecurityClearance.ClusterNode
                 }));
 
                 await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
-                await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand_V2
+                await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand
                 {
                     Certificate = base64Cert, // includes the private key
                     ReplaceImmediately = replaceImmediately
