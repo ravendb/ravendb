@@ -1187,9 +1187,7 @@ namespace Raven.Server.Rachis
             long lastTopologyIndex = -1;
             BlittableJsonReaderObject lastTopology = null;
 
-            using (
-    Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*)&reversedEntryIndex, sizeof(long),
-        out Slice key))
+            using (Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*)&reversedEntryIndex, sizeof(long), out Slice key))
             {
                 var lastEntryIndex = GetLastEntryIndex(context);
                 GetLastCommitIndex(context, out var lastCommitIndex, out var lastCommitTerm);
