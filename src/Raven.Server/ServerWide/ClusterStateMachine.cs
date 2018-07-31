@@ -1496,7 +1496,7 @@ namespace Raven.Server.ServerWide
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"Unable to access  {url} because {reply.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
-                        if (reply.Version != (int)TcpNegotiation.SpecialTcpStatus.OutOfRange)
+                        if (reply.Version != TcpNegotiation.OutOfRangeStatus)
                         {
                             return reply.Version;
                         }
@@ -1537,7 +1537,7 @@ namespace Raven.Server.ServerWide
                 tcpClient = await TcpUtils.ConnectAsync(info.Url, _parent.TcpConnectionTimeout).ConfigureAwait(false);
                 stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate, _parent.TcpConnectionTimeout);
 
-                var paramaters = new TcpNegotiateParamaters
+                var paramaters = new TcpNegotiateParameters
                 {
                     Database = null,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Cluster,

@@ -9,15 +9,12 @@ namespace Raven.Client.ServerWide.Tcp
 {
     public class TcpNegotiation
     {
-        public enum SpecialTcpStatus
-        {
-            OutOfRange = -1,
-            Drop = -2
-        }
+        public const int OutOfRangeStatus = -1;
+        public const int DropStatus = -2;
 
         private static readonly Logger Log = LoggingSource.Instance.GetLogger<TcpNegotiation>("TCP Negotiation"); 
 
-        public static TcpConnectionHeaderMessage.SupportedFeatures NegotiateProtocolVersion(JsonOperationContext context, Stream stream, TcpNegotiateParamaters parameters)
+        public static TcpConnectionHeaderMessage.SupportedFeatures NegotiateProtocolVersion(JsonOperationContext context, Stream stream, TcpNegotiateParameters parameters)
         {
             if (Log.IsInfoEnabled)
             {
@@ -43,14 +40,14 @@ namespace Raven.Client.ServerWide.Tcp
                         break;
 
                     //In this case we usually throw internally but for completeness we better handle it
-                    if (version == (int)SpecialTcpStatus.Drop)
+                    if (version == DropStatus)
                     {
                         return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Drop, TcpConnectionHeaderMessage.DropBaseLine);
                     }
                     var status = TcpConnectionHeaderMessage.OperationVersionSupported(parameters.Operation, version, out current);
                     if (status == TcpConnectionHeaderMessage.SupportedStatus.OutOfRange)
                     {
-                        SendTcpVersionInfo(context, writer, parameters, (int)SpecialTcpStatus.OutOfRange);
+                        SendTcpVersionInfo(context, writer, parameters, OutOfRangeStatus);
                         throw new ArgumentException($"The {parameters.Operation} version {parameters.Version} is out of range, our lowest version is {current}");
                     }
                     if (Log.IsInfoEnabled)
@@ -66,7 +63,7 @@ namespace Raven.Client.ServerWide.Tcp
             }
         }
 
-        private static void SendTcpVersionInfo(JsonOperationContext context, BlittableJsonTextWriter writer, TcpNegotiateParamaters parameters, int currentVersion)
+        private static void SendTcpVersionInfo(JsonOperationContext context, BlittableJsonTextWriter writer, TcpNegotiateParameters parameters, int currentVersion)
         {
             if (Log.IsInfoEnabled)
             {
@@ -84,7 +81,7 @@ namespace Raven.Client.ServerWide.Tcp
         }
     }
 
-    public class TcpNegotiateParamaters
+    public class TcpNegotiateParameters
     {
         public TcpConnectionHeaderMessage.OperationTypes Operation { get; set; }
         public int Version { get; set; }
