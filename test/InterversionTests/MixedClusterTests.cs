@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.Util;
+using Raven.Server;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -16,36 +19,146 @@ namespace InterversionTests
 {
     public class MixedClusterTests : InterversionTestBase
     {
-        [Fact(Skip = "fails consistently")]
+        public class ProcessNode
+        {
+            public string Version;
+            public Process Process;
+            public string Url;
+        }
+
+        public async Task<(RavenServer Leader, List<ProcessNode> Peers, List<RavenServer> LocalPeers)> CreateMixedCluster(string[] peers, int localPeers = 0)
+        {
+            var leaderServer = GetNewServer();
+            leaderServer.ServerStore.Engine.Bootstrap(leaderServer.WebUrl);
+
+            var nodeAdded = new ManualResetEvent(false);
+            leaderServer.ServerStore.Engine.TopologyChanged += (sender, clusterTopology) =>
+            {
+                if(clusterTopology.Promotables.Count == 0)
+                    nodeAdded.Set();
+            };
+
+            var local = new List<RavenServer>();
+            for (int i = 0; i < localPeers; i++)
+            {
+                var peer = GetNewServer();
+                await leaderServer.ServerStore.AddNodeToClusterAsync(peer.WebUrl);
+                Assert.True(nodeAdded.WaitOne(TimeSpan.FromSeconds(30)));
+                nodeAdded.Reset();
+                local.Add(peer);
+            }
+
+            var processes = new List<ProcessNode>();
+            foreach (var peer in peers)
+            {
+                var (url, process) = await GetServerAsync(peer);
+                await leaderServer.ServerStore.AddNodeToClusterAsync(url);
+                Assert.True(nodeAdded.WaitOne(TimeSpan.FromSeconds(30)));
+                nodeAdded.Reset();
+                processes.Add(new ProcessNode
+                {
+                    Version = peer,
+                    Process = process,
+                    Url = url
+                });
+            }
+
+            return (leaderServer, processes, local);
+        }
+
+        public async Task<(IDisposable Disposable, List<DocumentStore> Stores)> GetStores(RavenServer leader, List<ProcessNode> peers, List<RavenServer> local = null)
+        {
+            var stores = new List<DocumentStore>();
+
+            var leaderStore = GetDocumentStore(new Options
+            {
+                Server = leader,
+                CreateDatabase = false,
+                ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = true
+            });
+
+            stores.Add(leaderStore);
+
+            if (local != null)
+                foreach (var ravenServer in local)
+                {
+                    var peerStore = GetDocumentStore(new Options
+                    {
+                        Server = ravenServer,
+                        CreateDatabase = false,
+                        ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = true
+                    });
+                    stores.Add(peerStore);
+                }
+
+            foreach (var peer in peers)
+            {
+                var peerStore = await GetStore(peer.Url, peer.Process, null, new InterversionTestOptions
+                {
+                    CreateDatabase = false,
+                    ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = true
+                });
+                stores.Add(peerStore);
+            }
+            
+            return (new DisposableAction(() =>
+            {
+                foreach (var documentStore in stores)
+                {
+                    documentStore.Dispose();
+                }
+
+                if (local != null)
+                    foreach (var ravenServer in local)
+                    {
+                        ravenServer.Dispose();
+                    }
+
+                leaderStore.Dispose();
+            }), stores);
+        }
+
+        [Fact]
         public async Task ReplicationInMixedCluster_40Leader_with_two_41_nodes()
         {
-            DoNotReuseServer();
+            var (leader, peers, local) = await CreateMixedCluster(new[]
+            {
+                "4.0.6-patch-40047",
+            }, 1);
 
-            (var urlA, var serverA) = await GetServerAsync("4.0.6-patch-40047");
-            var dbName = "MixedClusterTestDB";
+            var peer = local[0];
+            while (true)
+            {
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
+                {
+                    try
+                    {
+                        if (leader.ServerStore.Engine.CurrentLeader != null)
+                        {
+                            leader.ServerStore.Engine.CurrentLeader.StepDown();
+                        }
+                        else
+                        {
+                            peer.ServerStore.Engine.CurrentLeader?.StepDown();
+                        }
 
-            using (var storeA = await GetStore(urlA.ToString(), serverA, null, new InterversionTestOptions
-            {
-                CreateDatabase = true,
-                ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
-            }))
-            using (var storeB = GetDocumentStore(new Options
-            {
-                CreateDatabase = false,
-                ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
-            }))
-            using (var storeC = GetDocumentStore(new Options
-            {
-                CreateDatabase = false,
-                ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
-            }))
-            {
-                await AddNodeToCluster(storeA, storeB.Urls[0]);
-                await Task.Delay(2500);
-                await AddNodeToCluster(storeA, storeC.Urls[0]);
-                await Task.Delay(500);
+                        await leader.ServerStore.Engine.WaitForState(RachisState.Follower, cts.Token);
+                        await peer.ServerStore.Engine.WaitForState(RachisState.Follower, cts.Token);
+                        break;
+                    }
+                    catch
+                    {
+                        //
+                    }
+                }
+            }
 
-                await CreateDatabase(dbName, storeA, 3);
+            var stores = await GetStores(leader, peers, local);
+            using (stores.Disposable)
+            {
+                var storeA = stores.Stores[0];
+
+                var dbName = await CreateDatabase(storeA, 3);
 
                 using (var session = storeA.OpenSession(dbName))
                 {
@@ -60,10 +173,7 @@ namespace InterversionTests
                     "users/1",
                     u => u.Name.Equals("aviv"),
                     TimeSpan.FromSeconds(10),
-                    new List<DocumentStore>
-                    {
-                        storeA, storeB, storeC
-                    },
+                    stores.Stores,
                     dbName));
 
                 storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(storeA.Database, true));
@@ -71,37 +181,23 @@ namespace InterversionTests
             }
         }
 
-        [Fact(Skip = "flaky")]
+        [Fact]
         public async Task ReplicationInMixedCluster_40Leader_with_one_41_node_and_two_40_nodes()
         {
-            DoNotReuseServer();
+            var (leader, peers, local) = await CreateMixedCluster(new[]
+            {
+                "4.0.6-patch-40047",
+                "4.0.6-patch-40047"
+            });
+            leader.ServerStore.Engine.CurrentLeader.StepDown();
+            await leader.ServerStore.Engine.WaitForState(RachisState.Follower, CancellationToken.None);
 
-            (var urlA, var serverA) = await GetServerAsync("4.0.6-patch-40047");
-            (var urlB, var serverB) = await GetServerAsync("4.0.6-patch-40047");
-            var dbName = "MixedClusterTestDB";
+            var stores = await GetStores(leader, peers);
+            using (stores.Disposable)
+            {
+                var storeA = stores.Stores[0];
 
-            using (var storeA = await GetStore(urlA.ToString(), serverA, null, new InterversionTestOptions
-            {
-                CreateDatabase = true,
-                ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
-            }))
-            using (var storeB = await GetStore(urlB.ToString(), serverB, null, new InterversionTestOptions
-            {
-                CreateDatabase = false,
-                ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
-            }))
-            using (var storeC = GetDocumentStore(new Options
-            {
-                CreateDatabase = false,
-                ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
-            }))
-            {
-                await AddNodeToCluster(storeA, urlB.ToString());
-                await Task.Delay(2500);
-                await AddNodeToCluster(storeA, storeC.Urls[0]);
-                await Task.Delay(500);
-
-                await CreateDatabase(dbName, storeA, 3);
+                var dbName = await CreateDatabase(storeA, 3);
 
                 using (var session = storeA.OpenSession(dbName))
                 {
@@ -116,10 +212,7 @@ namespace InterversionTests
                     "users/1",
                     u => u.Name.Equals("aviv"),
                     TimeSpan.FromSeconds(10),
-                    new List<DocumentStore>
-                    {
-                        storeA, storeB, storeC
-                    },
+                    stores.Stores,
                     dbName));
 
                 storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(storeA.Database, true));
@@ -127,28 +220,21 @@ namespace InterversionTests
             }
         }
 
-        [Fact(Skip = "fails consistently")]
+        [Fact]
         public async Task ReplicationInMixedCluster_41Leader_with_406_patch40047()
         {
-            DoNotReuseServer();
-
-            (var urlB, var serverB) = await GetServerAsync("4.0.6-patch-40047");
-            (var urlC, var serverC) = await GetServerAsync("4.0.6-patch-40047");
-
-            using (var storeA = GetDocumentStore(new Options
+            var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                CreateDatabase = true,
-                DeleteDatabaseOnDispose = false,
-                ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
-            }))
-            {
-                await AddNodeToCluster(storeA, urlB.ToString());
-                await Task.Delay(2500);
-                await AddNodeToCluster(storeA, urlC.ToString());
-                await Task.Delay(500);
+                "4.0.6-patch-40047",
+                "4.0.6-patch-40047"
+            });
 
-                var dbName = "MixedClusterTestDB";
-                await CreateDatabase(dbName, storeA, 3);
+            var stores = await GetStores(leader, peers);
+            using (stores.Disposable)
+            {
+                var storeA = stores.Stores[0];
+
+                var dbName = await CreateDatabase(storeA, 3);
 
                 using (var session = storeA.OpenSession(dbName))
                 {
@@ -158,55 +244,34 @@ namespace InterversionTests
                     }, "users/1");
                     session.SaveChanges();
                 }
-                using (var storeB = await GetStore(urlB.ToString(), serverB, dbName, new InterversionTestOptions
-                {
-                    CreateDatabase = false,
-                    ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
-                }))
-                using (var storeC = await GetStore(urlC.ToString(), serverC, dbName, new InterversionTestOptions
-                {
-                    CreateDatabase = false,
-                    ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
-                }))
-                {
-                    Assert.True(await WaitForDocumentInClusterAsync<User>(
-                        "users/1",
-                        u => u.Name.Equals("aviv"),
-                        TimeSpan.FromSeconds(10), 
-                        new List<DocumentStore>
-                        {
-                            storeA, storeB, storeC
-                        },
-                        dbName));
 
-                    storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(storeA.Database, true));
-                    storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, true));
-                }                
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    "users/1",
+                    u => u.Name.Equals("aviv"),
+                    TimeSpan.FromSeconds(10),
+                    stores.Stores,
+                    dbName));
+
+                storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(storeA.Database, true));
+                storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, true));
             }
         }
 
-        [Fact(Skip = "fails consistently")]
+        [Fact]
         public async Task ReplicationInMixedCluster_ShouldFail_41Leader_with_406_nightly20180727_1202()
         {
-            DoNotReuseServer();
-
-            (var urlB, var serverB) = await GetServerAsync("4.0.6-nightly-20180727-1202");
-            (var urlC, var serverC) = await GetServerAsync("4.0.6-nightly-20180727-1202");
-
-            using (var storeA = GetDocumentStore(new Options
+            var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                CreateDatabase = true,
-                DeleteDatabaseOnDispose = false,
-                ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
-            }))
-            {
-                await AddNodeToCluster(storeA, urlB.ToString());
-                await Task.Delay(2500);
-                await AddNodeToCluster(storeA, urlC.ToString());
-                await Task.Delay(500);
+                "4.0.6-nightly-20180727-1202",
+                "4.0.6-nightly-20180727-1202"
+            });
 
-                var dbName = "MixedClusterTestDB";
-                await CreateDatabase(dbName, storeA, 3);
+            var stores = await GetStores(leader, peers);
+            using (stores.Disposable)
+            {
+                var storeA = stores.Stores[0];
+
+                var dbName = await CreateDatabase(storeA, 3);
 
                 using (var session = storeA.OpenSession(dbName))
                 {
@@ -216,57 +281,34 @@ namespace InterversionTests
                     }, "users/1");
                     session.SaveChanges();
                 }
-                using (var storeB = await GetStore(urlB.ToString(), serverB, dbName, new InterversionTestOptions
-                {
-                    CreateDatabase = false,
-                    ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
-                }))
-                using (var storeC = await GetStore(urlC.ToString(), serverC, dbName, new InterversionTestOptions
-                {
-                    CreateDatabase = false,
-                    ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
-                }))
-                {
-                    // replication should fail
 
-                    Assert.False(await WaitForDocumentInClusterAsync<User>(
-                        "users/1",
-                        u => u.Name.Equals("aviv"),
-                        TimeSpan.FromSeconds(10),
-                        new List<DocumentStore>
-                        {
-                            storeA, storeB, storeC
-                        },
-                        dbName));
+                Assert.False(await WaitForDocumentInClusterAsync<User>(
+                    "users/1",
+                    u => u.Name.Equals("aviv"),
+                    TimeSpan.FromSeconds(10),
+                    stores.Stores,
+                    dbName));
 
-                    storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(storeA.Database, true));
-                    storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, true));
-                }
+                storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(storeA.Database, true));
+                storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, true));
             }
         }
 
-        [Fact(Skip = "fails consistently")]
+        [Fact]
         public async Task ReplicationInMixedCluster_41Leader_with_406_nightly20180730_1118()
         {
-            DoNotReuseServer();
-
-            (var urlB, var serverB) = await GetServerAsync("4.0.6-nightly-20180730-1118");
-            (var urlC, var serverC) = await GetServerAsync("4.0.6-nightly-20180730-1118");
-
-            using (var storeA = GetDocumentStore(new Options
+            var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                CreateDatabase = true,
-                DeleteDatabaseOnDispose = false,
-                ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
-            }))
-            {
-                await AddNodeToCluster(storeA, urlB.ToString());
-                await Task.Delay(2500);
-                await AddNodeToCluster(storeA, urlC.ToString());
-                await Task.Delay(500);
+                "4.0.6-nightly-20180730-1118",
+                "4.0.6-nightly-20180730-1118"
+            });
 
-                var dbName = "MixedClusterTestDB";
-                await CreateDatabase(dbName, storeA, 3);
+            var stores = await GetStores(leader, peers);
+            using (stores.Disposable)
+            {
+                var storeA = stores.Stores[0];
+
+                var dbName = await CreateDatabase(storeA, 3);
 
                 using (var session = storeA.OpenSession(dbName))
                 {
@@ -276,34 +318,20 @@ namespace InterversionTests
                     }, "users/1");
                     session.SaveChanges();
                 }
-                using (var storeB = await GetStore(urlB.ToString(), serverB, dbName, new InterversionTestOptions
-                {
-                    CreateDatabase = false,
-                    ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
-                }))
-                using (var storeC = await GetStore(urlC.ToString(), serverC, dbName, new InterversionTestOptions
-                {
-                    CreateDatabase = false,
-                    ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
-                }))
-                {
-                    Assert.True(await WaitForDocumentInClusterAsync<User>(
-                        "users/1",
-                        u => u.Name.Equals("aviv"),
-                        TimeSpan.FromSeconds(10),
-                        new List<DocumentStore>
-                        {
-                            storeA, storeB, storeC
-                        },
-                        dbName));
 
-                    storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(storeA.Database, true));
-                    storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, true));
-                }
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    "users/1",
+                    u => u.Name.Equals("aviv"),
+                    TimeSpan.FromSeconds(10),
+                    stores.Stores,
+                    dbName));
+
+                storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(storeA.Database, true));
+                storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, true));
             }
         }
 
-        private static async Task CreateDatabase(string dbName, IDocumentStore store, int replicationFactor = 1)
+        private static async Task<string> CreateDatabase(IDocumentStore store, int replicationFactor = 1, [CallerMemberName] string dbName = null)
         {
             var doc = new DatabaseRecord(dbName)
             {
@@ -319,6 +347,7 @@ namespace InterversionTests
 
             var databasePutResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, replicationFactor));
             Assert.Equal(replicationFactor, databasePutResult.NodesAddedTo.Count);
+            return dbName;
         }
 
         private static async Task AddNodeToCluster(DocumentStore store, string url)
