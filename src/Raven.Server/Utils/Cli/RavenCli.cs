@@ -1114,7 +1114,7 @@ namespace Raven.Server.Utils.Cli
             [Command.Script] = new SingleAction { NumOfArgs = 1, DelegateFunc = CommandScript },
             [Command.LowMem] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandLowMem },
             [Command.Timer] = new SingleAction { NumOfArgs = 1, DelegateFunc = CommandTimer },
-            [Command.OpenBrowser] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandOpenBrowser },
+            [Command.OpenBrowser] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandOpenBrowser },
             [Command.ResetServer] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandResetServer },
             [Command.Logout] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandLogout },
             [Command.Shutdown] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandShutdown },
