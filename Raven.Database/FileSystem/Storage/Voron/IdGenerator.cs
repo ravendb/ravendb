@@ -15,11 +15,11 @@ namespace Raven.Database.FileSystem.Storage.Voron
 {
     internal class IdGenerator
     {
-        private readonly ConcurrentDictionary<string, int> tableIds;
+        private readonly ConcurrentDictionary<string, long> tableIds;
 
         public IdGenerator(TableStorage storage)
         {
-            tableIds = new ConcurrentDictionary<string, int>();
+            tableIds = new ConcurrentDictionary<string, long>();
 
             using (var snapshot = storage.CreateSnapshot())
             {
@@ -34,7 +34,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             }
         }
 
-        public int GetNextIdForTable(Table table)
+        public long GetNextIdForTable(Table table)
         {
             if (!tableIds.ContainsKey(table.TableName))
                 throw new InvalidOperationException(string.Format("Id generation has not been configured for table '{0}'.", table.TableName));
@@ -45,7 +45,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             }, (s, l) => l + 1);
         }
 
-        private static int ReadLastIdFromTable(Table table, SnapshotReader snapshot)
+        private static long ReadLastIdFromTable(Table table, SnapshotReader snapshot)
         {
             using (var iterator = table.Iterate(snapshot, null))
             {
@@ -53,7 +53,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
                     return 0;
 
                 var id = iterator.CurrentKey.ToString();
-                return int.Parse(id);
+                return long.Parse(id);
             }
         }
     }

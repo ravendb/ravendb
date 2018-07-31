@@ -57,8 +57,8 @@ namespace Raven.Tests.FileSystem.Storage
             var buffer1 = Encoding.UTF8.GetBytes(text1);
             var buffer2 = Encoding.UTF8.GetBytes(text2);
 
-            var pageId1 = -1;
-            var pageId2 = -1;
+            long pageId1 = -1;
+            long pageId2 = -1;
 
             using (var storage = NewTransactionalStorage(requestedStorage))
             {

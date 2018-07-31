@@ -63,7 +63,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             writeBatch.Value = new WriteBatch { DisposeAfterWrite = writeBatch.Value.DisposeAfterWrite };
         }
 
-        public int InsertPage(byte[] buffer, int size)
+        public long InsertPage(byte[] buffer, int size)
         {
             var hashKey = new HashKey(buffer, size);
             var key = (Slice)ConvertToKey(hashKey);
@@ -86,7 +86,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
                 storage.Pages.Add(writeBatch.Value, id, page, version);
 
-                return page.Value<int>("id");
+                return page.Value<long>("id");
             }
 
             var newPageId = IdGenerator.GetNextIdForTable(storage.Pages);
@@ -165,7 +165,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             };
         }
 
-        public void AssociatePage(string filename, int pageId, int pagePositionInFile, int pageSize, bool incrementUsageCount = false)
+        public void AssociatePage(string filename, long pageId, int pagePositionInFile, int pageSize, bool incrementUsageCount = false)
         {
             var usageByFileName = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileName);
             var usageByFileNameAndPosition = storage.Usage.GetIndex(Tables.Usage.Indices.ByFileNameAndPosition);
@@ -215,7 +215,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
                 IncrementUsageCount(pageId);
         }
 
-        private void IncrementUsageCount(int pageId)
+        private void IncrementUsageCount(long pageId)
         {
             var key = (Slice)CreateKey(pageId);
 
@@ -229,7 +229,7 @@ namespace Raven.Database.FileSystem.Storage.Voron
             storage.Pages.Add(writeBatch.Value, key, page, version);
         }
 
-        public int ReadPage(int pageId, byte[] buffer)
+        public int ReadPage(long pageId, byte[] buffer)
         {
             var key = (Slice)CreateKey(pageId);
             var pageData = storage.Pages.GetIndex(Tables.Pages.Indices.Data);

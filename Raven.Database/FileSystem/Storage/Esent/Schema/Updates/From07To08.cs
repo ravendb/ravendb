@@ -20,8 +20,7 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
             var usageTableName = "usage";
 
             var newTableName = usageTableName + "_new";
-
-            JET_TABLEID newTableId;
+            
             try
             {
                 Api.JetDeleteTable(session, dbid, newTableName);
@@ -57,7 +56,7 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
 
                         Api.SetColumn(session, dst, dstColumns["name"], name, Encoding.Unicode);
                         Api.SetColumn(session, dst, dstColumns["file_pos"], file_pos);
-                        Api.SetColumn(session, dst, dstColumns["page_id"], page_id);
+                        Api.SetColumn(session, dst, dstColumns["page_id"], (long)page_id);
                         Api.SetColumn(session, dst, dstColumns["page_size"], page_size);
 
                         insert.Save();

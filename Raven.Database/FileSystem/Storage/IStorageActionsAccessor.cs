@@ -18,13 +18,13 @@ namespace Raven.Database.FileSystem.Storage
 
         void PulseTransaction();
 
-        int InsertPage(byte[] buffer, int size);
+        long InsertPage(byte[] buffer, int size);
 
         FileUpdateResult PutFile(string filename, long? totalSize, RavenJObject metadata, bool tombstone = false);
 
-        void AssociatePage(string filename, int pageId, int pagePositionInFile, int pageSize, bool incrementUsageCount = false);
+        void AssociatePage(string filename, long pageId, int pagePositionInFile, int pageSize, bool incrementUsageCount = false);
 
-        int ReadPage(int pageId, byte[] buffer);
+        int ReadPage(long pageId, byte[] buffer);
 
         FileHeader ReadFile(string filename);
 
