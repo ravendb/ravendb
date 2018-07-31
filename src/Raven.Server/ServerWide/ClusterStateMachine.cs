@@ -1496,7 +1496,7 @@ namespace Raven.Server.ServerWide
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"Unable to access  {url} because {reply.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
-                        if (reply.Version != -1)
+                        if (reply.Version != (int)TcpNegotiation.SpecialTcpStatus.OutOfRange)
                         {
                             return reply.Version;
                         }
@@ -1515,7 +1515,7 @@ namespace Raven.Server.ServerWide
             return TcpConnectionHeaderMessage.ClusterTcpVersion;
         }
 
-        public override async Task<RachisConnection> ConnectToPeer(string url, X509Certificate2 certificate)
+        public override async Task<RachisConnection> ConnectToPeer(string url, string tag ,X509Certificate2 certificate)
         {
             if (url == null)
                 throw new ArgumentNullException(nameof(url));
@@ -1543,7 +1543,8 @@ namespace Raven.Server.ServerWide
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Cluster,
                     Version = TcpConnectionHeaderMessage.ClusterTcpVersion,
                     ReadResponseAndGetVersionCallback = ClusterReadResponseAndGetVersion,
-                    Url = info.Url
+                    DestinationUrl = info.Url,
+                    DestinationNodeTag = tag
                 };
 
                 TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures;

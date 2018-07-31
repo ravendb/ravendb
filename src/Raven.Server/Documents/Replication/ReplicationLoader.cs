@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.Replication
                         _log.Info($"GetLastEtag response, last etag: {lastEtagFromSrc}");
                     var response = new DynamicJsonValue
                     {
-                        [nameof(ReplicationMessageReply.Type)] = "Ok",
+                        [nameof(ReplicationMessageReply.Type)] = ReplicationMessageReply.ReplyType.Ok.ToString(),
                         [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
                         [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc,
                         [nameof(ReplicationMessageReply.NodeTag)] = _server.NodeTag,
