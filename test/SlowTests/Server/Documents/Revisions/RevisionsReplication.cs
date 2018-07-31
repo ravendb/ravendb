@@ -197,8 +197,14 @@ namespace SlowTests.Server.Documents.Revisions
                 database.TombstoneCleaner.Subscribe(this);
                 database2.TombstoneCleaner.Subscribe(this);
 
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false);
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, false);
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, configuration =>
+                {
+                    configuration.Collections["Users"].PurgeOnDelete = false;
+                });
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, configuration =>
+                {
+                    configuration.Collections["Users"].PurgeOnDelete = false;
+                });
                 await SetupReplicationAsync(store1, store2);
 
                 var deletedRevisions = await store1.Commands().GetRevisionsBinEntriesAsync(long.MaxValue);

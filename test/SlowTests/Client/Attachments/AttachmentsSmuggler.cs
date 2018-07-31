@@ -113,7 +113,7 @@ namespace SlowTests.Client.Attachments
                     session.SaveChanges();
                 }
 
-                using (var stream = new MemoryStream(new byte[] {1, 2, 3}))
+                using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
                     store.Operations.Send(new PutAttachmentOperation("users/1", "file1", stream, "image/png"));
 
                 var config = new PeriodicBackupConfiguration
@@ -135,7 +135,7 @@ namespace SlowTests.Client.Attachments
 
                 var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
                 store.Operations.Send(new DeleteAttachmentOperation("users/1", "file1"));
-                using (var stream = new MemoryStream(new byte[] {4, 5, 6}))
+                using (var stream = new MemoryStream(new byte[] { 4, 5, 6 }))
                     store.Operations.Send(new PutAttachmentOperation("users/1", "file2", stream, "image/png"));
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
@@ -314,7 +314,12 @@ namespace SlowTests.Client.Attachments
                 {
                     await SetDatabaseId(store1, dbId);
 
-                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false, 4);
+                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, configuration =>
+                    {
+                        configuration.Collections["Users"].PurgeOnDelete = false;
+                        configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
+                    });
+
                     using (var session = store1.OpenSession())
                     {
                         session.Store(new User { Name = "Fitzchak" }, "users/1");
@@ -390,7 +395,12 @@ namespace SlowTests.Client.Attachments
                 }))
                 {
                     await SetDatabaseId(store1, new Guid("00000000-48c4-421e-9466-000000000000"));
-                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false, 4);
+                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, configuration =>
+                    {
+                        configuration.Collections["Users"].PurgeOnDelete = false;
+                        configuration.Collections["Users"].MinimumRevisionsToKeep = 4;
+                    });
+
                     AttachmentsRevisions.CreateDocumentWithAttachments(store1);
                     using (var bigStream = new MemoryStream(Enumerable.Range(1, 999 * 1024).Select(x => (byte)x).ToArray()))
                         store1.Operations.Send(new PutAttachmentOperation("users/1", "big-file", bigStream, "image/png"));

@@ -47,6 +47,7 @@ namespace Raven.Server.Documents
             return (current & flag) == flag;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static DocumentFlags Strip(this DocumentFlags current, DocumentFlags flag)
         {
             return current & ~flag;
