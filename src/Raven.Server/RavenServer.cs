@@ -1215,7 +1215,7 @@ namespace Raven.Server
 
                                 if (Logger.IsInfoEnabled)
                                 {
-                                    Logger.Info($"TCP connection form {header.SourceNodeTag ?? tcpClient.Client.RemoteEndPoint.ToString()} " +
+                                    Logger.Info($"TCP connection from {header.SourceNodeTag ?? tcpClient.Client.RemoteEndPoint.ToString()} " +
                                                 $"for '{header.Operation}' is accepted with version {supported}");
                                 }
                             }
