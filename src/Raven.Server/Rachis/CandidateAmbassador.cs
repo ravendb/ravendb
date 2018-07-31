@@ -18,7 +18,6 @@ namespace Raven.Server.Rachis
         private readonly Candidate _candidate;
         private readonly string _tag;
         private readonly string _url;
-        private readonly X509Certificate2 _certificate;
         private string _statusMessage;
         public string StatusMessage
         {
@@ -43,13 +42,12 @@ namespace Raven.Server.Rachis
         private RemoteConnection _connection;
         private RemoteConnection _publishedConnection;
 
-        public CandidateAmbassador(RachisConsensus engine, Candidate candidate, string tag, string url, X509Certificate2 certificate)
+        public CandidateAmbassador(RachisConsensus engine, Candidate candidate, string tag, string url)
         {
             _engine = engine;
             _candidate = candidate;
             _tag = tag;
             _url = url;
-            _certificate = certificate;
             Status = AmbassadorStatus.Started;
             StatusMessage = $"Started Candidate Ambassador for {_engine.Tag} > {_tag}";
         }
@@ -111,7 +109,7 @@ namespace Raven.Server.Rachis
                         Action disconnect;
                         try
                         {
-                            var connection = _engine.ConnectToPeer(_url, _tag, _certificate).Result;
+                            var connection = _engine.ConnectToPeer(_url, _tag, _engine.ClusterCertificate).Result;
                             stream = connection.Stream;
                             disconnect = connection.Disconnect;
 
