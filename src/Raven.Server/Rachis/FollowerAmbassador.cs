@@ -42,7 +42,6 @@ namespace Raven.Server.Rachis
         private ManualResetEvent _wakeLeader;
         private readonly string _tag;
         private readonly string _url;
-        private readonly X509Certificate2 _certificate;
         private string _statusMessage;
 
         public string StatusMessage
