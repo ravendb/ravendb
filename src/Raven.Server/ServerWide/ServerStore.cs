@@ -1042,6 +1042,9 @@ namespace Raven.Server.ServerWide
 
                             Server.SetCertificate(newClusterCertificate, bytesToSave, Configuration.Security.CertificatePassword);
 
+                            NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_ReplaceError, null));
+                            NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_ReplacePending, null));
+
                             NotificationCenter.Add(AlertRaised.Create(
                                 null,
                                 Constants.Certificates.CertReplaceAlertTitle,
