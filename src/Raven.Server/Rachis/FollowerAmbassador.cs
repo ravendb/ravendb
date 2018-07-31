@@ -270,7 +270,8 @@ namespace Raven.Server.Rachis
                                             TruncateLogBefore = _leader.LowestIndexInEntireCluster,
                                             PrevLogTerm = _engine.GetTermFor(context, _followerMatchIndex) ?? 0,
                                             PrevLogIndex = _followerMatchIndex,
-                                            TimeAsLeader = _leader.LeaderShipDuration
+                                            TimeAsLeader = _leader.LeaderShipDuration,
+                                            MinClusterCommandVersion = ClusterCommandsVersionManager.CurrentClusterMinimalVersion
                                         };
                                     }
                                 }
@@ -723,7 +724,9 @@ namespace Raven.Server.Rachis
                 var llr = _connection.Read<LogLengthNegotiationResponse>(context);
 
                 FollowerCommandsVersion = GetFollowerVersion(llr);
-                ClusterCommandsVersionManager.SetMinimalClusterVersion(FollowerCommandsVersion);
+                _engine.CurrentLeader.PeersVersion[_tag] = FollowerCommandsVersion;
+                var minimalVersion = ClusterCommandsVersionManager.GetClusterMinimalVersion(_engine.CurrentLeader.PeersVersion.Values.ToList(), _engine.MaximalVersion);
+                ClusterCommandsVersionManager.SetClusterVersion(minimalVersion);
 
                 if (_engine.Log.IsInfoEnabled)
                 {

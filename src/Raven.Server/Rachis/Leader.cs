@@ -55,6 +55,8 @@ namespace Raven.Server.Rachis
         private readonly Dictionary<string, FollowerAmbassador> _nonVoters =
             new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
 
+        public ConcurrentDictionary<string, int> PeersVersion = new ConcurrentDictionary<string, int>();
+
         private PoolOfThreads.LongRunningWork _leaderLongRunningWork;
 
         private int _previousPeersWereDisposed;
@@ -847,6 +849,7 @@ namespace Raven.Server.Rachis
                             newNonVotes[nodeTag] = nodeUrl;
                             break;
                         case TopologyModification.Remove:
+                            PeersVersion.TryRemove(nodeTag, out _);
                             if (clusterTopology.Contains(nodeTag) == false)
                             {
                                 throw new InvalidOperationException($"Was requested to remove node={nodeTag} from the topology " +
