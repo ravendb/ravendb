@@ -99,9 +99,10 @@ namespace Raven.Embedded
                 {
                     Urls = new[] { serverUrl.AbsoluteUri },
                     Database = databaseName,
-                    Certificate = _certificate
-
+                    Certificate = _certificate,
+                    Conventions = options.Conventions
                 };
+
                 store.AfterDispose += (sender, args) => _documentStores.TryRemove(databaseName, out _);
 
                 store.Initialize();
