@@ -481,7 +481,7 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
-                var parameters = new TcpNegotiateParamaters
+                var parameters = new TcpNegotiateParameters
                 {
                     Database = Destination.Database,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Replication,
@@ -544,7 +544,7 @@ namespace Raven.Server.Documents.Replication
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
-                        if (headerResponse.Version != (int)TcpNegotiation.SpecialTcpStatus.OutOfRange)
+                        if (headerResponse.Version != TcpNegotiation.OutOfRangeStatus)
                         {
                             return headerResponse.Version;
                         }
