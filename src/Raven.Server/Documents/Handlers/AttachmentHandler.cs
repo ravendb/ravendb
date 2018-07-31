@@ -344,7 +344,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private class MergedDeleteAttachmentCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class MergedDeleteAttachmentCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
         {
             public string DocumentId;
             public string Name;
@@ -363,6 +363,16 @@ namespace Raven.Server.Documents.Handlers
                     ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
                 }
                 return 1;
+            }
+
+            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto()
+            {
+                return new MergedDeleteAttachmentCommandDto
+                {
+                    DocumentId = DocumentId,
+                    Name = Name,
+                    ExpectedChangeVector = ExpectedChangeVector
+                };
             }
         }
     }
@@ -386,6 +396,24 @@ namespace Raven.Server.Documents.Handlers
                 ContentType = ContentType,
                 Stream = Stream,
                 Hash = Hash,
+                Database = database
+            };
+        }
+    }
+
+    internal class MergedDeleteAttachmentCommandDto : TransactionOperationsMerger.IReplayableCommandDto<AttachmentHandler.MergedDeleteAttachmentCommand>
+    {
+        public string DocumentId;
+        public string Name;
+        public LazyStringValue ExpectedChangeVector;
+
+        public AttachmentHandler.MergedDeleteAttachmentCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
+        {
+            return new AttachmentHandler.MergedDeleteAttachmentCommand
+            {
+                DocumentId = DocumentId,
+                Name = Name,
+                ExpectedChangeVector = ExpectedChangeVector,
                 Database = database
             };
         }

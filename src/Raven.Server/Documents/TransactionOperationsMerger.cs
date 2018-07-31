@@ -1259,6 +1259,8 @@ namespace Raven.Server.Documents
                     return jsonSerializer.Deserialize<MergedInsertBulkCommandDto>(reader);
                 case nameof(AttachmentHandler.MergedPutAttachmentCommand):
                     return jsonSerializer.Deserialize<MergedPutAttachmentCommandDto>(reader);
+                case nameof(AttachmentHandler.MergedDeleteAttachmentCommand):
+                    return jsonSerializer.Deserialize<MergedDeleteAttachmentCommandDto>(reader);
                 case nameof(HiLoHandler.MergedNextHiLoCommand):
                     return null;
                 default:

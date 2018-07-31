@@ -57,6 +57,51 @@ namespace SlowTests.Server
         }
 
         [Fact]
+        public async Task RecordingDeleteAttachmentCommand()
+        {
+            //Arrange
+            var recordFilePath = NewDataPath();
+
+            const string bufferContent = "Menahem";
+            var expected = Encoding.ASCII.GetBytes(bufferContent);
+            var attachmentStream = new MemoryStream(expected);
+
+            var user = new User { Name = "Gershon" };
+            const string id = "users/1";
+
+            const string fileName = "someFileName";
+
+            //Recording
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+
+                await store.Commands().PutAsync(id, null, user, new Dictionary<string, object>
+                {
+                    {"@collection", "Users"}
+                });
+
+                store.Operations.Send(new PutAttachmentOperation(id, fileName, attachmentStream, "application/pdf"));
+
+                store.Operations.Send(new DeleteAttachmentOperation(id, fileName));
+
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+            }
+
+            //Replay
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
+            {
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
+
+                var attachmentResult = store.Operations.Send(new GetAttachmentOperation(id, fileName, AttachmentType.Document, null));
+
+                //Assert
+                Assert.Null(attachmentResult);
+            }
+        }
+
+        [Fact]
         public async Task RecordingPutAttachmentCommand()
         {
             //Arrange
@@ -92,7 +137,6 @@ namespace SlowTests.Server
             {
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
 
-//                WaitForUserToContinueTheTest(store);
                 var attachmentResult = store.Operations.Send(new GetAttachmentOperation(id, fileName, AttachmentType.Document, null));
                 var actual = attachmentResult.Stream.ReadData();
 

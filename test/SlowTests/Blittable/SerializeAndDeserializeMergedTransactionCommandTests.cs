@@ -22,6 +22,49 @@ namespace SlowTests.Blittable
     public class SerializeAndDeserializeMergedTransactionCommandTests : RavenLowLevelTestBase
     {
         [Fact]
+        public void SerializeAndDeserialize_MergedDeleteAttachmentCommand()
+        {
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                //Arrange
+                var changeVector = context.GetLazyString("Some Lazy String");
+                var expected = new AttachmentHandler.MergedDeleteAttachmentCommand
+                {
+                    DocumentId = "someId",
+                    Name = "someName",
+                    ExpectedChangeVector = changeVector
+                };
+
+                //Serialize
+                var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+                BlittableJsonReaderObject blitCommand;
+                using (var writer = new BlittableJsonWriter(context))
+                {
+                    var dto = expected.ToDto();
+                    jsonSerializer.Serialize(writer, dto);
+                    writer.FinalizeDocument();
+
+                    blitCommand = writer.CreateReader();
+                }
+
+                var fromStream = SerializeTestHelper.SimulateSavingToFileAndLoading(context, blitCommand);
+
+                //Deserialize
+                AttachmentHandler.MergedDeleteAttachmentCommand actual;
+                using (var reader = new BlittableJsonReader(context))
+                {
+                    reader.Init(fromStream);
+
+                    var dto = jsonSerializer.Deserialize<MergedDeleteAttachmentCommandDto>(reader);
+                    actual = dto.ToCommand(null, null);
+                }
+
+                //Assert
+                Assert.Equal(expected, actual, new CustomComparer<AttachmentHandler.MergedDeleteAttachmentCommand>());
+            }
+        }
+
+        [Fact]
         public void SerializeAndDeserialize_MergedPutAttachmentCommand()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
