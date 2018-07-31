@@ -77,6 +77,8 @@ namespace Voron.Impl.Journal
             _journalWriter?.AddRef();
         }
 
+        public bool Disposed { get => _journalWriter == null; }
+
         public void Dispose()
         {
             if (_transactionHeaders != null)
@@ -307,7 +309,16 @@ namespace Voron.Impl.Journal
             Array.Copy(transactionHeaders, _transactionHeaders, transactionsCount);
         }
 
-        public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
+        public bool DeleteOnClose
+        {
+            set
+            {
+                var jrnlWriter = _journalWriter;
+                if (jrnlWriter == null)
+                    return;
+                jrnlWriter.DeleteOnClose = value;
+            }
+        }
 
 
         private static readonly ObjectPool<FastList<PagePosition>, FastList<PagePosition>.ResetBehavior> _scratchPagesPositionsPool = new ObjectPool<FastList<PagePosition>, FastList<PagePosition>.ResetBehavior>(() => new FastList<PagePosition>(), 10);
