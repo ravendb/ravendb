@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -366,7 +365,7 @@ namespace Tests.Infrastructure
                 return slice.ToString() == "values";
             }
 
-            public override async Task<RachisConnection> ConnectToPeer(string url, X509Certificate2 certificate)
+            public override async Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate)
             {
                 TimeSpan time;
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out TransactionOperationContext ctx))

@@ -332,7 +332,9 @@ namespace Raven.Server.ServerWide.Maintenance
                         Operation = TcpConnectionHeaderMessage.OperationTypes.Heartbeats,
                         Version = TcpConnectionHeaderMessage.HeartbeatsTcpVersion,
                         ReadResponseAndGetVersionCallback = SupervisorReadResponseAndGetVersion,
-                        Url = tcpConnectionInfo.Url
+                        DestinationUrl = tcpConnectionInfo.Url,
+                        DestinationNodeTag = ClusterTag
+                        
                     };
                     supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(ctx, connection, paramaters);
 
@@ -360,7 +362,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             throw new AuthorizationException(
                                 $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
                         case TcpConnectionStatus.TcpVersionMismatch:
-                            if (headerResponse.Version != -1)
+                            if (headerResponse.Version != (int)TcpNegotiation.SpecialTcpStatus.OutOfRange)
                             {
                                 return headerResponse.Version;
                             }

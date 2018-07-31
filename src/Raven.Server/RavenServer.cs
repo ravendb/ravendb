@@ -1118,6 +1118,7 @@ namespace Raven.Server
                             int count = 0, maxRetries = 100;
                             using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
                             {
+                                int supported;
                                 while (true)
                                 {
                                     using (var headerJson = await context.ParseToMemoryAsync(
@@ -1154,15 +1155,11 @@ namespace Raven.Server
                                                 Logger.Info($"Got a request to drop TCP connection to {header.DatabaseName ?? "the cluster node"} " +
                                                             $"from {tcpClient.Client.RemoteEndPoint} reason: {header.Info}");
                                             }
-
                                             return;
                                         }
-
-                                        if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Ping)
-                                            break;
                                     }
 
-                                    var status = TcpConnectionHeaderMessage.OperationVersionSupported(header.Operation, header.OperationVersion, out var prevSupported);
+                                    var status = TcpConnectionHeaderMessage.OperationVersionSupported(header.Operation, header.OperationVersion, out supported);
                                     if (status == TcpConnectionHeaderMessage.SupportedStatus.Supported)
                                         break;
 
@@ -1186,17 +1183,18 @@ namespace Raven.Server
                                     {
                                         Logger.Info(
                                             $"Got a request to establish TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} " +
-                                            $"Didn't agree on {header.Operation} protocol version: {header.OperationVersion} will request to use version: {prevSupported}.");
+                                            $"Didn't agree on {header.Operation} protocol version: {header.OperationVersion} will request to use version: {supported}.");
                                     }
 
-                                    RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch, prevSupported);
+                                    RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch, supported);
                                 }
 
                                 bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
                                 //At this stage the error is not relevant.
                                 RespondToTcpConnection(stream, context, null,
                                     authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed,
-                                    header.OperationVersion);
+                                    supported);
+                                tcp.ProtocolVersion = supported;
 
                                 if (authSuccessful == false)
                                 {
@@ -1213,7 +1211,11 @@ namespace Raven.Server
                                     return; // cannot proceed
                                 }
 
-                                tcp.ProtocolVersion = header.OperationVersion;
+                                if (Logger.IsInfoEnabled)
+                                {
+                                    Logger.Info($"TCP connection form {header.SourceNodeTag ?? tcpClient.Client.RemoteEndPoint.ToString()} " +
+                                                $"for '{header.Operation}' is accepted with version {supported}");
+                                }
                             }
 
                             if (_tcpAuditLog != null)

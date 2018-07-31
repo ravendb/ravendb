@@ -73,7 +73,7 @@ namespace Raven.Server.Rachis
 
         public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
 
-        public abstract Task<RachisConnection> ConnectToPeer(string url, X509Certificate2 certificate);
+        public abstract Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate);
 
         public virtual Task OnSnapshotInstalledAsync(long lastIncludedIndex, ServerStore serverStore)
         {

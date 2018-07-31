@@ -192,7 +192,9 @@ namespace Raven.Client.Documents.Subscriptions
                     Database = databaseName,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
                     Version = TcpConnectionHeaderMessage.SubscriptionTcpVersion,
-                    ReadResponseAndGetVersionCallback = ReadServerResponseAndGetVersion
+                    ReadResponseAndGetVersionCallback = ReadServerResponseAndGetVersion,
+                    DestinationNodeTag = CurrentNodeTag,
+                    DestinationUrl = command.Result.Url
                 };
                 _supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(context, _stream, parameters);
 
@@ -228,7 +230,7 @@ namespace Raven.Client.Documents.Subscriptions
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"Cannot access database {_dbName} because " + reply.Message);
                     case TcpConnectionStatus.TcpVersionMismatch:
-                        if (reply.Version != -1)
+                        if (reply.Version != (int)TcpNegotiation.SpecialTcpStatus.OutOfRange)
                         {
                             return reply.Version;
                         }
