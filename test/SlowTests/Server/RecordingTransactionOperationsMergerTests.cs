@@ -355,6 +355,98 @@ namespace SlowTests.Server
         }
 
         [Fact]
+        public void RecordingAddAttachmentAsBatch()
+        {
+            var filePath = NewDataPath();
+
+            const string bufferContent = "Menahem";
+            var expected = Encoding.ASCII.GetBytes(bufferContent);
+            var attachmentStream = new MemoryStream(expected);
+
+            const string name = "Avi";
+            const string id = "users/A-1";
+            const string attachmentName = "someFileName";
+
+            //Recording
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = name }, id);
+                    session.Advanced.Attachments.Store(id, attachmentName, attachmentStream);
+
+                    session.SaveChanges();
+                }
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+            }
+
+            //Replay
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(filePath, FileMode.Open))
+            {
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
+                using (var session = store.OpenSession())
+                {
+                    var attachmentResult = session.Advanced.Attachments.Get(id, attachmentName);
+                    var actual = attachmentResult.Stream.ReadData();
+
+                    //Assert
+                    Assert.Equal(actual, expected);
+                }
+            }
+        }
+
+        [Fact]
+        public void RecordingDeleteAttachmentAsBatch()
+        {
+            var filePath = NewDataPath();
+
+            const string bufferContent = "Menahem";
+            var expected = Encoding.ASCII.GetBytes(bufferContent);
+            var attachmentStream = new MemoryStream(expected);
+
+            const string name = "Avi";
+            const string id = "users/A-1";
+            const string attachmentName = "someFileName";
+
+            //Recording
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = name }, id);
+                    session.Advanced.Attachments.Store(id, attachmentName, attachmentStream);
+
+                    session.SaveChanges();
+
+                    session.Advanced.Attachments.Delete(id, attachmentName);
+                    session.SaveChanges();
+
+//                    WaitForUserToContinueTheTest(store);
+                }
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+            }
+
+            //Replay
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(filePath, FileMode.Open))
+            {
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
+//                WaitForUserToContinueTheTest(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var attachmentResult = session.Advanced.Attachments.Get(id, attachmentName);
+
+                    //Assert
+                    Assert.Null(attachmentResult);
+                }
+            }
+        }
+
+        [Fact]
         public void RecordingDeleteAsBatch()
         {
             var filePath = NewDataPath();

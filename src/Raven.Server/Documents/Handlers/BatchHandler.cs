@@ -302,7 +302,8 @@ namespace Raven.Server.Documents.Handlers
             {
                 return new MergedBatchCommandDto
                 {
-                    ParsedCommands = ParsedCommands.ToArray()
+                    ParsedCommands = ParsedCommands.ToArray(),
+                    AttachmentStreams = AttachmentStreams
                 };
             }
 
@@ -542,6 +543,7 @@ namespace Raven.Server.Documents.Handlers
     public class MergedBatchCommandDto : TransactionOperationsMerger.IReplayableCommandDto<BatchHandler.MergedBatchCommand>
     {
         public BatchRequestParser.CommandData[] ParsedCommands { get; set; }
+        public Queue<BatchHandler.MergedBatchCommand.AttachmentStream> AttachmentStreams;
 
         public BatchHandler.MergedBatchCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
         {
@@ -574,7 +576,8 @@ namespace Raven.Server.Documents.Handlers
             var newCmd = new BatchHandler.MergedBatchCommand
             {
                 Database = database,
-                ParsedCommands = ParsedCommands
+                ParsedCommands = ParsedCommands,
+                AttachmentStreams = AttachmentStreams
             };
 
             return newCmd;
