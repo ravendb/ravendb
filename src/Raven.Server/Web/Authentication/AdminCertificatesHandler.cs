@@ -788,6 +788,67 @@ namespace Raven.Server.Web.Authentication
             return Task.CompletedTask;
         }
 
+        [RavenAction("/admin/certificates/replacement/reset", "POST", AuthorizationStatus.ClusterAdmin)]
+        public Task ReplacementReset()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                ServerStore.Cluster.DeleteItem(context, "server/cert");
+                tx.Commit();
+            }
+
+            return NoContent();
+        }
+
+        [RavenAction("/admin/certificates/replacement/status", "GET", AuthorizationStatus.ClusterAdmin)]
+        public Task ReplacementStatus()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                BlittableJsonReaderObject certStatus;
+                using (context.OpenReadTransaction())
+                {
+                    certStatus = ServerStore.Cluster.GetItem(context, "server/cert");
+                }
+
+                if (certStatus != null)
+                {
+                    certStatus.TryGet(Constants.Certificates.Confirmations, out int confirmations);
+                    certStatus.TryGet(Constants.Certificates.Thumbprint, out string thumbprint);
+                    certStatus.TryGet(Constants.Certificates.OldThumbprint, out string oldThumbprint);
+                    certStatus.TryGet(Constants.Certificates.ReplaceImmediately, out bool replaceImmediately);
+                    certStatus.TryGet(Constants.Certificates.Replaced, out int replaced);
+
+                    // Not writing the certificate itself, because it has the private key
+                    writer.WriteStartObject();
+                    writer.WritePropertyName(Constants.Certificates.Confirmations);
+                    writer.WriteInteger(confirmations);
+                    writer.WriteComma();
+                    writer.WritePropertyName(Constants.Certificates.Thumbprint);
+                    writer.WriteString(thumbprint);
+                    writer.WriteComma();
+                    writer.WritePropertyName(Constants.Certificates.OldThumbprint);
+                    writer.WriteString(oldThumbprint);
+                    writer.WriteComma();
+                    writer.WritePropertyName(Constants.Certificates.ReplaceImmediately);
+                    writer.WriteBool(replaceImmediately);
+                    writer.WriteComma();
+                    writer.WritePropertyName(Constants.Certificates.Replaced);
+                    writer.WriteInteger(replaced);
+                    writer.WriteComma();
+                    writer.WriteEndObject();
+                }
+                else
+                {
+                    return NoContent();
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/admin/certificates/letsencrypt/force-renew", "POST", AuthorizationStatus.ClusterAdmin)]
         public Task ForceRenew()
         {
