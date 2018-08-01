@@ -17,6 +17,12 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
 
         public void Update(Session session, JET_DBID dbid, Action<string> output)
         {
+            // this schema update is first part of migration changing autoincremented ids column type from
+            // JET_coltyp.Long (int32 actually) to JET_coltyp.Currency (int64)
+            // here we are updating 'usages' table
+            // the reason we do it as separate migration steps is that if we fail during second phase (From08To09) then
+            // we won't need to apply this one again (From07To08)
+            
             var usageTableName = "usage";
 
             var newTableName = usageTableName + "_new";
@@ -32,6 +38,30 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
             }
 
             SchemaCreator.CreateUsageTable(dbid, newTableName, session);
+
+
+            using (var newUsage = new Table(session, dbid, newTableName, OpenTableGrbit.None))
+            {
+                // let's create index in usages table necessary for migration purposes in schema upgrade From08To09
+                // we need to seek by page_id in order to update value in 'usages' table 
+                // during migration of 'pages' table
+
+                var indexDef = "+page_id\0\0";
+
+                Api.JetCreateIndex2(session, newUsage, new[]
+                {
+                    new JET_INDEXCREATE
+                    {
+                        szIndexName = "by_page_id",
+                        cbKey = indexDef.Length,
+                        cbKeyMost = SystemParameters.KeyMost,
+                        cbVarSegMac = SystemParameters.KeyMost,
+                        szKey = indexDef,
+                        grbit = CreateIndexGrbit.None,
+                        ulDensity = 80
+                    }
+                }, 1);
+            }
 
             var rows = 0;
 
