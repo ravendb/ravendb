@@ -27,7 +27,7 @@ namespace InterversionTests
         protected async Task<(RavenServer Leader, List<ProcessNode> Peers, List<RavenServer> LocalPeers)> CreateMixedCluster(string[] peers, int localPeers = 0)
         {
             var leaderServer = GetNewServer();
-            leaderServer.ServerStore.Engine.Bootstrap(leaderServer.WebUrl);
+            leaderServer.ServerStore.EnsureNotPassive();
 
             var nodeAdded = new ManualResetEvent(false);
             leaderServer.ServerStore.Engine.TopologyChanged += (sender, clusterTopology) =>
