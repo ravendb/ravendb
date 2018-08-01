@@ -76,6 +76,8 @@ namespace SlowTests.Issues
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{new Company_ByName().IndexName}' UPDATE {{this.Sample = 'Value'}}" }));
 
+                Assert.Equal(OperationStatusFetchMode.ChangesApi, operation.StatusFetchMode);
+
                 var progresses = new List<IOperationProgress>();
 
                 operation.OnProgressChanged += progress =>
