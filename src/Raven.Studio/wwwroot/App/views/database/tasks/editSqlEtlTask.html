@@ -107,10 +107,15 @@
                         </div>
                         <div data-bind="collapse: $root.showAdvancedOptions">
                             <div class="panel-body">
-                                <div class="form-group" data-bind="validationElement: taskName">
+                                <div class="form-group" data-bind="validationElement: commandTimeout">
                                     <label for="commandTimeout" class="control-label">Command Timeout</label>
                                     <div class="flex-grow">
-                                        <input type="text" class="form-control" id="commandTimeout" autocomplete="off">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" placeholder="Use SQL provider default value" id="commandTimeout" data-bind="numericInput: commandTimeout" autocomplete="off">
+                                            <div class="input-group-addon">
+                                                seconds
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="form-group">
