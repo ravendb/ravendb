@@ -87,7 +87,7 @@ namespace Tests.Infrastructure
         }
 
 
-        protected async Task<(Uri ServerUrl, Process ServerProcess)> GetServerAsync(
+        protected async Task<(string ServerUrl, Process ServerProcess)> GetServerAsync(
             string serverVersion,
             InterversionTestOptions options = null,
             [CallerMemberName] string database = null,
@@ -110,7 +110,7 @@ namespace Tests.Infrastructure
                 file.CopyTo(Path.Combine(target.FullName, file.Name));
         }
 
-        private async Task<(Uri ServerUrl, Process ServerProcess)> RunServer(ConfigurableRavenServerLocator locator)
+        private async Task<(string ServerUrl, Process ServerProcess)> RunServer(ConfigurableRavenServerLocator locator)
         {
             var process = RunServerProcess(locator);
 
@@ -147,7 +147,7 @@ namespace Tests.Infrastructure
                 throw new InvalidOperationException(BuildStartupExceptionMessage(outputString, errorString));
             }
 
-            return (new Uri(url), process);
+            return (url, process);
         }
 
         private static string BuildStartupExceptionMessage(string outputString, string errorString)
@@ -254,12 +254,12 @@ namespace Tests.Infrastructure
             }
         }
 
-        protected async Task<bool> WaitForDocumentInClusterAsync<T>(string docId, Func<T, bool> predicate, TimeSpan timeout, List<DocumentStore> stores)
+        protected async Task<bool> WaitForDocumentInClusterAsync<T>(string docId, Func<T, bool> predicate, TimeSpan timeout, List<DocumentStore> stores, string database = null)
         {
             var tasks = new List<Task<bool>>();
 
             foreach (var store in stores)
-                tasks.Add(Task.Run(() => WaitForDocument(store, docId, predicate, (int)timeout.TotalMilliseconds)));
+                tasks.Add(Task.Run(() => WaitForDocument(store, docId, predicate, (int)timeout.TotalMilliseconds, database)));
 
             await Task.WhenAll(tasks);
 
@@ -270,17 +270,19 @@ namespace Tests.Infrastructure
         protected bool WaitForDocument<T>(IDocumentStore store,
             string docId,
             Func<T, bool> predicate,
-            int timeout = 10000)
+            int timeout = 10000,
+            string database = null)
         {
             if (DebuggerAttachedTimeout.DisableLongTimespan == false &&
                 Debugger.IsAttached)
                 timeout *= 100;
 
+            database = database ?? store.Database;
             var sw = Stopwatch.StartNew();
             Exception ex = null;
             while (sw.ElapsedMilliseconds < timeout)
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenSession(database))
                 {
                     try
                     {
@@ -301,7 +303,7 @@ namespace Tests.Infrastructure
                 Thread.Sleep(100);
             }
 
-            using (var session = store.OpenSession())
+            using (var session = store.OpenSession(database))
             {
                 //one last try, and throw if there is still a conflict
                 var doc = session.Load<T>(docId);
