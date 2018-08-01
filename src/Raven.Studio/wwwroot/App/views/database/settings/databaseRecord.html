@@ -16,8 +16,7 @@
 
             <div class="flex-grow"></div>
             <div class="btn-group btn-group-sm pull-right" role="group">
-                <button type="button" class="btn btn-default" data-toggle="button" data-bind=""><span class="icon-collapse"></span> <span>Toggle collapse</span></button>
-                <button type="button" class="btn btn-default" data-toggle="button" data-bind=""><span class="icon-newline"></span> <span>Toggle new lines</span></button>
+                <button type="button" class="btn btn-default" data-toggle="button" data-bind="click: toggleAutoCollapse"><span class="icon-collapse"></span> <span>Toggle collapse</span></button>
             </div>
         </div>
         <pre id="dbDocEditor" class="form-control flex-grow" data-bind="aceEditor: { code: documentText, lang: 'ace/mode/json', readOnly: true }" style="height: 500px"></pre>
