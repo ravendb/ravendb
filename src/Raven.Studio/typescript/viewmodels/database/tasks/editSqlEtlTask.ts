@@ -644,10 +644,18 @@ class editSqlEtlTask extends viewModelBase {
     }
 
     editTransformationScript(model: ongoingTaskSqlEtlTransformationModel) {
+        this.makeSureSandboxIsVisible();
         this.transformationScriptSelectedForEdit(model);
         this.editedTransformationScriptSandbox(new ongoingTaskSqlEtlTransformationModel(model.toDto(), false, model.resetScript()));
 
         $('.edit-raven-sql-task .js-test-area [data-toggle="tooltip"]').tooltip();
+    }
+    
+    private makeSureSandboxIsVisible() {
+        const $editArea = $(".edit-raven-sql-task");
+        if ($editArea.scrollTop() > 300) {
+            $editArea.scrollTop(0);
+        }
     }
 
     createCollectionNameAutocompleter(collectionText: KnockoutObservable<string>) {
@@ -741,7 +749,7 @@ class editSqlEtlTask extends viewModelBase {
         }
     }    
     
-    editSqlTable(sqlTableModel: ongoingTaskSqlEtlTableModel) {          
+    editSqlTable(sqlTableModel: ongoingTaskSqlEtlTableModel) {
         this.sqlTableSelectedForEdit(sqlTableModel);
         this.editedSqlTableSandbox(new ongoingTaskSqlEtlTableModel(sqlTableModel.toDto(), false));
     }
