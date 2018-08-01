@@ -20,7 +20,7 @@ packages/*/
 *.InstallLog
 /test/storage.raven
 /Raven.Web/Data/
-VERSION
+/VERSION
 /Samples/*/Server/*.dll
 /Samples/*/Server/Raven.Server.exe
 /Samples/*/Server/Raven.Server.log
