@@ -291,7 +291,7 @@ namespace Sparrow
 
             EnsureIsNotBadPointer();
 
-            return new string((char*)_pointer->Ptr, 0, _pointer->Length);
+            return UTF8Encoding.UTF8.GetString(_pointer->Ptr, _pointer->Length);
         }
 
         public string ToString(UTF8Encoding encoding)
