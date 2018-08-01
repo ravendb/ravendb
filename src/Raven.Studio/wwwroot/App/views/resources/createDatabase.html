@@ -1,5 +1,5 @@
 <div class="modal-dialog modal-lg" role="document" id="newDatabase">
-    <form data-bind="submit: createDatabase" autocomplete="off">
+    <form data-bind="submit: createDatabase" autocomplete="off" novalidate>
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" data-bind="click: close" class="close" data-dismiss="modal" aria-label="Close"><i aria-hidden="true" class="icon-cancel"></i></button>
@@ -342,7 +342,7 @@
             <div class="input-group" title="Set the number of nodes that will contain the database" 
                  data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showReplicationFactorWarning()) }, validationElement: replicationFactor">
                 <span class="input-group-addon">Replication factor</span>
-                <input class="form-control" type="number" min="0" title="Set the number of nodes that will contain the database" 
+                <input class="form-control" type="number" title="Set the number of nodes that will contain the database" 
                        data-bind="numericInput: replicationFactor, disable: $root.databaseModel.isFromBackupOrFromOfflineMigration || $root.disableReplicationFactorInput">
                 <div class="help-block" data-bind="visible: !$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showReplicationFactorWarning">
                     With the replication factor set to 1, the data won't be replicated!

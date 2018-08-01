@@ -1,5 +1,5 @@
 <div class="modal-dialog" id="setCounterModal" role="document">
-    <form data-bind="submit: updateCounter" autocomplete="off">
+    <form data-bind="submit: updateCounter" autocomplete="off" novalidate>
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
@@ -25,7 +25,7 @@
                                 <label for="counterValueInput" class="control-label">Counter Value<i class="required"></i></label>
                             </div>
                             <div class="col-md-9">
-                                <input type="text" id="counterValueInput" data-bind="textInput: newTotalValue" placeholder="Enter counter value" class="form-control">
+                                <input type="number" id="counterValueInput" data-bind="textInput: newTotalValue" placeholder="Enter counter value" class="form-control">
                             </div>
                         </div>
                     </div>
@@ -53,7 +53,7 @@
                                 <label for="counterTotalInput" class="control-label">Set New Value<i class="required"></i></label>
                             </div>
                             <div class="col-md-9">
-                                <input type="text" id="counterTotalInput" data-bind="textInput: newTotalValue" placeholder="Enter new counter value" class="form-control" autofocus>
+                                <input type="number" id="counterTotalInput" data-bind="textInput: newTotalValue" placeholder="Enter new counter value" class="form-control" autofocus>
                             </div>
                         </div>
                     </div>

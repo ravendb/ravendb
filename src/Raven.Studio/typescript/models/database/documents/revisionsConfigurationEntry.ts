@@ -71,7 +71,8 @@ class revisionsConfigurationEntry {
             required: {
                 onlyIf: () => this.limitRevisions()
             },
-            min: 0
+            min: 0,
+            digit: true
         });
 
         this.minimumRevisionAgeToKeep.extend({
