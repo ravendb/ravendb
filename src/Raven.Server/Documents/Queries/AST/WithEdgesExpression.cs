@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using JetBrains.Annotations;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -10,7 +9,7 @@ namespace Raven.Server.Documents.Queries.AST
     {
         public QueryExpression Where;
 
-        public StringSegment EdgeType;
+        public StringSegment? EdgeType;
 
         public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> OrderBy;
 

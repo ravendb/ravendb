@@ -70,5 +70,14 @@ namespace Raven.Client.Documents.Session
         /// <param name="entity">entity to store.</param>
         /// <param name="id">Id to store this entity under. If other entity exists with the same id it will be overwritten.</param>
         void Store(object entity, string id);
+
+        /// <summary>
+        /// Add edge between two documents
+        /// </summary>
+        /// <param name="from">entity to add the edge from</param>
+        /// <param name="to">entity to add the edge to</param>
+        /// <param name="type">type of the edge</param>
+        /// <param name="edgeProperties">an entity that contains the properties attached to the edge</param>
+        void AddEdgeBetween(object from, object to, string type, object edgeProperties = null);
     }
 }

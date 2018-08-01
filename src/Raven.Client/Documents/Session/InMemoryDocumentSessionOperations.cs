@@ -18,6 +18,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Graph;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
@@ -594,6 +595,7 @@ more responsive application.
             StoreInternal(entity, null, null, hasId == false ? ConcurrencyCheckMode.Forced : ConcurrencyCheckMode.Auto);
         }
 
+      
         /// <summary>
         /// Stores the specified entity in the session, explicitly specifying its Id. The entity will be saved when SaveChanges is called.
         /// </summary>
@@ -610,6 +612,67 @@ more responsive application.
             StoreInternal(entity, changeVector, id, changeVector == null ? ConcurrencyCheckMode.Disabled : ConcurrencyCheckMode.Forced);
         }
 
+        public void AddEdgeBetween(object @from, object to, string edgeType, object edgeProperties = null)
+        {
+            if (NoTracking)
+                throw new InvalidOperationException("Cannot store entity. Entity tracking is disabled in this session.");
+
+            if (from == null)
+                throw new ArgumentNullException(nameof(from));
+
+            if (to == null)
+                throw new ArgumentNullException(nameof(to));
+
+            if (edgeType == null)
+                throw new ArgumentNullException(nameof(edgeType));
+
+            if (!DocumentsByEntity.TryGetValue(@from, out var fromDocInfo))
+                throw new InvalidOperationException($"Cannot add edge. The parameter '{nameof(@from)}' should be in the session BEFORE an edge can be added");
+            if (!DocumentsByEntity.TryGetValue(to, out var toDocInfo))
+                throw new InvalidOperationException($"Cannot add edge. The parameter '{nameof(to)}' should be in the session BEFORE an edge can be added");
+            
+            if(fromDocInfo.MetadataInstance == null)
+                fromDocInfo.MetadataInstance = new MetadataAsDictionary();
+
+            MetadataAsDictionary edges;
+
+            if (!(fromDocInfo.MetadataInstance.TryGetValue("@edges", out object edgesAsObject)))
+            {
+                edges = new MetadataAsDictionary
+                {
+                    [edgeType] = new List<EdgeInfo>
+                    {
+                        new EdgeInfo
+                        {
+                            To = toDocInfo.Id
+                        }
+                    }
+                };
+
+                fromDocInfo.MetadataInstance["@edges"] = edges;
+            }
+            else
+            {
+                edges = (MetadataAsDictionary)edgesAsObject;
+                if (!(edges[edgeType] is List<EdgeInfo> edgeMetadata))
+                {
+                    edgeMetadata = new List<EdgeInfo>();
+                    edges[edgeType] = edgeMetadata;
+                }
+
+                var toMetadata = edgeMetadata.FirstOrDefault(em => em.To.Equals(toDocInfo.Id, StringComparison.InvariantCultureIgnoreCase));
+                if (toMetadata == null)
+                {
+                    toMetadata = new EdgeInfo
+                    {
+                        To = toDocInfo.Id
+                    };
+                    edgeMetadata.Add(toMetadata);
+                }
+            }
+
+        }
+
         private void StoreInternal(object entity, string changeVector, string id, ConcurrencyCheckMode forceConcurrencyCheck)
         {
             if (NoTracking)
@@ -618,8 +681,7 @@ more responsive application.
             if (entity == null)
                 throw new ArgumentNullException(nameof(entity));
 
-            DocumentInfo value;
-            if (DocumentsByEntity.TryGetValue(entity, out value))
+            if (DocumentsByEntity.TryGetValue(entity, out var value))
             {
                 value.ChangeVector = changeVector ?? value.ChangeVector;
                 value.ConcurrencyCheckMode = forceConcurrencyCheck;
