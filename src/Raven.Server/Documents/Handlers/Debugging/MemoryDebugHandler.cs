@@ -20,7 +20,7 @@ using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    public class MemoryStatsHandler : RequestHandler
+    public class MemoryDebugHandler : RequestHandler
     {
         [RavenAction("/admin/debug/memory/low-mem-log", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public Task LowMemLog()
@@ -36,13 +36,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 return Task.CompletedTask;
             }
         }
-        
+
         [RavenAction("/admin/debug/proc/status", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true, IsPosixSpecificEndpoint = true)]
         public async Task PosixMemStatus()
         {
             await WriteFile("/proc/self/status");
         }
-        
+
         [RavenAction("/admin/debug/proc/meminfo", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true, IsPosixSpecificEndpoint = true)]
         public async Task PosixMemInfo()
         {
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             foreach (var item in lowMemLog.OrderByDescending(x =>
             {
-                if (x!=null)
+                if (x != null)
                     return x.Time;
                 return DateTime.MinValue;
             }))
@@ -229,7 +229,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     if (fileMappingByDir.TryGetValue(sizes.Key, out Dictionary<string, ConcurrentDictionary<IntPtr, long>> value))
                     {
                         var details = new DynamicJsonValue();
-                        
+
                         var dir = new DynamicJsonValue
                         {
                             [nameof(MemoryInfoMappingItem.Directory)] = sizes.Key.Substring(prefixLength),
@@ -394,28 +394,28 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             return prefixLength;
         }
-        
-            
+
+
         internal class MemoryInfo
         {
             public long WorkingSet { get; set; }
             public long TotalUnmanagedAllocations { get; set; }
-            public long ManagedAllocations { get; set;}
+            public long ManagedAllocations { get; set; }
             public long TotalMemoryMapped { get; set; }
             public string PhysicalMem { get; set; }
             public string FreeMem { get; set; }
             public string HighMemLastOneMinute { get; set; }
             public string LowMemLastOneMinute { get; set; }
-            public string HighMemLastFiveMinute { get; set; }        
+            public string HighMemLastFiveMinute { get; set; }
             public string LowMemLastFiveMinute { get; set; }
             public string HighMemSinceStartup { get; set; }
             public string LowMemSinceStartup { get; set; }
             public MemoryInfoHumane Humane { get; set; }
             public MemoryInfoMappingItem[] Mappings { get; set; }
             //TODO: threads
-            
+
         }
-        
+
         internal class MemoryInfoHumane
         {
             public string WorkingSet { get; set; }
@@ -423,7 +423,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string ManagedAllocations { get; set; }
             public string TotalMemoryMapped { get; set; }
         }
-        
+
         internal class MemoryInfoMappingItem
         {
             public string Directory { get; set; }
@@ -431,7 +431,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string HumaneTotalDirectorySize { get; set; }
             public Dictionary<string, MemoryInfoMappingFileInfo> Details { get; set; }
         }
-        
+
         internal class MemoryInfoMappingFileInfo
         {
             public long FileSize { get; set; }
@@ -440,12 +440,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string HumaneTotalMapped { get; set; }
             public MemoryInfoMappingDetails[] Mappings { get; set; }
         }
-        
+
         internal class MemoryInfoMappingDetails
         {
             public long Size { get; set; }
             public long Count { get; set; }
         }
     }
-    
+
 }

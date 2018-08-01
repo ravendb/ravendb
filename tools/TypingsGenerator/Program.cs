@@ -390,7 +390,7 @@ namespace TypingsGenerator
             
             // debug
             scripter.AddType(typeof(ThreadsHandler.ThreadInfo));
-            scripter.AddType(typeof(MemoryStatsHandler.MemoryInfo));
+            scripter.AddType(typeof(MemoryDebugHandler.MemoryInfo));
             
             // counters
             scripter.AddType(typeof(CounterBatch));
