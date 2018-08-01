@@ -51,6 +51,7 @@ using Raven.Server.Web.System;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
+using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
@@ -369,6 +370,9 @@ namespace TypingsGenerator
             // debug
             scripter.AddType(typeof(ThreadsHandler.ThreadInfo));
             scripter.AddType(typeof(MemoryStatsHandler.MemoryInfo));
+
+            // version info
+            scripter.AddType(typeof(LatestVersionCheck.VersionInfo));
 
             return scripter;
         }
