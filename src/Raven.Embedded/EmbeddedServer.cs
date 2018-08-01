@@ -31,10 +31,13 @@ namespace Raven.Embedded
         private readonly ConcurrentDictionary<string, Lazy<Task<IDocumentStore>>> _documentStores = new ConcurrentDictionary<string, Lazy<Task<IDocumentStore>>>();
         private X509Certificate2 _certificate;
 
+        private TimeSpan _gracefulShutdownTimeout;
+
         public void StartServer(ServerOptions options = null)
         {
             options = options ?? ServerOptions.Default;
 
+            _gracefulShutdownTimeout = options.gracefulShutdownTimeout;
             var startServer = new Lazy<Task<(Uri ServerUrl, Process ServerProcess)>>(() => RunServer(options));
             if (Interlocked.CompareExchange(ref _serverTask, startServer, null) != null)
                 throw new InvalidOperationException("The server was already started");
@@ -139,23 +142,46 @@ namespace Raven.Embedded
             return (await server.Value.WithCancellation(token).ConfigureAwait(false)).ServerUrl;
         }
 
-        private void KillSlavedServerProcess(Process process)
+        private void ShutdownServerProcess(Process process)
         {
             if (process == null || process.HasExited)
                 return;
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Killing global server PID { process.Id }.");
-
             try
             {
-                process.Kill();
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Try shutdown server PID {process.Id} gracefully.");
+
+                using (var inputStream = process.StandardInput)
+                {
+                    inputStream.Write($"q{Environment.NewLine}y{Environment.NewLine}");
+                }
+
+                process.WaitForExit((int)_gracefulShutdownTimeout.TotalMilliseconds);
+                if (process.HasExited)
+                    return;
+
             }
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
                 {
-                    _logger.Info($"Failed to kill process {process.Id}", e);
+                    _logger.Info($"Failed to shutdown server PID {process.Id} gracefully", e);
+                }
+
+                try
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Killing global server PID {process.Id}.");
+
+                    process.Kill();
+                }
+                catch (Exception ex)
+                {
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info($"Failed to kill process {process.Id}", ex);
+                    }
                 }
             }
         }
@@ -175,7 +201,7 @@ namespace Raven.Embedded
                 {
                     var errorString = await ReadOutput(process.StandardError, startupDuration, options, null).ConfigureAwait(false);
 
-                    KillSlavedServerProcess(process);
+                    ShutdownServerProcess(process);
 
                     throw new InvalidOperationException(BuildStartupExceptionMessage(builder.ToString(), errorString));
                 }
@@ -194,7 +220,7 @@ namespace Raven.Embedded
             {
                 var errorString = await ReadOutput(process.StandardError, startupDuration, options, null).ConfigureAwait(false);
 
-                KillSlavedServerProcess(process);
+                ShutdownServerProcess(process);
 
                 throw new InvalidOperationException(BuildStartupExceptionMessage(outputString, errorString));
             }
@@ -288,7 +314,7 @@ namespace Raven.Embedded
                 return;
 
             var process = lazy.Value.Result.ServerProcess;
-            KillSlavedServerProcess(process);
+            ShutdownServerProcess(process);
             foreach (var item in _documentStores)
             {
                 if (item.Value.IsValueCreated)
