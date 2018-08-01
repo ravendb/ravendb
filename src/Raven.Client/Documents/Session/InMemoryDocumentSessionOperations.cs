@@ -689,6 +689,7 @@ more responsive application.
                 id[id.Length - 1] == '|' ||
                 id[id.Length - 1] == '/' ||
                 DocumentsById.TryGetValue(id, out info) == false ||
+                _knownMissingIds.Contains(id) ||
                 ReferenceEquals(info.Entity, entity))
                 return;
 
