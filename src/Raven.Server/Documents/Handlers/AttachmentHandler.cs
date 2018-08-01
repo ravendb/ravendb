@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Handlers
             return GetAttachment(false);
         }
 
-        [RavenAction("/databases/*/debug/attachments/hash", "GET", AuthorizationStatus.ValidUser,isDebugInformationEndpoint:true)]
+        [RavenAction("/databases/*/debug/attachments/hash", "GET", AuthorizationStatus.ValidUser)]
         public Task Exists()
         {
             var hash = GetStringQueryString("hash");
@@ -92,14 +92,14 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/debug/attachments/metadata", "GET", AuthorizationStatus.ValidUser, isDebugInformationEndpoint: true)]
+        [RavenAction("/databases/*/debug/attachments/metadata", "GET", AuthorizationStatus.ValidUser)]
         public Task GetDocumentsAttachmentMetadataWithCounts()
         {
             var id = GetStringQueryString("id", false);
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var array = Database.DocumentsStorage.AttachmentsStorage.GetAttachmentsMetadataForDocumenWithCounts(context, id.ToLowerInvariant());                
+                var array = Database.DocumentsStorage.AttachmentsStorage.GetAttachmentsMetadataForDocumenWithCounts(context, id.ToLowerInvariant());
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.Handlers
                 AttachmentDetails result;
                 using (var streamsTempFile = Database.DocumentsStorage.AttachmentsStorage.GetTempFile("put"))
                 using (var stream = streamsTempFile.StartNewStream())
-                {                    
+                {
                     Stream requestBodyStream = RequestBodyStream();
                     string hash;
                     try

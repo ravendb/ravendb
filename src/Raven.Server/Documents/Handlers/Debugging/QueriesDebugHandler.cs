@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             return Task.CompletedTask;
         }
-       
+
         [RavenAction("/databases/*/debug/queries/cache/list", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task QueriesCacheList()
         {
@@ -105,15 +105,16 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 var queryCache = Database.QueryMetadataCache.GetQueryCache();
 
-                var responseDjv = new DynamicJsonValue();
                 var queriesList = new List<DynamicJsonValue>();
+
+                writer.WriteStartObject();
 
                 writer.WritePropertyName("TotalCachedQueries");
                 writer.WriteInteger(queryCache.Length);
                 writer.WriteComma();
-                                               
+
                 foreach (var item in queryCache)
-                {                    
+                {
                     if (item != null)
                     {
                         var curDjvItem = new DynamicJsonValue();
@@ -189,20 +190,20 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                         if (string.IsNullOrEmpty(item.AutoIndexName) == false)
                         {
-                            curDjvItem[nameof(Queries.QueryMetadata.AutoIndexName)] = item.AutoIndexName;                                
+                            curDjvItem[nameof(Queries.QueryMetadata.AutoIndexName)] = item.AutoIndexName;
                         }
 
                         if (string.IsNullOrEmpty(item.IndexName) == false)
                         {
                             curDjvItem[nameof(Queries.QueryMetadata.IndexName)] = item.IndexName;
-                        }                        
-                    
-                        curDjvItem[nameof(Queries.QueryMetadata.QueryText)] = item.QueryText;                        
+                        }
+
+                        curDjvItem[nameof(Queries.QueryMetadata.QueryText)] = item.QueryText;
                     }
                 }
 
                 writer.WriteArray("Results", queriesList, context);
-
+                writer.WriteEndObject();
             }
 
             return Task.CompletedTask;
