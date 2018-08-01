@@ -51,7 +51,4 @@
   <ItemGroup>
     <ProjectReference Include="..\..\tools\TypingsGenerator\TypingsGenerator.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <TypeScriptCompile Include="typescript\common\storage\savedPatchesStorage.ts" />
-  </ItemGroup>
 </Project>
