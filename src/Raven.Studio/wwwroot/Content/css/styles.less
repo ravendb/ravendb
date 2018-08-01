@@ -1826,6 +1826,13 @@ ul.properties {
         color: @tooltip-inner-color;
     }
 }
+@state-experimental-text: @color-5-2;
+@state-experimental-bg: @color-5-1;
+@state-experimental-border: darken(spin(@state-experimental-bg, -10), 5%);
+
+.bg-experimental {
+    .bg-variant(@state-experimental-bg, @state-experimental-text);
+}
 
 @import "pages/tasks-sampleData";
 @import "pages/tasks-csvImport";
