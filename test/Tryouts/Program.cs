@@ -7,10 +7,10 @@ using SlowTests.Authentication;
 using SlowTests.Bugs.MapRedue;
 using SlowTests.Client;
 using SlowTests.Client.Attachments;
+using FastTests.Voron;
 using SlowTests.Issues;
 using SlowTests.MailingList;
 using Sparrow.Logging;
-using StressTests.Client.Attachments;
 
 namespace Tryouts
 {
@@ -20,9 +20,9 @@ namespace Tryouts
         {
             try
             {
-                using (var test = new AttachmentsSessionStress())
+                using (var test = new SlowTests.Issues.RavenDB_5570())
                 {
-                    test.StressPutLotOfAttachments(10_000);
+                   test.Doing_PUT_without_commit_should_not_cause_NRE_on_subsequent_PUTs();
                 }
             }
             catch (Exception e)

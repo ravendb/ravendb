@@ -257,7 +257,7 @@ namespace Raven.Server.Documents
             var nonPersistentFlags = NonPersistentDocumentFlags.None;
             var fromReplication = (flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication;
 
-            if (_documentsStorage.ConflictsStorage.ConflictsCount != 0)
+            if (_documentsStorage.ConflictsStorage.GetConflictsCount(context) != 0)
             {
                 // Since this document resolve the conflict we don't need to alter the change vector.
                 // This way we avoid another replication back to the source

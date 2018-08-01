@@ -22,6 +22,7 @@ using Voron.Impl.Scratch;
 using Voron.Global;
 using Voron.Debugging;
 using Voron.Util;
+using System.Collections.ObjectModel;
 
 namespace Voron.Impl
 {
@@ -44,7 +45,7 @@ namespace Voron.Impl
         public long NumberOfModifiedPages => _numberOfModifiedPages;
 
         private readonly WriteAheadJournal _journal;
-        internal readonly List<JournalSnapshot> JournalSnapshots = new List<JournalSnapshot>();
+        internal readonly JournalSnapshot[] JournalSnapshots = Array.Empty<JournalSnapshot>();
 
         bool IPagerLevelTransactionState.IsWriteTransaction => Flags == TransactionFlags.ReadWrite;
 
@@ -91,7 +92,6 @@ namespace Voron.Impl
 
         public event Action<IPagerLevelTransactionState> BeforeCommitFinalization;
         public event Action<IPagerLevelTransactionState> OnDispose;
-        public event Action AfterCommitWhenNewReadTransactionsPrevented;
 
         private readonly IFreeSpaceHandling _freeSpaceHandling;
         internal FixedSizeTree _freeSpaceTree;
@@ -146,7 +146,6 @@ namespace Voron.Impl
             var env = previous._env;
             env.Options.AssertNoCatastrophicFailure();
 
-            FlushInProgressLockTaken = previous.FlushInProgressLockTaken;
             CurrentTransactionHolder = previous.CurrentTransactionHolder;
             TxStartTime = DateTime.UtcNow;
             DataPager = env.Options.DataPager;
@@ -217,6 +216,7 @@ namespace Voron.Impl
             _pagesToFreeOnCommit = new Stack<long>();
 
             _state = previous._state.Clone();
+            _state.TransactionCounter = _id;
 
             _pageLocator = PersistentContext.AllocatePageLocator(this);
             InitializeRoots();
@@ -242,7 +242,10 @@ namespace Voron.Impl
             PersistentContext = transactionPersistentContext;
             Flags = flags;
 
-            var scratchPagerStates = env.ScratchBufferPool.GetPagerStatesOfAllScratches();
+            _state = env.State.Clone();
+
+            
+            var scratchPagerStates = _state.PagerStatesAllScratchesCache;
             foreach (var scratchPagerState in scratchPagerStates.Values)
             {
                 scratchPagerState.AddRef();
@@ -257,14 +260,15 @@ namespace Voron.Impl
                 // for write transactions, we can use the current one (which == null)
                 _scratchPagerStates = scratchPagerStates;
 
-                _state = env.State.Clone();
 
                 InitializeRoots();
 
-                JournalSnapshots = _journal.GetSnapshots();
+                JournalSnapshots = _state.SnapshotCache;
 
                 return;
             }
+
+            _state.TransactionCounter = Id;
 
             EnsureNoDuplicateTransactionId(id);
             // we keep this copy to make sure that if we use async commit, we have a stable copy of the jounrals
@@ -284,7 +288,6 @@ namespace Voron.Impl
             _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
             _pagesToFreeOnCommit = new Stack<long>();
 
-            _state = env.State.Clone();
             InitializeRoots();
             InitTransactionHeader();
         }
@@ -1029,7 +1032,6 @@ namespace Voron.Impl
             if (_disposed)
                 throw new ObjectDisposedException("Transaction");
 
-
             if (Committed || RolledBack || Flags != (TransactionFlags.ReadWrite))
                 return;
 
@@ -1047,15 +1049,16 @@ namespace Voron.Impl
 
             // release scratch file page allocated for the transaction header
             Allocator.Release(ref _txHeaderMemory);
-
-            using (_env.PreventNewReadTransactions())
-            {
-                _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
-                _env.Journal.UpdateCacheForJournalSnapshots();
-            }
+            _env.ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches(_state);
+            _env.Journal.UpdateCacheForJournalSnapshots(_state);
+            // need to update the env state, but the transaction was rolled back,
+            // so we need to go back to the previous tx id
+            _state.TransactionCounter = _env.State.TransactionCounter;
+            _env.State = _state;
 
             RolledBack = true;
         }
+
         public void RetrieveCommitStats(out CommitStats stats)
         {
             _requestedCommitStats = stats = new CommitStats();
@@ -1065,7 +1068,6 @@ namespace Voron.Impl
         private bool _isLazyTransaction;
 
         internal ActiveTransactions.Node ActiveTransactionNode;
-        internal bool FlushInProgressLockTaken;
         private ByteString _txHeaderMemory;
         internal ImmutableAppendOnlyList<JournalFile> JournalFiles;
         internal bool AlreadyAllowedDisposeWithLazyTransactionRunning;
@@ -1085,14 +1087,6 @@ namespace Voron.Impl
 
             state = state.CurrentPager.GetPagerStateAndAddRefAtomically(); // state might hold released pagerState, and we want to add ref to the current (i.e. data file was re-allocated and a new state is now available). RavenDB-6950
             _lastState = state;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void OnAfterCommitWhenNewReadTransactionsPrevented()
-        {
-            // the event cannot be called outside this class while we need to call it in 
-            // StorageEnvironment.TransactionAfterCommit
-            AfterCommitWhenNewReadTransactionsPrevented?.Invoke();
         }
 
 

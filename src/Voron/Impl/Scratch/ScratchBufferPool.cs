@@ -33,8 +33,6 @@ namespace Voron.Impl.Scratch
         // Local writable state. Can perform multiple reads, but must never do multiple writes simultaneously.
         private int _currentScratchNumber = -1;
 
-        private Dictionary<int, PagerState> _pagerStatesAllScratchesCache;
-
         private readonly ConcurrentDictionary<int, ScratchBufferItem> _scratchBuffers = new ConcurrentDictionary<int, ScratchBufferItem>(NumericEqualityComparer.BoxedInstanceInt32);
 
         private readonly LinkedList<ScratchBufferItem> _recycleArea = new LinkedList<ScratchBufferItem>();
@@ -49,14 +47,6 @@ namespace Voron.Impl.Scratch
         {
             _disposeOnceRunner = new DisposeOnce<ExceptionRetry>(() =>
             {
-                if (_pagerStatesAllScratchesCache != null)
-                {
-                    foreach (var pagerState in _pagerStatesAllScratchesCache)
-                    {
-                        pagerState.Value.Release();
-                    }
-                }
-
                 foreach (var scratch in _scratchBuffers)
                 {
                     scratch.Value.File.Dispose();
@@ -68,17 +58,12 @@ namespace Voron.Impl.Scratch
             _env = env;
             _options = env.Options;
             _current = NextFile(_options.InitialLogFileSize, null);
-            UpdateCacheForPagerStatesOfAllScratches();
+            UpdateCacheForPagerStatesOfAllScratches(env.State);
 
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
-        public Dictionary<int, PagerState> GetPagerStatesOfAllScratches()
-        {
-            return _pagerStatesAllScratchesCache;
-        }
-
-        public void UpdateCacheForPagerStatesOfAllScratches()
+        public void UpdateCacheForPagerStatesOfAllScratches(StorageEnvironmentState state)
         {
             var dic = new Dictionary<int, PagerState>(NumericEqualityComparer.BoxedInstanceInt32);
             foreach (var scratchBufferItem in _scratchBuffers)
@@ -86,17 +71,12 @@ namespace Voron.Impl.Scratch
                 dic[scratchBufferItem.Key] = scratchBufferItem.Value.File.PagerState;
             }
 
-            // for the lifetime of this cache, we have to hold a reference to the 
-            // pager state, to avoid handing out garbage to transactions
-            // note that this call is protected from running concurrently with the 
-            // call to GetPagerStatesOfAllScratches()
-
             foreach (var pagerState in dic)
             {
                 pagerState.Value.AddRef();
             }
-            var old = _pagerStatesAllScratchesCache;
-            _pagerStatesAllScratchesCache = dic;
+            var old = state.PagerStatesAllScratchesCache;
+            state.PagerStatesAllScratchesCache = dic;
             if (old == null)
                 return;
 

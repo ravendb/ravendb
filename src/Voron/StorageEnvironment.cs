@@ -83,11 +83,8 @@ namespace Voron
         private readonly SemaphoreSlim _transactionWriter = new SemaphoreSlim(1, 1);
         private NativeMemory.ThreadStats _currentWriteTransactionHolder;
         private readonly AsyncManualResetEvent _writeTransactionRunning = new AsyncManualResetEvent();
-        internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
-        private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
         private readonly CountdownEvent _envDispose = new CountdownEvent(1);
 
-        private long _transactionsCounter;
         private readonly IFreeSpaceHandling _freeSpaceHandling;
         private readonly HeaderAccessor _headerAccessor;
         private readonly DecompressionBuffersPool _decompressionBuffers;
@@ -113,7 +110,7 @@ namespace Voron
 
         public Guid DbId { get; set; }
 
-        public StorageEnvironmentState State { get; private set; }
+        public StorageEnvironmentState State { get; internal set; } = new StorageEnvironmentState(null, 0);
 
         public event Action OnLogsApplied;
 
@@ -290,10 +287,11 @@ namespace Voron
             State = new StorageEnvironmentState(null, nextPageNumber)
             {
                 NextPageNumber = nextPageNumber,
-                Options = Options
+                Options = Options,
+                TransactionCounter = header->TransactionId == 0 ? entry.TransactionId : header->TransactionId,
+                SnapshotCache = Array.Empty<JournalSnapshot>()
             };
 
-            Interlocked.Exchange(ref _transactionsCounter, header->TransactionId == 0 ? entry.TransactionId : header->TransactionId);
             var transactionPersistentContext = new TransactionPersistentContext(true);
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             using (var root = Tree.Open(tx, null, Constants.RootTreeNameSlice, header->TransactionId == 0 ? &entry.Root : &header->Root))
@@ -332,6 +330,8 @@ namespace Voron
                 }
 
                 tx.Commit();
+
+                State.Root = tx.State.Root;
             }
 
             UpgradeSchemaIfRequired();
@@ -430,13 +430,14 @@ namespace Voron
             const int initialNextPageNumber = 0;
             State = new StorageEnvironmentState(null, initialNextPageNumber)
             {
-                Options = Options
+                Options = Options,
             };
 
             var transactionPersistentContext = new TransactionPersistentContext();
             using (var tx = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
             using (var root = Tree.Create(tx, null, Constants.RootTreeNameSlice))
             {
+                tx.State.TransactionCounter = 1;
 
                 // important to first create the root trees, then set them on the env
                 tx.UpdateRootsIfNeeded(root);
@@ -452,6 +453,7 @@ namespace Voron
 
                     treesTx.PrepareForCommit();
 
+                    
                     tx.Commit();
                 }
             }
@@ -527,6 +529,7 @@ namespace Voron
                 {
                     _journal,
                     _headerAccessor,
+                    new ReleasePagerStates(State.PagerStatesAllScratchesCache.Values),
                     _scratchBufferPool,
                     _decompressionBuffers,
                     _options.OwnsPagers ? _options : null
@@ -544,6 +547,25 @@ namespace Voron
 
                 if (errors.Count != 0)
                     throw new AggregateException(errors);
+            }
+        }
+
+        private class ReleasePagerStates: IDisposable
+        {
+            private readonly IEnumerable<PagerState> _items;
+
+            public ReleasePagerStates(IEnumerable<PagerState> items)
+            {
+                _items = items;
+            }
+
+
+            public void Dispose()
+            {
+                foreach (var item in _items)
+                {
+                    item.Release();
+                }
             }
         }
 
@@ -602,7 +624,6 @@ namespace Voron
             _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
             bool txLockTaken = false;
-            bool flushInProgressReadLockTaken = false;
             try
             {
                 IncrementUsageOnNewTransaction();
@@ -610,16 +631,6 @@ namespace Voron
                 if (flags == TransactionFlags.ReadWrite)
                 {
                     var wait = timeout ?? (Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(30));
-
-                    if (FlushInProgressLock.IsWriteLockHeld == false)
-                    {
-                        flushInProgressReadLockTaken = FlushInProgressLock.TryEnterReadLock(wait);
-                        if (flushInProgressReadLockTaken == false)
-                        {
-                            GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(this);
-                            ThrowOnTimeoutWaitingForReadFlushingInProgressLock(wait);
-                        }
-                    }
 
                     ThrowOnWriteTransactionOpenedByTheSameThread();
 
@@ -648,27 +659,18 @@ namespace Voron
 
                 LowLevelTransaction tx;
 
-                _txCommit.EnterReadLock();
-                try
+                _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+                long txId = flags == TransactionFlags.ReadWrite ? NextWriteTransactionId : CurrentReadTransactionId;
+                tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling,
+                    context)
                 {
-                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                };
 
-                    long txId = flags == TransactionFlags.ReadWrite ? NextWriteTransactionId : CurrentReadTransactionId;
-                    tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling,
-                        context)
-                    {
-                        FlushInProgressLockTaken = flushInProgressReadLockTaken,
-                    };
+                if (flags == TransactionFlags.ReadWrite)
+                    tx.CurrentTransactionHolder = _currentWriteTransactionHolder; 
 
-                    if (flags == TransactionFlags.ReadWrite)
-                        tx.CurrentTransactionHolder = _currentWriteTransactionHolder; 
-
-                    ActiveTransactions.Add(tx);
-                }
-                finally
-                {
-                    _txCommit.ExitReadLock();
-                }
+                ActiveTransactions.Add(tx);
 
                 var state = _dataPager.PagerState;
                 tx.EnsurePagerStateReference(state);
@@ -683,10 +685,6 @@ namespace Voron
                     {
                         _currentWriteTransactionHolder = null;
                         _transactionWriter.Release();
-                    }
-                    if (flushInProgressReadLockTaken)
-                    {
-                        FlushInProgressLock.ExitReadLock();
                     }
                 }
                 finally
@@ -749,24 +747,8 @@ namespace Voron
 
             throw new TimeoutException(message);
         }
-
-        private void ThrowOnTimeoutWaitingForReadFlushingInProgressLock(TimeSpan wait)
-        {
-            var copy = Journal.CurrentFlushingInProgressHolder;
-            if (copy == NativeMemory.ThreadAllocations.Value)
-            {
-                throw new InvalidOperationException("Flushing is already being performed by this thread");
-            }
-
-            var message = $"Waited for {wait} for read access of the flushing in progress lock, but could not get it";
-            if (copy != null)
-                message += $", the flushing in progress lock is currently owned by thread {copy.Id} - {copy.Name}";
-
-            throw new TimeoutException(message);
-        }
-
-        public long CurrentReadTransactionId => Interlocked.Read(ref _transactionsCounter);
-        public long NextWriteTransactionId => Interlocked.Read(ref _transactionsCounter) + 1;
+        public long CurrentReadTransactionId => State.TransactionCounter;
+        public long NextWriteTransactionId => CurrentReadTransactionId + 1;
 
         public long PossibleOldestReadTransaction(LowLevelTransaction tx)
         {
@@ -779,12 +761,6 @@ namespace Voron
             if (tx != null)
                 tx.LocalPossibleOldestReadTransaction = result;
             return result;
-        }
-
-        internal ExitWriteLock PreventNewReadTransactions()
-        {
-            _txCommit.EnterWriteLock();
-            return new ExitWriteLock(_txCommit);
         }
 
         public struct ExitWriteLock : IDisposable
@@ -807,19 +783,18 @@ namespace Voron
             if (ActiveTransactions.Contains(tx) == false)
                 return;
 
-            using (PreventNewReadTransactions())
-            {
-                Journal.Applicator.OnTransactionCommitted(tx);
-                ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches();
-                Journal.UpdateCacheForJournalSnapshots();
+            Journal.Applicator.OnTransactionCommitted(tx);
+            ScratchBufferPool.UpdateCacheForPagerStatesOfAllScratches(tx.State);
+            Journal.UpdateCacheForJournalSnapshots(tx.State);
 
-                tx.OnAfterCommitWhenNewReadTransactionsPrevented();
+            // We only want to increment the tx counter if the transaction
+            // actully did something. However, the in memory state is still
+            // different, so we need to copy it regardless
+            if (tx.Committed == false ||
+                tx.FlushedToJournal == false)
+                tx.State.TransactionCounter = State.TransactionCounter;
 
-                if (tx.Committed && tx.FlushedToJournal)
-                    Interlocked.Exchange(ref _transactionsCounter, tx.Id);
-
-                State = tx.State;
-            }
+            State = tx.State;
         }
 
         internal void TransactionCompleted(LowLevelTransaction tx)
@@ -852,9 +827,6 @@ namespace Voron
                 _currentWriteTransactionHolder = null;
                 _writeTransactionRunning.Reset();
                 _transactionWriter.Release();
-
-                if (tx.FlushInProgressLockTaken)
-                    FlushInProgressLock.ExitReadLock();
             }
             finally
             {

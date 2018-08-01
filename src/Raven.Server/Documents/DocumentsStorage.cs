@@ -798,7 +798,7 @@ namespace Raven.Server.Documents
 
             if (table.ReadByKey(lowerId, out tvr) == false)
             {
-                if (throwOnConflict && ConflictsStorage.ConflictsCount > 0)
+                if (throwOnConflict && ConflictsStorage.GetConflictsCount(context) != 0)
                     ConflictsStorage.ThrowOnDocumentConflict(context, lowerId);
 
                 return false;
@@ -1083,7 +1083,7 @@ namespace Raven.Server.Documents
             CollectionName collectionName = null, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None,
             DocumentFlags documentFlags = DocumentFlags.None)
         {
-            if (ConflictsStorage.ConflictsCount != 0)
+            if (ConflictsStorage.GetConflictsCount(context) != 0)
             {
                 var result = ConflictsStorage.DeleteConflicts(context, lowerId, expectedChangeVector, changeVector);
                 if (result != null)

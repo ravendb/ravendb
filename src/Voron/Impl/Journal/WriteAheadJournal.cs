@@ -26,6 +26,7 @@ using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 using Voron.Util;
 using Voron.Global;
+using System.Collections.ObjectModel;
 
 namespace Voron.Impl.Journal
 {
@@ -52,7 +53,6 @@ namespace Voron.Impl.Journal
         private LazyTransactionBuffer _lazyTransactionBuffer;
         private readonly DiffPages _diffPage = new DiffPages();
         private readonly Logger _logger;
-        private List<JournalSnapshot> _snapshotCache;
         public bool HasDataInLazyTxBuffer() => _lazyTransactionBuffer?.HasDataInBuffer() ?? false;
 
         private readonly object _writeLock = new object();
@@ -311,7 +311,7 @@ namespace Voron.Impl.Journal
             if (tx.Flags == TransactionFlags.Read)
             {
                 // read log snapshots from the back to get the most recent version of a page
-                for (var i = tx.JournalSnapshots.Count - 1; i >= 0; i--)
+                for (var i = tx.JournalSnapshots.Length - 1; i >= 0; i--)
                 {
                     PagePosition value;
                     if (tx.JournalSnapshots[i].PageTranslationTable.TryGetValue(tx, pageNumber, out value))
@@ -356,14 +356,10 @@ namespace Voron.Impl.Journal
             return _headerAccessor.Get(ptr => ptr->Journal);
         }
 
-        public List<JournalSnapshot> GetSnapshots()
+        public void UpdateCacheForJournalSnapshots(StorageEnvironmentState state)
         {
-            return _snapshotCache;
-        }
-
-        public void UpdateCacheForJournalSnapshots()
-        {
-            var items = new List<JournalSnapshot>(_files.Count);
+            int index = 0;
+            var items = new JournalSnapshot[_files.Count];
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var journalFile in _files)
             {
@@ -371,28 +367,29 @@ namespace Voron.Impl.Journal
                 // we have to hold a reference to the journals for the lifetime of the cache
                 // this call is prevented from running concurrently with GetSnapshots()
                 journalSnapshot.FileInstance.AddRef();
-                items.Add(journalSnapshot);
+                items[index++] = journalSnapshot;
             }
 
             ValidateNoDuplicateJournals(items);
 
-            var old = _snapshotCache;
-            _snapshotCache = items;
+            var old = state.SnapshotCache;
+            state.SnapshotCache = items;
+
             if (old == null)
                 return;
-
+            
             foreach (var journalSnapshot in old)
             {
-                journalSnapshot.FileInstance.Release();// free the old cache reference
+                journalSnapshot.FileInstance.Release(); // free the old cache reference
             }
         }
 
         [Conditional("DEBUG")]
-        private static void ValidateNoDuplicateJournals(List<JournalSnapshot> items)
+        private static void ValidateNoDuplicateJournals(JournalSnapshot[] items)
         {
-            for (int i = 0; i < items.Count; i++)
+            for (int i = 0; i < items.Length; i++)
             {
-                for (int j = i + 1; j < items.Count; j++)
+                for (int j = i + 1; j < items.Length; j++)
                 {
                     if (items[i].Number == items[j].Number)
                     {
@@ -629,7 +626,6 @@ namespace Voron.Impl.Journal
                 // the idea here is that even though we need to run the journal through its state update under the transaction lock
                 // we don't actually have to do that in our own transaction, what we'll do is to setup things so if there is a running
                 // write transaction, we'll piggy back on its commit to complete our process, without interrupting its work
-                _waj._env.FlushInProgressLock.EnterWriteLock();
                 _waj.CurrentFlushingInProgressHolder = NativeMemory.ThreadAllocations.Value;
 
                 try
@@ -666,7 +662,6 @@ namespace Voron.Impl.Journal
                 finally
                 {
                     _waj.CurrentFlushingInProgressHolder = null;
-                    _waj._env.FlushInProgressLock.ExitWriteLock();
                 }
             }
 
