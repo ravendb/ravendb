@@ -19,6 +19,7 @@ using Raven.Client.Json;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Exceptions;
 using Raven.Server.Json;
@@ -1261,6 +1262,10 @@ namespace Raven.Server.Documents
                     return jsonSerializer.Deserialize<MergedPutAttachmentCommandDto>(reader);
                 case nameof(AttachmentHandler.MergedDeleteAttachmentCommand):
                     return jsonSerializer.Deserialize<MergedDeleteAttachmentCommandDto>(reader);
+                case nameof(ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand):
+                    return jsonSerializer.Deserialize<PutResolvedConflictsCommandDto>(reader);
+                //Todo To deal with those cases after a possibility to serialize and deserialize is implemented
+                case nameof(IncomingReplicationHandler.MergedDocumentReplicationCommand):
                 case nameof(HiLoHandler.MergedNextHiLoCommand):
                     return null;
                 default:

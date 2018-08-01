@@ -989,7 +989,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
+        internal unsafe class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             private readonly IncomingReplicationHandler _incoming;
 

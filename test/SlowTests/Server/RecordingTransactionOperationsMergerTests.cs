@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -12,14 +13,20 @@ using FastTests.Voron.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Exceptions;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes.Static.Extensions;
@@ -54,6 +61,100 @@ namespace SlowTests.Server
                 var i = typeof(TransactionOperationsMerger.IRecordableCommand);
                 Assert.True(i.IsAssignableFrom(t), $"{t.Name} should implement {i.Name}");
             });
+        }
+
+        [Fact]
+        public async Task RecordingPutResolvedConflictsCommand()
+        {
+            var recordFilePath = NewDataPath();
+
+            const string id = "Users\rA-1";
+            var expected = new User { Name = "Avi"};
+
+            using (var master = GetDocumentStore())
+            using (var slave = GetDocumentStore())
+            {
+                slave.Maintenance.Server.Send(new ModifyConflictSolverOperation(slave.Database));
+
+                var databaseWatcher = new ExternalReplication(slave.Database, $"ConnectionString-{slave.Identifier}");
+
+                await master.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                {
+                    Name = databaseWatcher.ConnectionStringName,
+                    Database = databaseWatcher.Database,
+                    TopologyDiscoveryUrls = master.Urls
+                }));
+
+                //Recording
+                slave.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+
+                await master.Maintenance.SendAsync(new UpdateExternalReplicationOperation(databaseWatcher));
+
+                slave.Commands().Put(id, null, expected);
+
+                expected.Age = 67;
+                master.Commands().Put(id, null, expected);
+
+                await WaitForConflict(slave, id);
+
+                slave.Maintenance.Server.Send(new ModifyConflictSolverOperation(slave.Database, null, true));
+
+                await WaitForConflictToBeResolved(slave, id);
+
+                slave.Maintenance.Send(new StopTransactionsRecordingOperation());
+            }
+
+            //Replay
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
+            {
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
+                using (var session = store.OpenSession())
+                {
+                    var actual = session.Load<User>(id);
+
+                    //Assert
+                    Assert.Equal(expected, actual, new UserComparer());
+                }
+            }
+        }
+
+        private static async Task WaitForConflictToBeResolved(IDocumentStore slave, string id)
+        {
+            while (true)
+            {
+                using (var session = slave.OpenSession())
+                {
+                    try
+                    {
+                        session.Load<User>(id);
+                        break;
+                    }
+                    catch (ConflictException)
+                    {
+                        await Task.Delay(100);
+                    }
+                }
+            }
+        }
+
+        private static async Task WaitForConflict(IDocumentStore slave, string id)
+        {
+            while (true)
+            {
+                using (var session = slave.OpenSession())
+                {
+                    try
+                    {
+                        session.Load<User>(id);
+                        await Task.Delay(100);
+                    }
+                    catch (ConflictException)
+                    {
+                        break;
+                    }
+                }
+            }
         }
 
         [Fact]
@@ -424,7 +525,7 @@ namespace SlowTests.Server
                     session.Advanced.Attachments.Delete(id, attachmentName);
                     session.SaveChanges();
 
-//                    WaitForUserToContinueTheTest(store);
+                    //                    WaitForUserToContinueTheTest(store);
                 }
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
@@ -434,7 +535,7 @@ namespace SlowTests.Server
             using (var replayStream = new FileStream(filePath, FileMode.Open))
             {
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
-//                WaitForUserToContinueTheTest(store);
+                //                WaitForUserToContinueTheTest(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -674,20 +775,15 @@ namespace SlowTests.Server
         {
             public bool Equals(User x, User y)
             {
-                return x.Name == y.Name;
+                return
+                    x.Name == y.Name &&
+                    x.Age == y.Age;
             }
 
             public int GetHashCode(User obj)
             {
                 throw new NotImplementedException();
             }
-        }
-
-        private class Album
-        {
-            public string Name { get; set; }
-            public string Description { get; set; }
-            public string[] Tags { get; set; }
         }
     }
 }

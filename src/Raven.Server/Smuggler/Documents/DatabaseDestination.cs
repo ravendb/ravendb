@@ -642,7 +642,8 @@ namespace Raven.Server.Smuggler.Documents
                 return new MergedBatchPutCommandDto
                 {
                     BuildType = _buildType,
-                    Documents = Documents
+                    Documents = Documents,
+                    IsRevision = IsRevision
                 };
             }
         }
@@ -652,11 +653,15 @@ namespace Raven.Server.Smuggler.Documents
     {
         public BuildVersionType BuildType;
         public List<DocumentItem> Documents;
+        public bool IsRevision;
 
         public DatabaseDestination.MergedBatchPutCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
         {
             var log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
-            var command = new DatabaseDestination.MergedBatchPutCommand(database, BuildType, log);
+            var command = new DatabaseDestination.MergedBatchPutCommand(database, BuildType, log)
+            {
+                IsRevision = IsRevision
+            };
             Documents.ForEach(d => command.Add(d));
 
             return command;

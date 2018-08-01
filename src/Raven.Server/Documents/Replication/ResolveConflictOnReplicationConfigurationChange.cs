@@ -6,6 +6,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Documents.Patch;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -124,7 +125,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private class PutResolvedConflictsCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class PutResolvedConflictsCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
         {
             private readonly ConflictsStorage _conflictsStorage;
             private readonly List<(DocumentConflict ResolvedConflict, long MaxConflictEtag)> _resolvedConflicts;
@@ -160,6 +161,18 @@ namespace Raven.Server.Documents.Replication
                 }
 
                 return count;
+            }
+
+            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto()
+            {
+                // The LowerId created as in memory LazyStringValue
+                // so EscapePositions set to empty to avoid reference to escape characters while serializing
+                _resolvedConflicts.ForEach(c => c.ResolvedConflict.LowerId.EscapePositions = Array.Empty<int>());
+
+                return new PutResolvedConflictsCommandDto
+                {
+                    ResolvedConflicts = _resolvedConflicts
+                };
             }
         }
 
@@ -358,6 +371,23 @@ namespace Raven.Server.Documents.Replication
             latestDoc.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
 
             return latestDoc;
+        }
+    }
+
+    internal class PutResolvedConflictsCommandDto : TransactionOperationsMerger.IReplayableCommandDto<ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand>
+    {
+        public List<(DocumentConflict ResolvedConflict, long MaxConflictEtag)> ResolvedConflicts;
+
+        public ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
+        {
+            var resolver = new ResolveConflictOnReplicationConfigurationChange(
+                database.ReplicationLoader, 
+                LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name));
+
+            return new ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand(
+                conflictsStorage: null, 
+                ResolvedConflicts, 
+                resolver);
         }
     }
 }
