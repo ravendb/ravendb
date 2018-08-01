@@ -18,6 +18,9 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
 
         public void Update(Session session, JET_DBID dbid, Action<string> output)
         {
+            // this is continuation of migration started in From07To08
+            // here we are migrating 'pages' table and update relevant rows in 'usages'
+
             var pagesTableName = "pages";
 
             var newTableName = pagesTableName + "_new";
@@ -39,40 +42,6 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
 
             using (var usage = new Table(session, dbid, "usage", OpenTableGrbit.None))
             {
-                // let's create index in usages table necessary for migration purposes
-                // we need to seek by page_id in order to update value in 'usages' table after
-                // writing a page to new table where it will get new id
-
-                var indexDef = "+page_id\0\0";
-                try
-                {
-                    Api.JetDeleteIndex(session, usage, "by_page_id");
-                }
-                catch (Exception)
-                {
-                    //if there is no such index - then it is not important
-                    //this is a precaution against partially failed upgrade process
-                }
-
-                Api.JetCreateIndex2(session, usage, new[]
-                {
-                    new JET_INDEXCREATE
-                    {
-                        szIndexName = "by_page_id",
-                        cbKey = indexDef.Length,
-                        cbKeyMost = SystemParameters.KeyMost,
-                        cbVarSegMac = SystemParameters.KeyMost,
-                        szKey = indexDef,
-                        grbit = CreateIndexGrbit.None,
-                        ulDensity = 80
-                    }
-                }, 1);
-
-                // commit index creation
-
-                Api.JetCommitTransaction(session, CommitTransactionGrbit.LazyFlush);
-                Api.JetBeginTransaction2(session, BeginTransactionGrbit.None);
-
                 var usageColumns = Api.GetColumnDictionary(session, usage);
 
                 using (var src = new Table(session, dbid, pagesTableName, OpenTableGrbit.None))
@@ -152,12 +121,21 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
 
                             if (Api.TrySeek(session, usage, SeekGrbit.SeekEQ))
                             {
-                                using (var update = new Update(session, usage, JET_prep.Replace))
+                                do
                                 {
-                                    Api.SetColumn(session, usage, usageColumns["page_id"], newPageId);
+                                    var page_id = Api.RetrieveColumnAsInt64(session, usage, usageColumns["page_id"]).Value;
 
-                                    update.Save();
-                                }
+                                    if (page_id != oldPageId)
+                                        break;
+
+                                    using (var update = new Update(session, usage, JET_prep.Replace))
+                                    {
+                                        Api.SetColumn(session, usage, usageColumns["page_id"], newPageId);
+
+                                        update.Save();
+                                    }
+
+                                } while (Api.TryMoveNext(session, usage));
                             }
                         }
 
@@ -173,7 +151,7 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
 
             using (var usage = new Table(session, dbid, "usage", OpenTableGrbit.None))
             {
-                // delete no longer necessary index
+                // delete no longer necessary index, created in schema upgrade From07To08
 
                 Api.JetDeleteIndex(session, usage, "by_page_id");
             }
