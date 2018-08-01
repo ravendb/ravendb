@@ -13,6 +13,8 @@ class serverSetup {
 
     userDomains = ko.observable<Raven.Server.Commercial.UserDomainsWithIps>();
     
+    useExperimentalFeatures = ko.observable<boolean>(false);
+    
     mode = ko.observable<Raven.Server.Commercial.SetupMode | "Continue">();
     license = ko.observable<licenseInfo>(new licenseInfo());
     domain = ko.observable<domainInfo>(new domainInfo(() => this.license().toDto()));
@@ -104,6 +106,16 @@ class serverSetup {
             RegisterClientCert: this.registerClientCertificate()
         } as Raven.Server.Commercial.ContinueSetupInfo;
     }
+
+    toUnsecuredDto() : Raven.Server.Commercial.UnsecuredSetupInfo {
+        const setup = this.unsecureSetup();
+        return {
+            EnableExperimentalFeatures: this.useExperimentalFeatures(),
+            Port: setup.port() ? parseInt(setup.port(), 10) : 8080,
+            Addresses: [setup.ip().ip()],
+            TcpPort: setup.tcpPort() ? parseInt(setup.tcpPort(), 10) : 38888
+        }
+    }
     
     toSecuredDto(): Raven.Server.Commercial.SetupInfo {
         const nodesInfo = {} as dictionary<Raven.Server.Commercial.SetupInfo.NodeInfo>;
@@ -113,6 +125,7 @@ class serverSetup {
         });
 
         return {
+            EnableExperimentalFeatures: this.useExperimentalFeatures(),
             License: this.license().toDto(),
             Email: this.domain().userEmail(),
             Domain: this.domain().domain(),

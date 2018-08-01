@@ -50,14 +50,6 @@ class unsecureSetup {
             tcpPort: this.tcpPort
         })
     }
-
-    toDto() : Raven.Server.Commercial.UnsecuredSetupInfo {
-        return {
-            Port: this.port() ? parseInt(this.port(), 10) : 8080,
-            Addresses: [this.ip().ip()],
-            TcpPort: this.tcpPort() ? parseInt(this.tcpPort(), 10) : 38888
-        }
-    }
     
 }
 

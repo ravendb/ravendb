@@ -137,7 +137,7 @@ class finish extends setupStep {
     }
     
     private saveUnsecuredConfiguration() {
-        new saveUnsecuredSetupCommand(this.model.unsecureSetup().toDto())
+        new saveUnsecuredSetupCommand(this.model.toUnsecuredDto())
             .execute()
             .done(() => {
                 this.configurationTask.resolve();

@@ -89,3 +89,21 @@ Let's start with choosing your desired level of security. Select the security op
         In order to disable this guide and setup the server manually, please find the 'settings.json' file in your RavenDB installation directory and change the <strong>Setup.Mode</strong> value to <strong>None</strong>
     </div>
 </div>
+
+<div class="bg-danger padding flex-horizontal margin-top">
+    <div class="margin-right">
+        <i class="icon-experimental icon-lg"></i>
+    </div>
+    <div class="margin-left">
+        <div class="checkbox">
+            <input id="features" type="checkbox" data-bind="checked: model.useExperimentalFeatures">
+            <label for="features">Enable the following experimental features:</label>
+        </div>
+        
+        <ul class="margin-left">
+            <li>JavaScript Indexes</li>
+            <li>Counters</li>
+            <li>Cluster-wide Transactions</li>
+        </ul>
+    </div>
+</div>
