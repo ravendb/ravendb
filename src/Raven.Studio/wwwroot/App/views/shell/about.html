@@ -20,34 +20,34 @@
                         </div>
                     </div>
 
-                    <!-- TODO
                     <div>
                         <div class="flex-horizontal flex-stretch-items">
-                            <button class="btn btn-primary big-button">
+                            <button data-bind="click: openLatestVersionDownload" class="btn btn-primary big-button">
                                 <i class="icon-client"></i>
-                                <div class="content">
-                                    <small>New version (4.0.1) is available</small>
-                                    <strong>Download now</strong>
+                                <div class="content" >
+                                    <small data-bind="html: newVersionAvailableHtml"></small>
+                                    <strong data-bind="visible: !isNewVersionAvailable(), text: currentServerVersion" ></strong>
+                                    <strong data-bind="visible: isNewVersionAvailable" >Download Now</strong>
                                 </div>
                             </button>
-                            <button class="btn btn-primary">
+                            <button data-bind="disable: spinners.latestVersionUpdates, click: refreshLatestVersionInfo, css: { 'btn-spinner': spinners.latestVersionUpdates }" 
+                                    class="btn btn-primary">
                                 <i class="icon-refresh"></i>
                             </button>
 
                         </div>
 
-                        <div class="text-center margin-top">
-                            <a href="#" target="_blank">See what's new</a>
+                        <div class="text-center margin-top" data-bind="if: isNewVersionAvailable">
+                            <a href="#" data-bind="attr: { href: latestVersionWhatsNewUrl }" target="_blank">See What's New</a>
                         </div>
                     </div>
-                    -->
 
                     <div>
                         <a data-bind="click: openFeedbackForm" class="btn btn-info big-button">
                             <i class="icon-rocket"></i>
                             <div class="content">
                                 <small>Help us improve</small>
-                                <strong>Send feedback</strong>
+                                <strong>Send Feedback</strong>
                             </div>
                         </a>
 
