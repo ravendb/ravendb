@@ -5,9 +5,31 @@ namespace Raven.Server.Documents.Queries.AST
 {
     public class PatternMatchVertexExpression : PatternMatchExpression
     {
-        public StringSegment? Alias;
+        public readonly StringSegment? Alias;
 
-        public StringSegment? VertexType;
+        public readonly StringSegment? VertexType;
+
+        protected bool Equals(PatternMatchVertexExpression other)
+        {
+            return Alias.Equals(other.Alias) && VertexType.Equals(other.VertexType);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+
+            return obj.GetType() == GetType() && 
+                   Equals((PatternMatchVertexExpression)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Alias?.GetHashCode()).GetValueOrDefault() * 397) ^ (VertexType?.GetHashCode()).GetValueOrDefault();
+            }
+        }
 
         public PatternMatchVertexExpression(StringSegment? @alias, StringSegment? vertexType)
         {

@@ -1,33 +1,28 @@
-using System;
-using System.Collections.Generic;
-using Raven.Server.Documents;
+ï»¿using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Graph;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow;
-using Xunit.Sdk;
+using Xunit;
 
-namespace Tryouts
+namespace FastTests.Graph
 {
-    public static class Program
+    public class Parsing : RavenLowLevelTestBase
     {
-        public static void Main(string[] args)
+        [Fact]
+        public async Task ParseBasicGraphQuery()
         {
-            /*
-                The AST for 
+            using (var database = CreateDocumentDatabase())
+            {
+                var graphQueryRunner = new GraphQueryRunner(database);
+                var ast = CreateAst();
 
-                with { from Movies where Name = “Star Wars Episode 1” } as lovedMovie
-                with { from Movies } as recommendedMovie
-                with edges(HasGenre) { order by Weight desc limit 1 } as dominantGenre
-                match (lovedMovie)-[dominantGenre]->(Genre)<-[HasGenre(Weight > 0.8)]-(recommendedMovie)<-(u)
-                select recommendedMovie           
-                
-             */
-            CreateAST();
-
-            //Console.WriteLine(graphQuery.ToString());
+                var result = await graphQueryRunner.RunAsync(ast);
+            }            
         }
 
-        private static void CreateAST()
+        private static GraphQuery CreateAst()
         {
             var queryParser = new QueryParser();
             queryParser.Init("from Movies where Name = 'Star Wars Episode 1'");
@@ -41,7 +36,7 @@ namespace Tryouts
             queryParser.Init("from Users where Age between 18 and 35");
             var thirdWithClause = queryParser.Parse();
 
-            var graphQuery = new GraphQuery
+            return new GraphQuery
             {
                 WithDocumentQueries = new Dictionary<StringSegment, Query>
                 {
@@ -101,7 +96,7 @@ namespace Tryouts
                         },
                         new PatternMatchElementExpression
                         {
-                            From = new PatternMatchVertexExpression("u", null),
+                            From = new PatternMatchVertexExpression("usersWhoRated", null),
                             To = new PatternMatchVertexExpression(null, "recommendedMovie"),
                         }, PatternMatchBinaryExpression.Operator.And),
                     PatternMatchBinaryExpression.Operator.And

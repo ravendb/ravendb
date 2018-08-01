@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -51,7 +52,40 @@ namespace Raven.Server.Documents.Queries.AST
         }
 
         public virtual void VisitPatternMatchClause(PatternMatchExpression expression)
+        {            
+            switch (expression)
+            {
+                case PatternMatchBinaryExpression binaryExpression:
+                    VisitBinaryExpression(binaryExpression);
+                    break;
+                case PatternMatchElementExpression elementExpression:
+                    VisitElementExpression(elementExpression);
+                    break;
+                case PatternMatchNotExpression notExpression:
+                    VisitNotExpression(notExpression);
+                    break;
+            }
+        }
+
+
+        public virtual void VisitElementExpression(PatternMatchElementExpression elementExpression)
         {
+        }
+
+        public virtual void VisitNotExpression(PatternMatchNotExpression notExpression)
+        {
+            VisitPatternMatchClause(notExpression.AppliedOn);
+        }
+
+        public virtual void VisitBinaryOperator(PatternMatchBinaryExpression binaryExpression, PatternMatchBinaryExpression.Operator op)
+        {
+        }
+
+        public virtual void VisitBinaryExpression(PatternMatchBinaryExpression binaryExpression)
+        {
+            VisitPatternMatchClause(binaryExpression.Left);
+            VisitBinaryOperator(binaryExpression, binaryExpression.Op);
+            VisitPatternMatchClause(binaryExpression.Right);
         }
     }
 }
