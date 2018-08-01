@@ -1,4 +1,5 @@
 using FastTests;
+using Raven.Client.Exceptions.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -34,7 +35,10 @@ namespace SlowTests.Issues
                         Text = "text-2"
                     };
                     
-                    session.Store(doc);
+                    var exception = Assert.Throws<NonUniqueObjectException>(() => session.Store(doc));
+                    Assert.Equal("Attempted to associate a different object with id 'docs/1'.", exception.Message);
+
+                    session.Store(doc, doc.Id);
 
                     session.SaveChanges();
                 }
@@ -74,7 +78,10 @@ namespace SlowTests.Issues
                         Text = "text-2"
                     };
                     
-                    session.Store(doc);
+                    var exception = Assert.Throws<NonUniqueObjectException>(() => session.Store(doc));
+                    Assert.Equal("Attempted to associate a different object with id 'docs/1'.", exception.Message);
+
+                    session.Store(doc, doc.Id);
 
                     session.SaveChanges();
                 }
