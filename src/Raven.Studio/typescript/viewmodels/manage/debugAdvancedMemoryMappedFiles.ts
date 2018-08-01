@@ -14,7 +14,7 @@ type memoryMappingItem = {
     HumaneTotalMapped: string;
     FileSize: number;
     TotalMapped: number;
-    Mappings: Raven.Server.Documents.Handlers.Debugging.MemoryStatsHandler.MemoryInfoMappingDetails[];
+    Mappings: Raven.Server.Documents.Handlers.Debugging.MemoryDebugHandler.MemoryInfoMappingDetails[];
 }
 
 class memoryMappedFiles extends viewModelBase {
@@ -127,7 +127,7 @@ class memoryMappedFiles extends viewModelBase {
             .done(response => {
                 
                 const mappedResults = _.flatMap(response.Mappings, m => {
-                    return _.map(m.Details, (details: Raven.Server.Documents.Handlers.Debugging.MemoryStatsHandler.MemoryInfoMappingFileInfo, fileName: string) => {
+                    return _.map(m.Details, (details: Raven.Server.Documents.Handlers.Debugging.MemoryDebugHandler.MemoryInfoMappingFileInfo, fileName: string) => {
                         return {
                             Directory: m.Directory,
                             FileName: fileName,
