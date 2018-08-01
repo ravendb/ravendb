@@ -157,17 +157,14 @@ namespace Raven.Embedded
                     inputStream.Write($"q{Environment.NewLine}y{Environment.NewLine}");
                 }
 
-                process.WaitForExit((int)_gracefulShutdownTimeout.TotalMilliseconds);
-                if (process.HasExited)
+                if (process.WaitForExit((int)_gracefulShutdownTimeout.TotalMilliseconds))
                     return;
-
             }
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
                 {
-                    _logger.Info($"Failed to shutdown server PID {process.Id} gracefully " +
-                                 $"in {_gracefulShutdownTimeout.ToString()}", e);
+                    _logger.Info($"Failed to shutdown server PID {process.Id} gracefully in {_gracefulShutdownTimeout.ToString()}", e);
                 }
             }
 
@@ -178,11 +175,11 @@ namespace Raven.Embedded
 
                 process.Kill();
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
                 {
-                    _logger.Info($"Failed to kill process {process.Id}", ex);
+                    _logger.Info($"Failed to kill process {process.Id}", e);
                 }
             }
         }
