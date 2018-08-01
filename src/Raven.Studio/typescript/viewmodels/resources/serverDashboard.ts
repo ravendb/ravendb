@@ -19,6 +19,7 @@ import databasesManager = require("common/shell/databasesManager");
 import createDatabase = require("viewmodels/resources/createDatabase");
 import serverTime = require("common/helpers/database/serverTime");
 import accessManager = require("common/shell/accessManager");
+import utils = require("widgets/virtualGrid/virtualGridUtils");
 
 class machineResourcesSection {
 
@@ -237,10 +238,11 @@ class databasesSection {
     
     totalOfflineDatabases = ko.observable<number>(0);
     totalOnlineDatabases = ko.observable<number>(0);
+    totalDisabledDatabases = ko.observable<number>(0);
     totalDatabases: KnockoutComputed<number>;
     
     constructor() {
-        this.totalDatabases = ko.pureComputed(() => this.totalOnlineDatabases() + this.totalOfflineDatabases());
+        this.totalDatabases = ko.pureComputed(() => this.totalOnlineDatabases() + this.totalOfflineDatabases() + this.totalDisabledDatabases());
     }
     
     init() {
@@ -248,13 +250,24 @@ class databasesSection {
 
         grid.headerVisible(true);
 
+        const iconProvider = (item: databaseItem) => {
+            if (item.online()) {
+                return '<i class="icon-database-cutout icon-addon-check"></i>';
+            } else if (item.disabled()) {
+                return '<i class="icon-database-cutout icon-addon-cancel"></i>';
+            } else {
+                return '<i class="icon-database-cutout icon-addon-clock"></i>';
+            }
+        };
+        
         grid.init((s, t) => $.when({
             totalResultCount: this.table.length,
             items: this.table
         }), () => {
             return [ 
-                new hyperlinkColumn<databaseItem>(grid, x => x.database(), x => appUrl.forDocuments(null, x.database()), "Database", "30%", {
-                    extraClass: x => x.disabled() ? "disabled" : ""
+                new hyperlinkColumn<databaseItem>(grid, x => iconProvider(x) + '<span>' + utils.escape(x.database()) + '</span>', x => appUrl.forDocuments(null, x.database()), "Database", "30%", {
+                    extraClass: x => x.disabled() ? "disabled" : "",
+                    useRawValue: () => true
                 }), 
                 new textColumn<databaseItem>(grid, x => x.documentsCount(), "Docs #", "25%"),
                 new textColumn<databaseItem>(grid, 
@@ -302,10 +315,13 @@ class databasesSection {
     private updateTotals() {
         let totalOnline = 0;
         let totalOffline = 0;
+        let totalDisabled = 0;
         
         this.table.forEach(item => {
             if (item.online()) {
                 totalOnline++;
+            } else if (item.disabled()) {
+                totalDisabled++;
             } else {
                 totalOffline++;
             }
@@ -313,6 +329,7 @@ class databasesSection {
         
         this.totalOnlineDatabases(totalOnline);
         this.totalOfflineDatabases(totalOffline);
+        this.totalDisabledDatabases(totalDisabled);
     }
 }
 
