@@ -14,6 +14,7 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
@@ -136,6 +137,8 @@ namespace Raven.Client.Documents.Conventions
             }
 
             MaxHttpCacheSize = new Size(httpCacheSizeInMb, SizeUnit.Megabytes);
+
+            OperationStatusFetchMode = OperationStatusFetchMode.ChangesApi;
         }
 
         private bool _frozen;
@@ -170,6 +173,7 @@ namespace Raven.Client.Documents.Conventions
         private bool? _useCompression;
         private Func<MemberInfo, string> _propertyNameConverter;
         private Func<Type, bool> _typeIsKnownServerSide = _ => false;
+        private OperationStatusFetchMode _operationStatusFetchMode;
 
         public Func<MemberInfo, string> PropertyNameConverter
         {
@@ -512,6 +516,19 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _saveEnumsAsIntegers = value;
+            }
+        }
+
+        /// <summary>
+        /// Changes the way the Operation is fetching the operation status when waiting for completion
+        /// </summary>
+        public OperationStatusFetchMode OperationStatusFetchMode
+        {
+            get => _operationStatusFetchMode;
+            set
+            {
+                AssertNotFrozen();
+                _operationStatusFetchMode = value;
             }
         }
 
