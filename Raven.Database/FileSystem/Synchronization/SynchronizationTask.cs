@@ -473,6 +473,9 @@ namespace Raven.Database.FileSystem.Synchronization
                     // let's do it _only_ if we saw the same etag multiple times
 
                     forceIncrementingEtag = true;
+
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("Going to force incrementing last synchronized etag as last source file etag: " + lastReplicatedEtagRecord.Etag + " was already seen " + lastReplicatedEtagRecord.Seen + " times. This should prevent from getting stuck.");
                 }
             }
  
