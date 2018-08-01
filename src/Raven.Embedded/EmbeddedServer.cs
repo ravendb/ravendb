@@ -37,7 +37,7 @@ namespace Raven.Embedded
         {
             options = options ?? ServerOptions.Default;
 
-            _gracefulShutdownTimeout = options.gracefulShutdownTimeout;
+            _gracefulShutdownTimeout = options.GracefulShutdownTimeout;
             var startServer = new Lazy<Task<(Uri ServerUrl, Process ServerProcess)>>(() => RunServer(options));
             if (Interlocked.CompareExchange(ref _serverTask, startServer, null) != null)
                 throw new InvalidOperationException("The server was already started");
