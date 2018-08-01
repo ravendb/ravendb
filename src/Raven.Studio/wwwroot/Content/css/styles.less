@@ -54,7 +54,6 @@ a.text-revisions:hover {
 h1,
 h2,
 h3 {
-    font-weight: 300;
     margin-top: 3px;
 
     [class*=" icon-"],
@@ -135,6 +134,11 @@ h6 {
 
 .nobr {
     white-space: nowrap;
+}
+
+.small-properties {
+    font-size: 11px;
+    text-transform: uppercase;
 }
 
 .whitespace-initial {
@@ -1661,10 +1665,10 @@ pre {
 }
 
 .feedback-link {
-    color: #a140b0 !important;
+    color: @color-5 !important;
 
     &:hover {
-        color: lighten(#a140b0, 10%) !important;
+        color: lighten(@color-5, 10%) !important;
     }
 }
 

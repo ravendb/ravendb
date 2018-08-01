@@ -5,6 +5,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 
 type hypertextColumnOpts<T> = {
     extraClass?: (item: T) => string;
+    useRawValue?: (item: T) => boolean;
     handler?: (item: T, event: JQueryEventObject) => void;
 }
 

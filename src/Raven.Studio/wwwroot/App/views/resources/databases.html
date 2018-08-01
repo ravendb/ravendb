@@ -175,9 +175,9 @@
                                                        css: { 'btn-spinner': inProgressAction },
                                                        disable: isBeingDeleted() || inProgressAction()">
                                         <span data-bind="visible: inProgressAction(), text: inProgressAction()"></span>
-                                        <i class="icon-unlock" data-bind="visible: !inProgressAction() && disabled()"></i>
+                                        <i class="icon-database-cutout icon-addon-play2" data-bind="visible: !inProgressAction() && disabled()"></i>
                                         <span data-bind="visible: !inProgressAction() && disabled()">Enable</span>
-                                        <i class="icon-lock" data-bind="visible: !inProgressAction() && !disabled()"></i>
+                                        <i class="icon-database-cutout icon-addon-cancel" data-bind="visible: !inProgressAction() && !disabled()"></i>
                                         <span data-bind="visible: !inProgressAction() && !disabled()">Disable</span>
                                     </button>
                                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
@@ -198,7 +198,7 @@
                                         </li>
                                         <li data-bind="visible: $root.accessManager.canDisableIndexing() && !indexingDisabled()">
                                             <a href="#" data-bind="click: $root.toggleDisableDatabaseIndexing">
-                                                <i class="icon-lock"></i> Disable indexing
+                                                <i class="icon-cancel"></i> Disable indexing
                                             </a>
                                         </li>
                                         <li data-bind="visible: indexingDisabled()">
