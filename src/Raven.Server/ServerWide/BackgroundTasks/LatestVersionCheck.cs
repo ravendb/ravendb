@@ -16,6 +16,10 @@ namespace Raven.Server.ServerWide.BackgroundTasks
     {
         private const string ApiRavenDbNet = "https://api.ravendb.net";
 
+        private static SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
+
+        private static VersionInfo _lastRetrievedVersionInfo = null;
+
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger("Server", typeof(LatestVersionCheck).FullName);
 
         private static AlertRaised _alert;
@@ -46,8 +50,15 @@ namespace Raven.Server.ServerWide.BackgroundTasks
             serverStore.NotificationCenter.Add(_alert);
         }
 
-        private static async Task PerformAsync()
+        public static VersionInfo GetLastRetrievedVersionUpdatesInfo()
         {
+            return _lastRetrievedVersionInfo;
+        }
+
+        public static async Task PerformAsync()
+        {
+            await _locker.WaitAsync();
+
             try
             {
                 var buildNumber = ServerVersion.Build;
@@ -72,12 +83,18 @@ namespace Raven.Server.ServerWide.BackgroundTasks
 
                         AddAlertToNotificationCenter();
                     }
+
+                    _lastRetrievedVersionInfo = latestVersionInfo;
                 }
             }
             catch (Exception err)
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Error getting latest version info.", err);
+            }
+            finally
+            {
+                _locker.Release();
             }
         }
 
