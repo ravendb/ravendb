@@ -97,7 +97,7 @@ namespace Raven.Client.ServerWide.Tcp
         ///
         /// If the respond is 'Drop' the function should throw.
         /// If the respond is 'None' the function should throw.
-        /// If the respond is 'TcpMissMatch' the function should return the read version.
+        /// If the respond is 'TcpMismatch' the function should return the read version.
         /// </summary>
         public Func<JsonOperationContext, BlittableJsonTextWriter, Stream, string, int> ReadResponseAndGetVersionCallback { get; set; }
     }
