@@ -277,7 +277,8 @@ namespace Raven.Server
             //stop dumping logs
             LoggingSource.Instance.DisableConsoleLogging();
 
-            return new RavenCli().Start(server, Console.Out, Console.In, true);
+            var consoleColoring = !CommandLineSwitches.NonConsole;
+            return new RavenCli().Start(server, Console.Out, Console.In, consoleColoring);
         }
 
         public static void WriteServerStatsAndWaitForEsc(RavenServer server)

@@ -19,6 +19,8 @@ namespace Raven.Embedded
 
         public string ServerUrl { get; set; }
 
+        public int GracefullyExitTimeout { get; set; } = 3;
+
         public TimeSpan MaxServerStartupTimeDuration { get; set; } = TimeSpan.FromMinutes(1);
 
         public List<string> CommandLineArgs { get; set; } = new List<string>();

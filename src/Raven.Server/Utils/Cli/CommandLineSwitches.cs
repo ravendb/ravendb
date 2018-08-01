@@ -28,6 +28,8 @@ namespace Raven.Server.Utils.Cli
 
         public static bool LogToConsole => ParseSwitchOption(_logToConsole);
 
+        public static bool NonConsole => ParseSwitchOption(_nonConsoleOption);
+
         private static CommandLineApplication _app;
 
         private static CommandOption _logToConsole;
@@ -43,6 +45,8 @@ namespace Raven.Server.Utils.Cli
         private static CommandOption _serviceNameOption;
 
         private static CommandOption _helpOption;
+
+        private static CommandOption _nonConsoleOption;
 
         private static CommandOption _customConfigPathOption;
 
@@ -100,6 +104,11 @@ namespace Raven.Server.Utils.Cli
                 "-l | --log-to-console",
                 "Print logs to console (when run in non-interactive mode)",
                 CommandOptionType.NoValue);
+            _nonConsoleOption = _app.Option(
+                "--non-console",
+                "Run in non-console mode (disable console coloring)",
+                CommandOptionType.NoValue
+            );
 
             _app.Execute(nonConfigurationSwitches.ToArray());
 
