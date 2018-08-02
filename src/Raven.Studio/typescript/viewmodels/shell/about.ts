@@ -45,7 +45,7 @@ class about extends viewModelBase {
 
     newVersionAvailableHtml = ko.pureComputed(() => {
         if (this.isNewVersionAvailable()) {
-            return `New version available - <span class="nobr">${ about.latestVersion().Version }</span>`;
+            return `New version available<br/> <span class="nobr">${ about.latestVersion().Version }</span>`;
         } else {
             return `You are using the latest version`;
         }

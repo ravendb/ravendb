@@ -15,6 +15,7 @@
 
     .big-button {
         white-space: normal;
+        align-items: center;
 
         small {
             max-width: 185px;
@@ -114,7 +115,9 @@
         grid-gap: @grid-gutter-width;
 
         @media (min-width: @screen-sm) {
-            grid-template-columns: 1fr 1fr;
+            grid-auto-flow: column;
+            grid-template-columns: auto auto;
+            grid-template-rows: auto auto;
         }
     }
 
