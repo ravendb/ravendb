@@ -1,12 +1,12 @@
 ﻿using System;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Graph;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
@@ -33,6 +33,8 @@ namespace Raven.Client.Json.Converters
 {
     internal class JsonDeserializationClient : JsonDeserializationBase
     {
+        public static readonly Func<BlittableJsonReaderObject, EdgeInfo> EdgeInfo = GenerateJsonDeserializationRoutine<EdgeInfo>();
+
         public static readonly Func<BlittableJsonReaderObject, SmugglerProgressBase.CountsWithSkippedCountAndLastEtag> CountsWithSkippedCountAndLastEtag = GenerateJsonDeserializationRoutine<SmugglerProgressBase.CountsWithSkippedCountAndLastEtag>();
 
         public static readonly Func<BlittableJsonReaderObject, IsDatabaseLoadedCommand.CommandResult> IsDatabaseLoadedCommandResult = GenerateJsonDeserializationRoutine<IsDatabaseLoadedCommand.CommandResult>();

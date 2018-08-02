@@ -616,7 +616,7 @@ more responsive application.
             StoreInternal(entity, changeVector, id, changeVector == null ? ConcurrencyCheckMode.Disabled : ConcurrencyCheckMode.Forced);
         }
 
-        public void AddEdgeBetween(object @from, object to, string edgeType, object edgeProperties = null)
+        public void AddEdgeBetween(object @from, object to, string edgeType, Dictionary<string,string> edgeProperties = null)
         {
             if (NoTracking)
                 throw new InvalidOperationException("Cannot store entity. Entity tracking is disabled in this session.");
@@ -634,47 +634,24 @@ more responsive application.
                 throw new InvalidOperationException($"Cannot add edge. The parameter '{nameof(@from)}' should be in the session BEFORE an edge can be added");
             if (!DocumentsByEntity.TryGetValue(to, out var toDocInfo))
                 throw new InvalidOperationException($"Cannot add edge. The parameter '{nameof(to)}' should be in the session BEFORE an edge can be added");
-            
-            if(fromDocInfo.MetadataInstance == null)
-                fromDocInfo.MetadataInstance = new MetadataAsDictionary();
 
-            MetadataAsDictionary edges;
-
-            if (!(fromDocInfo.MetadataInstance.TryGetValue("@edges", out object edgesAsObject)))
+            var newEdgeInfo = new EdgeInfo
             {
-                edges = new MetadataAsDictionary
-                {
-                    [edgeType] = new List<EdgeInfo>
-                    {
-                        new EdgeInfo
-                        {
-                            To = toDocInfo.Id
-                        }
-                    }
-                };
+                To = toDocInfo.Id,
+                EdgeType = edgeType,
+                Attributes = edgeProperties
+            };
 
-                fromDocInfo.MetadataInstance["@edges"] = edges;
-            }
-            else
+            if (fromDocInfo.Metadata.Modifications == null || 
+                !(fromDocInfo.Metadata.Modifications[Constants.Documents.Metadata.Edges] is List<EdgeInfo> edgeData))
             {
-                edges = (MetadataAsDictionary)edgesAsObject;
-                if (!(edges[edgeType] is List<EdgeInfo> edgeMetadata))
-                {
-                    edgeMetadata = new List<EdgeInfo>();
-                    edges[edgeType] = edgeMetadata;
-                }
-
-                var toMetadata = edgeMetadata.FirstOrDefault(em => em.To.Equals(toDocInfo.Id, StringComparison.InvariantCultureIgnoreCase));
-                if (toMetadata == null)
-                {
-                    toMetadata = new EdgeInfo
-                    {
-                        To = toDocInfo.Id
-                    };
-                    edgeMetadata.Add(toMetadata);
-                }
+                edgeData = fromDocInfo.Metadata.GetEdgeData();
+                if (fromDocInfo.Metadata.Modifications == null)
+                    fromDocInfo.Metadata.Modifications = new DynamicJsonValue();
             }
 
+            edgeData.Add(newEdgeInfo);
+            fromDocInfo.Metadata.Modifications[Constants.Documents.Metadata.Edges] = edgeData;
         }
 
         private void StoreInternal(object entity, string changeVector, string id, ConcurrencyCheckMode forceConcurrencyCheck)
@@ -723,7 +700,7 @@ more responsive application.
             var collectionName = _requestExecutor.Conventions.GetCollectionName(entity);
             var metadata = new DynamicJsonValue();
             if (collectionName != null)
-                metadata[Constants.Documents.Metadata.Collection] = collectionName;
+                metadata[Constants.Documents.Metadata.Collection] = collectionName;           
 
             var clrType = _requestExecutor.Conventions.GetClrTypeName(entity.GetType());
             if (clrType != null)
@@ -938,17 +915,23 @@ more responsive application.
 
         private static bool UpdateMetadataModifications(DocumentInfo documentInfo)
         {
-            if (documentInfo.MetadataInstance == null || ((MetadataAsDictionary)documentInfo.MetadataInstance).Changed == false)
-                return false;
+            if ((documentInfo.MetadataInstance == null || 
+                ((MetadataAsDictionary)documentInfo.MetadataInstance).Changed == false) &&
+                (documentInfo.Metadata.Modifications == null || 
+                documentInfo.Metadata.Modifications.Properties.Count == 0))
+                    return false;
 
             if (documentInfo.Metadata.Modifications == null || documentInfo.Metadata.Modifications.Properties.Count == 0)
             {
                 documentInfo.Metadata.Modifications = new DynamicJsonValue();
             }
 
-            foreach (var prop in documentInfo.MetadataInstance.Keys)
+            if (documentInfo.MetadataInstance != null)
             {
-                documentInfo.Metadata.Modifications[prop] = documentInfo.MetadataInstance[prop];
+                foreach (var prop in documentInfo.MetadataInstance.Keys)
+                {
+                    documentInfo.Metadata.Modifications[prop] = documentInfo.MetadataInstance[prop];
+                }
             }
 
             return true;
@@ -1017,6 +1000,7 @@ more responsive application.
                     continue;
 
                 var metadataUpdated = UpdateMetadataModifications(entity.Value);
+           
                 var document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
                 if (EntityChanged(document, entity.Value, null) == false)
                     continue;
@@ -1043,6 +1027,7 @@ more responsive application.
                     DocumentsById.Remove(entity.Value.Id);
 
                 entity.Value.Document = document;
+
                 if (metadataUpdated)
                 {
                     // we need to preserve the metadata after the changes, otherwise we'll consume the changes
@@ -1051,6 +1036,7 @@ more responsive application.
                     {
                         ThrowMissingDocumentMetadata(document);
                     }
+
                     entity.Value.Metadata = Context.ReadObject(metadata, entity.Value.Id, BlittableJsonDocumentBuilder.UsageMode.None);
                 }
 
