@@ -228,6 +228,18 @@ namespace Raven.Client.Documents.Session
             };
         }
 
+        public IReadOnlyList<EdgeInfo> GetEdgesOf<T>(T instance)
+        {
+            if (instance == null)
+                throw new ArgumentNullException(nameof(instance));
+
+            var documentInfo = GetDocumentInfo(instance);
+            if(documentInfo == null)
+                throw new InvalidOperationException($"Cannot fetch edges of {nameof(instance)} because it is not loaded in the document session.");
+
+            return documentInfo.Metadata.GetEdgeData().ToList();
+        }
+
         /// <summary>
         /// Gets the metadata for the specified entity.
         /// </summary>
@@ -594,7 +606,6 @@ more responsive application.
             var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out string _);
             StoreInternal(entity, null, null, hasId == false ? ConcurrencyCheckMode.Forced : ConcurrencyCheckMode.Auto);
         }
-
       
         /// <summary>
         /// Stores the specified entity in the session, explicitly specifying its Id. The entity will be saved when SaveChanges is called.
@@ -641,7 +652,7 @@ more responsive application.
             if (fromDocInfo.Metadata.Modifications == null || 
                 !(fromDocInfo.Metadata.Modifications[Constants.Documents.Metadata.Edges] is List<EdgeInfo> edgeData))
             {
-                edgeData = fromDocInfo.Metadata.GetEdgeData();
+                edgeData = fromDocInfo.Metadata.GetEdgeData().ToList();
                 if (fromDocInfo.Metadata.Modifications == null)
                     fromDocInfo.Metadata.Modifications = new DynamicJsonValue();
             }

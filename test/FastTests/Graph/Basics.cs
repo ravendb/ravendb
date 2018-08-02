@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Raven.Client.Documents;
 using Xunit;
@@ -27,16 +28,11 @@ namespace FastTests.Graph
         [Fact]
         public void Can_add_edges_between_documents()
         {
-            using (var store = new DocumentStore
+            using (var store = GetDocumentStore())
             {
-                Database   = "FooBar",
-                Urls = new []{"http://live-test.ravendb.net"}
-            })
-            {
-                store.Initialize();
                 using (var session = store.OpenSession())
                 {
-                    var m1 = new Movie
+                    var movie = new Movie
                     {
                         Name = "Star Wars Episode 1"
                     };
@@ -56,18 +52,25 @@ namespace FastTests.Graph
                         Name = "Adventure"
                     };
 
-                    session.Store(m1);
+                    session.Store(movie);
                     session.Store(scifi);
                     session.Store(fantasy);
                     session.Store(adventure);
 
-                    session.AddEdgeBetween(m1,scifi,"HasGenre", new Dictionary<string, string>{ { "Weight", "0.3" } });
-                    session.AddEdgeBetween(m1,fantasy,"HasGenre", new Dictionary<string, string>{ { "Weight", "0.6" } });
-                    session.AddEdgeBetween(m1,adventure,"HasGenre", new Dictionary<string, string>{ { "Weight", "0.1" } });
+                    session.Advanced.AddEdgeBetween(movie,scifi,"HasGenre", new Dictionary<string, string>{ { "Weight", "0.3" } });
+                    session.Advanced.AddEdgeBetween(movie,fantasy,"HasGenre", new Dictionary<string, string>{ { "Weight", "0.6" } });
+                    session.Advanced.AddEdgeBetween(movie,adventure,"HasGenre", new Dictionary<string, string>{ { "Weight", "0.1" } });
                     
-                    session.AddEdgeBetween(fantasy,scifi,"Related");
-
                     session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var movie = session.Query<Movie>().First();
+                    var edges = session.Advanced.GetEdgesOf(movie);
+
+                    Assert.Equal(3,edges.Count);
+                    Assert.All(edges, e => Assert.Equal("HasGenre",e.EdgeType));
                 }
 
             }
