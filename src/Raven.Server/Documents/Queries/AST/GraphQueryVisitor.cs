@@ -61,20 +61,12 @@ namespace Raven.Server.Documents.Queries.AST
                 case PatternMatchElementExpression elementExpression:
                     VisitElementExpression(elementExpression);
                     break;
-                case PatternMatchNotExpression notExpression:
-                    VisitNotExpression(notExpression);
-                    break;
             }
         }
 
 
         public virtual void VisitElementExpression(PatternMatchElementExpression elementExpression)
         {
-        }
-
-        public virtual void VisitNotExpression(PatternMatchNotExpression notExpression)
-        {
-            VisitPatternMatchClause(notExpression.AppliedOn);
         }
 
         public virtual void VisitBinaryOperator(PatternMatchBinaryExpression binaryExpression, PatternMatchBinaryExpression.Operator op)

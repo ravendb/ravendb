@@ -66,14 +66,7 @@ namespace Raven.Server.Documents.Queries.AST
         public override void VisitElementExpression(PatternMatchElementExpression elementExpression)
         {
             Sb.Append($" {elementExpression} ");
-        }
-
-        public override void VisitNotExpression(PatternMatchNotExpression notExpression)
-        {
-            Sb.Append("NOT (");
-            base.VisitNotExpression(notExpression);
-            Sb.Append(")");
-        }
+        }     
 
         public override void VisitBinaryOperator(PatternMatchBinaryExpression binaryExpression, PatternMatchBinaryExpression.Operator op)
         {
