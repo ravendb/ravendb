@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Graph
 
         public string EdgeType { get; set; }
 
-        public Dictionary<string, string> Attributes { get; set; }
+        public Dictionary<string, object> Attributes { get; set; }
         
         public DynamicJsonValue ToJson()
         {
