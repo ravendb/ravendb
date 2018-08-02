@@ -27,7 +27,7 @@
                             </div>
                             <div class="flex-grow" data-bind="validationElement: deleteFrequencyInSec">
                                 <div class="input-group">
-                                    <input class="form-control" type="number" placeholder="Default (60)" data-bind="numericInput: deleteFrequencyInSec, enable: specifyDeleteFrequency" />
+                                    <input class="form-control" type="number" min="0" placeholder="Default (60)" data-bind="numericInput: deleteFrequencyInSec, enable: specifyDeleteFrequency" />
                                     <div class="input-group-addon">
                                         seconds
                                     </div>

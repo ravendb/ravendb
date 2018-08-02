@@ -42,7 +42,7 @@
                             </div>
                         </div>
                         <div class="col-sm-2" data-bind="validationElement: model.maxNumberOfRequestsPerSession">
-                            <input class="form-control" type="number"
+                            <input class="form-control" type="number" min="0"
                                    data-bind="numericInput: model.maxNumberOfRequestsPerSession, enable: _.includes(model.isDefined(), 'maxNumberOfRequestsPerSession')" />
                         </div>
                     </div>
