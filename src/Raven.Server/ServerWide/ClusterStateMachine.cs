@@ -73,7 +73,7 @@ namespace Raven.Server.ServerWide
         private static readonly Slice CompareExchange;
         public static readonly Slice Identities;
         public static readonly Slice TransactionCommands;
-        public static readonly Slice TransactionCommandsIndex;
+        public static readonly Slice TransactionCommandsCountPerDatabase;
 
         static ClusterStateMachine()
         {
@@ -83,7 +83,7 @@ namespace Raven.Server.ServerWide
                 Slice.From(ctx, "CmpXchg", out CompareExchange);
                 Slice.From(ctx, "Identities", out Identities);
                 Slice.From(ctx, "TransactionCommands", out TransactionCommands);
-                Slice.From(ctx, "TransactionCommandsIndex", out TransactionCommandsIndex);
+                Slice.From(ctx, "TransactionCommandsIndex", out TransactionCommandsCountPerDatabase);
             }
             ItemsSchema = new TableSchema();
 
@@ -312,12 +312,12 @@ namespace Raven.Server.ServerWide
             foreach (var tuple in affectedDatabases)
             {
                 var database = tuple.Key;
-                var cleanIndex = tuple.Value;
+                var commandsCount = tuple.Value;
                 var record = ReadDatabase(context, database);
                 if (record == null)
                     continue;
 
-                record.TruncatedClusterTransactionIndex = cleanIndex;
+                record.TruncatedClusterTransactionCommandsCount = commandsCount;
 
                 var dbKey = "db/" + tuple.Key;
                 using (Slice.From(context.Allocator, dbKey, out Slice valueName))
@@ -616,8 +616,11 @@ namespace Raven.Server.ServerWide
             CleanupDatabaseRelatedValues(context, items, databaseName);
 
             var transactionsCommands = context.Transaction.InnerTransaction.OpenTable(TransactionCommandsSchema, TransactionCommands);
+            var commandsCountPerDatabase = context.Transaction.InnerTransaction.ReadTree(TransactionCommandsCountPerDatabase);
+
             using (ClusterTransactionCommand.GetPrefix(context, databaseName, out var prefixSlice))
             {
+                commandsCountPerDatabase.Delete(prefixSlice);
                 transactionsCommands.DeleteByPrimaryKeyPrefix(prefixSlice);
             }
         }
@@ -971,7 +974,7 @@ namespace Raven.Server.ServerWide
             if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= ClusterCommandsVersionManager.Base41CommandsVersion)
                 return baseVersion
                        || slice.Content.Match(TransactionCommands.Content)
-                       || slice.Content.Match(TransactionCommandsIndex.Content);
+                       || slice.Content.Match(TransactionCommandsCountPerDatabase.Content);
 
             return baseVersion;
         }
@@ -982,7 +985,7 @@ namespace Raven.Server.ServerWide
             ItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
             CompareExchangeSchema.Create(context.Transaction.InnerTransaction, CompareExchange, 32);
             TransactionCommandsSchema.Create(context.Transaction.InnerTransaction, TransactionCommands, 32);
-            context.Transaction.InnerTransaction.CreateTree(TransactionCommandsIndex);
+            context.Transaction.InnerTransaction.CreateTree(TransactionCommandsCountPerDatabase);
             context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
             context.Transaction.InnerTransaction.CreateTree(Identities);
             parent.StateChanged += OnStateChange;

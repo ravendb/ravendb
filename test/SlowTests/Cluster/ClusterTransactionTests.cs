@@ -91,9 +91,10 @@ namespace SlowTests.Cluster
                 for (int j = 0; j < numOfSessions; j++)
                 {
 
-                    var retry = false;
+                    bool retry;
                     do
                     {
+                        retry = false;
                         try
                         {
                             using (var session = store.OpenAsyncSession(new SessionOptions
@@ -108,13 +109,13 @@ namespace SlowTests.Cluster
                                         LastName = RandomString(2048),
                                         Age = i
                                     };
-                                    await session.StoreAsync(user, "users/" + (docsPerSession * j + i));
+                                    await session.StoreAsync(user, "users/" + (docsPerSession * j + i + 1));
                                 }
 
                                 if (numberOfNodes > 1)
                                     await ActionWithLeader(l =>
                                     {
-                                        l.ServerStore.Engine.CurrentLeader.StepDown();
+                                        l.ServerStore.Engine.CurrentLeader?.StepDown();
                                         return Task.CompletedTask;
                                     });
                                 await session.SaveChangesAsync();

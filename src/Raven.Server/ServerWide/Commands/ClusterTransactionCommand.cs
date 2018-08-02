@@ -94,16 +94,6 @@ namespace Raven.Server.ServerWide.Commands
         [JsonDeserializationIgnore]
         public readonly List<ClusterTransactionDataCommand> DatabaseCommands = new List<ClusterTransactionDataCommand>();
 
-        public static Slice CommandsCountKey;
-
-        static ClusterTransactionCommand()
-        {
-            using (StorageEnvironment.GetStaticContext(out var ctx))
-            {
-                Slice.From(ctx, "CommandsCountKey", out CommandsCountKey);
-            }
-        }
-
         public ClusterTransactionCommand() { }
 
         public ClusterTransactionCommand(string database, ArraySegment<BatchRequestParser.CommandData> commandParsedCommands, ClusterTransactionOptions options)
@@ -189,20 +179,22 @@ namespace Raven.Server.ServerWide.Commands
             }
 
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
-            var commandsIndexTree = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.TransactionCommandsIndex);
+            var commandsCountPerDatabase = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.TransactionCommandsCountPerDatabase);
             var commands = SerializedDatabaseCommands.Clone(context);
 
-            var count = commandsIndexTree.ReadLong(CommandsCountKey) ?? 0;
-            using (GetPrefix(context, Database, out var prefixSlice, count))
-            using (items.Allocate(out TableValueBuilder tvb))
+            using (GetPrefix(context, Database, out var databaseSlice))
             {
-                tvb.Add(prefixSlice.Content.Ptr, prefixSlice.Size);
-                tvb.Add(commands.BasePointer, commands.Size);
-                tvb.Add(index);
-                items.Insert(tvb);
-
-                using (commandsIndexTree.DirectAdd(CommandsCountKey, sizeof(long), out var ptr))
-                    *(long*)ptr = count + DatabaseCommandsCount;
+                var count = commandsCountPerDatabase.ReadLong(databaseSlice) ?? 0;
+                using (GetPrefix(context, Database, out var prefixSlice, count))
+                using (items.Allocate(out TableValueBuilder tvb))
+                {
+                    tvb.Add(prefixSlice.Content.Ptr, prefixSlice.Size);
+                    tvb.Add(commands.BasePointer, commands.Size);
+                    tvb.Add(index);
+                    items.Insert(tvb);
+                    using (commandsCountPerDatabase.DirectAdd(databaseSlice, sizeof(long), out var ptr))
+                        *(long*)ptr = count + DatabaseCommandsCount;
+                }
             }
         }
 
@@ -214,7 +206,7 @@ namespace Raven.Server.ServerWide.Commands
             RaftIndex,
         }
 
-        public static unsafe SingleClusterDatabaseCommand ReadFirstClusterTransaction(TransactionOperationContext context, string database)
+        public static SingleClusterDatabaseCommand ReadFirstClusterTransaction(TransactionOperationContext context, string database)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
             using (GetPrefix(context, database, out var prefixSlice))
@@ -248,7 +240,7 @@ namespace Raven.Server.ServerWide.Commands
                     {
                         lowerBufferStart[i] = char.ToLowerInvariant(pDb[i]);
                     }
-
+                    
                     var dbLen = Encoding.UTF8.GetBytes(lowerBufferStart, database.Length, prefixBuffer.Ptr, prefixBuffer.Length);
                     prefixBuffer.Ptr[dbLen] = Separator;
                     var actualSize = dbLen + 1;
@@ -278,23 +270,51 @@ namespace Raven.Server.ServerWide.Commands
             public string Database;
         }
 
-        public static IEnumerable<SingleClusterDatabaseCommand> ReadCommandsBatch(TransactionOperationContext context, string database, long fromCount)
+        public static SingleClusterDatabaseCommand ReadSingleCommand(TransactionOperationContext context, string database, long? fromCount)
         {
             var lowerDb = database.ToLowerInvariant();
             var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
-            using (GetPrefix(context, database, out Slice prefixSlice))
+            using (GetPrefix(context, database, out Slice prefixSlice, fromCount))
             {
-                var commandsBulk = items.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0);
+                var commandsBulk = items.SeekByPrimaryKey(prefixSlice, 0);
                 foreach (var command in commandsBulk)
                 {
-                    var reader = command.Value.Reader;
+                    var reader = command.Reader;
+                    var result = ReadCommand(context, reader);
+                    if (result == null)
+                        return null;
+                    if (result.Database != lowerDb) // beware of reading commands of other databases.
+                        continue;
+                    if (result.PreviousCount < fromCount)
+                        continue;
+                    return result;
+                }
+
+                return null;
+            }
+        }
+
+
+        public static IEnumerable<SingleClusterDatabaseCommand> ReadCommandsBatch(TransactionOperationContext context, string database, long? fromCount, int take = 128)
+        {
+            var lowerDb = database.ToLowerInvariant();
+            var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
+            using (GetPrefix(context, database, out Slice prefixSlice, fromCount))
+            {
+                var commandsBulk = items.SeekByPrimaryKey(prefixSlice, 0);
+                foreach (var command in commandsBulk)
+                {
+                    var reader = command.Reader;
                     var result = ReadCommand(context, reader);
                     if (result == null)
                         yield break;
                     if (result.Database != lowerDb) // beware of reading commands of other databases.
-                        yield break;
+                        continue;
                     if (result.PreviousCount < fromCount)
                         continue;
+                    if (take <= 0)
+                        yield break;
+                    take--;
                     yield return result;
                 }
             }
@@ -305,7 +325,7 @@ namespace Raven.Server.ServerWide.Commands
             var ptr = reader.Read((int)TransactionCommandsColumn.Commands, out var size);
             if (ptr == null)
                 return null;
-            var blittable = new BlittableJsonReaderObject(ptr, size, context);
+            var blittable = new BlittableJsonReaderObject(ptr, size, context).Clone(context);
             blittable.TryGet(nameof(DatabaseCommands), out BlittableJsonReaderArray array);
 
             ClusterTransactionOptions options = null;

@@ -20,7 +20,7 @@ namespace Raven.Server.ServerWide.Commands
             foreach (var tuple in ClusterTransactionsCleanup)
             {
                 var database = tuple.Key;
-                var upToIndex = tuple.Value;
+                var upToCommandCount = tuple.Value - 1;
 
                 var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
                 using (ClusterTransactionCommand.GetPrefix(context, database, out var prefixSlice))
@@ -28,13 +28,13 @@ namespace Raven.Server.ServerWide.Commands
                     var deleted = items.DeleteByPrimaryKeyPrefix(prefixSlice, shouldAbort: (tvb) =>
                     {
                         var value = tvb.Reader.Read((int)ClusterTransactionCommand.TransactionCommandsColumn.Key, out var size);
-                        var currentIndex = Bits.SwapBytes(*(long*)(value + size - sizeof(long)));
-                        return currentIndex > upToIndex;
+                        var commandCount = Bits.SwapBytes(*(long*)(value + size - sizeof(long)));
+                        return commandCount > upToCommandCount;
                     });
                    
                     if (deleted)
                     {
-                        affectedDatabases.Add(database, upToIndex);
+                        affectedDatabases.Add(database, upToCommandCount);
                     }
                 }
             }

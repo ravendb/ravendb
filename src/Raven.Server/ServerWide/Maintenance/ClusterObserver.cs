@@ -351,7 +351,7 @@ namespace Raven.Server.ServerWide.Maintenance
             if (record.Topology.Count != stats.Count)
                 return null;
 
-            long currentIndex = long.MaxValue;
+            long commandCount = long.MaxValue;
             foreach (var node in record.Topology.AllNodes)
             {
                 if (stats.TryGetValue(node, out var nodeReport) == false)
@@ -361,13 +361,13 @@ namespace Raven.Server.ServerWide.Maintenance
                     return null;
 
                 var last = ChangeVectorUtils.GetEtagById(report.DatabaseChangeVector, record.Topology.DatabaseTopologyIdBase64);
-                currentIndex = Math.Min(currentIndex, last);
+                commandCount = Math.Min(commandCount, last);
             }
 
-            if (currentIndex <= record.TruncatedClusterTransactionIndex)
+            if (commandCount <= record.TruncatedClusterTransactionCommandsCount)
                 return null;
 
-            return currentIndex;
+            return commandCount;
         }
 
         private void AddToDecisionLog(string database, string updateReason)
