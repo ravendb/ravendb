@@ -1,34 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Raven.Client.Documents;
-using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Graph
 {
     public class Basics : RavenTestBase
-    {
-        public class Movie
-        {
-            public string Name { get; set; }
-        }
-
-        public class Genre
-        {
-            public string Name { get; set; }
-        }
-
-        public class User
-        {
-            public string Name { get;set; }
-            public int Age { get; set; }
-        }
-
+    {   
         [Fact]
         public void Can_add_edges_between_documents()
-        {
+        {            
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
@@ -71,12 +51,10 @@ namespace FastTests.Graph
                     var edges = session.Advanced.GetEdgesOf(movie);
 
                     Assert.Equal(3,edges.Count);
-                    Assert.All(edges, e => Assert.Equal("HasGenre",e.EdgeType));
-
-                    Assert.Contains(edges, e => (long)e.Attributes["Weight"] == 3);
-                    Assert.Contains(edges, e => (long)e.Attributes["Weight"] == 6);
-                    Assert.Contains(edges, e => (long)e.Attributes["Weight"] == 1);
-                }                
+                    Assert.Contains(edges, e => (long)e.Edge.Attributes["Weight"] == 3);
+                    Assert.Contains(edges, e => (long)e.Edge.Attributes["Weight"] == 6);
+                    Assert.Contains(edges, e => (long)e.Edge.Attributes["Weight"] == 1);
+                }                         
             }
         }
     }

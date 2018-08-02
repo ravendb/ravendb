@@ -6,10 +6,9 @@ namespace Raven.Server.Documents.Queries.AST
     {
         public enum Operator
         {
-            // ReSharper disable once InconsistentNaming
             And,
-            // ReSharper disable once InconsistentNaming
-            Or
+            Or,
+            AndNot
         }
 
         public PatternMatchExpression Left;
