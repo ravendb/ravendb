@@ -64,6 +64,80 @@ namespace SlowTests.Server
         }
 
         [Fact]
+        public async Task RecordingMergedHiLoReturnCommand()
+        {
+            var filePath = NewDataPath();
+            var user = new User();
+
+            string expected;
+            using (var firstStore = GetDocumentStore())
+            {
+                var secondStore = new DocumentStore
+                {
+                    Urls = new[] { Server.WebUrl },
+                    Database = firstStore.Database
+                };
+                secondStore.Initialize();
+                await secondStore.Conventions.AsyncDocumentIdGenerator(secondStore.Database, user);
+
+                //Recording
+                firstStore.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
+                secondStore.Dispose();
+                firstStore.Maintenance.Send(new StopTransactionsRecordingOperation());
+
+                expected = await secondStore.Conventions.AsyncDocumentIdGenerator(firstStore.Database, user);
+            }
+
+            //Replay
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(filePath, FileMode.Open))
+            {
+                await store.Conventions.AsyncDocumentIdGenerator(store.Database, user);
+
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
+                var actual = await store.Conventions.AsyncDocumentIdGenerator(store.Database, user);
+                //Assert
+
+                Assert.Equal(expected, actual);
+            }
+        }
+
+        [Fact]
+        public async Task RecordingMergedNextHiLoCommand()
+        {
+            var filePath = NewDataPath();
+            var user = new User();
+
+            //Recording
+            string expected;
+            using (var store1 = GetDocumentStore())
+            using (var store2 = new DocumentStore
+            {
+                Urls = new[] { Server.WebUrl },
+                Database = store1.Database
+            })
+            {
+                store2.Initialize();
+
+                store1.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
+                await store1.Conventions.AsyncDocumentIdGenerator(store1.Database, user);
+                store1.Maintenance.Send(new StopTransactionsRecordingOperation());
+
+                expected = await store2.Conventions.AsyncDocumentIdGenerator(store1.Database, user);
+            }
+
+            //Replay
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(filePath, FileMode.Open))
+            {
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
+                var actual = await store.Conventions.AsyncDocumentIdGenerator(store.Database, user);
+                //Assert
+                Assert.Equal(expected, actual);
+            }
+        }
+
+        [Fact]
         public async Task RecordingPutResolvedConflictsCommand()
         {
             var recordFilePath = NewDataPath();

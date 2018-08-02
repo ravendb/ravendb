@@ -1264,9 +1264,12 @@ namespace Raven.Server.Documents
                     return jsonSerializer.Deserialize<MergedDeleteAttachmentCommandDto>(reader);
                 case nameof(ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand):
                     return jsonSerializer.Deserialize<PutResolvedConflictsCommandDto>(reader);
+                case nameof(HiLoHandler.MergedNextHiLoCommand):
+                    return jsonSerializer.Deserialize<MergedNextHiLoCommandDto>(reader);
+                case nameof(HiLoHandler.MergedHiLoReturnCommand):
+                    return jsonSerializer.Deserialize<MergedHiLoReturnCommandDto>(reader);
                 //Todo To deal with those cases after a possibility to serialize and deserialize is implemented
                 case nameof(IncomingReplicationHandler.MergedDocumentReplicationCommand):
-                case nameof(HiLoHandler.MergedNextHiLoCommand):
                     return null;
                 default:
                     throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);

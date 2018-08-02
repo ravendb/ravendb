@@ -11,6 +11,7 @@ using Raven.Client.Json;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Processors;
@@ -21,6 +22,55 @@ namespace SlowTests.Blittable
 {
     public class SerializeAndDeserializeMergedTransactionCommandTests : RavenLowLevelTestBase
     {
+        [Fact]
+        public void SerializeAndDeserialize_PutResolvedConflictsCommand()
+        {
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var database = CreateDocumentDatabase())
+            {
+                //Arrange
+                var resolvedConflicts = new List<(DocumentConflict, long)>
+                    {
+                        (new DocumentConflict
+                        {
+                            Id = context.GetLazyString("Some id"),
+                            LowerId = context.GetLazyString("Some lower id"),
+                            Collection = context.GetLazyString("Some collection"),
+                            Doc = EntityToBlittable.ConvertCommandToBlittable(new { SomeName = "Some Value" }, context)
+                        }, 10)
+                    };
+
+                var expected = new ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand(
+                    null, resolvedConflicts, null);
+                var expectedDto = expected.ToDto();
+
+                //Serialize
+                var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+                BlittableJsonReaderObject blitCommand;
+                using (var writer = new BlittableJsonWriter(context))
+                {
+                    jsonSerializer.Serialize(writer, expectedDto);
+                    writer.FinalizeDocument();
+
+                    blitCommand = writer.CreateReader();
+                }
+
+                var fromStream = SerializeTestHelper.SimulateSavingToFileAndLoading(context, blitCommand);
+
+                //Deserialize
+                ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand actual;
+                using (var reader = new BlittableJsonReader(context))
+                {
+                    reader.Init(fromStream);
+
+                    var actualDto = jsonSerializer.Deserialize<PutResolvedConflictsCommandDto>(reader);
+
+                    //Assert
+//                    Assert.Equal(expectedDto.)
+                }
+            }
+        }
+
         [Fact]
         public void SerializeAndDeserialize_MergedDeleteAttachmentCommand()
         {
@@ -115,7 +165,7 @@ namespace SlowTests.Blittable
                 }
 
                 //Assert
-                Assert.Equal(expected, actual, 
+                Assert.Equal(expected, actual,
                     new CustomComparer<AttachmentHandler.MergedPutAttachmentCommand>(new []{typeof(Stream)}));
 
                 stream.Seek(0, SeekOrigin.Begin);
