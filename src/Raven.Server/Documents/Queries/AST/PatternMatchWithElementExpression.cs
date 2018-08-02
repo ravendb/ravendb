@@ -4,30 +4,16 @@ namespace Raven.Server.Documents.Queries.AST
 {
     public class PatternMatchElementExpression : PatternMatchExpression
     {
-     
-        public PatternMatchVertexExpression From;
+        public string FromAlias;
 
-        public StringSegment? EdgeAlias;
+        public string EdgeAlias;
 
-        public StringSegment? EdgeType;
-
-        public PatternMatchVertexExpression To;
+        public string ToAlias;
 
         public override string ToString() => GetText();
 
         public override string GetText(IndexQueryServerSide parent) => GetText();
-        
-        public string GetText() => $"{From}-{GetEdgeText()}->{To}";
 
-        public string GetEdgeText()
-        {
-            if (EdgeAlias.HasValue && EdgeType.HasValue)
-                return $"[{EdgeAlias}:{EdgeType}]";
-
-            if(EdgeAlias.HasValue && !EdgeType.HasValue)
-                return $"[{EdgeAlias}]";
-
-            return $"[:{EdgeType}]";
-        }
+        public string GetText() => $"{FromAlias}-{EdgeAlias}->{ToAlias}";
     }
 }

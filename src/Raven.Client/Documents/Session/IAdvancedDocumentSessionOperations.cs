@@ -115,7 +115,7 @@ namespace Raven.Client.Documents.Session
         IMetadataDictionary GetMetadataFor<T>(T instance);
 
         
-        IReadOnlyList<EdgeInfo> GetEdgesOf<T>(T instance);
+        IReadOnlyList<(string EdgeType, EdgeInfo Edge)> GetEdgesOf<T>(T instance);
 
         /// <summary>
         /// Add edge between two documents

@@ -288,7 +288,10 @@ namespace Raven.Server.Documents
                     }
                 }, null);
 
-                Task.Run(() => ExectueClusterTransactionTask(), DatabaseShutdown);
+                Task.Run(() =>
+                {
+                    ExectueClusterTransactionTask();
+                }, DatabaseShutdown);
 
             }
             catch (Exception)

@@ -8,8 +8,6 @@ namespace Raven.Client.Documents.Graph
     {        
         public string To { get; set; }
 
-        public string EdgeType { get; set; }
-
         public Dictionary<string, object> Attributes { get; set; }
         
         public DynamicJsonValue ToJson()
@@ -26,7 +24,6 @@ namespace Raven.Client.Documents.Graph
             var val = new DynamicJsonValue
             {
                 [nameof(To)] = To,
-                [nameof(EdgeType)] = EdgeType,
                 [nameof(Attributes)] = dja
             };
 

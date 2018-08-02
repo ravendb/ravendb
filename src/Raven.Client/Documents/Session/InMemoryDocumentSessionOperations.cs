@@ -228,7 +228,7 @@ namespace Raven.Client.Documents.Session
             };
         }
 
-        public IReadOnlyList<EdgeInfo> GetEdgesOf<T>(T instance)
+        public IReadOnlyList<(string EdgeType, EdgeInfo Edge)> GetEdgesOf<T>(T instance)
         {
             if (instance == null)
                 throw new ArgumentNullException(nameof(instance));
@@ -237,7 +237,7 @@ namespace Raven.Client.Documents.Session
             if(documentInfo == null)
                 throw new InvalidOperationException($"Cannot fetch edges of {nameof(instance)} because it is not loaded in the document session.");
 
-            return documentInfo.Metadata.GetEdgeData().ToList();
+            return documentInfo.Metadata.ReadEdgeData().ToList();
         }
 
         /// <summary>
@@ -645,20 +645,19 @@ more responsive application.
             var newEdgeInfo = new EdgeInfo
             {
                 To = toDocInfo.Id,
-                EdgeType = edgeType,
                 Attributes = edgeProperties
             };
 
-            if (fromDocInfo.Metadata.Modifications == null || 
-                !(fromDocInfo.Metadata.Modifications[Constants.Documents.Metadata.Edges] is List<EdgeInfo> edgeData))
+            if (!fromDocInfo.Metadata.TryGetMember(Constants.Documents.Metadata.Edges,out _))
             {
-                edgeData = fromDocInfo.Metadata.GetEdgeData().ToList();
-                if (fromDocInfo.Metadata.Modifications == null)
+                if(fromDocInfo.Metadata.Modifications == null)
                     fromDocInfo.Metadata.Modifications = new DynamicJsonValue();
+
+                fromDocInfo.Metadata.Modifications[Constants.Documents.Metadata.Edges] = new DynamicJsonArray();
+                fromDocInfo.Metadata = Context.ReadObject(fromDocInfo.Metadata, "add/@edges");
             }
 
-            edgeData.Add(newEdgeInfo);
-            fromDocInfo.Metadata.Modifications[Constants.Documents.Metadata.Edges] = edgeData;
+            fromDocInfo.Metadata.WriteEdgeData(edgeType,newEdgeInfo);
         }
 
         private void StoreInternal(object entity, string changeVector, string id, ConcurrencyCheckMode forceConcurrencyCheck)
