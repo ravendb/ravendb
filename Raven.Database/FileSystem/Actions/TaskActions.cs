@@ -27,10 +27,9 @@ namespace Raven.Database.FileSystem.Actions
         public TaskActions(RavenFileSystem fileSystem, ILog log)
             : base(fileSystem, log)
         {
-            InitializeTimer();
         }
 
-        private void InitializeTimer()
+        public void InitializeTimer()
         {
             FileSystem.TimerManager.NewTimer(state => ClearCompletedPendingTasks(), TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         }

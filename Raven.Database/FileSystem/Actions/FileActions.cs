@@ -43,10 +43,9 @@ namespace Raven.Database.FileSystem.Actions
         public FileActions(RavenFileSystem fileSystem, ILog log)
             : base(fileSystem, log)
         {
-            InitializeTimer();
         }
 
-        private void InitializeTimer()
+        public void InitializeTimer()
         {
             FileSystem.TimerManager.NewTimer(state =>
             {
@@ -487,9 +486,19 @@ namespace Raven.Database.FileSystem.Actions
             var filesToDelete = new List<DeleteFileOperation>();
 
             int totalCount;
-            Storage.Batch(accessor => filesToDelete = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.DeleteOperationConfigPrefix, 0, MaxNumberOfFilesToDeleteByCleanupTaskRun, out totalCount)
-                                                              .Select(config => config.JsonDeserialization<DeleteFileOperation>())
-                                                              .ToList());
+            Storage.Batch(accessor =>
+            {
+                try
+                {
+                    filesToDelete = accessor.GetConfigsStartWithPrefix(RavenFileNameHelper.DeleteOperationConfigPrefix, 0, MaxNumberOfFilesToDeleteByCleanupTaskRun, out totalCount)
+                        .Select(config => config.JsonDeserialization<DeleteFileOperation>())
+                        .ToList();
+                }
+                catch (Exception e)
+                {
+                    Log.ErrorException("Failed to cleanup deleted files in", e);
+                }
+            });
 
             if (filesToDelete.Count == 0)
                 return new CompletedTask();

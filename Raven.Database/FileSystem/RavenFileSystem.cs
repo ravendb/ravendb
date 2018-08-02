@@ -160,6 +160,9 @@ namespace Raven.Database.FileSystem
 
                 SecondStageInitialization();
 
+                Files.InitializeTimer();
+                Tasks.InitializeTimer();
+
                 synchronizationTask.Start();
             }
             catch (Exception e)
