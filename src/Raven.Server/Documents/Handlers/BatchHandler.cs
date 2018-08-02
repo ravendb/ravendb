@@ -19,7 +19,6 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Runtime.ExceptionServices;
-using System.Threading;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Json;
 using Raven.Server.Json;
@@ -144,27 +143,7 @@ namespace Raven.Server.Documents.Handlers
             var array = new DynamicJsonArray();
             if (clusterTransactionCommand.DatabaseCommandsCount > 0)
             {
-#if DEBUG
-                ClusterTransactionCompletionResult reply;
-
-                while (true)
-                {
-                    try
-                    {
-                        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
-                        {
-                            reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, cts.Token);
-                        }
-                        break;
-                    }
-                    catch
-                    {
-                        Console.WriteLine($"Waited too long... id: {options.TaskId}, {string.Join(',', clusterTransactionCommand.DatabaseCommands.Select(c => c.Id))}, {clusterTransactionCommand.DatabaseCommandsCount}, {clusterTransactionCommand.Database}");
-                    }
-                }
-#else
                 var reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, HttpContext.RequestAborted);
-#endif
                 if (reply.IndexTask != null)
                 {
                     await reply.IndexTask;

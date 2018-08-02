@@ -47,6 +47,8 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         ReplicationMissingAttachments,
 
+        ClusterTransactionFailure,
+
         OutOfMemoryException
     }
 }

@@ -27,6 +27,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
@@ -379,20 +380,22 @@ namespace Raven.Server.Documents
                         {
                             continue;
                         }
-                        
+
+                        var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch);
                         try
                         {
-                            var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch);
                             TxMerger.Enqueue(mergedCommands).Wait(DatabaseShutdown);
-                            foreach (var command in batch)
-                            {
-                                OnClusterTransactionCompletion(command.Index, mergedCommands);
-                                _nextClusterCommand = command.PreviousCount + command.Commands.Length;
-                            }
+                           
                         }
                         catch
                         {
                             ExecuteClusterTransactionOneByOne(batch);
+                            return;
+                        }
+                        foreach (var command in batch)
+                        {
+                            OnClusterTransactionCompletion(command.Index, mergedCommands);
+                            _nextClusterCommand = command.PreviousCount + command.Commands.Length;
                         }
                     }
                     catch (Exception e)
@@ -424,6 +427,16 @@ namespace Raven.Server.Documents
                 catch (Exception e)
                 {
                     OnClusterTransactionCompletion(command.Index, mergedCommand, exception: e);
+                    NotificationCenter.Add(AlertRaised.Create(
+                        Name,
+                        "Cluster transaction failed to execute",
+                        $"Failed to execute cluster transactions with raft index: {command.Index}. " +
+                        $"With the following document ids: {string.Join(", ",command.Commands.Select(item => JsonDeserializationServer.ClusterTransactionDataCommand((BlittableJsonReaderObject)item).Id))}" +
+                        " Performing cluster transactions on this database will be stopped until the issue resolved.",
+                        AlertType.ClusterTransactionFailure,
+                        NotificationSeverity.Error,
+                        $"{Name}/ClusterTransaction",
+                        new ExceptionDetails(e)));
                     Task.Delay(1000, DatabaseShutdown).Wait(DatabaseShutdown);
                     return;
                 }
