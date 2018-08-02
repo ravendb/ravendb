@@ -1,8 +1,15 @@
 <div id="about-page" class="content-margin">
 
     <div class="about-info">
-        <div>
-            <a href="https://ravendb.net/" target="_blank"><i class="icon-logo text-primary"></i></a>
+        <div class="text-center">
+            <a href="https://ravendb.net/" target="_blank" class="visible-block"><i class="icon-logo text-primary"></i></a>
+            <div class="social margin-bottom margin-lg">
+                <a href="https://www.facebook.com/RavenDB-265907650186374/" target="_blank"><i class="icon-facebook"></i></a>
+                <a href="https://plus.google.com/communities/112242341438716210743" target="_blank"><i class="icon-googleplus"></i></a>
+                <a href="https://twitter.com/ravendb" target="_blank"><i class="icon-twitter"></i></a>
+                <a href="https://www.linkedin.com/company/hibernating-rhinos-ltd-" target="_blank"><i class="icon-linkedin"></i></a>
+            </div>
+            <hr/>
             <div class="margin-top">
                 <div class="about-grid">
                     <div class="big-label">
@@ -21,16 +28,26 @@
                     </div>
 
                     <div>
+                        <a data-bind="click: openFeedbackForm" class="btn btn-info big-button">
+                            <i class="icon-rocket"></i>
+                            <div class="content">
+                                <small>Help us improve</small>
+                                <strong>Send Feedback</strong>
+                            </div>
+                        </a>
+                    </div>
+
+                    <div>
                         <div class="flex-horizontal flex-stretch-items">
                             <button data-bind="click: openLatestVersionDownload" class="btn btn-primary big-button">
                                 <i class="icon-client"></i>
-                                <div class="content" >
+                                <div class="content">
                                     <small data-bind="html: newVersionAvailableHtml"></small>
-                                    <strong data-bind="visible: !isNewVersionAvailable(), text: currentServerVersion" ></strong>
-                                    <strong data-bind="visible: isNewVersionAvailable" >Download Now</strong>
+                                    <strong data-bind="visible: !isNewVersionAvailable(), text: currentServerVersion"></strong>
+                                    <strong data-bind="visible: isNewVersionAvailable">Download Now</strong>
                                 </div>
                             </button>
-                            <button data-bind="disable: spinners.latestVersionUpdates, click: refreshLatestVersionInfo, css: { 'btn-spinner': spinners.latestVersionUpdates }" 
+                            <button data-bind="disable: spinners.latestVersionUpdates, click: refreshLatestVersionInfo, css: { 'btn-spinner': spinners.latestVersionUpdates }"
                                     class="btn btn-primary">
                                 <i class="icon-refresh"></i>
                             </button>
@@ -41,24 +58,10 @@
                             <a href="#" data-bind="attr: { href: latestVersionWhatsNewUrl }" target="_blank">See What's New</a>
                         </div>
                     </div>
-
-                    <div>
-                        <a data-bind="click: openFeedbackForm" class="btn btn-info big-button">
-                            <i class="icon-rocket"></i>
-                            <div class="content">
-                                <small>Help us improve</small>
-                                <strong>Send Feedback</strong>
-                            </div>
-                        </a>
-
-                        <div class="social margin-top">
-                            <a href="https://www.facebook.com/RavenDB-265907650186374/" target="_blank"><i class="icon-facebook"></i></a>
-                            <a href="https://plus.google.com/communities/112242341438716210743" target="_blank"><i class="icon-googleplus"></i></a>
-                            <a href="https://twitter.com/ravendb" target="_blank"><i class="icon-twitter"></i></a>
-                            <a href="https://www.linkedin.com/company/hibernating-rhinos-ltd-" target="_blank"><i class="icon-linkedin"></i></a>
-                        </div>
-                    </div>
                 </div>
+
+
+
             </div>
         </div>
         <div class="margin-top">
