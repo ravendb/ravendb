@@ -68,5 +68,48 @@ namespace SlowTests.Server.Replication
 
             }
         }
+
+        [Fact]
+        public async Task EditExternalReplication()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                var delay = TimeSpan.FromSeconds(5);
+                var externalTask = new ExternalReplication(store2.Database, "DelayedExternalReplication")
+                {
+                    DelayReplicationFor = delay
+                };
+                await AddWatcherToReplicationTopology(store1, externalTask);
+                DateTime date;
+
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new User(), "foo/bar");
+                    date = DateTime.UtcNow;
+                    s1.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument(store2, "foo/bar"));
+                var elapsed = DateTime.UtcNow - date;
+                Assert.True(elapsed >= delay, $" only {elapsed}/{delay} ticks elapsed");
+
+                delay = TimeSpan.Zero;
+                externalTask.DelayReplicationFor = delay;
+                var op = new UpdateExternalReplicationOperation(externalTask);
+                await store1.Maintenance.SendAsync(op);
+
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new User(), "foo/bar");
+                    date = DateTime.UtcNow;
+                    s1.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument(store2, "foo/bar"));
+                var elapsedTime = DateTime.UtcNow - date;
+                Assert.True(elapsedTime >= delay && elapsedTime < elapsed, $" only {elapsed}/{delay} ticks elapsed");
+            }
+        }
     }
 }
