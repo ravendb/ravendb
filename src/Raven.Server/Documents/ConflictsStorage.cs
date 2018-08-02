@@ -339,7 +339,7 @@ namespace Raven.Server.Documents
                     }
                     else if(conflicted.Flags.Contain(DocumentFlags.FromReplication) == false)
                     {
-                        using (Slice.External(context.Allocator, conflicted.LowerId, out Slice key))
+                        using (Slice.External(context.Allocator, conflicted.LowerId, out var key))
                         {
                             var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
                             _documentsStorage.RevisionsStorage.DeleteRevision(context, key, conflicted.Collection, conflicted.ChangeVector, lastModifiedTicks);
