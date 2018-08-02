@@ -67,13 +67,10 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
                             using (var dstStream = new ColumnStream(session, dst, dstColumns["page_strong_hash"]))
                             {
                                 int readCount;
-                                int offset = 0;
 
                                 while ((readCount = srcStream.Read(buffer, 0, buffer.Length)) > 0)
                                 {
-                                    dstStream.Write(buffer, offset, readCount);
-
-                                    offset += readCount;
+                                    dstStream.Write(buffer, 0, readCount);
                                 }
 
                                 dstStream.Flush();
@@ -90,13 +87,10 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
                             using (var dstStream = new ColumnStream(session, dst, dstColumns["data"]))
                             {
                                 int readCount;
-                                int offset = 0;
 
                                 while ((readCount = srcStream.Read(buffer, 0, buffer.Length)) > 0)
                                 {
-                                    dstStream.Write(buffer, offset, readCount);
-
-                                    offset += readCount;
+                                    dstStream.Write(buffer, 0, readCount);
                                 }
 
                                 dstStream.Flush();
@@ -146,8 +140,12 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
                             Api.JetBeginTransaction2(session, BeginTransactionGrbit.None);
                         }
                     }
+
+                    output("Processed " + (rows) + " rows in 'pages' table. DONE");
                 }
             }
+
+            output("Starting to delete 'by_page_id' index (necessary for migration purposes)");
 
             using (var usage = new Table(session, dbid, "usage", OpenTableGrbit.None))
             {
@@ -155,6 +153,8 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
 
                 Api.JetDeleteIndex(session, usage, "by_page_id");
             }
+
+            output("'by_page_id' deleted");
 
             Api.JetCommitTransaction(session, CommitTransactionGrbit.None);
             Api.JetDeleteTable(session, dbid, pagesTableName);

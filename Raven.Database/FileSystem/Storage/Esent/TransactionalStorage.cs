@@ -566,6 +566,9 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
         private void Output(string message)
         {
+            log.Info(message);
+
+            Console.Write("FS {0}: ", Path.GetFileName(Path.GetDirectoryName(database)));
             Console.Write(message);
             Console.WriteLine();
         }
