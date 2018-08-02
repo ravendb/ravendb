@@ -314,7 +314,7 @@ namespace Raven.Client.Documents.Session
                 (instance is IDynamicMetaObjectProvider == false || GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id) == false))
                 throw new InvalidOperationException($"Could not find the document id for {instance}");
 
-            AssertNoNonUniqueInstance(instance, id);
+            AssertUniqueInstance(instance, id, explicitId: false);
 
             throw new ArgumentException($"Document {id} doesn\'t exist in the session");
         }
@@ -618,15 +618,15 @@ more responsive application.
             if (entity == null)
                 throw new ArgumentNullException(nameof(entity));
 
-            DocumentInfo value;
-            if (DocumentsByEntity.TryGetValue(entity, out value))
+            if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo value))
             {
                 value.ChangeVector = changeVector ?? value.ChangeVector;
                 value.ConcurrencyCheckMode = forceConcurrencyCheck;
                 return;
             }
 
-            if (id == null)
+            bool explicitId = id != null;
+            if (explicitId == false)
             {
                 if (GenerateDocumentIdsOnStore)
                 {
@@ -652,7 +652,7 @@ more responsive application.
             // we make the check here even if we just generated the ID
             // users can override the ID generation behavior, and we need
             // to detect if they generate duplicates.
-            AssertNoNonUniqueInstance(entity, id);
+            AssertUniqueInstance(entity, id, explicitId);
 
             var collectionName = _requestExecutor.Conventions.GetCollectionName(entity);
             var metadata = new DynamicJsonValue();
@@ -750,17 +750,17 @@ more responsive application.
                 DocumentsById.Add(documentInfo);
         }
 
-        protected void AssertNoNonUniqueInstance(object entity, string id)
+        protected void AssertUniqueInstance(object entity, string id, bool explicitId)
         {
-            DocumentInfo info;
             if (string.IsNullOrEmpty(id) ||
                 id[id.Length - 1] == '|' ||
                 id[id.Length - 1] == '/' ||
-                DocumentsById.TryGetValue(id, out info) == false ||
+                (explicitId && _knownMissingIds.Contains(id)) ||
+                DocumentsById.TryGetValue(id, out var info) == false ||
                 ReferenceEquals(info.Entity, entity))
                 return;
 
-            throw new NonUniqueObjectException("Attempted to associate a different object with id '" + id + "'.");
+            throw new NonUniqueObjectException($"Attempted to associate a different object with id '{id}'.");
         }
 
         protected async Task<string> GetOrGenerateDocumentIdAsync(object entity)
