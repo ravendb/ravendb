@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Raven.Client.Documents;
+using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Graph
@@ -57,9 +58,9 @@ namespace FastTests.Graph
                     session.Store(fantasy);
                     session.Store(adventure);
 
-                    session.Advanced.AddEdgeBetween(movie,scifi,"HasGenre", new Dictionary<string, string>{ { "Weight", "0.3" } });
-                    session.Advanced.AddEdgeBetween(movie,fantasy,"HasGenre", new Dictionary<string, string>{ { "Weight", "0.6" } });
-                    session.Advanced.AddEdgeBetween(movie,adventure,"HasGenre", new Dictionary<string, string>{ { "Weight", "0.1" } });
+                    session.Advanced.AddEdgeBetween(movie,scifi,"HasGenre", new Dictionary<string, object>{ { "Weight", 3 } });
+                    session.Advanced.AddEdgeBetween(movie,fantasy,"HasGenre", new Dictionary<string, object>{ { "Weight", 6 } });
+                    session.Advanced.AddEdgeBetween(movie,adventure,"HasGenre", new Dictionary<string, object>{ { "Weight", 1 } });
                     
                     session.SaveChanges();
                 }
@@ -71,8 +72,11 @@ namespace FastTests.Graph
 
                     Assert.Equal(3,edges.Count);
                     Assert.All(edges, e => Assert.Equal("HasGenre",e.EdgeType));
-                }
 
+                    Assert.Contains(edges, e => (long)e.Attributes["Weight"] == 3);
+                    Assert.Contains(edges, e => (long)e.Attributes["Weight"] == 6);
+                    Assert.Contains(edges, e => (long)e.Attributes["Weight"] == 1);
+                }                
             }
         }
     }

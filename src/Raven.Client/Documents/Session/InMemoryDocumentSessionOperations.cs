@@ -623,7 +623,7 @@ more responsive application.
             StoreInternal(entity, changeVector, id, changeVector == null ? ConcurrencyCheckMode.Disabled : ConcurrencyCheckMode.Forced);
         }
 
-        public void AddEdgeBetween(object @from, object to, string edgeType, Dictionary<string,string> edgeProperties = null)
+        public void AddEdgeBetween(object @from, object to, string edgeType, Dictionary<string, object> edgeProperties = null)
         {
             if (NoTracking)
                 throw new InvalidOperationException("Cannot store entity. Entity tracking is disabled in this session.");
