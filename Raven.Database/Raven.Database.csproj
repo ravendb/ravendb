@@ -568,6 +568,7 @@
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From52To53.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From51To52.cs" />
     <Compile Include="Storage\Esent\SchemaUpdates\Updates\From50To51.cs" />
+    <Compile Include="Storage\Esent\SchemaUpdates\Updates\From54To55.cs" />
     <Compile Include="Storage\Esent\StorageConfigurator.cs" />
     <Compile Include="Storage\IncrementalBackupState.cs" />
     <Compile Include="Storage\RemainingReductionPerLevel.cs" />

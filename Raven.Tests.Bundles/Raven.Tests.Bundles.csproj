@@ -181,6 +181,7 @@
     <Compile Include="Replication\FailoverBetweenTwoMultiTenantDatabases.cs" />
     <Compile Include="Replication\FailoverDisabled.cs" />
     <Compile Include="Replication\FailureHandling.cs" />
+    <Compile Include="Replication\Issues\RavenDB-11663.cs" />
     <Compile Include="Replication\Issues\RavenDB693.cs" />
     <Compile Include="Replication\Issues\RavenDB693_Embeddable.cs" />
     <Compile Include="Replication\Issues\RavenDB_677.cs" />

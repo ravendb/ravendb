@@ -13,7 +13,7 @@ namespace Raven.Storage.Esent
     [CLSCompliant(false)]
     public class SchemaCreator
     {
-        public const string SchemaVersion = "5.4";
+        public const string SchemaVersion = "5.5";
         private readonly Session session;
 
         public SchemaCreator(Session session)
@@ -788,33 +788,61 @@ namespace Raven.Storage.Esent
                 coltyp = JET_coltyp.DateTime,
                 grbit = ColumndefGrbit.ColumnNotNULL,
             }, null, 0, out columnid);
+           
+            var szIndexName = "+id\0\0";
+            var by_name_and_etag = "+name\0+etag\0\0";
+            var by_name_and_key = "+name\0+key\0\0";
+            var by_name_and_created_at = "+name\0+created_at\0\0";
 
-
-            CreateIndexes(tableid,
+            Api.JetCreateIndex2(session, tableid, new[]
+            {
                 new JET_INDEXCREATE
                 {
-                    szIndexName = "by_id",
-                    szKey = "+id\0\0",
-                    grbit = CreateIndexGrbit.IndexPrimary
-                },
+                    szIndexName = "szIndexName",
+                    cbKey = szIndexName.Length,
+                    szKey = szIndexName,
+                    grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                }
+            }, 1);
+
+            Api.JetCreateIndex2(session, tableid, new[]
+            {
                 new JET_INDEXCREATE
                 {
                     szIndexName = "by_name_and_etag",
-                    szKey = "+name\0+etag\0\0",
-                    grbit = CreateIndexGrbit.IndexDisallowNull
-                },
-                new JET_INDEXCREATE
+                    cbKey = by_name_and_etag.Length,
+                    cbKeyMost = SystemParameters.KeyMost,
+                    cbVarSegMac = SystemParameters.KeyMost,
+                    szKey = by_name_and_etag,
+                    grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                }
+            }, 1);
+
+            Api.JetCreateIndex2(session, tableid, new[]
                 {
-                    szIndexName = "by_name_and_key",
-                    szKey = "+name\0+key\0\0",
-                    grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique
-                },
-                new JET_INDEXCREATE
+                    new JET_INDEXCREATE
+                    {
+                        szIndexName = "by_name_and_key",
+                        cbKey = by_name_and_key.Length,
+                        cbKeyMost = SystemParameters.KeyMost,
+                        cbVarSegMac = SystemParameters.KeyMost,
+                        szKey = by_name_and_key,
+                        grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                    }
+                }, 1);
+
+            Api.JetCreateIndex2(session, tableid, new[]
                 {
-                    szIndexName = "by_name_and_created_at",
-                    szKey = "+name\0+created_at\0\0",
-                    grbit = CreateIndexGrbit.IndexDisallowNull
-                });
+                    new JET_INDEXCREATE
+                    {
+                        szIndexName = "by_name_and_created_at",
+                        cbKey = by_name_and_created_at.Length,
+                        cbKeyMost = SystemParameters.KeyMost,
+                        cbVarSegMac = SystemParameters.KeyMost,
+                        szKey = by_name_and_created_at,
+                        grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                    }
+                }, 1);          
         }
 
 
@@ -1059,31 +1087,60 @@ namespace Raven.Storage.Esent
                 grbit = ColumnNotNullIfOnHigherThanWindowsXp()
             }, null, 0, out columnid);
 
-            CreateIndexes(tableid,
+            var by_id = "+id\0\0";
+            var by_key = "+key\0\0";
+            var by_view_and_key = "+view\0+key\0\0";
+            var by_ref = "+ref\0\0";
+
+            Api.JetCreateIndex2(session, tableid, new[]
+            {               
                 new JET_INDEXCREATE
                 {
                     szIndexName = "by_id",
-                    szKey = "+id\0\0",
-                    grbit = CreateIndexGrbit.IndexPrimary
-                },
-                new JET_INDEXCREATE
+                    cbKey = by_id.Length,
+                    szKey = by_id,
+                    grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                }
+            }, 1);
+
+            Api.JetCreateIndex2(session, tableid, new[]
                 {
-                    szIndexName = "by_key",
-                    szKey = "+key\0\0",
-                    grbit = CreateIndexGrbit.IndexDisallowNull
-                },
-                new JET_INDEXCREATE
+                    new JET_INDEXCREATE
+                    {
+                        szIndexName = "by_key",
+                        cbKey = by_key.Length,
+                        cbKeyMost = SystemParameters.KeyMost,
+                        cbVarSegMac = SystemParameters.KeyMost,
+                        szKey = by_key,
+                        grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                    }
+                }, 1);
+
+            Api.JetCreateIndex2(session, tableid, new[]
                 {
-                    szIndexName = "by_view_and_key",
-                    szKey = "+view\0+key\0\0",
-                    grbit = CreateIndexGrbit.IndexDisallowNull
-                },
-                new JET_INDEXCREATE
+                    new JET_INDEXCREATE
+                    {
+                        szIndexName = "by_view_and_key",
+                        cbKey = by_view_and_key.Length,
+                        cbKeyMost = SystemParameters.KeyMost,
+                        cbVarSegMac = SystemParameters.KeyMost,
+                        szKey = by_view_and_key,
+                        grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                    }
+                }, 1);
+            Api.JetCreateIndex2(session, tableid, new[]
                 {
-                    szIndexName = "by_ref",
-                    szKey = "+ref\0\0",
-                    grbit = CreateIndexGrbit.IndexDisallowNull
-                });
+                    new JET_INDEXCREATE
+                    {
+                        szIndexName = "by_ref",
+                        cbKey = by_ref.Length,
+                        cbKeyMost = SystemParameters.KeyMost,
+                        cbVarSegMac = SystemParameters.KeyMost,
+                        szKey = by_ref,
+                        grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                    }
+                }, 1);
+
         }
 
         public static void UpdateVersion(Session session, JET_DBID dbid, string newVersion)
