@@ -64,10 +64,12 @@ namespace Raven.Server.Documents
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
 
         private readonly object _idleLocker = new object();
+
         /// <summary>
         /// The current lock, used to make sure indexes have a unique names
         /// </summary>
         private Task _indexStoreTask;
+
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
@@ -114,6 +116,7 @@ namespace Raven.Server.Documents
                             throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
                     }
                 }
+
                 ClusterTransactionWaiter = new ClusterTransactionWaiter(this);
                 QueryMetadataCache = new QueryMetadataCache();
                 IoChanges = new IoChangesNotifications();
@@ -319,7 +322,7 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
-                 throw new InvalidOperationException("Cannot open database because RavenDB was unable create file lock on: " + _lockFile, e); 
+                throw new InvalidOperationException("Cannot open database because RavenDB was unable create file lock on: " + _lockFile, e);
             }
         }
 
@@ -352,8 +355,8 @@ namespace Raven.Server.Documents
             _hasClusterTransaction.Set();
         }
 
-        private long _clusterTxCount;
-
+        private long? _nextClusterCommand;
+     
         private void ExectueClusterTransactionTask()
         {
             while (DatabaseShutdown.IsCancellationRequested == false)
@@ -363,90 +366,106 @@ namespace Raven.Server.Documents
                     return;
 
                 _hasClusterTransaction.Reset();
-
-                ExectueClusterTransactionOnDatabase();
-            }
-        }
-
-        public void ExectueClusterTransactionOnDatabase(Action<List<Task>> customWait = null)
-        {
-            try
-            {
-                var transactionsTasks = new List<Task>();
-                using (PreventFromUnloading())
-                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
-                using (serverContext.OpenReadTransaction())
+               
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
                 {
-                    var commands = ClusterTransactionCommand.ReadCommandsBatch(serverContext, Name, fromCount: _clusterTxCount).ToList();
-                    if (commands.Count == 0)
+                    try
                     {
-                        return;
-                    }
+                        var batch = new List<ClusterTransactionCommand.SingleClusterDatabaseCommand>(
+                            ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand));
 
-                    foreach (var command in commands)
+                        if (batch.Count == 0)
+                        {
+                            continue;
+                        }
+                        
+                        try
+                        {
+                            var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch);
+                            TxMerger.Enqueue(mergedCommands).Wait(DatabaseShutdown);
+                            foreach (var command in batch)
+                            {
+                                OnClusterTransactionCompletion(command.Index, mergedCommands);
+                                _nextClusterCommand = command.PreviousCount + command.Commands.Length;
+                            }
+                        }
+                        catch
+                        {
+                            ExecuteClusterTransactionOneByOne(batch);
+                        }
+                    }
+                    catch (Exception e)
                     {
-                        var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, command);
-                        var task = TxMerger.Enqueue(mergedCommands);
-                        transactionsTasks.Add(task);
-                        OnClusterTransactionCompletion(command.Index, task, mergedCommands);
+                        if (_logger.IsInfoEnabled)
+                        {
+                            _logger.Info($"Can't perform cluster transaction on database '{Name}'.", e);
+                        }
                     }
-
-                    if (customWait != null)
-                    {
-                        customWait(transactionsTasks);
-                        return;
-                    }
-
-                    Task.WaitAll(transactionsTasks.ToArray(), DatabaseShutdown);
-                    _clusterTxCount = commands.Last().PreviousCount;
-                }
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info($"Can't perform cluster transaction on database '{Name}'.", e);
                 }
             }
         }
 
-        private void OnClusterTransactionCompletion(long index, Task task, BatchHandler.ClusterTransactionMergedCommand mergedCommands)
+        private void ExecuteClusterTransactionOneByOne(List<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
         {
-            task.ContinueWith(t =>
+            foreach (var command in batch)
             {
+                var singleCommand = new List<ClusterTransactionCommand.SingleClusterDatabaseCommand>
+                {
+                    command
+                };
+                var mergedCommand = new BatchHandler.ClusterTransactionMergedCommand(this, singleCommand);
                 try
                 {
-                    if (t.IsCompletedSuccessfully)
-                    {
-                        var options = mergedCommands.Options;
-                        Task indexTask = null;
-                        if (options?.WaitForIndexesTimeout != null)
-                        {
-                            indexTask = BatchHandler.WaitForIndexesAsync(DocumentsStorage.ContextPool, this, options.WaitForIndexesTimeout.Value,
-                                options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
-                                mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
-                        }
-
-                        var result = new BatchHandler.ClusterTransactionCompletionResult
-                        {
-                            Array = mergedCommands.Reply,
-                            IndexTask = indexTask,
-                        };
-                        ClusterTransactionWaiter.SetResult(mergedCommands.Options.TaskId, index, result);
-                        return;
-                    }
-
-                    ClusterTransactionWaiter.SetException(mergedCommands.Options.TaskId, index, t.Exception);
+                    TxMerger.Enqueue(mergedCommand).Wait(DatabaseShutdown);
+                    OnClusterTransactionCompletion(command.Index, mergedCommand);
+                    _nextClusterCommand = command.PreviousCount + command.Commands.Length;
                 }
                 catch (Exception e)
                 {
-                    // nothing we can do
-                    if (_logger.IsInfoEnabled)
-                    {
-                        _logger.Info($"Failed to notify about transaction completion for database '{Name}'.", e);
-                    }
+                    OnClusterTransactionCompletion(command.Index, mergedCommand, exception: e);
+                    Task.Delay(1000, DatabaseShutdown).Wait(DatabaseShutdown);
+                    return;
                 }
-            }, DatabaseShutdown);
+            }
+        }
+
+
+        private void OnClusterTransactionCompletion(long index,
+            BatchHandler.ClusterTransactionMergedCommand mergedCommands, Exception exception = null)
+        {
+            try
+            {
+                var options = mergedCommands.Options[index];
+                if (exception == null)
+                {
+                    Task indexTask = null;
+                    if (options.WaitForIndexesTimeout != null)
+                    {
+                        indexTask = BatchHandler.WaitForIndexesAsync(DocumentsStorage.ContextPool, this, options.WaitForIndexesTimeout.Value,
+                            options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
+                            mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
+                    }
+
+                    var result = new BatchHandler.ClusterTransactionCompletionResult
+                    {
+                        Array = mergedCommands.Replies[index],
+                        IndexTask = indexTask,
+                    };
+                    ClusterTransactionWaiter.SetResult(options.TaskId, index, result);
+                    return;
+                }
+
+                ClusterTransactionWaiter.SetException(options.TaskId, index, exception);
+            }
+            catch (Exception e)
+            {
+                // nothing we can do
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"Failed to notify about transaction completion for database '{Name}'.", e);
+                }
+            }
         }
 
         public struct DatabaseUsage : IDisposable

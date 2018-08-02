@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
@@ -48,7 +49,11 @@ namespace BulkInsert.Benchmark
             store = new DocumentStore
             {
                 Urls = new[] { url },
-                Database = "test"
+                Database = "test",
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
             };
 
             store.Initialize();
@@ -56,16 +61,16 @@ namespace BulkInsert.Benchmark
 
         private void Log(string txt, bool isError = false)
         {
-            if (_logFilename == null)
-            {
-                _logFilename = Path.GetTempFileName();
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("Loggin into " + _logFilename);
-                Console.ResetColor();
-            }
+//            if (_logFilename == null)
+//            {
+//                _logFilename = Path.GetTempFileName();
+//                Console.ForegroundColor = ConsoleColor.Green;
+//                Console.WriteLine("Loggin into " + _logFilename);
+//                Console.ResetColor();
+//            }
             var errorStr = isError ? " *** ERROR ***" : "";
             string txtToLog = SystemTime.UtcNow.ToString("G", new CultureInfo("he-il")) + errorStr + " : " + txt;
-            File.AppendAllText(_logFilename, txtToLog + Environment.NewLine);
+//            File.AppendAllText(_logFilename, txtToLog + Environment.NewLine);
 
             Console.WriteLine(txtToLog);
         }
@@ -122,22 +127,23 @@ namespace BulkInsert.Benchmark
                 _randStr[index] = RandomString(docSize);
             }
            
-            var threads = new Thread[numberOfClients];
+            var tasks = new Task[numberOfClients];
             for (int i = 0; i < numberOfClients; i++)
             {
-                threads[i] = new Thread(() => PerfomStore(collection, numberOfDocuments, docsPerSession, dummies, docSize, sizeOfDocuments, useSeqId));
+                tasks[i] = PerfomStore(collection, numberOfDocuments, docsPerSession, dummies, docSize, sizeOfDocuments, useSeqId);
             }
-            foreach (var thread in threads)
+
+            try
             {
-                thread.Start();
+                Task.WaitAll(tasks);
             }
-            foreach (var thread in threads)
+            catch (Exception e)
             {
-                thread.Join();
+                Console.WriteLine(e);
             }
         }
 
-        private void PerfomStore(string collection, long numberOfDocuments, int docsPerSession, long dummies, int docSize, int? sizeOfDocuments, bool useSeqId)
+        private async Task PerfomStore(string collection, long numberOfDocuments, int docsPerSession, long dummies, int docSize, int? sizeOfDocuments, bool useSeqId)
         {
             var entities = new DocEntity[3];
             var ids = new long[] {-1, -1, -1};
@@ -150,16 +156,15 @@ namespace BulkInsert.Benchmark
             var i = 0;
             for (int j = 0; j < numberOfSessions; j++)
             {
-                using (var session = store.OpenSession(new SessionOptions
+                using (var session = store.OpenAsyncSession(new SessionOptions
                 {
                     TransactionMode = TransactionMode.ClusterWide
                 }))
                 {
                     for (; i < docsPerSession * (j + 1); i++)
                     {
-                        if (i % (numberOfDocuments / 5) == 0)
-                            Console.WriteLine($"{SystemTime.UtcNow:G} : Progress {i:##,###} out of {numberOfDocuments} ...");
-
+                        //  if (i % (numberOfDocuments / 5) == 0)
+                        //      Console.WriteLine($"{SystemTime.UtcNow:G} : Progress {i:##,###} out of {numberOfDocuments} ...");
                         var entity = new DocEntity
                         {
                             SerialId = i,
@@ -167,8 +172,8 @@ namespace BulkInsert.Benchmark
                             SomeRandomText = _randStr[i % dummies],
                             Tags = tags
                         };
-                        var idToUse = useSeqId ? _seqId++ : id++;
-                        session.Store(entity, $"{collection}/{idToUse}");
+                        var idToUse = Interlocked.Increment(ref _seqId);
+                        await session.StoreAsync(entity, $"{collection}/{idToUse}");
 
                         if (i == 0)
                         {
@@ -187,7 +192,7 @@ namespace BulkInsert.Benchmark
                         }
                     }
 
-                    session.SaveChanges();
+                    await session.SaveChangesAsync();
                 }
             }
 
@@ -378,7 +383,7 @@ namespace BulkInsert.Benchmark
         {
             public static void Main(string[] args)
             {
-                using (var massiveObj = new BulkInsertBench("http://10.0.0.87:8080", 1805861237))
+                using (var massiveObj = new BulkInsertBench("http://localhost:8080", 1805861237))
                 {
                     massiveObj.CreateDb();
 //                    var sp = Stopwatch.StartNew();
@@ -416,7 +421,7 @@ namespace BulkInsert.Benchmark
                     //                    
                     //                                        Console.WriteLine("Ending tests...");
 
-                    var clients = 10;
+                    var clients = 200;
                     var docsPerSession = 2;
 
                     Console.WriteLine("warmup...");

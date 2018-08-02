@@ -19,6 +19,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Runtime.ExceptionServices;
+using System.Threading;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Json;
 using Raven.Server.Json;
@@ -73,7 +74,7 @@ namespace Raven.Server.Documents.Handlers
                         {
                             WaitForIndexesTimeout = waitForIndexesTimeout,
                             WaitForIndexThrow = waitForIndexThrow,
-                            SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null,
+                            SpecifiedIndexesQueryString = specifiedIndexesQueryString.Count > 0 ? specifiedIndexesQueryString.ToList() : null
                         };
                         await HandleClusterTransaction(context, command, options);
                     }
@@ -86,7 +87,7 @@ namespace Raven.Server.Documents.Handlers
                 try
                 {
                     await Database.TxMerger.Enqueue(command);
-                    command?.ExceptionDispatchInfo?.Throw();
+                    command.ExceptionDispatchInfo?.Throw();
                 }
                 catch (ConcurrencyException)
                 {
@@ -137,21 +138,39 @@ namespace Raven.Server.Documents.Handlers
                 throw new ConcurrencyException($"Failed to execute cluster transaction due to the following issues: {string.Join(Environment.NewLine, errors)}");
             }
 
+            // wait for the command to be applied on this node
+            await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
+
             var array = new DynamicJsonArray();
             if (clusterTransactionCommand.DatabaseCommandsCount > 0)
             {
+#if DEBUG
+                ClusterTransactionCompletionResult reply;
+
+                while (true)
+                {
+                    try
+                    {
+                        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+                        {
+                            reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, cts.Token);
+                        }
+                        break;
+                    }
+                    catch
+                    {
+                        Console.WriteLine($"Waited too long... id: {options.TaskId}, {string.Join(',', clusterTransactionCommand.DatabaseCommands.Select(c => c.Id))}, {clusterTransactionCommand.DatabaseCommandsCount}, {clusterTransactionCommand.Database}");
+                    }
+                }
+#else
                 var reply = (ClusterTransactionCompletionResult)await Database.ClusterTransactionWaiter.WaitForResults(options.TaskId, HttpContext.RequestAborted);
+#endif
                 if (reply.IndexTask != null)
                 {
                     await reply.IndexTask;
                 }
 
                 array = reply.Array;
-            }
-            else
-            {
-                // wait for the command to be applied on this node (batch of cmpxchng ops only)
-                await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
             }
 
             foreach (var clusterCommands in clusterTransactionCommand.ClusterCommands)
@@ -427,15 +446,13 @@ namespace Raven.Server.Documents.Handlers
 
         public class ClusterTransactionMergedCommand : TranscationMergedCommand
         {
-            private readonly BlittableJsonReaderArray _commands;
-            private long _count;
-            public ClusterTransactionCommand.ClusterTransactionOptions Options { get; }
+            private readonly List<ClusterTransactionCommand.SingleClusterDatabaseCommand> _batch;
+            public Dictionary<long, DynamicJsonArray> Replies = new Dictionary<long, DynamicJsonArray>();
+            public Dictionary<long, ClusterTransactionCommand.ClusterTransactionOptions> Options = new Dictionary<long, ClusterTransactionCommand.ClusterTransactionOptions>();
 
-            public ClusterTransactionMergedCommand(DocumentDatabase database, ClusterTransactionCommand.SingleClusterDatabaseCommand command) : base(database)
+            public ClusterTransactionMergedCommand(DocumentDatabase database, List<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch) : base(database)
             {
-                _commands = command.Commands;
-                _count = command.PreviousCount;
-                Options = command.Options;
+                _batch = batch;
             }
 
             public override int Execute(DocumentsOperationContext context)
@@ -446,129 +463,140 @@ namespace Raven.Server.Documents.Handlers
                              (context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context));
                 var dbGrpId = Database.DatabaseGroupId;
                 var current = ChangeVectorUtils.GetEtagById(global, dbGrpId);
-                if (Options.WaitForIndexesTimeout != null)
-                {
-                    ModifiedCollections = new HashSet<string>();
-                }
 
-                if (_commands != null)
+                foreach (var command in _batch)
                 {
-                    foreach (BlittableJsonReaderObject blittableCommand in _commands)
+                    Replies.Add(command.Index, new DynamicJsonArray());
+                    Reply = Replies[command.Index];
+
+                    var commands = command.Commands;
+                    var count = command.PreviousCount;
+                    var options = Options[command.Index] = command.Options;
+
+                    if (options.WaitForIndexesTimeout != null)
                     {
-                        _count++;
-                        var changeVector = $"RAFT:{_count}-{dbGrpId}";
+                        ModifiedCollections = new HashSet<string>();
+                    }
 
-                        var cmd = JsonDeserializationServer.ClusterTransactionDataCommand(blittableCommand);
-
-                        switch (cmd.Type)
+                    if (commands != null)
+                    {
+                        foreach (BlittableJsonReaderObject blittableCommand in commands)
                         {
-                            case CommandType.PUT:
-                                if (current < _count)
-                                {
-                                    var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document.Clone(context), changeVector: changeVector,
-                                        flags: DocumentFlags.FromClusterTransaction);
-                                    context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
-                                    AddPutResult(putResult);
-                                }
-                                else
-                                {
-                                    try
+                            count++;
+                            var changeVector = $"RAFT:{count}-{dbGrpId}";
+
+                            var cmd = JsonDeserializationServer.ClusterTransactionDataCommand(blittableCommand);
+
+                            switch (cmd.Type)
+                            {
+                                case CommandType.PUT:
+                                    if (current < count)
                                     {
-                                        var item = Database.DocumentsStorage.GetDocumentOrTombstone(context, cmd.Id);
-                                        if (item.Missing)
+                                        var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document.Clone(context), changeVector: changeVector,
+                                            flags: DocumentFlags.FromClusterTransaction);
+                                        context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
+                                        AddPutResult(putResult);
+                                    }
+                                    else
+                                    {
+                                        try
+                                        {
+                                            var item = Database.DocumentsStorage.GetDocumentOrTombstone(context, cmd.Id);
+                                            if (item.Missing)
+                                            {
+                                                AddPutResult(new DocumentsStorage.PutOperationResults
+                                                {
+                                                    ChangeVector = changeVector,
+                                                    Id = cmd.Id,
+                                                    LastModified = DateTime.UtcNow,
+                                                    Collection = Database.DocumentsStorage.ExtractCollectionName(context, cmd.Document)
+                                                });
+                                                continue;
+                                            }
+                                            var collection = GetCollection(context, item);
+                                            AddPutResult(new DocumentsStorage.PutOperationResults
+                                            {
+                                                ChangeVector = changeVector,
+                                                Id = cmd.Id,
+                                                Flags = item.Document?.Flags ?? item.Tombstone.Flags,
+                                                LastModified = item.Document?.LastModified ?? item.Tombstone.LastModified,
+                                                Collection = collection
+                                            });
+                                        }
+                                        catch (DocumentConflictException)
                                         {
                                             AddPutResult(new DocumentsStorage.PutOperationResults
                                             {
                                                 ChangeVector = changeVector,
                                                 Id = cmd.Id,
-                                                LastModified = DateTime.UtcNow,
-                                                Collection = Database.DocumentsStorage.ExtractCollectionName(context, cmd.Document)
+                                                Collection = GetFirstConflictCollection(context, cmd)
                                             });
-                                            continue;
                                         }
-                                        var collection = GetCollection(context, item);
-                                        AddPutResult(new DocumentsStorage.PutOperationResults
-                                        {
-                                            ChangeVector = changeVector,
-                                            Id = cmd.Id,
-                                            Flags = item.Document?.Flags ?? item.Tombstone.Flags,
-                                            LastModified = item.Document?.LastModified ?? item.Tombstone.LastModified,
-                                            Collection = collection
-                                        });
                                     }
-                                    catch (DocumentConflictException)
-                                    {
-                                        AddPutResult(new DocumentsStorage.PutOperationResults
-                                        {
-                                            ChangeVector = changeVector,
-                                            Id = cmd.Id,
-                                            Collection = GetFirstConflictCollection(context, cmd)
-                                        });
-                                    }
-                                }
 
-                                break;
-                            case CommandType.DELETE:
-                                if (current < _count)
-                                {
-                                    using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
+                                    break;
+                                case CommandType.DELETE:
+                                    if (current < count)
                                     {
-                                        var deleteResult = Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, null, changeVector: changeVector,
-                                            documentFlags: DocumentFlags.FromClusterTransaction);
-                                        AddDeleteResult(deleteResult, cmd.Id);
+                                        using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
+                                        {
+                                            var deleteResult = Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, null, changeVector: changeVector,
+                                                documentFlags: DocumentFlags.FromClusterTransaction);
+                                            AddDeleteResult(deleteResult, cmd.Id);
+                                        }
                                     }
-                                }
-                                else
-                                {
-                                    try
+                                    else
                                     {
-                                        var item = Database.DocumentsStorage.GetDocumentOrTombstone(context, cmd.Id);
-                                        if (item.Missing)
+                                        try
+                                        {
+                                            var item = Database.DocumentsStorage.GetDocumentOrTombstone(context, cmd.Id);
+                                            if (item.Missing)
+                                            {
+                                                AddDeleteResult(new DocumentsStorage.DeleteOperationResult
+                                                {
+                                                    ChangeVector = changeVector,
+                                                    Collection = null
+                                                }, cmd.Id);
+                                                continue;
+                                            }
+                                            var collection = GetCollection(context, item);
+                                            AddDeleteResult(new DocumentsStorage.DeleteOperationResult
+                                            {
+                                                ChangeVector = changeVector,
+                                                Collection = collection
+                                            }, cmd.Id);
+                                        }
+                                        catch (DocumentConflictException)
                                         {
                                             AddDeleteResult(new DocumentsStorage.DeleteOperationResult
                                             {
                                                 ChangeVector = changeVector,
-                                                Collection = null
+                                                Collection = GetFirstConflictCollection(context, cmd)
                                             }, cmd.Id);
-                                            continue;
                                         }
-                                        var collection = GetCollection(context, item);
-                                        AddDeleteResult(new DocumentsStorage.DeleteOperationResult
-                                        {
-                                            ChangeVector = changeVector,
-                                            Collection = collection
-                                        }, cmd.Id);
                                     }
-                                    catch (DocumentConflictException)
-                                    {
-                                        AddDeleteResult(new DocumentsStorage.DeleteOperationResult
-                                        {
-                                            ChangeVector = changeVector,
-                                            Collection = GetFirstConflictCollection(context, cmd)
-                                        }, cmd.Id);
-                                    }
-                                }
-                                break;
-                            default:
-                                throw new NotSupportedException($"{cmd.Type} is not supported in {nameof(ClusterTransactionMergedCommand)}.");
+                                    break;
+                                default:
+                                    throw new NotSupportedException($"{cmd.Type} is not supported in {nameof(ClusterTransactionMergedCommand)}.");
+                            }
                         }
                     }
-                }
 
-                if (context.LastDatabaseChangeVector == null)
-                {
-                    context.LastDatabaseChangeVector = global;
-                }
+                    if (context.LastDatabaseChangeVector == null)
+                    {
+                        context.LastDatabaseChangeVector = global;
+                    }
 
-                var result = ChangeVectorUtils.TryUpdateChangeVector("RAFT", dbGrpId, _count, context.LastDatabaseChangeVector);
-                if (result.IsValid)
-                {
-                    context.LastDatabaseChangeVector = result.ChangeVector;
+                    var result = ChangeVectorUtils.TryUpdateChangeVector("RAFT", dbGrpId, count, context.LastDatabaseChangeVector);
+                    if (result.IsValid)
+                    {
+                        context.LastDatabaseChangeVector = result.ChangeVector;
+                    }
                 }
 
                 return Reply.Count;
             }
-
+            
             private CollectionName GetCollection(DocumentsOperationContext context, DocumentsStorage.DocumentOrTombstone item)
             {
                 return item.Document != null

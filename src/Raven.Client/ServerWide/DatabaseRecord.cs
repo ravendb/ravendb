@@ -70,7 +70,7 @@ namespace Raven.Client.ServerWide
 
         public ClientConfiguration Client;
 
-        public long TruncatedClusterTransactionIndex;
+        public long TruncatedClusterTransactionCommandsCount;
 
         public void AddIndex(IndexDefinition definition)
         {
