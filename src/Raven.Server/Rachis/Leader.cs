@@ -254,6 +254,12 @@ namespace Raven.Server.Rachis
                 
                 if (old.Count > 0)
                 {
+                    foreach (var ambasaddor in old)
+                    {
+                        _voters.TryRemove(ambasaddor.Key, out _);
+                        _nonVoters.TryRemove(ambasaddor.Key, out _);
+                        _promotables.TryRemove(ambasaddor.Key, out _);
+                    }
                     Interlocked.Increment(ref _previousPeersWereDisposed);
                     System.Threading.ThreadPool.QueueUserWorkItem(_ =>
                     {
