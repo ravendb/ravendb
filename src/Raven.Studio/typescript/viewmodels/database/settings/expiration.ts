@@ -78,7 +78,6 @@ class expiration extends viewModelBase {
             required: {
                 onlyIf: () => this.specifyDeleteFrequency()
             },
-            min: 0,
             digit: true
         });
 
