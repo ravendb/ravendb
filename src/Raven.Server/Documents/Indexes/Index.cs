@@ -2071,7 +2071,7 @@ namespace Raven.Server.Documents.Indexes
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
-                        if(documentsContext.Transaction != null)
+                        if(documentsContext.Transaction == null)
                             documentsContext.OpenReadTransaction();
 
                         // we have to open read tx for mapResults _after_ we open index tx

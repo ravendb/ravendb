@@ -17,24 +17,25 @@ namespace Raven.Server.Documents.Queries.Graph
 {
     public class GraphQueryRunner
     {
-        protected DocumentDatabase Database;
-        private readonly GraphQuery _q;
+        protected readonly DocumentDatabase Database;
+        protected readonly GraphQuery Query;
 
         public GraphQueryRunner([NotNull] DocumentDatabase database, [NotNull] GraphQuery q)
         {
             Database = database ?? throw new ArgumentNullException(nameof(database));
-            _q = q ?? throw new ArgumentNullException(nameof(q));
+            Query = q ?? throw new ArgumentNullException(nameof(q));
         }
 
         public async Task<DocumentQueryResult> RunAsync()
         {
             var withQueryRunner = new DynamicQueryRunner(Database);
+            
             //first do the with clause queries
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
                 var withClauseResults = new Dictionary<string, List<Match>>();
-                foreach (var withClause in _q.WithDocumentQueries)
+                foreach (var withClause in Query.WithDocumentQueries)
                 {
                     var withClauseQueryResult =
                         await withQueryRunner.ExecuteQuery(new IndexQueryServerSide(withClause.Value.ToString()), ctx, null, OperationCancelToken.None);
@@ -48,9 +49,7 @@ namespace Raven.Server.Documents.Queries.Graph
                     withClauseResults.Add(withClause.Key, queryMatches);
                 }
 
-                Execute(withClauseResults, _q.MatchClause);
-
-
+                var patternMatchResult = ExecutePatternMatch(withClauseResults, Query.MatchClause);
 
                 return new DocumentQueryResult
                 {
@@ -79,13 +78,13 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
-        private List<Match> Execute(Dictionary<string, List<Match>> source, PatternMatchExpression matchClause)
+        private List<Match> ExecutePatternMatch(Dictionary<string, List<Match>> source, PatternMatchExpression matchClause)
         {
             switch (matchClause)
             {
                 case PatternMatchBinaryExpression patternMatchBinaryExpression:
-                    var left = Execute(source, patternMatchBinaryExpression.Left);
-                    var right = Execute(source, patternMatchBinaryExpression.Right);
+                    var left = ExecutePatternMatch(source, patternMatchBinaryExpression.Left);
+                    var right = ExecutePatternMatch(source, patternMatchBinaryExpression.Right);
 
                     switch (patternMatchBinaryExpression.Op)
                     {
@@ -146,7 +145,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
 
             WithEdgesExpression edgesExpression = null;
-            if (edgeAlias != null && _q.WithEdgePredicates.TryGetValue(edgeAlias, out edgesExpression) == false)
+            if (edgeAlias != null && Query.WithEdgePredicates.TryGetValue(edgeAlias, out edgesExpression) == false)
             {
                 throw new InvalidOperationException("Missing edge alias criteria: " + edgeAlias);
             }
