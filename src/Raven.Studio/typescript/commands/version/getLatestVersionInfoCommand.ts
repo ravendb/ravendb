@@ -15,7 +15,7 @@ class getLatestVersionInfoCommand extends commandBase {
             + (this.refresh ? this.urlEncodeArgs(args) : '');
         return this.post<VersionInfoDto>(url, null)
             .fail(response => {
-                this.reportError(`Failed to get latest version info.'`,
+                this.reportError(`Failed to get latest version info.`,
                     response.responseText,
                     response.statusText);
             });
