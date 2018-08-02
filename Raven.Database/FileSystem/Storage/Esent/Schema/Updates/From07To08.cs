@@ -101,6 +101,8 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
                 }
             }
 
+            output("Processed " + (rows) + " rows in '" + usageTableName + "' table. DONE");
+
             Api.JetCommitTransaction(session, CommitTransactionGrbit.None);
             Api.JetDeleteTable(session, dbid, usageTableName);
             Api.JetRenameTable(session, dbid, newTableName, usageTableName);
