@@ -1,23 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Graph;
+using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
 namespace Raven.Client.Extensions
 {
     public static class GraphMetadataExtensions
     {
-        private static readonly Func<BlittableJsonReaderObject, List<EdgeInfo>> Deserialize =
-            JsonDeserializationBase.GenerateJsonDeserializationRoutine<List<EdgeInfo>>();
-
-        public static List<EdgeInfo> GetEdgeData(this BlittableJsonReaderObject metadata)
+        public static IEnumerable<EdgeInfo> GetEdgeData(this BlittableJsonReaderObject metadata)
         {
-            if (!metadata.TryGet("@edges", out BlittableJsonReaderObject edgesData))
+            if (!metadata.TryGet(Constants.Documents.Metadata.Edges, out BlittableJsonReaderArray edgesData))
             {
-                return new List<EdgeInfo>();
+                yield break;
             }
 
-            return Deserialize(edgesData);
+            foreach (BlittableJsonReaderObject e in edgesData)
+            {
+                yield return JsonDeserializationClient.EdgeInfo(e);
+            }
         }
     }
 }

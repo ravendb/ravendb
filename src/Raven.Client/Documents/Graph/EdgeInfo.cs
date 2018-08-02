@@ -14,16 +14,12 @@ namespace Raven.Client.Documents.Graph
         
         public DynamicJsonValue ToJson()
         {
-            var dja = new DynamicJsonArray();
+            var dja = new DynamicJsonValue();
             if (Attributes != null)
             {
                 foreach (var item in Attributes)
                 {
-                    var djv = new DynamicJsonValue
-                    {
-                        [item.Key] = item.Value
-                    };
-                    dja.Add(djv);
+                    dja[item.Key] = item.Value;
                 }
             }
 
