@@ -68,7 +68,7 @@ namespace Raven.Server.Web.System
             await WriteVersionUpdatesInfo();
         }
 
-        private const int LatestVersionCheckThrottlePeriodInMinutes = 3;
+        private static readonly TimeSpan LatestVersionCheckThrottlePeriod = TimeSpan.FromMinutes(3);
 
         private static bool IsLatestVersionCheckThrottled()
         {
@@ -76,7 +76,7 @@ namespace Raven.Server.Web.System
             if (lastRunAt == null)
                 return false;
             
-            return (SystemTime.UtcNow - lastRunAt.Value).TotalMinutes <= LatestVersionCheckThrottlePeriodInMinutes;
+            return SystemTime.UtcNow - lastRunAt.Value <= LatestVersionCheckThrottlePeriod;
         }
 
         private async Task WriteVersionUpdatesInfo()
