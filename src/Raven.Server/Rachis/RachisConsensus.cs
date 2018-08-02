@@ -913,7 +913,8 @@ namespace Raven.Server.Rachis
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
             {
-                engine.Url = clusterTopology.AllNodes[engine.Tag];
+                clusterTopology.AllNodes.TryGetValue(engine.Tag, out var key);
+                engine.Url = key;
                 TaskExecutor.CompleteAndReplace(ref engine._topologyChanged);
                 engine.TopologyChanged?.Invoke(engine, clusterTopology);
             };
