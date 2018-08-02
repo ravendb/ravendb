@@ -124,7 +124,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="to">entity to add the edge to</param>
         /// <param name="type">type of the edge</param>
         /// <param name="edgeProperties">an entity that contains the properties attached to the edge</param>
-        void AddEdgeBetween(object from, object to, string type, Dictionary<string,string> edgeProperties = null);
+        void AddEdgeBetween(object @from, object to, string type, Dictionary<string, object> edgeProperties = null);
 
         /// <summary>
         ///     Gets change vector for the specified entity.
