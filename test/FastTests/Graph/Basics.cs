@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Raven.Client.Documents;
 using Xunit;
 
 namespace FastTests.Graph
@@ -26,8 +27,13 @@ namespace FastTests.Graph
         [Fact]
         public void Can_add_edges_between_documents()
         {
-            using (var store = GetDocumentStore())
+            using (var store = new DocumentStore
             {
+                Database   = "FooBar",
+                Urls = new []{"http://live-test.ravendb.net"}
+            })
+            {
+                store.Initialize();
                 using (var session = store.OpenSession())
                 {
                     var m1 = new Movie
@@ -55,14 +61,15 @@ namespace FastTests.Graph
                     session.Store(fantasy);
                     session.Store(adventure);
 
-                    session.AddEdgeBetween(m1,scifi,"HasGenre", new { Weight = 0.3 });
-                    session.AddEdgeBetween(m1,fantasy,"HasGenre", new { Weight = 0.6 });
-                    session.AddEdgeBetween(m1,adventure,"HasGenre", new { Weight = 0.1 });
+                    session.AddEdgeBetween(m1,scifi,"HasGenre", new Dictionary<string, string>{ { "Weight", "0.3" } });
+                    session.AddEdgeBetween(m1,fantasy,"HasGenre", new Dictionary<string, string>{ { "Weight", "0.6" } });
+                    session.AddEdgeBetween(m1,adventure,"HasGenre", new Dictionary<string, string>{ { "Weight", "0.1" } });
+                    
+                    session.AddEdgeBetween(fantasy,scifi,"Related");
 
                     session.SaveChanges();
                 }
 
-                WaitForUserToContinueTheTest(store);
             }
         }
     }

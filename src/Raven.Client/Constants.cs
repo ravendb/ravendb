@@ -132,6 +132,7 @@ namespace Raven.Client
                 private Metadata()
                 {
                 }
+                public const string Edges = "@edges";
 
                 public const string Collection = "@collection";
 

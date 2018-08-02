@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Session;
 using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Json
 {
@@ -225,6 +227,12 @@ namespace Raven.Client.Json
                     break;
                 case IDictionary<string, object> dico:
                     WriteDictionary(dico);
+                    break;
+                case DynamicJsonValue val:
+                    foreach (var prop in val.Properties)
+                    {
+                        WritePropertyValue(prop.Name,prop.Value);
+                    }
                     break;
                 case IEnumerable enumerable:
                     _manualBlittableJsonDocumentBuilder.StartWriteArray();
