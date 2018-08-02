@@ -65,7 +65,7 @@ namespace Raven.Server.Web.System
                 _lastRunAt = SystemTime.UtcNow;
             }
 
-            await WriteVersionUpdatesInfo();
+            WriteVersionUpdatesInfo();
         }
 
         private static readonly TimeSpan LatestVersionCheckThrottlePeriod = TimeSpan.FromMinutes(3);
@@ -79,13 +79,12 @@ namespace Raven.Server.Web.System
             return SystemTime.UtcNow - lastRunAt.Value <= LatestVersionCheckThrottlePeriod;
         }
 
-        private async Task WriteVersionUpdatesInfo()
+        private void WriteVersionUpdatesInfo()
         {
             var versionUpdatesInfo = LatestVersionCheck.GetLastRetrievedVersionUpdatesInfo();
-            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var stream = new MemoryStream();
-                using (var writer = new BlittableJsonTextWriter(context, stream))
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
@@ -94,9 +93,6 @@ namespace Raven.Server.Web.System
                         [nameof(LatestVersionCheck.VersionInfo.BuildNumber)] = versionUpdatesInfo?.BuildNumber
                     });
                 }
-
-                var versionBuffer = stream.ToArray();
-                await ResponseBodyStream().WriteAsync(versionBuffer);
             }
 
         }
