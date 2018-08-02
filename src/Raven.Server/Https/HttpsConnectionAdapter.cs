@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Adapter.Internal;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Sparrow.Logging;
 
 namespace Raven.Server.Https
@@ -19,6 +20,8 @@ namespace Raven.Server.Https
 
     public class HttpsConnectionAdapter : IConnectionAdapter
     {
+        private readonly HttpsConnectionAdapterOptions _options;
+
         // See http://oid-info.com/get/1.3.6.1.5.5.7.3.1
         // Indicates that a certificate can be used as a SSL server certificate
         private const string ServerAuthenticationOid = "1.3.6.1.5.5.7.3.1";
@@ -36,6 +39,7 @@ namespace Raven.Server.Https
         public HttpsConnectionAdapter()
         {
             _logger = LoggingSource.Instance.GetLogger<HttpsConnectionAdapter>("Server");
+            _options = new HttpsConnectionAdapterOptions();
         }
 
 
@@ -78,6 +82,9 @@ namespace Raven.Server.Https
                            sslPolicyErrors == SslPolicyErrors.None;
                 });
 
+            var timeoutFeature = context.Features.Get<Microsoft.AspNetCore.Server.Kestrel.Core.Features.IConnectionTimeoutFeature>();
+            timeoutFeature.SetTimeout(_options.HandshakeTimeout);
+
             try
             {
                 await sslStream.AuthenticateAsServerAsync(
@@ -97,6 +104,10 @@ namespace Raven.Server.Https
                     _logger.Info("Failed to authenticate client", ex);
                 sslStream.Dispose();
                 return _closedAdaptedConnection;
+            }
+            finally
+            {
+                timeoutFeature.CancelTimeout();
             }
 
             // Always set the feature even though the cert might be null
