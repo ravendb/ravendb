@@ -296,6 +296,8 @@ namespace Raven.Server.Documents
                 context.LastDatabaseChangeVector = changeVector;
             }
 
+            DeleteTombstoneIfNeeded(context, key);
+
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
             using (table.Allocate(out TableValueBuilder tvb))
