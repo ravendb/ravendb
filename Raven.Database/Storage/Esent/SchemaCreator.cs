@@ -789,7 +789,7 @@ namespace Raven.Storage.Esent
                 grbit = ColumndefGrbit.ColumnNotNULL,
             }, null, 0, out columnid);
            
-            var szIndexName = "+id\0\0";
+            var by_id = "+id\0\0";
             var by_name_and_etag = "+name\0+etag\0\0";
             var by_name_and_key = "+name\0+key\0\0";
             var by_name_and_created_at = "+name\0+created_at\0\0";
@@ -798,9 +798,9 @@ namespace Raven.Storage.Esent
             {
                 new JET_INDEXCREATE
                 {
-                    szIndexName = "szIndexName",
-                    cbKey = szIndexName.Length,
-                    szKey = szIndexName,
+                    szIndexName = "by_id",
+                    cbKey = by_id.Length,
+                    szKey = by_id,
                     grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
                 }
             }, 1);
