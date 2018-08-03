@@ -43,7 +43,7 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                 {
                 new JET_INDEXCREATE
                 {
-                    szIndexName = "szIndexName",
+                    szIndexName = "by_id",
                     cbKey = by_id.Length,
                     szKey = by_id,
                     grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
