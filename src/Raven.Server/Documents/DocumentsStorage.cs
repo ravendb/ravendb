@@ -1358,22 +1358,49 @@ namespace Raven.Server.Documents
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones));
-            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
-            using (Slice.From(context.Allocator, changeVector, out var cv))
-            using (table.Allocate(out TableValueBuilder tvb))
+
+            try
             {
-                tvb.Add(lowerId);
-                tvb.Add(Bits.SwapBytes(newEtag));
-                tvb.Add(Bits.SwapBytes(documentEtag));
-                tvb.Add(context.GetTransactionMarker());
-                tvb.Add((byte)Tombstone.TombstoneType.Document);
-                tvb.Add(collectionSlice);
-                tvb.Add((int)flags);
-                tvb.Add(cv.Content.Ptr, cv.Size);
-                tvb.Add(lastModifiedTicks);
-                table.Insert(tvb);
+                using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
+                using (Slice.From(context.Allocator, changeVector, out var cv))
+                using (table.Allocate(out TableValueBuilder tvb))
+                {
+                    tvb.Add(lowerId);
+                    tvb.Add(Bits.SwapBytes(newEtag));
+                    tvb.Add(Bits.SwapBytes(documentEtag));
+                    tvb.Add(context.GetTransactionMarker());
+                    tvb.Add((byte)Tombstone.TombstoneType.Document);
+                    tvb.Add(collectionSlice);
+                    tvb.Add((int)flags);
+                    tvb.Add(cv.Content.Ptr, cv.Size);
+                    tvb.Add(lastModifiedTicks);
+                    table.Insert(tvb);
+                }
             }
+            catch (VoronConcurrencyErrorException e)
+            {
+                var tombstoneTable = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+                if (tombstoneTable.ReadByKey(lowerId, out var tvr))
+                {
+                    var tombstoneCollection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
+                    var tombstoneCollectionName = ExtractCollectionName(context, tombstoneCollection);
+
+                    if (tombstoneCollectionName != collectionName)
+                        ThrowNotSupportedExceptionForCreatingTombstoneWhenItExistsForDifferentCollection(lowerId, collectionName, tombstoneCollectionName, e);
+                }
+
+                throw;
+            }
+
             return (newEtag, changeVector);
+        }
+
+        private static void ThrowNotSupportedExceptionForCreatingTombstoneWhenItExistsForDifferentCollection(Slice lowerId, CollectionName collectionName,
+            CollectionName tombstoneCollectionName, VoronConcurrencyErrorException e)
+        {
+            throw new NotSupportedException(
+                $"Could not delete document '{lowerId}' from collection '{collectionName.Name}' because tombstone for that document but different collection ('{tombstoneCollectionName.Name}') already exists. Did you change the documents collection recently? If yes, please give some time for other system components (e.g. Indexing, Replication, Backup) to process that change.",
+                e);
         }
 
         public struct PutOperationResults
