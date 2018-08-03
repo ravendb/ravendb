@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Queries.Facets
                     {
                         queryParser.Init(range);
 
-                        if (queryParser.Expression(out var qr) == false)
+                        if (queryParser.Expression(queryParser.Operator, out var qr) == false)
                             throw new InvalidOperationException($"Could not parse the following range expression '{range}' from facet setup document: {setup.Id}");
 
                         facetRanges.Add(qr);

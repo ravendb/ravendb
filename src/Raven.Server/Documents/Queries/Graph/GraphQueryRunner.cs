@@ -78,27 +78,27 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
-        private List<Match> ExecutePatternMatch(Dictionary<string, List<Match>> source, PatternMatchExpression matchClause)
+        private List<Match> ExecutePatternMatch(Dictionary<string, List<Match>> source, QueryExpression matchClause)
         {
             switch (matchClause)
             {
-                case PatternMatchBinaryExpression patternMatchBinaryExpression:
-                    var left = ExecutePatternMatch(source, patternMatchBinaryExpression.Left);
-                    var right = ExecutePatternMatch(source, patternMatchBinaryExpression.Right);
+                //case PatternMatchBinaryExpression patternMatchBinaryExpression:
+                //    var left = ExecutePatternMatch(source, patternMatchBinaryExpression.Left);
+                //    var right = ExecutePatternMatch(source, patternMatchBinaryExpression.Right);
 
-                    switch (patternMatchBinaryExpression.Op)
-                    {
-                        case PatternMatchBinaryExpression.Operator.And:
-                            return left.Intersect(right).ToList();
-                        case PatternMatchBinaryExpression.Operator.Or:
-                            return left.Union(right).ToList();
-                        case PatternMatchBinaryExpression.Operator.AndNot:
-                            return left.Except(right).ToList();
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-                case PatternMatchElementExpression patternMatchElementExpression:
-                    return ExecuteGraphPattern(patternMatchElementExpression, source);
+                //    switch (patternMatchBinaryExpression.Op)
+                //    {
+                //        case PatternMatchBinaryExpression.Operator.And:
+                //            return left.Intersect(right).ToList();
+                //        case PatternMatchBinaryExpression.Operator.Or:
+                //            return left.Union(right).ToList();
+                //        case PatternMatchBinaryExpression.Operator.AndNot:
+                //            return left.Except(right).ToList();
+                //        default:
+                //            throw new ArgumentOutOfRangeException();
+                //    }
+                //case PatternMatchElementExpression patternMatchElementExpression:
+                //    return ExecuteGraphPattern(patternMatchElementExpression, source);
                 default:
                     throw new ArgumentException("Unknown type " + matchClause);
             }
@@ -106,32 +106,33 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private List<Match> ExecuteGraphPattern(PatternMatchElementExpression p, Dictionary<string, List<Match>> source)
         {
-            if (!source.TryGetValue(p.FromAlias, out var start) || !source.TryGetValue(p.ToAlias, out var end))
-            {
-                return new List<Match>();
-            }
+            throw new NotImplementedException();
+            //if (!source.TryGetValue(p.FromAlias, out var start) || !source.TryGetValue(p.ToAlias, out var end))
+            //{
+            //    return new List<Match>();
+            //}
 
-            var final = new List<Match>();
-            foreach (var v in start)
-            {
-                var edges = GetEdges(v.Get(p.FromAlias), p.EdgeAlias);
-                foreach (var edge in edges)
-                {
-                    if (edge.TryGet("@to", out string to) == false)
-                        continue;
-                    var d = end.Find(x => x.Get(p.ToAlias)?.GetMetadata()?.GetId() == to);
+            //var final = new List<Match>();
+            //foreach (var v in start)
+            //{
+            //    var edges = GetEdges(v.Get(p.FromAlias), p.EdgeAlias);
+            //    foreach (var edge in edges)
+            //    {
+            //        if (edge.TryGet("@to", out string to) == false)
+            //            continue;
+            //        var d = end.Find(x => x.Get(p.ToAlias)?.GetMetadata()?.GetId() == to);
 
-                    var match = new Match();
-                    match.Set(p.FromAlias, v.Get(p.FromAlias));
-                    match.Set(p.ToAlias, d.Get(p.ToAlias));
-                    if (p.EdgeAlias != null)
-                        match.Set(p.EdgeAlias, edge);
+            //        var match = new Match();
+            //        match.Set(p.FromAlias, v.Get(p.FromAlias));
+            //        match.Set(p.ToAlias, d.Get(p.ToAlias));
+            //        if (p.EdgeAlias != null)
+            //            match.Set(p.EdgeAlias, edge);
 
-                    final.Add(match);
-                }
-            }
+            //        final.Add(match);
+            //    }
+            //}
 
-            return final;
+            //return final;
 
         }
 

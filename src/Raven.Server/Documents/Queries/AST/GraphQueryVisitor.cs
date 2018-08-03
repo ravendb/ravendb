@@ -14,8 +14,9 @@ namespace Raven.Server.Documents.Queries.AST
             if(q.WithEdgePredicates != null)
                 VisitWithEdgePredicates(q.WithEdgePredicates);
 
-            if(q.MatchClause != null)
-                VisitPatternMatchClause(q.MatchClause);
+            if (q.MatchClause != null)
+                throw new NotImplementedException();
+            //    base.Visit(q.MatchClause);
 
             if(q.Include != null)
                 VisitInclude(q.Include);
@@ -51,33 +52,8 @@ namespace Raven.Server.Documents.Queries.AST
                 VisitOrderBy(expression.OrderBy);
         }
 
-        public virtual void VisitPatternMatchClause(PatternMatchExpression expression)
-        {            
-            switch (expression)
-            {
-                case PatternMatchBinaryExpression binaryExpression:
-                    VisitBinaryExpression(binaryExpression);
-                    break;
-                case PatternMatchElementExpression elementExpression:
-                    VisitElementExpression(elementExpression);
-                    break;
-            }
-        }
-
-
         public virtual void VisitElementExpression(PatternMatchElementExpression elementExpression)
         {
-        }
-
-        public virtual void VisitBinaryOperator(PatternMatchBinaryExpression binaryExpression, PatternMatchBinaryExpression.Operator op)
-        {
-        }
-
-        public virtual void VisitBinaryExpression(PatternMatchBinaryExpression binaryExpression)
-        {
-            VisitPatternMatchClause(binaryExpression.Left);
-            VisitBinaryOperator(binaryExpression, binaryExpression.Op);
-            VisitPatternMatchClause(binaryExpression.Right);
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using FastTests.Graph;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
@@ -24,6 +25,12 @@ namespace Tryouts
              */
 
             //Console.WriteLine(graphQuery.ToString());
+
+            using(var parsing = new Parsing())
+            {
+                parsing.CanRewriteQuery();
+            }
+
         }
 
         

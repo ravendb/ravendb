@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Queries.AST
      
         public Dictionary<StringSegment, WithEdgesExpression> WithEdgePredicates;
 
-        public PatternMatchExpression MatchClause;
+        public QueryExpression MatchClause;
 
         public List<QueryExpression> Include;
 
