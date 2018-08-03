@@ -1,5 +1,6 @@
 ﻿using Sparrow;
 using System;
+using Sparrow.Global;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
 using Xunit;
@@ -19,7 +20,7 @@ namespace FastTests.Sparrow
                 Assert.True(byteString.HasValue);
                 Assert.True((ByteStringType.Mutable & byteString.Flags) != 0);
                 Assert.True(byteString.IsMutable);
-                Assert.Equal(1024, byteString._pointer->Size);
+                Assert.Equal(512 + sizeof(ByteStringStorage), byteString._pointer->Size);
 
                 context.Allocate(1024 - sizeof(ByteStringStorage), out var byteStringWithExactSize);
 
@@ -82,8 +83,8 @@ namespace FastTests.Sparrow
             using (var context = new ByteStringContext<ByteStringContext.Pooled>(SharedMultipleUseFlag.None))
             {
                 context.Allocate((blockSize / 2) - sizeof(ByteStringStorage), out var byteStringInFirstSegment);
-                context.Allocate((blockSize / 2) - sizeof(ByteStringStorage) + 1, out var byteStringInNewSegment);
                 context.Allocate((blockSize / 2) - sizeof(ByteStringStorage), out var byteStringInReusedSegment);
+                context.Allocate((blockSize / 2) - sizeof(ByteStringStorage), out var byteStringInNewSegment);                
 
                 long startLocation = (long)byteStringInFirstSegment._pointer;
                 Assert.NotInRange((long)byteStringInNewSegment._pointer, startLocation, startLocation + blockSize);
@@ -118,42 +119,38 @@ namespace FastTests.Sparrow
         [Fact]
         public void AllocateBiggerThanBlockSize()
         {
-            int blockSize = default(ByteStringContext.Pooled).BlockSize;
-            using (var context = new ByteStringContext<ByteStringContext.Pooled>(SharedMultipleUseFlag.None))
+            int blockSize = default(ByteStringContext.NoPool).BlockSize;
+            using (var context = new ByteStringContext<ByteStringContext.NoPool>(SharedMultipleUseFlag.None))
             {
                 // Will be only 128 bytes left for the allocation unit.
-                context.Allocate(blockSize - sizeof(ByteStringStorage), out var byteStringInFirst);
+                context.Allocate(blockSize - 512, out var byteStringInFirst);
 
                 long ptrLocation = (long)byteStringInFirst._pointer;
-                long nextPtrLocation = ptrLocation + byteStringInFirst._pointer->Size;
 
-                context.Release(ref byteStringInFirst); // After the release the block should be reserved as a new segment. 
+                // We allocate a bigger than the block size segment to ensure that we keep it around. 
+                context.Allocate(blockSize + 1024, out var byteStringReused);
 
-                // We use a different size to ensure we are not reusing a reuse bucket but big enough to avoid having space available for the next request. 
-                context.Allocate(blockSize - 128, out var byteStringReused);
-
-                Assert.InRange((long)byteStringReused._pointer, ptrLocation, ptrLocation + blockSize);
-                Assert.Equal(ptrLocation, (long)byteStringReused._pointer); // We are the first in the segment.
+                Assert.NotInRange((long)byteStringReused._pointer, ptrLocation, ptrLocation + blockSize);
+                Assert.NotEqual(ptrLocation, (long)byteStringReused._pointer); // We are not in the first segment.
 
                 // This allocation will have an allocation unit size of 128 and fit into the rest of the initial segment, which should be 
                 // available for an exact reuse bucket allocation. 
-                context.Allocate(512, out var byteStringReusedFromBucket);
+                context.Allocate(512 - sizeof(ByteStringStorage), out var byteStringReusedFromBucket);
 
-                Assert.Equal((long)byteStringReusedFromBucket._pointer, nextPtrLocation);
+                Assert.NotInRange((long)byteStringReusedFromBucket._pointer, ptrLocation, ptrLocation + blockSize);
             }
         }
 
         [Fact]
         public void AllocateAndReleaseShouldReuseAsSegment()
         {
-            int blockSize = default(ByteStringContext.Pooled).BlockSize;
-            using (var context = new ByteStringContext<ByteStringContext.Pooled>(SharedMultipleUseFlag.None))
+            int blockSize = default(ByteStringContext.NoPool).BlockSize;
+            using (var context = new ByteStringContext<ByteStringContext.NoPool>(SharedMultipleUseFlag.None))
             {
                 // Will be only 128 bytes left for the allocation unit.
                 context.Allocate(blockSize - 128, out var byteStringInFirst);
 
                 long ptrLocation = (long)byteStringInFirst._pointer;
-                long nextPtrLocation = ptrLocation + byteStringInFirst._pointer->Size;
 
                 context.Release(ref byteStringInFirst); // After the release the block should be reserved as a new segment. 
 
@@ -162,12 +159,6 @@ namespace FastTests.Sparrow
 
                 Assert.InRange((long)byteStringReused._pointer, ptrLocation, ptrLocation + blockSize);
                 Assert.Equal(ptrLocation, (long)byteStringReused._pointer); // We are the first in the segment.
-
-                // This allocation will have an allocation unit size of 128 and fit into the rest of the initial segment, which should be 
-                // available for an exact reuse bucket allocation. 
-                context.Allocate(64, out var byteStringReusedFromBucket);
-
-                Assert.Equal((long)byteStringReusedFromBucket._pointer, nextPtrLocation);
             }
         }
 

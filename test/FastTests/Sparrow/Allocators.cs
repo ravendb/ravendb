@@ -138,8 +138,8 @@ namespace FastTests.Sparrow
 
             int size = 1000;
 
-            var ptr = allocator.Allocate(size);
-            Assert.Equal(size, ptr.Size);
+            var ptr = allocator.Allocate(1024);
+            Assert.Equal(1024, ptr.BlockSize);
             Assert.True(ptr.IsValid);
 
             long pointerAddress = (long)ptr.Ptr;
@@ -166,8 +166,8 @@ namespace FastTests.Sparrow
             var pointers = new BlockPointer[5];
             for (int i = 0; i < 5; i++)
             {
-                var ptr = allocator.Allocate(size);
-                Assert.Equal(size, ptr.Size);
+                var ptr = allocator.Allocate(1024);
+                Assert.Equal(1024, ptr.Size);
                 Assert.True(ptr.IsValid);
                 Assert.Equal(1024, ptr.BlockSize);
 
@@ -181,14 +181,16 @@ namespace FastTests.Sparrow
                 Assert.False(pointers[i].IsValid);
             }
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 5; i++)
             {
                 var ptr = allocator.Allocate(size);
                 Assert.Contains((long)ptr.Ptr, addresses);
+                Assert.Equal(1024, ptr.BlockSize);
             }
 
             var nonReusedPtr = allocator.Allocate(size);
             Assert.Equal(size, nonReusedPtr.Size);
+            Assert.Equal(size, nonReusedPtr.BlockSize);
             Assert.True(nonReusedPtr.IsValid);
             // Cannot check for actual different addresses because the memory system may return it back to us again. 
         }

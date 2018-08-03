@@ -416,7 +416,7 @@ namespace Sparrow
         }
     }
 
-    public sealed class ByteStringContext : ByteStringContext<ByteStringContext.Pooled>
+    public sealed class ByteStringContext : ByteStringContext<ByteStringContext.Direct>
     {
         // PERF: These constants could be configured with runtime code emit facilities if we need to (some heavy engineering required but viable). 
         private struct GlobalDefault : IFixedSizeThreadAffinePoolOptions, INativeOptions
@@ -465,7 +465,22 @@ namespace Sparrow
                 return _globalAllocator;
             }
         }
-       
+
+        public struct NoPool : IPoolAllocatorOptions
+        {
+            public bool HasOwnership => false;
+            public IAllocatorComposer<Pointer> CreateAllocator()
+            {
+                var allocator = new Allocator<FragmentAllocator<FragmentPool>>();
+                allocator.Initialize(default(FragmentPool));
+                return allocator;
+            }
+
+            public int BlockSize => default(FragmentPool).BlockSize;
+            public int MaxBlockSize => 0;
+            public int MaxPoolSizeInBytes => 0; // We are effectively disabling the pooling. 
+        }
+
         public struct Pooled : IPoolAllocatorOptions
         {
             public bool HasOwnership => false;
@@ -543,6 +558,7 @@ namespace Sparrow
         private ByteString AllocateExternal(byte* valuePtr, int size, ByteStringType type)
         {
             Debug.Assert((type & ByteStringType.External) != 0, "This allocation routine is only for use with external storage byte strings.");
+            Debug.Assert(size >= 0);
 
             _totalAllocated += sizeof(ByteStringStorage);
             BlockPointer ptr = _allocator.Allocate(ref _allocator, sizeof(ByteStringStorage));
@@ -564,18 +580,17 @@ namespace Sparrow
             if (_disposed)
                 ThrowObjectDisposed();
 
+            Debug.Assert(length >= 0);
             Debug.Assert((type & ByteStringType.External) == 0, "This allocation routine is only for use with internal storage byte strings.");
             type &= ~ByteStringType.External; // We are allocating internal, so we will force it (even if we are checking for it in debug).
 
             int size = length + sizeof(ByteStringStorage);
 
             BlockPointer ptr = _allocator.Allocate(ref _allocator, size);
-            Console.WriteLine($"BlockPointer{ptr.Describe()} = _allocator.Allocate(ref {nameof(ByteStringContext<TOptions>)}, {size})");
 
             Debug.Assert(length <= ptr.BlockSize - sizeof(ByteStringStorage));
 
             var basePtr = (ByteStringStorage*)ptr.Ptr;
-            Console.WriteLine($"var basePtr = (ByteStringStorage*){(long)ptr.Ptr:X32}");
             basePtr->Flags = type;
             basePtr->Length = length;
             basePtr->Ptr = (byte*)ptr.Ptr + sizeof(ByteStringStorage);            
@@ -632,12 +647,13 @@ namespace Sparrow
         {
             if (_disposed)
                 ThrowObjectDisposed();
-
+            
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
 
             if (value._pointer == null) // this is a safe-guard on Release, it is better to not release the memory than fail
                 return;
 
+            Debug.Assert(value.Length >= 0);
             Debug.Assert(value.IsExternal, "Cannot release as external an internal pointer.");
 
             // We are releasing, therefore we should validate among other things if an immutable string changed and if we are the owners.
@@ -666,11 +682,12 @@ namespace Sparrow
         {
             if (_disposed)
                 ThrowObjectDisposed();
-
+            
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
             if (value._pointer == null) // this is a safe-guard on Release, it is better to not release the memory than fail
                 return;
 
+            Debug.Assert(value.Length >= 0);
             Debug.Assert(value._pointer->Flags != ByteStringType.Disposed, "Double free");
             Debug.Assert(!value.IsExternal, "Cannot release as internal an external pointer.");
 

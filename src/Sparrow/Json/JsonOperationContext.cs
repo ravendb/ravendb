@@ -367,7 +367,7 @@ namespace Sparrow.Json
 
         public struct ReturnBuffer : IDisposable
         {
-            private  ManagedPinnedBuffer _buffer;
+            private ManagedPinnedBuffer _buffer;
             private readonly JsonOperationContext _parent;
 
             public ReturnBuffer(ManagedPinnedBuffer buffer, JsonOperationContext parent)

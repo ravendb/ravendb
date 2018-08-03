@@ -73,20 +73,25 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public BlockPointer Allocate(ref PoolAllocator<TOptions> allocator, int size)
         {
-            int vsize = Bits.PowerOf2(Math.Max(sizeof(BlockPointer), size));
-
-            var index = Bits.MostSignificantBit(vsize) - 2; // We use -2 because we are not starting at 0. 
-            if (index < allocator._freed.Length && allocator._freed[index].IsValid)
+            // We are effectively disabling the pooling code generation.
+            // It is useful for cases where composition is done through type chaining. 
+            if (allocator._options.MaxPoolSizeInBytes > 0)
             {
-                // Stack copy of the pointer itself.
-                BlockPointer section = _freed[index];
+                int vsize = Bits.PowerOf2(Math.Max(sizeof(BlockPointer), size));
 
-                // Pointer was holding the marker for the next released block instead. 
-                allocator._freed[index] = *((BlockPointer*)section.Ptr);
-                allocator.Used += section.Size;
+                var index = Bits.MostSignificantBit(vsize) - 2; // We use -2 because we are not starting at 0. 
+                if (index < allocator._freed.Length && allocator._freed[index].IsValid)
+                {
+                    // Stack copy of the pointer itself.
+                    BlockPointer section = _freed[index];
 
-                return section;
-            }
+                    // Pointer was holding the marker for the next released block instead. 
+                    allocator._freed[index] = *((BlockPointer*)section.Ptr);
+                    allocator.Used += section.Size;
+
+                    return new BlockPointer(section.Ptr, section.BlockSize, size);
+                }
+            }        
 
             allocator.Used += size;
             allocator.Allocated += size;
@@ -98,7 +103,9 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Release(ref PoolAllocator<TOptions> allocator, ref BlockPointer ptr)
         {
-            if (allocator.Used > allocator._options.MaxPoolSizeInBytes || Allocator.LowMemoryFlag.IsRaised())
+            // When MaxPoolSizeInBytes is zero, we are effectively disabling the pooling code generation.
+            // It is useful for cases where composition is done through type chaining. 
+            if (allocator.Used > allocator._options.MaxPoolSizeInBytes || Allocator.LowMemoryFlag.IsRaised() || allocator._options.MaxPoolSizeInBytes == 0)
                 goto UnlikelyRelease;
 
             int originalSize = ptr.Size;
