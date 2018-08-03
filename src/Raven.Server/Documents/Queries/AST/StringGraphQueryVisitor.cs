@@ -27,17 +27,7 @@ namespace Raven.Server.Documents.Queries.AST
         }
 
         private bool _hasOutputMatch;
-        public override void VisitPatternMatchClause(PatternMatchExpression expression)
-        {
-            if (!_hasOutputMatch)
-            {
-                Sb.Append("MATCH ");
-                _hasOutputMatch = true;
-            }
-
-            base.VisitPatternMatchClause(expression);
-        }
-
+      
         public override void VisitWithEdgePredicates(Dictionary<StringSegment, WithEdgesExpression> expression)
         {
             foreach (var withEdgesClause in expression)
@@ -48,30 +38,10 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        public override void VisitBinaryExpression(PatternMatchBinaryExpression binaryExpression)
-        {
-            Sb.Append("("); 
-                VisitPatternMatchClause(binaryExpression.Left);
-            Sb.Append(")");
-            
-            VisitBinaryOperator(binaryExpression, binaryExpression.Op);
-            
-            Sb.Append("("); 
-                VisitPatternMatchClause(binaryExpression.Right);
-            Sb.Append(")");
-
-            Sb.AppendLine();
-        }
-        
         public override void VisitElementExpression(PatternMatchElementExpression elementExpression)
         {
             Sb.Append($" {elementExpression} ");
         }     
-
-        public override void VisitBinaryOperator(PatternMatchBinaryExpression binaryExpression, PatternMatchBinaryExpression.Operator op)
-        {
-            Sb.Append($" {op} ");
-        }
 
         public override void VisitInclude(List<QueryExpression> includes)
         {

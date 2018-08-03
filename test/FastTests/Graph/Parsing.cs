@@ -10,36 +10,150 @@ using Xunit;
 namespace FastTests.Graph
 {
     public class Parsing : RavenTestBase
-    {         
+    {
+        [Fact]
+        public void CanParseSimpleGraph()
+        {
+            const string text = @"
+with { from Users } as u
+match (u)
+";
+            var queryParser = new QueryParser();
+            queryParser.Init(text);
+
+            Query query = queryParser.Parse(QueryType.Select);
+            if (query.GraphQuery.MatchClause is PatternMatchElementExpression p)
+            {
+                Assert.Equal(1, p.Path.Length);
+                Assert.Equal("u", p.Path[0].Alias);
+                Assert.Equal(EdgeType.Outgoing, p.Path[0].EdgeType);
+            }
+            else
+            {
+                Assert.False(true, "Exepcted to get proper match expr");
+
+            }
+        }
+
+        [Fact]
+        public void CanParsePath()
+        {
+            const string text = @"
+with { from Users } as u
+with edges(Rated)  as r
+with { from Movies } as m
+match (u)-[r]->(m)
+";
+            var queryParser = new QueryParser();
+            queryParser.Init(text);
+
+            Query query = queryParser.Parse(QueryType.Select);
+            if (query.GraphQuery.MatchClause is PatternMatchElementExpression p)
+            {
+                Assert.Equal(3, p.Path.Length);
+                Assert.Equal("u", p.Path[0].Alias);
+                Assert.Equal(EdgeType.Outgoing, p.Path[0].EdgeType);
+                Assert.Equal("r", p.Path[1].Alias);
+                Assert.Equal(EdgeType.Outgoing, p.Path[1].EdgeType);
+                Assert.Equal("m", p.Path[2].Alias);
+                Assert.Equal(EdgeType.Outgoing, p.Path[2].EdgeType);
+            }
+            else
+            {
+                Assert.False(true, "Exepcted to get proper match expr");
+
+            }
+        }
+
+        [Fact]
+        public void CanParseIncomingPaths()
+        {
+            const string text = @"
+with { from Users } as u
+with edges(Rated) { } as r
+with { from Movies } as m
+match (m)<-[r]<-(u)
+";
+            var queryParser = new QueryParser();
+            queryParser.Init(text);
+
+            Query query = queryParser.Parse(QueryType.Select);
+            if (query.GraphQuery.MatchClause is PatternMatchElementExpression p)
+            {
+                Assert.Equal(3, p.Path.Length);
+                Assert.Equal("m", p.Path[0].Alias);
+                Assert.Equal(EdgeType.Incoming, p.Path[0].EdgeType);
+                Assert.Equal("r", p.Path[1].Alias);
+                Assert.Equal(EdgeType.Incoming, p.Path[1].EdgeType);
+                Assert.Equal("u", p.Path[2].Alias);
+                Assert.Equal(EdgeType.Outgoing, p.Path[2].EdgeType);
+            }
+            else
+            {
+                Assert.False(true, "Exepcted to get proper match expr");
+
+            }
+        }
+
+        [Fact]
+        public void CanRewriteQuery()
+        {
+            const string text = @"
+match (m:Movies)<-[r:Rated]<-( u:Users(City='Hadera') )
+";
+            var queryParser = new QueryParser();
+            queryParser.Init(text);
+
+            Query query = queryParser.Parse(QueryType.Select);
+            if (query.GraphQuery.MatchClause is PatternMatchElementExpression p)
+            {
+                Assert.Equal(3, p.Path.Length);
+                Assert.Equal("m", p.Path[0].Alias);
+                Assert.Equal(EdgeType.Incoming, p.Path[0].EdgeType);
+                Assert.Equal("r", p.Path[1].Alias);
+                Assert.Equal(EdgeType.Incoming, p.Path[1].EdgeType);
+                Assert.Equal("u", p.Path[2].Alias);
+                Assert.Equal(EdgeType.Outgoing, p.Path[2].EdgeType);
+
+                Assert.Equal("FROM Users WHERE City = 'Hadera'", query.GraphQuery.WithDocumentQueries["u"].ToString().Trim());
+                Assert.Equal("FROM Movies", query.GraphQuery.WithDocumentQueries["m"].ToString().Trim());
+                Assert.Equal("WITH EDGES(Rated)", query.GraphQuery.WithEdgePredicates["r"].ToString());
+            }
+            else
+            {
+                Assert.False(true, "Exepcted to get proper match expr");
+
+            }
+        }
 
         [Fact]
         public async Task ParseBasicGraphQuery()
         {
-            using(var store = GetDocumentStore())
-            using (var database = await GetDocumentDatabaseInstanceFor(store))
+            using (DocumentStore store = GetDocumentStore())
+            using (Raven.Server.Documents.DocumentDatabase database = await GetDocumentDatabaseInstanceFor(store))
             {
 
                 CreateGraphData(store);
 
-                var ast = CreateAst();
-                var graphQueryRunner = new GraphQueryRunner(database,ast);
-                var result = await graphQueryRunner.RunAsync();
-            }            
+                GraphQuery ast = CreateAst();
+                var graphQueryRunner = new GraphQueryRunner(database, ast);
+                Raven.Server.Documents.Queries.DocumentQueryResult result = await graphQueryRunner.RunAsync();
+            }
         }
 
         private static GraphQuery CreateAst()
         {
             var queryParser = new QueryParser();
             queryParser.Init("from Movies where Name = 'Star Wars Episode 1'");
-            var firstWithClause = queryParser.Parse();
+            Query firstWithClause = queryParser.Parse();
 
             queryParser = new QueryParser();
             queryParser.Init("from Movies");
-            var secondWithClause = queryParser.Parse();
+            Query secondWithClause = queryParser.Parse();
 
             queryParser = new QueryParser();
             queryParser.Init("from Users where Age between 18 and 35");
-            var thirdWithClause = queryParser.Parse();
+            Query thirdWithClause = queryParser.Parse();
 
             return new GraphQuery
             {
@@ -85,33 +199,33 @@ namespace FastTests.Graph
                         )
                     }
                 },
-                MatchClause = new PatternMatchBinaryExpression(
-                    new PatternMatchElementExpression
-                    {
-                        FromAlias = "lovedMovie",
-                        ToAlias = "Genre",
-                        EdgeAlias = "dominantGenre"
-                    },
-                    new PatternMatchBinaryExpression(
-                        new PatternMatchElementExpression
-                        {
-                            FromAlias = "recommendedMovie",
-                            ToAlias = "Genre",
-                            EdgeAlias = "alias1"
-                        },
-                        new PatternMatchElementExpression
-                        {
-                            FromAlias = "usersWhoRated",
-                            ToAlias = "recommendedMovie"
-                        }, PatternMatchBinaryExpression.Operator.And),
-                    PatternMatchBinaryExpression.Operator.And
-                )
+                //MatchClause = new PatternMatchBinaryExpression(
+                //    new PatternMatchElementExpression
+                //    {
+                //        FromAlias = "lovedMovie",
+                //        ToAlias = "Genre",
+                //        EdgeAlias = "dominantGenre"
+                //    },
+                //    new PatternMatchBinaryExpression(
+                //        new PatternMatchElementExpression
+                //        {
+                //            FromAlias = "recommendedMovie",
+                //            ToAlias = "Genre",
+                //            EdgeAlias = "alias1"
+                //        },
+                //        new PatternMatchElementExpression
+                //        {
+                //            FromAlias = "usersWhoRated",
+                //            ToAlias = "recommendedMovie"
+                //        }, PatternMatchBinaryExpression.Operator.And),
+                //    PatternMatchBinaryExpression.Operator.And
+                //)
             };
         }
 
         private void CreateGraphData(DocumentStore store)
         {
-            using (var session = store.OpenSession())
+            using (Raven.Client.Documents.Session.IDocumentSession session = store.OpenSession())
             {
                 var starwars = new Movie
                 {
@@ -149,7 +263,7 @@ namespace FastTests.Graph
                     Name = "The Postman"
                 };
 
-                var users = new[]
+                User[] users = new[]
                 {
                     new User
                     {
@@ -203,8 +317,10 @@ namespace FastTests.Graph
                     },
                 };
 
-                foreach(var u in users)
+                foreach (User u in users)
+                {
                     session.Store(u);
+                }
 
                 session.Store(starwars);
                 session.Store(firefly);
@@ -215,42 +331,42 @@ namespace FastTests.Graph
                 session.Store(adventure);
                 session.Store(postApocalypse);
 
-                session.Advanced.AddEdgeBetween(starwars,scifi,"HasGenre", new Dictionary<string, object>{ { "Weight", 3 } });
-                session.Advanced.AddEdgeBetween(starwars,fantasy,"HasGenre", new Dictionary<string, object>{ { "Weight", 6 } });
-                session.Advanced.AddEdgeBetween(starwars,adventure,"HasGenre", new Dictionary<string, object>{ { "Weight", 1 } });
-                    
-                session.Advanced.AddEdgeBetween(firefly,scifi,"HasGenre", new Dictionary<string, object>{ { "Weight", 7 } });
-                session.Advanced.AddEdgeBetween(firefly,adventure,"HasGenre", new Dictionary<string, object>{ { "Weight", 3 } });
+                session.Advanced.AddEdgeBetween(starwars, scifi, "HasGenre", new Dictionary<string, object> { { "Weight", 3 } });
+                session.Advanced.AddEdgeBetween(starwars, fantasy, "HasGenre", new Dictionary<string, object> { { "Weight", 6 } });
+                session.Advanced.AddEdgeBetween(starwars, adventure, "HasGenre", new Dictionary<string, object> { { "Weight", 1 } });
 
-                session.Advanced.AddEdgeBetween(thePostman,postApocalypse,"HasGenre", new Dictionary<string, object>{ { "Weight", 4 } });
-                session.Advanced.AddEdgeBetween(thePostman,adventure,"HasGenre", new Dictionary<string, object>{ { "Weight", 6 } });
+                session.Advanced.AddEdgeBetween(firefly, scifi, "HasGenre", new Dictionary<string, object> { { "Weight", 7 } });
+                session.Advanced.AddEdgeBetween(firefly, adventure, "HasGenre", new Dictionary<string, object> { { "Weight", 3 } });
 
-                session.Advanced.AddEdgeBetween(users[0],starwars,"Rated",new Dictionary<string, object>{ {"Rating", 5 } });
-                session.Advanced.AddEdgeBetween(users[0],firefly,"Rated",new Dictionary<string, object>{ {"Rating", 7 } });
-                session.Advanced.AddEdgeBetween(users[0],thePostman,"Rated",new Dictionary<string, object>{ {"Rating", 2 } });
+                session.Advanced.AddEdgeBetween(thePostman, postApocalypse, "HasGenre", new Dictionary<string, object> { { "Weight", 4 } });
+                session.Advanced.AddEdgeBetween(thePostman, adventure, "HasGenre", new Dictionary<string, object> { { "Weight", 6 } });
 
-                session.Advanced.AddEdgeBetween(users[1],starwars,"Rated",new Dictionary<string, object>{ {"Rating", 8 } });
-                session.Advanced.AddEdgeBetween(users[1],firefly,"Rated",new Dictionary<string, object>{ {"Rating", 4 } });
-                session.Advanced.AddEdgeBetween(users[1],thePostman,"Rated",new Dictionary<string, object>{ {"Rating", 3 } });
+                session.Advanced.AddEdgeBetween(users[0], starwars, "Rated", new Dictionary<string, object> { { "Rating", 5 } });
+                session.Advanced.AddEdgeBetween(users[0], firefly, "Rated", new Dictionary<string, object> { { "Rating", 7 } });
+                session.Advanced.AddEdgeBetween(users[0], thePostman, "Rated", new Dictionary<string, object> { { "Rating", 2 } });
 
-                session.Advanced.AddEdgeBetween(users[2],starwars,"Rated",new Dictionary<string, object>{ {"Rating", 3 } });
-                session.Advanced.AddEdgeBetween(users[2],thePostman,"Rated",new Dictionary<string, object>{ {"Rating", 10 } });
+                session.Advanced.AddEdgeBetween(users[1], starwars, "Rated", new Dictionary<string, object> { { "Rating", 8 } });
+                session.Advanced.AddEdgeBetween(users[1], firefly, "Rated", new Dictionary<string, object> { { "Rating", 4 } });
+                session.Advanced.AddEdgeBetween(users[1], thePostman, "Rated", new Dictionary<string, object> { { "Rating", 3 } });
 
-                session.Advanced.AddEdgeBetween(users[3],starwars,"Rated",new Dictionary<string, object>{ {"Rating", 7 } });
-                session.Advanced.AddEdgeBetween(users[3],thePostman,"Rated",new Dictionary<string, object>{ {"Rating", 4 } });
+                session.Advanced.AddEdgeBetween(users[2], starwars, "Rated", new Dictionary<string, object> { { "Rating", 3 } });
+                session.Advanced.AddEdgeBetween(users[2], thePostman, "Rated", new Dictionary<string, object> { { "Rating", 10 } });
 
-                session.Advanced.AddEdgeBetween(users[4],firefly,"Rated",new Dictionary<string, object>{ {"Rating", 6 } });
-                session.Advanced.AddEdgeBetween(users[4],starwars,"Rated",new Dictionary<string, object>{ {"Rating", 6 } });
+                session.Advanced.AddEdgeBetween(users[3], starwars, "Rated", new Dictionary<string, object> { { "Rating", 7 } });
+                session.Advanced.AddEdgeBetween(users[3], thePostman, "Rated", new Dictionary<string, object> { { "Rating", 4 } });
 
-                session.Advanced.AddEdgeBetween(users[5],firefly,"Rated",new Dictionary<string, object>{ {"Rating", 5 } });
-                session.Advanced.AddEdgeBetween(users[5],thePostman,"Rated",new Dictionary<string, object>{ {"Rating", 5 } });
+                session.Advanced.AddEdgeBetween(users[4], firefly, "Rated", new Dictionary<string, object> { { "Rating", 6 } });
+                session.Advanced.AddEdgeBetween(users[4], starwars, "Rated", new Dictionary<string, object> { { "Rating", 6 } });
 
-                session.Advanced.AddEdgeBetween(users[7],firefly,"Rated",new Dictionary<string, object>{ {"Rating", 9 } });
+                session.Advanced.AddEdgeBetween(users[5], firefly, "Rated", new Dictionary<string, object> { { "Rating", 5 } });
+                session.Advanced.AddEdgeBetween(users[5], thePostman, "Rated", new Dictionary<string, object> { { "Rating", 5 } });
 
-                session.Advanced.AddEdgeBetween(users[8],starwars,"Rated",new Dictionary<string, object>{ {"Rating", 8 } });
-                session.Advanced.AddEdgeBetween(users[8],thePostman,"Rated",new Dictionary<string, object>{ {"Rating", 6 } });
+                session.Advanced.AddEdgeBetween(users[7], firefly, "Rated", new Dictionary<string, object> { { "Rating", 9 } });
 
-                session.Advanced.AddEdgeBetween(users[9],thePostman,"Rated",new Dictionary<string, object>{ {"Rating", 3 } });
+                session.Advanced.AddEdgeBetween(users[8], starwars, "Rated", new Dictionary<string, object> { { "Rating", 8 } });
+                session.Advanced.AddEdgeBetween(users[8], thePostman, "Rated", new Dictionary<string, object> { { "Rating", 6 } });
+
+                session.Advanced.AddEdgeBetween(users[9], thePostman, "Rated", new Dictionary<string, object> { { "Rating", 3 } });
                 session.SaveChanges();
             }
         }

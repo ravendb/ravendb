@@ -15,9 +15,6 @@ namespace Raven.Server.Documents.Queries.AST
 
         public WithEdgesExpression(QueryExpression @where, string edgeType, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy)
         {
-            if(@where == null && orderBy == null)
-                throw new ArgumentNullException($"{nameof(WithEdgesExpression)} should have either Where or OrderBy clauses.");
-
             Where = @where;
             OrderBy = orderBy;
             //null edges means all edges 
@@ -30,7 +27,8 @@ namespace Raven.Server.Documents.Queries.AST
 
         private string GetText()
         {
-            var sb = new StringBuilder();
+            var sb = new StringBuilder("WITH EDGES");
+            sb.Append("(").Append(EdgeType).Append(")");
 
             var visitor = new StringQueryVisitor(sb);
 
