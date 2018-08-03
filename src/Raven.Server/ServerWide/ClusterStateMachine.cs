@@ -1496,7 +1496,7 @@ namespace Raven.Server.ServerWide
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"Unable to access  {url} because {reply.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
-                        if (reply.Version != -1)
+                        if (reply.Version != TcpNegotiation.OutOfRangeStatus)
                         {
                             return reply.Version;
                         }
@@ -1515,7 +1515,7 @@ namespace Raven.Server.ServerWide
             return TcpConnectionHeaderMessage.ClusterTcpVersion;
         }
 
-        public override async Task<RachisConnection> ConnectToPeer(string url, X509Certificate2 certificate)
+        public override async Task<RachisConnection> ConnectToPeer(string url, string tag ,X509Certificate2 certificate)
         {
             if (url == null)
                 throw new ArgumentNullException(nameof(url));
@@ -1537,13 +1537,14 @@ namespace Raven.Server.ServerWide
                 tcpClient = await TcpUtils.ConnectAsync(info.Url, _parent.TcpConnectionTimeout).ConfigureAwait(false);
                 stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate, _parent.TcpConnectionTimeout);
 
-                var paramaters = new TcpNegotiateParamaters
+                var paramaters = new TcpNegotiateParameters
                 {
                     Database = null,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Cluster,
                     Version = TcpConnectionHeaderMessage.ClusterTcpVersion,
-                    ReadResponseAndGetVersion = ClusterReadResponseAndGetVersion,
-                    Url = info.Url
+                    ReadResponseAndGetVersionCallback = ClusterReadResponseAndGetVersion,
+                    DestinationUrl = info.Url,
+                    DestinationNodeTag = tag
                 };
 
                 TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures;

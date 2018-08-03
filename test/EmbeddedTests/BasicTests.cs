@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using FastTests;
+using Raven.Client.Documents.Conventions;
 using Raven.Embedded;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -22,8 +23,17 @@ namespace EmbeddedTests
                     DataDirectory = paths.DataDirectory,
                 });
 
-                using (var store = embedded.GetDocumentStore("Test"))
+                using (var store = embedded.GetDocumentStore(new DatabaseOptions("Test")
                 {
+                    Conventions = new DocumentConventions
+                    {
+                        SaveEnumsAsIntegers = true
+                    }
+                }))
+                {
+                    Assert.True(store.Conventions.SaveEnumsAsIntegers);
+                    Assert.True(store.GetRequestExecutor().Conventions.SaveEnumsAsIntegers);
+
                     using (var session = store.OpenSession())
                     {
                         session.Store(new Person
@@ -46,6 +56,9 @@ namespace EmbeddedTests
 
                 using (var store = embedded.GetDocumentStore("Test"))
                 {
+                    Assert.False(store.Conventions.SaveEnumsAsIntegers);
+                    Assert.False(store.GetRequestExecutor().Conventions.SaveEnumsAsIntegers);
+
                     using (var session = store.OpenSession())
                     {
                         var person = session.Load<Person>("people/1");

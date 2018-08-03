@@ -1,4 +1,4 @@
-<form role="form" class="revisions flex-vertical absolute-fill content-margin" data-bind="submit: saveChanges">
+<form role="form" class="revisions flex-vertical absolute-fill content-margin" data-bind="submit: saveChanges" novalidate>
     <div class="flex-header">
         <div class="clearfix toolbar">
             <div class="pull-left">
@@ -107,7 +107,7 @@
                 </div>
                 <div class="toggle-margin" data-bind="collapse: limitRevisions, validationElement: minimumRevisionsToKeep">
                     <small>Minimum revisions to keep</small>
-                    <input type="number" class="form-control" placeholder="0" data-bind="numericInput: minimumRevisionsToKeep" />
+                    <input type="number" min="0" class="form-control" placeholder="0" data-bind="numericInput: minimumRevisionsToKeep" />
                 </div>
                 <div class="toggle toggle-primary">
                     <input id="limitRevisionsByAge" class="styled" type="checkbox" data-bind="checked: limitRevisionsByAge">

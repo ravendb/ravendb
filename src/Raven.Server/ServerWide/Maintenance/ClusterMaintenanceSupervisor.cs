@@ -313,7 +313,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }
 
-
             private ClusterMaintenanceConnection ConnectToClientNode(TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout)
             {
                 return AsyncHelpers.RunSync(() => ConnectToClientNodeAsync(tcpConnectionInfo, timeout));
@@ -327,15 +326,17 @@ namespace Raven.Server.ServerWide.Maintenance
                 using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 using (var writer = new BlittableJsonTextWriter(ctx, connection))
                 {
-                    var paramaters = new TcpNegotiateParamaters
+                    var paramaters = new TcpNegotiateParameters
                     {
                         Database = null,
                         Operation = TcpConnectionHeaderMessage.OperationTypes.Heartbeats,
                         Version = TcpConnectionHeaderMessage.HeartbeatsTcpVersion,
-                        ReadResponseAndGetVersionAsync = SupervisorReadResponseAndGetVersionAsync,
-                        Url = tcpConnectionInfo.Url
+                        ReadResponseAndGetVersionCallback = SupervisorReadResponseAndGetVersion,
+                        DestinationUrl = tcpConnectionInfo.Url,
+                        DestinationNodeTag = ClusterTag
+                        
                     };
-                    supportedFeatures = await TcpNegotiation.NegotiateProtocolVersionAsync(ctx, connection, paramaters).ConfigureAwait(false);
+                    supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(ctx, connection, paramaters);
 
                     WriteClusterMaintenanceConnectionHeader(writer);
                 }
@@ -348,9 +349,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 };
             }
 
-            private async Task<int> SupervisorReadResponseAndGetVersionAsync(JsonOperationContext ctx, BlittableJsonTextWriter writer, Stream stream, string url, CancellationToken ct)
+            private int SupervisorReadResponseAndGetVersion(JsonOperationContext ctx, BlittableJsonTextWriter writer, Stream stream, string url)
             {
-                using (var responseJson = await ctx.ReadForMemoryAsync(stream, _readStatusUpdateDebugString + "/Read-Handshake-Response"))
+                using (var responseJson = ctx.ReadForMemory(stream, _readStatusUpdateDebugString + "/Read-Handshake-Response"))
                 {
                     var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
                     switch (headerResponse.Status)
@@ -361,7 +362,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             throw new AuthorizationException(
                                 $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
                         case TcpConnectionStatus.TcpVersionMismatch:
-                            if (headerResponse.Version != -1)
+                            if (headerResponse.Version != TcpNegotiation.OutOfRangeStatus)
                             {
                                 return headerResponse.Version;
                             }

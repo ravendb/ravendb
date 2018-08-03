@@ -30,6 +30,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Https;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
@@ -1473,6 +1474,11 @@ namespace Raven.Server.Commercial
                         }
 
                         settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString();
+
+                        if (setupInfo.EnableExperimentalFeatures)
+                        {
+                            settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
+                        }
 
                         var certificateFileName = $"cluster.server.certificate.{name}.pfx";
 

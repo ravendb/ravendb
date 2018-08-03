@@ -14,16 +14,7 @@
 @import "toastr.less";
 @import "usageStats.less";
 
-@brand-database-color: #ad1457;
 
-@color-counters: #27c4c3;
-@color-revisions: #cfa125;
-@color-recent: #198fd1;
-@color-attachments: #50b068;
-@color-related: #9466d5;
-
-@link-color: #e33572;
-@link-hover-color: #ff6565;
 
 @tooltip-inner-min-width:     100px;
 @tooltip-inner-max-width:     200px;
@@ -63,7 +54,6 @@ a.text-revisions:hover {
 h1,
 h2,
 h3 {
-    font-weight: 300;
     margin-top: 3px;
 
     [class*=" icon-"],
@@ -144,6 +134,11 @@ h6 {
 
 .nobr {
     white-space: nowrap;
+}
+
+.small-properties {
+    font-size: 11px;
+    text-transform: uppercase;
 }
 
 .whitespace-initial {
@@ -1670,10 +1665,10 @@ pre {
 }
 
 .feedback-link {
-    color: #a140b0 !important;
+    color: @color-5 !important;
 
     &:hover {
-        color: lighten(#a140b0, 10%) !important;
+        color: lighten(@color-5, 10%) !important;
     }
 }
 
@@ -1830,6 +1825,13 @@ ul.properties {
         background-color: @tooltip-inner-bg-color;
         color: @tooltip-inner-color;
     }
+}
+@state-experimental-text: @color-5-2;
+@state-experimental-bg: @color-5-1;
+@state-experimental-border: darken(spin(@state-experimental-bg, -10), 5%);
+
+.bg-experimental {
+    .bg-variant(@state-experimental-bg, @state-experimental-text);
 }
 
 @import "pages/tasks-sampleData";

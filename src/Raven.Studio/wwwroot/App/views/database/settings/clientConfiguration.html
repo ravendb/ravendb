@@ -1,5 +1,5 @@
 <div class="content-container">
-    <form data-bind="submit: saveConfiguration">
+    <form data-bind="submit: saveConfiguration" novalidate>
         <div class="content-margin">
             <div class="toolbar">
                 <button type="submit" class="btn btn-primary" data-bind="disable: spinners.save, css: { 'btn-spinner': spinners.save }">
@@ -58,10 +58,10 @@
                     <div class="row flex-row row-sm">
                         <div class="col-sm-5">
                             <div class="checkbox">
-                                <input id="checkboxMaxRequests" class="styled" type="checkbox" 
-                                       data-bind="checked: model.isDefined, checkedValue: 'maxNumberOfRequestsPerSession', enable: canEditSettings">
+                                <input id="checkboxMaxRequests" class="styled" type="checkbox" min="0"
+                                       data-bind="checked: model.isDefined, checkedValue: 'maxNumberOfRequestsPerSession', enable: canEditSettings, validationElement: model.maxNumberOfRequestsPerSession">
                                 <label for="checkboxMaxRequests">
-                                    Max number of requests per session
+                                    Maximum number of requests per session
                                 </label>
                             </div>
                         </div>

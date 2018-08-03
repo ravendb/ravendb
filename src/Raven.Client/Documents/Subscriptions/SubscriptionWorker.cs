@@ -187,12 +187,14 @@ namespace Raven.Client.Documents.Subscriptions
 
                 var databaseName = _dbName ?? _store.Database;
 
-                var parameters = new TcpNegotiateParamaters
+                var parameters = new TcpNegotiateParameters
                 {
                     Database = databaseName,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
                     Version = TcpConnectionHeaderMessage.SubscriptionTcpVersion,
-                    ReadResponseAndGetVersion = ReadServerResponseAndGetVersion
+                    ReadResponseAndGetVersionCallback = ReadServerResponseAndGetVersion,
+                    DestinationNodeTag = CurrentNodeTag,
+                    DestinationUrl = command.Result.Url
                 };
                 _supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(context, _stream, parameters);
 
@@ -228,23 +230,29 @@ namespace Raven.Client.Documents.Subscriptions
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"Cannot access database {_dbName} because " + reply.Message);
                     case TcpConnectionStatus.TcpVersionMismatch:
-                        if (reply.Version != -1)
+                        if (reply.Version != TcpNegotiation.OutOfRangeStatus)
                         {
                             return reply.Version;
                         }
                         //Kindly request the server to drop the connection
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            [nameof(TcpConnectionHeaderMessage.DatabaseName)] = _dbName,
-                            [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop.ToString(),
-                            [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.GetOperationTcpVersion(TcpConnectionHeaderMessage.OperationTypes.Drop),
-                            [nameof(TcpConnectionHeaderMessage.Info)] = $"Couldn't agree on subscription tcp version ours:{TcpConnectionHeaderMessage.SubscriptionTcpVersion} theirs:{reply.Version}"
-                        });
-                        writer.Flush();
+                        SendDropMessage(context, writer, reply);
                         throw new InvalidOperationException($"Can't connect to database {_dbName} because: {reply.Message}");
                 }
                 return reply.Version;
             }
+        }
+
+        private void SendDropMessage(JsonOperationContext context, BlittableJsonTextWriter writer, TcpConnectionHeaderResponse reply)
+        {
+            context.Write(writer, new DynamicJsonValue
+            {
+                [nameof(TcpConnectionHeaderMessage.DatabaseName)] = _dbName,
+                [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop.ToString(),
+                [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.GetOperationTcpVersion(TcpConnectionHeaderMessage.OperationTypes.Drop),
+                [nameof(TcpConnectionHeaderMessage.Info)] =
+                    $"Couldn't agree on subscription TCP version ours:{TcpConnectionHeaderMessage.SubscriptionTcpVersion} theirs:{reply.Version}"
+            });
+            writer.Flush();
         }
 
         private void AssertConnectionState(SubscriptionConnectionServerMessage connectionStatus)

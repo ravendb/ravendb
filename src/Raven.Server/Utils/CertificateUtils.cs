@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -13,7 +12,6 @@ using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
 using Org.BouncyCastle.X509.Extension;
-using Sparrow.Platform;
 using BigInteger = Org.BouncyCastle.Math.BigInteger;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
@@ -44,7 +42,6 @@ namespace Raven.Server.Utils
                 false,
                 5,
                 out certBytes);
-
 
             ValidateNoPrivateKeyInServerCert(serverCertBytes);
 

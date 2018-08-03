@@ -372,7 +372,8 @@ class databaseCreationModel {
                     message: `Max available nodes: {0}`,
                     params: maxReplicationFactor
                 }
-            ]
+            ],
+            digit: true
         });
     }
     

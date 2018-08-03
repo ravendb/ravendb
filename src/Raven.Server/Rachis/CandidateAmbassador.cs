@@ -111,12 +111,9 @@ namespace Raven.Server.Rachis
                         Action disconnect;
                         try
                         {
-                            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                            {
-                                var connection = _engine.ConnectToPeer(_url, _certificate, context).Result;
-                                stream = connection.Stream;
-                                disconnect = connection.Disconnect;
-                            }
+                            var connection = _engine.ConnectToPeer(_url, _tag, _certificate).Result;
+                            stream = connection.Stream;
+                            disconnect = connection.Disconnect;
 
                             if (_candidate.Running == false)
                                 break;

@@ -19,6 +19,8 @@ namespace Raven.Embedded
 
         public string ServerUrl { get; set; }
 
+        public TimeSpan GracefulShutdownTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
         public TimeSpan MaxServerStartupTimeDuration { get; set; } = TimeSpan.FromMinutes(1);
 
         public List<string> CommandLineArgs { get; set; } = new List<string>();

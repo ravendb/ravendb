@@ -10,8 +10,8 @@ namespace rvn.Utils
     {
         public static bool IsServerDown(int pid)
         {
-            var process = Process.GetProcessById(pid);
-            return process == null || process.HasExited;
+            using (var process = Process.GetProcessById(pid))
+                return process == null || process.HasExited;
         }
 
         public static int GetRavenServerPid()
@@ -24,7 +24,7 @@ namespace rvn.Utils
                 {
                     if (currentProcess.Id == pr.Id)
                         continue;
-                    
+
                     availableRavenProcesses.Add(pr);
                 }
 
@@ -44,7 +44,7 @@ namespace rvn.Utils
 
                 Console.Write("More then one Raven.Server process where found:");
                 availableRavenProcesses.ForEach(x => Console.Write(" " + x.Id));
-                Console.WriteLine(Environment.NewLine + "Please specify RavenDB Server proccess manually" + Environment.NewLine);
+                Console.WriteLine(Environment.NewLine + "Please specify RavenDB Server process manually" + Environment.NewLine);
                 Console.Out.Flush();
                 Environment.Exit(2);
                 return 0;

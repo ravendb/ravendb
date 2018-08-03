@@ -33,6 +33,9 @@ namespace Raven.Client.Documents.Operations.ETL
         internal static readonly Regex LoadCountersBehaviorMethodRegex = new Regex(@"function\s+loadCountersOf(\w+)Behavior\s*\(.+\}", RegexOptions.Singleline);
         internal static readonly Regex LoadCountersBehaviorMethodNameRegex = new Regex(@"loadCountersOf(\w+)Behavior", RegexOptions.Singleline);
 
+        internal static readonly Regex DeleteDocumentsBehaviorMethodRegex = new Regex(@"function\s+deleteDocumentsOf(\w+)Behavior\s*\(.+\}", RegexOptions.Singleline);
+        internal static readonly Regex DeleteDocumentsBehaviorMethodNameRegex = new Regex(@"deleteDocumentsOf(\w+)Behavior", RegexOptions.Singleline);
+
         private static readonly Regex Legacy_ReplicateToMethodRegex = new Regex(@"replicateTo(\w+)", RegexOptions.Compiled);
 
         private string[] _collections;
@@ -48,6 +51,8 @@ namespace Raven.Client.Documents.Operations.ETL
         public string Script { get; set; }
 
         internal Dictionary<string, string> CollectionToLoadCounterBehaviorFunction { get; private set; }
+
+        internal Dictionary<string, string> CollectionToDeleteDocumentsBehaviorFunction { get; private set; }
 
         internal bool IsAddingAttachments { get; private set; }
 
@@ -151,6 +156,50 @@ namespace Raven.Client.Documents.Operations.ETL
                             }
 
                             CollectionToLoadCounterBehaviorFunction[collection] = functionName.Value;
+                        }
+                    }
+                }
+
+                var deleteBehaviors = DeleteDocumentsBehaviorMethodRegex.Matches(Script);
+
+                if (deleteBehaviors.Count > 0)
+                {
+                    if (type == EtlType.Sql)
+                    {
+                        errors.Add("Delete documents behavior functions aren't supported by SQL ETL");
+                    }
+                    else
+                    {
+                        CollectionToDeleteDocumentsBehaviorFunction = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                        for (int i = 0; i < deleteBehaviors.Count; i++)
+                        {
+                            var deleteBehaviorFunction = deleteBehaviors[i];
+
+                            if (deleteBehaviorFunction.Groups.Count != 2)
+                            {
+                                errors.Add(
+                                    "Invalid delete documents behavior function. It is expected to have the following signature: " +
+                                    "deleteDocumentsOf<CollectionName>Behavior(docId) and return 'true' if document deletion should be sent to a destination");
+                            }
+
+                            var function = deleteBehaviorFunction.Groups[0].Value;
+                            var collection = deleteBehaviorFunction.Groups[1].Value;
+
+                            var functionName = DeleteDocumentsBehaviorMethodNameRegex.Match(function);
+
+                            if (Collections.Contains(collection) == false)
+                            {
+                                var scriptCollections = string.Join(", ", Collections.Select(x => ($"'{x}'")));
+
+                                errors.Add(
+                                    $"There is '{functionName}' function defined in '{Name}' script while the processed collections " +
+                                    $"({scriptCollections}) doesn't include '{collection}'. " +
+                                    "deleteDocumentsOf<CollectionName>Behavior() function is meant to be defined only for documents from collections that " +
+                                    "are loaded to the same collection on a destination side");
+                            }
+
+                            CollectionToDeleteDocumentsBehaviorFunction[collection] = functionName.Value;
                         }
                     }
                 }

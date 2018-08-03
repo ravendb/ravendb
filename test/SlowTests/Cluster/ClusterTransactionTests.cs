@@ -90,42 +90,42 @@ namespace SlowTests.Cluster
             {
                 for (int j = 0; j < numOfSessions; j++)
                 {
-                    
-                        var retry = false;
-                        do
-                        {
-                            try
-                            {
-                                using (var session = store.OpenAsyncSession(new SessionOptions
-                                {
-                                    TransactionMode = TransactionMode.ClusterWide
-                                }))
-                                {
-                                    for (int i = 0; i < docsPerSession; i++)
-                                    {
-                                        var user = new User
-                                        {
-                                            LastName = RandomString(2048),
-                                            Age = i
-                                        };
-                                        await session.StoreAsync(user, "users/" + (docsPerSession * j + i));
-                                    }
 
-                                    if (numberOfNodes > 1)
-                                        await ActionWithLeader(l =>
-                                        {
-                                            l.ServerStore.Engine.CurrentLeader.StepDown();
-                                            return Task.CompletedTask;
-                                        });
-                                    await session.SaveChangesAsync();
-                                }
-                            }
-                            catch (Exception e) when (e is ConcurrencyException)
+                    var retry = false;
+                    do
+                    {
+                        try
+                        {
+                            using (var session = store.OpenAsyncSession(new SessionOptions
                             {
-                                retry = true;
+                                TransactionMode = TransactionMode.ClusterWide
+                            }))
+                            {
+                                for (int i = 0; i < docsPerSession; i++)
+                                {
+                                    var user = new User
+                                    {
+                                        LastName = RandomString(2048),
+                                        Age = i
+                                    };
+                                    await session.StoreAsync(user, "users/" + (docsPerSession * j + i));
+                                }
+
+                                if (numberOfNodes > 1)
+                                    await ActionWithLeader(l =>
+                                    {
+                                        l.ServerStore.Engine.CurrentLeader.StepDown();
+                                        return Task.CompletedTask;
+                                    });
+                                await session.SaveChangesAsync();
                             }
-                        } while (retry);
-                    }
+                        }
+                        catch (Exception e) when (e is ConcurrencyException)
+                        {
+                            retry = true;
+                        }
+                    } while (retry);
+                }
 
                 using (var session = store.OpenSession())
                 {
@@ -190,7 +190,7 @@ namespace SlowTests.Cluster
                 await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
             }
 
-            using (var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 2}))
+            using (var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 2 }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -619,7 +619,7 @@ namespace SlowTests.Cluster
                 {
                     Name = "Indych"
                 };
-                var index = await RevisionsHelper.SetupRevisions(leader.ServerStore, leaderStore.Database, purgeOnDelete: false);
+                var index = await RevisionsHelper.SetupRevisions(leader.ServerStore, leaderStore.Database, configuration => configuration.Collections["Users"].PurgeOnDelete = false);
                 await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(15));
 
                 // bring our SUT node down, but we still have a cluster and can execute cluster transaction.
@@ -634,8 +634,8 @@ namespace SlowTests.Cluster
                     TransactionMode = TransactionMode.ClusterWide
                 }))
                 {
-                    Assert.Equal(1, session.Advanced.RequestExecutor.TopologyNodes.Count); 
-                    Assert.Equal(leader.WebUrl, session.Advanced.RequestExecutor.Url); 
+                    Assert.Equal(1, session.Advanced.RequestExecutor.TopologyNodes.Count);
+                    Assert.Equal(leader.WebUrl, session.Advanced.RequestExecutor.Url);
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
                     await session.StoreAsync(user3, "foo/bar");
                     await session.SaveChangesAsync();
@@ -701,7 +701,7 @@ namespace SlowTests.Cluster
                         Assert.NotNull(await session.Advanced.Revisions.GetAsync<User>(changeVector));
                         var list = await session.Advanced.Revisions.GetForAsync<User>("foo/bar");
                         Assert.Equal(2, list.Count);
-                        
+
                         // revive another node so we should have a functional cluster now
                         Servers[2] = GetNewServer(new Dictionary<string, string>
                         {

@@ -23,11 +23,13 @@ namespace Raven.Server.Utils
             if (PlatformDetails.RunningOnPosix)
                 return false;
 
-            var p = ParentProcessUtilities.GetParentProcess();
-            if (p == null)
-                return false;
-            var hasBeenStartedByServices = p.ProcessName == "services";
-            return hasBeenStartedByServices;
+            using (var p = ParentProcessUtilities.GetParentProcess())
+            {
+                if (p == null)
+                    return false;
+                var hasBeenStartedByServices = p.ProcessName == "services";
+                return hasBeenStartedByServices;
+            }
         }
     }
 

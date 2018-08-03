@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Revisions;
@@ -8,7 +9,7 @@ namespace FastTests.Server.Documents.Revisions
 {
     public class RevisionsHelper
     {
-        public static async Task<long> SetupRevisions(Raven.Server.ServerWide.ServerStore serverStore, string database, bool purgeOnDelete = true, long minimumRevisionsToKeep = 123)
+        public static async Task<long> SetupRevisions(Raven.Server.ServerWide.ServerStore serverStore, string database, Action<RevisionsConfiguration> modifyConfiguration = null)
         {
             var configuration = new RevisionsConfiguration
             {
@@ -22,8 +23,8 @@ namespace FastTests.Server.Documents.Revisions
                     ["Users"] = new RevisionsCollectionConfiguration
                     {
                         Disabled = false,
-                        PurgeOnDelete = purgeOnDelete,
-                        MinimumRevisionsToKeep = minimumRevisionsToKeep
+                        PurgeOnDelete = true,
+                        MinimumRevisionsToKeep = 123
                     },
                     ["Comments"] = new RevisionsCollectionConfiguration
                     {
@@ -32,9 +33,11 @@ namespace FastTests.Server.Documents.Revisions
                     ["Products"] = new RevisionsCollectionConfiguration
                     {
                         Disabled = true
-                    },
+                    }
                 }
             };
+
+            modifyConfiguration?.Invoke(configuration);
 
             var index = await SetupRevisions(serverStore, database, configuration);
 
@@ -49,7 +52,7 @@ namespace FastTests.Server.Documents.Revisions
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var configurationJson = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
-                (var index, _) = await serverStore.ModifyDatabaseRevisions(context, database, configurationJson);
+                var (index, _) = await serverStore.ModifyDatabaseRevisions(context, database, configurationJson);
                 return index;
             }
         }

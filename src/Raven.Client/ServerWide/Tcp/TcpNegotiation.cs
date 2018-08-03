@@ -1,115 +1,94 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
-using System.Threading.Tasks;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Client.ServerWide.Tcp
 {
     public class TcpNegotiation
     {
-        public static TcpConnectionHeaderMessage.SupportedFeatures NegotiateProtocolVersion(JsonOperationContext documentsContext, Stream stream, TcpNegotiateParamaters parameters)
-        {
-            using (var writer = new BlittableJsonTextWriter(documentsContext, stream))
-            {
-                var currentVersion = parameters.Version;
-                while (true)
-                {
-                    documentsContext.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(TcpConnectionHeaderMessage.DatabaseName)] = parameters.Database, // _parent.Database.Name,
-                        [nameof(TcpConnectionHeaderMessage.Operation)] = parameters.Operation.ToString(),
-                        [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = parameters.NodeTag,
-                        [nameof(TcpConnectionHeaderMessage.OperationVersion)] = currentVersion
-                    });
-                    writer.Flush();
-                    var version = parameters.ReadResponseAndGetVersion(documentsContext, writer, stream, parameters.Url);
-                    //In this case we usally throw internaly but for completeness we better handle it
-                    if (version == -2)
-                    {
-                        return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Drop, TcpConnectionHeaderMessage.DropBaseLine40000);
-                    }
-                    var (supported, prevSupported) = TcpConnectionHeaderMessage.OperationVersionSupported(parameters.Operation, version);
-                    if (supported)
-                    {
-                        //We are done
-                        if (currentVersion == version)
-                        {
-                            return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, version);
-                        }
-                        //Here we support the requested version but need to inform the otherside we agree
-                        currentVersion = version;
-                        continue;
-                    }
-                    if (prevSupported == -1)
-                        return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.None, TcpConnectionHeaderMessage.NoneBaseLine40000);
-                    currentVersion = prevSupported;
-                }
-            }
-        }
+        public const int OutOfRangeStatus = -1;
+        public const int DropStatus = -2;
 
-        public static async Task<TcpConnectionHeaderMessage.SupportedFeatures> NegotiateProtocolVersionAsync(JsonOperationContext documentsContext, Stream stream, TcpNegotiateParamaters parameters)
+        private static readonly Logger Log = LoggingSource.Instance.GetLogger<TcpNegotiation>("TCP Negotiation"); 
+
+        public static TcpConnectionHeaderMessage.SupportedFeatures NegotiateProtocolVersion(JsonOperationContext context, Stream stream, TcpNegotiateParameters parameters)
         {
-            using (var writer = new BlittableJsonTextWriter(documentsContext, stream))
+            if (Log.IsInfoEnabled)
             {
-                var currentVersion = parameters.Version;
+                Log.Info($"Start negotiation for {parameters.Operation} operation with {parameters.DestinationNodeTag ?? parameters.DestinationUrl}");
+            }
+
+            using (var writer = new BlittableJsonTextWriter(context, stream))
+            {
+                var current = parameters.Version;
                 while (true)
                 {
                     if (parameters.CancellationToken.IsCancellationRequested)
-                        throw new OperationCanceledException($"Stoped Tcp negotiation for {parameters.Operation} because of cancelation request");
+                        throw new OperationCanceledException($"Stopped TCP negotiation for {parameters.Operation} because of cancellation request");
 
-                    documentsContext.Write(writer, new DynamicJsonValue
+                    SendTcpVersionInfo(context, writer, parameters, current);
+                    var version = parameters.ReadResponseAndGetVersionCallback(context, writer, stream, parameters.DestinationUrl);
+                    if (Log.IsInfoEnabled)
                     {
-                        [nameof(TcpConnectionHeaderMessage.DatabaseName)] = parameters.Database, // _parent.Database.Name,
-                        [nameof(TcpConnectionHeaderMessage.Operation)] = parameters.Operation.ToString(),
-                        [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = parameters.NodeTag,
-                        [nameof(TcpConnectionHeaderMessage.OperationVersion)] = currentVersion
-                    });
-                    writer.Flush();
-                    int version;
-                    if (parameters.ReadResponseAndGetVersionAsync == null)
-                    {
-                        version = parameters.ReadResponseAndGetVersion(documentsContext, writer, stream, parameters.Url);
+                        Log.Info($"Read response from {parameters.SourceNodeTag ?? parameters.DestinationUrl} for '{parameters.Operation}', received version is '{version}'");
                     }
-                    else
+
+                    if (version == current)
+                        break;
+
+                    //In this case we usually throw internally but for completeness we better handle it
+                    if (version == DropStatus)
                     {
-                        version = await parameters.ReadResponseAndGetVersionAsync(documentsContext, writer, stream, parameters.Url, parameters.CancellationToken).ConfigureAwait(false);
+                        return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Drop, TcpConnectionHeaderMessage.DropBaseLine);
                     }
-                    //In this case we usally throw internaly but for completeness we better handle it
-                    if (version == -2)
+                    var status = TcpConnectionHeaderMessage.OperationVersionSupported(parameters.Operation, version, out current);
+                    if (status == TcpConnectionHeaderMessage.SupportedStatus.OutOfRange)
                     {
-                        return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Drop, TcpConnectionHeaderMessage.DropBaseLine40000);
+                        SendTcpVersionInfo(context, writer, parameters, OutOfRangeStatus);
+                        throw new ArgumentException($"The {parameters.Operation} version {parameters.Version} is out of range, our lowest version is {current}");
                     }
-                    var (supported, prevSupported) = TcpConnectionHeaderMessage.OperationVersionSupported(parameters.Operation, version);
-                    if (supported)
+                    if (Log.IsInfoEnabled)
                     {
-                        //We are done
-                        if (currentVersion == version)
-                        {
-                            return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, version);
-                        }
-                        //Here we support the requested version but need to inform the otherside we agree
-                        currentVersion = version;
-                        continue;
+                        Log.Info($"The version {version} is {status}, will try to agree on '{current}' for {parameters.Operation} with {parameters.DestinationNodeTag ?? parameters.DestinationUrl}.");
                     }
-                    if (prevSupported == -1)
-                        return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.None, TcpConnectionHeaderMessage.NoneBaseLine40000);
-                    currentVersion = prevSupported;
                 }
+                if (Log.IsInfoEnabled)
+                {
+                    Log.Info($"{parameters.DestinationNodeTag ?? parameters.DestinationUrl} agreed on version '{current}' for {parameters.Operation}.");
+                }
+                return TcpConnectionHeaderMessage.GetSupportedFeaturesFor(parameters.Operation, current);
             }
+        }
+
+        private static void SendTcpVersionInfo(JsonOperationContext context, BlittableJsonTextWriter writer, TcpNegotiateParameters parameters, int currentVersion)
+        {
+            if (Log.IsInfoEnabled)
+            {
+                Log.Info($"Send negotiation for {parameters.Operation} in version {currentVersion}");
+            }
+
+            context.Write(writer, new DynamicJsonValue
+            {
+                [nameof(TcpConnectionHeaderMessage.DatabaseName)] = parameters.Database,
+                [nameof(TcpConnectionHeaderMessage.Operation)] = parameters.Operation.ToString(),
+                [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = parameters.SourceNodeTag,
+                [nameof(TcpConnectionHeaderMessage.OperationVersion)] = currentVersion
+            });
+            writer.Flush();
         }
     }
 
-    public class TcpNegotiateParamaters
+    public class TcpNegotiateParameters
     {
         public TcpConnectionHeaderMessage.OperationTypes Operation { get; set; }
         public int Version { get; set; }
         public string Database { get; set; }
-        public string NodeTag { get; set; }
-
-        public string Url { get; set; }
-
+        public string SourceNodeTag { get; set; }
+        public string DestinationNodeTag { get; set; }
+        public string DestinationUrl { get; set; }
         public CancellationToken CancellationToken { get; set; }
 
         /// <summary>
@@ -118,9 +97,8 @@ namespace Raven.Client.ServerWide.Tcp
         ///
         /// If the respond is 'Drop' the function should throw.
         /// If the respond is 'None' the function should throw.
-        /// If the respond is 'TcpMissMatch' the function should return the read version.
+        /// If the respond is 'TcpMismatch' the function should return the read version.
         /// </summary>
-        public Func<JsonOperationContext, BlittableJsonTextWriter, Stream, string, int> ReadResponseAndGetVersion { get; set; }
-        public Func<JsonOperationContext, BlittableJsonTextWriter, Stream, string, CancellationToken, Task<int>> ReadResponseAndGetVersionAsync { get; set; }
+        public Func<JsonOperationContext, BlittableJsonTextWriter, Stream, string, int> ReadResponseAndGetVersionCallback { get; set; }
     }
 }

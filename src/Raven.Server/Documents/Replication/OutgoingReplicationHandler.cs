@@ -481,12 +481,14 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
-                var parameters = new TcpNegotiateParamaters
+                var parameters = new TcpNegotiateParameters
                 {
                     Database = Destination.Database,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Replication,
-                    NodeTag = _parent._server.NodeTag,
-                    ReadResponseAndGetVersion = ReadHeaderResponseAndThrowIfUnAuthorized,
+                    SourceNodeTag = _parent._server.NodeTag,
+                    DestinationNodeTag = GetNode(),
+                    DestinationUrl = Destination.Url,
+                    ReadResponseAndGetVersionCallback = ReadHeaderResponseAndThrowIfUnAuthorized,
                     Version = TcpConnectionHeaderMessage.ReplicationTcpVersion
                 };
 
@@ -515,9 +517,10 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private int ReadHeaderResponseAndThrowIfUnAuthorized(JsonOperationContext jsonContext, BlittableJsonTextWriter writer, Stream stream, string url)
+        private int ReadHeaderResponseAndThrowIfUnAuthorized(JsonOperationContext context, BlittableJsonTextWriter writer, Stream stream, string url)
         {
             const int timeout = 2 * 60 * 1000;
+
             using (var replicationTcpConnectReplyMessage = _interruptibleRead.ParseToMemory(
                 _connectionDisposed,
                 "replication acknowledge response",
@@ -541,26 +544,33 @@ namespace Raven.Server.Documents.Replication
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
-                        if (headerResponse.Version != -1)
+                        if (headerResponse.Version != TcpNegotiation.OutOfRangeStatus)
                         {
                             return headerResponse.Version;
                         }
                         //Kindly request the server to drop the connection
-                        jsonContext.Write(writer, new DynamicJsonValue
-                        {
-                            [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database,
-                            [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop.ToString(),
-                            [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
-                            [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.GetOperationTcpVersion(TcpConnectionHeaderMessage.OperationTypes.Drop),
-                            [nameof(TcpConnectionHeaderMessage.Info)] = $"Couldn't agree on replication tcp version ours:{TcpConnectionHeaderMessage.ReplicationTcpVersion} theirs:{headerResponse.Version}"
-                        });
-                        writer.Flush();
+                        SendDropMessage(context, writer, headerResponse);
                         throw new InvalidOperationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     default:
                         throw new InvalidOperationException($"{Destination.FromString()} replied with unknown status {headerResponse.Status}, message:{headerResponse.Message}");
                 }
             }
         }
+
+        private void SendDropMessage(JsonOperationContext context, BlittableJsonTextWriter writer, TcpConnectionHeaderResponse headerResponse)
+        {
+            context.Write(writer, new DynamicJsonValue
+            {
+                [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database,
+                [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop.ToString(),
+                [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
+                [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.GetOperationTcpVersion(TcpConnectionHeaderMessage.OperationTypes.Drop),
+                [nameof(TcpConnectionHeaderMessage.Info)] =
+                    $"Couldn't agree on replication TCP version ours:{TcpConnectionHeaderMessage.ReplicationTcpVersion} theirs:{headerResponse.Version}"
+            });
+            writer.Flush();
+        }
+
         private bool WaitForChanges(int timeout, CancellationToken token)
         {
             while (true)
@@ -833,11 +843,6 @@ namespace Raven.Server.Documents.Replication
                     break;
                 case ReplicationMessageReply.ReplyType.MissingAttachments:
                     break;
-                default:
-                    var msg = $"Received error from remote replication destination. Error received: {replicationBatchReply.Exception}";
-                    if (_log.IsInfoEnabled)
-                        _log.Info(msg);
-                    break;
             }
 
             if (_log.IsInfoEnabled)
@@ -859,8 +864,8 @@ namespace Raven.Server.Documents.Replication
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(replicationBatchReply),
-                            "Received reply for replication batch with unrecognized type... got " +
-                            replicationBatchReply.Type);
+                            $"Received reply for replication batch with unrecognized type {replicationBatchReply.Type}" +
+                            $"raw: {replicationBatchReplyMessage}");
                 }
             }
             return replicationBatchReply;

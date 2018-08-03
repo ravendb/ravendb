@@ -114,6 +114,13 @@ class importDatabaseFromFile extends viewModelBase {
                 "<span class=\"token keyword\">this</span>.Freight = <span class=\"token number\">15.3</span>;<br />" +
                 "</pre>" 
             });
+
+        popoverUtils.longWithHover($("#configurationPopover"),
+            {
+                content:
+                    "<div>The following configuration settings will be imported:</div>" +
+                    "<strong>Revisions, Expiration & Client Configuration</strong>"
+            });
         
         this.updateHelpLink("YD9M1R");
     }

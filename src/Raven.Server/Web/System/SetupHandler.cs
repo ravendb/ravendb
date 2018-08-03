@@ -527,6 +527,11 @@ namespace Raven.Server.Web.System
 
                 settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.TcpPort, "tcp")));
 
+                if (setupInfo.EnableExperimentalFeatures)
+                {
+                    settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
+                }
+                
                 var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
 
                 var indentedJson = SetupManager.IndentJsonString(modifiedJsonObj.ToString());

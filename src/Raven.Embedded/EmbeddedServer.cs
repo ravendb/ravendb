@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Text;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
@@ -14,6 +13,7 @@ using System.Security.Cryptography.X509Certificates;
 using Raven.Client.Http;
 using Sparrow.Logging;
 using Raven.Client.Util;
+using Sparrow.Platform;
 
 namespace Raven.Embedded
 {
@@ -31,10 +31,13 @@ namespace Raven.Embedded
         private readonly ConcurrentDictionary<string, Lazy<Task<IDocumentStore>>> _documentStores = new ConcurrentDictionary<string, Lazy<Task<IDocumentStore>>>();
         private X509Certificate2 _certificate;
 
+        private TimeSpan _gracefulShutdownTimeout;
+
         public void StartServer(ServerOptions options = null)
         {
             options = options ?? ServerOptions.Default;
 
+            _gracefulShutdownTimeout = options.GracefulShutdownTimeout;
             var startServer = new Lazy<Task<(Uri ServerUrl, Process ServerProcess)>>(() => RunServer(options));
             if (Interlocked.CompareExchange(ref _serverTask, startServer, null) != null)
                 throw new InvalidOperationException("The server was already started");
@@ -99,9 +102,10 @@ namespace Raven.Embedded
                 {
                     Urls = new[] { serverUrl.AbsoluteUri },
                     Database = databaseName,
-                    Certificate = _certificate
-
+                    Certificate = _certificate,
+                    Conventions = options.Conventions
                 };
+
                 store.AfterDispose += (sender, args) => _documentStores.TryRemove(databaseName, out _);
 
                 store.Initialize();
@@ -138,16 +142,37 @@ namespace Raven.Embedded
             return (await server.Value.WithCancellation(token).ConfigureAwait(false)).ServerUrl;
         }
 
-        private void KillSlavedServerProcess(Process process)
+        private void ShutdownServerProcess(Process process)
         {
             if (process == null || process.HasExited)
                 return;
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Killing global server PID { process.Id }.");
+            try
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Try shutdown server PID {process.Id} gracefully.");
+
+                using (var inputStream = process.StandardInput)
+                {
+                    inputStream.Write($"q{Environment.NewLine}y{Environment.NewLine}");
+                }
+
+                if (process.WaitForExit((int)_gracefulShutdownTimeout.TotalMilliseconds))
+                    return;
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"Failed to shutdown server PID {process.Id} gracefully in {_gracefulShutdownTimeout.ToString()}", e);
+                }
+            }
 
             try
             {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Killing global server PID {process.Id}.");
+
                 process.Kill();
             }
             catch (Exception e)
@@ -174,7 +199,7 @@ namespace Raven.Embedded
                 {
                     var errorString = await ReadOutput(process.StandardError, startupDuration, options, null).ConfigureAwait(false);
 
-                    KillSlavedServerProcess(process);
+                    ShutdownServerProcess(process);
 
                     throw new InvalidOperationException(BuildStartupExceptionMessage(builder.ToString(), errorString));
                 }
@@ -193,7 +218,7 @@ namespace Raven.Embedded
             {
                 var errorString = await ReadOutput(process.StandardError, startupDuration, options, null).ConfigureAwait(false);
 
-                KillSlavedServerProcess(process);
+                ShutdownServerProcess(process);
 
                 throw new InvalidOperationException(BuildStartupExceptionMessage(outputString, errorString));
             }
@@ -263,19 +288,21 @@ namespace Raven.Embedded
         public void OpenStudioInBrowser()
         {
             var serverUrl = AsyncHelpers.RunSync(() => GetServerUriAsync());
+            var url = serverUrl.AbsoluteUri;
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (PlatformDetails.RunningOnPosix == false)
             {
-                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at Studio\" \"{serverUrl.AbsoluteUri}\"")); // Works ok on windows
+                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at Studio\" \"{url}\""));
+                return;
             }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+
+            if (PlatformDetails.RunningOnMacOsx)
             {
-                Process.Start("xdg-open", serverUrl.AbsoluteUri); // Works ok on linux
+                Process.Start("open", url);
+                return;
             }
-            else
-            {
-                throw new PlatformNotSupportedException("Cannot open browser with Studio on your current platform");
-            }
+
+            Process.Start("xdg-open", url);
         }
 
         public void Dispose()
@@ -285,7 +312,7 @@ namespace Raven.Embedded
                 return;
 
             var process = lazy.Value.Result.ServerProcess;
-            KillSlavedServerProcess(process);
+            ShutdownServerProcess(process);
             foreach (var item in _documentStores)
             {
                 if (item.Value.IsValueCreated)

@@ -246,6 +246,7 @@ namespace Raven.Server.ServerWide
                                         NotificationCenter.Add(topologyNotification);
                                     }
                                 }
+                                delay = await ReconnactionBackoff(delay);
                             }
                         }
                     }
@@ -259,11 +260,15 @@ namespace Raven.Server.ServerWide
                     {
                         Logger.Info($"Error during receiving topology updates from the leader. Waiting {delay} [ms] before trying again.", e);
                     }
-
-                    await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(delay), ServerShutdown);
-                    delay = Math.Min(15_000, delay * 2);
+                    delay = await ReconnactionBackoff(delay);
                 }
             }
+        }
+
+        private async Task<int> ReconnactionBackoff(int delay)
+        {
+            await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(delay), ServerShutdown);
+            return Math.Min(15_000, delay * 2);
         }
 
         internal ClusterObserver Observer { get; set; }
@@ -715,7 +720,9 @@ namespace Raven.Server.ServerWide
                 return;
 
             NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag,
-                NodeTag, _engine.CurrentTerm, GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));
+                NodeTag, _engine.CurrentTerm, GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails), 
+                DateTime.MinValue); 
+            // we set the postpone time to the minimum in order to overwrite it and to send this notification every time when a new client connects. 
         }
 
         private void OnDatabaseChanged(object sender, (string DatabaseName, long Index, string Type, DatabasesLandlord.ClusterDatabaseChangeType _) t)

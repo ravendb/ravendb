@@ -1,4 +1,5 @@
-﻿using Raven.Embedded;
+﻿using System;
+using Raven.Embedded;
 
 namespace Raven.TestDriver
 {
@@ -8,6 +9,18 @@ namespace Raven.TestDriver
         {
             get => base.ServerDirectory;
             set => base.ServerDirectory = value;
+        }
+
+        public static TestServerOptions UseFiddler()
+        {
+            return new TestServerOptions
+            {
+                ServerUrl = $"http://{Environment.MachineName}:0",
+                CommandLineArgs =
+                {
+                    "--Security.UnsecuredAccessAllowed=PrivateNetwork"
+                }
+            };
         }
     }
 }

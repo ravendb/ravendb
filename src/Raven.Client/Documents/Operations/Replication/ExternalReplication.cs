@@ -83,6 +83,7 @@ namespace Raven.Client.Documents.Operations.Replication
             {
                 return string.Equals(ConnectionStringName, externalReplication.ConnectionStringName, StringComparison.OrdinalIgnoreCase) &&
                        TaskId == externalReplication.TaskId &&
+                       DelayReplicationFor == externalReplication.DelayReplicationFor &&
                        string.Equals(externalReplication.Name, Name, StringComparison.OrdinalIgnoreCase) &&
                        string.Equals(externalReplication.Database, Database, StringComparison.OrdinalIgnoreCase);
             }

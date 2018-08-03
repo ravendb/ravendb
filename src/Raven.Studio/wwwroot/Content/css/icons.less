@@ -34,20 +34,29 @@
     line-height: 100%;
     font-size: 120%;
 
-    &+span {
+    & + span {
         margin-left: @grid-gutter-width/4;
     }
 
-    &.disabled {
-        opacity:.5;
-        color:@gray;
 
-        &:before, &:after {
-            
+    &::after {
+        position: absolute;
+        bottom: 8%;
+        right: -4%;
+        font-size: 50%;
+        line-height: 50%;
+    }
+
+    &.disabled {
+        opacity: .5;
+        color: @gray;
+
+        &::before, &::after {
         }
-        &:after {
+
+        &::after {
             content: "\e9a2";
-            position:absolute;
+            position: absolute;
             left: -4px;
             top: 1px;
             font-size: 24px;
@@ -57,13 +66,7 @@
 
 [class*=" icon-addon-"],
 [class^="icon-addon-"] {
-    &:after {
-        position: absolute;
-        bottom: 8%;
-        right: -4%;
-        font-size: 50%;
-        line-height: 50%;
-    }
+    
 }
 
 .icon-lg {
@@ -92,6 +95,15 @@
     }
 }
 
+.make-double-icon (@name, @glyph, @addon-glyph) {
+    .icon-@{name}::before {
+        content: @glyph;
+    }
+    .icon-@{name}::after {
+        content: @addon-glyph;
+    }
+}
+
 .make-icon-color (@name, @color-before, @color-after) {
 	.icon-@{name}::before {
         color: @color-before;
@@ -102,6 +114,8 @@
     }
 }
 
+.make-double-icon(new-database, "\e9fc", "\e937");
+.make-icon(experimental, "\ea14");
 .make-icon(flag, "\ea13");
 .make-icon(unsupported-browser, "\ea01");
 .make-icon(chrome, "\ea0a");
@@ -245,9 +259,8 @@
 .make-icon(new-filesystem, "\e95e");
 .make-icon(clock, "\e95f");
 .make-icon(periodic-export, "\e960");
-.make-icon(dashboard, "\e962");
+.make-icon(dashboard, "\e9de");
 .make-icon(map-reduce-visualizer, "\e964");
-.make-icon(new-database, "\e965");
 .make-icon(resources, "\e966");
 .make-icon(server, "\e967");
 .make-icon(user-info, "\e969");
@@ -403,10 +416,11 @@
     .make-icon-color(info, @color-3-3, @color-3-3);
     //Documents section
     .make-icon-color(recent, @color-4-1, @color-4-1);
-    .make-icon-color(patch, @color-4-2, @color-4-2);
-    .make-icon-color(documents-query, @color-4-3, @color-4-3);
-    .make-icon-color(conflicts, @color-5, @color-5);
-    .make-icon-color(cmp-xchg, @color-5-1, @color-5-1);
+    .make-icon-color(revisions-bin, @color-4-2, @color-4-2);
+    .make-icon-color(patch, @color-4-3, @color-4-3);
+    .make-icon-color(documents-query, @color-5, @color-5);
+    .make-icon-color(conflicts, @color-5-1, @color-5-1);
+    .make-icon-color(cmp-xchg, @color-5-2, @color-5-2);
     //Indexes section
     .make-icon-color(indexes-query, @color-5, @color-5);
     .make-icon-color(list-of-indexes, @color-5-1, @color-5-1);
@@ -429,7 +443,6 @@
     .make-icon-color(io-test, @color-2-1, @color-2-1);
     .make-icon-color(storage, @color-2-2, @color-2-2);
     .make-icon-color(replication-stats, @color-2-3, @color-2-3);
-
     //Manage server section
     .make-icon-color(cluster, @color-3-2, @color-3-2);
     .make-icon-color(client-configuration, @color-3-3, @color-3-3);
