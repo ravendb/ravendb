@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Graph;
 using Raven.Client.Http;
 using Sparrow.Json;
 
@@ -114,17 +113,6 @@ namespace Raven.Client.Documents.Session
         /// <param name="instance">The instance.</param>
         IMetadataDictionary GetMetadataFor<T>(T instance);
 
-        
-        IReadOnlyList<(string EdgeType, EdgeInfo Edge)> GetEdgesOf<T>(T instance);
-
-        /// <summary>
-        /// Add edge between two documents
-        /// </summary>
-        /// <param name="from">entity to add the edge from</param>
-        /// <param name="to">entity to add the edge to</param>
-        /// <param name="type">type of the edge</param>
-        /// <param name="edgeProperties">an entity that contains the properties attached to the edge</param>
-        void AddEdgeBetween(object @from, object to, string type, Dictionary<string, object> edgeProperties = null);
 
         /// <summary>
         ///     Gets change vector for the specified entity.
