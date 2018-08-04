@@ -16,6 +16,10 @@ namespace Raven.Migrator.MongoDB
         private readonly BsonDocument _filterDefinition = new BsonDocument();
 
         private const string MongoDocumentId = "_id";
+        private readonly List<string> _propertiesToRemove = new List<string>
+        {
+            MongoDocumentId
+        };
 
         public MongoDBMigrator(MongoDBConfiguration configuration)
         {
@@ -145,10 +149,7 @@ namespace Raven.Migrator.MongoDB
                             document,
                             documentId,
                             ravenCollectionName,
-                            new List<string>
-                            {
-                                MongoDocumentId
-                            },
+                            _propertiesToRemove,
                             isFirstDocument,
                             streamWriter);
                     }
