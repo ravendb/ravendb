@@ -23,5 +23,13 @@ namespace Raven.Server.Documents.Queries.AST
         {
             return Source.GetText(parent) + " between " + Min.GetText(parent) + " and " + Max.GetText(parent);
         }
+
+        public override bool Equals(QueryExpression other)
+        {
+            if (!(other is BetweenExpression be))
+                return false;
+
+            return Source.Equals(be.Source) && Max.Equals(be.Max) && Min.Equals(be.Min);
+        }
     }
 }

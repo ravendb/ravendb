@@ -26,5 +26,24 @@ namespace Raven.Server.Documents.Queries.AST
         {
             return $"{Source} in ({string.Join(", ", Values.Select(x => x.GetText(parent)))})";
         }
+
+        public override bool Equals(QueryExpression other)
+        {
+            if (!(other is InExpression ie))
+                return false;
+
+            if (All != ie.All || Source.Equals(ie.Source) == false || 
+                Values.Count != ie.Values.Count)
+                return false;
+
+
+            for (int i = 0; i < Values.Count; i++)
+            {
+                if (Values[i].Equals(ie.Values.Count) == false)
+                    return false;
+            }
+
+            return true;
+        }
     }
 }

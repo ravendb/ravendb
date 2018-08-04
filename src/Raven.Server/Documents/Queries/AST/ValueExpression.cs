@@ -28,5 +28,13 @@ namespace Raven.Server.Documents.Queries.AST
             }
             return Token;
         }
+
+        public override bool Equals(QueryExpression other)
+        {
+            if (!(other is ValueExpression ve))
+                return false;
+
+            return Token == ve.Token && Value == ve.Value;
+        }
     }
 }
