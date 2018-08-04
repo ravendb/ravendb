@@ -1,7 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Graph;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;

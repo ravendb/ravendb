@@ -27,9 +27,9 @@ namespace Tryouts
 
             //Console.WriteLine(graphQuery.ToString());
 
-            using(var parsing = new FastTests.Graph.Parsing())
+            using(var parsing = new FastTests.Graph.SimpleGraphQueries())
             {
-                 await parsing.ParseBasicGraphQuery();
+                 parsing.FindFriendlies();
             }
 
         }
