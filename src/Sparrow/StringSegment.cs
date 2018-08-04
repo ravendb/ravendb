@@ -129,7 +129,7 @@ namespace Sparrow
         public readonly int Offset;
 
         private string _valueString;
-        public string Value => _valueString ?? (_valueString = Buffer.Substring(Offset, Length));
+        public string Value => _valueString ?? (_valueString = Buffer?.Substring(Offset, Length));
 
 
         // PERF: Included this version to exploit the knowledge that we are going to get a full string.

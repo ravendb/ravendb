@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Queries.Parser
             Scanner.Init(q);
         }
 
-        public Query Parse(QueryType queryType = QueryType.Select)
+        public Query Parse(QueryType queryType = QueryType.Select, bool recursive = false)
         {
             var q = new Query
             {
@@ -45,13 +45,33 @@ namespace Raven.Server.Documents.Queries.Parser
                     ThrowParseException(name + " function was declared multiple times");
             }
 
-            q.From = FromClause();
+            while (Scanner.TryScan("WITH"))
+            {
+                if (recursive == true)
+                    ThrowParseException("With clause is not allow inside inner query");
 
-            if (Scanner.TryScan("GROUP BY"))
-                q.GroupBy = GroupBy();
+                WithClause(q);
+            }
 
-            if (Scanner.TryScan("WHERE") && Expression(out q.Where) == false)
-                ThrowParseException("Unable to parse WHERE clause");
+            if (q.GraphQuery == null)
+            {
+                q.From = FromClause();
+
+                if (Scanner.TryScan("GROUP BY"))
+                    q.GroupBy = GroupBy();
+
+                if (Scanner.TryScan("WHERE") && Expression(out q.Where) == false)
+                    ThrowParseException("Unable to parse WHERE clause");
+            }
+            else
+            {
+                if (Scanner.TryScan("MATCH") == false)
+                {
+                    ThrowParseException("Missing a 'match' clause after 'with' caluse");
+                }
+
+                q.GraphQuery.MatchClause = GraphMatch();
+            }
 
             if (Scanner.TryScan("ORDER BY"))
                 q.OrderBy = OrderBy();
@@ -91,10 +111,98 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
             }
 
-            if (Scanner.AtEndOfInput() == false)
+            if (recursive == false && Scanner.AtEndOfInput() == false)
                 ThrowParseException("Expected end of query");
 
             return q;
+        }
+
+        private void WithClause(Query q)
+        {
+            if (Scanner.TryScan("EDGES"))
+            {
+                Scanner.Identifier();
+
+                (var success, var error) = q.TryAddWithEdgePredicates(WithEdges());
+
+                if (success == false)
+                {
+                    ThrowParseException($"Error adding with edges clause, error:{error}");
+                }
+
+            }
+            else
+            {
+                (var success, var error) = q.TryAddWithClause(With());
+                if (success == false)
+                {
+                    ThrowParseException($"Error adding with clause, error:{error}");
+                }
+            }
+        }
+
+        private StringSegment EdgeType()
+        {
+            StringSegment edgeType = null;
+            if (Scanner.TryScan('('))
+            {
+                if (Scanner.Identifier() == true)
+                {
+                    edgeType = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength);
+                }
+                if (Scanner.TryScan(')') == false)
+                    ThrowParseException("With edges(<identifier>) was not closed with ')'");
+            }
+
+            return edgeType;
+        }
+
+        private (WithEdgesExpression Expression, StringSegment Allias) WithEdges()
+        {
+            StringSegment edgeType = EdgeType();
+
+            if (Scanner.TryScan('{') == false)
+                throw new InvalidQueryException("With edges should be followed with '{' ", Scanner.Input, null);
+
+            QueryExpression qe = null;
+            if (Scanner.TryScan("WHERE") && Expression(out qe) == false|| qe == null)
+                ThrowParseException("Unable to parse WHERE clause of an 'With Edges' clause");
+
+            List<(QueryExpression Expression, OrderByFieldType OrderingType, bool Ascending)> orderBy = null;
+            if (Scanner.TryScan("ORDER BY"))
+            {
+                orderBy = OrderBy();
+            }
+
+            if (Scanner.TryScan('}') == false)
+                throw new InvalidQueryException("With clause contains invalid body", Scanner.Input, null);
+
+            if (Alias(true, out var allias) == false || allias.HasValue == false)
+                throw new InvalidQueryException("With clause must contain allias but none was provided", Scanner.Input, null);
+
+            var wee = new WithEdgesExpression(qe, edgeType, orderBy);
+            return (wee, allias.Value);
+        }
+
+        private PatternMatchExpression GraphMatch()
+        {
+            throw new NotImplementedException();
+        }
+
+        private (Query Query, StringSegment Allias) With()
+        {
+            if (Scanner.TryScan('{') == false)
+                throw new InvalidQueryException("With keyword should be followed with either 'edges' or '{' ", Scanner.Input, null);
+
+            var query = Parse(recursive:true);
+
+            if (Scanner.TryScan('}') == false)
+                throw new InvalidQueryException("With clause contains invalid body", Scanner.Input, null);
+
+            if (Alias(true, out var allias) == false || allias.HasValue == false)
+                throw new InvalidQueryException("With clause must contain allias but none was provided", Scanner.Input, null);
+
+            return (query, allias.Value);
         }
 
         private static Esprima.Ast.Program ValidateScript(string script)
@@ -355,7 +463,7 @@ namespace Raven.Server.Documents.Queries.Parser
         }
 
 
-        private (FieldExpression From, StringSegment? Alias, QueryExpression Filter, bool Index) FromClause()
+        private FromClause FromClause()
         {
             if (Scanner.TryScan("FROM") == false)
                 ThrowParseException("Expected FROM clause");
@@ -389,7 +497,13 @@ namespace Raven.Server.Documents.Queries.Parser
 
             Alias(false, out var alias);
 
-            return (field, alias, filter, index);
+            return new FromClause
+            {
+                From = field,
+                Alias = alias,
+                Filter = filter,
+                Index = index
+            };
         }
 
         private static readonly string[] AliasKeywords =

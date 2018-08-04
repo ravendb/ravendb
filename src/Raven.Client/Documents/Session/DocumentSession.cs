@@ -71,6 +71,7 @@ namespace Raven.Client.Documents.Session
             : base(documentStore, id, options)
         {
         }
+
         /// <summary>
         /// Saves all the changes to the Raven server.
         /// </summary>
