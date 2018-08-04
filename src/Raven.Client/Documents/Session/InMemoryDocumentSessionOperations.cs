@@ -18,7 +18,6 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Graph;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
@@ -230,18 +229,6 @@ namespace Raven.Client.Documents.Session
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(_documentStore.Conventions)
             };
-        }
-
-        public IReadOnlyList<(string EdgeType, EdgeInfo Edge)> GetEdgesOf<T>(T instance)
-        {
-            if (instance == null)
-                throw new ArgumentNullException(nameof(instance));
-
-            var documentInfo = GetDocumentInfo(instance);
-            if(documentInfo == null)
-                throw new InvalidOperationException($"Cannot fetch edges of {nameof(instance)} because it is not loaded in the document session.");
-
-            return documentInfo.Metadata.ReadEdgeData().ToList();
         }
 
         /// <summary>
@@ -625,43 +612,6 @@ more responsive application.
         public void Store(object entity, string changeVector, string id)
         {
             StoreInternal(entity, changeVector, id, changeVector == null ? ConcurrencyCheckMode.Disabled : ConcurrencyCheckMode.Forced);
-        }
-
-        public void AddEdgeBetween(object @from, object to, string edgeType, Dictionary<string, object> edgeProperties = null)
-        {
-            if (NoTracking)
-                throw new InvalidOperationException("Cannot store entity. Entity tracking is disabled in this session.");
-
-            if (from == null)
-                throw new ArgumentNullException(nameof(from));
-
-            if (to == null)
-                throw new ArgumentNullException(nameof(to));
-
-            if (edgeType == null)
-                throw new ArgumentNullException(nameof(edgeType));
-
-            if (!DocumentsByEntity.TryGetValue(@from, out var fromDocInfo))
-                throw new InvalidOperationException($"Cannot add edge. The parameter '{nameof(@from)}' should be in the session BEFORE an edge can be added");
-            if (!DocumentsByEntity.TryGetValue(to, out var toDocInfo))
-                throw new InvalidOperationException($"Cannot add edge. The parameter '{nameof(to)}' should be in the session BEFORE an edge can be added");
-
-            var newEdgeInfo = new EdgeInfo
-            {
-                To = toDocInfo.Id,
-                Attributes = edgeProperties
-            };
-
-            if (!fromDocInfo.Metadata.TryGetMember(Constants.Documents.Metadata.Edges,out _))
-            {
-                if(fromDocInfo.Metadata.Modifications == null)
-                    fromDocInfo.Metadata.Modifications = new DynamicJsonValue();
-
-                fromDocInfo.Metadata.Modifications[Constants.Documents.Metadata.Edges] = new DynamicJsonArray();
-                fromDocInfo.Metadata = Context.ReadObject(fromDocInfo.Metadata, "add/@edges");
-            }
-
-            fromDocInfo.Metadata.WriteEdgeData(edgeType,newEdgeInfo);
         }
 
         private void StoreInternal(object entity, string changeVector, string id, ConcurrencyCheckMode forceConcurrencyCheck)
