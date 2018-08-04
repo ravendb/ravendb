@@ -124,6 +124,15 @@ class migrateDatabaseModel {
             required: true
         });
 
+        this.selectMigrationOption.extend({
+            validation: [
+                {
+                    validator: (value: migrationOptions) => value !== "none",
+                    message: "Please choose a database source"
+                }
+            ]
+        });
+
         this.mongoDbConfiguration.databaseName.extend({
             required: {
                 onlyIf: () => this.showMongoDbOptions()
@@ -170,6 +179,7 @@ class migrateDatabaseModel {
 
         this.validationGroup = ko.validatedObservable({
             fullPathToMigrator: this.fullPathToMigrator,
+            selectMigrationOption: this.selectMigrationOption,
             mongoDbDatabaseName: this.mongoDbConfiguration.databaseName,
             connectionString: this.mongoDbConfiguration.connectionString,
             cosmosDbDatabaseName: this.cosmosDbConfiguration.databaseName,
@@ -179,6 +189,7 @@ class migrateDatabaseModel {
 
         this.validationGroupDatabasesCommand = ko.validatedObservable({
             fullPathToMigrator: this.fullPathToMigrator,
+            selectMigrationOption: this.selectMigrationOption,
             connectionString: this.mongoDbConfiguration.connectionString,
             azureEndpointUrl: this.cosmosDbConfiguration.azureEndpointUrl,
             primaryKey: this.cosmosDbConfiguration.primaryKey
