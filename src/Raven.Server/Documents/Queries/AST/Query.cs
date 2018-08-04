@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Queries.AST
             return sb.ToString();
         }
 
-        public void TryAddWithClause((Query Query, StringSegment Allias) withClause)
+        public void TryAddWithClause(Query query, StringSegment alias)
         {
             if (GraphQuery == null)
             {
@@ -50,14 +50,14 @@ namespace Raven.Server.Documents.Queries.AST
                 GraphQuery.WithDocumentQueries = new Dictionary<StringSegment, Query>();
             }
 
-            if (GraphQuery.WithDocumentQueries.ContainsKey(withClause.Allias)  )
-                throw new InvalidQueryException($"Allias {withClause.Allias} is already in use on a diffrent 'With' clause", 
+            if (GraphQuery.WithDocumentQueries.ContainsKey(alias)  )
+                throw new InvalidQueryException($"Allias {alias} is already in use on a diffrent 'With' clause", 
                     QueryText, null);
 
-            GraphQuery.WithDocumentQueries.Add(withClause.Allias, withClause.Query);
+            GraphQuery.WithDocumentQueries.Add(alias, query);
         }
 
-        public void TryAddWithEdgePredicates((WithEdgesExpression Expression, StringSegment Allias) WithEdges)
+        public void TryAddWithEdgePredicates(WithEdgesExpression expr, StringSegment alias)
         {
             if (GraphQuery == null)
             {
@@ -69,11 +69,11 @@ namespace Raven.Server.Documents.Queries.AST
                 GraphQuery.WithEdgePredicates = new Dictionary<StringSegment, WithEdgesExpression>();
             }
 
-            if (GraphQuery.WithEdgePredicates.ContainsKey(WithEdges.Allias))
-                throw new InvalidQueryException($"Allias {WithEdges.Allias} is already in use on a diffrent 'With' clause",
+            if (GraphQuery.WithEdgePredicates.ContainsKey(alias))
+                throw new InvalidQueryException($"Allias {alias} is already in use on a diffrent 'With' clause",
                     QueryText, null);
 
-            GraphQuery.WithEdgePredicates.Add(WithEdges.Allias, WithEdges.Expression);
+            GraphQuery.WithEdgePredicates.Add(alias, expr);
         }
     }
 }

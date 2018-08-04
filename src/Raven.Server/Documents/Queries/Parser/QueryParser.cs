@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Queries.Parser
         private int _statePos;
 
         public QueryScanner Scanner = new QueryScanner();
-        private Dictionary<StringSegment, (Query Query, bool IsEdge)> _synteticWithQueries;
+        private Dictionary<StringSegment, (StringSegment Collection, QueryExpression Filter, bool IsEdge)> _synteticWithQueries;
 
         public void Init(string q)
         {
@@ -79,16 +79,23 @@ namespace Raven.Server.Documents.Queries.Parser
 
                 if(_synteticWithQueries != null)
                 {
-                    foreach (var sq in _synteticWithQueries.Values)
+                    foreach (var (alias, sq) in _synteticWithQueries)
                     {
                         if (sq.IsEdge)
                         {
-                            var with = new WithEdgesExpression(sq.Query.Where, sq.Query.From.From.FieldValue, null);
-                            q.TryAddWithEdgePredicates((with, sq.Query.From.Alias.Value));
+                            var with = new WithEdgesExpression(sq.Filter, sq.Collection, null);
+                            q.TryAddWithEdgePredicates(with, alias);
                         }
                         else
                         {
-                             q.TryAddWithClause((sq.Query, sq.Query.From.Alias.Value));
+                             q.TryAddWithClause(new Query
+                             {
+                                 From = new FromClause
+                                 {
+                                     From = new FieldExpression(new List<StringSegment> { sq.Collection }),
+                                 },
+                                 Where = sq.Filter
+                             }, alias);
                         }
                     }
                     _synteticWithQueries.Clear();
@@ -145,11 +152,13 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 Scanner.Identifier();
 
-                q.TryAddWithEdgePredicates(WithEdges());
+                var (with, alias) = WithEdges();
+                q.TryAddWithEdgePredicates(with, alias);
             }
             else
             {
-                q.TryAddWithClause(With());
+                var (expr, alias) = With();
+                q.TryAddWithClause(expr, alias);
             }
         }
 
@@ -221,52 +230,45 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (Scanner.Identifier() == false)
                     throw new InvalidQueryException("Failed to read collection after: " + alias, Scanner.Input, null);
                 var collection = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength);
+                QueryExpression filter = null;
                 if (Scanner.TryScan('('))
                 {
-                    if(Expression(out var filter) == false)
+                    if(Expression(out filter) == false)
                         throw new InvalidQueryException("Failed to parse filter expression for: " + alias, Scanner.Input, null);
-
-                    AddWithQuery(collection, alias, filter, isEdge);
 
                     if (Scanner.TryScan(')') == false)
                         throw new InvalidQueryException("Failed to find closing ')' after filter expression for: " + alias, Scanner.Input, null);
                 }
+
+                AddWithQuery(collection, alias, filter, isEdge);
+
             }
             return true;
         }
 
         private void AddWithQuery(StringSegment collection, StringSegment alias, QueryExpression filter, bool isEdge)
         {
-           
             if (_synteticWithQueries == null)
-                _synteticWithQueries = new Dictionary<StringSegment, (Query Query, bool IsEdge)>(StringSegmentEqualityComparer.Instance);
-
+                _synteticWithQueries = new Dictionary<StringSegment, (StringSegment Collection, QueryExpression Filter, bool IsEdge)>(StringSegmentEqualityComparer.Instance);
 
             if(_synteticWithQueries.TryGetValue(alias, out var existing))
             {
                 if (existing.IsEdge != isEdge)
                     ThrowDuplicateAliasWithoutSameBody(alias);
 
-                if (collection != existing.Query.From.From.Compound[0])
+                if (collection != existing.Collection)
                     ThrowDuplicateAliasWithoutSameBody(alias);
 
-                if((filter != null ) != (existing.Query.Where != null))
+                if((filter != null ) != (existing.Filter != null))
                     ThrowDuplicateAliasWithoutSameBody(alias);
 
-                if(filter != null && filter.Equals(existing.Query.Where) == false)
+                if(filter != null && filter.Equals(existing.Filter) == false)
                     ThrowDuplicateAliasWithoutSameBody(alias);
 
                 return;
             }
 
-            _synteticWithQueries.Add(alias, (new Query
-            {
-                From = new FromClause
-                {
-                    From = new FieldExpression(new List<StringSegment> { collection }),
-                },
-                Where = filter
-            }, isEdge));
+            _synteticWithQueries.Add(alias, (collection, filter, isEdge));
         }
 
         private void ThrowDuplicateAliasWithoutSameBody(StringSegment alias)
