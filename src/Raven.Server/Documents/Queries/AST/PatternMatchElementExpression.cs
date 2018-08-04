@@ -39,6 +39,23 @@ namespace Raven.Server.Documents.Queries.AST
             }
             return sb.ToString();
         }
+
+        public override bool Equals(QueryExpression other)
+        {
+            if (!(other is PatternMatchElementExpression pe))
+                return false;
+
+            if (Path.Length != pe.Path.Length)
+                return false;
+
+            for (int i = 0; i < Path.Length; i++)
+            {
+                if (Path[i].EdgeType != pe.Path[i].EdgeType ||
+                    Path[i].Alias != pe.Path[i].Alias)
+                    return false;
+            }
+            return true;
+        }
     }
 
     public enum EdgeType

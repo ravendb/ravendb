@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text;
+using Raven.Client.Exceptions;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -37,7 +38,7 @@ namespace Raven.Server.Documents.Queries.AST
             return sb.ToString();
         }
 
-        public (bool Success, string Error) TryAddWithClause((Query Query, StringSegment Allias) withClause)
+        public void TryAddWithClause((Query Query, StringSegment Allias) withClause)
         {
             if (GraphQuery == null)
             {
@@ -50,13 +51,13 @@ namespace Raven.Server.Documents.Queries.AST
             }
 
             if (GraphQuery.WithDocumentQueries.ContainsKey(withClause.Allias)  )
-                    return (false, $"Allias {withClause.Allias} is already in use on a diffrent 'With' clause");
+                throw new InvalidQueryException($"Allias {withClause.Allias} is already in use on a diffrent 'With' clause", 
+                    QueryText, null);
 
             GraphQuery.WithDocumentQueries.Add(withClause.Allias, withClause.Query);
-            return (true, null);
         }
 
-        public (bool Success, string Error) TryAddWithEdgePredicates((WithEdgesExpression Expression, StringSegment Allias) WithEdges)
+        public void TryAddWithEdgePredicates((WithEdgesExpression Expression, StringSegment Allias) WithEdges)
         {
             if (GraphQuery == null)
             {
@@ -69,10 +70,10 @@ namespace Raven.Server.Documents.Queries.AST
             }
 
             if (GraphQuery.WithEdgePredicates.ContainsKey(WithEdges.Allias))
-                return (false, $"Allias {WithEdges.Allias} is already in use on a diffrent 'With' clause");
+                throw new InvalidQueryException($"Allias {WithEdges.Allias} is already in use on a diffrent 'With' clause",
+                    QueryText, null);
 
             GraphQuery.WithEdgePredicates.Add(WithEdges.Allias, WithEdges.Expression);
-            return (true, null);
         }
     }
 }

@@ -44,5 +44,36 @@ namespace Raven.Server.Documents.Queries.AST
 
             return sb.ToString();
         }
+
+       
+        public override bool Equals(QueryExpression other)
+        {
+            if (!(other is WithEdgesExpression ie))
+                return false;
+
+            if (EdgeType != ie.EdgeType)
+                return false;
+
+            if ((Where != null) != (ie.Where != null) || 
+                (OrderBy != null) != (ie.OrderBy != null))
+                return false;
+
+            if (Where != null && Where.Equals(ie.Where) == false)
+                return false;
+
+            if(OrderBy != null)
+            {
+                if (OrderBy.Count != ie.OrderBy.Count)
+                    return false;
+
+                for (int i = 0; i < OrderBy.Count; i++)
+                {
+                    if (OrderBy[i].Equals(ie.OrderBy.Count) == false)
+                        return false;
+                }
+            }
+
+            return true;
+        }
     }
 }

@@ -57,5 +57,13 @@ namespace Raven.Server.Documents.Queries.AST
 
             return Left.GetText(parent) + " " + op + " " + Right.GetText(parent);
         }
+
+        public override bool Equals(QueryExpression other)
+        {
+            if (!(other is BinaryExpression be))
+                return false;
+
+            return Operator == be.Operator && Left.Equals(be.Left) && Right.Equals(be.Right);
+        }
     }
 }

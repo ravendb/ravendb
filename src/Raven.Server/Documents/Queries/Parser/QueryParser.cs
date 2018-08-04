@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Esprima;
 using Raven.Client.Exceptions;
@@ -23,7 +24,7 @@ namespace Raven.Server.Documents.Queries.Parser
         private int _statePos;
 
         public QueryScanner Scanner = new QueryScanner();
-        private List<(Query Query, bool IsEdge)> _synteticWithQueries;
+        private Dictionary<StringSegment, (Query Query, bool IsEdge)> _synteticWithQueries;
 
         public void Init(string q)
         {
@@ -78,20 +79,16 @@ namespace Raven.Server.Documents.Queries.Parser
 
                 if(_synteticWithQueries != null)
                 {
-                    foreach (var sq in _synteticWithQueries)
+                    foreach (var sq in _synteticWithQueries.Values)
                     {
                         if (sq.IsEdge)
                         {
                             var with = new WithEdgesExpression(sq.Query.Where, sq.Query.From.From.FieldValue, null);
-                            var (success, err) = q.TryAddWithEdgePredicates((with, sq.Query.From.Alias.Value));
-                            if (success == false)
-                                throw new InvalidQueryException("Failed to add a WITH clause because: " + err, Scanner.Input, null);
+                            q.TryAddWithEdgePredicates((with, sq.Query.From.Alias.Value));
                         }
                         else
                         {
-                            var (success, err) = q.TryAddWithClause((sq.Query, sq.Query.From.Alias.Value));
-                            if (success == false)
-                                throw new InvalidQueryException("Failed to add a WITH clause because: " + err, Scanner.Input, null);
+                             q.TryAddWithClause((sq.Query, sq.Query.From.Alias.Value));
                         }
                     }
                     _synteticWithQueries.Clear();
@@ -148,21 +145,11 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 Scanner.Identifier();
 
-                (var success, var error) = q.TryAddWithEdgePredicates(WithEdges());
-
-                if (success == false)
-                {
-                    ThrowParseException($"Error adding with edges clause, error: {error}");
-                }
-
+                q.TryAddWithEdgePredicates(WithEdges());
             }
             else
             {
-                (var success, var error) = q.TryAddWithClause(With());
-                if (success == false)
-                {
-                    ThrowParseException($"Error adding with clause, error: {error}");
-                }
+                q.TryAddWithClause(With());
             }
         }
 
@@ -219,7 +206,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
         public static readonly string[] EdgeOps = new[] { "<-", ">", "[", "-", "<", "(" };
 
-        private bool GraphAlias(Action<Query, bool> addFilterQuery, bool isEdge, out StringSegment alias)
+        private bool GraphAlias(bool isEdge, out StringSegment alias)
         {
             if (Scanner.Identifier() == false)
             {
@@ -234,36 +221,59 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (Scanner.Identifier() == false)
                     throw new InvalidQueryException("Failed to read collection after: " + alias, Scanner.Input, null);
                 var collection = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength);
-                QueryExpression filter = null;
                 if (Scanner.TryScan('('))
                 {
-                    if(Expression(out filter) == false)
+                    if(Expression(out var filter) == false)
                         throw new InvalidQueryException("Failed to parse filter expression for: " + alias, Scanner.Input, null);
+
+                    AddWithQuery(collection, alias, filter, isEdge);
 
                     if (Scanner.TryScan(')') == false)
                         throw new InvalidQueryException("Failed to find closing ')' after filter expression for: " + alias, Scanner.Input, null);
                 }
-                addFilterQuery(new Query
-                {
-                    From = new FromClause
-                    {
-                        From = new FieldExpression(new List<StringSegment> { collection }),
-                        Alias = alias
-                    },
-                    Where = filter
-                }, isEdge);
             }
             return true;
         }
 
-        private void AddWithQuery(Query filterQuery, bool isEdge)
+        private void AddWithQuery(StringSegment collection, StringSegment alias, QueryExpression filter, bool isEdge)
         {
-            if (filterQuery != null)
+           
+            if (_synteticWithQueries == null)
+                _synteticWithQueries = new Dictionary<StringSegment, (Query Query, bool IsEdge)>(StringSegmentEqualityComparer.Instance);
+
+
+            if(_synteticWithQueries.TryGetValue(alias, out var existing))
             {
-                if (_synteticWithQueries == null)
-                    _synteticWithQueries = new List<(Query Query, bool IsEdge)>();
-                _synteticWithQueries.Add((filterQuery, isEdge));
+                if (existing.IsEdge != isEdge)
+                    ThrowDuplicateAliasWithoutSameBody(alias);
+
+                if (collection != existing.Query.From.From.Compound[0])
+                    ThrowDuplicateAliasWithoutSameBody(alias);
+
+                if((filter != null ) != (existing.Query.Where != null))
+                    ThrowDuplicateAliasWithoutSameBody(alias);
+
+                if(filter != null && filter.Equals(existing.Query.Where) == false)
+                    ThrowDuplicateAliasWithoutSameBody(alias);
+
+                return;
             }
+
+            _synteticWithQueries.Add(alias, (new Query
+            {
+                From = new FromClause
+                {
+                    From = new FieldExpression(new List<StringSegment> { collection }),
+                },
+                Where = filter
+            }, isEdge));
+        }
+
+        private void ThrowDuplicateAliasWithoutSameBody(StringSegment alias)
+        {
+            throw new InvalidQueryException("Duplicated alias '" + alias + "' was found with a different definition than previous defined: " + 
+                new StringSegment(Scanner.Input, alias.Offset, Scanner.Position - alias.Offset),
+                 Scanner.Input, null);
         }
 
 
@@ -295,7 +305,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if(Scanner.TryScan('(') == false)
                 throw new InvalidQueryException("MATCH operator expected a '(', but didn't get it.", Scanner.Input, null);
 
-            if(GraphAlias(AddWithQuery, isEdge: false, out var alias) == false)
+            if(GraphAlias(isEdge: false, out var alias) == false)
             {
                 // this isn't (foo), so maybe ((foo)-...)
                 throw new NotImplementedException("Need to get here");
@@ -324,7 +334,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             if (foundDash == false)
                                 throw new InvalidQueryException("Got '[' when expected '-', did you forget to add '-[' ?", Scanner.Input, null);
 
-                            if (GraphAlias(AddWithQuery, isEdge: true, out alias) == false)
+                            if (GraphAlias(isEdge: true, out alias) == false)
                                 throw new InvalidQueryException("MATCH identifider after '-['", Scanner.Input, null);
                             if (Scanner.TryScan(']') == false)
                                 throw new InvalidQueryException("MATCH operator expected a ']' after reading: " + alias, Scanner.Input, null);
@@ -353,7 +363,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             if (expectNode == false && list[list.Count - 1].EdgeType != EdgeType.Incoming)
                                 throw new InvalidQueryException("Got '(', but it wasn't expected", Scanner.Input, null);
 
-                            if (GraphAlias(AddWithQuery, isEdge: false, out alias) == false)
+                            if (GraphAlias(isEdge: false, out alias) == false)
                                 throw new InvalidQueryException("Couldn't get node's alias", Scanner.Input, null);
 
                             if (Scanner.TryScan(')') == false)
