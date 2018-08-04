@@ -50,7 +50,9 @@ namespace Raven.Client.Json
                 {
                     if (prop.Name.Length > 0 && prop.Name[0] == '@')
                     {
-                        if (prop.Name != Constants.Documents.Metadata.Collection && prop.Name != Constants.Documents.Metadata.Expires)
+                        if (prop.Name != Constants.Documents.Metadata.Collection && 
+                            prop.Name != Constants.Documents.Metadata.Expires && 
+                            prop.Name != Constants.Documents.Metadata.Edges)
                             continue; // system property, ignoring it
                     }
 
