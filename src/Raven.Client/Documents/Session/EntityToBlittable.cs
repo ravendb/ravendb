@@ -33,9 +33,6 @@ namespace Raven.Client.Documents.Session
             if (entity is BlittableJsonReaderObject blittable)
                 return blittable;
 
-            //make sure to incorporate changes made to edges into the metadata
-            documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, "read/metadata-with-modifications");
-
             using (DefaultRavenContractResolver.RegisterExtensionDataGetter(FillMissingProperties))
             using (var writer = new BlittableJsonWriter(_session.Context, documentInfo))
             {
