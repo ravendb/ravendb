@@ -84,6 +84,16 @@
                             </div>
                         </div>
                         <!-- /ko -->
+                        
+                        <div class="form-group">
+                            <label class="control-label"></label>
+                            <div class="flex-grow">
+                                <div data-bind="if: activeConfiguration">
+                                    <pre class="form-control editor query-source"
+                                 data-bind="aceEditor: { code: transformScript, allowResize: false, minHeight: 300, maxHeight: 300, lang:'ace/mode/javascript' }"></pre>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

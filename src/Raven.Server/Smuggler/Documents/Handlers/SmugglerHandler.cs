@@ -460,6 +460,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
                 var token = CreateOperationToken();
+                var transformScript = migrationConfiguration.TransformScript;
 
                 var t = Database.Operations.AddOperation(Database, $"Migration from: {migrationConfiguration.DatabaseTypeName}",
                     Operations.OperationType.DatabaseMigration,
@@ -474,7 +475,10 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                 using (ContextPool.AllocateOperationContext(out DocumentsOperationContext migrateContext))
                                 using (var stream = new GZipStream(process.StandardOutput.BaseStream, CompressionMode.Decompress))
                                 {
-                                    var options = new DatabaseSmugglerOptionsServerSide();
+                                    var options = new DatabaseSmugglerOptionsServerSide
+                                    {
+                                        TransformScript = transformScript
+                                    };
                                     DoImportInternal(migrateContext, stream, options, result, onProgress, token);
                                 }
                             }
