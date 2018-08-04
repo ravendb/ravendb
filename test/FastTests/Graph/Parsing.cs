@@ -81,7 +81,6 @@ MATCH (((u)<-[r]-(m) AND NOT ((actor)-[__alias1]->(m))) OR (u)-[__alias2]->(acto
             queryParser.Init(q);
             Query query = queryParser.Parse(QueryType.Select);
             var result = query.ToString();
-            System.Console.WriteLine(result);
             Assert.Equal(expected.NormalizeLineEnding(), result.NormalizeLineEnding());
 
         }
@@ -174,7 +173,7 @@ match (u)-[r]->(m)
 with { from Users } as u
 with edges(Rated) { } as r
 with { from Movies } as m
-match (m)<-[r]<-(u)
+match (m)<-[r]-(u)
 ";
             var queryParser = new QueryParser();
             queryParser.Init(text);
@@ -188,7 +187,7 @@ match (m)<-[r]<-(u)
                 Assert.Equal("r", p.Path[1].Alias);
                 Assert.Equal(EdgeType.Incoming, p.Path[1].EdgeType);
                 Assert.Equal("u", p.Path[2].Alias);
-                Assert.Equal(EdgeType.Outgoing, p.Path[2].EdgeType);
+                Assert.Equal(EdgeType.Incoming, p.Path[2].EdgeType);
             }
             else
             {
@@ -201,7 +200,7 @@ match (m)<-[r]<-(u)
         public void CanRewriteQuery()
         {
             const string text = @"
-match (m:Movies)<-[r:Rated]<-( u:Users(City='Hadera') )
+match (m:Movies)<-[r:Rated]-( u:Users(City='Hadera') )
 ";
             var queryParser = new QueryParser();
             queryParser.Init(text);
@@ -215,7 +214,7 @@ match (m:Movies)<-[r:Rated]<-( u:Users(City='Hadera') )
                 Assert.Equal("r", p.Path[1].Alias);
                 Assert.Equal(EdgeType.Incoming, p.Path[1].EdgeType);
                 Assert.Equal("u", p.Path[2].Alias);
-                Assert.Equal(EdgeType.Outgoing, p.Path[2].EdgeType);
+                Assert.Equal(EdgeType.Incoming, p.Path[2].EdgeType);
 
                 Assert.Equal("FROM Users WHERE City = 'Hadera'", query.GraphQuery.WithDocumentQueries["u"].ToString().Trim());
                 Assert.Equal("FROM Movies", query.GraphQuery.WithDocumentQueries["m"].ToString().Trim());
