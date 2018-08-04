@@ -26,6 +26,7 @@ interface computedAppUrls {
     importCollectionFromCsv: KnockoutComputed<string>;
     importDatabaseFromSql: KnockoutComputed<string>;
     exportDatabaseUrl: KnockoutComputed<string>;
+    migrateRavenDbDatabaseUrl: KnockoutComputed<string>;
     migrateDatabaseUrl: KnockoutComputed<string>;
     sampleDataUrl: KnockoutComputed<string>;
     ongoingTasksUrl: KnockoutComputed<string>;
