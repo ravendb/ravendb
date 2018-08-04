@@ -28,7 +28,7 @@ namespace Tryouts
 
             using(var parsing = new Parsing())
             {
-                parsing.CanRewriteQuery();
+                parsing.CanParseComplexGraph();
             }
 
         }
