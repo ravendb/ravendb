@@ -1,6 +1,7 @@
 ﻿using System;
 using Microsoft.Extensions.CommandLineUtils;
 using Newtonsoft.Json;
+using Raven.Migrator.CosmosDB;
 using Raven.Migrator.MongoDB;
 
 namespace Raven.Migrator
@@ -8,6 +9,22 @@ namespace Raven.Migrator
     internal static class CommandLineApp
     {
         private const string HelpOptionString = "-h | -? | --help";
+
+        private static readonly string MongoDbDescription =
+            "Connect to MongoDB, pass configuration as JSON" + Environment.NewLine +
+            "   Command - available commands: databases, collections, export" + Environment.NewLine +
+            "   ConnectionString - MongoDB connection string" + Environment.NewLine +
+            "   DatbaseName - the database name, applicaple only for the collections and export commands" + Environment.NewLine +
+            "   MigrateGridFS - (Optional) migrate GridFS that is associated with the provided database" + Environment.NewLine +
+            "   CollectionsToMigrate - (Optional) a dictionary of collections to rename during the export";
+
+        private static readonly string CosmosDbDescription =
+            "Connect to CosmosDB, pass configuration as JSON" + Environment.NewLine +
+            "   Command - available commands: databases, collections, export" + Environment.NewLine +
+            "   AzureEndpointUrl - CosmosDB URL" + Environment.NewLine +
+            "   PrimaryKey - CosmosDB primary key" + Environment.NewLine +
+            "   DatbaseName - the database name, applicaple only for the collections and export commands" + Environment.NewLine +
+            "   CollectionsToMigrate - (Optional) a dictionary of collections to rename during the export";
 
         private static CommandLineApplication _app;
 
@@ -24,7 +41,10 @@ namespace Raven.Migrator
 
             _app.HelpOption(HelpOptionString);
 
-            ConfigureMigrationFromMongoDBCommand();
+            ConfigureMigrationFromNoSqlDatabaseCommand<MongoDBConfiguration>(
+                "mongodb", MongoDbDescription, config => new MongoDBMigrator(config));
+            ConfigureMigrationFromNoSqlDatabaseCommand<CosmosDBConfiguration>(
+                "cosmosdb", CosmosDbDescription, config => new CosmosDBMigrator(config));
 
             _app.OnExecute(() =>
             {
@@ -42,48 +62,45 @@ namespace Raven.Migrator
             }
         }
 
-        private static void ConfigureMigrationFromMongoDBCommand()
+        private static void ConfigureMigrationFromNoSqlDatabaseCommand<T>(
+            string command, string description, Func<T, INoSqlMigrator> getMigrator)
+            where T : AbstractMigrationConfiguration
         {
-            _app.Command("mongodb", cmd =>
+            _app.Command(command, cmd =>
             {
-                cmd.ExtendedHelpText = cmd.Description = "Connect to MongoDB, pass configuration as JSON" + Environment.NewLine +
-                                                         "   Command - available commands: databases, collections, export" + Environment.NewLine +
-                                                         "   ConnectionString - MongoDB connection string" + Environment.NewLine +
-                                                         "   DatbaseName - the database name, applicaple only for the collections and export commands" + Environment.NewLine +
-                                                         "   MigrateGridFS - (Optional) migrate GridFS that is associated with the provided database" + Environment.NewLine +
-                                                         "   CollectionsToMigrate - (Optional) a dictionary of collections to rename during the export";
+                cmd.ExtendedHelpText = cmd.Description = description;
                 cmd.HelpOption(HelpOptionString);
 
                 cmd.OnExecute(() =>
                 {
                     try
                     {
-                        var mongodbConfigurationString = Console.ReadLine();
-                        var mongodbConfiguration = JsonConvert.DeserializeObject<MongoDBConfiguration>(mongodbConfigurationString);
+                        var configurationString = Console.ReadLine();
+                        var configuration = JsonConvert.DeserializeObject<T>(configurationString);
 
-                        if (string.IsNullOrWhiteSpace(mongodbConfiguration.Command))
+                        if (string.IsNullOrWhiteSpace(configuration.Command))
                             return ExitWithError("Command cannot be null or empty", cmd);
 
-                        var migrator = new MongoDBMigrator(mongodbConfiguration);
-                        switch (mongodbConfiguration.Command)
+                        var migrator = getMigrator(configuration);
+                        switch (configuration.Command)
                         {
                             case "databases":
-                                migrator.GetDatabases().GetAwaiter().GetResult();
+                                migrator.GetDatabases().Wait();
                                 break;
                             case "collections":
-                                migrator.GetCollectionsInfo().GetAwaiter().GetResult();
+                                migrator.GetCollectionsInfo().Wait();
                                 break;
                             case "export":
-                                migrator.MigrateSingleDatabse().GetAwaiter().GetResult();
+                                migrator.MigrateDatabse().Wait();
                                 break;
                             default:
-                                return ExitWithError($"Command '{mongodbConfiguration.Command}' doesn't exist" + Environment.NewLine +
+                                return ExitWithError($"Command '{configuration.Command}' doesn't exist" + Environment.NewLine +
                                                      "available commands: databases, collections, export", cmd);
                         }
                     }
                     catch (Exception e)
                     {
-                        return ExitWithError($"Failed to run MongoDB command: {e}", cmd);
+                        return ExitWithError($"Failed to run {command} command: {e}", cmd);
                     }
 
                     return 0;

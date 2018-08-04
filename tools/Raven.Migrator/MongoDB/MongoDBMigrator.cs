@@ -10,7 +10,7 @@ using Newtonsoft.Json;
 
 namespace Raven.Migrator.MongoDB
 {
-    public class MongoDBMigrator
+    public class MongoDBMigrator : INoSqlMigrator
     {
         private readonly MongoDBConfiguration _configuration;
         private readonly BsonDocument _filterDefinition = new BsonDocument();
@@ -36,7 +36,7 @@ namespace Raven.Migrator.MongoDB
                     foreach (var database in cursor.Current)
                     {
                         var name = database["name"].ToString();
-                        if (name.Equals("admin") || name.Equals("local"))
+                        if (name.Equals("admin") || name.Equals("local") || name.Equals("config"))
                             continue;
 
                         databases.Add(name);
@@ -62,7 +62,7 @@ namespace Raven.Migrator.MongoDB
                 new ExtendedCollectionsInfo
                 {
                     Collections = await GetCollections(database),
-                    HasGridFs = await HasGridFs(database)
+                    HasGridFS = await HasGridFs(database)
                 });
         }
 
@@ -99,7 +99,7 @@ namespace Raven.Migrator.MongoDB
             }
         }
 
-        public async Task MigrateSingleDatabse()
+        public async Task MigrateDatabse()
         {
             AssertDatabaseName();
 
@@ -112,26 +112,15 @@ namespace Raven.Migrator.MongoDB
                 _configuration.CollectionsToMigrate = await GetCollectionsToMigrate(database);
             }
 
-            using (MigrationHelpers.GetStreamWriter(_configuration, out var streamWriter))
-            {
-                await streamWriter.WriteAsync("{\"Docs\":[");
-
-                var isFirstDocument = new Reference<bool> { Value = true };
-                foreach (var collection in _configuration.CollectionsToMigrate)
+            await MigrationHelpers.MigrateNoSqlDatabase(
+                _configuration,
+                async (mongoCollectionName, ravenCollectionName, isFirstDocument, streamWriter) => 
+                    await MigrateSingleCollection(database, mongoCollectionName, ravenCollectionName, isFirstDocument, streamWriter),
+                async (isFirstDocument, streamWriter) =>
                 {
-                    var mongoCollectionName = collection.Key;
-                    var ravenCollectionName = collection.Value;
-                    if (string.IsNullOrWhiteSpace(ravenCollectionName))
-                        ravenCollectionName = mongoCollectionName;
-
-                    await MigrateSingleCollection(database, mongoCollectionName, ravenCollectionName, isFirstDocument, streamWriter);
-                }
-
-                if (_configuration.MigrateGridFS)
-                    await MigrateGridFS(database, isFirstDocument, streamWriter);
-
-                await streamWriter.WriteAsync("]}");
-            }
+                    if (_configuration.MigrateGridFS)
+                        await MigrateGridFS(database, isFirstDocument, streamWriter);
+                });
         }
 
         private async Task MigrateSingleCollection(
@@ -149,9 +138,12 @@ namespace Raven.Migrator.MongoDB
                 {
                     foreach (var document in documentsCursor.Current)
                     {
+                        var dictionary = (IDictionary<string, object>)document;
+                        var documentId = dictionary[MongoDocumentId].ToString();
+
                         await MigrationHelpers.WriteDocument(
                             document,
-                            MongoDocumentId,
+                            documentId,
                             ravenCollectionName,
                             new List<string>
                             {
@@ -200,9 +192,10 @@ namespace Raven.Migrator.MongoDB
                     foreach (var fileInfo in cursor.Current)
                     {
                         var document = ToExpandoObject(fileInfo.Metadata);
+                        var dictionary = (IDictionary<string, object>)document;
                         var documentId = fileInfo.Id.ToString();
                         var totalSize = fileInfo.Length;
-                        var contentType = GetContentType(fileInfo, (IDictionary<string, object>)document);
+                        var contentType = GetContentType(fileInfo, dictionary);
 
                         using (var stream = new MemoryStream())
                         {
@@ -211,9 +204,21 @@ namespace Raven.Migrator.MongoDB
                             stream.Position = 0;
 
                             attachmentNumber++;
-                            await MigrationHelpers.WriteDocumentWithAttachment(
-                                document, stream, totalSize, documentId, collectionName, 
+                            var attachmentInfo = await MigrationHelpers.WriteAttachment(
+                                stream, totalSize, documentId, collectionName, 
                                 contentType, attachmentNumber, isFirstDocument, streamWriter);
+
+                            await MigrationHelpers.WriteDocument(
+                                document,
+                                documentId,
+                                collectionName,
+                                null,
+                                isFirstDocument,
+                                streamWriter,
+                                new List<Dictionary<string, object>>
+                                {
+                                    attachmentInfo
+                                });
                         }
                     }
                 }

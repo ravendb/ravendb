@@ -2,6 +2,6 @@
 {
     public class ExtendedCollectionsInfo : CollectionsInfo
     {
-        public bool HasGridFs { get; set; }
+        public bool HasGridFS { get; set; }
     }
 }
