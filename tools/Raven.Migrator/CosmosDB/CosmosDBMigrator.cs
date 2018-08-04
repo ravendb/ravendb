@@ -14,6 +14,16 @@ namespace Raven.Migrator.CosmosDB
     {
         private readonly CosmosDBConfiguration _configuration;
 
+        private static readonly List<string> PropertiesToRemove = new List<string>
+        {
+            "Id",
+            "_rid",
+            "_etag",
+            "_ts",
+            "_attachments",
+            "_self"
+        };
+
         private const string CosmosDocumentId = "id";
 
         public CosmosDBMigrator(CosmosDBConfiguration configuration)
@@ -126,15 +136,7 @@ namespace Raven.Migrator.CosmosDB
                         document,
                         documentId,
                         ravenCollectionName,
-                        new List<string>
-                        {
-                            "Id",
-                            "_rid",
-                            "_etag",
-                            "_ts",
-                            "_attachments",
-                            "_self"
-                        },
+                        PropertiesToRemove,
                         isFirstDocument,
                         streamWriter,
                         attachments);

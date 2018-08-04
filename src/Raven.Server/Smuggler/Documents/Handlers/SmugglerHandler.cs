@@ -472,9 +472,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             try
                             {
                                 using (ContextPool.AllocateOperationContext(out DocumentsOperationContext migrateContext))
+                                using (var stream = new GZipStream(process.StandardOutput.BaseStream, CompressionMode.Decompress))
                                 {
                                     var options = new DatabaseSmugglerOptionsServerSide();
-                                    var stream = new GZipStream(process.StandardOutput.BaseStream, CompressionMode.Decompress);
                                     DoImportInternal(migrateContext, stream, options, result, onProgress, token);
                                 }
                             }
