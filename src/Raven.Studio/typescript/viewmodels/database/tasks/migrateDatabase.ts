@@ -47,11 +47,6 @@ class migrateDatabase extends viewModelBase {
     }
 
     getDatabases() {
-        const activeConfiguration = this.model.activeConfiguration();
-        if (!activeConfiguration) {
-            return;
-        }
-
         if (!this.isValid(this.model.validationGroupDatabasesCommand)) {
             return;
         }
@@ -76,11 +71,6 @@ class migrateDatabase extends viewModelBase {
     }
 
     getCollections() {
-        const activeConfiguration = this.model.activeConfiguration();
-        if (!activeConfiguration) {
-            return;
-        }
-
         if (!this.isValid(this.model.validationGroup)) {
             return;
         }

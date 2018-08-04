@@ -15,7 +15,7 @@
                             </div>
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group" data-bind="validationElement: selectMigrationOption, validationOptions: { insertMessages: false }">
                             <label class="control-label">Database Source</label>
                             <div class="flex-grow">
                                 <div class="btn-group">
@@ -27,6 +27,9 @@
                                             data-bind="click: _.partial(selectMigrationOption, 'CosmosDB'), css: { active: selectMigrationOption() === 'CosmosDB' }">
                                         CosmosDB
                                     </button>
+                                </div>
+                                <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: selectMigrationOption">
+                                    <div class="help-block" data-bind="validationMessage: selectMigrationOption"></div>
                                 </div>
                             </div>
                         </div>
