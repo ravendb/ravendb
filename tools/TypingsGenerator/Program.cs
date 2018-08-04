@@ -4,7 +4,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Raven;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
@@ -39,7 +38,6 @@ using Raven.Server.Commercial;
 using Raven.Server.Dashboard;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
-using Raven.Server.Documents.ETL.Providers;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Providers.SQL.Test;
@@ -237,6 +235,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OfflineMigrationProgress));
             scripter.AddType(typeof(BuildInfoWithResourceNames));
             scripter.AddType(typeof(MigratedServerUrls));
+            scripter.AddType(typeof(MigrationConfiguration));
 
             // revisions
             scripter.AddType(typeof(RevisionsConfiguration));
