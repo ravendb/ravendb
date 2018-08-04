@@ -510,7 +510,7 @@ namespace Raven.Server.Smuggler.Documents
                         if (_database.DocumentsStorage.RevisionsStorage.Configuration == null)
                             ThrowRevisionsDisabled();
 
-                        PutAttachments(context, document);
+                        PutAttachments(context, document, documentType.Attachments);
 
                         if (document.Flags.Contain(DocumentFlags.DeleteRevision))
                         {
@@ -555,7 +555,8 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private unsafe void PutAttachments(DocumentsOperationContext context, Document document)
+            private unsafe void PutAttachments(
+                DocumentsOperationContext context, Document document, List<AttachmentStream> attachmentStreams)
             {
                 if ((document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments)
                     return;
