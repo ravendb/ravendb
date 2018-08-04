@@ -86,6 +86,7 @@ class cosmosDbMigrationModel extends noSqlMigrationModel {
 class migrateDatabaseModel {
     selectMigrationOption = ko.observable<migrationOptions>("none");
     fullPathToMigrator = ko.observable<string>();
+    transformScript = ko.observable<string>();
 
     mongoDbConfiguration = new mongoDbMigrationModel();
     cosmosDbConfiguration = new cosmosDbMigrationModel();
@@ -198,7 +199,8 @@ class migrateDatabaseModel {
             DatabaseTypeName: type,
             FullPathToMigrator: this.fullPathToMigrator(),
             IsExportCommand: isExportCommand,
-            Input: input
+            Input: input,
+            TransformScript: this.transformScript()
         };
     }
 }

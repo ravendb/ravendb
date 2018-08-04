@@ -3,8 +3,7 @@ import migrateDatabaseCommand = require("commands/database/studio/migrateDatabas
 import migrateDatabaseModel = require("models/database/tasks/migrateDatabaseModel");
 import notificationCenter = require("common/notifications/notificationCenter");
 import eventsCollector = require("common/eventsCollector");
-import recentError = require("common/notifications/models/recentError");
-import generalUtils = require("common/generalUtils");
+import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 
 interface databasesInfo {
     Databases: Array<string>;
@@ -27,6 +26,8 @@ class migrateDatabase extends viewModelBase {
 
     constructor() {
         super();
+
+        aceEditorBindingHandler.install();
 
         this.model.fullPathToMigrator.subscribe(() => this.getDatabases());
         this.model.mongoDbConfiguration.connectionString.subscribe(() => {

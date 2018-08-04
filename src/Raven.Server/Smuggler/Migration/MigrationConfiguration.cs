@@ -13,6 +13,8 @@ namespace Raven.Server.Smuggler.Migration
         public BlittableJsonReaderObject Input { get; set; }
 
         public bool IsExportCommand { get; set; }
+
+        public string TransformScript { get; set; }
     }
 
     public class SingleDatabaseMigrationConfiguration : MigrationConfigurationBase
