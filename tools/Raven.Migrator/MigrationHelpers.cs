@@ -6,6 +6,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Raven.Migrator.MongoDB;
 
 namespace Raven.Migrator
 {
@@ -14,6 +15,7 @@ namespace Raven.Migrator
         private const string StartObject = "{";
         private const string EndObject = "}";
         private const string RavenDocumentId = "@id";
+        private const string RavenCollection = "@collection";
 
         public static void OutputClass(
             AbstractMigrationConfiguration configuration,
@@ -21,24 +23,27 @@ namespace Raven.Migrator
         {
             if (configuration.ConsoleExport)
             {
-                foreach (var prop in obj.GetType().GetProperties())
-                {
-                    var value = prop.GetValue(obj, null);
-                    if (value is List<string> list)
-                    {
-                        value = string.Join(", ", list);
-                    }
-
-                    Console.WriteLine("{0}: {1}", prop.Name, value);
-                }
+                var jsonString = JsonConvert.SerializeObject(obj);
+                Console.WriteLine(jsonString);
                 return;
             }
 
-            var jsonString = JsonConvert.SerializeObject(obj);
-            Console.WriteLine(jsonString);
+            foreach (var prop in obj.GetType().GetProperties())
+            {
+                var value = prop.GetValue(obj, null);
+                if (value is List<string> list)
+                {
+                    value = string.Join(", ", list);
+                }
+
+                Console.WriteLine("{0}: {1}", prop.Name, value);
+            }
         }
 
-        public static IDisposable GetStreamWriter(AbstractMigrationConfiguration configuration, out StreamWriter streamWriter)
+        public static async Task MigrateNoSqlDatabase(
+            AbstractMigrationConfiguration configuration,
+            Func<string, string, Reference<bool>, StreamWriter, Task> migrateSingleCollection,
+            Func<Reference<bool>, StreamWriter, Task> migrateAttachments = null)
         {
             Stream stream;
             if (configuration.ConsoleExport)
@@ -52,55 +57,66 @@ namespace Raven.Migrator
                 stream = File.Create(Path.Combine(basePath, fileName));
             }
 
-            var gzipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true);
-            var streamWriterInternal = streamWriter = new StreamWriter(gzipStream);
-
-            return new DisposableAction(() =>
+            using (stream)
+            using (var gzipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
+            using (var streamWriter = new StreamWriter(gzipStream))
             {
-                using (stream)
-                using (gzipStream)
-                using (streamWriterInternal)
+                await streamWriter.WriteAsync("{\"Docs\":[");
+
+                var isFirstDocument = new Reference<bool> { Value = true };
+                foreach (var collection in configuration.CollectionsToMigrate)
                 {
+                    var mongoCollectionName = collection.Key;
+                    var ravenCollectionName = collection.Value;
+                    if (string.IsNullOrWhiteSpace(ravenCollectionName))
+                        ravenCollectionName = mongoCollectionName;
 
+                    await migrateSingleCollection(mongoCollectionName, ravenCollectionName, isFirstDocument, streamWriter);
                 }
-            });
-        }
 
-        internal class DisposableAction : IDisposable
-        {
-            private readonly Action _action;
+                if (migrateAttachments != null)
+                    await migrateAttachments(isFirstDocument, streamWriter);
 
-            public DisposableAction(Action action)
-            {
-                _action = action;
-            }
-
-            public void Dispose()
-            {
-                _action();
+                await streamWriter.WriteAsync("]}");
             }
         }
 
         public static async Task WriteDocument(
             ExpandoObject document,
-            string databaseDocumentId,
+            string documentId,
             string collectionName,
             List<string> propertiesToRemove,
             Reference<bool> isFirstDocument,
-            StreamWriter streamWriter)
+            StreamWriter streamWriter,
+            List<Dictionary<string, object>> attachments = null)
         {
             var dictionary = (IDictionary<string, object>)document;
-            var documentKey = dictionary[databaseDocumentId].ToString();
-            foreach (var toRemove in propertiesToRemove)
+            if (propertiesToRemove != null)
             {
-                dictionary.Remove(toRemove);
+                foreach (var toRemove in propertiesToRemove)
+                {
+                    dictionary.Remove(toRemove);
+                }
             }
 
-            dictionary["@metadata"] = new Dictionary<string, object>
+            if (attachments == null || attachments.Count == 0)
             {
-                {RavenDocumentId, documentKey},
-                {"@collection", collectionName}
-            };
+                dictionary["@metadata"] = new Dictionary<string, object>
+                {
+                    {RavenDocumentId, documentId},
+                    {RavenCollection, collectionName}
+                };
+            }
+            else
+            {
+                dictionary["@metadata"] = new Dictionary<string, object>
+                {
+                    {RavenDocumentId, documentId},
+                    {RavenCollection, collectionName},
+                    {"@flags", "HasAttachments"},
+                    {"@attachments", attachments}
+                };
+            }
 
             if (isFirstDocument.Value == false)
                 await streamWriter.WriteAsync(",");
@@ -110,9 +126,9 @@ namespace Raven.Migrator
             await streamWriter.WriteAsync(jsonString);
         }
 
-        public static async Task WriteDocumentWithAttachment( 
-            ExpandoObject document, Stream attachmentStream, long totalSize, 
-            string documentId, string collectionName, string contentType, long attachmentNumber,
+        public static async Task<Dictionary<string, object>> WriteAttachment( 
+            Stream attachmentStream, long totalSize, string attachmentId, 
+            string collectionName, string contentType, long attachmentNumber,
             Reference<bool> isFirstDocument, StreamWriter streamWriter)
         {
             if (isFirstDocument.Value == false)
@@ -122,7 +138,7 @@ namespace Raven.Migrator
             // we are going to recalculate the hash when importing
             var hash = string.Empty;
 
-            var tag = $"GridFS{attachmentNumber}";
+            var tag = $"Attachment{attachmentNumber}";
             await streamWriter.WriteAsync(
                 $"{StartObject}{GetQuotedString("@metadata")}:{StartObject}" +
                 $"{GetQuotedString("@export-type")}:{GetQuotedString("Attachment")}{EndObject}," +
@@ -132,33 +148,16 @@ namespace Raven.Migrator
             await streamWriter.FlushAsync();
             attachmentStream.Position = 0;
             await attachmentStream.CopyToAsync(streamWriter.BaseStream);
-            await streamWriter.WriteAsync(",");
 
-            // write the dummy document
-            var dictionary = (IDictionary<string, object>)document;
-            //dictionary.Remove(databaseDocumentId);
             var attachmentInfo = new Dictionary<string, object>
             {
-                {"Name", documentId},
+                {"Name", attachmentId},
                 {"Hash", hash},
                 {"ContentType", contentType},
                 {"Size", totalSize}
             };
-            var attachments = new List<Dictionary<string, object>>
-            {
-                {attachmentInfo}
-            };
 
-            dictionary["@metadata"] = new Dictionary<string, object>
-            {
-                {"@id", documentId},
-                {"@collection", collectionName},
-                {"@flags", "HasAttachments"},
-                {"@attachments", attachments}
-            };
-
-            var jsonString = JsonConvert.SerializeObject(document);
-            await streamWriter.WriteAsync(jsonString);
+            return attachmentInfo;
         }
 
         private static string GetQuotedString(string name)
