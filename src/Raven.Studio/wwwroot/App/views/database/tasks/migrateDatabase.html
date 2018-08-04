@@ -1,190 +1,89 @@
-<div class="migrateDatabase">
+<div class="migrate-database">
     <div class="panel">
         <div class="panel-body">
-            <form class="flex-form" data-bind="submit: migrateDb">
-                <h3>Migrate data from another RavenDB Server</h3>
-                <div class="bg-warning padding padding-xs"><small><i class="icon-warning"></i> Note: Migration will overwrite any existing documents and indexes.</small></div>
+            <form class="flex-form" data-bind="submit: migrateDb" autocomplete="off">
+                <h3>Migrate data from another database</h3>
+                <div class="bg-warning padding padding-xs"><small><i class="icon-warning"></i> Note: Migration will overwrite any existing documents.</small></div>
+            
                 <div class="row" data-bind="with: model">
                     <div class="col-sm-8 col-lg-6 margin-top">
-                        <div class="form-group" data-bind="validationElement: serverUrl">
-                            <label class="control-label">Server URL</label>
+
+                        <div class="form-group" data-bind="validationElement: fullPathToMigrator">
+                            <label class="control-label">Migrator Path</label>
                             <div class="flex-grow">
-                                <div class="flex-grow">
-                                    <div class="dropdown btn-block">
-                                        <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
-                                               id="server-url"
-                                               data-bind="textInput: serverUrl"
-                                               placeholder="Source server url">
-                                        <ul class="dropdown-menu max-height" data-bind="foreach: createServerUrlAutoCompleter(), autoComplete: '#server-url'">
-                                            <li data-bind="click: $parent.selectServerUrl.bind($parent, $data)">
-                                                <a href="#" data-bind="text: $data"></a>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
+                                <input data-bind="textInput: fullPathToMigrator" type="text" class="form-control" placeholder="Full path to the migrator tool" />
                             </div>
                         </div>
 
-                        <div class="form-group" data-bind="validationElement: serverMajorVersion">
-                            <label class="control-label">Server Version</label>
+                        <div class="form-group">
+                            <label class="control-label">Database Source</label>
                             <div class="flex-grow">
-                                <div class="form-control-static">
-                                    <div data-bind="text: serverMajorVersionNumber, visible: !$root.spinners.versionDetect() && serverMajorVersionNumber()"></div>
-                                    <div data-bind="visible: $root.spinners.versionDetect">
-                                        <i class="global-spinner spinner-sm"></i>
-                                    </div>
-                                </div>
-                                <div>
-                                    <div class="help-block" data-bind="validationMessage: serverMajorVersion"></div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group" data-bind="visible: hasRavenFs">
-                            <label class="control-label">Resource type</label>
-                            <div class="flex-grow" data-bind="validationElement: authenticationMethod">
                                 <div class="btn-group">
                                     <button type="button" class="btn btn-default"
-                                            data-bind="click: _.partial(importRavenFs, false), css: { active: !importRavenFs() }">
-                                        Database
+                                            data-bind="click: _.partial(selectMigrationOption, 'MongoDB'), css: { active: selectMigrationOption() === 'MongoDB' }">
+                                        MongoDB
                                     </button>
                                     <button type="button" class="btn btn-default"
-                                            data-bind="click: _.partial(importRavenFs, true), css: { active: importRavenFs }">
-                                        RavenFS
+                                            data-bind="click: _.partial(selectMigrationOption, 'CosmosDB'), css: { active: selectMigrationOption() === 'CosmosDB' }">
+                                        CosmosDB
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="form-group" data-bind="validationElement: resourceName">
-                            <label class="control-label"><span data-bind="text: resourceTypeName"></span> name</label>
+                        <!-- ko with: mongoDbConfiguration -->
+                        <div data-bind="visible: $parent.showMongoDbOptions">
+                            <div class="form-group" data-bind="validationElement: connectionString">
+                                <label class="control-label">Connection String</label>
+                                <div class="flex-grow">
+                                    <input data-bind="textInput: connectionString" type="text" class="form-control" placeholder="mongodb://[username:password@]host[:port]" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label"></label>
+                                <div class="toggle">
+                                    <input class="styled" type="checkbox" id="migrate-gridfs" data-bind="checked: migrateGridFs">
+                                    <label for="migrate-gridfs">Migrate GridFS</label>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- /ko -->
+                        <!-- ko with: cosmosDbConfiguration -->
+                        <div data-bind="if: $parent.showCosmosDbOptions">
+                            <div class="form-group" data-bind="validationElement: azureEndpointUrl">
+                                <label class="control-label">Azure Endpoint URL</label>
+                                <div class="flex-grow">
+                                    <input data-bind="textInput: azureEndpointUrl" type="text" class="form-control" placeholder="Azure Endpoint URL" />
+                                </div>
+                            </div>
+                            <div class="form-group" data-bind="validationElement: primaryKey">
+                                <label class="control-label">Primary Key</label>
+                                <div class="flex-grow">
+                                    <input data-bind="textInput: primaryKey" type="text" class="form-control" placeholder="Primary Key" />
+                                </div>
+                            </div>
+                        </div>
+                        <!-- /ko -->
+                        <!-- ko with: activeConfiguration -->
+                        <div class="form-group" data-bind="validationElement: databaseName">
+                            <label class="control-label">Database Name</label>
                             <div class="flex-grow">
                                 <div class="dropdown btn-block">
-                                    <input type="text" 
-                                           class="form-control dropdown-toggle" 
+                                    <input type="text"
+                                           class="form-control dropdown-toggle"
                                            data-toggle="dropdown"
-                                           id="resource-name"
-                                           data-bind="textInput: resourceName, attr: { 'placeholder': 'Source ' + resourceTypeName().toLowerCase() + ' name' }">
-                                    <ul class="dropdown-menu max-height" data-bind="foreach: createResourceNamesAutoCompleter(), autoComplete: '#resource-name'">
-                                        <li data-bind="click: $parent.selectResourceName.bind($parent, $data)">
+                                           id="database-name"
+                                           placeholder="Database Name"
+                                           data-bind="textInput: databaseName">
+                                    <ul class="dropdown-menu max-height" data-bind="foreach: createDatabaseNamesAutoCompleter(), autoComplete: '#database-name'">
+                                        <li data-bind="click: $parent.selectDatabaseName.bind($parent, $data)">
                                             <a href="#" data-bind="text: $data"></a>
                                         </li>
                                     </ul>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div data-bind="visible: isLegacy">
-                            <div class="form-group">
-                                <label class="control-label">Authentication method</label>
-                                <div class="flex-grow" data-bind="validationElement: authenticationMethod">
-                                    <div class="btn-group">
-                                        <button type="button" class="btn btn-default"
-                                                data-bind="click: _.partial(authenticationMethod, 'none'), css: { active: authenticationMethod() === 'none' }">
-                                            None
-                                        </button>
-                                        <button type="button" class="btn btn-default"
-                                                data-bind="click: _.partial(authenticationMethod, 'apiKey'), css: { active: authenticationMethod() === 'apiKey' }">
-                                            API Key
-                                        </button>
-                                        <button type="button" class="btn btn-default"
-                                                data-bind="click: _.partial(authenticationMethod, 'windows'), css: { active: authenticationMethod() === 'windows' }">
-                                            Windows Credentials
-                                        </button>
-                                    </div>
-                                    <span data-bind="visible: $root.spinners.getResourceNames">
-                                        <i class="global-spinner spinner-sm"></i>
-                                    </span>
-                                </div>
-                            </div>
-                            <div data-bind="visible: showWindowsCredentialInputs">
-                                <div class="form-group" data-bind="validationElement: userName">
-                                    <label class="control-label">User name</label>
-                                    <div class="flex-grow">
-                                        <input data-bind="textInput: userName" type="text" class="form-control" placeholder="User name" />
-                                    </div>
-                                </div>
-                                <div class="form-group" data-bind="validationElement: password">
-                                    <label class="control-label">Password</label>
-                                    <div class="flex-grow">
-                                        <input data-bind="textInput: password" type="password" class="form-control" placeholder="Password" />
-                                    </div>
-                                </div>
-                                <div class="form-group" data-bind="validationElement: domain">
-                                    <label class="control-label">Domain</label>
-                                    <div class="flex-grow">
-                                        <input data-bind="textInput: domain" type="text" class="form-control" placeholder="Domain" />
-                                    </div>
-                                </div>
-                            </div>
-                            <div data-bind="visible: showApiKeyCredentialInputs">
-                                <div class="form-group" data-bind="validationElement: apiKey">
-                                    <label class="control-label">API Key</label>
-                                    <div class="flex-grow">
-                                        <input data-bind="textInput: apiKey" type="password" class="form-control" placeholder="API Key" />
-                                    </div>
-                                </div>
-
-                                <div class="form-group" data-bind="visible: isUnsecuredBasicAuthentication">
-                                    <label class="control-label"></label>
-                                    <div class="toggle">
-                                        <input class="styled" type="checkbox" id="basic-authentication" data-bind="checked: enableBasicAuthenticationOverUnsecuredHttp">
-                                        <label for="basic-authentication">Enable Basic Authentication Over Unsecured Http</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div data-bind="with: model" style="margin-left: 160px">
-                    <div data-bind="visible: isRavenDb() && !ravenFsImport()">
-                        <div class="form-group flex-horizontal flex-stretch-items">
-                            <div>
-                                <div class="toggle" data-bind="visible: !isLegacy()">
-                                    <input id="migrate_database_record" type="checkbox" data-bind="checked: includeDatabaseRecord">
-                                    <label for="migrate_database_record">Include Database Record</label>
-                                </div>
-                                <div class="toggle">
-                                    <input id="migrate_documents" type="checkbox" data-bind="checked: includeDocuments">
-                                    <label for="migrate_documents">Include Documents</label>
-                                </div>
-                                <div class="toggle" data-bind="visible: isLegacy">
-                                    <input id="migrate_legacy_attachments" type="checkbox" data-bind="checked: includeLegacyAttachments">
-                                    <label for="migrate_legacy_attachments">Include Attachments</label>
-                                </div>
-                                <div class="toggle" data-bind="visible: !isLegacy()">
-                                    <input id="migrate_conflicts" type="checkbox" data-bind="checked: includeConflicts">
-                                    <label for="migrate_conflicts">Include Conflicts</label>
-                                </div>
-                                <div class="toggle" data-bind="visible: !isLegacy()" data-toggle="tooltip" data-placement="top">
-                                    <input id="migrate_revisions" type="checkbox" data-bind="checked: includeRevisionDocuments" />
-                                    <label for="migrate_revisions">Include Document Revisions</label>
-                                </div>
-                                <div class="toggle" data-bind="visible: !isLegacy()">
-                                    <input id="migrate_identities" type="checkbox" data-bind="checked: includeIdentities">
-                                    <label for="migrate_identities">Include Identities</label>
-                                </div>
-                                <div class="toggle" data-bind="visible: !isLegacy()">
-                                    <input id="migrate_cmp_xch" type="checkbox" data-bind="checked: includeCompareExchange">
-                                    <label for="migrate_cmp_xch">Include Compare Exchange</label>
-                                </div>
-
-                                <div data-bind="validationElement: importDefinitionHasIncludes">
-                                    <div class="help-block" data-bind="validationMessage: importDefinitionHasIncludes"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="toggle">
-                                    <input id="migrate_indexes" type="checkbox" data-bind="checked: includeIndexes">
-                                    <label for="migrate_indexes">Include Indexes</label>
-                                </div>
-                                <div class="toggle">
-                                    <input id="migrate_remove_analyzers" type="checkbox" data-bind="checked: removeAnalyzers">
-                                    <label for="migrate_remove_analyzers">Remove Analyzers</label>
-                                </div>
-                            </div>
-                        </div>
+                        <!-- /ko -->
                     </div>
                 </div>
 

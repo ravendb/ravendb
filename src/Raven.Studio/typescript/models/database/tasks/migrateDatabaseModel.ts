@@ -1,306 +1,205 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
-type authenticationMethod = "none" | "apiKey" | "windows";
+type migrationOptions = "none" | "MongoDB" | "CosmosDB";
+type availableNoSqlCommands = "databases" | "collections" | "export";
+
+interface IMongoDbMigrationConfiguration extends IAbstractMigrationConfiguration {
+    ConnectionString: string;
+    MigrateGridFS: boolean;
+}
+
+interface ICosmosDbMigrationConfiguration extends IAbstractMigrationConfiguration {
+    AzureEndpointUrl: string;
+    PrimaryKey: string;
+}
+
+interface IAbstractMigrationConfiguration {
+    Command: string;
+    DatabaseName: string;
+    ConsoleExport: boolean;
+    ExportFilePath: string;
+    CollectionsToMigrate: { [key: string]: string; };
+}
+
+abstract class noSqlMigrationModel {
+    databaseName = ko.observable<string>();
+    collectionsToMigrate = ko.observable<{ [key: string]: string; }>(null);
+    databaseNames = ko.observableArray<string>([]);
+    collectionNames = ko.observableArray<string>([]);
+
+    createDatabaseNamesAutoCompleter() {
+        return ko.pureComputed(() => {
+            const options = this.databaseNames();
+            let key = this.databaseName();
+
+            if (key) {
+                key = key.toLowerCase();
+                return options.filter(x => x.toLowerCase().includes(key));
+            }
+
+            return options;
+        });
+    }
+
+    selectDatabaseName(databaseName: string) {
+        this.databaseName(databaseName);
+    }
+
+    abstract toDto(command: string): IAbstractMigrationConfiguration;
+}
+
+class mongoDbMigrationModel extends noSqlMigrationModel{
+    connectionString = ko.observable<string>();
+    migrateGridFs = ko.observable<boolean>(false);
+    hasGridFs = ko.observable<boolean>();
+
+    toDto(command: string): IMongoDbMigrationConfiguration {
+        return {
+            ConnectionString: this.connectionString(),
+            MigrateGridFS: this.migrateGridFs(),
+            DatabaseName: this.databaseName(),
+            Command: command,
+            CollectionsToMigrate: this.collectionsToMigrate(),
+            ConsoleExport: true,
+            ExportFilePath: null
+        };
+    }
+}
+
+class cosmosDbMigrationModel extends noSqlMigrationModel {
+    azureEndpointUrl = ko.observable<string>();
+    primaryKey = ko.observable<string>();
+
+    toDto(command: string): ICosmosDbMigrationConfiguration {
+        return {
+            AzureEndpointUrl: this.azureEndpointUrl(),
+            PrimaryKey: this.primaryKey(),
+            DatabaseName: this.databaseName(),
+            Command: command,
+            CollectionsToMigrate: this.collectionsToMigrate(),
+            ConsoleExport: true,
+            ExportFilePath: null
+        };
+    }
+}
 
 class migrateDatabaseModel {
-    serverUrl = ko.observable<string>();
-    resourceName = ko.observable<string>();
-    includeDatabaseRecord = ko.observable(true);
-    includeDocuments = ko.observable(true);
-    includeConflicts = ko.observable(true);
-    includeIndexes = ko.observable(true);
-    includeIdentities = ko.observable(true);
-    includeCompareExchange = ko.observable(true);
-    includeRevisionDocuments = ko.observable(true);
-    includeLegacyAttachments = ko.observable(true);
-    removeAnalyzers = ko.observable(false);
-    importRavenFs = ko.observable(false);
+    selectMigrationOption = ko.observable<migrationOptions>("none");
+    fullPathToMigrator = ko.observable<string>();
 
-    authenticationMethod = ko.observable<authenticationMethod>("none");
-    authorized = ko.observable(true);
-    hasUnsecuredBasicAuthenticationOption = ko.observable(false);
+    mongoDbConfiguration = new mongoDbMigrationModel();
+    cosmosDbConfiguration = new cosmosDbMigrationModel();
 
-    serverMajorVersion = ko.observable<Raven.Server.Smuggler.Migration.MajorVersion>("Unknown");
-    buildVersion = ko.observable<number>();
-    fullVersion = ko.observable<string>();
-    productVersion = ko.observable<string>();
-    serverUrls = ko.observableArray<string>([]);
-    databaseNames = ko.observableArray<string>([]);
-    fileSystemNames = ko.observableArray<string>([]);
-
-    userName = ko.observable<string>();
-    password = ko.observable<string>();
-    domain = ko.observable<string>();
-    apiKey = ko.observable<string>();
-    enableBasicAuthenticationOverUnsecuredHttp = ko.observable<boolean>();
-
-    serverMajorVersionNumber: KnockoutComputed<string>;
-    isRavenDb: KnockoutComputed<boolean>;
-    isLegacy: KnockoutComputed<boolean>;
-    hasRavenFs: KnockoutComputed<boolean>;
-    ravenFsImport: KnockoutComputed<boolean>;
-    resourceTypeName: KnockoutComputed<string>;
-    showWindowsCredentialInputs: KnockoutComputed<boolean>;
-    showApiKeyCredentialInputs: KnockoutComputed<boolean>;
-    isUnsecuredBasicAuthentication: KnockoutComputed<boolean>;
+    activeConfiguration: KnockoutComputed<noSqlMigrationModel>;
+    showMongoDbOptions: KnockoutComputed<boolean>;
+    showCosmosDbOptions: KnockoutComputed<boolean>;
 
     validationGroup: KnockoutValidationGroup;
-    importDefinitionHasIncludes: KnockoutComputed<boolean>;
-    versionCheckValidationGroup: KnockoutValidationGroup;
+    validationGroupDatabasesCommand: KnockoutValidationGroup;
 
     constructor() {
         this.initObservables();
         this.initValidation();
     }
 
-    toDto(): Raven.Server.Smuggler.Migration.SingleDatabaseMigrationConfiguration {
-        const operateOnTypes: Array<Raven.Client.Documents.Smuggler.DatabaseItemType> = [];
-
-        if (!this.ravenFsImport()) {
-            if (this.includeDatabaseRecord()) {
-                operateOnTypes.push("DatabaseRecord");
-            }
-            if (this.includeDocuments()) {
-                operateOnTypes.push("Documents");
-            }
-            if (this.includeConflicts() && !this.isLegacy()) {
-                operateOnTypes.push("Conflicts");
-            }
-            if (this.includeIndexes()) {
-                operateOnTypes.push("Indexes");
-            }
-            if (this.includeRevisionDocuments() && !this.isLegacy()) {
-                operateOnTypes.push("RevisionDocuments");
-            }
-            if (this.includeLegacyAttachments() && this.isLegacy()) {
-                operateOnTypes.push("LegacyAttachments");
-            }
-            if (this.includeIdentities() && !this.isLegacy()) {
-                operateOnTypes.push("Identities");
-            }
-            if (this.includeCompareExchange() && !this.isLegacy()) {
-                operateOnTypes.push("CompareExchange");
-            }
-        }
-
-        if (operateOnTypes.length === 0) {
-            operateOnTypes.push("None");
-        }
-
-        const migrationSettings: Raven.Server.Smuggler.Migration.DatabaseMigrationSettings = {
-            DatabaseName: this.resourceName(),
-            OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Documents.Smuggler.DatabaseItemType,
-            RemoveAnalyzers: this.removeAnalyzers(),
-            ImportRavenFs: this.importRavenFs()
-        };
-
-        return {
-            ServerUrl: this.serverUrl(),
-            MigrationSettings: migrationSettings,
-            UserName: this.showWindowsCredentialInputs() ? this.userName() : null,
-            Password: this.showWindowsCredentialInputs() ? this.password() : null, 
-            Domain: this.showWindowsCredentialInputs() ? this.domain() : null, 
-            ApiKey: this.showApiKeyCredentialInputs() ? this.apiKey() : null, 
-            EnableBasicAuthenticationOverUnsecuredHttp: this.apiKey() ? this.enableBasicAuthenticationOverUnsecuredHttp() : false, 
-            BuildMajorVersion: this.serverMajorVersion(),
-            BuildVersion: this.buildVersion()
-        };
-    }
-
     private initObservables() {
-        this.serverMajorVersionNumber = ko.pureComputed<string>(() => {
-            const serverMajorVersion = this.serverMajorVersion();
-            const buildVersionInt = this.buildVersion();
-            const productVersion = this.productVersion();
-
-            if (!serverMajorVersion || !buildVersionInt) {
-                return null;
+        this.activeConfiguration = ko.pureComputed(() => {
+            switch (this.selectMigrationOption()) {
+                case "MongoDB":
+                    return this.mongoDbConfiguration;
+                case "CosmosDB":
+                    return this.cosmosDbConfiguration;
+                default:
+                    return null;
             }
-
-            let majorVersion: string;
-            let buildVersion = buildVersionInt.toString();
-            switch (serverMajorVersion) {
-            case "Unknown":
-                return "Unknown";
-            case "V2":
-                majorVersion = "2.x";
-                break;
-            case "V30":
-                majorVersion = "3.0";
-                break;
-            case "V35":
-                majorVersion = "3.5";
-                break;
-            case "V4":
-                majorVersion = productVersion;
-                break;
-            default:
-                return null;
-            }
-
-            return `${majorVersion} (build: ${buildVersion})`;
         });
 
-        this.isRavenDb = ko.pureComputed(() => {
-            const version = this.serverMajorVersion();
-            if (!version) {
-                return false;
-            }
-
-            return version !== "Unknown";
-        });
-
-        this.isLegacy = ko.pureComputed(() => {
-           const version = this.serverMajorVersion();
-           return version === "V2" || version === "V30" || version === "V35";
-        });
-
-        this.hasRavenFs = ko.pureComputed(() => {
-            const version = this.serverMajorVersion();
-            return version === "V30" || version === "V35";
-        });
-
-        this.ravenFsImport = ko.pureComputed(() => this.hasRavenFs() && this.importRavenFs());
-
-        this.resourceTypeName = ko.pureComputed(() => this.ravenFsImport() ? "File system" : "Database");
-
-        this.showWindowsCredentialInputs = ko.pureComputed(() => {
-            const authMethod = this.authenticationMethod();
-            return authMethod === "windows";
-        });
-
-        this.showApiKeyCredentialInputs = ko.pureComputed(() => {
-            const authMethod = this.authenticationMethod();
-            return authMethod === "apiKey";
-        });
-
-        this.isUnsecuredBasicAuthentication = ko.pureComputed(() => {
-            const url = this.serverUrl();
-            if (!url) {
-                return false;
-            }
-
-            return this.hasUnsecuredBasicAuthenticationOption() && url.toLowerCase().startsWith("http://");
-        });
+        this.showMongoDbOptions = ko.pureComputed(() => this.selectMigrationOption() === "MongoDB");
+        this.showCosmosDbOptions = ko.pureComputed(() => this.selectMigrationOption() === "CosmosDB");
     }
     
     private initValidation() {
-        this.serverUrl.extend({
-            required: true,
+        this.fullPathToMigrator.extend({
+            required: true
+        });
+
+        this.mongoDbConfiguration.databaseName.extend({
+            required: {
+                onlyIf: () => this.showMongoDbOptions()
+            }
+        });
+
+        this.mongoDbConfiguration.connectionString.extend({
+            required: {
+                onlyIf: () => this.showMongoDbOptions()
+            },
+            validation: [
+                {
+                    validator: (value: string) => {
+                        if (!this.showMongoDbOptions()) {
+                            return true;
+                        }
+                        const prefix = "mongodb://";
+                        return value && value.toLowerCase().startsWith(prefix) &&
+                            value.length > prefix.length + 1;
+                    },
+                    message: "Invalid MongoDB connection string"
+                }
+            ]
+        });
+
+        this.cosmosDbConfiguration.databaseName.extend({
+            required: {
+                onlyIf: () => this.showCosmosDbOptions()
+            }
+        });
+
+        this.cosmosDbConfiguration.azureEndpointUrl.extend({
+            required: {
+                onlyIf: () => this.showCosmosDbOptions()
+            },
             validUrl: true
         });
 
-        this.resourceName.extend({
-            validation: [
-                {
-                    validator: () => !this.hasRavenFs() || this.authorized(),
-                    message: "Unauthorized access to the server, please enter your credentials"
-                },
-                {
-                    validator: (value: string) => value,
-                    message: "This field is required."
-                }
-            ]
-        });
-        
-        this.userName.extend({
+        this.cosmosDbConfiguration.primaryKey.extend({
             required: {
-                onlyIf: () => this.showWindowsCredentialInputs()
+                onlyIf: () => this.showCosmosDbOptions()
             }
-        });
-        
-        this.password.extend({
-            required: {
-                onlyIf: () => this.showWindowsCredentialInputs()
-            }
-        });
-
-        this.apiKey.extend({
-            required: {
-                onlyIf: () => this.showApiKeyCredentialInputs()
-            }
-        });
-
-        this.importDefinitionHasIncludes = ko.pureComputed(() => {
-            if (this.serverMajorVersion() === "V4") {
-                return this.includeDatabaseRecord() || this.includeDocuments() || this.includeRevisionDocuments() || this.includeConflicts() ||
-                    this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange();
-            }
-
-            const hasIncludes = this.includeDocuments() || this.includeIndexes() || this.includeLegacyAttachments();
-            if (this.serverMajorVersion() === "V30" || this.serverMajorVersion() === "V35") {
-                return hasIncludes || this.importRavenFs();
-            }
-
-            return hasIncludes;
-        });
-
-        this.importDefinitionHasIncludes.extend({
-            validation: [
-                {
-                    validator: () => this.importDefinitionHasIncludes(),
-                    message: "Note: At least one 'include' option must be checked..."
-                }
-            ]
         });
 
         this.validationGroup = ko.validatedObservable({
-            serverUrl: this.serverUrl,
-            databaseName: this.resourceName,
-            serverMajorVersion: this.serverMajorVersion, 
-            userName: this.userName,
-            password: this.password, 
-            domain: this.domain,
-            importDefinitionHasIncludes: this.importDefinitionHasIncludes
+            fullPathToMigrator: this.fullPathToMigrator,
+            mongoDbDatabaseName: this.mongoDbConfiguration.databaseName,
+            connectionString: this.mongoDbConfiguration.connectionString,
+            cosmosDbDatabaseName: this.cosmosDbConfiguration.databaseName,
+            azureEndpointUrl: this.cosmosDbConfiguration.azureEndpointUrl,
+            primaryKey: this.cosmosDbConfiguration.primaryKey
         });
-        
-        this.versionCheckValidationGroup = ko.validatedObservable({
-            serverUrl: this.serverUrl
-        });
-    }
 
-    createServerUrlAutoCompleter() {
-        return ko.pureComputed(() => {
-            const options = this.serverUrls();
-            let key = this.serverUrl();
-
-            if (key) {
-                key = key.toLowerCase();
-                return options.filter(x => x.toLowerCase().includes(key));
-            }
-
-            return options;
+        this.validationGroupDatabasesCommand = ko.validatedObservable({
+            fullPathToMigrator: this.fullPathToMigrator,
+            connectionString: this.mongoDbConfiguration.connectionString,
+            azureEndpointUrl: this.cosmosDbConfiguration.azureEndpointUrl,
+            primaryKey: this.cosmosDbConfiguration.primaryKey
         });
     }
 
-    selectServerUrl(serverUrl: string) {
-        this.serverUrl(serverUrl);
-    }
-
-    createResourceNamesAutoCompleter() {
-        return ko.pureComputed(() => {
-            const options = this.getResourceNames();
-            let key = this.resourceName();
-
-            if (key) {
-                key = key.toLowerCase();
-                return options.filter(x => x.toLowerCase().includes(key));
-            }
-
-            return options;
-        });
-    }
-
-    private getResourceNames(): string[] {
-        if (!this.hasRavenFs()) {
-            return this.databaseNames();
+    toDto(command: availableNoSqlCommands): Raven.Server.Smuggler.Migration.MigrationConfiguration {
+        const activeConfiguration = this.activeConfiguration();
+        if (!activeConfiguration) {
+            return null;
         }
 
-        return this.importRavenFs() ? this.fileSystemNames() : this.databaseNames();
-    }
+        const input = activeConfiguration.toDto(command);
 
-    selectResourceName(resourceName: string) {
-        this.resourceName(resourceName);
+        const isExportCommand = command === "export";
+        const type = this.selectMigrationOption().toLowerCase();
+        return {
+            DatabaseTypeName: type,
+            FullPathToMigrator: this.fullPathToMigrator(),
+            IsExportCommand: isExportCommand,
+            Input: input
+        };
     }
 }
 
