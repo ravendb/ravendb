@@ -29,21 +29,7 @@ namespace Tryouts
 
             using(var parsing = new FastTests.Graph.Parsing())
             {
-                 parsing.CanRoundTripQueries(@"
-with { from Movies where Genre = $genre } as m
-match (u:Users)<-[r:Rated]-(m) and not (actor:Actors)-[:ActedOn]->(m) or (u)-[:Likes]->(actor)", @"WITH {
-    FROM Movies WHERE Genre = $genre
-} AS m
-WITH {
-    FROM Users
-} AS u
-WITH {
-    FROM Actors
-} AS actor
-WITH EDGES(Rated) AS r
-WITH EDGES(ActedOn) AS __alias1
-WITH EDGES(Likes) AS __alias2
-MATCH (((u)<-[r]-(m) AND NOT ((actor)-[__alias1]->(m))) OR (u)-[__alias2]->(actor))");
+                 await parsing.ParseBasicGraphQuery();
             }
 
         }

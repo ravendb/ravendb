@@ -377,6 +377,7 @@ namespace Raven.Server.Documents.Queries.AST
                     _sb.Append(" AS ").Append(withEdgesClause.Key);
                     continue;
                 }
+                _sb.Append(" {");
                 _indent++;
                 EnsureLine();
                 VisitWithEdgesExpression(withEdgesClause.Value);
