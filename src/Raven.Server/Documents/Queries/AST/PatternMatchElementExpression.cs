@@ -6,7 +6,7 @@ namespace Raven.Server.Documents.Queries.AST
 {
     public class PatternMatchElementExpression : QueryExpression
     {
-        public (StringSegment Alias, EdgeType EdgeType)[] Path;
+        public MatchPath[] Path;
 
         public override string ToString() => GetText();
 
@@ -18,19 +18,19 @@ namespace Raven.Server.Documents.Queries.AST
 
             for (int i = 0; i < Path.Length; i++)
             {
-                sb.Append("{");
+                sb.Append(Path[i].IsEdge ? "[" : "(");
                 sb.Append(Path[i].Alias);
-                sb.Append("}");
+                sb.Append(Path[i].IsEdge ? "]" : ")");
 
                 if (i + 1 < Path.Length)
                 {
                     switch (Path[i + 1].EdgeType)
                     {
                         case EdgeType.Outgoing:
-                            sb.Append("->");
+                            sb.Append(Path[i+1].IsEdge ? "-" : "->");
                             break;
                         case EdgeType.Incoming:
-                            sb.Append("<-");
+                            sb.Append(Path[i].IsEdge ? "-" : "<-");
                             break;
                         default:
                             throw new ArgumentOutOfRangeException(Path[i + 1].EdgeType + " is not known");
@@ -62,5 +62,12 @@ namespace Raven.Server.Documents.Queries.AST
     {
         Outgoing,
         Incoming
+    }
+
+    public struct MatchPath
+    {
+        public StringSegment Alias;
+        public EdgeType EdgeType;
+        public bool IsEdge;
     }
 }

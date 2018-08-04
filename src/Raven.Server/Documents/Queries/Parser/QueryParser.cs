@@ -18,6 +18,7 @@ namespace Raven.Server.Documents.Queries.Parser
         private static readonly string[] OrderByAsOptions = { "string", "long", "double", "alphaNumeric" };
 
 
+        private int _counter;
         private int _depth;
         private NextTokenOptions _state = NextTokenOptions.Parenthesis;
 
@@ -217,13 +218,23 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private bool GraphAlias(bool isEdge, out StringSegment alias)
         {
+            var start = Scanner.Position;
+
             if (Scanner.Identifier() == false)
             {
-                alias = default;
-                return false;
+                if (Scanner.TryPeek(':') == false)
+                {
+                    alias = default;
+                    return false;
+                }
+
+                alias = "__alias" + (++_counter);
+            }
+            else
+            {
+                alias = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength);
             }
 
-            alias = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength);
 
             if (Scanner.TryScan(':'))
             {
@@ -240,13 +251,13 @@ namespace Raven.Server.Documents.Queries.Parser
                         throw new InvalidQueryException("Failed to find closing ')' after filter expression for: " + alias, Scanner.Input, null);
                 }
 
-                AddWithQuery(collection, alias, filter, isEdge);
+                AddWithQuery(collection, alias, filter, isEdge, start);
 
             }
             return true;
         }
 
-        private void AddWithQuery(StringSegment collection, StringSegment alias, QueryExpression filter, bool isEdge)
+        private void AddWithQuery(StringSegment collection, StringSegment alias, QueryExpression filter, bool isEdge, int start)
         {
             if (_synteticWithQueries == null)
                 _synteticWithQueries = new Dictionary<StringSegment, (StringSegment Collection, QueryExpression Filter, bool IsEdge)>(StringSegmentEqualityComparer.Instance);
@@ -254,16 +265,16 @@ namespace Raven.Server.Documents.Queries.Parser
             if(_synteticWithQueries.TryGetValue(alias, out var existing))
             {
                 if (existing.IsEdge != isEdge)
-                    ThrowDuplicateAliasWithoutSameBody(alias);
+                    ThrowDuplicateAliasWithoutSameBody(start);
 
                 if (collection != existing.Collection)
-                    ThrowDuplicateAliasWithoutSameBody(alias);
+                    ThrowDuplicateAliasWithoutSameBody(start);
 
                 if((filter != null ) != (existing.Filter != null))
-                    ThrowDuplicateAliasWithoutSameBody(alias);
+                    ThrowDuplicateAliasWithoutSameBody(start);
 
                 if(filter != null && filter.Equals(existing.Filter) == false)
-                    ThrowDuplicateAliasWithoutSameBody(alias);
+                    ThrowDuplicateAliasWithoutSameBody(start);
 
                 return;
             }
@@ -271,10 +282,10 @@ namespace Raven.Server.Documents.Queries.Parser
             _synteticWithQueries.Add(alias, (collection, filter, isEdge));
         }
 
-        private void ThrowDuplicateAliasWithoutSameBody(StringSegment alias)
+        private void ThrowDuplicateAliasWithoutSameBody(int start)
         {
-            throw new InvalidQueryException("Duplicated alias '" + alias + "' was found with a different definition than previous defined: " + 
-                new StringSegment(Scanner.Input, alias.Offset, Scanner.Position - alias.Offset),
+            throw new InvalidQueryException("Duplicated alias  was found with a different definition than previous defined: " + 
+                new StringSegment(Scanner.Input, start, Scanner.Position - start),
                  Scanner.Input, null);
         }
 
@@ -296,7 +307,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
             var parenthesis = Scanner.TryPeek('(');
 
-            if (GraphOperation(out var right) == false)
+            if (BinaryGraph(out var right) == false)
                 ThrowParseException($"Failed to find second part of {type} expression");
 
             return TrySimplifyBinaryExpression(right, type, negate, parenthesis, ref op);
@@ -309,20 +320,31 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if(GraphAlias(isEdge: false, out var alias) == false)
             {
-                // this isn't (foo), so maybe ((foo)-...)
-                throw new NotImplementedException("Need to get here");
+                if (BinaryGraph(out op) == false)
+                {
+                    throw new InvalidQueryException("Invalid expression in MATCH", Scanner.Input, null);
+                }
+
+                if (Scanner.TryScan(')') == false)
+                    throw new InvalidQueryException("Missing ')' in MATCH", Scanner.Input, null);
+                return true;
             }
 
-            if(Scanner.TryScan(')') == false)
+            if (Scanner.TryScan(')') == false)
                 throw new InvalidQueryException("MATCH operator expected a ')' after reading: " + alias, Scanner.Input, null);
 
-            var list = new List<(StringSegment Alias, EdgeType EdgeType)>();
+            var list = new List<MatchPath>();
 
-            list.Add((alias, EdgeType.Outgoing));
+            list.Add(new MatchPath
+            {
+                Alias = alias,
+                EdgeType = EdgeType.Outgoing
+            });
 
 
             bool foundDash = false;
             bool expectNode = false;
+            MatchPath last;
             while (true)
             {
                 if (Scanner.TryScan(EdgeOps, out var found))
@@ -341,10 +363,21 @@ namespace Raven.Server.Documents.Queries.Parser
                             if (Scanner.TryScan(']') == false)
                                 throw new InvalidQueryException("MATCH operator expected a ']' after reading: " + alias, Scanner.Input, null);
 
-                            list.Add((alias, list[list.Count - 1].EdgeType));
+                            list.Add(new MatchPath
+                            {
+                                Alias = alias,
+                                EdgeType = list[list.Count - 1].EdgeType,
+                                IsEdge = true
+                            });
                             break;
                         case "<-":
-                            list[list.Count - 1] = (list[list.Count - 1].Alias, EdgeType.Incoming);
+                            last = list[list.Count - 1];
+                            list[list.Count - 1] = new MatchPath
+                            {
+                                Alias = last.Alias,
+                                IsEdge = last.IsEdge,
+                                EdgeType = EdgeType.Incoming
+                            };
                             foundDash = true;
                             expectNode = true;
                             continue;
@@ -353,8 +386,13 @@ namespace Raven.Server.Documents.Queries.Parser
                         case ">":
                             if (foundDash == false)
                                 throw new InvalidQueryException("Got '>' when expected '-', did you forget to add '->' ?", Scanner.Input, null);
-
-                            list[list.Count - 1] = (list[list.Count - 1].Alias, EdgeType.Outgoing);
+                            last = list[list.Count - 1];
+                            list[list.Count - 1] = new MatchPath
+                            {
+                                Alias = last.Alias,
+                                IsEdge = last.IsEdge,
+                                EdgeType = EdgeType.Outgoing
+                            };
                             if (Scanner.TryScan('(') == false)
                                 throw new InvalidQueryException("MATCH operator expected a '(', but didn't get it.", Scanner.Input, null);
                             expectNode = true;
@@ -371,7 +409,11 @@ namespace Raven.Server.Documents.Queries.Parser
                             if (Scanner.TryScan(')') == false)
                                 throw new InvalidQueryException("MATCH operator expected a ')' after reading: " + alias, Scanner.Input, null);
 
-                            list.Add((alias, EdgeType.Outgoing));
+                            list.Add(new MatchPath
+                            {
+                                Alias = alias,
+                                EdgeType = list[list.Count - 1].EdgeType
+                            });
                             break;
                         default:
                             throw new ArgumentOutOfRangeException("Unknown edge type: " + found);
@@ -382,8 +424,6 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
                 else
                 {
-                    list[list.Count - 1] = (list[list.Count - 1].Alias, EdgeType.Outgoing);
-
                     op = new PatternMatchElementExpression
                     {
                         Path = list.ToArray(),

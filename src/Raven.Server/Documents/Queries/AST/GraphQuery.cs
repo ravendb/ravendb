@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Queries.AST
         public override string ToString()
         {
             var sb = new StringBuilder();
-            new StringGraphQueryVisitor(sb).Visit(this);
+            new StringQueryVisitor(sb).VisitGraph(this);
             return sb.ToString();
         }
     }
