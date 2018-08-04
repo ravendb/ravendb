@@ -36,6 +36,32 @@ match (u)
         }
 
         [Fact]
+        public void CanParseComplexGraph()
+        {
+            const string text = @"
+with { from Users } as src
+match (src)-[r1:Rated]->(m:Movie)<-[r2:Rated]-(dst:Users) and (dst:Users)-[a:PaidFor]->(m)
+";
+            var queryParser = new QueryParser();
+            queryParser.Init(text);
+
+            Query query = queryParser.Parse(QueryType.Select);
+            if (query.GraphQuery.MatchClause is BinaryExpression be)
+            {
+                Assert.Equal(OperatorType.And, be.Operator);
+                var left = (PatternMatchElementExpression)be.Left;
+                Assert.Equal(5, left.Path.Length);
+                var right = (PatternMatchElementExpression)be.Right;
+                Assert.Equal(3, right.Path.Length);
+            }
+            else
+            {
+                Assert.False(true, "Exepcted to get proper match expr");
+
+            }
+        }
+
+        [Fact]
         public void CanParsePath()
         {
             const string text = @"

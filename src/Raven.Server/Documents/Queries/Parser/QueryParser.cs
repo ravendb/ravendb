@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (Scanner.TryScan("GROUP BY"))
                     q.GroupBy = GroupBy();
 
-                if (Scanner.TryScan("WHERE") && Expression(Operator, out q.Where) == false)
+                if (Scanner.TryScan("WHERE") && Expression(out q.Where) == false)
                     ThrowParseException("Unable to parse WHERE clause");
             }
             else
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (q.GraphQuery == null)
                     q.GraphQuery = new GraphQuery();
 
-                if(GraphOperation(requiredField: false, out var op) == false)
+                if(BinaryGraph(out var op) == false)
                     ThrowParseException("Unexpceted input when trying to parse the MATCH clause");
                 q.GraphQuery.MatchClause = op;
 
@@ -83,11 +83,15 @@ namespace Raven.Server.Documents.Queries.Parser
                         if (sq.IsEdge)
                         {
                             var with = new WithEdgesExpression(sq.Query.Where, sq.Query.From.From.FieldValue, null);
-                            q.TryAddWithEdgePredicates((with, sq.Query.From.Alias.Value));
+                            var (success, err) = q.TryAddWithEdgePredicates((with, sq.Query.From.Alias.Value));
+                            if (success == false)
+                                throw new InvalidQueryException("Failed to add a WITH clause because: " + err, Scanner.Input, null);
                         }
                         else
                         {
-                            q.TryAddWithClause((sq.Query, sq.Query.From.Alias.Value));
+                            var (success, err) = q.TryAddWithClause((sq.Query, sq.Query.From.Alias.Value));
+                            if (success == false)
+                                throw new InvalidQueryException("Failed to add a WITH clause because: " + err, Scanner.Input, null);
                         }
                     }
                     _synteticWithQueries.Clear();
@@ -194,7 +198,7 @@ namespace Raven.Server.Documents.Queries.Parser
             }
 
             QueryExpression qe = null;
-            if (Scanner.TryScan("WHERE") && (Expression(Operator, out qe) == false|| qe == null))
+            if (Scanner.TryScan("WHERE") && (Expression(out qe) == false|| qe == null))
                 ThrowParseException("Unable to parse WHERE clause of an 'With Edges' clause");
 
             List<(QueryExpression Expression, OrderByFieldType OrderingType, bool Ascending)> orderBy = null;
@@ -233,7 +237,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 QueryExpression filter = null;
                 if (Scanner.TryScan('('))
                 {
-                    if(Expression(Operator, out filter) == false)
+                    if(Expression(out filter) == false)
                         throw new InvalidQueryException("Failed to parse filter expression for: " + alias, Scanner.Input, null);
 
                     if (Scanner.TryScan(')') == false)
@@ -261,7 +265,32 @@ namespace Raven.Server.Documents.Queries.Parser
                 _synteticWithQueries.Add((filterQuery, isEdge));
             }
         }
-        private bool GraphOperation(bool requiredField, out QueryExpression op)
+
+
+        private bool BinaryGraph(out QueryExpression op)
+        {
+            if (GraphOperation(out op) == false)
+                return false;
+
+            if (Scanner.TryScan(BinaryOperators, out var found) == false)
+                return true; // found simple
+
+            var negate = Scanner.TryScan("NOT");
+            var type = found == "OR"
+                ? OperatorType.Or
+                : OperatorType.And;
+
+            _state = NextTokenOptions.Parenthesis;
+
+            var parenthesis = Scanner.TryPeek('(');
+
+            if (GraphOperation(out var right) == false)
+                ThrowParseException($"Failed to find second part of {type} expression");
+
+            return TrySimplifyBinaryExpression(right, type, negate, parenthesis, ref op);
+        }
+
+        private bool GraphOperation(out QueryExpression op)
         {
             if(Scanner.TryScan('(') == false)
                 throw new InvalidQueryException("MATCH operator expected a '(', but didn't get it.", Scanner.Input, null);
@@ -269,8 +298,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if(GraphAlias(AddWithQuery, isEdge: false, out var alias) == false)
             {
                 // this isn't (foo), so maybe ((foo)-...)
-                // hand this off to the normal parenthesis rules.
-                return Parenthesis(GraphOperation, out op);
+                throw new NotImplementedException("Need to get here");
             }
 
             if(Scanner.TryScan(')') == false)
@@ -293,7 +321,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             foundDash = true;
                             continue;
                         case "[":
-                            if(foundDash == false)
+                            if (foundDash == false)
                                 throw new InvalidQueryException("Got '[' when expected '-', did you forget to add '-[' ?", Scanner.Input, null);
 
                             if (GraphAlias(AddWithQuery, isEdge: true, out alias) == false)
@@ -301,7 +329,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             if (Scanner.TryScan(']') == false)
                                 throw new InvalidQueryException("MATCH operator expected a ']' after reading: " + alias, Scanner.Input, null);
 
-                            list.Add((alias, EdgeType.Outgoing));
+                            list.Add((alias, list[list.Count - 1].EdgeType));
                             break;
                         case "<-":
                             list[list.Count - 1] = (list[list.Count - 1].Alias, EdgeType.Incoming);
@@ -322,7 +350,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             goto case "(";
 
                         case "(":
-                            if(expectNode == false)
+                            if (expectNode == false && list[list.Count - 1].EdgeType != EdgeType.Incoming)
                                 throw new InvalidQueryException("Got '(', but it wasn't expected", Scanner.Input, null);
 
                             if (GraphAlias(AddWithQuery, isEdge: false, out alias) == false)
@@ -349,6 +377,7 @@ namespace Raven.Server.Documents.Queries.Parser
                         Path = list.ToArray(),
                         Type = ExpressionType.Pattern
                     };
+
                     return true;
                 }
             }
@@ -651,7 +680,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
                 if (Scanner.TryScan('(')) // FROM  Collection ( filter )
                 {
-                    if (Expression(Operator, out filter) == false)
+                    if (Expression(out filter) == false)
                         ThrowParseException("Expected filter in filtered FORM clause");
 
                     if (Scanner.TryScan(')') == false)
@@ -736,7 +765,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return true;
         }
 
-        internal bool Expression(OperatorAction operatorAction, out QueryExpression op)
+        internal bool Expression(out QueryExpression op)
         {
             if (++_depth > 128)
                 ThrowQueryException("Query is too complex, over 128 nested clauses are not allowed");
@@ -745,24 +774,22 @@ namespace Raven.Server.Documents.Queries.Parser
                 _statePos = Scanner.Position;
                 _state = NextTokenOptions.Parenthesis;
             }
-            var result = Binary(operatorAction, out op);
+            var result = Binary(out op);
             _depth--;
             return result;
         }
 
-        internal delegate bool OperatorAction(bool requiredField, out QueryExpression op);
-
-        private bool Binary(OperatorAction operatorAction, out QueryExpression op)
+        private bool Binary(out QueryExpression op)
         {
             switch (_state)
             {
                 case NextTokenOptions.Parenthesis:
-                    if (Parenthesis(operatorAction, out op) == false)
+                    if (Parenthesis(out op) == false)
                         return false;
                     break;
                 case NextTokenOptions.BinaryOp:
                     _state = NextTokenOptions.Parenthesis;
-                    if (operatorAction(true, out op) == false)
+                    if (Operator(true, out op) == false)
                         return false;
                     break;
                 default:
@@ -783,9 +810,19 @@ namespace Raven.Server.Documents.Queries.Parser
 
             var parenthesis = Scanner.TryPeek('(');
 
-            if (Binary(operatorAction, out var right) == false)
+            if (Binary(out var right) == false)
                 ThrowParseException($"Failed to find second part of {type} expression");
 
+            return TrySimplifyBinaryExpression(right, type, negate, parenthesis, ref op);
+        }
+
+        private bool TrySimplifyBinaryExpression(
+            QueryExpression right,
+            OperatorType type,
+            bool negate, 
+            bool parenthesis, 
+            ref QueryExpression op)
+        {
             if (parenthesis == false)
             {
                 if (negate)
@@ -852,15 +889,15 @@ namespace Raven.Server.Documents.Queries.Parser
             return new NegatedExpression(expr);
         }
 
-        private bool Parenthesis(OperatorAction operatorAction, out QueryExpression op)
+        private bool Parenthesis(out QueryExpression op)
         {
             if (Scanner.TryScan('(') == false)
             {
                 _state = NextTokenOptions.BinaryOp;
-                return Binary(operatorAction, out op);
+                return Binary(out op);
             }
 
-            if (Expression(operatorAction, out op) == false)
+            if (Expression(out op) == false)
                 return false;
 
             if (Scanner.TryScan(')') == false)
@@ -868,7 +905,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return true;
         }
 
-        public bool Operator(bool fieldRequired, out QueryExpression op)
+        private bool Operator(bool fieldRequired, out QueryExpression op)
         {
             OperatorType type;
             FieldExpression field = null;
@@ -1067,7 +1104,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     }
                 }
 
-                if (Expression(Operator, out var expr))
+                if (Expression(out var expr))
                     args.Add(expr);
                 else
                     ThrowParseException("parsing method, expected an argument");

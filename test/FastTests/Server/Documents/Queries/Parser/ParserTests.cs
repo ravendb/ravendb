@@ -125,7 +125,7 @@ UPDATE {
             parser.Init(q);
 
             QueryExpression op;
-            Assert.True(parser.Expression(parser.Operator ,out op));
+            Assert.True(parser.Expression(out op));
             Assert.IsType<BinaryExpression>(op);
             Assert.Equal(type, ((BinaryExpression)op).Operator);
         }
@@ -138,7 +138,7 @@ UPDATE {
             parser.Init(q);
 
             QueryExpression op;
-            Assert.True(parser.Expression(parser.Operator, out op));
+            Assert.True(parser.Expression(out op));
             Assert.IsType<BinaryExpression>(op);
             Assert.Equal(type, ((BinaryExpression)op).Operator);
             Assert.IsType<NegatedExpression>(((BinaryExpression)op).Right);
@@ -162,7 +162,7 @@ UPDATE {
             parser.Init(q);
 
             QueryExpression op;
-            Assert.True(parser.Expression(parser.Operator, out op));
+            Assert.True(parser.Expression(out op));
             Assert.Equal(type, op.GetType());
         }
 
@@ -186,7 +186,7 @@ UPDATE {
             parser.Init(q);
 
             QueryExpression op;
-            Assert.True(parser.Expression(parser.Operator, out op));
+            Assert.True(parser.Expression(out op));
             var output = new StringWriter();
             new StringQueryVisitor(output.GetStringBuilder()).VisitExpression(op);
             Assert.Equal(o, output.GetStringBuilder().ToString());
@@ -212,7 +212,7 @@ UPDATE {
             parser.Init(q);
 
             QueryExpression op;
-            Assert.True(parser.Expression(parser.Operator, out op));
+            Assert.True(parser.Expression(out op));
             var output = new StringWriter();
             new JsonQueryVisitor(new JsonTextWriter(output)).VisitExpression(op);
             var actual = output.GetStringBuilder().ToString();
