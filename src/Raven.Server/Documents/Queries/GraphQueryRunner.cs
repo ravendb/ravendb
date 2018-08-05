@@ -28,6 +28,8 @@ namespace Raven.Server.Documents.Queries
         {
             var q = query.Metadata.Query;
 
+            Console.WriteLine(q);
+
             var ir = new IntermediateResults();
 
             foreach (var documentQuery in q.GraphQuery.WithDocumentQueries)
@@ -35,6 +37,8 @@ namespace Raven.Server.Documents.Queries
                 var queryMetadata = new QueryMetadata(documentQuery.Value, query.QueryParameters, 0);
                 var results = await Database.QueryRunner.ExecuteQuery(new IndexQueryServerSide(queryMetadata),
                     documentsContext, existingResultEtag, token);
+                
+                ir.EnsureExists(documentQuery.Key);
 
                 foreach (var result in results.Results)
                 {
@@ -66,7 +70,6 @@ namespace Raven.Server.Documents.Queries
 
         private List<Match> ExecutePatternMatch(DocumentsOperationContext documentsContext, Query q, IntermediateResults ir)
         {
-            var results = new DocumentQueryResult();
             var visitor = new GraphExecuteVisitor(ir, q.GraphQuery, documentsContext);
             visitor.VisitExpression(q.GraphQuery.MatchClause);
             return visitor.Output;
@@ -159,16 +162,19 @@ namespace Raven.Server.Documents.Queries
 
             public void Add(string alias, Match match, Document instance)
             {
-                if (MatchesByAlias.TryGetValue(alias, out var aliasDic) == false)
-                    MatchesByAlias[alias] = aliasDic = new Dictionary<string, Match>();
-
                 //TODO: need to handle map/reduce results?
-                aliasDic[instance.Id] = match;
+                MatchesByAlias[alias][instance.Id] = match;
             }
 
             public bool TryGetByAlias(string alias, out Dictionary<string,Match> value)
             {
                 return MatchesByAlias.TryGetValue(alias, out value);
+            }
+
+            public void EnsureExists(string alias)
+            {
+                if (MatchesByAlias.TryGetValue(alias, out _) == false)
+                    MatchesByAlias[alias] =  new Dictionary<string, Match>();
             }
         }
 
@@ -240,8 +246,10 @@ namespace Raven.Server.Documents.Queries
                 if (prev.Data.TryGet(edge, out string nextId) == false || nextId == null)
                     return false;
 
-                if (edgeResults?.TryGetValue(nextId, out relatedMatch) == true)
-                    return true;
+                if (edgeResults != null)
+                {
+                    return edgeResults.TryGetValue(nextId, out relatedMatch);
+                }
 
                 var doc = _ctx.DocumentDatabase.DocumentsStorage.Get(_ctx, nextId, false);
                 if (doc == null)
