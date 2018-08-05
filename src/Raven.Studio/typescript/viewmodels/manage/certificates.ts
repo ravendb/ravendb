@@ -130,7 +130,9 @@ class certificates extends viewModelBase {
     }
     
     private onAlert(alert: Raven.Server.NotificationCenter.Notifications.AlertRaised) {
-        if (alert.AlertType === "Certificates_ReplaceError" || alert.AlertType === "Certificates_ReplaceSuccess") {
+        if (alert.AlertType === "Certificates_ReplaceError" ||
+            alert.AlertType === "Certificates_ReplaceSuccess" ||
+            alert.AlertType === "Certificates_EntireClusterReplaceSuccess") {
             this.loadCertificates();
         }
     }
