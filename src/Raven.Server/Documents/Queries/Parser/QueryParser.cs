@@ -338,7 +338,7 @@ namespace Raven.Server.Documents.Queries.Parser
             list.Add(new MatchPath
             {
                 Alias = alias,
-                EdgeType = EdgeType.Outgoing
+                EdgeType = EdgeType.Right
             });
 
 
@@ -376,7 +376,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             {
                                 Alias = last.Alias,
                                 IsEdge = last.IsEdge,
-                                EdgeType = EdgeType.Incoming
+                                EdgeType = EdgeType.Left
                             };
                             foundDash = true;
                             expectNode = true;
@@ -391,7 +391,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             {
                                 Alias = last.Alias,
                                 IsEdge = last.IsEdge,
-                                EdgeType = EdgeType.Outgoing
+                                EdgeType = EdgeType.Right
                             };
                             if (Scanner.TryScan('(') == false)
                                 throw new InvalidQueryException("MATCH operator expected a '(', but didn't get it.", Scanner.Input, null);
@@ -400,7 +400,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             goto case "(";
 
                         case "(":
-                            if (expectNode == false && list[list.Count - 1].EdgeType != EdgeType.Incoming)
+                            if (expectNode == false && list[list.Count - 1].EdgeType != EdgeType.Left)
                                 throw new InvalidQueryException("Got '(', but it wasn't expected", Scanner.Input, null);
 
                             if (GraphAlias(isEdge: false, out alias) == false)
@@ -424,14 +424,113 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
                 else
                 {
-                    op = new PatternMatchElementExpression
-                    {
-                        Path = list.ToArray(),
-                        Type = ExpressionType.Pattern
-                    };
+                    op = FinalProcessingOfMatchExpression(list);
 
                     return true;
                 }
+            }
+        }
+
+        private static QueryExpression FinalProcessingOfMatchExpression(List<MatchPath> list)
+        {
+            bool hasIncoming = false, hasOutgoing = false;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                hasIncoming |= list[i].EdgeType == EdgeType.Left;
+                hasOutgoing |= list[i].EdgeType == EdgeType.Right;
+            }
+
+            QueryExpression op;
+            if (hasIncoming)
+            {
+                if(hasOutgoing == false)
+                {
+                    ReverseIncomingChain(list);
+                }
+                else
+                {
+                    return BreakPatternChainToAndClasues(list, out op);
+                }
+
+            }
+
+            op = new PatternMatchElementExpression
+            {
+                Path = list.ToArray(),
+                Type = ExpressionType.Pattern
+            };
+            return op;
+        }
+
+        private static QueryExpression BreakPatternChainToAndClasues(List<MatchPath> list, out QueryExpression op)
+        {
+            // need to split the expression based on the direction of the arrows
+            var clauses = new List<PatternMatchElementExpression>();
+            for (int i = list.Count - 1; i >= 1; i--)
+            {
+                if (list[i].EdgeType != list[i - 1].EdgeType)
+                {
+                    var part = list.Skip(i ).ToList();
+                    if (part.Last().EdgeType == EdgeType.Left)
+                    {
+                        ReverseIncomingChain(part);
+                    }
+                    else
+                    {
+                        part[0] = new MatchPath
+                        {
+                            Alias = part[0].Alias,
+                            EdgeType = EdgeType.Left,
+                            IsEdge = part[0].IsEdge
+                        };
+                    }
+                    list[i] = new MatchPath
+                    {
+                        Alias = list[i].Alias,
+                        EdgeType = list[i-1].EdgeType,
+                        IsEdge = list[i].IsEdge
+                    };
+                    clauses.Add(new PatternMatchElementExpression
+                    {
+                        Path = part.ToArray(),
+                        Type = ExpressionType.Pattern
+                    });
+                    list.RemoveRange(i+1, list.Count - i -1);
+                }
+            }
+
+            if(list[0].EdgeType == EdgeType.Left)
+            {
+                ReverseIncomingChain(list);
+            }
+            clauses.Add(new PatternMatchElementExpression
+            {
+                Path = list.ToArray(),
+                Type = ExpressionType.Pattern
+            });
+
+            op = clauses.Last();
+            for (int i = clauses.Count - 2; i >= 0; i--)
+            {
+                op = new BinaryExpression(op, clauses[i], OperatorType.And);
+            }
+            return op;
+        }
+
+        private static void ReverseIncomingChain(List<MatchPath> list)
+        {
+            // reverse the path so it is always rightward skips
+            list.Reverse();
+            for (int i = 0; i < list.Count; i++)
+            {
+                var cur = list[i];
+                list[i] = new MatchPath
+                {
+                    Alias = cur.Alias,
+                    EdgeType = EdgeType.Right,
+                    IsEdge = cur.IsEdge
+                };
             }
         }
 

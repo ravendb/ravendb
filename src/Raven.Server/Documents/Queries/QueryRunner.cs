@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Queries
     {
         private const int NumberOfRetries = 3;
 
+        private readonly GraphQueryRunner _graph;
         private readonly StaticIndexQueryRunner _static;
         private readonly AbstractQueryRunner _dynamic;
         private readonly CollectionQueryRunner _collection;
@@ -35,6 +36,7 @@ namespace Raven.Server.Documents.Queries
                 ? (AbstractQueryRunner)new InvalidQueryRunner(database)
                 : new DynamicQueryRunner(database);
             _collection = new CollectionQueryRunner(database);
+            _graph = new GraphQueryRunner(database);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -47,6 +49,8 @@ namespace Raven.Server.Documents.Queries
 
                 return _collection;
             }
+            if (query.Metadata.IsGraph)
+                return _graph;
 
             return _static;
         }

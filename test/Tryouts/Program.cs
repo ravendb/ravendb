@@ -27,9 +27,20 @@ namespace Tryouts
 
             //Console.WriteLine(graphQuery.ToString());
 
-            using(var parsing = new FastTests.Graph.SimpleGraphQueries())
+            using(var parsing = new FastTests.Graph.Parsing())
             {
-                 parsing.FindFriendlies();
+                 parsing.CanRoundTripQueries(@"with { from Movies where Genre = $genre } as m
+match (u:Users)<-[r:Rated]-(m)->(a:Actor)", @"WITH {
+    FROM Movies WHERE Genre = $genre
+} AS m
+WITH {
+    FROM Users
+} AS u
+WITH {
+    FROM Actor
+} AS a
+WITH EDGES(Rated) AS r
+MATCH ((m)-[r]->(u) AND (m)->(a))");
             }
 
         }

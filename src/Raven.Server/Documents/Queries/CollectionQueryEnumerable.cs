@@ -100,9 +100,6 @@ namespace Raven.Server.Documents.Queries
 
             private (List<Slice>, string) ExtractIdsFromQuery(IndexQueryServerSide query, DocumentsOperationContext context)
             {
-                if (string.IsNullOrWhiteSpace(query.Query))
-                    return (null, null);
-
                 if (query.Metadata.Query.Where == null)
                     return (null, null);
 

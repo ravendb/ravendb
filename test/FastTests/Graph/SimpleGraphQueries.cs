@@ -47,7 +47,6 @@ namespace FastTests.Graph
             using (var store = GetDocumentStore())
             {
                 CreateData(store);
-                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                    var friends = session.Advanced.RawQuery<dynamic>(@"

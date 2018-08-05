@@ -26,10 +26,10 @@ namespace Raven.Server.Documents.Queries.AST
                 {
                     switch (Path[i + 1].EdgeType)
                     {
-                        case EdgeType.Outgoing:
+                        case EdgeType.Right:
                             sb.Append(Path[i+1].IsEdge ? "-" : "->");
                             break;
-                        case EdgeType.Incoming:
+                        case EdgeType.Left:
                             sb.Append(Path[i].IsEdge ? "-" : "<-");
                             break;
                         default:
@@ -60,8 +60,8 @@ namespace Raven.Server.Documents.Queries.AST
 
     public enum EdgeType
     {
-        Outgoing,
-        Incoming
+        Right,
+        Left
     }
 
     public struct MatchPath
@@ -69,5 +69,11 @@ namespace Raven.Server.Documents.Queries.AST
         public StringSegment Alias;
         public EdgeType EdgeType;
         public bool IsEdge;
+
+        public override string ToString()
+        {
+
+            return (IsEdge ? "[" : "(") +  Alias + (IsEdge ? "]" : ")") + (EdgeType == EdgeType.Left ? "<-" : "->"); 
+        }
     }
 }
