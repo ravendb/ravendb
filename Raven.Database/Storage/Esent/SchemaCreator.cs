@@ -801,7 +801,7 @@ namespace Raven.Storage.Esent
                     szIndexName = "by_id",
                     cbKey = by_id.Length,
                     szKey = by_id,
-                    grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                    grbit = CreateIndexGrbit.IndexPrimary
                 }
             }, 1);
 
@@ -1099,7 +1099,7 @@ namespace Raven.Storage.Esent
                     szIndexName = "by_id",
                     cbKey = by_id.Length,
                     szKey = by_id,
-                    grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                    grbit = CreateIndexGrbit.IndexPrimary
                 }
             }, 1);
 

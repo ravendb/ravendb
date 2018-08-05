@@ -27,28 +27,15 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
         {
             using (var tbl = new Table(session, dbid, "lists", OpenTableGrbit.None))
             {
-                var by_id = "+id\0\0";
                 var by_name_and_etag = "+name\0+etag\0\0";
                 var by_name_and_key = "+name\0+key\0\0";
                 var by_name_and_created_at = "+name\0+created_at\0\0";
 
                 var tableid = tbl.JetTableid;
-
-                Api.JetDeleteIndex(session, tbl, "szIndexName");
+            
                 Api.JetDeleteIndex(session, tbl, "by_name_and_etag");
                 Api.JetDeleteIndex(session, tbl, "by_name_and_key");
                 Api.JetDeleteIndex(session, tbl, "by_name_and_created_at");
-
-                Api.JetCreateIndex2(session, tableid, new[]
-                {
-                new JET_INDEXCREATE
-                {
-                    szIndexName = "by_id",
-                    cbKey = by_id.Length,
-                    szKey = by_id,
-                    grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
-                }
-                }, 1);
 
                 Api.JetCreateIndex2(session, tableid, new[]
                 {
@@ -93,28 +80,15 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
 
             using (var tbl = new Table(session, dbid, "indexed_documents_references", OpenTableGrbit.None))
             {
-                var by_id = "+id\0\0";
                 var by_key = "+key\0\0";
                 var by_view_and_key = "+view\0+key\0\0";
                 var by_ref = "+ref\0\0";
 
                 var tableid = tbl.JetTableid;
 
-                Api.JetDeleteIndex(session, tbl, "by_id");
                 Api.JetDeleteIndex(session, tbl, "by_key");
                 Api.JetDeleteIndex(session, tbl, "by_view_and_key");
                 Api.JetDeleteIndex(session, tbl, "by_ref");
-
-                Api.JetCreateIndex2(session, tableid, new[]
-{
-                new JET_INDEXCREATE
-                {
-                    szIndexName = "by_id",
-                    cbKey = by_id.Length,
-                    szKey = by_id,
-                    grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
-                }
-            }, 1);
 
                 Api.JetCreateIndex2(session, tableid, new[]
                     {
