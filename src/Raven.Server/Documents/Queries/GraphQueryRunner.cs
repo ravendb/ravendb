@@ -13,6 +13,9 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Diagnostics;
+using System.Linq;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Exceptions;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -24,7 +27,8 @@ namespace Raven.Server.Documents.Queries
 
         // this code is first draft mode, meant to start working. It is known that 
         // there are LOT of allocations here that we'll need to get under control
-        public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag,
+            OperationCancelToken token)
         {
             var q = query.Metadata.Query;
 
@@ -37,7 +41,7 @@ namespace Raven.Server.Documents.Queries
                 var queryMetadata = new QueryMetadata(documentQuery.Value, query.QueryParameters, 0);
                 var results = await Database.QueryRunner.ExecuteQuery(new IndexQueryServerSide(queryMetadata),
                     documentsContext, existingResultEtag, token);
-                
+
                 ir.EnsureExists(documentQuery.Key);
 
                 foreach (var result in results.Results)
@@ -48,11 +52,51 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            var matchResults = ExecutePatternMatch(documentsContext, q, ir) ?? new List<Match>();
+            var matchResults = ExecutePatternMatch(documentsContext, q, ir) ?? new List<Match>();         
 
             //TODO: handle order by, load, select clauses
-
+            
             var final = new DocumentQueryResult();
+
+            if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
+            {
+                HandleResultsWithoutSelect(documentsContext, matchResults, final);
+            }
+            else if (q.Select != null)
+            {
+                foreach (var field in query.Metadata.SelectFields)
+                {
+                    var resultsForField = matchResults.Where(mr => mr.Aliases.Contains(field.Name.Value));
+                    foreach (var result in resultsForField)
+                    {
+                        if (result.TryPopulate(field, out var json))
+                        {
+                            final.AddResult(new Document
+                            {
+                                Data = documentsContext.ReadObject(json, "graph/result"),
+                            });
+                        }
+                    }
+                }
+
+                foreach (var match in matchResults)
+                {                   
+                    var result = new DynamicJsonValue();
+                    match.Populate(result);
+
+                    final.AddResult(new Document
+                    {
+                        Data = documentsContext.ReadObject(result, "graph/result"),
+                    });
+                }
+            }
+
+            final.TotalResults = final.Results.Count;
+            return final;
+        }
+
+        private static void HandleResultsWithoutSelect(DocumentsOperationContext documentsContext, List<Match> matchResults, DocumentQueryResult final)
+        {
             foreach (var match in matchResults)
             {
                 var result = new DynamicJsonValue();
@@ -62,10 +106,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     Data = documentsContext.ReadObject(result, "graph/result"),
                 });
-
             }
-            final.TotalResults = final.Results.Count;
-            return final;
         }
 
         private List<Match> ExecutePatternMatch(DocumentsOperationContext documentsContext, Query q, IntermediateResults ir)
@@ -101,7 +142,7 @@ namespace Raven.Server.Documents.Queries
         {
             private Dictionary<string, Document> _inner;
 
-            public object Key { get => _inner; }
+            public object Key => _inner;
 
             public IEnumerable<string> Aliases => _inner.Keys;
 
@@ -118,6 +159,17 @@ namespace Raven.Server.Documents.Queries
                     _inner = new Dictionary<string, Document>();
 
                 _inner.Add(alias, val);
+            }
+
+            public bool TryPopulate(SelectField f, out DynamicJsonValue j)
+            {
+                j = null;
+                if (_inner.TryGetValue(f.Name.Value, out var val))
+                {
+                    j = new DynamicJsonValue(val.Data);
+                    return true;
+                }
+                else return false;
             }
 
             public void Populate(DynamicJsonValue j)
@@ -147,10 +199,8 @@ namespace Raven.Server.Documents.Queries
         private struct IntermediateResults// using struct because we have a single field 
         {
             private Dictionary<string, Dictionary<string, Match>> _matchesByAlias;
-            private Dictionary<string, Dictionary<string, Match>> MatchesByAlias
-            {
-                get =>  _matchesByAlias ??( _matchesByAlias = new Dictionary<string, Dictionary<string, Match>>());
-            }
+            private Dictionary<string, Dictionary<string, Match>> MatchesByAlias => 
+                _matchesByAlias ??( _matchesByAlias = new Dictionary<string, Dictionary<string, Match>>());
 
             public void Add(Match match)
             {
