@@ -33,28 +33,58 @@ namespace Raven.Server.Documents.Queries
         public readonly Dictionary<StringSegment, (string PropertyPath, bool Array, bool Parameter, bool Quoted, string LoadFromAlias)> RootAliasPaths = new Dictionary<StringSegment, (string, bool, bool, bool, string)>();
 
         public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey, QueryType queryType = QueryType.Select)
+            : this(ParseQuery(query, queryType), parameters, cacheKey)
+        {
+            
+        }
+
+        private static Query ParseQuery(string q, QueryType queryType)
+        {
+            var qp = new QueryParser();
+            qp.Init(q);
+            return qp.Parse(queryType);
+        }
+
+        public QueryMetadata(Query query, BlittableJsonReaderObject parameters, ulong cacheKey)
         {
             CacheKey = cacheKey;
 
-            var qp = new QueryParser();
-            qp.Init(query);
-            Query = qp.Parse(queryType);
+            Query = query;
 
             QueryText = Query.QueryText;
 
-            IsDynamic = Query.From.Index == false;
+            IsGraph = Query.GraphQuery != null;
             IsDistinct = Query.IsDistinct;
-            IsGroupBy = Query.GroupBy != null;
 
-            var fromToken = Query.From.From;
 
-            if (IsDynamic)
-                CollectionName = fromToken.FieldValue;
+            if (IsGraph == false)
+            {
+                IsDynamic = Query.From.Index == false;
+                var fromToken = Query.From.From;
+
+                if (IsDynamic)
+                    CollectionName = fromToken.FieldValue;
+                else
+                    IndexName = fromToken.FieldValue;
+
+                if (IsDynamic == false || IsGroupBy)
+                    IsCollectionQuery = false;
+
+
+                IsOptimizedSortOnly = IsCollectionQuery == false
+                                      && WhereFields.Count == 0
+                                      && OrderBy?.Length == 1
+                                      && (OrderBy[0].OrderingType == OrderByFieldType.Implicit || OrderBy[0].OrderingType == OrderByFieldType.String)
+                                      && HasExplanations == false
+                                      && HasHighlightings == false
+                                      && IsDistinct == false;
+            }
             else
-                IndexName = fromToken.FieldValue;
-
-            if (IsDynamic == false || IsGroupBy)
+            {
                 IsCollectionQuery = false;
+            }
+
+            IsGroupBy = Query.GroupBy != null;
 
             if (IsGroupBy && IsDynamic == false)
                 throw new ArgumentException("Can't use 'group by' when querying on an Index. 'group by' can be used only when querying on collections.");
@@ -64,14 +94,6 @@ namespace Raven.Server.Documents.Queries
             Build(parameters);
 
             CanCache = cacheKey != 0;
-
-            IsOptimizedSortOnly = IsCollectionQuery == false
-                                  && WhereFields.Count == 0
-                                  && OrderBy?.Length == 1
-                                  && (OrderBy[0].OrderingType == OrderByFieldType.Implicit || OrderBy[0].OrderingType == OrderByFieldType.String)
-                                  && HasExplanations == false
-                                  && HasHighlightings == false
-                                  && IsDistinct == false;
 
             CreatedAt = DateTime.UtcNow;
             LastQueriedAt = CreatedAt;
@@ -85,6 +107,7 @@ namespace Raven.Server.Documents.Queries
 
         public readonly bool IsGroupBy;
 
+        public readonly bool IsGraph;
         public bool HasFacet { get; private set; }
 
         public bool HasSuggest { get; private set; }

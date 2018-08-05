@@ -75,12 +75,34 @@ WITH EDGES(Rated) AS r
 WITH EDGES(ActedOn) AS __alias1
 WITH EDGES(Likes) AS __alias2
 MATCH (((u)<-[r]-(m) AND NOT ((actor)-[__alias1]->(m))) OR (u)-[__alias2]->(actor))")]
+        [InlineData(@"with { from Movies where Genre = $genre } as m
+match (u:Users)<-[r:Rated]-(m)", @"WITH {
+    FROM Movies WHERE Genre = $genre
+} AS m
+WITH {
+    FROM Users
+} AS u
+WITH EDGES(Rated) AS r
+MATCH (m)-[r]->(u)")]
+        [InlineData(@"with { from Movies where Genre = $genre } as m
+match (u:Users)<-[r:Rated]-(m)->(a:Actor)", @"WITH {
+    FROM Movies WHERE Genre = $genre
+} AS m
+WITH {
+    FROM Users
+} AS u
+WITH {
+    FROM Actor
+} AS a
+WITH EDGES(Rated) AS r
+MATCH ((m)-[r]->(u) AND (m)->(a))")]
         public void CanRoundTripQueries(string q, string expected)
         {
             var queryParser = new QueryParser();
             queryParser.Init(q);
             Query query = queryParser.Parse(QueryType.Select);
             var result = query.ToString();
+            System.Console.WriteLine(result);
             Assert.Equal(expected.NormalizeLineEnding(), result.NormalizeLineEnding());
 
         }
@@ -101,7 +123,7 @@ match (u)
             {
                 Assert.Equal(1, p.Path.Length);
                 Assert.Equal("u", p.Path[0].Alias);
-                Assert.Equal(EdgeType.Outgoing, p.Path[0].EdgeType);
+                Assert.Equal(EdgeType.Right, p.Path[0].EdgeType);
             }
             else
             {
@@ -153,11 +175,11 @@ match (u)-[r]->(m)
             {
                 Assert.Equal(3, p.Path.Length);
                 Assert.Equal("u", p.Path[0].Alias);
-                Assert.Equal(EdgeType.Outgoing, p.Path[0].EdgeType);
+                Assert.Equal(EdgeType.Right, p.Path[0].EdgeType);
                 Assert.Equal("r", p.Path[1].Alias);
-                Assert.Equal(EdgeType.Outgoing, p.Path[1].EdgeType);
+                Assert.Equal(EdgeType.Right, p.Path[1].EdgeType);
                 Assert.Equal("m", p.Path[2].Alias);
-                Assert.Equal(EdgeType.Outgoing, p.Path[2].EdgeType);
+                Assert.Equal(EdgeType.Right, p.Path[2].EdgeType);
             }
             else
             {
@@ -183,11 +205,11 @@ match (m)<-[r]-(u)
             {
                 Assert.Equal(3, p.Path.Length);
                 Assert.Equal("m", p.Path[0].Alias);
-                Assert.Equal(EdgeType.Incoming, p.Path[0].EdgeType);
+                Assert.Equal(EdgeType.Left, p.Path[0].EdgeType);
                 Assert.Equal("r", p.Path[1].Alias);
-                Assert.Equal(EdgeType.Incoming, p.Path[1].EdgeType);
+                Assert.Equal(EdgeType.Left, p.Path[1].EdgeType);
                 Assert.Equal("u", p.Path[2].Alias);
-                Assert.Equal(EdgeType.Incoming, p.Path[2].EdgeType);
+                Assert.Equal(EdgeType.Left, p.Path[2].EdgeType);
             }
             else
             {
@@ -210,11 +232,11 @@ match (m:Movies)<-[r:Rated]-( u:Users(City='Hadera') )
             {
                 Assert.Equal(3, p.Path.Length);
                 Assert.Equal("m", p.Path[0].Alias);
-                Assert.Equal(EdgeType.Incoming, p.Path[0].EdgeType);
+                Assert.Equal(EdgeType.Left, p.Path[0].EdgeType);
                 Assert.Equal("r", p.Path[1].Alias);
-                Assert.Equal(EdgeType.Incoming, p.Path[1].EdgeType);
+                Assert.Equal(EdgeType.Left, p.Path[1].EdgeType);
                 Assert.Equal("u", p.Path[2].Alias);
-                Assert.Equal(EdgeType.Incoming, p.Path[2].EdgeType);
+                Assert.Equal(EdgeType.Left, p.Path[2].EdgeType);
 
                 Assert.Equal("FROM Users WHERE City = 'Hadera'", query.GraphQuery.WithDocumentQueries["u"].ToString().Trim());
                 Assert.Equal("FROM Movies", query.GraphQuery.WithDocumentQueries["m"].ToString().Trim());
