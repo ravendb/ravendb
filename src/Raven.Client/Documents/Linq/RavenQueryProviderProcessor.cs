@@ -57,6 +57,9 @@ namespace Raven.Client.Documents.Linq
         private List<LoadToken> _loadTokens;
         private readonly HashSet<string> _loadAliasesMovedToOutputFuction;
         private int _insideLet = 0;
+        private const string DefaultAliasPrefix = "__alias";
+        private bool _addedDefaultAlias;
+
         private readonly HashSet<string> _aliasKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "AS",
@@ -68,8 +71,6 @@ namespace Raven.Client.Documents.Linq
             "UPDATE"
         };
         private List<string> _projectionParameters { get; set; }
-
-        private const string TransparentIdentifier = "<>h__TransparentIdentifier";
 
         private int _aliasesCount;
 
@@ -1491,7 +1492,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                                 || lambdaExpression.Body.NodeType == ExpressionType.MemberInit
                                 || lambdaExpression.Body.NodeType == ExpressionType.MemberAccess)
                             && lambdaExpression.Parameters[0] != null
-                            && lambdaExpression.Parameters[0].Name.StartsWith(TransparentIdentifier))
+                            && lambdaExpression.Parameters[0].Name.StartsWith(JavascriptConversionExtensions.TransparentIdentifier))
                         {
                             _insideLet++;
                         }
@@ -2157,7 +2158,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         ? innerMemberExpression.Member.Name
                         : string.Empty;
 
-                if (param == "<>h__TransparentIdentifier0" || _fromAlias.StartsWith("__ravenDefaultAlias") || _aliasKeywords.Contains(param))
+                if (param == "<>h__TransparentIdentifier0" || _fromAlias.StartsWith(DefaultAliasPrefix) || _aliasKeywords.Contains(param))
                 {
                     // (1) the load argument was defined in a previous let statement, i.e :
                     //     let detailId = "details/1-A" 
@@ -2280,7 +2281,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_insideLet > 0)
             {
-                var newAlias = $"__ravenDefaultAlias{_aliasesCount++}";
+                var newAlias = $"{DefaultAliasPrefix}{_aliasesCount++}";
                 AppendLineToOutputFunction(alias, newAlias);
                 return newAlias;
             }
@@ -2686,11 +2687,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void AddToFieldsToFetch(string field, string alias)
         {
-            if (string.Equals(alias, "load", StringComparison.OrdinalIgnoreCase) ||
-                _aliasKeywords.Contains(alias))
-            {
-                alias = "'" + alias + "'";
-            }
+            HandleKeywordsIfNeeded(ref field, ref alias);
 
             var identityProperty = _documentQuery.Conventions.GetIdentityProperty(_originalQueryType);
             if (identityProperty != null && identityProperty.Name == field)
@@ -2815,7 +2812,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_jsSelectBody != null)
             {
-                return documentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias, _declareToken, _loadTokens, true));
+                return documentQuery.SelectFields<T>(new QueryData(new[] {_jsSelectBody}, _jsProjectionNames, _fromAlias, _declareToken, _loadTokens, true));
             }
 
             var (fields, projections) = GetProjections();
@@ -2851,7 +2848,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_jsSelectBody != null)
             {
-                return asyncDocumentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias, _declareToken, _loadTokens, true));
+                return asyncDocumentQuery.SelectFields<T>(new QueryData(new[] {_jsSelectBody}, _jsProjectionNames, _fromAlias, _declareToken, _loadTokens, true));
             }
 
             var (fields, projections) = GetProjections();
@@ -2949,7 +2946,73 @@ The recommended method is to use full text search (mark the field as Analyzed an
             return type.IsArray || typeof(IEnumerable).IsAssignableFrom(type) && typeof(string) != type;
         }
 
-        #region Nested type: SpecialQueryType
+        private void HandleKeywordsIfNeeded(ref string field, ref string alias)
+        {
+            if (NeedToAddFromAliasToField(field))
+            {
+                AddFromAliasToFieldToFetch(ref field, ref alias);
+            }
+            else if (_aliasKeywords.Contains(field))
+            {
+                AddDefaultAliasToQuery();
+                AddFromAliasToFieldToFetch(ref field, ref alias, true);
+            }
+
+            var indexOf = field.IndexOf(".", StringComparison.OrdinalIgnoreCase);
+            if (indexOf != -1)
+            {
+                var parameter = field.Substring(0, indexOf);
+                if (_aliasKeywords.Contains(parameter))
+                {
+                    // field is a nested path that starts with RQL keyword,
+                    // need to quote the keyword
+                    var nestedPath = field.Substring(indexOf + 1);
+                    AddDefaultAliasToQuery();
+                    AddFromAliasToFieldToFetch(ref parameter, ref alias, true);
+                    field = $"{parameter}.{nestedPath}";
+                }
+            }
+
+            if (string.Equals(alias, "load", StringComparison.OrdinalIgnoreCase) ||
+                _aliasKeywords.Contains(alias))
+            {
+                alias = "'" + alias + "'";
+            }
+        }
+
+        private bool NeedToAddFromAliasToField(string field)
+        {
+            return _addedDefaultAlias &&
+                   field.StartsWith($"{_fromAlias}.") == false &&
+                   field.StartsWith("id(") == false;
+        }
+
+        private void AddDefaultAliasToQuery()
+        {
+            var fromAlias = $"{DefaultAliasPrefix}{_aliasesCount++}";
+            AddFromAlias(fromAlias);
+            foreach (var fieldToFetch in FieldsToFetch)
+            {
+                fieldToFetch.Name = $"{fromAlias}.{fieldToFetch.Name}";
+            }
+
+            _addedDefaultAlias = true;
+        }
+
+        private void AddFromAliasToFieldToFetch(ref string field, ref string alias, bool quote = false)
+        {
+            if (field == alias)
+            {
+                alias = null;
+            }
+
+            field = quote
+                ? $"{_fromAlias}.'{field}'"
+                : $"{_fromAlias}.{field}";
+
+        }
+    
+    #region Nested type: SpecialQueryType
 
         /// <summary>
         /// Different query types 
@@ -2991,6 +3054,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         }
 
         #endregion
+
     }
 
     public class FieldToFetch
@@ -3001,7 +3065,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             Alias = name != alias ? alias : null;
         }
 
-        public string Name { get; }
+        public string Name { get; internal set; }
         public string Alias { get; internal set; }
 
         protected bool Equals(FieldToFetch other)
