@@ -1665,12 +1665,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             if (fields.Length != 1)
                 return;
 
-            var typeInfo = typeof(T).GetTypeInfo();
-            if (typeof(T) != typeof(string) && 
-                typeInfo.IsValueType == false && 
-                typeInfo.IsEnum == false)
-                return;
-
             var indexOf = fields[0].IndexOf(".", StringComparison.Ordinal);
             if (indexOf == -1)
                 return;
