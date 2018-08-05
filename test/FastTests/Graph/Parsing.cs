@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Server.Documents.Queries.AST;
-using Raven.Server.Documents.Queries.Graph;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Extensions;
 using Sparrow;
@@ -100,7 +99,7 @@ MATCH ((m)-[r]->(u) AND (m)->(a))")]
         {
             var queryParser = new QueryParser();
             queryParser.Init(q);
-            Query query = queryParser.Parse(QueryType.Select);
+            var query = queryParser.Parse();
             var result = query.ToString();
             System.Console.WriteLine(result);
             Assert.Equal(expected.NormalizeLineEnding(), result.NormalizeLineEnding());
