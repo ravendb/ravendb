@@ -618,15 +618,27 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private readonly ConcurrentQueue<(CommandBase Cmd, TaskCompletionSource<Task<(long Index,object Result)>> Tcs)> _commandsQueue = new ConcurrentQueue<(CommandBase, TaskCompletionSource<Task<(long, object)>>)>();
+        private class RachisMergedCommand
+        {
+            public CommandBase Command;
+            public TaskCompletionSource<Task<(long Index, object Result)>> Tcs;
+            public readonly MultipleUseFlag Consumed = new MultipleUseFlag();
+        }
+
+        private readonly ConcurrentQueue<RachisMergedCommand> _commandsQueue = new ConcurrentQueue<RachisMergedCommand>();
 
         private readonly AsyncManualResetEvent _waitForCommit = new AsyncManualResetEvent();
 
         public async Task<(long Index, object Result)> PutAsync(CommandBase command, TimeSpan timeout)
         {
-            var tcs = new TaskCompletionSource<Task<(long, object)>>(TaskCreationOptions.RunContinuationsAsynchronously);
-            _commandsQueue.Enqueue((command, tcs));
-            while (tcs.Task.IsCompleted == false)
+            var rachisMergedCommand = new RachisMergedCommand
+            {
+                Command = command,
+                Tcs = new TaskCompletionSource<Task<(long, object)>>(TaskCreationOptions.RunContinuationsAsynchronously)
+            };
+
+            _commandsQueue.Enqueue(rachisMergedCommand);
+            while (rachisMergedCommand.Tcs.Task.IsCompleted == false)
             {
                 var lockTaken = false;
                 try
@@ -649,8 +661,13 @@ namespace Raven.Server.Rachis
                     {
                         if (await task == false)
                         {
-                            GetConvertResult(command)?.AboutToTimeout();
-                            throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
+                            if (rachisMergedCommand.Consumed.Raise())
+                            {
+                                GetConvertResult(command)?.AboutToTimeout();
+                                throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
+                            }
+                            // if the command is already dequeued we must let it continue to keep its context valid. 
+                            await rachisMergedCommand.Tcs.Task;
                         }
                     }
                 }
@@ -661,7 +678,7 @@ namespace Raven.Server.Rachis
                 }
             }
 
-            var inner = await tcs.Task;
+            var inner = await rachisMergedCommand.Tcs.Task;
             if (await inner.WaitWithTimeout(timeout) == false)
             {
                 GetConvertResult(command)?.AboutToTimeout();
@@ -682,10 +699,17 @@ namespace Raven.Server.Rachis
                 {
                     while (_commandsQueue.TryDequeue(out var cmd))
                     {
-                        list.Add(cmd.Tcs);
-                        _engine.InvokeBeforeAppendToRaftLog(context, cmd.Cmd);
+                        if (cmd.Consumed.Raise() == false)
+                        {
+                            // if the command was aborted due to timeout, we should skip it.
+                            // The command is not appended, so We can and must do so, because the context of the command is no longer valid.
+                            continue;
+                        }
 
-                        var djv = cmd.Cmd.ToJson(context);
+                        list.Add(cmd.Tcs);
+                        _engine.InvokeBeforeAppendToRaftLog(context, cmd.Command);
+
+                        var djv = cmd.Command.ToJson(context);
                         var cmdJson = context.ReadObject(djv, "raft/command");
 
                         var index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
@@ -699,7 +723,7 @@ namespace Raven.Server.Rachis
                             {
                                 CommandIndex = index,
                                 TaskCompletionSource = tcs,
-                                ConvertResult = GetConvertResult(cmd.Cmd)
+                                ConvertResult = GetConvertResult(cmd.Command)
                         };
                         _entries[index] = state;
                     }

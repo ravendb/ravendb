@@ -156,43 +156,59 @@ namespace BulkInsert.Benchmark
             var i = 0;
             for (int j = 0; j < numberOfSessions; j++)
             {
-                using (var session = store.OpenAsyncSession(new SessionOptions
+                while (true)
                 {
-                    TransactionMode = TransactionMode.ClusterWide
-                }))
-                {
-                    for (; i < docsPerSession * (j + 1); i++)
+                    try
                     {
-                        //  if (i % (numberOfDocuments / 5) == 0)
-                        //      Console.WriteLine($"{SystemTime.UtcNow:G} : Progress {i:##,###} out of {numberOfDocuments} ...");
-                        var entity = new DocEntity
+                        using (var session = store.OpenAsyncSession(new SessionOptions
                         {
-                            SerialId = i,
-                            RandomId = _random.Next(),
-                            SomeRandomText = _randStr[i % dummies],
-                            Tags = tags
-                        };
-                        var idToUse = Interlocked.Increment(ref _seqId);
-                        await session.StoreAsync(entity, $"{collection}/{idToUse}");
+                            TransactionMode = TransactionMode.ClusterWide
+                        }))
+                        {
+                            for (; i < docsPerSession * (j + 1); i++)
+                            {
+                                //  if (i % (numberOfDocuments / 5) == 0)
+                                //      Console.WriteLine($"{SystemTime.UtcNow:G} : Progress {i:##,###} out of {numberOfDocuments} ...");
+                                var entity = new DocEntity
+                                {
+                                    SerialId = i,
+                                    RandomId = _random.Next(),
+                                    SomeRandomText = _randStr[i % dummies],
+                                    Tags = tags
+                                };
+                                var idToUse = Interlocked.Increment(ref _seqId);
+                                await session.StoreAsync(entity, $"{collection}/{idToUse}");
 
-                        if (i == 0)
-                        {
-                            ids[0] = idToUse;
-                            entities[0] = entity;
+                                if (i == 0)
+                                {
+                                    ids[0] = idToUse;
+                                    entities[0] = entity;
+                                }
+                                else if (i == numberOfDocuments / 2)
+                                {
+                                    ids[1] = idToUse;
+                                    entities[1] = entity;
+                                }
+                                else if (i == numberOfDocuments - 1)
+                                {
+                                    ids[2] = idToUse;
+                                    entities[2] = entity;
+                                }
+                            }
+
+                            await session.SaveChangesAsync();
                         }
-                        else if (i == numberOfDocuments / 2)
-                        {
-                            ids[1] = idToUse;
-                            entities[1] = entity;
-                        }
-                        else if (i == numberOfDocuments - 1)
-                        {
-                            ids[2] = idToUse;
-                            entities[2] = entity;
-                        }
+                        break;
                     }
-
-                    await session.SaveChangesAsync();
+                    catch (TimeoutException)
+                    {
+                        // retry
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        throw;
+                    }
                 }
             }
 
@@ -383,7 +399,7 @@ namespace BulkInsert.Benchmark
         {
             public static void Main(string[] args)
             {
-                using (var massiveObj = new BulkInsertBench("http://localhost:8080", 1805861237))
+                using (var massiveObj = new BulkInsertBench("http://localhost:8090", 1805861237))
                 {
                     massiveObj.CreateDb();
 //                    var sp = Stopwatch.StartNew();
