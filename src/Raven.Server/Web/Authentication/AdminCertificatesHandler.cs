@@ -238,6 +238,17 @@ namespace Raven.Server.Web.Authentication
 
                 try
                 {
+                    var _ = string.IsNullOrEmpty(certificate.Password)
+                        ? new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet)
+                        : new X509Certificate2(certBytes, certificate.Password, X509KeyStorageFlags.MachineKeySet);
+                }
+                catch (Exception e)
+                {
+                    throw new ArgumentException("Unable to load the provided certificate.", e);
+                }
+
+                try
+                {
                     await PutCertificateCollectionInCluster(certificate, certBytes, certificate.Password, ServerStore, ctx);
                 }
                 catch (Exception e)
@@ -863,6 +874,18 @@ namespace Raven.Server.Web.Authentication
 
                     if (string.IsNullOrWhiteSpace(certificate.Certificate))
                         throw new ArgumentException($"{nameof(certificate.Certificate)} is a required field in the certificate definition.");
+
+                    try
+                    {
+                        var certBytes = Convert.FromBase64String(certificate.Certificate);
+                        var _ = string.IsNullOrEmpty(certificate.Password)
+                            ? new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet)
+                            : new X509Certificate2(certBytes, certificate.Password, X509KeyStorageFlags.MachineKeySet);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new ArgumentException("Unable to load the provided certificate.", e);
+                    }
 
                     if (IsClusterAdmin() == false)
                         throw new InvalidOperationException("Cannot replace the server certificate. Only a ClusterAdmin can do this.");
