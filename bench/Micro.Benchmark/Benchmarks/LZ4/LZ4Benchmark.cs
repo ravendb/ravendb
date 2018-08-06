@@ -25,7 +25,7 @@ namespace Micro.Benchmark.Benchmarks.LZ4
             {
                 Add(new Job(RunMode.Dry)
                 {
-                    Env =
+                    Environment =
                     {
                         Runtime = Runtime.Core,
                         Platform = Platform.X64,
