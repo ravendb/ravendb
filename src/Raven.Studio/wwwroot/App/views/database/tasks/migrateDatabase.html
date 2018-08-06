@@ -67,6 +67,7 @@
                             </div>
                         </div>
                         <!-- /ko -->
+
                         <!-- ko with: activeConfiguration -->
                         <div class="form-group" data-bind="validationElement: databaseName">
                             <label class="control-label">Database Name</label>
@@ -83,6 +84,37 @@
                                             <a href="#" data-bind="text: $data"></a>
                                         </li>
                                     </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label"></label>
+                            <div class="toggle">
+                                <input class="styled" type="checkbox" id="migrate-all-collections" data-bind="checked: migrateAllCollections, disable: !hasCollectionsToMigrate()">
+                                <label for="migrate-all-collections">Migrate all collections</label>
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="if: hasCollectionsToMigrate && !migrateAllCollections()">
+                            <label class="control-label">Collections</label>
+                            <div class="flex-grow">
+                                <label data-bind="text: migratingCollectionsText"></label>
+                                <div class="prop-table">
+                                    <!-- ko foreach: collectionsToMigrate -->
+                                    <div class="prop-table-row">
+                                        <div class="toggle">
+                                            <input class="styled" type="checkbox" id="migrate-collection" data-bind="checked: migrateCollection">
+                                            <label for="migrate-collection"></label>
+                                        </div>
+                                        <div class="name" data-bind="text: name, attr:{ title: name }"></div>
+                                        <div class="arrow"><i class="icon-arrow-filled-right"></i></div>
+                                        <div class="inline-edit">
+                                            <div class="static">
+                                                <span class="raven-property-name" data-bind="text: newName, attr:{ title: newName }"></span> <span class="text-muted raven-property-type"></span>
+                                            </div>
+                                            <input class="form-control input-sm" data-bind="textInput: newName, disable: !migrateCollection()"/>
+                                        </div>
+                                    </div>
+                                    <!-- /ko -->
                                 </div>
                             </div>
                         </div>

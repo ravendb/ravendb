@@ -12,6 +12,13 @@ namespace Raven.Migrator
 
         public string ExportFilePath { get; set; }
 
-        public Dictionary<string, string> CollectionsToMigrate { get; set; }
+        public List<Collection> CollectionsToMigrate { get; set; }
+    }
+
+    public class Collection
+    {
+        public string Name { get; set; }
+
+        public string NewName { get; set; }
     }
 }

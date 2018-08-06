@@ -18,14 +18,57 @@ interface IAbstractMigrationConfiguration {
     DatabaseName: string;
     ConsoleExport: boolean;
     ExportFilePath: string;
-    CollectionsToMigrate: { [key: string]: string; };
+    CollectionsToMigrate: ICollection[];
+}
+
+interface ICollection {
+    Name: string;
+    NewName: string;
+}
+
+class collection {
+    name = ko.observable<string>();
+    newName = ko.observable<string>();
+    migrateCollection = ko.observable<boolean>();
+
+    constructor(name: string) {
+        this.name(name);
+        this.newName(name);
+        this.migrateCollection(true);
+    }
+
+    toDto(): ICollection {
+        return {
+            Name: this.name(),
+            NewName: this.newName()
+        }
+    }
 }
 
 abstract class noSqlMigrationModel {
     databaseName = ko.observable<string>();
-    collectionsToMigrate = ko.observable<{ [key: string]: string; }>(null);
+    collectionsToMigrate = ko.observableArray<collection>([]);
     databaseNames = ko.observableArray<string>([]);
-    collectionNames = ko.observableArray<string>([]);
+    migrateAllCollections = ko.observable<boolean>(true);
+    hasCollectionsToMigrate: KnockoutComputed<boolean>;
+    migratingCollectionsText: KnockoutComputed<string>;
+    actualCollectionsToMigrate: KnockoutComputed<collection[]>;
+
+    constructor() {
+        this.hasCollectionsToMigrate = ko.pureComputed(() => this.collectionsToMigrate().length > 0);
+
+        this.actualCollectionsToMigrate = ko.pureComputed(() => this.collectionsToMigrate().filter(x => x.migrateCollection()));
+
+        this.migratingCollectionsText = ko.pureComputed(() => {
+            const collectionsToMigrate = this.actualCollectionsToMigrate().length;
+            if (collectionsToMigrate === 0) {
+                return "No collections were selected for migration";
+            }
+
+            const pluralize = collectionsToMigrate > 1 ? "s" : "";
+            return `Migarting ${collectionsToMigrate} collection${pluralize}`;
+        });
+    }
 
     createDatabaseNamesAutoCompleter() {
         return ko.pureComputed(() => {
@@ -45,7 +88,22 @@ abstract class noSqlMigrationModel {
         this.databaseName(databaseName);
     }
 
-    abstract toDto(command: string): IAbstractMigrationConfiguration;
+    setCollections(collections: string[]) {
+        const collectionsToMigrate = collections.map(c => new collection(c));
+        this.collectionsToMigrate(collectionsToMigrate);
+        this.migrateAllCollections(true);
+    }
+
+    toDto(command: string): IAbstractMigrationConfiguration {
+        const collectionsToMigrate = this.migrateAllCollections() ? null : this.actualCollectionsToMigrate().map(x => x.toDto());
+        return {
+            DatabaseName: this.databaseName(),
+            Command: command,
+            CollectionsToMigrate: collectionsToMigrate,
+            ConsoleExport: true,
+            ExportFilePath: null
+        };
+    }
 }
 
 class mongoDbMigrationModel extends noSqlMigrationModel{
@@ -54,15 +112,10 @@ class mongoDbMigrationModel extends noSqlMigrationModel{
     hasGridFs = ko.observable<boolean>();
 
     toDto(command: string): IMongoDbMigrationConfiguration {
-        return {
-            ConnectionString: this.connectionString(),
-            MigrateGridFS: this.migrateGridFs(),
-            DatabaseName: this.databaseName(),
-            Command: command,
-            CollectionsToMigrate: this.collectionsToMigrate(),
-            ConsoleExport: true,
-            ExportFilePath: null
-        };
+        const dto = super.toDto(command) as IMongoDbMigrationConfiguration;
+        dto.ConnectionString = this.connectionString();
+        dto.MigrateGridFS = this.migrateGridFs();
+        return dto;
     }
 }
 
@@ -71,15 +124,10 @@ class cosmosDbMigrationModel extends noSqlMigrationModel {
     primaryKey = ko.observable<string>();
 
     toDto(command: string): ICosmosDbMigrationConfiguration {
-        return {
-            AzureEndpointUrl: this.azureEndpointUrl(),
-            PrimaryKey: this.primaryKey(),
-            DatabaseName: this.databaseName(),
-            Command: command,
-            CollectionsToMigrate: this.collectionsToMigrate(),
-            ConsoleExport: true,
-            ExportFilePath: null
-        };
+        const dto = super.toDto(command) as ICosmosDbMigrationConfiguration;
+        dto.AzureEndpointUrl = this.azureEndpointUrl();
+        dto.PrimaryKey = this.primaryKey();
+        return dto;
     }
 }
 
