@@ -397,8 +397,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 if (string.IsNullOrWhiteSpace(migrationConfiguration.FullPathToMigrator))
                     throw new ArgumentException("FullPathToMigrator cannot be null or empty");
 
-                if (migrationConfiguration.Input == null)
-                    throw new ArgumentException("Input cannot be null");
+                if (migrationConfiguration.InputConfiguration == null)
+                    throw new ArgumentException("InputConfiguration cannot be null");
 
                 if (Directory.Exists(migrationConfiguration.FullPathToMigrator) == false)
                     throw new InvalidOperationException($"Directory {migrationConfiguration.FullPathToMigrator} doesn't exist");
@@ -434,7 +434,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                                         + processStartInfo.FileName + " " + processStartInfo.Arguments, e);
                 }
 
-                await process.StandardInput.WriteLineAsync(migrationConfiguration.Input.ToString());
+                await process.StandardInput.WriteLineAsync(migrationConfiguration.InputConfiguration.ToString());
 
                 if (migrationConfiguration.IsExportCommand == false)
                 {
