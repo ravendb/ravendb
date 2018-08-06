@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -157,26 +158,15 @@ namespace Raven.Migrator.MongoDB
             }
         }
 
-        private static async Task<Dictionary<string, string>> GetCollectionsToMigrate(IMongoDatabase database)
+        private static async Task<List<Collection>> GetCollectionsToMigrate(IMongoDatabase database)
         {
-            var collectionsToMigrate = new Dictionary<string, string>();
-
-            using (var cursor = await database.ListCollectionsAsync())
-            {
-                while (await cursor.MoveNextAsync())
+            var collectionsToMigrate = await GetCollections(database);
+            return collectionsToMigrate
+                .Select(x => new Collection
                 {
-                    foreach (var collectionDocument in cursor.Current)
-                    {
-                        var collectionName = collectionDocument["name"].ToString();
-                        if (collectionName.EndsWith(".chunks") || collectionName.EndsWith(".files"))
-                            continue; // grid fs files will be handled in a separate thread
-
-                        collectionsToMigrate.Add(collectionName, collectionName);
-                    }
-                }
-            }
-
-            return collectionsToMigrate;
+                    Name = x,
+                    NewName = x
+                }).ToList();
         }
 
         private static async Task MigrateGridFS(IMongoDatabase database, Reference<bool> isFirstDocument, StreamWriter streamWriter)
