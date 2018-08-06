@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using BenchmarkDotNet.Analysers;
 using BenchmarkDotNet.Attributes;
-using BenchmarkDotNet.Attributes.Columns;
 using BenchmarkDotNet.Columns;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Environments;
@@ -54,7 +52,7 @@ namespace Voron.Benchmark
             {
                 Add(new Job
                 {
-                    Env =
+                    Environment =
                     {
                         Runtime = Runtime.Core,
                         Platform = BenchmarkDotNet.Environments.Platform.X64,
@@ -64,7 +62,7 @@ namespace Voron.Benchmark
                     {
                         LaunchCount = 1,
                         WarmupCount = 1,
-                        TargetCount = 1,
+                        IterationCount  = 1,
                         InvocationCount = 1,
                         UnrollFactor = 1
                     },
@@ -132,7 +130,8 @@ namespace Voron.Benchmark
 
         private void DeleteStorage()
         {
-            if (!Directory.Exists(Path)) return;
+            if (!Directory.Exists(Path))
+                return;
 
             for (var i = 0; i < 10; ++i)
             {
