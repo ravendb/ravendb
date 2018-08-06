@@ -19,7 +19,7 @@ namespace StressTests
     public class Databases : RavenTestBase
     {
         [NightlyBuildTheory]
-        [InlineData(100)]
+        [InlineData(25)]
         public void CanHandleMultipleDatabasesOnWrite(int numberOfDatabases)
         {
             UseNewLocalServer();
