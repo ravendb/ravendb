@@ -54,16 +54,33 @@ class migrateDatabase extends viewModelBase {
         this.spinners.getDatabaseNames(true);
 
         const db = this.activeDatabase();
-
+        const selectMigrationOption = this.model.selectMigrationOption();
         new migrateDatabaseCommand<databasesInfo>(db, this.model.toDto("databases"), true)
             .execute()
             .done((databasesInfo: databasesInfo) => {
-                switch (this.model.selectMigrationOption()) {
+                if (selectMigrationOption !== this.model.selectMigrationOption()) {
+                    return;
+                }
+
+                switch (selectMigrationOption) {
                     case "MongoDB":
                         this.model.mongoDbConfiguration.databaseNames(databasesInfo.Databases);
                         break;
                     case "CosmosDB":
                         this.model.cosmosDbConfiguration.databaseNames(databasesInfo.Databases);
+                        break;
+                }
+            })
+            .fail(() => {
+                switch (selectMigrationOption) {
+                    case "MongoDB":
+                        this.model.mongoDbConfiguration.databaseNames([]);
+                        this.model.mongoDbConfiguration.setCollections([]);
+                        this.model.mongoDbConfiguration.hasGridFs(false);
+                        break;
+                    case "CosmosDB":
+                        this.model.cosmosDbConfiguration.databaseNames([]);
+                        this.model.cosmosDbConfiguration.setCollections([]);
                         break;
                 }
             })
@@ -78,17 +95,32 @@ class migrateDatabase extends viewModelBase {
         this.spinners.getCollectionNames(true);
 
         const db = this.activeDatabase();
-
+        const selectMigrationOption = this.model.selectMigrationOption();
         new migrateDatabaseCommand<collectionInfo>(db, this.model.toDto("collections"), true)
             .execute()
             .done((collectionInfo: collectionInfo) => {
-                switch (this.model.selectMigrationOption()) {
+                if (selectMigrationOption !== this.model.selectMigrationOption()) {
+                    return;
+                }
+
+                switch (selectMigrationOption) {
                     case "MongoDB":
-                        this.model.mongoDbConfiguration.collectionNames(collectionInfo.Collections);
+                        this.model.mongoDbConfiguration.setCollections(collectionInfo.Collections);
                         this.model.mongoDbConfiguration.hasGridFs(collectionInfo.HasGridFS);
                         break;
                     case "CosmosDB":
-                        this.model.cosmosDbConfiguration.collectionNames(collectionInfo.Collections);
+                        this.model.cosmosDbConfiguration.setCollections(collectionInfo.Collections);
+                        break;
+                }
+            })
+            .fail(() => {
+                switch (selectMigrationOption) {
+                    case "MongoDB":
+                        this.model.mongoDbConfiguration.setCollections([]);
+                        this.model.mongoDbConfiguration.hasGridFs(false);
+                        break;
+                    case "CosmosDB":
+                        this.model.cosmosDbConfiguration.setCollections([]);
                         break;
                 }
             })

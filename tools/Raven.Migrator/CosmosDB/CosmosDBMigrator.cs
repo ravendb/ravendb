@@ -58,13 +58,22 @@ namespace Raven.Migrator.CosmosDB
             var client = CreateNewCosmosClient();
             var databaseUri = UriFactory.CreateDatabaseUri(_configuration.DatabaseName);
             var database = (await client.ReadDatabaseAsync(databaseUri)).Resource;
-            var collections = GetCollectionsToMigrate(client, database).Keys.ToList();
+            var collections = GetCollections(client, database).ToList();
 
             MigrationHelpers.OutputClass(_configuration,
                 new CollectionsInfo
                 {
                     Collections = collections
                 });
+        }
+
+        private static IEnumerable<string> GetCollections(DocumentClient client, Database database)
+        {
+            var azureCollections = client.CreateDocumentCollectionQuery(database.SelfLink);
+            foreach (var azureCollection in azureCollections)
+            {
+                yield return azureCollection.Id;
+            }
         }
 
         public async Task MigrateDatabse()
@@ -144,14 +153,17 @@ namespace Raven.Migrator.CosmosDB
             }
         }
 
-        private static Dictionary<string, string> GetCollectionsToMigrate(DocumentClient client, Database database)
+        private static List<Collection> GetCollectionsToMigrate(DocumentClient client, Database database)
         {
-            var collectionsToMigrate = new Dictionary<string, string>();
+            var collectionsToMigrate = new List<Collection>();
 
-            var azureCollections = client.CreateDocumentCollectionQuery(database.SelfLink).ToList();
-            foreach (var azureCollection in azureCollections)
+            foreach (var azureCollection in GetCollections(client, database))
             {
-                collectionsToMigrate.Add(azureCollection.Id, azureCollection.Id);
+                collectionsToMigrate.Add(new Collection
+                {
+                    Name = azureCollection,
+                    NewName = azureCollection
+                });
             }
 
             return collectionsToMigrate;

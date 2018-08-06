@@ -66,8 +66,8 @@ namespace Raven.Migrator
                 var isFirstDocument = new Reference<bool> { Value = true };
                 foreach (var collection in configuration.CollectionsToMigrate)
                 {
-                    var mongoCollectionName = collection.Key;
-                    var ravenCollectionName = collection.Value;
+                    var mongoCollectionName = collection.Name;
+                    var ravenCollectionName = collection.NewName;
                     if (string.IsNullOrWhiteSpace(ravenCollectionName))
                         ravenCollectionName = mongoCollectionName;
 
