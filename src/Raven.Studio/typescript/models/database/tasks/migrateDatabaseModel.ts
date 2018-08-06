@@ -202,7 +202,7 @@ class migrateDatabaseModel {
             return null;
         }
 
-        const input = activeConfiguration.toDto(command);
+        const inputConfiguration = activeConfiguration.toDto(command);
 
         const isExportCommand = command === "export";
         const type = this.selectMigrationOption().toLowerCase();
@@ -210,7 +210,7 @@ class migrateDatabaseModel {
             DatabaseTypeName: type,
             FullPathToMigrator: this.fullPathToMigrator(),
             IsExportCommand: isExportCommand,
-            Input: input,
+            InputConfiguration: inputConfiguration,
             TransformScript: this.transformScript()
         };
     }
