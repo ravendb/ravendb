@@ -88,13 +88,6 @@ namespace Raven.Client
             }
 
             public const string Prefix = "certificates/";
-            public const string Certificate = "Certificate";
-            public const string Thumbprint = "Thumbprint";
-            public const string OldThumbprint = "OldThumbprint";
-            public const string Confirmations = "Confirmations";
-            public const string Replaced = "Replaced";
-            public const string ReplaceImmediately = "ReplaceImmediately";
-            public const string CertReplaceAlertTitle = "Server Certificate Replacement";
         }
 
         public class Configuration

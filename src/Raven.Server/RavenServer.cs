@@ -460,7 +460,7 @@ namespace Raven.Server
 
                         ServerStore.NotificationCenter.Add(AlertRaised.Create(
                             null,
-                            Constants.Certificates.CertReplaceAlertTitle,
+                            CertificateReplacement.CertReplaceAlertTitle,
                             msg,
                             AlertType.Certificates_ReplaceError,
                             NotificationSeverity.Error));
@@ -486,18 +486,22 @@ namespace Raven.Server
                 if (ServerStore.IsLeader() == false)
                     return;
 
-                if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion < ClusterCommandsVersionManager.ClusterCommandsVersions[nameof(ConfirmServerCertificateReplacedCommand)])
-                    throw new ClusterNodesVersionMismatchException("It is not possible to refresh/replace the cluster certificate in the current cluster topology. Please make sure that all the cluster nodes run the same version.");
+                if(ClusterCommandsVersionManager.ClusterCommandsVersions.TryGetValue(nameof(ConfirmServerCertificateReplacedCommand), out var commandVersion) == false)
+                    throw new InvalidOperationException($"Failed to get the command version of '{nameof(ConfirmServerCertificateReplacedCommand)}'.");
+
+                if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion < commandVersion)
+                    throw new ClusterNodesVersionMismatchException("It is not possible to refresh/replace the cluster certificate in the current cluster topology. Please make sure that all the cluster nodes have an equal or newer version than the command version." +
+                                                                   $"Cluster Version: {ClusterCommandsVersionManager.CurrentClusterMinimalVersion}, Command Version: {commandVersion}.");
 
                 // we need to see if there is already an ongoing process
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var certUpdate = ServerStore.Cluster.GetItem(context, "server/cert");
+                    var certUpdate = ServerStore.Cluster.GetItem(context, CertificateReplacement.CertificateReplacementDoc);
                     if (certUpdate != null)
                     {
-                        if (certUpdate.TryGet(Constants.Certificates.Confirmations, out int confirmations) == false)
-                            throw new InvalidOperationException($"Expected to get '{Constants.Certificates.Confirmations}' count");
+                        if (certUpdate.TryGet(nameof(CertificateReplacement.Confirmations), out int confirmations) == false)
+                            throw new InvalidOperationException($"Expected to get '{nameof(CertificateReplacement.Confirmations)}' count");
 
                         var nodesInCluster = ServerStore.GetClusterTopology(context).AllNodes.Count;
                         if (nodesInCluster > confirmations)
@@ -510,7 +514,7 @@ namespace Raven.Server
                             return;
                         }
 
-                        if (certUpdate.TryGet(Constants.Certificates.Replaced, out int replaced) == false)
+                        if (certUpdate.TryGet(nameof(CertificateReplacement.Replaced), out int replaced) == false)
                             replaced = 0;
 
                         if (nodesInCluster > replaced)
@@ -539,7 +543,7 @@ namespace Raven.Server
                     msg = "It's time to renew your Let's Encrypt server certificate but automatic renewal is turned off when using the developer license. Go to the certificate page in the studio and trigger the renewal manually.";
                     ServerStore.NotificationCenter.Add(AlertRaised.Create(
                         null,
-                        Constants.Certificates.CertReplaceAlertTitle,
+                        CertificateReplacement.CertReplaceAlertTitle,
                         msg,
                         AlertType.Certificates_DeveloperLetsEncryptRenewal,
                         NotificationSeverity.Warning));
@@ -569,7 +573,7 @@ namespace Raven.Server
 
                 ServerStore.NotificationCenter.Add(AlertRaised.Create(
                     null,
-                    Constants.Certificates.CertReplaceAlertTitle,
+                    CertificateReplacement.CertReplaceAlertTitle,
                     msg,
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
@@ -648,7 +652,7 @@ namespace Raven.Server
 
                 ServerStore.NotificationCenter.Add(AlertRaised.Create(
                     null,
-                    Constants.Certificates.CertReplaceAlertTitle,
+                    CertificateReplacement.CertReplaceAlertTitle,
                     msg,
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,

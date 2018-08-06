@@ -805,7 +805,7 @@ namespace Raven.Server.Web.Authentication
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
-                ServerStore.Cluster.DeleteItem(context, "server/cert");
+                ServerStore.Cluster.DeleteItem(context, CertificateReplacement.CertificateReplacementDoc);
                 tx.Commit();
             }
 
@@ -821,39 +821,38 @@ namespace Raven.Server.Web.Authentication
                 BlittableJsonReaderObject certStatus;
                 using (context.OpenReadTransaction())
                 {
-                    certStatus = ServerStore.Cluster.GetItem(context, "server/cert");
+                    certStatus = ServerStore.Cluster.GetItem(context, CertificateReplacement.CertificateReplacementDoc);
                 }
 
                 if (certStatus != null)
                 {
-                    certStatus.TryGet(Constants.Certificates.Confirmations, out int confirmations);
-                    certStatus.TryGet(Constants.Certificates.Thumbprint, out string thumbprint);
-                    certStatus.TryGet(Constants.Certificates.OldThumbprint, out string oldThumbprint);
-                    certStatus.TryGet(Constants.Certificates.ReplaceImmediately, out bool replaceImmediately);
-                    certStatus.TryGet(Constants.Certificates.Replaced, out int replaced);
+                    certStatus.TryGet(nameof(CertificateReplacement.Confirmations), out int confirmations);
+                    certStatus.TryGet(nameof(CertificateReplacement.Thumbprint), out string thumbprint);
+                    certStatus.TryGet(nameof(CertificateReplacement.OldThumbprint), out string oldThumbprint);
+                    certStatus.TryGet(nameof(CertificateReplacement.ReplaceImmediately), out bool replaceImmediately);
+                    certStatus.TryGet(nameof(CertificateReplacement.Replaced), out int replaced);
 
                     // Not writing the certificate itself, because it has the private key
                     writer.WriteStartObject();
-                    writer.WritePropertyName(Constants.Certificates.Confirmations);
+                    writer.WritePropertyName(nameof(CertificateReplacement.Confirmations));
                     writer.WriteInteger(confirmations);
                     writer.WriteComma();
-                    writer.WritePropertyName(Constants.Certificates.Thumbprint);
+                    writer.WritePropertyName(nameof(CertificateReplacement.Thumbprint));
                     writer.WriteString(thumbprint);
                     writer.WriteComma();
-                    writer.WritePropertyName(Constants.Certificates.OldThumbprint);
+                    writer.WritePropertyName(nameof(CertificateReplacement.OldThumbprint));
                     writer.WriteString(oldThumbprint);
                     writer.WriteComma();
-                    writer.WritePropertyName(Constants.Certificates.ReplaceImmediately);
+                    writer.WritePropertyName(nameof(CertificateReplacement.ReplaceImmediately));
                     writer.WriteBool(replaceImmediately);
                     writer.WriteComma();
-                    writer.WritePropertyName(Constants.Certificates.Replaced);
+                    writer.WritePropertyName(nameof(CertificateReplacement.Replaced));
                     writer.WriteInteger(replaced);
-                    writer.WriteComma();
                     writer.WriteEndObject();
                 }
                 else
                 {
-                    return NoContent();
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 }
             }
 
