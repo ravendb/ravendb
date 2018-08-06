@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text;
 using Sparrow;
 
@@ -10,6 +9,8 @@ namespace Raven.Server.Documents.Queries.AST
         public QueryExpression Where;
 
         public StringSegment? EdgeType;
+
+        public StringSegment? FromAlias;
 
         public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> OrderBy;
 

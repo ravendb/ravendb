@@ -18,6 +18,10 @@ namespace Raven.Server.Documents.Queries
 
         public string SourceAlias;
 
+        public bool IsEdge;
+
+        public bool IsVertex;
+
         public bool IsParameter;
 
         public bool IsQuoted;
