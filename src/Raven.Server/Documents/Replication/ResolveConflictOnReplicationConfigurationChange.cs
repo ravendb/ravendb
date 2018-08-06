@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Replication
                 return count;
             }
 
-            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto()
+            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 // The LowerId created as in memory LazyStringValue
                 // so EscapePositions set to empty to avoid reference to escape characters while serializing
@@ -378,7 +378,7 @@ namespace Raven.Server.Documents.Replication
     {
         public List<(DocumentConflict ResolvedConflict, long MaxConflictEtag)> ResolvedConflicts;
 
-        public ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
+        public ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             var resolver = new ResolveConflictOnReplicationConfigurationChange(
                 database.ReplicationLoader, 

@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.TransactionCommands
             return 1;
         }
 
-        public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto()
+        public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
         {
             return new DeleteDocumentCommandDto()
             {
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.TransactionCommands
         public string ChangeVector { get; set; }
         public bool CatchConcurrencyErrors { get; set; }
 
-        public DeleteDocumentCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
+        public DeleteDocumentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             return new DeleteDocumentCommand(Id, ChangeVector, database, CatchConcurrencyErrors);
         }

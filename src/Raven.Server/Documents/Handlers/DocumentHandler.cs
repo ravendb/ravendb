@@ -529,7 +529,7 @@ namespace Raven.Server.Documents.Handlers
             _document?.Dispose();
         }
 
-        public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto()
+        public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
         {
             return new MergedPutCommandDto()
             {
@@ -545,7 +545,7 @@ namespace Raven.Server.Documents.Handlers
             public LazyStringValue ExpectedChangeVector { get; set; }
             public BlittableJsonReaderObject Document { get; set; }
 
-            public MergedPutCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
+            public MergedPutCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
                 return new MergedPutCommand(Document, Id, ExpectedChangeVector, database);
             }

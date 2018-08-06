@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.Patch
             _returnRunIfMissing.Dispose();
         }
 
-        public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto()
+        public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
         {
             return new PatchDocumentCommandDto
             {
@@ -230,7 +230,7 @@ namespace Raven.Server.Documents.Patch
         public bool DebugMode;
         public bool CollectResultsNeeded;
 
-        public PatchDocumentCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
+        public PatchDocumentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             return new PatchDocumentCommand(
                 context,

@@ -89,12 +89,12 @@ namespace Raven.Server.Documents
 
         public interface IRecordableCommand
         {
-            IReplayableCommandDto<MergedTransactionCommand> ToDto();
+            IReplayableCommandDto<MergedTransactionCommand> ToDto(JsonOperationContext context);
         }
 
         public interface IReplayableCommandDto<out T> where T : MergedTransactionCommand
         {
-            T ToCommand(JsonOperationContext context, DocumentDatabase database); // receive some parameters here?
+            T ToCommand(DocumentsOperationContext context, DocumentDatabase database); // receive some parameters here?
         }
 
         //Todo To define MergedTransactionCommand implement IRecordableCommand after all drive do implement
@@ -199,7 +199,7 @@ namespace Raven.Server.Documents
 
                     if (operation is IRecordableCommand recordableCommand)
                     {
-                        var dto = recordableCommand.ToDto();
+                        var dto = recordableCommand.ToDto(context);
                         using (var writer = new BlittableJsonWriter(context))
                         {
                             var jsonSerializer = DocumentConventions.Default.CreateSerializer();
@@ -1224,7 +1224,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private MergedTransactionCommand DeserializeCommand(string type, BlittableJsonReaderObject wrapCmdReader, JsonOperationContext context,
+        private MergedTransactionCommand DeserializeCommand(string type, BlittableJsonReaderObject wrapCmdReader, DocumentsOperationContext context,
             PeepingTomStream peepingTomStream)
         {
             if (!wrapCmdReader.TryGet(nameof(RecordingCommandDetails.Command), out BlittableJsonReaderObject commandReader))
@@ -1268,9 +1268,8 @@ namespace Raven.Server.Documents
                     return jsonSerializer.Deserialize<MergedNextHiLoCommandDto>(reader);
                 case nameof(HiLoHandler.MergedHiLoReturnCommand):
                     return jsonSerializer.Deserialize<MergedHiLoReturnCommandDto>(reader);
-                //Todo To deal with those cases after a possibility to serialize and deserialize is implemented
                 case nameof(IncomingReplicationHandler.MergedDocumentReplicationCommand):
-                    return null;
+                    return jsonSerializer.Deserialize<MergedDocumentReplicationCommandDto>(reader);
                 default:
                     throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
             }

@@ -64,6 +64,136 @@ namespace SlowTests.Server
         }
 
         [Fact]
+        public async Task RecordingMergedDocumentReplicationCommand_WithAttachment()
+        {
+            var recordFilePath = NewDataPath();
+
+            const string id = "UsersA-1";
+            var user = new User
+            {
+                Name = "Avi"
+            };
+
+            const string bufferContent = "Menahem";
+            var expected = Encoding.ASCII.GetBytes(bufferContent);
+            var attachmentStream = new MemoryStream(expected);
+
+            using (var master = GetDocumentStore())
+            using (var slave = GetDocumentStore())
+            {
+                var databaseWatcher = new ExternalReplication(slave.Database, $"ConnectionString-{slave.Identifier}");
+
+                await master.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                {
+                    Name = databaseWatcher.ConnectionStringName,
+                    Database = databaseWatcher.Database,
+                    TopologyDiscoveryUrls = master.Urls
+                }));
+                await master.Maintenance.SendAsync(new UpdateExternalReplicationOperation(databaseWatcher));
+
+                //Recording
+                slave.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+
+                master.Commands().Put(id, null, user);
+                await WaitForReplication(() =>
+                    null != slave.Commands().Get(id));
+
+
+                const string attachmentName = "someAttachmentName";
+                master.Operations.Send(new PutAttachmentOperation(id, attachmentName, attachmentStream));
+                await WaitForReplication(() =>
+                    null != slave.Operations.Send(new GetAttachmentOperation(id, attachmentName, AttachmentType.Document, null)));
+
+
+                slave.Maintenance.Send(new StopTransactionsRecordingOperation());
+            }
+
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
+            {
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
+
+                //Todo To remove after ReplayTransactionsRecordingOperation implement IOperation<T> interface 
+                AttachmentResult attachmentResult = null;
+                await WaitForReplication(() =>
+                {
+                    attachmentResult = store.Operations.Send(new GetAttachmentOperation(id, "someAttachmentName", AttachmentType.Document, null));
+                    return attachmentResult != null;
+                });
+
+                //Assert
+                Assert.Equal(expected, attachmentResult.Stream.ReadData());
+            }
+        }
+
+        private async Task WaitForReplication(Func<bool> check)
+        {
+            int maxSecondToWait = 15;
+
+            var startTime = DateTime.Now;
+            while (true)
+            {
+                if ((DateTime.Now - startTime).Seconds > maxSecondToWait)
+                {
+                    throw new TimeoutException($"Waited for replication more than {maxSecondToWait}");
+                }
+                if (check())
+                {
+                    break;
+                }
+                await Task.Delay(100);
+            }
+        }
+
+        [Fact]
+        public async Task RecordingMergedDocumentReplicationCommand()
+        {
+            var recordFilePath = NewDataPath();
+
+            const string id = "UsersA-1";
+            var expected = new User
+            {
+                Name = "Avi"
+            };
+
+            using (var master = GetDocumentStore())
+            using (var slave = GetDocumentStore())
+            {
+                var databaseWatcher = new ExternalReplication(slave.Database, $"ConnectionString-{slave.Identifier}");
+
+                await master.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                {
+                    Name = databaseWatcher.ConnectionStringName,
+                    Database = databaseWatcher.Database,
+                    TopologyDiscoveryUrls = master.Urls
+                }));
+                await master.Maintenance.SendAsync(new UpdateExternalReplicationOperation(databaseWatcher));
+
+                //Recording
+                slave.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+
+                master.Commands().Put(id, null, expected);
+                await WaitForReplication(() =>
+                    null != slave.Commands().Get(id));
+
+                slave.Maintenance.Send(new StopTransactionsRecordingOperation());
+            }
+
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
+            {
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
+                using (var session = store.OpenSession())
+                {
+                    var actual = session.Load<User>(id);
+
+                    //Assert
+                    Assert.Equal(expected, actual, new UserComparer());
+                }
+            }
+        }
+
+        [Fact]
         public async Task RecordingMergedHiLoReturnCommand()
         {
             var filePath = NewDataPath();

@@ -637,7 +637,7 @@ namespace Raven.Server.Smuggler.Documents
                 Documents.Add(document);
             }
 
-            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto()
+            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new MergedBatchPutCommandDto
                 {
@@ -655,7 +655,7 @@ namespace Raven.Server.Smuggler.Documents
         public List<DocumentItem> Documents;
         public bool IsRevision;
 
-        public DatabaseDestination.MergedBatchPutCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
+        public DatabaseDestination.MergedBatchPutCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             var log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
             var command = new DatabaseDestination.MergedBatchPutCommand(database, BuildType, log)

@@ -1733,8 +1733,7 @@ namespace Raven.Server.Documents
         {
             // See format of the lazy string ID in the GetLowerIdSliceAndStorageKey method
             var ptr = tvr.Read(index, out int size);
-            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out byte offset);
-            return context.AllocateStringValue(null, ptr + offset, size);
+            return context.GetLazyStringValue(ptr);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

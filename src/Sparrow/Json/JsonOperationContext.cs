@@ -526,6 +526,13 @@ namespace Sparrow.Json
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe LazyStringValue GetLazyStringValue(byte* ptr)
+        {
+            var size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out var offset);
+            return AllocateStringValue(null, ptr + offset, size);
+        }
+
         public BlittableJsonReaderObject ReadForDisk(Stream stream, string documentId)
         {
             return ParseToMemory(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);

@@ -330,7 +330,7 @@ namespace Raven.Server.Documents.Handlers
                 return 1;
             }
 
-            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto()
+            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new MergedPutAttachmentCommandDto
                 {
@@ -365,7 +365,7 @@ namespace Raven.Server.Documents.Handlers
                 return 1;
             }
 
-            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto()
+            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new MergedDeleteAttachmentCommandDto
                 {
@@ -386,7 +386,7 @@ namespace Raven.Server.Documents.Handlers
         public Stream Stream;
         public string Hash;
 
-        public AttachmentHandler.MergedPutAttachmentCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
+        public AttachmentHandler.MergedPutAttachmentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             return new AttachmentHandler.MergedPutAttachmentCommand
             {
@@ -407,7 +407,7 @@ namespace Raven.Server.Documents.Handlers
         public string Name;
         public LazyStringValue ExpectedChangeVector;
 
-        public AttachmentHandler.MergedDeleteAttachmentCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
+        public AttachmentHandler.MergedDeleteAttachmentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             return new AttachmentHandler.MergedDeleteAttachmentCommand
             {

@@ -211,7 +211,7 @@ namespace Raven.Server.Documents.Handlers
                 return NumberOfCommands;
             }
 
-            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto()
+            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new MergedInsertBulkCommandDto
                 {
@@ -225,7 +225,7 @@ namespace Raven.Server.Documents.Handlers
     {
         public BatchRequestParser.CommandData[] Commands { get; set; }
 
-        public BulkInsertHandler.MergedInsertBulkCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
+        public BulkInsertHandler.MergedInsertBulkCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             if (Commands == null || Commands.Any() == false) 
             {

@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.Handlers
                 return 1;
             }
 
-            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto()
+            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new MergedNextHiLoCommandDto
                 {
@@ -217,7 +217,7 @@ namespace Raven.Server.Documents.Handlers
                 return 1;
             }
 
-            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto()
+            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new MergedHiLoReturnCommandDto
                 {
@@ -236,7 +236,7 @@ namespace Raven.Server.Documents.Handlers
         public long End;
         public long Last;
 
-        public HiLoHandler.MergedHiLoReturnCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
+        public HiLoHandler.MergedHiLoReturnCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             return new HiLoHandler.MergedHiLoReturnCommand()
             {
@@ -257,7 +257,7 @@ namespace Raven.Server.Documents.Handlers
         public string Prefix;
         public long OldMax;
 
-        public HiLoHandler.MergedNextHiLoCommand ToCommand(JsonOperationContext context, DocumentDatabase database)
+        public HiLoHandler.MergedNextHiLoCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             return new HiLoHandler.MergedNextHiLoCommand
             {
