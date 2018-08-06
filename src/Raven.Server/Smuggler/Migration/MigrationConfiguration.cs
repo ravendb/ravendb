@@ -10,7 +10,7 @@ namespace Raven.Server.Smuggler.Migration
 
         public string FullPathToMigrator { get; set; }
 
-        public BlittableJsonReaderObject Input { get; set; }
+        public BlittableJsonReaderObject InputConfiguration { get; set; }
 
         public bool IsExportCommand { get; set; }
 
