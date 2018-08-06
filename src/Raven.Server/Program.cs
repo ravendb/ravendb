@@ -187,9 +187,17 @@ namespace Raven.Server
                         }
                         catch (Exception e)
                         {
+                            var message =
+                                $"{e.Message}{Environment.NewLine}Port might be already in use.{Environment.NewLine}Try running with an unused port.{Environment.NewLine}" +
+                                $"You can change the port using one of the following options:{Environment.NewLine}" +
+                                $"1) Run the server from the command line with --ServerUrl option.{Environment.NewLine}" +
+                                $"2) Change the ServerUrl property in setting.json file.{Environment.NewLine}" +
+                                $"3) Add RAVEN_ServerUrl in linux or RAVEN.ServerUrl in windows to the Environment Variables.{Environment.NewLine}" +
+                                "For more information go to https://ravendb.net/docs/article-page/4.0/csharp/server/configuration/configuration-options";
+
                             if (Logger.IsOperationsEnabled)
                                 Logger.Operations("Failed to initialize the server", e);
-                            Console.WriteLine(e);
+                            Console.WriteLine(message);
 
                             return -1;
                         }
