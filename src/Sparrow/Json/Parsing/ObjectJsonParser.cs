@@ -373,7 +373,7 @@ namespace Sparrow.Json.Parsing
                     return true;
                 }
 
-                if (current is int || current is byte || current is short)
+                if (current is int || current is byte || current is sbyte || current is short || current is ushort)
                 {
                     _state.Long = Convert.ToInt32(current);
                     _state.CurrentTokenType = JsonParserToken.Integer;
@@ -386,15 +386,14 @@ namespace Sparrow.Json.Parsing
                     _state.CurrentTokenType = JsonParserToken.Integer;
                     return true;
                 }
-                
-                
+
                 if (current is ulong ul)
                 {
                     _state.Long = (long)ul;
                     _state.CurrentTokenType = JsonParserToken.Integer;
                     return true;
                 }
-                
+
                 if (current is uint ui)
                 {
                     _state.Long = (long)ui;
@@ -456,7 +455,7 @@ namespace Sparrow.Json.Parsing
                 {
                     var d = (decimal)current;
 
-                    if (DecimalHelper.Instance.IsDouble(ref d) || d> long.MaxValue || d < long.MinValue)
+                    if (DecimalHelper.Instance.IsDouble(ref d) || d > long.MaxValue || d < long.MinValue)
                     {
                         var s = EnsureDecimalPlace((double)d2, d2.ToString(CultureInfo.InvariantCulture));
                         SetStringBuffer(s);
