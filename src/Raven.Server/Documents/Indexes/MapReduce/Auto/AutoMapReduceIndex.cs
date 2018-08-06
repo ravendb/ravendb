@@ -126,8 +126,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 }
 
                 if (_isFanout == false)
+                {
                     _output.Results.Add((singleResult, _reduceKeyProcessor.Hash));
-                else
+                }
+                else if (_output.GroupByFields.Count >= Definition.GroupByFields.Count)
                 {
                     for (var i = 0; i < _output.MaxGroupByFieldsCount; i++)
                     {
@@ -148,6 +150,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                         _reduceKeyProcessor.Reset();
                     }
                 }
+                // else { } - we have fanout index with multiple group by fields and one is collection
+                // if we have empty collection we cannot create composite key then
+                // let's skip putting such map results
 
                 foreach (var field in Definition.MapFields)
                 {
