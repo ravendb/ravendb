@@ -16,7 +16,7 @@ namespace Raven.Migrator
             "   ConnectionString - MongoDB connection string" + Environment.NewLine +
             "   DatbaseName - the database name, applicaple only for the collections and export commands" + Environment.NewLine +
             "   MigrateGridFS - (Optional) migrate GridFS that is associated with the provided database" + Environment.NewLine +
-            "   CollectionsToMigrate - (Optional) a dictionary of collections to rename during the export";
+            "   CollectionsToMigrate - (Optional) a list of collections to rename during the export";
 
         private static readonly string CosmosDbDescription =
             "Connect to CosmosDB, pass configuration as JSON" + Environment.NewLine +
@@ -24,7 +24,7 @@ namespace Raven.Migrator
             "   AzureEndpointUrl - CosmosDB URL" + Environment.NewLine +
             "   PrimaryKey - CosmosDB primary key" + Environment.NewLine +
             "   DatbaseName - the database name, applicaple only for the collections and export commands" + Environment.NewLine +
-            "   CollectionsToMigrate - (Optional) a dictionary of collections to rename during the export";
+            "   CollectionsToMigrate - (Optional) a list of collections to rename during the export";
 
         private static CommandLineApplication _app;
 
