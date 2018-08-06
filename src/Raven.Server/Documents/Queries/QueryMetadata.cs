@@ -481,7 +481,7 @@ namespace Raven.Server.Documents.Queries
             if (Query.Select != null && Query.Select.Count > 0)
                 ThrowInvalidFunctionSelectWithMoreFields(parameters);
 
-            if (RootAliasPaths.Count == 0)
+            if (RootAliasPaths.Count == 0 && IsGraph == false )
                 ThrowMissingAliasOnSelectFunctionBody(parameters);
 
             var name = "__selectOutput";
@@ -835,7 +835,7 @@ namespace Raven.Server.Documents.Queries
             try
             {
                 SelectFields = new SelectField[Query.Select.Count];
-
+                
                 for (var index = 0; index < Query.Select.Count; index++)
                 {
                     var fieldInfo = Query.Select[index];

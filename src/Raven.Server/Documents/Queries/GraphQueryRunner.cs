@@ -16,6 +16,9 @@ using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Timings;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -34,65 +37,67 @@ namespace Raven.Server.Documents.Queries
 
             Console.WriteLine(q);
 
-            var ir = new IntermediateResults();
-
-            foreach (var documentQuery in q.GraphQuery.WithDocumentQueries)
+            using (var timingScope = new QueryTimingsScope())
             {
-                var queryMetadata = new QueryMetadata(documentQuery.Value, query.QueryParameters, 0);
-                var results = await Database.QueryRunner.ExecuteQuery(new IndexQueryServerSide(queryMetadata),
-                    documentsContext, existingResultEtag, token);
+                var ir = new IntermediateResults();
 
-                ir.EnsureExists(documentQuery.Key);
-
-                foreach (var result in results.Results)
+                foreach (var documentQuery in q.GraphQuery.WithDocumentQueries)
                 {
-                    var match = new Match();
-                    match.Set(documentQuery.Key, result);
-                    match.Populate(ref ir);
-                }
-            }
+                    var queryMetadata = new QueryMetadata(documentQuery.Value, query.QueryParameters, 0);
+                    var results = await Database.QueryRunner.ExecuteQuery(new IndexQueryServerSide(queryMetadata),
+                        documentsContext, existingResultEtag, token);
 
-            var matchResults = ExecutePatternMatch(documentsContext, q, ir) ?? new List<Match>();         
+                    ir.EnsureExists(documentQuery.Key);
 
-            //TODO: handle order by, load, select clauses
-            
-            var final = new DocumentQueryResult();
-
-            if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
-            {
-                HandleResultsWithoutSelect(documentsContext, matchResults, final);
-            }
-            else if (q.Select != null)
-            {
-                foreach (var field in query.Metadata.SelectFields)
-                {
-                    var resultsForField = matchResults.Where(mr => mr.Aliases.Contains(field.Name.Value));
-                    foreach (var result in resultsForField)
+                    foreach (var result in results.Results)
                     {
-                        if (result.TryPopulate(field, out var json))
-                        {
-                            final.AddResult(new Document
-                            {
-                                Data = documentsContext.ReadObject(json, "graph/result"),
-                            });
-                        }
+                        var match = new Match();
+                        match.Set(documentQuery.Key, result);
+                        match.Populate(ref ir);
                     }
                 }
 
-                foreach (var match in matchResults)
-                {                   
-                    var result = new DynamicJsonValue();
-                    match.Populate(result);
+                var matchResults = ExecutePatternMatch(documentsContext, q, query.Metadata, ir) ?? new List<Match>();
 
-                    final.AddResult(new Document
-                    {
-                        Data = documentsContext.ReadObject(result, "graph/result"),
-                    });
+                //TODO: handle order by, load, select clauses
+
+                var final = new DocumentQueryResult();
+
+                if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
+                {
+                    HandleResultsWithoutSelect(documentsContext, matchResults, final);
                 }
-            }
+                else if (q.Select != null)
+                {
+                    var fieldsToFetch = new FieldsToFetch(query.Metadata.SelectFields,null);
+                    var resultRetriever = new GraphQueryResultRetriever(
+                        q.GraphQuery,
+                        Database, 
+                        query, 
+                        timingScope, 
+                        Database.DocumentsStorage, 
+                        documentsContext, 
+                        fieldsToFetch, null);
 
-            final.TotalResults = final.Results.Count;
-            return final;
+                    foreach (var match in matchResults)
+                    {
+                        var json = new DynamicJsonValue();
+                        match.Populate(json, fieldsToFetch, q.GraphQuery);
+
+                        var doc = documentsContext.ReadObject(json, "graph/projection");
+
+                        var projectedDoc = resultRetriever.Get(new Document
+                        {
+                            Data = doc
+                        });
+                     
+                        final.AddResult(projectedDoc);
+                    }
+                }
+
+                final.TotalResults = final.Results.Count;
+                return final;
+            }
         }
 
         private static void HandleResultsWithoutSelect(DocumentsOperationContext documentsContext, List<Match> matchResults, DocumentQueryResult final)
@@ -109,7 +114,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private List<Match> ExecutePatternMatch(DocumentsOperationContext documentsContext, Query q, IntermediateResults ir)
+        private List<Match> ExecutePatternMatch(DocumentsOperationContext documentsContext, Query q, QueryMetadata queryMetadata, IntermediateResults ir)
         {
             var visitor = new GraphExecuteVisitor(ir, q.GraphQuery, documentsContext);
             visitor.VisitExpression(q.GraphQuery.MatchClause);
@@ -137,8 +142,7 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException("You cannot patch based on graph query");
         }
 
-
-        private struct Match // using struct because we have a single field 
+        public struct Match // using struct because we have a single field 
         {
             private Dictionary<string, Document> _inner;
 
@@ -151,6 +155,17 @@ namespace Raven.Server.Documents.Queries
                 Document result = null;
                 _inner?.TryGetValue(alias, out result);
                 return result;
+            }           
+
+            public bool TryGetKey(string alias, out string key)
+            {
+                key = null;
+                var hasKey = _inner.TryGetValue(alias, out var doc);
+
+                if (hasKey)
+                    key = doc.Id;
+
+                return hasKey;
             }
 
             public void Set(StringSegment alias, Document val)
@@ -161,15 +176,58 @@ namespace Raven.Server.Documents.Queries
                 _inner.Add(alias, val);
             }
 
-            public bool TryPopulate(SelectField f, out DynamicJsonValue j)
+            public bool TryPopulate(SelectField f, GraphQuery gq, ref DynamicJsonValue json)
             {
-                j = null;
-                if (_inner.TryGetValue(f.Name.Value, out var val))
+                if (json == null) 
+                    return false;
+
+                Debug.Assert(f.Name != null);
+
+                if (f.Name == null) //precaution
+                    return false;
+
+                //populate vertex
+                if (_inner.TryGetValue(f.Name.Value, out var vertexData))
                 {
-                    j = new DynamicJsonValue(val.Data);
+                    json[string.IsNullOrWhiteSpace(f.Alias) ? f.Name.Value : f.Alias] = vertexData.Data;
                     return true;
                 }
-                else return false;
+
+                //populate edge
+                if (gq.WithEdgePredicates.TryGetValue(f.Name?.Value, out var edgeData) &&
+                    edgeData.FromAlias.HasValue && //precaution
+                    edgeData.EdgeType.HasValue && //precaution
+                    _inner.TryGetValue(edgeData.FromAlias.Value,out var edgeVertexSource) &&
+                    edgeVertexSource.Data.TryGet(edgeData.EdgeType, out object property))
+                {
+                    json[string.IsNullOrWhiteSpace(f.Alias) ? f.Name?.Value : f.Alias] = property;
+                    return true;
+                }
+
+                return false;
+            }
+
+            public void Populate(DynamicJsonValue j, FieldsToFetch fields, GraphQuery gq)
+            {
+                if (_inner == null)
+                    return;
+
+                var edgeAliases = fields.Fields.Keys.Except(_inner.Keys).ToArray();
+                foreach (var item in _inner)
+                {
+                    item.Value.EnsureMetadata();
+                    j[item.Key] = item.Value.Data;
+
+                    foreach (var alias in edgeAliases)
+                    {
+                        if (gq.WithEdgePredicates.TryGetValue(alias, out var edge) && 
+                            edge.FromAlias.GetValueOrDefault() == item.Key &&
+                            item.Value.Data.TryGet(edge.EdgeType, out object property))
+                        {
+                            j[alias] = property;
+                        }
+                    }
+                }
             }
 
             public void Populate(DynamicJsonValue j)
@@ -180,7 +238,7 @@ namespace Raven.Server.Documents.Queries
                 foreach (var item in _inner)
                 {
                     item.Value.EnsureMetadata();
-                    j[item.Key] = item.Value.Data;
+                    j[item.Key] = item.Value.Data;                    
                 }
             }
 
@@ -196,7 +254,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private struct IntermediateResults// using struct because we have a single field 
+        public struct IntermediateResults// using struct because we have a single field 
         {
             private Dictionary<string, Dictionary<string, Match>> _matchesByAlias;
             private Dictionary<string, Dictionary<string, Match>> MatchesByAlias => 
@@ -233,7 +291,8 @@ namespace Raven.Server.Documents.Queries
             private readonly IntermediateResults _source;
             private readonly GraphQuery _gq;
             private readonly DocumentsOperationContext _ctx;
-            public List<Match> Output;
+            public List<Match> Output;            
+
             public GraphExecuteVisitor(IntermediateResults source, GraphQuery gq, DocumentsOperationContext documentsContext)
             {
                 _source = source;
@@ -241,14 +300,13 @@ namespace Raven.Server.Documents.Queries
                 _ctx = documentsContext;
             }
 
-
             public override void VisitPatternMatchElementExpression(PatternMatchElementExpression ee)
-            {
+            {                
                 Debug.Assert(ee.Path[0].EdgeType == EdgeType.Right);
                 if (_source.TryGetByAlias(ee.Path[0].Alias, out var nodeResults) == false || 
                     nodeResults.Count == 0)
                     return; // if root is empty, the entire thing is empty
-
+                
                 var currentResults = new List<Match>();
                 foreach (var item in nodeResults)
                 {
@@ -261,12 +319,12 @@ namespace Raven.Server.Documents.Queries
                 for (int pathIndex = 1; pathIndex < ee.Path.Length-1; pathIndex+=2)
                 {
                     Debug.Assert(ee.Path[pathIndex].IsEdge);
-
+                    
                     var prevNodeAlias = ee.Path[pathIndex - 1].Alias;
                     var nextNodeAlias = ee.Path[pathIndex + 1].Alias;
-
-
+                    
                     var edge = _gq.WithEdgePredicates[ee.Path[pathIndex].Alias].EdgeType.Value;
+                    _gq.WithEdgePredicates[ee.Path[pathIndex].Alias].FromAlias = prevNodeAlias;
 
                     _source.TryGetByAlias(nextNodeAlias, out var edgeResults);
 
@@ -282,8 +340,8 @@ namespace Raven.Server.Documents.Queries
                             continue;
                         }
 
-                        var realted = relatedMatch.Get(nextNodeAlias);
-                        item.Set(nextNodeAlias, realted);
+                        var related = relatedMatch.Get(nextNodeAlias);
+                        item.Set(nextNodeAlias, related);
                     }
                 }
 
