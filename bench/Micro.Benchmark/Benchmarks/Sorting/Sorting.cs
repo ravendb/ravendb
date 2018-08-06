@@ -23,7 +23,7 @@ namespace Micro.Benchmark.Benchmarks.Sorting
             {
                 Add(new Job
                 {
-                    Env =
+                    Environment =
                     {
                         Runtime = Runtime.Core,
                         Platform = Platform.X64,

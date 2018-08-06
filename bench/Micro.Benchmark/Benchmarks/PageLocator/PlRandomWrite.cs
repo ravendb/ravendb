@@ -22,7 +22,7 @@ namespace Micro.Benchmark.Benchmarks.PageLocator
             {
                 Add(new Job
                 {
-                    Env =
+                    Environment =
                     {
                         Runtime = Runtime.Core,
                         Platform = Platform.X64,

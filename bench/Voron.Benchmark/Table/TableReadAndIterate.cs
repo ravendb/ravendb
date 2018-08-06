@@ -1,10 +1,7 @@
-﻿using System.IO;
-using Voron.Data;
-using Voron.Data.Tables;
+﻿using Voron.Data.Tables;
 
 namespace Voron.Benchmark.Table
 {
-    using System;
     using System.Collections.Generic;
     using System.Threading;
     using BenchmarkDotNet.Attributes;
