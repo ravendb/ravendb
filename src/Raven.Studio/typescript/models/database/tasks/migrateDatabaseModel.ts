@@ -252,12 +252,10 @@ class migrateDatabaseModel {
 
         const inputConfiguration = activeConfiguration.toDto(command);
 
-        const isExportCommand = command === "export";
         const type = this.selectMigrationOption().toLowerCase();
         return {
             DatabaseTypeName: type,
             FullPathToMigrator: this.fullPathToMigrator(),
-            IsExportCommand: isExportCommand,
             InputConfiguration: inputConfiguration,
             TransformScript: this.transformScript()
         };
