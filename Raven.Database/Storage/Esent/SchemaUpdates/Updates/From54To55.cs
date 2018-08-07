@@ -47,6 +47,7 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                     cbVarSegMac = SystemParameters.KeyMost,
                     szKey = by_name_and_etag,
                     grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                    ulDensity = 90
                 }
                 }, 1);
 
@@ -60,6 +61,7 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                         cbVarSegMac = SystemParameters.KeyMost,
                         szKey = by_name_and_key,
                         grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                        ulDensity = 90
                     }
                 }, 1);
 
@@ -73,6 +75,7 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                         cbVarSegMac = SystemParameters.KeyMost,
                         szKey = by_name_and_created_at,
                         grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                        ulDensity = 90
                     }
                 }, 1);
 
@@ -100,6 +103,7 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                         cbVarSegMac = SystemParameters.KeyMost,
                         szKey = by_key,
                         grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                        ulDensity = 90
                     }
                 }, 1);
 
@@ -113,6 +117,7 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                         cbVarSegMac = SystemParameters.KeyMost,
                         szKey = by_view_and_key,
                         grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                        ulDensity = 90
                     }
                 }, 1);
                 Api.JetCreateIndex2(session, tableid, new[]
@@ -125,6 +130,7 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                         cbVarSegMac = SystemParameters.KeyMost,
                         szKey = by_ref,
                         grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                        ulDensity = 90
                     }
                 }, 1);
             }
