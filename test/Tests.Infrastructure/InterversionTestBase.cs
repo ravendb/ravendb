@@ -94,7 +94,6 @@ namespace Tests.Infrastructure
         {
             var serverBuildInfo = ServerBuildDownloadInfo.Create(serverVersion);
             var serverPath = await _serverBuildRetriever.GetServerPath(serverBuildInfo);
-            Console.WriteLine(serverPath);
             var testServerPath = NewDataPath(prefix: serverVersion);
             CopyFilesRecursively(new DirectoryInfo(serverPath), new DirectoryInfo(testServerPath));
 
@@ -277,11 +276,11 @@ namespace Tests.Infrastructure
                 Debugger.IsAttached)
                 timeout *= 100;
 
+            database = database ?? store.Database;
             var sw = Stopwatch.StartNew();
             Exception ex = null;
             while (sw.ElapsedMilliseconds < timeout)
             {
-                database = database ?? store.Database;
                 using (var session = store.OpenSession(database))
                 {
                     try
