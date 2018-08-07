@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
     public class CaptureDictionaryFieldsNamesVisitor : CSharpSyntaxRewriter
     {
-        private const string SupportedGenericDictionaryType = "Dictionary<string, object>";
+        public const string SupportedGenericDictionaryType = "Dictionary<string, object>";
 
         public HashSet<string> Fields;
 
