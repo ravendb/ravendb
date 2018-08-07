@@ -14,7 +14,15 @@
                             <label for="url" class="control-label">URL</label>
                             <div class="flex-grow">
                                 <div data-bind="validationElement: serverUrl">
-                                    <input autocomplete="off" type="text" class="form-control" data-bind="textInput: serverUrl" id="url" placeholder="Enter server url"> 
+                                    <input autocomplete="off" type="text" class="form-control" data-bind="textInput: serverUrl" id="url" placeholder="Enter server url">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="tag" class="control-label">Tag</label>
+                            <div class="flex-grow">
+                                <div data-bind="validationElement: nodeTag">
+                                    <input autocomplete="off" type="text" class="form-control" data-bind="textInput: nodeTag" id="tag" placeholder="Manually specify the node tag (optional)">
                                 </div>
                             </div>
                         </div>

@@ -316,6 +316,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             SetupCORSHeaders();
 
             var nodeUrl = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
+            var tag = GetStringQueryString("tag", false);
             var watcher = GetBoolValueQueryString("watcher", false);
             var assignedCores = GetIntValueQueryString("assignedCores", false);
             if (assignedCores <= 0)
@@ -406,7 +407,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         }
                     }
 
-                    var nodeTag = nodeInfo.NodeTag == RachisConsensus.InitialTag ? null : nodeInfo.NodeTag;
+                    var nodeTag = nodeInfo.NodeTag == RachisConsensus.InitialTag ? tag : nodeInfo.NodeTag;
                     CertificateDefinition oldServerCert = null;
                     X509Certificate2 certificate = null;
 
