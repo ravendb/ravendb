@@ -24,22 +24,31 @@ namespace InterversionTests
             public string Url;
         }
 
-        protected async Task<(RavenServer Leader, List<ProcessNode> Peers, List<RavenServer> LocalPeers)> CreateMixedCluster(string[] peers, int localPeers = 0)
+        protected async Task<(RavenServer Leader, List<ProcessNode> Peers, List<RavenServer> LocalPeers)> CreateMixedCluster(
+            string[] peers, int localPeers = 0, IDictionary<string, string> customSettings = null)
         {
-            var leaderServer = GetNewServer();
-            leaderServer.ServerStore.EnsureNotPassive();
+            var leaderServer = GetNewServer(customSettings);
+            leaderServer.ServerStore.EnsureNotPassive(leaderServer.WebUrl);
 
             var nodeAdded = new ManualResetEvent(false);
+            var expectedMembers = 2;
             leaderServer.ServerStore.Engine.TopologyChanged += (sender, clusterTopology) =>
             {
-                if (clusterTopology.Promotables.Count == 0)
-                    nodeAdded.Set();
+                var count = expectedMembers;
+                if (clusterTopology.Promotables.Count == 0 && clusterTopology.Members.Count == count)
+                {
+                    var result = Interlocked.CompareExchange(ref expectedMembers, count + 1, count);
+                    if (result == count)
+                    {
+                        nodeAdded.Set();
+                    }
+                }
             };
 
             var local = new List<RavenServer>();
             for (int i = 0; i < localPeers; i++)
             {
-                var peer = GetNewServer();
+                var peer = GetNewServer(customSettings);
                 await leaderServer.ServerStore.AddNodeToClusterAsync(peer.WebUrl);
                 Assert.True(nodeAdded.WaitOne(TimeSpan.FromSeconds(30)));
                 nodeAdded.Reset();
@@ -50,9 +59,6 @@ namespace InterversionTests
             foreach (var peer in peers)
             {
                 var (url, process) = await GetServerAsync(peer);
-                await leaderServer.ServerStore.AddNodeToClusterAsync(url);
-                Assert.True(nodeAdded.WaitOne(TimeSpan.FromSeconds(30)));
-                nodeAdded.Reset();
                 processes.Add(new ProcessNode
                 {
                     Version = peer,
@@ -61,18 +67,32 @@ namespace InterversionTests
                 });
             }
 
+            foreach (var processNode in processes)
+            {
+                await leaderServer.ServerStore.AddNodeToClusterAsync(processNode.Url);
+                Assert.True(nodeAdded.WaitOne(TimeSpan.FromSeconds(30)));
+                nodeAdded.Reset();
+            }
+
+            Assert.Equal(peers.Length + localPeers + 1, leaderServer.ServerStore.GetClusterTopology().Members.Count);
             return (leaderServer, processes, local);
         }
 
-        protected async Task<(IDisposable Disposable, List<DocumentStore> Stores)> GetStores(RavenServer leader, List<ProcessNode> peers, List<RavenServer> local = null)
+        protected async Task<(IDisposable Disposable, List<DocumentStore> Stores)> GetStores(RavenServer leader, List<ProcessNode> peers, 
+            List<RavenServer> local = null, Action<DocumentStore> modifyDocumentStore = null)
         {
+            if (modifyDocumentStore == null)
+            {
+                modifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = true;
+            }
+
             var stores = new List<DocumentStore>();
 
             var leaderStore = GetDocumentStore(new Options
             {
                 Server = leader,
                 CreateDatabase = false,
-                ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = true
+                ModifyDocumentStore = modifyDocumentStore
             });
 
             stores.Add(leaderStore);
@@ -84,7 +104,7 @@ namespace InterversionTests
                     {
                         Server = ravenServer,
                         CreateDatabase = false,
-                        ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = true
+                        ModifyDocumentStore = modifyDocumentStore
                     });
                     stores.Add(peerStore);
                 }
@@ -94,7 +114,7 @@ namespace InterversionTests
                 var peerStore = await GetStore(peer.Url, peer.Process, null, new InterversionTestOptions
                 {
                     CreateDatabase = false,
-                    ModifyDocumentStore = s => s.Conventions.DisableTopologyUpdates = true
+                    ModifyDocumentStore = modifyDocumentStore
                 });
                 stores.Add(peerStore);
             }
