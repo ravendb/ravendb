@@ -271,7 +271,7 @@ namespace Raven.Server.Rachis
                                             PrevLogTerm = _engine.GetTermFor(context, _followerMatchIndex) ?? 0,
                                             PrevLogIndex = _followerMatchIndex,
                                             TimeAsLeader = _leader.LeaderShipDuration,
-                                            MinClusterCommandVersion = ClusterCommandsVersionManager.CurrentClusterMinimalVersion
+                                            MinCommandVersion = ClusterCommandsVersionManager.CurrentClusterMinimalVersion
                                         };
                                     }
                                 }
