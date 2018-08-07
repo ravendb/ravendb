@@ -408,13 +408,21 @@ namespace Raven.Server.Utils
         public static PropertyAccessor GetPropertyAccessor(object value)
         {
             var type = value.GetType();
-            return PropertyAccessorCache.GetOrAdd(type, PropertyAccessor.Create);
+
+            if (value is Dictionary<string, object>) // don't use cache when using dictionaries
+                return PropertyAccessor.Create(type, value);
+
+            return PropertyAccessorCache.GetOrAdd(type, x => PropertyAccessor.Create(type, value));
         }
 
         public static PropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, HashSet<string> groupByFields)
         {
             var type = value.GetType();
-            return PropertyAccessorCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(x, groupByFields));
+
+            if (value is Dictionary<string, object>) // don't use cache when using dictionaries
+                return PropertyAccessor.Create(type, value);
+
+            return PropertyAccessorCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields));
         }
 
         public static bool ShouldTreatAsEnumerable(object item)
