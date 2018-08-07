@@ -149,7 +149,8 @@ if (ShouldBuildStudio $STUDIO_OUT_DIR $DontRebuildStudio $DontBuildStudio) {
     write-host "Not building studio..."
 }
 
-if ($JustStudio -eq $False) {
+$IsPosix = $IsWindows -eq $False
+if (($JustStudio -eq $False) -and ($IsPosix -eq $False)) {
     $studioZipPath = [io.path]::combine($STUDIO_OUT_DIR, "Raven.Studio.zip")
     BuildEmbeddedNuget $PROJECT_DIR $OUT_DIR $SERVER_SRC_DIR $studioZipPath $Debug
     $embeddedDir = [io.path]::combine($OUT_DIR, "RavenDB.Embedded")
@@ -160,6 +161,8 @@ if ($JustStudio -eq $False) {
     $nupkgs = Join-Path $embeddedDir -ChildPath "*.nupkg"
     Move-Item -Path $nupkgs -Destination $OUT_DIR
     Remove-Item -Recurse $embeddedDir
+} else {
+    write-host "Skip building RavenDB Embedded."
 }
 
 if ($JustNuget) {
