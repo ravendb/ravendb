@@ -14,6 +14,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.ServerWide.Tcp;
@@ -123,7 +124,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, UnsecuredSetupInfo> UnsecuredSetupInfo = GenerateJsonDeserializationRoutine<UnsecuredSetupInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, ClaimDomainInfo> ClaimDomainInfo = GenerateJsonDeserializationRoutine<ClaimDomainInfo>();
-        
+
         public static readonly Func<BlittableJsonReaderObject, SourceSqlDatabase> SourceSqlDatabase = GenerateJsonDeserializationRoutine<SourceSqlDatabase>();
 
         public static readonly Func<BlittableJsonReaderObject, ListDomainsInfo> ListDomainsInfo = GenerateJsonDeserializationRoutine<ListDomainsInfo>();
@@ -133,6 +134,10 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, CompactSettings> CompactSettings = GenerateJsonDeserializationRoutine<CompactSettings>();
 
         public static readonly Func<BlittableJsonReaderObject, ClientConfiguration> ClientConfiguration = GenerateJsonDeserializationRoutine<ClientConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, StudioConfiguration> StudioConfiguration = GenerateJsonDeserializationRoutine<StudioConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, ServerWideStudioConfiguration> ServerWideStudioConfiguration = GenerateJsonDeserializationRoutine<ServerWideStudioConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, IndexQueryServerSide> IndexQuery = GenerateJsonDeserializationRoutine<IndexQueryServerSide>();
 

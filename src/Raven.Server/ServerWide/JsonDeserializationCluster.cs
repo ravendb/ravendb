@@ -113,6 +113,7 @@ namespace Raven.Server.ServerWide
             [nameof(DeleteCertificateCollectionFromClusterCommand)] = GenerateJsonDeserializationRoutine<DeleteCertificateCollectionFromClusterCommand>(),
             [nameof(PutCertificateCommand)] = GenerateJsonDeserializationRoutine<PutCertificateCommand>(),
             [nameof(PutClientConfigurationCommand)] = GenerateJsonDeserializationRoutine<PutClientConfigurationCommand>(),
+            [nameof(PutServerWideStudioConfigurationCommand)] = GenerateJsonDeserializationRoutine<PutServerWideStudioConfigurationCommand>(),
             [nameof(RemoveNodeFromDatabaseCommand)] = GenerateJsonDeserializationRoutine<RemoveNodeFromDatabaseCommand>(),
             [nameof(AcknowledgeSubscriptionBatchCommand)] = GenerateJsonDeserializationRoutine<AcknowledgeSubscriptionBatchCommand>(),
             [nameof(PutSubscriptionCommand)] = GenerateJsonDeserializationRoutine<PutSubscriptionCommand>(),

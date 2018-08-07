@@ -22,6 +22,7 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
@@ -276,6 +277,9 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(PutClientConfigurationCommand):
                         PutValue<ClientConfiguration>(context, type, cmd, index, leader);
+                        break;
+                    case nameof(PutServerWideStudioConfigurationCommand):
+                        PutValue<ServerWideStudioConfiguration>(context, type, cmd, index, leader);
                         break;
                     case nameof(AddDatabaseCommand):
                         var addedNodes = AddDatabase(context, cmd, index, leader);
