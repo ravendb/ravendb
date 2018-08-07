@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         private static void ThrowIndexingFunctionMustReturnAnonymousObjectOrDictionary()
         {
-            throw new InvalidOperationException("Indexing function must return an anonymous object or Dictionary<string, object>");
+            throw new InvalidOperationException($"Indexing function must return an anonymous object or {CaptureDictionaryFieldsNamesVisitor.SupportedGenericDictionaryType}");
         }
     }
 }
