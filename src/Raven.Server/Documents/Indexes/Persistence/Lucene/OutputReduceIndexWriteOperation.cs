@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 var djv = new DynamicJsonValue();
 
                 if (_index.OutputReduceToCollectionPropertyAccessor == null)
-                    _index.OutputReduceToCollectionPropertyAccessor = PropertyAccessor.Create(reduceObject.GetType());
+                    _index.OutputReduceToCollectionPropertyAccessor = PropertyAccessor.Create(reduceObject.GetType(), reduceObject);
                 foreach (var property in _index.OutputReduceToCollectionPropertyAccessor.PropertiesInOrder)
                 {
                     var value = property.Value.GetValue(reduceObject);
