@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -378,6 +381,197 @@ namespace InterversionTests
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20)))
                     await storeA.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(dbName, true), cts.Token);
             }
+        }
+
+        [Fact]
+        public async Task V40Cluster_V41Client_BasicReplication()
+        {
+            (var urlA, var serverA) = await GetServerAsync("4.0.6");
+            (var urlB, var serverB) = await GetServerAsync("4.0.6");
+            (var urlc, var serverC) = await GetServerAsync("4.0.6");
+
+            using (var storeA = await GetStore(urlA, serverA, null, new InterversionTestOptions
+            {
+                ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
+            }))
+            using (var storeB = await GetStore(urlB, serverB, null, new InterversionTestOptions
+            {
+                CreateDatabase = false,
+                ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
+            }))
+            using (var storeC = await GetStore(urlc, serverC, null, new InterversionTestOptions
+            {
+                CreateDatabase = false,
+                ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
+            }))
+            {
+                await AddNodeToCluster(storeA, storeB.Urls[0]);
+                await Task.Delay(2500);
+                await AddNodeToCluster(storeA, storeC.Urls[0]);
+                await Task.Delay(1000);
+
+                var dbName = await CreateDatabase(storeA, 3);
+                await Task.Delay(500);
+
+                using (var session = storeA.OpenSession(dbName))
+                {
+                    session.Store(new User
+                    {
+                        Name = "aviv"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    "users/1",
+                    u => u.Name.Equals("aviv"),
+                    TimeSpan.FromSeconds(10),
+                    new List<DocumentStore>
+                    {
+                        storeA, storeB, storeC
+                    },
+                    dbName));
+
+                storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(storeA.Database, true));
+                storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, true));
+            }
+        
+        }
+
+        [Fact]
+        public async Task V40Cluster_V41Client_Counters()
+        {
+            (var urlA, var serverA) = await GetServerAsync("4.0.6");
+            (var urlB, var serverB) = await GetServerAsync("4.0.6");
+            (var urlc, var serverC) = await GetServerAsync("4.0.6");
+
+            using (var storeA = await GetStore(urlA, serverA, null, new InterversionTestOptions
+            {
+                ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
+            }))
+            using (var storeB = await GetStore(urlB, serverB, null, new InterversionTestOptions
+            {
+                CreateDatabase = false,
+                ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
+            }))
+            using (var storeC = await GetStore(urlc, serverC, null, new InterversionTestOptions
+            {
+                CreateDatabase = false,
+                ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
+            }))
+            {
+                await AddNodeToCluster(storeA, storeB.Urls[0]);
+                await Task.Delay(2500);
+                await AddNodeToCluster(storeA, storeC.Urls[0]);
+                await Task.Delay(1000);
+
+                var dbName = await CreateDatabase(storeA, 3);
+                await Task.Delay(500);
+
+                using (var session = storeA.OpenSession(dbName))
+                {
+                    session.Store(new User
+                    {
+                        Name = "aviv"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    "users/1",
+                    u => u.Name.Equals("aviv"),
+                    TimeSpan.FromSeconds(10),
+                    new List<DocumentStore>
+                    {
+                        storeA, storeB, storeC
+                    },
+                    dbName));
+
+                using (var session = storeA.OpenSession(dbName))
+                {
+                    session.CountersFor("users/1").Increment("likes");
+                    Assert.Throws<RavenException>(() => session.SaveChanges());
+                }
+                using (var session = storeA.OpenSession(dbName))
+                {
+                    session.CountersFor("users/1").Delete("likes");
+                    Assert.Throws<RavenException>(() => session.SaveChanges());
+                }
+
+                using (var session = storeA.OpenSession(dbName))
+                {
+                    Assert.Throws<ClientVersionMismatchException>(() => session.CountersFor("users/1").Get("likes"));
+                }
+
+                storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(storeA.Database, true));
+                storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, true));
+            }
+
+        }
+
+        [Fact]
+        public async Task V40Cluster_V41Client_ClusterTransactions()
+        {
+            (var urlA, var serverA) = await GetServerAsync("4.0.6");
+            (var urlB, var serverB) = await GetServerAsync("4.0.6");
+            (var urlc, var serverC) = await GetServerAsync("4.0.6");
+
+            using (var storeA = await GetStore(urlA, serverA, null, new InterversionTestOptions
+            {
+                ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
+            }))
+            using (var storeB = await GetStore(urlB, serverB, null, new InterversionTestOptions
+            {
+                CreateDatabase = false,
+                ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
+            }))
+            using (var storeC = await GetStore(urlc, serverC, null, new InterversionTestOptions
+            {
+                CreateDatabase = false,
+                ModifyDocumentStore = store => store.Conventions.DisableTopologyUpdates = true
+            }))
+            {
+                await AddNodeToCluster(storeA, storeB.Urls[0]);
+                await Task.Delay(2500);
+                await AddNodeToCluster(storeA, storeC.Urls[0]);
+                await Task.Delay(1000);
+
+                var dbName = await CreateDatabase(storeA, 3);
+                await Task.Delay(500);
+
+                var user1 = new User
+                {
+                    Name = "Karmel"
+                };
+                var user3 = new User
+                {
+                    Name = "Indych"
+                };
+
+                using (var session = storeA.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
+                    await session.StoreAsync(user3, "foo/bar");
+                    await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
+
+                    var value = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende");
+                    Assert.Null(value);
+                }
+
+                storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(storeA.Database, true));
+                storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, true));
+            }
+
+        }
+
+        private static async Task AddNodeToCluster(DocumentStore store, string url)
+        {
+            var addNodeRequest = await store.GetRequestExecutor().HttpClient.SendAsync(
+                new HttpRequestMessage(HttpMethod.Put, $"{store.Urls[0]}/admin/cluster/node?url={url}"));
+            Assert.True(addNodeRequest.IsSuccessStatusCode);
         }
 
         private async Task CreateDocuments(DocumentStore store, string database, int amount)
