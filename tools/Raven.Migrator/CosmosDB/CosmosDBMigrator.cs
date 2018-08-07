@@ -84,7 +84,8 @@ namespace Raven.Migrator.CosmosDB
             var databaseUri = UriFactory.CreateDatabaseUri(_configuration.DatabaseName);
             var database = (await client.ReadDatabaseAsync(databaseUri)).Resource;
 
-            if (_configuration.CollectionsToMigrate == null || _configuration.CollectionsToMigrate.Count == 0)
+            if (_configuration.CollectionsToMigrate == null ||
+                _configuration.CollectionsToMigrate.Count == 0)
             {
                 _configuration.CollectionsToMigrate = GetCollectionsToMigrate(client, database);
             }
