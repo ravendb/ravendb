@@ -159,6 +159,102 @@ namespace InterversionTests
         }
 
         [Fact]
+        public async Task MixedCluster_OutgoingReplicationFrom41To40_ShouldStopAfterUsingCounters()
+        {
+            var (leader, peers, local) = await CreateMixedCluster(new[]
+            {
+                "4.0.6",
+                "4.0.6"
+            }, 1);
+
+            var stores = await GetStores(leader, peers, local);
+            using (stores.Disposable)
+            {
+                var storeA = stores.Stores[0]; // 4.1
+                var storeB = stores.Stores[1]; // 4.1
+                var storeC = stores.Stores[2]; // 4.0
+                var storeD = stores.Stores[3]; // 4.0
+
+                var dbName = await CreateDatabase(storeA, 4);
+                await Task.Delay(500);
+
+                using (var session = storeA.OpenSession(dbName))
+                {
+                    session.Store(new User
+                    {
+                        Name = "aviv"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    "users/1",
+                    u => u.Name.Equals("aviv"),
+                    TimeSpan.FromSeconds(15),
+                    stores.Stores,
+                    dbName));
+
+                using (var session = storeA.OpenSession(dbName))
+                {
+                    // using Counters here should stop the outgoing 
+                    // replication from this node (A) to the 4.0 nodes (C, D)
+                    session.CountersFor("users/1").Increment("likes", 100);
+                    session.SaveChanges();
+                }
+
+                foreach (var store in new []{ storeA, storeB })
+                {
+                    using (var session = store.OpenSession(dbName))
+                    {
+                        var val = session.CountersFor("users/1").Get("likes");
+                        Assert.Equal(100, val);
+                    }
+                }
+
+                foreach (var store in new[] { storeC, storeD })
+                {
+                    using (var session = store.OpenSession(dbName))
+                    {
+                        Assert.Throws<ClientVersionMismatchException>(() => session.CountersFor("users/1").Get("likes"));
+                    }
+                }
+
+                using (var session = storeA.OpenSession(dbName))
+                {
+                    // should only be replicated to node B 
+                    session.Store(new User
+                    {
+                        Name = "aviv2"
+                    }, "users/2");
+                    session.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument<User>(
+                    storeB,
+                    "users/2",
+                    u => true,
+                    (int)TimeSpan.FromSeconds(5).TotalMilliseconds,
+                    dbName));
+
+                Assert.False(WaitForDocument<User>(
+                    storeC,
+                    "users/2",
+                    u => true,
+                    (int)TimeSpan.FromSeconds(5).TotalMilliseconds,
+                    dbName));
+
+                Assert.False(WaitForDocument<User>(
+                    storeD,
+                    "users/2",
+                    u => true,
+                    (int)TimeSpan.FromSeconds(5).TotalMilliseconds,
+                    dbName));
+
+                storeA.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, true));
+            }
+        }
+
+        [Fact]
         public async Task ClientFailoverInMixedCluster_V41Store()
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
