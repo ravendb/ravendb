@@ -155,7 +155,7 @@ namespace InterversionTests
             return dbName;
         }
 
-        private async Task<DocumentStore> GetStore(string serverUrl, Process serverProcess = null, [CallerMemberName] string database = null, InterversionTestOptions options = null)
+        protected async Task<DocumentStore> GetStore(string serverUrl, Process serverProcess = null, [CallerMemberName] string database = null, InterversionTestOptions options = null)
         {
             options = options ?? InterversionTestOptions.Default;
             var name = database ?? GetDatabaseName(null);
