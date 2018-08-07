@@ -301,7 +301,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         }
 
         [RavenAction("/databases/*/admin/smuggler/migrate", "POST", AuthorizationStatus.Operator)]
-        public async Task RavenDbMigration()
+        public async Task MigrateFromRavenDB()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
@@ -403,6 +403,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 if (Directory.Exists(migrationConfiguration.FullPathToMigrator) == false)
                     throw new InvalidOperationException($"Directory {migrationConfiguration.FullPathToMigrator} doesn't exist");
 
+                if (migrationConfiguration.InputConfiguration.TryGet("Command", out string command) == false)
+                    throw new ArgumentException("Cannot find the Command property in the InputConfiguration");
+
                 const string migratorFileName = "Raven.Migrator.dll";
                 var path = Path.Combine(migrationConfiguration.FullPathToMigrator, migratorFileName);
                 if (File.Exists(path) == false)
@@ -436,16 +439,16 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 await process.StandardInput.WriteLineAsync(migrationConfiguration.InputConfiguration.ToString());
 
-                if (migrationConfiguration.IsExportCommand == false)
+                var isExportCommand = command == "export";
+                if (isExportCommand == false)
                 {
                     try
                     {
                         var line = process.StandardOutput.ReadLine();
-                        // return type is json, will throw if we fail to deserialize
-                        JsonConvert.DeserializeObject(line);
                         using (var sw = new StreamWriter(ResponseBodyStream()))
+                        using (var jsonWriter = new JsonTextWriter(sw))
                         {
-                            await sw.WriteAsync(line);
+                            await jsonWriter.WriteRawAsync(line);
                         }
                     }
                     catch (Exception e)
