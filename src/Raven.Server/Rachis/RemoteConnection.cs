@@ -207,7 +207,7 @@ namespace Raven.Server.Rachis
                 [nameof(AppendEntries.TruncateLogBefore)] = ae.TruncateLogBefore,
                 [nameof(AppendEntries.TimeAsLeader)] = ae.TimeAsLeader,
                 [nameof(AppendEntries.SendingThread)] = Thread.CurrentThread.ManagedThreadId,
-                [nameof(AppendEntries.MinClusterCommandVersion)] = ae.MinClusterCommandVersion
+                [nameof(AppendEntries.MinCommandVersion)] = ae.MinCommandVersion
             };
 
             if (ae.ForceElections)
