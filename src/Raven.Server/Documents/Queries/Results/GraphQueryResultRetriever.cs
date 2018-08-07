@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Queries.Results
         public Document Get(Document doc)
         {
             return GetProjectionFromDocument(doc, null, 0, FieldsToFetch, _context, null);
-        }
+        }      
 
         public override Document Get(Lucene.Net.Documents.Document input, float score, IState state)
         {

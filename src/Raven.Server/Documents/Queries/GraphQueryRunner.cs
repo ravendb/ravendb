@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Queries
                     {
                         var match = new Match();
                         match.Set(documentQuery.Key, result);
-                        match.Populate(ref ir);
+                        match.PopulateVertices(ref ir);
                     }
                 }
 
@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Queries
                     foreach (var match in matchResults)
                     {
                         var json = new DynamicJsonValue();
-                        match.Populate(json, fieldsToFetch, q.GraphQuery);
+                        match.Populate(json, query.Metadata.AliasesInGraphSelect, q.GraphQuery);
 
                         var doc = documentsContext.ReadObject(json, "graph/projection");
 
@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Queries
                      
                         final.AddResult(projectedDoc);
                     }
-                }
+                }        
 
                 final.TotalResults = final.Results.Count;
                 return final;
@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Queries
             foreach (var match in matchResults)
             {
                 var result = new DynamicJsonValue();
-                match.Populate(result);
+                match.PopulateVertices(result);
 
                 final.AddResult(new Document
                 {
@@ -172,45 +172,14 @@ namespace Raven.Server.Documents.Queries
                     _inner = new Dictionary<string, Document>();
 
                 _inner.Add(alias, val);
-            }
+            }            
 
-            public bool TryPopulate(SelectField f, GraphQuery gq, ref DynamicJsonValue json)
-            {
-                if (json == null) 
-                    return false;
-
-                Debug.Assert(f.Name != null);
-
-                if (f.Name == null) //precaution
-                    return false;
-
-                //populate vertex
-                if (_inner.TryGetValue(f.Name.Value, out var vertexData))
-                {
-                    json[string.IsNullOrWhiteSpace(f.Alias) ? f.Name.Value : f.Alias] = vertexData.Data;
-                    return true;
-                }
-
-                //populate edge
-                if (gq.WithEdgePredicates.TryGetValue(f.Name?.Value, out var edgeData) &&
-                    edgeData.FromAlias.HasValue && //precaution
-                    edgeData.EdgeType.HasValue && //precaution
-                    _inner.TryGetValue(edgeData.FromAlias.Value,out var edgeVertexSource) &&
-                    edgeVertexSource.Data.TryGet(edgeData.EdgeType, out object property))
-                {
-                    json[string.IsNullOrWhiteSpace(f.Alias) ? f.Name?.Value : f.Alias] = property;
-                    return true;
-                }
-
-                return false;
-            }
-
-            public void Populate(DynamicJsonValue j, FieldsToFetch fields, GraphQuery gq)
+            public void Populate(DynamicJsonValue j, string[] aliases, GraphQuery gq)
             {
                 if (_inner == null)
                     return;
 
-                var edgeAliases = fields.Fields.Keys.Except(_inner.Keys).ToArray();
+                var edgeAliases = aliases.Except(_inner.Keys).ToArray();
                 foreach (var item in _inner)
                 {
                     item.Value.EnsureMetadata();
@@ -228,7 +197,7 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            public void Populate(DynamicJsonValue j)
+            public void PopulateVertices(DynamicJsonValue j)
             {
                 if (_inner == null)
                     return;
@@ -240,7 +209,7 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            public void Populate(ref IntermediateResults i)
+            public void PopulateVertices(ref IntermediateResults i)
             {
                 if (_inner == null)
                     return;

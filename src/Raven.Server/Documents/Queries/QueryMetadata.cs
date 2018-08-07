@@ -148,6 +148,9 @@ namespace Raven.Server.Documents.Queries
 
         public SelectField[] SelectFields;
 
+        //in case we have JS function in SELECT, keep the original select fields
+        public string[] AliasesInGraphSelect;
+
         public HighlightingField[] Highlightings;
 
         public ExplanationField Explanation;
@@ -231,6 +234,16 @@ namespace Raven.Server.Documents.Queries
                 HandleSelectFunctionBody(parameters);
             else if (Query.Select != null)
                 FillSelectFields(parameters);
+
+            if (IsGraph)
+            {
+                AliasesInGraphSelect = Query.GraphQuery.WithEdgePredicates.Keys
+                    .Union(
+                        Query.GraphQuery.WithDocumentQueries.Keys)
+                    .Select(str => (string)str)
+                    .ToArray();
+            }
+
             if (Query.Where != null)
             {
                 if (Query.Where is MethodExpression me)
@@ -492,7 +505,9 @@ namespace Raven.Server.Documents.Queries
 
             sb.Append("function ").Append(name).Append("(");
             int index = 0;
-            var args = new SelectField[RootAliasPaths.Count];
+            var args = new SelectField[IsGraph ? 
+                Query.GraphQuery.WithDocumentQueries.Count + Query.GraphQuery.WithEdgePredicates.Count : 
+                RootAliasPaths.Count];
 
             foreach (var alias in RootAliasPaths)
             {
@@ -502,6 +517,26 @@ namespace Raven.Server.Documents.Queries
                 args[index++] = SelectField.Create(QueryFieldName.Empty, alias.Key, alias.Value.PropertyPath,
                     alias.Value.Array, true, alias.Value.Parameter, alias.Value.Quoted, alias.Value.LoadFromAlias);
             }
+
+            if (IsGraph)
+            {
+                foreach (var withClause in Query.GraphQuery.WithDocumentQueries)
+                {
+                    if (index != 0)
+                        sb.Append(", ");
+                    sb.Append(withClause.Key);
+                    args[index++] = SelectField.Create(QueryFieldName.Empty, withClause.Key, null, false, false);
+                }
+
+                foreach (var withEdgePredicate in Query.GraphQuery.WithEdgePredicates)
+                {
+                    if (index != 0)
+                        sb.Append(", ");
+                    sb.Append(withEdgePredicate.Key);
+                    args[index++] = SelectField.Create(QueryFieldName.Empty, withEdgePredicate.Key, null, false, false);
+                }
+            }
+
             if (index != 0)
                 sb.Append(", ");
             sb.AppendLine("rvnQueryArgs) { ");
