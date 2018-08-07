@@ -134,7 +134,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     Maps = new HashSet<string>
                     {
-                        @"from user in docs.Users select new Dictionary<string, object>() { {""Age"", user.Age}, {""Name"", user.Name} }"
+                        @"from user in docs.Users select new Dictionary <string, object >() { {""Age"", user.Age}, {""Name"", user.Name} }"
                     }
                 };
             }
