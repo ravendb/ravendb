@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.HashFunction.Blake2;
 using System.Dynamic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Raven.Migrator.MongoDB;
 
 namespace Raven.Migrator
 {
@@ -16,6 +16,12 @@ namespace Raven.Migrator
         private const string EndObject = "}";
         private const string RavenDocumentId = "@id";
         private const string RavenCollection = "@collection";
+
+        private static readonly Lazy<IBlake2B> Blake2BFactory = new Lazy<IBlake2B>(() => 
+            System.Data.HashFunction.Blake2.Blake2BFactory.Instance.Create(new Blake2BConfig
+            {
+                HashSizeInBits = 256
+            }));
 
         public static void OutputClass(
             AbstractMigrationConfiguration configuration,
@@ -135,9 +141,7 @@ namespace Raven.Migrator
                 await streamWriter.WriteAsync(",");
             isFirstDocument.Value = false;
 
-            // we are going to recalculate the hash when importing
-            var hash = string.Empty;
-
+            var hash = Blake2BFactory.Value.ComputeHash(attachmentStream).AsBase64String();
             var tag = $"Attachment{attachmentNumber}";
             await streamWriter.WriteAsync(
                 $"{StartObject}{GetQuotedString("@metadata")}:{StartObject}" +
