@@ -88,6 +88,7 @@ namespace Raven.Server.ServerWide
             [nameof(CleanUpClusterStateCommand)] = Base41CommandsVersion,
             [nameof(ClusterTransactionCommand)] = Base41CommandsVersion,
             [nameof(SetIndexStateCommand)] = Base41CommandsVersion,
+            [nameof(PutServerWideStudioConfigurationCommand)] = Base41CommandsVersion
         };
 
         public static bool CanPutCommand(string command)

@@ -1,0 +1,241 @@
+﻿using System;
+using System.Net.Http;
+using FastTests;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Configuration;
+using Raven.Client.Documents.Session;
+using Raven.Client.Http;
+using Raven.Client.Json;
+using Raven.Client.Json.Converters;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Configuration;
+using Sparrow.Json;
+using Xunit;
+
+namespace SlowTests.Issues
+{
+    public class RavenDB_10546 : RavenTestBase
+    {
+        [Fact]
+        public void CanSetStudioConfiguration()
+        {
+            DoNotReuseServer();
+
+            using (var store = GetDocumentStore())
+            {
+                StudioConfiguration studioConfiguration = store.Maintenance.Server.Send(new GetServerWideStudioConfigurationOperation());
+
+                Assert.Null(studioConfiguration);
+
+                studioConfiguration = store.Maintenance.Send(new GetStudioConfigurationOperation());
+
+                Assert.Null(studioConfiguration);
+
+                store.Maintenance.Server.Send(new PutServerWideStudioConfigurationOperation(new ServerWideStudioConfiguration
+                {
+                    Environment = StudioConfiguration.StudioEnvironment.Development
+                }));
+
+                studioConfiguration = store.Maintenance.Server.Send(new GetServerWideStudioConfigurationOperation());
+
+                Assert.NotNull(studioConfiguration);
+                Assert.Equal(StudioConfiguration.StudioEnvironment.Development, studioConfiguration.Environment); // from server
+
+                studioConfiguration = store.Maintenance.Send(new GetStudioConfigurationOperation());
+
+                Assert.NotNull(studioConfiguration);
+                Assert.Equal(StudioConfiguration.StudioEnvironment.Development, studioConfiguration.Environment); // from server
+
+                store.Maintenance.Send(new PutStudioConfigurationOperation(new StudioConfiguration
+                {
+                    Environment = StudioConfiguration.StudioEnvironment.Production
+                }));
+
+                studioConfiguration = store.Maintenance.Send(new GetStudioConfigurationOperation());
+
+                Assert.NotNull(studioConfiguration);
+                Assert.Equal(StudioConfiguration.StudioEnvironment.Production, studioConfiguration.Environment); // from database
+
+                store.Maintenance.Server.Send(new PutServerWideStudioConfigurationOperation(new ServerWideStudioConfiguration
+                {
+                    Environment = StudioConfiguration.StudioEnvironment.None
+                }));
+
+                studioConfiguration = store.Maintenance.Send(new GetStudioConfigurationOperation());
+
+                Assert.NotNull(studioConfiguration);
+                Assert.Equal(StudioConfiguration.StudioEnvironment.Production, studioConfiguration.Environment); // from database
+
+                store.Maintenance.Send(new PutStudioConfigurationOperation(new StudioConfiguration
+                {
+                    Environment = StudioConfiguration.StudioEnvironment.Production,
+                    Disabled = true
+                }));
+
+                studioConfiguration = store.Maintenance.Send(new GetStudioConfigurationOperation());
+
+                Assert.NotNull(studioConfiguration);
+                Assert.Equal(StudioConfiguration.StudioEnvironment.None, studioConfiguration.Environment); // from server
+            }
+        }
+
+        internal class GetStudioConfigurationOperation : IMaintenanceOperation<StudioConfiguration>
+        {
+            public RavenCommand<StudioConfiguration> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new GetStudioConfigurationCommand();
+            }
+
+            private class GetStudioConfigurationCommand : RavenCommand<StudioConfiguration>
+            {
+                public override bool IsReadRequest => false;
+
+                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+                {
+                    url = $"{node.Url}/databases/{node.Database}/configuration/studio";
+
+                    var request = new HttpRequestMessage
+                    {
+                        Method = HttpMethod.Get
+                    };
+
+                    return request;
+                }
+
+                public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+                {
+                    if (response == null)
+                        return;
+
+                    Result = JsonDeserializationClient.StudioConfiguration(response);
+                }
+            }
+        }
+
+        internal class PutStudioConfigurationOperation : IMaintenanceOperation
+        {
+            private readonly StudioConfiguration _configuration;
+
+            public PutStudioConfigurationOperation(StudioConfiguration configuration)
+            {
+                _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            }
+
+            public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new PutStudioConfigurationCommand(conventions, context, _configuration);
+            }
+
+            private class PutStudioConfigurationCommand : RavenCommand
+            {
+                private readonly BlittableJsonReaderObject _configuration;
+
+                public PutStudioConfigurationCommand(DocumentConventions conventions, JsonOperationContext context, StudioConfiguration configuration)
+                {
+                    if (conventions == null)
+                        throw new ArgumentNullException(nameof(conventions));
+                    if (configuration == null)
+                        throw new ArgumentNullException(nameof(configuration));
+                    if (context == null)
+                        throw new ArgumentNullException(nameof(context));
+
+                    _configuration = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
+                }
+
+                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+                {
+                    url = $"{node.Url}/databases/{node.Database}/admin/configuration/studio";
+
+                    return new HttpRequestMessage
+                    {
+                        Method = HttpMethod.Put,
+                        Content = new BlittableJsonContent(stream =>
+                        {
+                            ctx.Write(stream, _configuration);
+                        })
+                    };
+                }
+            }
+        }
+
+        internal class PutServerWideStudioConfigurationOperation : IServerOperation
+        {
+            private readonly ServerWideStudioConfiguration _configuration;
+
+            public PutServerWideStudioConfigurationOperation(ServerWideStudioConfiguration configuration)
+            {
+                _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            }
+
+            public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new PutServerWideStudioConfigurationCommand(conventions, context, _configuration);
+            }
+
+            private class PutServerWideStudioConfigurationCommand : RavenCommand
+            {
+                private readonly BlittableJsonReaderObject _configuration;
+
+                public PutServerWideStudioConfigurationCommand(DocumentConventions conventions, JsonOperationContext context, ServerWideStudioConfiguration configuration)
+                {
+                    if (conventions == null)
+                        throw new ArgumentNullException(nameof(conventions));
+                    if (configuration == null)
+                        throw new ArgumentNullException(nameof(configuration));
+                    if (context == null)
+                        throw new ArgumentNullException(nameof(context));
+
+                    _configuration = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
+                }
+
+                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+                {
+                    url = $"{node.Url}/admin/configuration/studio";
+
+                    return new HttpRequestMessage
+                    {
+                        Method = HttpMethod.Put,
+                        Content = new BlittableJsonContent(stream =>
+                        {
+                            ctx.Write(stream, _configuration);
+                        })
+                    };
+                }
+            }
+        }
+
+        internal class GetServerWideStudioConfigurationOperation : IServerOperation<ServerWideStudioConfiguration>
+        {
+            public RavenCommand<ServerWideStudioConfiguration> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new GetServerWideStudioConfigurationCommand();
+            }
+
+            private class GetServerWideStudioConfigurationCommand : RavenCommand<ServerWideStudioConfiguration>
+            {
+                public override bool IsReadRequest => false;
+
+                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+                {
+                    url = $"{node.Url}/configuration/studio";
+
+                    var request = new HttpRequestMessage
+                    {
+                        Method = HttpMethod.Get
+                    };
+
+                    return request;
+                }
+
+                public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+                {
+                    if (response == null)
+                        return;
+
+                    Result = JsonDeserializationClient.ServerWideStudioConfiguration(response);
+                }
+            }
+        }
+    }
+}

@@ -221,6 +221,8 @@ namespace Raven.Server.Documents
 
         public ClientConfiguration ClientConfiguration { get; private set; }
 
+        public StudioConfiguration StudioConfiguration { get; private set; }
+
         public long LastDatabaseRecordIndex { get; private set; }
 
         public bool CanUnload => Interlocked.Read(ref _preventUnloadCounter) == 0;
@@ -992,6 +994,8 @@ namespace Raven.Server.Documents
                 ClientConfiguration = record.Client;
                 _lastClientConfigurationIndex = record.Client?.Etag ?? -1;
 
+                StudioConfiguration = record.Studio;
+
                 NotifyFeaturesAboutStateChange(record, index);
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
@@ -1085,6 +1089,7 @@ namespace Raven.Server.Documents
                 return;
 
             ClientConfiguration = record.Client;
+            StudioConfiguration = record.Studio;
             DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(record);
             ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, record, ExpiredDocumentsCleaner);
             PeriodicBackupRunner.UpdateConfigurations(record);
