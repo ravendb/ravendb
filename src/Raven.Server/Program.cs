@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.CommandLineUtils;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
@@ -187,14 +188,18 @@ namespace Raven.Server
                         }
                         catch (Exception e)
                         {
-                            var message =
-                                $"{e.Message}{Environment.NewLine}Port might be already in use.{Environment.NewLine}Try running with an unused port.{Environment.NewLine}" +
-                                $"You can change the port using one of the following options:{Environment.NewLine}" +
-                                $"1) Run the server from the command line with --ServerUrl option.{Environment.NewLine}" +
-                                $"2) Change the ServerUrl property in setting.json file.{Environment.NewLine}" +
-                                $"3) Add RAVEN_ServerUrl in linux or RAVEN.ServerUrl in windows to the Environment Variables.{Environment.NewLine}" +
-                                "For more information go to https://ravendb.net/docs/article-page/4.0/csharp/server/configuration/configuration-options";
-
+                            var message = e.Message;
+                            if (e.InnerException is AddressInUseException)
+                            {
+                                 message +=
+                                    $"{Environment.NewLine}Port might be already in use.{Environment.NewLine}Try running with an unused port.{Environment.NewLine}" +
+                                    $"You can change the port using one of the following options:{Environment.NewLine}" +
+                                    $"1) Change the ServerUrl property in setting.json file.{Environment.NewLine}" +
+                                    $"2) Run the server from the command line with --ServerUrl option.{Environment.NewLine}" +
+                                    $"3) Add RAVEN_ServerUrl to the Environment Variables.{Environment.NewLine}" +
+                                    "For more information go to https://ravendb.net/l/EJS81M/4.0";
+                            }
+                           
                             if (Logger.IsOperationsEnabled)
                                 Logger.Operations("Failed to initialize the server", e);
                             Console.WriteLine(message);
