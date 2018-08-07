@@ -2,6 +2,7 @@
 
 class addClusterNodeModel {
     serverUrl = ko.observable<string>();
+    nodeTag = ko.observable<string>();
     addAsWatcher = ko.observable<boolean>(false);
     assignedCores = ko.observable<number>(undefined);
     usaAvailableCores = ko.observable<boolean>(true);
