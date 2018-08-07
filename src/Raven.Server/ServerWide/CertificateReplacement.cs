@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Sparrow.Json.Parsing;
-
-namespace Raven.Client.ServerWide.Operations.Certificates
+﻿namespace Raven.Server.ServerWide
 {
     public class CertificateReplacement
     {
