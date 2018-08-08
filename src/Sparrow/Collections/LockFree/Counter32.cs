@@ -3,26 +3,25 @@
 // This file is distributed under the MIT License. See LICENSE.md for details.
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
-using Sparrow.Utils;
 
 namespace Sparrow.Collections.LockFree
 {
-    [StructLayout(LayoutKind.Sequential)]
-    internal sealed class Counter32
+    /// <summary>
+    /// Scalable 32bit counter that can be used from multiple threads.
+    /// </summary>
+    public sealed class Counter32: CounterBase
     {
-        private static readonly int MAX_CELL_COUNT = ProcessorInfo.ProcessorCount * 2;
-        private const int MAX_DRIFT = 1;
-
         private class Cell
         {
-            [StructLayout(LayoutKind.Explicit)]
+            [StructLayout(LayoutKind.Explicit, Size = CACHE_LINE * 2 - OBJ_HEADER_SIZE)]
             public struct SpacedCounter
             {
-                // 64 bytes - sizeof(int) - sizeof(objecHeader64)
-                [FieldOffset(44)]
+                [FieldOffset(CACHE_LINE - OBJ_HEADER_SIZE)]
                 public int cnt;
             }
 
@@ -35,22 +34,28 @@ namespace Sparrow.Collections.LockFree
         // default counter
         private int cnt;
 
-        // how many cells we have
-        private int cellCount;
-
         // delayed estimated count
-        private int lastCntTicks;
         private int lastCnt;
-        
+
+        /// <summary>
+        /// Initializes a new instance of the <see
+        /// cref="Counter32"/>
+        /// </summary>
         public Counter32()
         {
         }
 
+        /// <summary>
+        /// Returns the value of the counter at the time of the call.
+        /// </summary>
+        /// <remarks>
+        /// The value may miss in-progress updates if the counter is being concurrently modified.
+        /// </remarks>
         public int Value
         {
             get
             {
-                var count = cnt;
+                var count = this.cnt;
                 var cells = this.cells;
 
                 if (cells != null)
@@ -73,16 +78,22 @@ namespace Sparrow.Collections.LockFree
             }
         }
 
+        /// <summary>
+        /// Returns the approximate value of the counter at the time of the call.
+        /// </summary>
+        /// <remarks>
+        /// EstimatedValue could be significantly cheaper to obtain, but may be slightly delayed.
+        /// </remarks>
         public int EstimatedValue
         {
             get
             {
-                if (cells == null)
+                if (this.cells == null)
                 {
-                    return cnt;
+                    return this.cnt;
                 }
 
-                var curTicks = Environment.TickCount;
+                var curTicks = (uint)Environment.TickCount;
                 // more than a millisecond passed?
                 if (curTicks != lastCntTicks)
                 {
@@ -94,114 +105,108 @@ namespace Sparrow.Collections.LockFree
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <summary>
+        /// Increments the counter by 1.
+        /// </summary>
         public void Increment()
         {
-            Cell cell = null;
+            int curCellCount = this.cellCount;
+            var drift = increment(ref GetCntRef(curCellCount));
 
-            int curCellCount = cellCount;
-            if (curCellCount > 1 & cells != null)
-            {
-                cell = cells[GetIndex(curCellCount)];
-            }
-
-            var drift = cell == null ?
-                increment(ref cnt) :
-                increment(ref cell.counter.cnt);
-
-            if (drift > MAX_DRIFT)
+            if (drift != 0)
             {
                 TryAddCell(curCellCount);
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Add(int c)
-        {
-            Cell cell = null;
-
-            int curCellCount = cellCount;
-            if (curCellCount > 1 & cells != null)
-            {
-                cell = cells[GetIndex(curCellCount)];
-            }
-
-            var drift = cell == null ?
-                increment(ref cnt, c) :
-                increment(ref cell.counter.cnt, c);
-
-            if (drift > MAX_DRIFT)
-            {
-                TryAddCell(curCellCount);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        /// <summary>
+        /// Decrements the counter by 1.
+        /// </summary>
         public void Decrement()
         {
-            Cell cell = null;
+            int curCellCount = this.cellCount;
+            var drift = decrement(ref GetCntRef(curCellCount));
 
-            int curCellCount = cellCount;
-            if (curCellCount > 1 & cells != null)
-            {
-                cell = cells[GetIndex(curCellCount)];
-            }
-
-            var drift = cell == null ?
-                decrement(ref cnt) :
-                decrement(ref cell.counter.cnt);
-
-            if (drift > MAX_DRIFT)
+            if (drift != 0)
             {
                 TryAddCell(curCellCount);
             }
+        }
+
+        /// <summary>
+        /// Increments the counter by 'value'.
+        /// </summary>
+        public void Add(int value)
+        {
+            int curCellCount = this.cellCount;
+            var drift = add(ref GetCntRef(curCellCount), value);
+
+            if (drift != 0)
+            {
+                TryAddCell(curCellCount);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ref int GetCntRef(int curCellCount)
+        {
+            if (this.cells != null & curCellCount > 1)
+            {
+                var cell = this.cells[GetIndex(curCellCount)];
+
+                if (cell != null)
+                {
+                    return ref cell.counter.cnt;
+                }
+            }
+
+            return ref cnt;
         }
 
         private static int increment(ref int val)
         {
-            return -val + Interlocked.Increment(ref val) - 1;
+            return -val - 1 + Interlocked.Increment(ref val);
         }
 
-        private static int increment(ref int val, int inc)
+        private static int add(ref int val, int inc)
         {
-            return -val + Interlocked.Add(ref val, inc) - inc;
+            return -val - inc + Interlocked.Add(ref val, inc);
         }
 
         private static int decrement(ref int val)
         {
-            return val - Interlocked.Decrement(ref val) - 1;
+            return val - 1 - Interlocked.Decrement(ref val);
         }
 
-        private static int GetIndex(int cellCount)
-        {
-            return Environment.CurrentManagedThreadId % cellCount;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void TryAddCell(int curCellCount)
         {
             if (curCellCount < MAX_CELL_COUNT)
             {
-                var cells = this.cells;
-                if (cells == null)
-                {
-                    var newCells = new Cell[MAX_CELL_COUNT];
-                    cells = Interlocked.CompareExchange(ref this.cells, newCells, null) ?? newCells;
-                }
+                TryAddCellCore(curCellCount);
+            }
+        }
 
-                if (cells[curCellCount] == null)
-                {
-                    Interlocked.CompareExchange(ref cells[curCellCount], new Cell(), null);
-                }
+        private void TryAddCellCore(int curCellCount)
+        {
+            var cells = this.cells;
+            if (cells == null)
+            {
+                var newCells = new Cell[MAX_CELL_COUNT];
+                cells = Interlocked.CompareExchange(ref this.cells, newCells, null) ?? newCells;
+            }
 
-                if (cellCount == curCellCount)
-                {
-                    Interlocked.CompareExchange(ref cellCount, curCellCount + 1, curCellCount);
-                    //if (Interlocked.CompareExchange(ref this.cellCount, curCellCount + 1, curCellCount) == curCellCount)
-                    //{
-                    //    System.Console.WriteLine(curCellCount + 1);
-                    //}
-                }
+            if (cells[curCellCount] == null)
+            {
+                Interlocked.CompareExchange(ref cells[curCellCount], new Cell(), null);
+            }
+
+            if (this.cellCount == curCellCount)
+            {
+                Interlocked.CompareExchange(ref this.cellCount, curCellCount + 1, curCellCount);
+                //if (Interlocked.CompareExchange(ref this.cellCount, curCellCount + 1, curCellCount) == curCellCount)
+                //{
+                //    System.Console.WriteLine(curCellCount + 1);
+                //}
             }
         }
     }
