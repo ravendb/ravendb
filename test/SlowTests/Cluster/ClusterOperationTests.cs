@@ -31,7 +31,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        private static async Task FailSuccessfully(IDocumentStore store, string db)
+        public static async Task FailSuccessfully(IDocumentStore store, string db)
         {
             var ex = await Assert.ThrowsAsync<RavenException>(async () =>
             {
@@ -90,7 +90,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        private static async Task ReverseOrderSuccessfully(IDocumentStore store, string db)
+        public static async Task ReverseOrderSuccessfully(IDocumentStore store, string db)
         {
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(db));
             record.Topology.Members.Reverse();
