@@ -302,7 +302,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/smuggler/migrate", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/databases/*/admin/smuggler/migrate/ravendb", "POST", AuthorizationStatus.Operator)]
         public async Task MigrateFromRavenDB()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -385,7 +385,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/smuggler/migrate", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/admin/smuggler/migrate", "POST", AuthorizationStatus.ValidUser)]
         public async Task MigrateFromAnotherDatabase()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
