@@ -1164,7 +1164,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void Replay(Stream replayStream)
+        public IEnumerable<ReplayProgress> Replay(Stream replayStream)
         {
             DocumentsOperationContext txCtx = null;
             IDisposable txDisposable = null;
@@ -1176,6 +1176,7 @@ namespace Raven.Server.Documents
                 var state = new JsonParserState();
                 var parser = new UnmanagedJsonParser(context, state, "file");
 
+                var commandsProgress = 0;
                 foreach (var item in UnmanagedJsonParserHelper.ReadArrayToMemory(context, peepingTomStream, parser, state, buffer))
                 {
                     using (item)
@@ -1219,9 +1220,22 @@ namespace Raven.Server.Documents
                         var cmd = DeserializeCommand(strType, item, context, peepingTomStream);
 
                         cmd?.Execute(txCtx, null);
+                        commandsProgress++;
+
+                        yield return new ReplayProgress
+                        {
+                            StreamProgress = replayStream.Position,
+                            CommandsProgress = commandsProgress
+                        };
                     }
                 }
             }
+        }
+
+        public class ReplayProgress
+        {
+            public long StreamProgress;
+            public long CommandsProgress;
         }
 
         private MergedTransactionCommand DeserializeCommand(string type, BlittableJsonReaderObject wrapCmdReader, DocumentsOperationContext context,

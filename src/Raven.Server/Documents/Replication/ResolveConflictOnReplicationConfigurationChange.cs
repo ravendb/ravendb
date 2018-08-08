@@ -152,7 +152,8 @@ namespace Raven.Server.Documents.Replication
                         // let's check if nothing has changed since we resolved the conflict in the read tx
                         // in particular the conflict could be resolved externally before the tx merger opened this write tx
 
-                        if (_conflictsStorage.ShouldThrowConcurrencyExceptionOnConflict(context, lowerId, item.MaxConflictEtag, out _))
+                        // Can be null in replay transaction commands
+                        if (_conflictsStorage != null && _conflictsStorage.ShouldThrowConcurrencyExceptionOnConflict(context, lowerId, item.MaxConflictEtag, out _))
                             continue;
                         RequiresRetry = true;
                     }
