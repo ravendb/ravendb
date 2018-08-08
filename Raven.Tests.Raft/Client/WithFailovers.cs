@@ -95,7 +95,7 @@ namespace Raven.Tests.Raft.Client
         }
 
 
-        [Theory]
+        [Theory(Skip = "Flaky")]
         [InlineData(3, FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers)]
         [InlineData(3, FailoverBehavior.ReadFromLeaderWriteToLeaderWithFailovers)]
         [InlineData(5, FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers)]

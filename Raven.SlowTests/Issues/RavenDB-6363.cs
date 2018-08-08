@@ -12,7 +12,7 @@ namespace Raven.SlowTests.Issues
 {
     public class RavenDB_6363 : ReplicationBase
     {
-        [Fact]
+        [Fact(Skip = "Flaky")]
         public async Task FailoverShouldStillWorkAfter5MinutesAsync()
         {
             var s1 = CreateStore(databaseName: "Foo1");
@@ -90,7 +90,7 @@ namespace Raven.SlowTests.Issues
         }
 
 
-        [Fact]
+        [Fact(Skip = "Flaky")]
         public void FailoverShouldStillWorkAfter5MinutesSync()
         {
             var s1 = CreateStore(databaseName: "Foo1");
