@@ -206,17 +206,17 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                 if (_logger.IsInfoEnabled)
                                                     _logger.Info($"Failed to execute mapping function on '{current.Id}' for '{_index.Name}'.", e);
                                             }
-
-                                            if (CanContinueBatch(databaseContext, indexContext, collectionStats, lastEtag, lastCollectionEtag, batchCount) == false)
-                                            {
-                                                keepRunning = false;
-                                                break;
-                                            }
-
-                                            if (MapDocuments.MaybeRenewTransaction(databaseContext, sw, _configuration, ref maxTimeForDocumentTransactionToRemainOpen))
-                                                break;
                                         }
                                     }
+
+                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, lastEtag, lastCollectionEtag, batchCount) == false)
+                                    {
+                                        keepRunning = false;
+                                        break;
+                                    }
+
+                                    if (MapDocuments.MaybeRenewTransaction(databaseContext, sw, _configuration, ref maxTimeForDocumentTransactionToRemainOpen))
+                                        break;
                                 }
 
                                 if (batchCount == 0 || batchCount >= pageSize)
