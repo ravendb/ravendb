@@ -11,7 +11,7 @@ class migrateDatabaseCommand<T> extends commandBase {
     }
 
     execute(): JQueryPromise<T> {
-        const url = endpoints.databases.smuggler.smugglerMigrate;
+        const url = endpoints.databases.smuggler.adminSmugglerMigrate;
 
         return this.post(url, JSON.stringify(this.dto), this.db)
             .fail((response: JQueryXHR) => {
