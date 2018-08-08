@@ -79,9 +79,8 @@ namespace Raven.Migrator
                 stream = File.Create(Path.Combine(basePath, fileName));
             }
 
-            using (stream)
-            using (var gzipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
-            using (var streamWriter = new StreamWriter(gzipStream))
+            using (GetStream(configuration, stream, out var outStream))
+            using (var streamWriter = new StreamWriter(outStream))
             using (var jsonTextWriter = new JsonTextWriter(streamWriter))
             {
                 if (configuration.ConsoleExport == false)
@@ -107,6 +106,27 @@ namespace Raven.Migrator
                 await jsonTextWriter.WriteEndArrayAsync();
                 await jsonTextWriter.WriteEndObjectAsync();
             }
+        }
+
+        private static IDisposable GetStream(
+            AbstractMigrationConfiguration configuration,
+            Stream stream, out Stream outStream)
+        {
+            if (configuration.ConsoleExport)
+            {
+                outStream = stream;
+                return new DisposableAction(stream.Dispose);
+            }
+
+            var gzipStream = outStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true);
+            return new DisposableAction(() =>
+            {
+                using (stream)
+                using (gzipStream)
+                {
+                    
+                }
+            });
         }
 
         public static void WriteDocument(
