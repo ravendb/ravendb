@@ -518,19 +518,23 @@ namespace Raven.Server.Documents.Queries
                         sourcePath = value.PropertyPath;
                     }
 
-                    else if (Query.From.Alias?.Value != null &&
-                             fe.FieldValue != null)
+                    else if (fe.FieldValue != null)
                     {
-                        var split = fe.FieldValue.Split('.');
-                        if (split.Length >= 2 &&
-                            split[0] == Query.From.Alias.Value)
+                        if (Query.From.Alias?.Value == null)
                         {
-                            sourcePath = fe.FieldValue.Substring(split[0].Length + 1);
+                            sourcePath = fe.FieldValue;
+                        }
+                        else
+                        {
+                            var split = fe.FieldValue.Split('.');
+                            if (split.Length >= 2 &&
+                                split[0] == Query.From.Alias.Value)
+                            {
+                                sourcePath = fe.FieldValue.Substring(split[0].Length + 1);
+                            }
                         }
                     }
                 }
-
-
             }
 
             if (start == expression.Arguments.Count)
