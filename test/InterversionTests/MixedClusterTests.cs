@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Revisions;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
@@ -15,6 +18,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Cluster;
 using Sparrow;
 using Xunit;
 
@@ -663,6 +667,127 @@ namespace InterversionTests
 
         }
 
+        [Fact]
+        public async Task RevisionsInMixedCluster()
+        {
+            var company = new Company { Name = "Company Name" };
+
+            var (leader, peers, local) = await CreateMixedCluster(new[]
+            {
+                "4.0.6",
+                "4.0.6"
+            });
+
+            var stores = await GetStores(leader, peers);
+
+            using (stores.Disposable)
+            {
+                var storeA = stores.Stores[0];
+
+                var dbName = await CreateDatabase(storeA, 3);
+                await Task.Delay(500);
+
+                await RevisionsHelper.SetupRevisions(leader.ServerStore, dbName);
+                using (var session = storeA.OpenAsyncSession(dbName))
+                {
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+                }
+                using (var session = storeA.OpenAsyncSession(dbName))
+                {
+                    var company2 = await session.LoadAsync<Company>(company.Id);
+                    company2.Name = "Hibernating Rhinos";
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.True(await WaitForDocumentInClusterAsync<Company>(
+                    company.Id,
+                    u => u.Name.Equals("Hibernating Rhinos"),
+                    TimeSpan.FromSeconds(10),
+                    stores.Stores,
+                    dbName));
+
+                foreach (var store in stores.Stores)
+                {
+                    using (var session = store.OpenAsyncSession(dbName))
+                    {
+                        var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
+                        Assert.Equal(2, companiesRevisions.Count);
+                        Assert.Equal("Hibernating Rhinos", companiesRevisions[0].Name);
+                        Assert.Equal("Company Name", companiesRevisions[1].Name);
+                    }
+                }
+
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20)))
+                    await storeA.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(dbName, true), cts.Token);
+            }
+        }
+
+        [Fact]
+        public async Task MixedCluster_ClusterWideIdentity()
+        {
+
+            var (leader, peers, local) = await CreateMixedCluster(new[]
+            {
+                "4.0.6",
+                "4.0.6"
+            });
+
+            var stores = await GetStores(leader, peers);
+            var leaderStore = stores.Stores.Single(s => s.Urls[0] == leader.WebUrl);
+            var nonLeader = stores.Stores.First(s => s.Urls[0] != leader.WebUrl);
+
+            using (stores.Disposable)
+            {
+                var dbName = await CreateDatabase(leaderStore, 3);
+                await Task.Delay(500);
+
+                using (var session = nonLeader.OpenAsyncSession(dbName))
+                {
+                    var command = new SeedIdentityForCommand("users", 1990);
+
+                    await session.Advanced.RequestExecutor.ExecuteAsync(command, session.Advanced.Context);
+
+                    var result = command.Result;
+
+                    Assert.Equal(1990, result);
+                    var user = new User
+                    {
+                        Name = "Adi",
+                        LastName = "Async"
+                    };
+                    await session.StoreAsync(user, "users|");
+                    await session.SaveChangesAsync();
+                    var id = session.Advanced.GetDocumentId(user);
+                    Assert.Equal("users/1991", id);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task MixedCluster_CanReorderDatabaseNodes()
+        {
+            var (leader, peers, local) = await CreateMixedCluster(new[]
+            {
+                "4.0.6",
+                "4.0.6"
+            });
+
+            var stores = await GetStores(leader, peers);
+
+            using (stores.Disposable)
+            {
+                var storeA = stores.Stores[0];
+
+                var dbName = await CreateDatabase(storeA, 3);
+                await Task.Delay(500);
+
+                await ClusterOperationTests.ReverseOrderSuccessfully(storeA, dbName);
+                await ClusterOperationTests.FailSuccessfully(storeA, dbName);
+            }
+
+        }
+
         private static async Task AddNodeToCluster(DocumentStore store, string url)
         {
             var addNodeRequest = await store.GetRequestExecutor().HttpClient.SendAsync(
@@ -690,7 +815,7 @@ namespace InterversionTests
             public int MaxId;
         }
 
-        private readonly TimeSpan _reasonableWaitTime = /*Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) :*/ TimeSpan.FromSeconds(10);
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(15);
 
         private async Task<SubscriptionWorker<User>> CreateAndInitiateSubscription(RavenServer server, IDocumentStore store, string database, List<User> usersCount, AsyncManualResetEvent reachedMaxDocCountMre, int batchSize, string mentor)
         {
