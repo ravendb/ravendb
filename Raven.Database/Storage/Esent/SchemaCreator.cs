@@ -843,7 +843,7 @@ namespace Raven.Storage.Esent
                         cbKeyMost = SystemParameters.KeyMost,
                         cbVarSegMac = SystemParameters.KeyMost,
                         szKey = by_name_and_created_at,
-                        grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                        grbit =  CreateIndexGrbit.IndexDisallowNull,
                         ulDensity = 90
                     }
                 }, 1);          
@@ -1117,7 +1117,7 @@ namespace Raven.Storage.Esent
                         cbKeyMost = SystemParameters.KeyMost,
                         cbVarSegMac = SystemParameters.KeyMost,
                         szKey = by_key,
-                        grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                        grbit =  CreateIndexGrbit.IndexDisallowNull,
                         ulDensity = 90
                     }
                 }, 1);
@@ -1131,7 +1131,7 @@ namespace Raven.Storage.Esent
                         cbKeyMost = SystemParameters.KeyMost,
                         cbVarSegMac = SystemParameters.KeyMost,
                         szKey = by_view_and_key,
-                        grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                        grbit =  CreateIndexGrbit.IndexDisallowNull,
                         ulDensity = 90
                     }
                 }, 1);
@@ -1144,7 +1144,7 @@ namespace Raven.Storage.Esent
                         cbKeyMost = SystemParameters.KeyMost,
                         cbVarSegMac = SystemParameters.KeyMost,
                         szKey = by_ref,
-                        grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                        grbit =  CreateIndexGrbit.IndexDisallowNull,
                         ulDensity = 90
                     }
                 }, 1);
