@@ -28,13 +28,13 @@ namespace Raven.Server.ServerWide.Commands
                     var deleted = items.DeleteByPrimaryKeyPrefix(prefixSlice, shouldAbort: (tvb) =>
                     {
                         var value = tvb.Reader.Read((int)ClusterTransactionCommand.TransactionCommandsColumn.Key, out var size);
-                        var commandCount = Bits.SwapBytes(*(long*)(value + size - sizeof(long)));
-                        return commandCount > upToCommandCount;
+                        var prevCommandsCount = Bits.SwapBytes(*(long*)(value + size - sizeof(long)));
+                        return prevCommandsCount > upToCommandCount;
                     });
                    
                     if (deleted)
                     {
-                        affectedDatabases.Add(database, upToCommandCount);
+                        affectedDatabases.Add(database, tuple.Value);
                     }
                 }
             }
