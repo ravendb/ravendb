@@ -91,7 +91,10 @@
                             <label class="control-label"></label>
                             <div class="toggle">
                                 <input class="styled" type="checkbox" id="migrate-all-collections" data-bind="checked: migrateAllCollections, disable: !hasCollectionsToMigrate()">
-                                <label for="migrate-all-collections">Migrate all collections</label>
+                                <label for="migrate-all-collections">
+                                    Migrate all collections
+                                    <span data-bind="if: hasCollectionsToMigrate">(<span data-bind="text: collectionsToMigrate().length"></span>)</span>
+                                </label>
                             </div>
                         </div>
                         <div class="form-group" data-bind="if: hasCollectionsToMigrate && !migrateAllCollections()">
@@ -102,8 +105,8 @@
                                     <!-- ko foreach: collectionsToMigrate -->
                                     <div class="prop-table-row">
                                         <div class="toggle">
-                                            <input class="styled" type="checkbox" id="migrate-collection" data-bind="checked: migrateCollection">
-                                            <label for="migrate-collection"></label>
+                                            <input class="styled" type="checkbox" data-bind="checked: migrateCollection, attr: { 'id': 'migrate-collection' + $index() }">
+                                            <label data-bind="attr: { 'for': 'migrate-collection' + $index() }"></label>
                                         </div>
                                         <div class="name" data-bind="text: name, attr:{ title: name }"></div>
                                         <div class="arrow"><i class="icon-arrow-filled-right"></i></div>
