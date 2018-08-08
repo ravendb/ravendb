@@ -14,6 +14,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
@@ -23,6 +24,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
@@ -454,9 +456,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     }
                     catch (Exception e)
                     {
-                        var error = process.StandardError.ReadLine();
+                        var errorString = await ReadOutput(process.StandardError).ConfigureAwait(false);
                         process.Kill();
-                        throw new InvalidOperationException($"Process error: {error}, exception: {e}");
+                        throw new InvalidOperationException($"Process error: {errorString}, exception: {e}");
                     }
 
                     return;
@@ -470,7 +472,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     Operations.OperationType.DatabaseMigration,
                     onProgress =>
                     {
-                        return Task.Run(() =>
+                        return Task.Run(async() =>
                         {
                             var result = new SmugglerResult();
 
@@ -498,11 +500,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             }
                             catch (Exception e)
                             {
-                                var error = process.StandardError.ReadLine();
-                                result.AddError($"Error occurred during migration. Process error: {error}, exception: {e}");
+                                var errorString = await ReadOutput(process.StandardError).ConfigureAwait(false);
+                                result.AddError($"Error occurred during migration. Process error: {errorString}, exception: {e}");
                                 onProgress.Invoke(result.Progress);
                                 process.Kill();
-                                throw new InvalidOperationException(error);
+                                throw new InvalidOperationException(errorString);
                             }
 
                             return (IOperationResult)result;
@@ -514,6 +516,34 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     writer.WriteOperationId(context, operationId);
                 }
             }
+        }
+
+        private static async Task<string> ReadOutput(StreamReader output)
+        {
+            var sb = new StringBuilder();
+
+            Task<string> readLineTask = null;
+            while (true)
+            {
+                if (readLineTask == null)
+                    readLineTask = output.ReadLineAsync();
+
+                var hasResult = await readLineTask.WaitWithTimeout(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                if (hasResult == false)
+                    continue;
+
+                var line = readLineTask.Result;
+
+                readLineTask = null;
+
+                if (line != null)
+                    sb.AppendLine(line);
+
+                if (line == null)
+                    break;
+            }
+
+            return sb.ToString();
         }
 
         [RavenAction("/databases/*/smuggler/import", "POST", AuthorizationStatus.ValidUser)]
