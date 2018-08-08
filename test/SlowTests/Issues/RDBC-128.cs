@@ -2,10 +2,12 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Indexes;
 
 namespace SlowTests.Issues
 {
@@ -121,6 +123,76 @@ update {
                     foreach (var item in s)
                     {
                         Assert.Equal(240, item.Total);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void IndexingOfLoadDocument_UnderLowMemory()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const int numberOfSocks = 100;
+
+                Assert.True(numberOfSocks > Raven.Server.Documents.Indexes.Index.MinMapReduceBatchSize,
+                    "this test used to fail once number of references per document is greater than min indexing batch size of " +
+                    "map-reduce index that is forced under low memory");
+
+                Invoices_Search invoicesSearch = new Invoices_Search();
+                invoicesSearch.Execute(store);
+
+                using (var bulk = store.BulkInsert())
+                {
+                    for (int i = 0; i < 10_000; i++)
+                    {
+                        bulk.Store(new Invoice
+                        {
+                            Amount = 4,
+                            Price = 3,
+                            Symbol = "SY" + (i % 100)
+                        });
+                    }
+                }
+
+                WaitForIndexing(store);
+
+                WaitForUserToContinueTheTest(store);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                using (var bulk = store.BulkInsert())
+                {
+                    for (int i = 0; i < 100; i++)
+                    {
+                        bulk.Store(new Stock
+                        {
+                            Age = 1,
+                            Name = "Long name #" + i,
+                            Symbol = "SY" + i
+                        });
+                    }
+                }
+                
+                GetDatabase(store.Database).Result.IndexStore.GetIndex(invoicesSearch.IndexName).SimulateLowMemory();
+
+                store.Maintenance.Send(new StartIndexingOperation());
+                
+                WaitForUserToContinueTheTest(store);
+                
+                using (var session = store.OpenSession())
+                {
+                    Thread.Sleep(5000); // TODO arek
+
+                    var s = session.Query<Invoices_Search.Result, Invoices_Search>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .ToList();
+
+                    Assert.Equal(100, s.Count);
+
+                    foreach (var item in s)
+                    {
+                        Assert.Equal(1200, item.Total);
                     }
                 }
             }
