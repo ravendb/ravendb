@@ -5,6 +5,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Threading;
 
 namespace Sparrow.Collections.LockFree
 {
@@ -17,7 +20,7 @@ namespace Sparrow.Collections.LockFree
             return new SnapshotKV(this);
         }
 
-        internal override IDictionaryEnumerator GetDictionaryEnumerator()
+        internal override IDictionaryEnumerator GetdIDictEnumerator()
         {
             return new SnapshotIDict(this);
         }
@@ -31,7 +34,7 @@ namespace Sparrow.Collections.LockFree
 
             public Snapshot(DictionaryImpl<TKey, TKeyStore, TValue> dict)
             {
-                _table = dict;
+                this._table = dict;
 
                 // linearization point.
                 // if table is quiescent and has no copy in progress,
@@ -45,7 +48,7 @@ namespace Sparrow.Collections.LockFree
 
                     // there is a copy in progress, finish it and try again
                     _table.HelpCopyImpl(copy_all: true);
-                    _table = (DictionaryImpl<TKey, TKeyStore, TValue>)(_table._topDict._table);
+                    this._table = (DictionaryImpl<TKey, TKeyStore, TValue>)(this._table._topDict._table);
                 }
 
                 // Warm-up the iterator
@@ -63,7 +66,7 @@ namespace Sparrow.Collections.LockFree
                 _curValue = _nextV;
                 _nextV = NULLVALUE;
 
-                var entries = _table._entries;
+                var entries = this._table._entries;
                 while (_idx < entries.Length)
                 {  // Scan array
                     var nextEntry = entries[_idx++];
@@ -115,13 +118,13 @@ namespace Sparrow.Collections.LockFree
             {
                 get
                 {
-                    var curValue = _curValue;
+                    var curValue = this._curValue;
                     if (curValue == NULLVALUE)
                     {
                         throw new InvalidOperationException();
                     }
 
-                    return new KeyValuePair<TKey, TValue>(_curKey, (TValue)curValue);
+                    return new KeyValuePair<TKey, TValue>(this._curKey, (TValue)curValue);
                 }
             }
 
@@ -136,13 +139,13 @@ namespace Sparrow.Collections.LockFree
             {
                 get
                 {
-                    var curValue = _curValue;
+                    var curValue = this._curValue;
                     if (curValue == NULLVALUE)
                     {
                         throw new InvalidOperationException();
                     }
 
-                    return new DictionaryEntry(_curKey, (TValue)curValue);
+                    return new DictionaryEntry(this._curKey, (TValue)curValue);
                 }
             }
 

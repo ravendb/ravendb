@@ -10,22 +10,22 @@ using System.Threading;
 
 namespace Sparrow.Collections.LockFree
 {
-    internal sealed class DictionaryImplLong<TValue>
-                : DictionaryImpl<long, long, TValue>
+    internal sealed class DictionaryImplULong<TValue>
+                : DictionaryImpl<ulong, long, TValue>
     {
-        internal DictionaryImplLong(int capacity, ConcurrentDictionary<long, TValue> topDict)
+        internal DictionaryImplULong(int capacity, ConcurrentDictionary<ulong, TValue> topDict)
             : base(capacity, topDict)
         {
         }
 
-        internal DictionaryImplLong(int capacity, DictionaryImplLong<TValue> other)
+        internal DictionaryImplULong(int capacity, DictionaryImplULong<TValue> other)
             : base(capacity, other)
         {
         }
 
-        protected override bool TryClaimSlotForPut(ref long entryKey, long key)
+        protected override bool TryClaimSlotForPut(ref long entryKey, ulong key)
         {
-            return TryClaimSlot(ref entryKey, key);
+            return TryClaimSlot(ref entryKey, (long)key);
         }
 
         protected override bool TryClaimSlotForCopy(ref long entryKey, long key)
@@ -48,10 +48,10 @@ namespace Sparrow.Collections.LockFree
                 }
             }
 
-            return key == entryKeyValue || _keyComparer.Equals(key, entryKey);
+            return key == entryKeyValue || _keyComparer.Equals((ulong)key, (ulong)entryKey);
         }
 
-        protected override int hash(long key)
+        protected override int hash(ulong key)
         {
             if (key == 0)
             {
@@ -61,38 +61,38 @@ namespace Sparrow.Collections.LockFree
             return base.hash(key);
         }
 
-        protected override bool keyEqual(long key, long entryKey)
+        protected override bool keyEqual(ulong key, long entryKey)
         {
-            return key == entryKey || _keyComparer.Equals(key, entryKey);
+            return key == (ulong)entryKey || _keyComparer.Equals(key, (ulong)entryKey);
         }
 
-        protected override DictionaryImpl<long, long, TValue> CreateNew(int capacity)
+        protected override DictionaryImpl<ulong, long, TValue> CreateNew(int capacity)
         {
-            return new DictionaryImplLong<TValue>(capacity, this);
+            return new DictionaryImplULong<TValue>(capacity, this);
         }
 
-        protected override long keyFromEntry(long entryKey)
+        protected override ulong keyFromEntry(long entryKey)
         {
-            return entryKey;
+            return (ulong)entryKey;
         }
     }
 
-    internal sealed class DictionaryImplLongNoComparer<TValue>
-            : DictionaryImpl<long, long, TValue>
+    internal sealed class DictionaryImplULongNoComparer<TValue>
+            : DictionaryImpl<ulong, long, TValue>
     {
-        internal DictionaryImplLongNoComparer(int capacity, ConcurrentDictionary<long, TValue> topDict)
+        internal DictionaryImplULongNoComparer(int capacity, ConcurrentDictionary<ulong, TValue> topDict)
             : base(capacity, topDict)
         {
         }
 
-        internal DictionaryImplLongNoComparer(int capacity, DictionaryImplLongNoComparer<TValue> other)
+        internal DictionaryImplULongNoComparer(int capacity, DictionaryImplULongNoComparer<TValue> other)
             : base(capacity, other)
         {
         }
 
-        protected override bool TryClaimSlotForPut(ref long entryKey, long key)
+        protected override bool TryClaimSlotForPut(ref long entryKey, ulong key)
         {
-            return TryClaimSlot(ref entryKey, key);
+            return TryClaimSlot(ref entryKey, (long)key);
         }
 
         protected override bool TryClaimSlotForCopy(ref long entryKey, long key)
@@ -118,26 +118,26 @@ namespace Sparrow.Collections.LockFree
             return key == entryKeyValue;
         }
 
-        protected override int hash(long key)
+        protected override int hash(ulong key)
         {
             return (key == 0) ?
                 ZEROHASH :
                 key.GetHashCode() | REGULAR_HASH_BITS;
         }
 
-        protected override bool keyEqual(long key, long entryKey)
+        protected override bool keyEqual(ulong key, long entryKey)
         {
-            return key == entryKey;
+            return key == (ulong)entryKey;
         }
 
-        protected override DictionaryImpl<long, long, TValue> CreateNew(int capacity)
+        protected override DictionaryImpl<ulong, long, TValue> CreateNew(int capacity)
         {
-            return new DictionaryImplLongNoComparer<TValue>(capacity, this);
+            return new DictionaryImplULongNoComparer<TValue>(capacity, this);
         }
 
-        protected override long keyFromEntry(long entryKey)
+        protected override ulong keyFromEntry(long entryKey)
         {
-            return entryKey;
+            return (ulong)entryKey;
         }
     }
 }

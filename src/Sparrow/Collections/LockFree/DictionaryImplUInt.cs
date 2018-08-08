@@ -10,22 +10,22 @@ using System.Threading;
 
 namespace Sparrow.Collections.LockFree
 {
-    internal sealed class DictionaryImplInt<TValue>
-                : DictionaryImpl<int, int, TValue>
+    internal sealed class DictionaryImplUInt<TValue>
+                : DictionaryImpl<uint, int, TValue>
     {
-        internal DictionaryImplInt(int capacity, ConcurrentDictionary<int, TValue> topDict)
+        internal DictionaryImplUInt(int capacity, ConcurrentDictionary<uint, TValue> topDict)
             : base(capacity, topDict)
         {
         }
 
-        internal DictionaryImplInt(int capacity, DictionaryImplInt<TValue> other)
+        internal DictionaryImplUInt(int capacity, DictionaryImplUInt<TValue> other)
             : base(capacity, other)
         {
         }
 
-        protected override bool TryClaimSlotForPut(ref int entryKey, int key)
+        protected override bool TryClaimSlotForPut(ref int entryKey, uint key)
         {
-            return TryClaimSlot(ref entryKey, key);
+            return TryClaimSlot(ref entryKey, (int)key);
         }
 
         protected override bool TryClaimSlotForCopy(ref int entryKey, int key)
@@ -48,10 +48,10 @@ namespace Sparrow.Collections.LockFree
                 }
             }
 
-            return key == entryKeyValue || _keyComparer.Equals(key, entryKey);
+            return key == entryKeyValue || _keyComparer.Equals((uint)key, (uint)entryKey);
         }
 
-        protected override int hash(int key)
+        protected override int hash(uint key)
         {
             if (key == 0)
             {
@@ -61,38 +61,38 @@ namespace Sparrow.Collections.LockFree
             return base.hash(key);
         }
 
-        protected override bool keyEqual(int key, int entryKey)
+        protected override bool keyEqual(uint key, int entryKey)
         {
-            return key == entryKey || _keyComparer.Equals(key, entryKey);
+            return key == (uint)entryKey || _keyComparer.Equals(key, (uint)entryKey);
         }
 
-        protected override DictionaryImpl<int, int, TValue> CreateNew(int capacity)
+        protected override DictionaryImpl<uint, int, TValue> CreateNew(int capacity)
         {
-            return new DictionaryImplInt<TValue>(capacity, this);
+            return new DictionaryImplUInt<TValue>(capacity, this);
         }
 
-        protected override int keyFromEntry(int entryKey)
+        protected override uint keyFromEntry(int entryKey)
         {
-            return entryKey;
+            return (uint)entryKey;
         }
     }
 
-    internal sealed class DictionaryImplIntNoComparer<TValue>
-            : DictionaryImpl<int, int, TValue>
+    internal sealed class DictionaryImplUIntNoComparer<TValue>
+            : DictionaryImpl<uint, int, TValue>
     {
-        internal DictionaryImplIntNoComparer(int capacity, ConcurrentDictionary<int, TValue> topDict)
+        internal DictionaryImplUIntNoComparer(int capacity, ConcurrentDictionary<uint, TValue> topDict)
             : base(capacity, topDict)
         {
         }
 
-        internal DictionaryImplIntNoComparer(int capacity, DictionaryImplIntNoComparer<TValue> other)
+        internal DictionaryImplUIntNoComparer(int capacity, DictionaryImplUIntNoComparer<TValue> other)
             : base(capacity, other)
         {
         }
 
-        protected override bool TryClaimSlotForPut(ref int entryKey, int key)
+        protected override bool TryClaimSlotForPut(ref int entryKey, uint key)
         {
-            return TryClaimSlot(ref entryKey, key);
+            return TryClaimSlot(ref entryKey, (int)key);
         }
 
         protected override bool TryClaimSlotForCopy(ref int entryKey, int key)
@@ -118,26 +118,26 @@ namespace Sparrow.Collections.LockFree
             return key == entryKeyValue;
         }
 
-        protected override int hash(int key)
+        protected override int hash(uint key)
         {
             return (key == 0) ?
                 ZEROHASH :
-                key | REGULAR_HASH_BITS;
+                (int)key | REGULAR_HASH_BITS;
         }
 
-        protected override bool keyEqual(int key, int entryKey)
+        protected override bool keyEqual(uint key, int entryKey)
         {
-            return key == entryKey;
+            return key == (uint)entryKey;
         }
 
-        protected override DictionaryImpl<int, int, TValue> CreateNew(int capacity)
+        protected override DictionaryImpl<uint, int, TValue> CreateNew(int capacity)
         {
-            return new DictionaryImplIntNoComparer<TValue>(capacity, this);
+            return new DictionaryImplUIntNoComparer<TValue>(capacity, this);
         }
 
-        protected override int keyFromEntry(int entryKey)
+        protected override uint keyFromEntry(int entryKey)
         {
-            return entryKey;
+            return (uint)entryKey;
         }
     }
 }
