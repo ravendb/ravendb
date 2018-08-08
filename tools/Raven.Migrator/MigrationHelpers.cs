@@ -12,11 +12,27 @@ namespace Raven.Migrator
 {
     public static class MigrationHelpers
     {
-        private const string StartObject = "{";
-        private const string EndObject = "}";
         private const string RavenDocumentId = "@id";
         private const string RavenCollection = "@collection";
 
+        private const string MetadataProperty = "@metadata";
+        private const string MetadataPropertyFlags = "@flags";
+        private const string MetadataPropertyFlagsValue = "HasAttachments";
+        private const string MetadataPropertyAttachments = "@attachments";
+
+        private const string AttachmentTagPrefix = "Attachment";
+        private const string ExportTypeProperty = "@export-type";
+        private const string ExportTypeValue = "Attachment";
+        private const string HashProperty = "Hash";
+        private const string SizeProperty = "Size";
+        private const string TagProperty = "Tag";
+
+        private const string AttachmentInfoName = "Name";
+        private const string AttachmentInfoHash = "Hash";
+        private const string AttachmentInfoContentType = "ContentType";
+        private const string AttachmentInfoSize = "Size";
+
+        private static readonly Lazy<JsonSerializer> JsonSerializer = new Lazy<JsonSerializer>(() => new JsonSerializer());
         private static readonly Lazy<IBlake2B> Blake2BFactory = new Lazy<IBlake2B>(() => 
             System.Data.HashFunction.Blake2.Blake2BFactory.Instance.Create(new Blake2BConfig
             {
@@ -48,8 +64,8 @@ namespace Raven.Migrator
 
         public static async Task MigrateNoSqlDatabase(
             AbstractMigrationConfiguration configuration,
-            Func<string, string, Reference<bool>, StreamWriter, Task> migrateSingleCollection,
-            Func<Reference<bool>, StreamWriter, Task> migrateAttachments = null)
+            Func<string, string, JsonTextWriter, StreamWriter, Task> migrateSingleCollection,
+            Func<JsonTextWriter, StreamWriter, Task> migrateAttachments = null)
         {
             Stream stream;
             if (configuration.ConsoleExport)
@@ -66,10 +82,15 @@ namespace Raven.Migrator
             using (stream)
             using (var gzipStream = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
             using (var streamWriter = new StreamWriter(gzipStream))
+            using (var jsonTextWriter = new JsonTextWriter(streamWriter))
             {
-                await streamWriter.WriteAsync("{\"Docs\":[");
+                if (configuration.ConsoleExport == false)
+                    jsonTextWriter.Formatting = Formatting.Indented;
 
-                var isFirstDocument = new Reference<bool> { Value = true };
+                await jsonTextWriter.WriteStartObjectAsync();
+                await jsonTextWriter.WritePropertyNameAsync("Docs");
+                await jsonTextWriter.WriteStartArrayAsync();
+
                 foreach (var collection in configuration.CollectionsToMigrate)
                 {
                     var mongoCollectionName = collection.Name;
@@ -77,23 +98,23 @@ namespace Raven.Migrator
                     if (string.IsNullOrWhiteSpace(ravenCollectionName))
                         ravenCollectionName = mongoCollectionName;
 
-                    await migrateSingleCollection(mongoCollectionName, ravenCollectionName, isFirstDocument, streamWriter);
+                    await migrateSingleCollection(mongoCollectionName, ravenCollectionName, jsonTextWriter, streamWriter);
                 }
 
                 if (migrateAttachments != null)
-                    await migrateAttachments(isFirstDocument, streamWriter);
+                    await migrateAttachments(jsonTextWriter, streamWriter);
 
-                await streamWriter.WriteAsync("]}");
+                await jsonTextWriter.WriteEndArrayAsync();
+                await jsonTextWriter.WriteEndObjectAsync();
             }
         }
 
-        public static async Task WriteDocument(
+        public static void WriteDocument(
             ExpandoObject document,
             string documentId,
             string collectionName,
             List<string> propertiesToRemove,
-            Reference<bool> isFirstDocument,
-            StreamWriter streamWriter,
+            JsonTextWriter jsonTextWriter,
             List<Dictionary<string, object>> attachments = null)
         {
             var dictionary = (IDictionary<string, object>)document;
@@ -107,7 +128,7 @@ namespace Raven.Migrator
 
             if (attachments == null || attachments.Count == 0)
             {
-                dictionary["@metadata"] = new Dictionary<string, object>
+                dictionary[MetadataProperty] = new Dictionary<string, object>
                 {
                     {RavenDocumentId, documentId},
                     {RavenCollection, collectionName}
@@ -115,58 +136,54 @@ namespace Raven.Migrator
             }
             else
             {
-                dictionary["@metadata"] = new Dictionary<string, object>
+                dictionary[MetadataProperty] = new Dictionary<string, object>
                 {
                     {RavenDocumentId, documentId},
                     {RavenCollection, collectionName},
-                    {"@flags", "HasAttachments"},
-                    {"@attachments", attachments}
+                    {MetadataPropertyFlags, MetadataPropertyFlagsValue},
+                    {MetadataPropertyAttachments, attachments}
                 };
             }
 
-            if (isFirstDocument.Value == false)
-                await streamWriter.WriteAsync(",");
-            isFirstDocument.Value = false;
-
-            var jsonString = JsonConvert.SerializeObject(document);
-            await streamWriter.WriteAsync(jsonString);
+            JsonSerializer.Value.Serialize(jsonTextWriter, document);
         }
 
         public static async Task<Dictionary<string, object>> WriteAttachment( 
             Stream attachmentStream, long totalSize, string attachmentId, 
             string collectionName, string contentType, long attachmentNumber,
-            Reference<bool> isFirstDocument, StreamWriter streamWriter)
+            JsonTextWriter jsonTextWriter, StreamWriter streamWriter)
         {
-            if (isFirstDocument.Value == false)
-                await streamWriter.WriteAsync(",");
-            isFirstDocument.Value = false;
-
             var hash = Blake2BFactory.Value.ComputeHash(attachmentStream).AsBase64String();
-            var tag = $"Attachment{attachmentNumber}";
-            await streamWriter.WriteAsync(
-                $"{StartObject}{GetQuotedString("@metadata")}:{StartObject}" +
-                $"{GetQuotedString("@export-type")}:{GetQuotedString("Attachment")}{EndObject}," +
-                $"{GetQuotedString("Hash")}:{GetQuotedString(hash)},{GetQuotedString("Size")}:{totalSize}," +
-                $"{GetQuotedString("Tag")}:{GetQuotedString(tag)}{EndObject}");
+            var tag = $"{AttachmentTagPrefix}{attachmentNumber}";
+            await jsonTextWriter.WriteStartObjectAsync();
+            await jsonTextWriter.WritePropertyNameAsync(MetadataProperty);
+            await jsonTextWriter.WriteStartObjectAsync();
+            await jsonTextWriter.WritePropertyNameAsync(ExportTypeProperty);
+            await jsonTextWriter.WriteValueAsync(ExportTypeValue);
+            await jsonTextWriter.WriteEndObjectAsync();
+            await jsonTextWriter.WritePropertyNameAsync(HashProperty);
+            await jsonTextWriter.WriteValueAsync(hash);
+            await jsonTextWriter.WritePropertyNameAsync(SizeProperty);
+            await jsonTextWriter.WriteValueAsync(totalSize);
+            await jsonTextWriter.WritePropertyNameAsync(TagProperty);
+            await jsonTextWriter.WriteValueAsync(tag);
+            await jsonTextWriter.WriteEndObjectAsync();
 
+            await jsonTextWriter.FlushAsync();
             await streamWriter.FlushAsync();
+
             attachmentStream.Position = 0;
             await attachmentStream.CopyToAsync(streamWriter.BaseStream);
 
             var attachmentInfo = new Dictionary<string, object>
             {
-                {"Name", attachmentId},
-                {"Hash", hash},
-                {"ContentType", contentType},
-                {"Size", totalSize}
+                {AttachmentInfoName, attachmentId},
+                {AttachmentInfoHash, hash},
+                {AttachmentInfoContentType, contentType},
+                {AttachmentInfoSize, totalSize}
             };
 
             return attachmentInfo;
-        }
-
-        private static string GetQuotedString(string name)
-        {
-            return $"\"{name}\"";
         }
     }
 }

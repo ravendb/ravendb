@@ -91,6 +91,12 @@ namespace Raven.Migrator
                                 migrator.GetCollectionsInfo().Wait();
                                 break;
                             case "export":
+                                if (configuration.ConsoleExport &&
+                                    string.IsNullOrWhiteSpace(configuration.ExportFilePath) == false)
+                                {
+                                    throw new InvalidOperationException("Cannot export to the console and to a file. " +
+                                                                        "Either set ConsoleExport to false or clear the ExportFilePath");
+                                }
                                 migrator.MigrateDatabse().Wait();
                                 break;
                             default:

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 using Microsoft.Azure.Documents.Linq;
+using Newtonsoft.Json;
 
 namespace Raven.Migrator.CosmosDB
 {
@@ -92,8 +93,8 @@ namespace Raven.Migrator.CosmosDB
 
             await MigrationHelpers.MigrateNoSqlDatabase(
                 _configuration,
-                async (mongoCollectionName, ravenCollectionName, isFirstDocument, streamWriter) =>
-                    await MigrateSingleCollection(client, database, mongoCollectionName, ravenCollectionName, isFirstDocument, streamWriter));
+                async (mongoCollectionName, ravenCollectionName, jsonTextWriter, streamWriter) =>
+                    await MigrateSingleCollection(client, database, mongoCollectionName, ravenCollectionName, jsonTextWriter, streamWriter));
         }
 
         private static async Task MigrateSingleCollection(
@@ -101,7 +102,7 @@ namespace Raven.Migrator.CosmosDB
             Database database,
             string cosmosCollectionName,
             string ravenCollectionName,
-            Reference<bool> isFirstDocument,
+            JsonTextWriter jsonTextWriter,
             StreamWriter streamWriter)
         {
             var collection = UriFactory.CreateDocumentCollectionUri(database.Id, cosmosCollectionName);
@@ -131,24 +132,22 @@ namespace Raven.Migrator.CosmosDB
                         var attachmentResponse = await client.ReadAttachmentAsync(attachmentUri);
                         var resourceMediaLink = attachmentResponse.Resource.MediaLink;
                         var mediaLinkResponse = await client.ReadMediaAsync(resourceMediaLink);
-
                         attachmentNumber++;
 
                         var attachmentInfo = await MigrationHelpers.WriteAttachment(
                             mediaLinkResponse.Media, mediaLinkResponse.Media.Length,
                             attachmentResponse.Resource.Id, ravenCollectionName,
-                            mediaLinkResponse.ContentType,attachmentNumber, isFirstDocument, streamWriter);
+                            mediaLinkResponse.ContentType, attachmentNumber, jsonTextWriter, streamWriter);
 
                         attachments.Add(attachmentInfo);
                     }
 
-                    await MigrationHelpers.WriteDocument(
+                    MigrationHelpers.WriteDocument(
                         document,
                         documentId,
                         ravenCollectionName,
                         PropertiesToRemove,
-                        isFirstDocument,
-                        streamWriter,
+                        jsonTextWriter,
                         attachments);
                 }
             }
