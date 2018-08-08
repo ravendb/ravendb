@@ -66,7 +66,7 @@ abstract class noSqlMigrationModel {
             }
 
             const pluralize = collectionsToMigrate > 1 ? "s" : "";
-            return `Migarting ${collectionsToMigrate} collection${pluralize}`;
+            return `Migarte ${collectionsToMigrate} collection${pluralize}`;
         });
     }
 
