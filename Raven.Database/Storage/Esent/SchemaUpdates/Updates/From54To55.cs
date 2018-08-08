@@ -46,7 +46,7 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                     cbKeyMost = SystemParameters.KeyMost,
                     cbVarSegMac = SystemParameters.KeyMost,
                     szKey = by_name_and_etag,
-                    grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                    grbit =  CreateIndexGrbit.IndexDisallowNull,
                     ulDensity = 90
                 }
                 }, 1);
