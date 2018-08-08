@@ -10,7 +10,7 @@ class migrateRavenDbDatabaseCommand extends commandBase {
     }
 
     execute(): JQueryPromise<operationIdDto> {
-        const url = endpoints.databases.smuggler.adminSmugglerMigrate;
+        const url = endpoints.databases.smuggler.adminSmugglerMigrateRavendb;
         
         return this.post(url, JSON.stringify(this.model.toDto()), this.db)
             .fail((response: JQueryXHR) => this.reportError("Failed to migrate database", response.responseText, response.statusText));
