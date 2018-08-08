@@ -14,13 +14,10 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
 {
     public class From54To55 : ISchemaUpdate
     {
-        private InMemoryRavenConfiguration configuration;
-
         public string FromSchemaVersion { get { return "5.4"; } }
 
         public void Init(IUuidGenerator generator, InMemoryRavenConfiguration configuration)
         {
-            this.configuration = configuration;
         }
 
         public void Update(Session session, JET_DBID dbid, Action<string> output)
@@ -46,7 +43,7 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                     cbKeyMost = SystemParameters.KeyMost,
                     cbVarSegMac = SystemParameters.KeyMost,
                     szKey = by_name_and_etag,
-                    grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                    grbit = CreateIndexGrbit.None,
                     ulDensity = 90
                 }
                 }, 1);
@@ -60,7 +57,7 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                         cbKeyMost = SystemParameters.KeyMost,
                         cbVarSegMac = SystemParameters.KeyMost,
                         szKey = by_name_and_key,
-                        grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                        grbit = CreateIndexGrbit.None,
                         ulDensity = 90
                     }
                 }, 1);
@@ -74,7 +71,7 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                         cbKeyMost = SystemParameters.KeyMost,
                         cbVarSegMac = SystemParameters.KeyMost,
                         szKey = by_name_and_created_at,
-                        grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                        grbit = CreateIndexGrbit.None,
                         ulDensity = 90
                     }
                 }, 1);
@@ -102,7 +99,7 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                         cbKeyMost = SystemParameters.KeyMost,
                         cbVarSegMac = SystemParameters.KeyMost,
                         szKey = by_key,
-                        grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                        grbit = CreateIndexGrbit.None,
                         ulDensity = 90
                     }
                 }, 1);
@@ -116,7 +113,7 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                         cbKeyMost = SystemParameters.KeyMost,
                         cbVarSegMac = SystemParameters.KeyMost,
                         szKey = by_view_and_key,
-                        grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                        grbit = CreateIndexGrbit.None,
                         ulDensity = 90
                     }
                 }, 1);
@@ -129,7 +126,7 @@ namespace Raven.Database.Storage.Esent.SchemaUpdates.Updates
                         cbKeyMost = SystemParameters.KeyMost,
                         cbVarSegMac = SystemParameters.KeyMost,
                         szKey = by_ref,
-                        grbit = CreateIndexGrbit.IndexDisallowNull | CreateIndexGrbit.IndexUnique,
+                        grbit = CreateIndexGrbit.None,
                         ulDensity = 90
                     }
                 }, 1);
