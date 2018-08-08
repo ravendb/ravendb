@@ -446,9 +446,10 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     {
                         var line = process.StandardOutput.ReadLine();
                         using (var sw = new StreamWriter(ResponseBodyStream()))
-                        using (var jsonWriter = new JsonTextWriter(sw))
+                        using (var jsonTextWriter = new JsonTextWriter(sw))
                         {
-                            await jsonWriter.WriteRawAsync(line);
+                            var jsonSerializer = new JsonSerializer();
+                            jsonSerializer.Serialize(jsonTextWriter, line);
                         }
                     }
                     catch (Exception e)
