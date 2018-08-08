@@ -168,7 +168,6 @@ namespace Raven.Server.ServerWide.Maintenance
 
             private void ListenToMaintenanceWorker()
             {
-                var needToWait = false;
                 var firstIteration = true;
                 var onErrorDelayTime = _parent.Config.OnErrorDelayTime.AsTimeSpan;
                 var receiveFromWorkerTimeout = _parent.Config.ReceiveFromWorkerTimeout.AsTimeSpan;
@@ -184,30 +183,28 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
                 }
 
-                TcpConnectionInfo tcpConnection = null;
                 while (_token.IsCancellationRequested == false)
                 {
                     try
                     {
-                        if (needToWait)
+                        if (firstIteration == false) 
                         {
-                            needToWait = false; // avoid tight loop if there was timeout / error
-                            if (firstIteration == false)
-                            {
-                                _token.WaitHandle.WaitOne(onErrorDelayTime);
-                            }
-                            firstIteration = false;
-                            using (var timeout = new CancellationTokenSource(tcpTimeout))
-                            using (var combined = CancellationTokenSource.CreateLinkedTokenSource(_token, timeout.Token))
-                            {
-                                tcpConnection = ReplicationUtils.GetTcpInfo(Url, null, "Supervisor", _parent._server.Server.Certificate.Certificate, combined.Token);
-                            }
+                            // avoid tight loop if there was timeout / error
+                            _token.WaitHandle.WaitOne(onErrorDelayTime);
+                            if (_token.IsCancellationRequested)
+                                return;
                         }
+                        firstIteration = false;
 
-                        if (tcpConnection == null)
+                        TcpConnectionInfo tcpConnection = null;
+                        using (var timeout = new CancellationTokenSource(tcpTimeout))
+                        using (var combined = CancellationTokenSource.CreateLinkedTokenSource(_token, timeout.Token))
                         {
-                            needToWait = true;
-                            continue;
+                            tcpConnection = ReplicationUtils.GetTcpInfo(Url, null, "Supervisor", _parent._server.Server.Certificate.Certificate, combined.Token);
+                            if (tcpConnection == null)
+                            {
+                                continue;
+                            }
                         }
 
                         var connection = ConnectToClientNode(tcpConnection, _parent._server.Engine.TcpConnectionTimeout);
@@ -246,7 +243,6 @@ namespace Raven.Server.ServerWide.Maintenance
                                         DateTime.UtcNow,
                                         _lastSuccessfulReceivedReport);
 
-                                    needToWait = true;
                                     break;
                                 }
 
@@ -269,8 +265,6 @@ namespace Raven.Server.ServerWide.Maintenance
                             e,
                             DateTime.UtcNow,
                             _lastSuccessfulReceivedReport);
-
-                        needToWait = true;
                     }
                 }
             }

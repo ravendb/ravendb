@@ -385,10 +385,13 @@ namespace Raven.Server.Documents
                         try
                         {
                             TxMerger.Enqueue(mergedCommands).Wait(DatabaseShutdown);
-                           
                         }
-                        catch
+                        catch(Exception e)
                         {
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info($"Failed to execute cluster transaction batch (count: {batch.Count}), will retry them one-by-one.", e);
+                            }
                             ExecuteClusterTransactionOneByOne(batch);
                             return;
                         }

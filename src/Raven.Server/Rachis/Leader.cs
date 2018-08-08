@@ -31,7 +31,7 @@ namespace Raven.Server.Rachis
     /// </summary>
     public class Leader : IDisposable
     {
-        private Task _topologyModification;
+        private TaskCompletionSource<object> _topologyModification;
         private readonly RachisConsensus _engine;
 
         public delegate object ConvertResultFromLeader(JsonOperationContext ctx, object result);
@@ -634,30 +634,21 @@ namespace Raven.Server.Rachis
                 Command = command,
                 Tcs = new TaskCompletionSource<Task<(long, object)>>(TaskCreationOptions.RunContinuationsAsynchronously)
             };
-
             _commandsQueue.Enqueue(rachisMergedCommand);
+
             while (rachisMergedCommand.Tcs.Task.IsCompleted == false)
             {
                 var lockTaken = false;
                 try
                 {
-                    var task = _waitForCommit.WaitAsync(timeout);
                     Monitor.TryEnter(_commandsQueue, ref lockTaken);
-
                     if (lockTaken)
                     {
-                        try
-                        {
-                            EmptyQueue();
-                        }
-                        finally
-                        {
-                            _waitForCommit.SetAndResetAtomically();
-                        }
+                        EmptyQueue();
                     }
                     else
                     {
-                        if (await task == false)
+                        if (await _waitForCommit.WaitAsync(timeout) == false)
                         {
                             if (rachisMergedCommand.Consumed.Raise())
                             {
@@ -672,7 +663,10 @@ namespace Raven.Server.Rachis
                 finally
                 {
                     if (lockTaken)
+                    {
                         Monitor.Exit(_commandsQueue);
+                        _waitForCommit.SetAndResetAtomically();
+                    }
                 }
             }
 
@@ -695,7 +689,8 @@ namespace Raven.Server.Rachis
                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
-                    while (_commandsQueue.TryDequeue(out var cmd))
+                    var cmdsCount = 0;
+                    while (_commandsQueue.TryDequeue(out var cmd) && cmdsCount++ < 128)
                     {
                         if (cmd.Consumed.Raise() == false)
                         {
@@ -885,19 +880,21 @@ namespace Raven.Server.Rachis
             {
                 throw new ArgumentException("Can't set the node tag to 'RAFT'. It is a reserved tag.");
             }
-
+            
             using (_disposerLock.EnsureNotDisposed())
             {
+                var topologyModification = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var existing = Interlocked.CompareExchange(ref _topologyModification, topologyModification, null);
+                if (existing != null)
+                {
+                    task = existing.Task;
+                    return false;
+                }
+                task = topologyModification.Task;
+
                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
-                    var existing = Interlocked.CompareExchange(ref _topologyModification, null, null);
-                    if (existing != null)
-                    {
-                        task = existing;
-                        return false;
-                    }
-
                     var clusterTopology = _engine.GetTopology(context);
 
                     //We need to validate that the node doesn't exists before we generate the nodeTag
@@ -975,9 +972,9 @@ namespace Raven.Server.Rachis
                         CommandIndex = index
                     };
 
-                    _topologyModification = task = tcs.Task.ContinueWith(_ =>
+                    tcs.Task.ContinueWith(_ =>
                     {
-                        Interlocked.Exchange(ref _topologyModification, null);
+                        Interlocked.Exchange(ref _topologyModification, null).TrySetResult(null);
                     });
                 }
                 _hasNewTopology.Raise();
