@@ -448,10 +448,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     {
                         var line = process.StandardOutput.ReadLine();
                         using (var sw = new StreamWriter(ResponseBodyStream()))
-                        using (var jsonTextWriter = new JsonTextWriter(sw))
                         {
-                            var jsonSerializer = new JsonSerializer();
-                            jsonSerializer.Serialize(jsonTextWriter, line);
+                            await sw.WriteAsync(line);
                         }
                     }
                     catch (Exception e)
