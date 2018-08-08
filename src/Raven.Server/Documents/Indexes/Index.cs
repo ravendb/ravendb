@@ -2730,7 +2730,7 @@ namespace Raven.Server.Documents.Indexes
         private int? _minBatchSize;
 
         private const int MinMapBatchSize = 128;
-        private const int MinMapReduceBatchSize = 64;
+        internal const int MinMapReduceBatchSize = 64;
 
         private int MinBatchSize
         {
@@ -3081,6 +3081,12 @@ namespace Raven.Server.Documents.Indexes
             {
                 _lowMemoryFlag.Lower();
             }
+        }
+
+        internal void SimulateLowMemory()
+        {
+            _lowMemoryPressure = long.MaxValue;
+            LowMemory();
         }
 
         private Regex GetOrAddRegex(string arg)
