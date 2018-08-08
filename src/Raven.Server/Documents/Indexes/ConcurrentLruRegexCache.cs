@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
-using Sparrow.Collections.LockFree;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Indexes
                     .Take(_capacity / 4))
                 {
                     
-                    if(_regexCache.Remove(kv.Key))
+                    if(_regexCache.TryRemove(kv.Key, out _))
                         countRemoved++;
                 }
                 Interlocked.Add(ref _count, -countRemoved);

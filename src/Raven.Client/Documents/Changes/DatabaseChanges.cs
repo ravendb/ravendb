@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Security;
@@ -13,7 +14,6 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Sparrow;
-using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -339,8 +339,8 @@ namespace Raven.Client.Documents.Changes
 
                 _ms.TryGetBuffer(out var buffer);
 
-                _confirmations.Add(currentCommandId, taskCompletionSource);
-
+                _confirmations.TryAdd(currentCommandId, taskCompletionSource);
+                
                 await _client.SendAsync(buffer, WebSocketMessageType.Text, endOfMessage: true, cancellationToken: _cts.Token).ConfigureAwait(false);
             }
             finally

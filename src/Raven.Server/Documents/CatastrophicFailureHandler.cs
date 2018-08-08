@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
-using Sparrow.Collections.LockFree;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents
