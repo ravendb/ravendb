@@ -37,8 +37,7 @@ namespace Raven.Server.Rachis
 
         private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        private readonly Sparrow.Collections.LockFree.ConcurrentDictionary<long, CommandState> _entries =
-            new Sparrow.Collections.LockFree.ConcurrentDictionary<long, CommandState>();
+        private readonly ConcurrentDictionary<long, CommandState> _entries = new ConcurrentDictionary<long, CommandState>();
 
         private MultipleUseFlag _hasNewTopology = new MultipleUseFlag();
         private readonly ManualResetEvent _newEntry = new ManualResetEvent(false);

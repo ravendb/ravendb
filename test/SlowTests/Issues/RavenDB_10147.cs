@@ -1,9 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Session;
 using Raven.Client.Json;
-using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Xunit;
 
