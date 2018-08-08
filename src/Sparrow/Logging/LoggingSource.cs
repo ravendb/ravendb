@@ -68,8 +68,8 @@ namespace Sparrow.Logging
             public LoggingFilter Filter { get; } = new LoggingFilter();
         }
 
-        private readonly Collections.LockFree.ConcurrentDictionary<WebSocket, WebSocketContext> _listeners =
-            new Collections.LockFree.ConcurrentDictionary<WebSocket, WebSocketContext>();
+        private readonly ConcurrentDictionary<WebSocket, WebSocketContext> _listeners =
+            new ConcurrentDictionary<WebSocket, WebSocketContext>();
 
         public LogMode LogMode { get; private set; }
         private LogMode _oldLogMode;
