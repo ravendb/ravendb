@@ -119,12 +119,12 @@ namespace Raven.Migrator.MongoDB
 
             await MigrationHelpers.MigrateNoSqlDatabase(
                 _configuration,
-                async (mongoCollectionName, ravenCollectionName, isFirstDocument, streamWriter) => 
-                    await MigrateSingleCollection(database, mongoCollectionName, ravenCollectionName, isFirstDocument, streamWriter),
-                async (isFirstDocument, streamWriter) =>
+                async (mongoCollectionName, ravenCollectionName, jsonTextWriter, streamWriter) => 
+                    await MigrateSingleCollection(database, mongoCollectionName, ravenCollectionName, jsonTextWriter),
+                async (jsonTextWriter, streamWriter) =>
                 {
                     if (_configuration.MigrateGridFS)
-                        await MigrateGridFS(database, isFirstDocument, streamWriter);
+                        await MigrateGridFS(database, jsonTextWriter, streamWriter);
                 });
         }
 
@@ -132,8 +132,7 @@ namespace Raven.Migrator.MongoDB
             IMongoDatabase database, 
             string mongoCollectionName,
             string ravenCollectionName,
-            Reference<bool> isFirstDocument,
-            StreamWriter streamWriter)
+            JsonTextWriter jsonTextWriter)
         {
             var collection = database.GetCollection<ExpandoObject>(mongoCollectionName);
 
@@ -146,13 +145,12 @@ namespace Raven.Migrator.MongoDB
                         var dictionary = (IDictionary<string, object>)document;
                         var documentId = dictionary[MongoDocumentId].ToString();
 
-                        await MigrationHelpers.WriteDocument(
+                        MigrationHelpers.WriteDocument(
                             document,
                             documentId,
                             ravenCollectionName,
                             _propertiesToRemove,
-                            isFirstDocument,
-                            streamWriter);
+                            jsonTextWriter);
                     }
                 }
             }
@@ -169,7 +167,10 @@ namespace Raven.Migrator.MongoDB
                 }).ToList();
         }
 
-        private static async Task MigrateGridFS(IMongoDatabase database, Reference<bool> isFirstDocument, StreamWriter streamWriter)
+        private static async Task MigrateGridFS(
+            IMongoDatabase database, 
+            JsonTextWriter jsonTextWriter, 
+            StreamWriter streamWriter)
         {
             var bucket = new GridFSBucket(database);
             var collectionName = bucket.Options.BucketName == "fs" ? "Files" : bucket.Options.BucketName;
@@ -196,16 +197,15 @@ namespace Raven.Migrator.MongoDB
 
                             attachmentNumber++;
                             var attachmentInfo = await MigrationHelpers.WriteAttachment(
-                                stream, totalSize, documentId, collectionName, 
-                                contentType, attachmentNumber, isFirstDocument, streamWriter);
+                                stream, totalSize, documentId, collectionName, contentType,
+                                attachmentNumber, jsonTextWriter, streamWriter);
 
-                            await MigrationHelpers.WriteDocument(
+                            MigrationHelpers.WriteDocument(
                                 document,
                                 documentId,
                                 collectionName,
                                 null,
-                                isFirstDocument,
-                                streamWriter,
+                                jsonTextWriter,
                                 new List<Dictionary<string, object>>
                                 {
                                     attachmentInfo
