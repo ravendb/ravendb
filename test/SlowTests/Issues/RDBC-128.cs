@@ -157,8 +157,6 @@ update {
 
                 WaitForIndexing(store);
 
-                WaitForUserToContinueTheTest(store);
-
                 store.Maintenance.Send(new StopIndexingOperation());
 
                 using (var bulk = store.BulkInsert())
@@ -178,12 +176,8 @@ update {
 
                 store.Maintenance.Send(new StartIndexingOperation());
                 
-                WaitForUserToContinueTheTest(store);
-                
                 using (var session = store.OpenSession())
                 {
-                    Thread.Sleep(5000); // TODO arek
-
                     var s = session.Query<Invoices_Search.Result, Invoices_Search>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
@@ -193,6 +187,85 @@ update {
                     foreach (var item in s)
                     {
                         Assert.Equal(1200, item.Total);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void IndexingOfLoadDocumentWhileChanged_UnderLowMemory()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var bulk = store.BulkInsert())
+                {
+                    for (int i = 0; i < 500; i++)
+                    {
+                        bulk.Store(new Stock
+                        {
+                            Age = 1,
+                            Name = "Long name #" + i,
+                            Symbol = "SY" + i
+                        });
+                    }
+
+                    for (int i = 0; i < 5_000; i++)
+                    {
+                        bulk.Store(new Invoice
+                        {
+                            Amount = 4,
+                            Price = 3,
+                            Symbol = "SY" + (i % 500)
+                        });
+                    }
+
+                    Invoices_Search invoicesSearch = new Invoices_Search();
+                    invoicesSearch.Execute(store);
+
+                    GetDatabase(store.Database).Result.IndexStore.GetIndex(invoicesSearch.IndexName).SimulateLowMemory();
+
+                    for (int i = 0; i < 5_000; i++)
+                    {
+                        bulk.Store(new Invoice
+                        {
+                            Amount = 4,
+                            Price = 3,
+                            Symbol = "SY" + (i % 500)
+                        });
+                    }
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var s = session.Query<Invoices_Search.Result, Invoices_Search>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .ToList();
+                    Assert.Equal(500, s.Count);
+                    foreach (var item in s)
+                    {
+                        Assert.Equal(240, item.Total);
+                    }
+                }
+
+                var op = store.Operations.Send(new PatchByQueryOperation(@"
+from Stocks
+update {
+    this.Age++;
+}
+"));
+                op.WaitForCompletion();
+
+                using (var session = store.OpenSession())
+                {
+                    var s = session.Query<Invoices_Search.Result, Invoices_Search>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .ToList();
+
+                    Assert.Equal(500, s.Count);
+
+                    foreach (var item in s)
+                    {
+                        Assert.Equal(480, item.Total);
                     }
                 }
             }

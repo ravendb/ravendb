@@ -285,13 +285,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return PutMapResults(lowerId, wrapper, indexContext, stats);
         }
 
-        protected override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, List<string> stalenessReasons = null)
+        protected override bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
         {
-            var isStale = base.IsStale(databaseContext, indexContext, cutoff, stalenessReasons);
+            var isStale = base.IsStale(databaseContext, indexContext, cutoff, referenceCutoff, stalenessReasons);
             if (isStale && stalenessReasons == null || _referencedCollections.Count == 0)
                 return isStale;
 
-            return StaticIndexHelper.IsStale(this, databaseContext, indexContext, cutoff, stalenessReasons) || isStale;
+            return StaticIndexHelper.IsStaleDueToReferences(this, databaseContext, indexContext, referenceCutoff, stalenessReasons) || isStale;
         }
 
         protected override unsafe long CalculateIndexEtag(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext,
