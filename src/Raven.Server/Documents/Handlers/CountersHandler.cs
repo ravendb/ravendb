@@ -301,7 +301,7 @@ namespace Raven.Server.Documents.Handlers
                 docId, counterName))
             {
                 value = value ?? 0;
-                value += val;
+                value = checked (value + val);
 
                 if (addFullValues)
                 {

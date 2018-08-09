@@ -338,7 +338,7 @@ namespace Raven.Server.Documents
                     tvb.Add(counterKey);
                     tvb.Add(nameSlice);
                     tvb.Add(Bits.SwapBytes(etag));
-                    tvb.Add(prev + value); //inc
+                    tvb.Add(checked (prev + value)); //inc
                     tvb.Add(cv);
                     tvb.Add(collectionSlice);
                     tvb.Add(context.TransactionMarkerOffset);
@@ -394,7 +394,7 @@ namespace Raven.Server.Documents
                     value = value ?? 0;
                     var pCounterDbValue = result.Value.Reader.Read((int)CountersTable.Value, out var size);
                     Debug.Assert(size == sizeof(long));
-                    value += *(long*)pCounterDbValue;
+                    value = checked (value + *(long*)pCounterDbValue);
                 }
 
                 return value;
