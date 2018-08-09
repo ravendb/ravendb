@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
-    public class StartBackupOperation : IMaintenanceOperation<BackupDatabaseNowResult>
+    public class StartBackupOperation : IMaintenanceOperation<StartBackupOperationResult>
     {
         private readonly bool _isFullBackup;
         private readonly long _taskId;
@@ -17,12 +17,12 @@ namespace Raven.Client.Documents.Operations.Backups
             _taskId = taskId;
         }
 
-        public RavenCommand<BackupDatabaseNowResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<StartBackupOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new StartBackupCommand(_isFullBackup, _taskId);
         }
 
-        private class StartBackupCommand : RavenCommand<BackupDatabaseNowResult>
+        private class StartBackupCommand : RavenCommand<StartBackupOperationResult>
         {
             public override bool IsReadRequest => true;
 
@@ -54,5 +54,12 @@ namespace Raven.Client.Documents.Operations.Backups
                 Result = JsonDeserializationClient.BackupDatabaseNowResult(response);
             }
         }
-    }    
+    }
+
+    public class StartBackupOperationResult
+    {
+        public string ResponsibleNode { get; set; }
+
+        public int OperationId { get; set; }
+    }
 }

@@ -312,7 +312,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                BackupDatabaseNowResult newBackupStatus;
+                StartBackupOperationResult newBackupStatus;
                 do
                 {
                     newBackupStatus = await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
