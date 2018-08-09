@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.Migration;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Smuggler;
@@ -89,6 +90,8 @@ namespace Raven.Client.Json.Converters
         public static readonly Func<BlittableJsonReaderObject, DatabaseStatistics> GetStatisticsResult = GenerateJsonDeserializationRoutine<DatabaseStatistics>();
 
         public static readonly Func<BlittableJsonReaderObject, OperationIdResult> OperationIdResult = GenerateJsonDeserializationRoutine<OperationIdResult>();
+
+        public static readonly Func<BlittableJsonReaderObject, ReplayTrxOperationResult> GetReplayTrxOperationResult = GenerateJsonDeserializationRoutine<ReplayTrxOperationResult>();
 
         public static readonly Func<BlittableJsonReaderObject, HiLoResult> HiLoResult = GenerateJsonDeserializationRoutine<HiLoResult>();
 

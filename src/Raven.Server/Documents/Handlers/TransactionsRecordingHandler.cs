@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.TransactionsRecording;
+using Raven.Client.Documents.Session;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -14,42 +16,30 @@ namespace Raven.Server.Documents.Handlers
     public class TransactionsRecordingHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/transactions/replay", "POST", AuthorizationStatus.ValidUser)]
-        public Task ReplayRecording()
+        public async Task ReplayRecording()
         {
-            var operationCancelToken = CreateOperationToken();
-            var operationId = Database.Operations.GetNextOperationId();
-
-            Stream stream = RequestBodyStream();
-            //Todo to use zip
-            //using (var gZipStreamDocuments = new GZipStream(fileStream, CompressionMode.Compress, true))
-
-            //Todo To think how to deal with HttpRequestStream dispose without using new and is it enough to register dispaosable to token
-            var replayStream = new MemoryStream();
-            operationCancelToken.Token.Register(replayStream.Dispose);
-            stream.CopyTo(replayStream);
-            replayStream.Seek(0, SeekOrigin.Begin);
-
-            var task = Database.Operations.AddOperation(
-                database: Database,
-                description: "Replay transaction commands",
-                operationType: Operations.Operations.OperationType.ReplayTransactionCommands,
-                taskFactory: async progress => await DoReplay(progress, replayStream, operationCancelToken.Token),
-                id: operationId,
-                token: operationCancelToken
-            );
-            
-            using(ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            var operationId = GetLongQueryString("operationId");
+            using (var operationCancelToken = CreateOperationToken())
             {
-                writer.WriteOperationId(context, operationId);
+                var replayStream = RequestBodyStream();
+                //Todo to use zip
+                //using (var gZipStreamDocuments = new GZipStream(fileStream, CompressionMode.Compress, true))
+
+                var result = await Database.Operations.AddOperation(
+                    database: Database,
+                    description: "Replay transaction commands",
+                    operationType: Operations.Operations.OperationType.ReplayTransactionCommands,
+                    taskFactory: async progress => await DoReplay(progress, replayStream, operationCancelToken.Token),
+                    id: operationId,
+                    token: operationCancelToken
+                );
+
+                using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, result.ToJson());
+                }
             }
-
-            task.ContinueWith(_ =>
-            {
-                operationCancelToken.Dispose();
-            });
-
-            return Task.CompletedTask;
         }
 
         private async Task<IOperationResult> DoReplay(
@@ -63,9 +53,9 @@ namespace Raven.Server.Documents.Handlers
             {
                 return await Task.Run(() =>
                 {
-
                     long commandsProgress = 0;
-                    var streamLength = replayStream.Length;
+                    var stopwatch = Stopwatch.StartNew();
+                    stopwatch.Start();
                     foreach (var replayProgress in Database.TxMerger.Replay(replayStream))
                     {
                         commandsProgress = replayProgress.CommandsProgress;
@@ -75,16 +65,18 @@ namespace Raven.Server.Documents.Handlers
                             onProgress(new ReplayTrxProgress
                             {
                                 ProcessedCommand = replayProgress.CommandsProgress,
-                                ProcessedPercentage = (int)(100 * replayProgress.StreamProgress / streamLength)
+                                PassedTime = stopwatch.Elapsed
                             });
                         }
 
                         token.ThrowIfCancellationRequested();
                     }
+                    stopwatch.Stop();
 
                     return new ReplayTrxOperationResult
                     {
-                        CommandsAmount = commandsProgress
+                        ExecutedCommandsAmount = commandsProgress,
+                        PassedTime = stopwatch.Elapsed
                     };
                 }, token);
             }

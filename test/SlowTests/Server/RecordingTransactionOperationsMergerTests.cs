@@ -76,11 +76,7 @@ namespace SlowTests.Server
 
                 for (var i = 0; i < 1000; i++)
                 {
-                    using (var session = store.OpenSession())
-                    {
-                        session.Store(new User { Name = $"someName{i}" });
-                        session.SaveChanges();
-                    }
+                    await store.Commands().PutAsync("user/", null, new User { Name = $"someName{i}" });
                 }
 
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
@@ -90,18 +86,20 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
-                var operation = store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream));
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
 
-                using (var session = store.OpenSession())
-                {
-                    var beforeWaiting = session.Query<User>().ToArray();
+                var task = Task.Run(() => { store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result)); });
 
-                    operation.WaitForCompletion();
+                var operation = new Operation(store.Commands().RequestExecutor, () => store.Changes(), store.Conventions, command.Result);
+                var operationProgresses = new List<IOperationProgress>();
+                operation.OnProgressChanged += (p) => operationProgresses.Add(p);
 
-                    var afterWaiting = session.Query<User>().ToArray();
+                var result = await operation.WaitForCompletionAsync<ReplayTrxOperationResult>();
+                await task;
 
-                    Assert.True(beforeWaiting.Length < afterWaiting.Length);
-                }
+                //Assert
+                //Todo To think how to assert this test and if this test should be exist
             }
         }
 
@@ -153,8 +151,9 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
-                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream))
-                    .WaitForCompletion(TimeSpan.FromMilliseconds(15));
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 var attachmentResult = store.Operations.Send(new GetAttachmentOperation(id, "someAttachmentName", AttachmentType.Document, null));
 
@@ -219,8 +218,9 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
-                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream))
-                    .WaitForCompletion(TimeSpan.FromMilliseconds(15));
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
                 {
@@ -263,8 +263,9 @@ namespace SlowTests.Server
             {
                 await store.Conventions.AsyncDocumentIdGenerator(store.Database, user);
 
-                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream))
-                    .WaitForCompletion(TimeSpan.FromMilliseconds(15));
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 var actual = await store.Conventions.AsyncDocumentIdGenerator(store.Database, user);
                 //Assert
@@ -301,8 +302,9 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(filePath, FileMode.Open))
             {
-                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream))
-                    .WaitForCompletion(TimeSpan.FromMilliseconds(15));
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 var actual = await store.Conventions.AsyncDocumentIdGenerator(store.Database, user);
                 //Assert
@@ -355,8 +357,9 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
-                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream))
-                    .WaitForCompletion();
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
                 {
@@ -442,8 +445,9 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
-                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream))
-                    .WaitForCompletion(TimeSpan.FromMilliseconds(15));
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 var attachmentResult = store.Operations.Send(new GetAttachmentOperation(id, fileName, AttachmentType.Document, null));
 
@@ -486,8 +490,9 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
-                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream))
-                    .WaitForCompletion(TimeSpan.FromMilliseconds(15));
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 var attachmentResult = store.Operations.Send(new GetAttachmentOperation(id, fileName, AttachmentType.Document, null));
                 var actual = attachmentResult.Stream.ReadData();
@@ -523,18 +528,18 @@ namespace SlowTests.Server
         [Fact]
         public void ReplayUnsetToZeroStream_ShouldThrowException()
         {
-            Assert.Throws<ArgumentException>(() =>
+            using (var store = GetDocumentStore())
             {
-                using (var store = GetDocumentStore())
+                using (var replayStream = new MemoryStream(new byte[10]))
                 {
-                    using (var replayStream = new MemoryStream(new byte[10]))
-                    {
-                        replayStream.Position = 5;
-                        store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream))
-                            .WaitForCompletion(TimeSpan.FromMilliseconds(15));
-                    }
+                    replayStream.Position = 5;
+                    var command = new GetNextOperationIdCommand();
+                    store.Commands().Execute(command);
+
+                    Assert.Throws<ArgumentException>(() =>
+                        store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result)));
                 }
-            });
+            }
         }
 
         [Fact]
@@ -569,8 +574,9 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(filePath, FileMode.Open))
             {
-                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream))
-                    .WaitForCompletion();
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
                 {
@@ -588,7 +594,6 @@ namespace SlowTests.Server
         public void RecordingPatchWithParametersByQuery(params string[] names)
         {
             var filePath = NewDataPath();
-
 
             var users = names.Select(n => new User { Name = n }).ToArray();
 
@@ -611,7 +616,8 @@ namespace SlowTests.Server
                 var query = "FROM Users UPDATE {  this.Age = $age; }";
                 var parameters = new Parameters { ["age"] = newAge };
                 store.Operations
-                    .Send(new PatchByQueryOperation(new IndexQuery { Query = query, QueryParameters = parameters }));
+                    .Send(new PatchByQueryOperation(new IndexQuery { Query = query, QueryParameters = parameters }))
+                    .WaitForCompletion();
 
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
@@ -620,8 +626,9 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(filePath, FileMode.Open))
             {
-                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream))
-                    .WaitForCompletion();
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
                 {
@@ -660,8 +667,9 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(filePath, FileMode.Open))
             {
-                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream))
-                    .WaitForCompletion();
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
                 {
@@ -700,8 +708,9 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(filePath, FileMode.Open))
             {
-                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream))
-                    .WaitForCompletion(TimeSpan.FromMilliseconds(15));
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
                 {
@@ -744,8 +753,9 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(filePath, FileMode.Open))
             {
-                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream))
-                    .WaitForCompletion(TimeSpan.FromMilliseconds(15));
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
                 {
@@ -794,8 +804,9 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(filePath, FileMode.Open))
             {
-                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream))
-                    .WaitForCompletion(TimeSpan.FromMilliseconds(15));
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
                 {
@@ -840,8 +851,9 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(filePath, FileMode.Open))
             {
-                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream))
-                    .WaitForCompletion();
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
                 {
@@ -892,8 +904,9 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
-                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream))
-                    .WaitForCompletion(TimeSpan.FromMilliseconds(15));
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
                 {
@@ -936,8 +949,9 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
-                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream))
-                    .WaitForCompletion();
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
                 {
@@ -979,8 +993,9 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
-                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream))
-                    .WaitForCompletion(TimeSpan.FromMilliseconds(15));
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
                 using (var session = store.OpenSession())
                 {

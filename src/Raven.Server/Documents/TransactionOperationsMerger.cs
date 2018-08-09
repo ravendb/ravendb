@@ -1224,7 +1224,6 @@ namespace Raven.Server.Documents
 
                         yield return new ReplayProgress
                         {
-                            StreamProgress = replayStream.Position,
                             CommandsProgress = commandsProgress
                         };
                     }
@@ -1234,7 +1233,6 @@ namespace Raven.Server.Documents
 
         public class ReplayProgress
         {
-            public long StreamProgress;
             public long CommandsProgress;
         }
 

@@ -1,4 +1,5 @@
-﻿using Sparrow.Json.Parsing;
+﻿using System;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.TransactionsRecording
 {
@@ -6,14 +7,14 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
     {
         public long ProcessedCommand { get; set; }
 
-        public float ProcessedPercentage { get; set; }
+        public TimeSpan PassedTime { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue(GetType())
             {
                 [nameof(ProcessedCommand)] = ProcessedCommand,
-                [nameof(ProcessedPercentage)] = ProcessedPercentage
+                [nameof(PassedTime)] = PassedTime
             };
         }
     }
