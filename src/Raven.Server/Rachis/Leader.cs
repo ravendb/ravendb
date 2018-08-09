@@ -655,6 +655,7 @@ namespace Raven.Server.Rachis
                                 GetConvertResult(command)?.AboutToTimeout();
                                 throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
                             }
+
                             // if the command is already dequeued we must let it continue to keep its context valid. 
                             await rachisMergedCommand.Tcs.Task;
                         }
@@ -690,7 +691,7 @@ namespace Raven.Server.Rachis
                 using (context.OpenWriteTransaction())
                 {
                     var cmdsCount = 0;
-                    while (_commandsQueue.TryDequeue(out var cmd) && cmdsCount++ < 128)
+                    while (cmdsCount++ < 128 && _commandsQueue.TryDequeue(out var cmd))
                     {
                         if (cmd.Consumed.Raise() == false)
                         {
