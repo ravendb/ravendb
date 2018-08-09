@@ -464,7 +464,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         }
                     }
 
-                    await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology: false, asWatcher: watcher ?? false);
+                    await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology: true, asWatcher: watcher ?? false);
 
                     using (ctx.OpenReadTransaction())
                     {
