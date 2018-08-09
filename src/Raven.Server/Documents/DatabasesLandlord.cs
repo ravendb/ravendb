@@ -490,6 +490,8 @@ namespace Raven.Server.Documents
                 else
                     _databaseSemaphore.Release();
 
+                DeleteIfNeeded(databaseName, database);
+
                 return database;
             }
             catch (Exception)
@@ -548,6 +550,26 @@ namespace Raven.Server.Documents
                     _disposing.ExitReadLock();
 
             }
+        }
+
+        private void DeleteIfNeeded(StringSegment databaseName, Task<DocumentDatabase> database)
+        {
+            database.ContinueWith(t =>
+            {
+                // This is in case when an deletion request was issued prior to the actual loading of the database.
+                try
+                {
+                    var record = _serverStore.LoadDatabaseRecord(databaseName, out _);
+                    if (record == null)
+                        return;
+
+                    ShouldDeleteDatabase(databaseName.ToString(), record);
+                }
+                catch
+                {
+                    // nothing we can do here
+                }
+            });
         }
 
         public ConcurrentDictionary<string, ConcurrentQueue<string>> InitLog =
