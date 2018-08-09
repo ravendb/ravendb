@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Client.ServerWide;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -39,7 +40,7 @@ namespace SlowTests.Issues
                     Assert.Equal(long.MaxValue, val);
 
                     documentCounters.Increment("Downloads");
-                    var e = Assert.Throws<RavenException>(() => session.SaveChanges());
+                    var e = Assert.Throws<CounterOverflowException>(() => session.SaveChanges());
                     Assert.Contains("CounterOverflowException: Could not increment counter 'Downloads' " +
                                     $"from document 'users/1' with value '{long.MaxValue}' by '1'. " +
                                     "Arithmetic operation resulted in an overflow", e.Message);
@@ -77,7 +78,7 @@ namespace SlowTests.Issues
                 }
             }.Initialize())
             {
-                var stores = new []
+                var stores = new[]
                 {
                     (DocumentStore)leaderStore, (DocumentStore)followerStore
                 };
@@ -109,7 +110,7 @@ namespace SlowTests.Issues
                 {
                     var documentCounters = session.CountersFor("users/1");
                     documentCounters.Increment("Downloads");
-                    var e = Assert.Throws<RavenException>(() => session.SaveChanges());
+                    var e = Assert.Throws<CounterOverflowException>(() => session.SaveChanges());
                     Assert.Contains("CounterOverflowException: Overflow detected " +
                                     "in counter 'Downloads' from document 'users/1'"
                                     , e.Message);
@@ -147,10 +148,10 @@ namespace SlowTests.Issues
                     try
                     {
                         var doc = session.Load<T>(docId);
-                        if (doc != null && 
-                            session.Advanced.GetCountersFor(doc) != null)                       
+                        if (doc != null &&
+                            session.Advanced.GetCountersFor(doc) != null)
                             return true;
-                        
+
                     }
                     catch (Exception e)
                     {

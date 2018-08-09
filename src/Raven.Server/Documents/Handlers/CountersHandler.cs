@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Client.Json.Converters;
 using Raven.Server.Config.Categories;
 using Raven.Server.Exceptions;
@@ -307,8 +308,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 catch (OverflowException e)
                 {
-                    throw new CounterOverflowException(
-                        $"Overflow detected in counter '{counterName}' from document '{docId}'.", e);
+                    CounterOverflowException.ThrowFor(docId, counterName, e);
                 }
 
                 if (addFullValues)
