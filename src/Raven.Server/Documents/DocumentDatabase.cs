@@ -321,6 +321,11 @@ namespace Raven.Server.Documents
                 _writeLockFile.SetLength(1);
                 _writeLockFile.Lock(0, 1);
             }
+            catch (PlatformNotSupportedException)
+            {
+                // locking part of the file isn't supported on macOS
+                // new FileStream will lock the file on this platform
+            }
             catch (Exception e)
             {
                 throw new InvalidOperationException("Cannot open database because RavenDB was unable create file lock on: " + _lockFile, e);
@@ -650,8 +655,17 @@ namespace Raven.Server.Documents
             {
                 if (_writeLockFile != null)
                 {
-                    _writeLockFile.Unlock(0, 1);
+                    try
+                    {
+                        _writeLockFile.Unlock(0, 1);
+                    }
+                    catch (PlatformNotSupportedException)
+                    {
+                        // Unlock isn't supported on macOS
+                    }
+                    
                     _writeLockFile.Dispose();
+                    
                     try
                     {
                         if (File.Exists(_lockFile))
