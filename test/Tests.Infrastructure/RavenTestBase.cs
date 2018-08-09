@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -18,6 +19,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -94,6 +96,11 @@ namespace FastTests
                 {
                     options = options ?? Options.Default;
                     var serverToUse = options.Server ?? Server;
+
+                    if (options.ExternalReplicationEnabledForTests)
+                    {
+                        SetExternalReplicationToLicenseToTrue(serverToUse);
+                    }
 
                     var name = GetDatabaseName(caller);
 
@@ -254,6 +261,29 @@ namespace FastTests
             {
                 throw new TimeoutException($"{te.Message} {Environment.NewLine} {te.StackTrace}{Environment.NewLine}Servers states:{Environment.NewLine}{GetLastStatesFromAllServersOrderedByTime()}");
             }
+        }
+
+        private static void SetExternalReplicationToLicenseToTrue(RavenServer serverToUse)
+        {
+            var licenseManagerType = serverToUse.ServerStore.LicenseManager.GetType();
+            var licenseStatusField = licenseManagerType.GetField("_licenseStatus", BindingFlags.Instance | BindingFlags.NonPublic);
+            var licenseStatus = licenseStatusField.GetValue(serverToUse.ServerStore.LicenseManager);
+
+            var licenseStatusType = licenseStatus.GetType();
+            var attributesProp = licenseStatusType.GetProperty("Attributes", BindingFlags.Instance | BindingFlags.Public);
+
+            var getAttributesMethod = attributesProp.GetGetMethod();
+            var attributes = getAttributesMethod.Invoke(licenseStatus, new object[0]);
+            if (attributes == null)
+            {
+                var setAttributesMethod = attributesProp.GetSetMethod();
+                setAttributesMethod.Invoke(licenseStatus, new object[] {new Dictionary<string, object>()});
+                attributes = getAttributesMethod.Invoke(licenseStatus, new object[0]);
+            }
+
+            var attributesType = attributes.GetType();
+            var indexerSet = attributesType.GetMethod("set_Item");
+            indexerSet.Invoke(attributes, new object[] {"externalReplication", true});
         }
 
         protected string GetLastStatesFromAllServersOrderedByTime()
@@ -634,6 +664,7 @@ namespace FastTests
             private Action<DatabaseRecord> _modifyDatabaseRecord;
             private Func<string, string> _modifyDatabaseName;
             private string _path;
+            private bool _isExternalReplicationEnabledForTests;
 
             public static readonly Options Default = new Options(true);
 
@@ -757,6 +788,16 @@ namespace FastTests
                 {
                     AssertNotFrozen();
                     _clientCertificate = value;
+                }
+            }
+
+            public bool ExternalReplicationEnabledForTests
+            {
+                get => _isExternalReplicationEnabledForTests;
+                set
+                {
+                    AssertNotFrozen();                   
+                    _isExternalReplicationEnabledForTests = value;
                 }
             }
 
