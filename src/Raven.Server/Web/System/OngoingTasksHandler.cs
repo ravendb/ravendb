@@ -453,10 +453,10 @@ namespace Raven.Server.Web.System
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WritePropertyName(nameof(BackupDatabaseNowResult.ResponsibleNode));
+                    writer.WritePropertyName(nameof(StartBackupOperationResult.ResponsibleNode));
                     writer.WriteString(ServerStore.NodeTag);
                     writer.WriteComma();
-                    writer.WritePropertyName(nameof(BackupDatabaseNowResult.OperationId));
+                    writer.WritePropertyName(nameof(StartBackupOperationResult.OperationId));
                     writer.WriteInteger(operationId);
                     writer.WriteEndObject();
                 }

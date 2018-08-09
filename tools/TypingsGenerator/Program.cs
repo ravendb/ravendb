@@ -310,7 +310,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(NextBackupOccurrence));
             scripter.AddType(typeof(OfflineMigrationConfiguration));
             scripter.AddType(typeof(BackupProgress));
-            scripter.AddType(typeof(BackupDatabaseNowResult));
+            scripter.AddType(typeof(StartBackupOperationResult));
 
             // ongoing tasks - subscription
             scripter.AddType(typeof(OngoingTaskSubscription));
