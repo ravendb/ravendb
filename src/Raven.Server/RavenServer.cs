@@ -6,6 +6,7 @@ using System.IO.Pipes;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -1007,6 +1008,12 @@ namespace Raven.Server
             return status;
         }
 
+        private bool PortInUse(int port)
+        {
+            var ipGlobalProperties = IPGlobalProperties.GetIPGlobalProperties();
+            return ipGlobalProperties.GetActiveTcpListeners().FirstOrDefault(endPoint => endPoint.Port == port) != null;
+        }
+
         private void StartListeners(string host, int port, TcpListenerStatus status)
         {
             try
@@ -1014,6 +1021,21 @@ namespace Raven.Server
                 _tcpAuditLog = LoggingSource.AuditLog.IsInfoEnabled ? LoggingSource.AuditLog.GetLogger("TcpConnections", "Audit") : null;
                 bool successfullyBoundToAtLeastOne = false;
                 var errors = new List<Exception>();
+
+                if (PortInUse(port))
+                {
+                    var message =
+                        $"Failed to bind to address tcp://{host}:{port}: address already in use.{Environment.NewLine}" +
+                        $"Try running with an unused TCP port.{Environment.NewLine}" +
+                        $"You can change the TCP port using one of the following options:{Environment.NewLine}" +
+                        $"1) Change the ServerUrl.Tcp property in setting.json file.{Environment.NewLine}" +
+                        $"2) Run the server from the command line with --ServerUrl.Tcp option.{Environment.NewLine}" +
+                        $"3) Add RAVEN_ServerUrl.Tcp to the Environment Variables.{Environment.NewLine}" +
+                        "For more information go to https://ravendb.net/l/EJS81M/4.1";
+
+                    throw new IOException(message);
+                }
+
                 foreach (var ipAddress in GetListenIpAddresses(host))
                 {
                     if (Configuration.Core.TcpServerUrls != null && Logger.IsInfoEnabled)
