@@ -558,11 +558,14 @@ namespace Raven.Server.Documents
             var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
 
             long deletedEtag = -1;
+            string documentId = null;
+            string name = null;
             if (table.DeleteByPrimaryKeyPrefix(key, tvh =>
                 {
                     long etag = *(long*)tvh.Reader.Read((int)CountersTable.Etag, out var size);
                     deletedEtag = Math.Max(Bits.SwapBytes(etag), deletedEtag);
                     Debug.Assert(size == sizeof(long));
+                    (documentId, name) = ExtractDocIdAndName(context, tvh.Reader);
                 }) == false
                 && forceTombstone == false)
                 return null;
@@ -573,6 +576,14 @@ namespace Raven.Server.Documents
             var newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
 
             CreateTombstone(context, key, collection, deletedEtag, lastModifiedTicks, newEtag, newChangeVector);
+
+            context.Transaction.AddAfterCommitNotification(new DocumentChange
+            {
+                ChangeVector = newChangeVector,
+                Id = documentId,
+                CounterName = name,
+                Type = DocumentChangeTypes.Counter
+            });
 
             return newChangeVector;
         }

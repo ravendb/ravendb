@@ -57,7 +57,9 @@ namespace Raven.Client.Documents.Changes
                 [nameof(Type)] = Type.ToString(),
                 [nameof(Id)] = Id,
                 [nameof(CollectionName)] = CollectionName,
-                [nameof(ChangeVector)] = ChangeVector
+                [nameof(ChangeVector)] = ChangeVector,
+                [nameof(CounterName)] = CounterName
+
             };
         }
 
@@ -67,13 +69,16 @@ namespace Raven.Client.Documents.Changes
             value.TryGet(nameof(ChangeVector), out string changeVector);
             value.TryGet(nameof(Id), out string id);
             value.TryGet(nameof(Type), out string type);
+            value.TryGet(nameof(CounterName), out string counterName);
+
 
             return new DocumentChange
             {
                 CollectionName = collectionName,
                 ChangeVector = changeVector,
                 Id = id,
-                Type = (DocumentChangeTypes)Enum.Parse(typeof(DocumentChangeTypes), type, ignoreCase: true)
+                Type = (DocumentChangeTypes)Enum.Parse(typeof(DocumentChangeTypes), type, ignoreCase: true),
+                CounterName = counterName
             };
         }
     }
