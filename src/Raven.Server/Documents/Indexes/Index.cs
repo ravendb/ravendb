@@ -709,7 +709,7 @@ namespace Raven.Server.Documents.Indexes
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                 using (indexContext.OpenReadTransaction())
                 {
-                    return IsStale(databaseContext, indexContext, cutoff, stalenessReasons);
+                    return IsStale(databaseContext, indexContext, cutoff: cutoff, referenceCutoff: cutoff, stalenessReasons: stalenessReasons);
                 }
             }
         }
@@ -748,7 +748,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
 
-        protected virtual bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, List<string> stalenessReasons = null)
+        protected virtual bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, List<string> stalenessReasons = null)
         {
             if (Type == IndexType.Faulty)
                 return true;
@@ -2049,7 +2049,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
-                long? cutoffEtag = null;
+                (long? DocEtag, long? ReferenceEtag)? cutoffEtag = null;
 
                 var stalenessScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Staleness), start: false);
 
@@ -2075,7 +2075,7 @@ namespace Raven.Server.Documents.Indexes
                             if (query.WaitForNonStaleResults && cutoffEtag == null)
                                 cutoffEtag = GetCutoffEtag(documentsContext);
 
-                            isStale = IsStale(documentsContext, indexContext, cutoffEtag);
+                            isStale = IsStale(documentsContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag);
                             if (WillResultBeAcceptable(isStale, query, wait) == false)
                             {
                                 documentsContext.CloseTransaction();
@@ -2226,7 +2226,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
-                long? cutoffEtag = null;
+                (long? DocEtag, long? ReferenceEtag)? cutoffEtag = null;
 
                 while (true)
                 {
@@ -2248,7 +2248,7 @@ namespace Raven.Server.Documents.Indexes
                             if (query.WaitForNonStaleResults && cutoffEtag == null)
                                 cutoffEtag = GetCutoffEtag(documentsContext);
 
-                            var isStale = IsStale(documentsContext, indexContext, cutoffEtag);
+                            var isStale = IsStale(documentsContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag);
 
                             if (WillResultBeAcceptable(isStale, query, wait) == false)
                             {
@@ -2265,7 +2265,7 @@ namespace Raven.Server.Documents.Indexes
                                 continue;
                             }
 
-                            FillFacetedQueryResult(result, IsStale(documentsContext, indexContext), 
+                            FillFacetedQueryResult(result, isStale, 
                                 facetQuery.FacetsEtag, facetQuery.Query.Metadata,
                                 documentsContext, indexContext);
 
@@ -2324,7 +2324,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
-                long? cutoffEtag = null;
+                (long? DocEtag, long? ReferenceEtag)? cutoffEtag = null;
 
                 while (true)
                 {
@@ -2346,7 +2346,7 @@ namespace Raven.Server.Documents.Indexes
                             if (query.WaitForNonStaleResults && cutoffEtag == null)
                                 cutoffEtag = GetCutoffEtag(documentsContext);
 
-                            var isStale = IsStale(documentsContext, indexContext, cutoffEtag);
+                            var isStale = IsStale(documentsContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag);
 
                             if (WillResultBeAcceptable(isStale, query, wait) == false)
                             {
@@ -2441,7 +2441,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private long GetCutoffEtag(DocumentsOperationContext context)
+        private (long DocumentCutoff, long? ReferenceCutoff) GetCutoffEtag(DocumentsOperationContext context)
         {
             long cutoffEtag = 0;
 
@@ -2453,9 +2453,24 @@ namespace Raven.Server.Documents.Indexes
                     cutoffEtag = etag;
             }
 
-            return cutoffEtag;
-        }
+            long? referenceCutoffEtag = null;
 
+            var referencedCollections = GetReferencedCollections();
+
+            if (referencedCollections != null)
+            {
+                foreach (var referencedCollection in GetReferencedCollections())
+                foreach (var refCollection in referencedCollection.Value)
+                {
+                    var etag = GetLastEtagInCollection(context, refCollection.Name);
+
+                    if (referenceCutoffEtag == null || etag > referenceCutoffEtag)
+                        referenceCutoffEtag = etag;
+                }
+            }
+
+            return (cutoffEtag, referenceCutoffEtag);
+        }
 
         private void ThrowErrored()
         {
