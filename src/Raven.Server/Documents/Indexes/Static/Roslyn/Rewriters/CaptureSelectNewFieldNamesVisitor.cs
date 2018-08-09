@@ -36,7 +36,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
             var lastAnonymusObjectCreation = node.DescendantNodes(descendIntoChildren: syntaxNode =>
                 {
-                    if (syntaxNode is AnonymousObjectCreationExpressionSyntax)
+                    if (syntaxNode is AnonymousObjectCreationExpressionSyntax || 
+                        syntaxNode is ObjectCreationExpressionSyntax oce && CaptureDictionaryFieldsNamesVisitor.IsDictionaryObjectCreationExpression(oce))
                     {
                         return false;
                     }
@@ -71,7 +72,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
             var last = node.DescendantNodes(descendIntoChildren: syntaxNode =>
                 {
-                    if (syntaxNode is AnonymousObjectCreationExpressionSyntax)
+                    if (syntaxNode is AnonymousObjectCreationExpressionSyntax ||
+                        syntaxNode is ObjectCreationExpressionSyntax oce && CaptureDictionaryFieldsNamesVisitor.IsDictionaryObjectCreationExpression(oce))
                     {
                         return false;
                     }
