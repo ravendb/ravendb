@@ -24,7 +24,6 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Tcp;
-using Raven.Server.Documents.PeriodicBackup;
 using Sparrow.Json;
 
 namespace Raven.Client.Json.Converters
