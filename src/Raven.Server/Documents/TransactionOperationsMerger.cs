@@ -364,7 +364,7 @@ namespace Raven.Server.Documents
                 {
                     while (_runTransactions)
                     {
-                        _recordingStatus?.Prepare(ref _recordingStatus);
+                        _recordingState?.Prepare(ref _recordingState);
 
                         if (_operations.IsEmpty)
                         {
@@ -517,7 +517,7 @@ namespace Raven.Server.Documents
                 {
                     try
                     {
-                        _recordingStatus?.Record(context, TxInstruction.BeginTx);
+                        _recordingState?.Record(context, TxInstruction.BeginTx);
                         tx = context.OpenWriteTransaction();
                     }
                     catch (Exception e)
@@ -535,7 +535,7 @@ namespace Raven.Server.Documents
                         {
                             if (tx != null)
                             {
-                                _recordingStatus?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
+                                _recordingState?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
                                 tx.Dispose();
                             }
                         }
@@ -566,7 +566,7 @@ namespace Raven.Server.Documents
                         // need to dispose here since we are going to open new tx for each operation
                         if (tx != null)
                         {
-                            _recordingStatus?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
+                            _recordingState?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
                             tx.Dispose();
                         }
 
@@ -581,11 +581,11 @@ namespace Raven.Server.Documents
                             {
                                 tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
 
-                                _recordingStatus?.Record(context, TxInstruction.Commit);
+                                _recordingState?.Record(context, TxInstruction.Commit);
                                 tx.Commit();
 
                                 SlowWriteNotification.Notify(stats, _parent);
-                                _recordingStatus?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
+                                _recordingState?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
                                 tx.Dispose();
                             }
                             catch (Exception e)
@@ -615,7 +615,7 @@ namespace Raven.Server.Documents
                 {
                     using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        _recordingStatus?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
+                        _recordingState?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
                     }
                     tx.Dispose();
                 }
@@ -672,7 +672,7 @@ namespace Raven.Server.Documents
                     {
                         previous.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out commitStats);
 
-                        _recordingStatus?.Record(context, TxInstruction.BeginAsyncCommitAndStartNewTransaction);
+                        _recordingState?.Record(context, TxInstruction.BeginAsyncCommitAndStartNewTransaction);
                         context.Transaction = previous.BeginAsyncCommitAndStartNewTransaction();
                     }
                     catch (Exception e)
@@ -752,7 +752,7 @@ namespace Raven.Server.Documents
                             return;
                         }
 
-                        //_recordingStatus?.Record(TxInstruction.DisposeTx, previous.Disposed == false);
+                        //_recordingState?.Record(context, TxInstruction.DisposeTx, previous.Disposed == false);
                         previous.Dispose();
 
                         switch (result)
@@ -762,12 +762,12 @@ namespace Raven.Server.Documents
                                 {
                                     context.Transaction.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
 
-                                    _recordingStatus?.Record(context, TxInstruction.Commit);
+                                    _recordingState?.Record(context, TxInstruction.Commit);
                                     context.Transaction.Commit();
 
                                     SlowWriteNotification.Notify(stats, _parent);
 
-                                    _recordingStatus?.Record(context, TxInstruction.DisposeTx, context.Transaction.Disposed == false);
+                                    _recordingState?.Record(context, TxInstruction.DisposeTx, context.Transaction.Disposed == false);
                                     context.Transaction.Dispose();
                                 }
                                 catch (Exception e)
@@ -794,7 +794,7 @@ namespace Raven.Server.Documents
                     {
                         if (context.Transaction != null)
                         {
-                            _recordingStatus?.Record(context, TxInstruction.DisposeTx, context.Transaction.Disposed == false);
+                            _recordingState?.Record(context, TxInstruction.DisposeTx, context.Transaction.Disposed == false);
                             context.Transaction.Dispose();
                         }
                     }
@@ -802,7 +802,7 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                _recordingStatus?.Record(context, TxInstruction.DisposeTx, previous.Disposed == false);
+                _recordingState?.Record(context, TxInstruction.DisposeTx, previous.Disposed == false);
                 previous.Dispose();
             }
         }
@@ -816,7 +816,7 @@ namespace Raven.Server.Documents
         {
             try
             {
-                _recordingStatus?.Record(context, TxInstruction.EndAsyncCommit);
+                _recordingState?.Record(context, TxInstruction.EndAsyncCommit);
                 previous.EndAsyncCommit();
 
                 //not sure about this 'if'
@@ -873,7 +873,7 @@ namespace Raven.Server.Documents
                 pendingOps.Add(op);
                 meter.IncrementCounter(1);
 
-                meter.IncrementCommands(op.Execute(context, _recordingStatus));
+                meter.IncrementCommands(op.Execute(context, _recordingState));
 
                 var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
                 var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
@@ -1055,17 +1055,17 @@ namespace Raven.Server.Documents
                         {
                             using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                             {
-                                _recordingStatus?.Record(context, TxInstruction.BeginTx);
+                                _recordingState?.Record(context, TxInstruction.BeginTx);
                                 using (var tx = context.OpenWriteTransaction())
                                 {
 
                                     op.RetryOnError = false;
 
-                                    op.Execute(context, _recordingStatus);
+                                    op.Execute(context, _recordingState);
 
                                     tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
 
-                                    _recordingStatus?.Record(context, TxInstruction.Commit);
+                                    _recordingState?.Record(context, TxInstruction.Commit);
                                     tx.Commit();
                                     SlowWriteNotification.Notify(stats, _parent);
                                 }
@@ -1108,7 +1108,7 @@ namespace Raven.Server.Documents
             _txLongRunningOperation?.Join(int.MaxValue);
 
             _waitHandle.Dispose();
-            _recordingStatus?.Dispose();
+            _recordingState?.Dispose();
 
             // make sure that the queue is empty and there are no pending 
             // transactions waiting. 
@@ -1146,22 +1146,22 @@ namespace Raven.Server.Documents
             EndAsyncCommit
         }
 
-        private RecordingState _recordingStatus = null;
+        private RecordingState _recordingState = null;
 
         public void StartRecording(string filePath)
         {
-            if (_recordingStatus != null)
+            if (_recordingState != null)
                 return;
-            Interlocked.CompareExchange(ref _recordingStatus, new RecordingState.BeforeEnabledRecordingState(this, filePath), null);
+            Interlocked.CompareExchange(ref _recordingState, new RecordingState.BeforeEnabledRecordingState(this, filePath), null);
             _waitHandle.Set();
         }
 
         public void StopRecording()
         {
-            var recordingStatus = _recordingStatus;
-            if (recordingStatus != null)
+            var recordingState = _recordingState;
+            if (recordingState != null)
             {
-                recordingStatus.Shutdown();
+                recordingState.Shutdown();
                 _waitHandle.Set();
             }
         }
