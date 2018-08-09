@@ -3,14 +3,14 @@ using System.Threading.Tasks;
 using FastTests.Server.Documents.Queries.Parser;
 using FastTests.Voron.Backups;
 using FastTests.Voron.Compaction;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Operations;
 using SlowTests.Authentication;
 using SlowTests.Bugs.MapRedue;
 using SlowTests.Client;
 using SlowTests.Client.Attachments;
 using SlowTests.Issues;
 using SlowTests.MailingList;
+using Sparrow.Logging;
+using StressTests.Client.Attachments;
 
 namespace Tryouts
 {
@@ -18,14 +18,19 @@ namespace Tryouts
     {
         public static async Task Main(string[] args)
         {
-            for (int i = 0; i < 1000; i++)
+            try
             {
-                Console.WriteLine(i);
-                using (var a = new RavenDB_8288())
+                using (var test = new RavenDB_11705())
                 {
-                    await a.Queries_will_work_during_index_replacements();
+                    await test.CanHandleRevisionOperationBeingRolledBack();
                 }
             }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+            
         }
     }
 }
