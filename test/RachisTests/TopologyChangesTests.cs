@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
@@ -85,7 +84,7 @@ namespace RachisTests
         {
             var leader = await CreateNetworkAndGetLeader(3);
             await Assert.ThrowsAsync<InvalidOperationException>(
-                () => leader.RemoveFromClusterAsync("http://not-a-real-url.com"));
+                () => leader.RemoveFromClusterAsync("ABCD"));
         }
 
         [Theory]
@@ -120,7 +119,7 @@ namespace RachisTests
                 Assert.True(await node.WaitForTopology(Leader.TopologyModification.Remove, follower.Tag).WaitAsync(TimeSpan.FromMilliseconds(node.ElectionTimeout.TotalMilliseconds * 10)), "Node was not removed from topology in time");
             }
             Assert.True(await leader.AddToClusterAsync(follower.Url, follower.Tag).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5)));
-            Assert.True(await follower.WaitForTopology(Leader.TopologyModification.Voter).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5))); ;
+            Assert.True(await follower.WaitForTopology(Leader.TopologyModification.Voter).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5)));
 
             using (leader.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
