@@ -179,7 +179,7 @@ update {
                 using (var session = store.OpenSession())
                 {
                     var s = session.Query<Invoices_Search.Result, Invoices_Search>()
-                        .Customize(x => x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults(waitTimeout: TimeSpan.FromMinutes(3)))
                         .ToList();
 
                     Assert.Equal(100, s.Count);
@@ -238,7 +238,7 @@ update {
                 using (var session = store.OpenSession())
                 {
                     var s = session.Query<Invoices_Search.Result, Invoices_Search>()
-                        .Customize(x => x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults(waitTimeout: TimeSpan.FromMinutes(3)))
                         .ToList();
                     Assert.Equal(500, s.Count);
                     foreach (var item in s)
