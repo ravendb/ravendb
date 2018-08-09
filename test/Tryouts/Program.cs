@@ -1,36 +1,28 @@
 using System;
-using System.Threading.Tasks;
-using FastTests.Server.Documents.Queries.Parser;
-using FastTests.Voron.Backups;
-using FastTests.Voron.Compaction;
-using SlowTests.Authentication;
-using SlowTests.Bugs.MapRedue;
-using SlowTests.Client;
-using SlowTests.Client.Attachments;
-using SlowTests.Issues;
-using SlowTests.MailingList;
-using Sparrow.Logging;
-using StressTests.Client.Attachments;
+using RachisTests;
 
 namespace Tryouts
 {
     public static class Program
     {
-        public static async Task Main(string[] args)
+        public static void Main(string[] args)
         {
             try
             {
-                using (var test = new RavenDB_11734())
+                for (int i = 0; i < 500; i++)
                 {
-                    await test.Index_Queries_Should_Not_Return_Deleted_Documents();
+                    Console.WriteLine(i);
+
+                    using (var test = new AddNodeToClusterTests())
+                    {
+                        test.PutDatabaseOnHealthyNodes().Wait();
+                    }
                 }
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
             }
-
-            
         }
     }
 }
