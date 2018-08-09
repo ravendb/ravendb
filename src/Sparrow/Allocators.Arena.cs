@@ -96,8 +96,45 @@ namespace Sparrow
         // How many bytes has this arena section handed out to the customers.
         private long _used;
 
+        private int _preferredSize;
+
         // Buffers that has been used and cannot be cleaned until a reset happens.
         private List<Pointer> _olderBuffers;
+
+        public long TotalAllocated
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
+
+        public long Allocated
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
+        public long InUse
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Initialize(ref ArenaAllocator<TOptions> allocator)
+        {
+            allocator._nativeAllocator.Initialize(ref allocator._nativeAllocator);            
+
+            allocator.TotalAllocated = 0;
+            allocator.Allocated = 0;
+            allocator.InUse = 0;
+
+            allocator._preferredSize = allocator._options.InitialArenaSize;
+        }
 
         public void Configure<TConfig>(ref ArenaAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
         {
@@ -111,32 +148,27 @@ namespace Sparrow
 
         public Pointer Allocate(ref ArenaAllocator<TOptions> allocator, int size)
         {
-            if (_ptrStart == null)
-                ThrowInvalidAllocateFromResetWithoutRenew();
-
-            if (allocator._used + size > allocator._currentBuffer.Size)
+            if (!allocator._currentBuffer.IsValid || allocator._used + size > allocator._currentBuffer.Size)
             {
                 allocator.GrowArena(ref allocator, size);
             }
 
             Pointer ptr = new Pointer(allocator._ptrCurrent, size);
-            allocator._ptrCurrent += size;
-            allocator._used += size;
-            allocator.Allocated += size;
+            allocator._ptrCurrent += ptr.Size;
+            allocator._used += ptr.Size;
+
+            allocator.InUse += ptr.Size;
+            allocator.TotalAllocated += ptr.Size;
 
             return ptr;
         }
 
         private void GrowArena( ref ArenaAllocator<TOptions> allocator, int requestedSize)
         {
-            int newSize = allocator._options.GrowthStrategy.GetGrowthSize(allocator._currentBuffer.Size, allocator._used);            
-            if (newSize > allocator._options.MaxArenaSize)
-                newSize = allocator._options.MaxArenaSize;
-
             // We could be requesting to allocate less than what the app requested (for big requests) so 
             // we account for that in case it happens. We would override also the MaxArenaSize in those cases
             // and resort to straight memory block allocation
-            newSize = Math.Max(requestedSize, newSize);
+            int newSize = Math.Max(requestedSize, allocator._preferredSize);
 
             Pointer newBuffer;
             try
@@ -147,8 +179,7 @@ namespace Sparrow
                 when (oom.Data?.Contains("Recoverable") != true) // this can be raised if the commit charge is low
             {
                 // we were too eager with memory allocations?
-                newBuffer = allocator._nativeAllocator.Allocate(ref allocator._nativeAllocator, requestedSize);                
-                newSize = requestedSize;           
+                newBuffer = allocator._nativeAllocator.Allocate(ref allocator._nativeAllocator, requestedSize);
             }            
 
             if (allocator._currentBuffer.IsValid)
@@ -163,120 +194,110 @@ namespace Sparrow
             allocator._ptrStart = (byte*)newBuffer.Ptr;
             allocator._ptrCurrent = (byte*)newBuffer.Ptr;
 
-            allocator._used = 0;            
+            allocator._used = 0;
+
+            allocator.Allocated += newBuffer.Size;
         }
 
-        private static void ThrowInvalidAllocateFromResetWithoutRenew()
-        {
-            throw new InvalidOperationException("Attempt to allocate from reset arena without calling renew");
-        }
-
+        /// <summary>
+        /// It could happen that we have fragmentation, in those cases nothing to be done here. 
+        /// Note that this fragmentation will be healed by the call to Reset trying to do this on the fly
+        /// is too expensive. Consider to compose this allocator with a PoolAllocator instead if
+        /// high fragmentation is expected. 
+        /// </summary>
+        /// <param name="allocator">The allocator</param>
+        /// <param name="ptr">The pointer to release</param>
         public void Release(ref ArenaAllocator<TOptions> allocator, ref Pointer ptr)
-        {
+        {            
             byte* address = (byte*)ptr.Ptr;
-            if (address < allocator._ptrStart || address != allocator._ptrCurrent - ptr.Size)
+            if (address >= allocator._ptrStart && address == allocator._ptrCurrent - ptr.Size)
             {
-                // we have fragmentation, so nothing to be done here. 
-                // note that this fragmentation will be healed by the call to Reset trying to do this on the fly
-                // is too expensive. Consider to compose this allocator with a PoolAllocator instead if
-                // high fragmentation is expected. 
-                return;
+                // since the returned allocation is at the end of the arena, we can move
+                // the pointer back
+                allocator._used -= ptr.Size;
+                allocator._ptrCurrent -= ptr.Size;
             }
 
-            // since the returned allocation is at the end of the arena, we can just move
-            // the pointer back
-            allocator._used -= ptr.Size;
-            allocator.Allocated -= ptr.Size;
-            allocator._ptrCurrent -= ptr.Size;
-        }
-
-        // How many bytes has this arena allocated from its memory provider since resets
-        public long Allocated
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private set;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Initialize(ref ArenaAllocator<TOptions> allocator)
-        {
-            allocator._nativeAllocator.Initialize(ref allocator._nativeAllocator);
-            allocator.Renew(ref allocator);
+            allocator.InUse -= ptr.Size;
+            ptr = new Pointer();
         }
 
         public void Reset(ref ArenaAllocator<TOptions> allocator)
         {
-            // Reset current arena buffer
-            allocator._ptrCurrent = allocator._ptrStart;
-
             // Is our strategy requiring us to change the size after having worked with it?
-            long preferredSize = allocator._options.GrowthStrategy.GetPreferredSize(allocator._currentBuffer.Size, allocator._used);
+            // The reasons to consider current buffer size and also the used amount of memory is very important to figure out
+            // what is the optimal policy for the arena size on the next round.
+            int preferredSize = allocator._options.GrowthStrategy.GetPreferredSize(allocator._currentBuffer.Size, allocator.InUse);
 
-            // Check if there has been new allocations happening in this round.
-            if (allocator._olderBuffers == null || allocator._olderBuffers.Count == 0)
+            if (allocator._olderBuffers != null)
             {
-                // Given that no new allocation happened, the size is probably too big. 
-                if (preferredSize < allocator._currentBuffer.Size && preferredSize > allocator._options.InitialArenaSize * 2)
+                // Free old buffers not being used anymore. A single arena ought to be enough for anybody, you know ;) 
+                foreach (var unusedBuffer in allocator._olderBuffers)
                 {
-                    if (allocator._ptrStart != null)
-                        allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref _currentBuffer);
+                    _used += unusedBuffer.Size;
 
-                    allocator._currentBuffer = allocator._nativeAllocator.Allocate(ref allocator._nativeAllocator, (int)preferredSize);
-                    allocator._ptrCurrent = allocator._ptrStart = null;
+                    Pointer ptr = unusedBuffer;
+
+                    allocator.Allocated -= ptr.Size;
+                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref ptr);
                 }
-
-                // Nothing else to do here.
-                allocator.Allocated = 0;
-                allocator._used = 0;
-                return;
+                allocator._olderBuffers.Clear();
             }
-
-            // Free old buffers not being used anymore
-            foreach (var unusedBuffer in allocator._olderBuffers)
-            {                
-                _used += unusedBuffer.Size;
-
-                Pointer ptr = unusedBuffer;
-                allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref ptr);
-            }
-            allocator._olderBuffers.Clear();
 
             // If we didnt use more memory than the currently allocated or we are in low memory mode
-            if (allocator._used <= allocator._currentBuffer.Size || Allocator.LowMemoryFlag.IsRaised())            
+            if (allocator.InUse <= allocator._currentBuffer.Size || Allocator.LowMemoryFlag.IsRaised())
             {
-                // Go on with the current setup
-                allocator._used = 0;
-                allocator.Allocated = 0;
-                return;
+                // Override with the current setup
+                preferredSize = allocator._currentBuffer.Size;
             }
 
-            // Given that we used more than the current size of the buffer,
-            // We'll likely need more memory in the next round, let us increase the size we hold on to
-            if (allocator._ptrStart != null)
-                allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref _currentBuffer);
+            if (allocator._currentBuffer.IsValid)
+            {
+                allocator.Allocated -= _currentBuffer.Size;
+                allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref _currentBuffer);                
+            }                
 
-            long newSize = allocator._options.GrowthStrategy.GetPreferredSize(allocator._currentBuffer.Size, allocator._used);
-            if (newSize > allocator._options.MaxArenaSize)
-                newSize = allocator._options.MaxArenaSize;
+            // We will always cap the size of the Arena toward the MaxArenaSize.
+            if (preferredSize > allocator._options.MaxArenaSize)
+                preferredSize = allocator._options.MaxArenaSize;
 
-            allocator._currentBuffer = allocator._nativeAllocator.Allocate(ref allocator._nativeAllocator, (int)newSize);
-            allocator._ptrStart = allocator._ptrCurrent = (byte*)allocator._currentBuffer.Ptr;
-            allocator.Allocated = 0;
-
+            allocator._preferredSize = preferredSize;
+            allocator._currentBuffer = new Pointer();
+            allocator._ptrStart = allocator._ptrCurrent = null;
             allocator._used = 0;
+
+            allocator.TotalAllocated = 0;
+            allocator.Allocated = 0;
+            allocator.InUse = 0;
         }
 
         public void Renew(ref ArenaAllocator<TOptions> allocator)
         {
-            if (allocator._ptrStart != null)
-                return;
+            if (!allocator._currentBuffer.IsValid)
+            {
+                allocator._currentBuffer = allocator._nativeAllocator.Allocate(ref allocator._nativeAllocator, (int)allocator._preferredSize);
+                allocator.Allocated += allocator._currentBuffer.Size;
+            }
 
-            allocator._currentBuffer = allocator._nativeAllocator.Allocate(ref allocator._nativeAllocator, (int)allocator._currentBuffer.Size);
+            if (allocator._olderBuffers != null)
+            {
+                // Free old buffers not being used anymore. A single arena ought to be enough for anybody, you know ;) 
+                foreach (var unusedBuffer in allocator._olderBuffers)
+                {
+                    _used += unusedBuffer.Size;
+
+                    Pointer ptr = unusedBuffer;
+
+                    allocator.Allocated -= ptr.Size;
+                    allocator._nativeAllocator.Release(ref allocator._nativeAllocator, ref ptr);
+                }
+
+                allocator._olderBuffers.Clear();
+            }
+
             allocator._ptrStart = allocator._ptrCurrent = (byte*)allocator._currentBuffer.Ptr;
-            allocator.Allocated = 0;
             allocator._used = 0;
+            allocator.InUse = 0;
         }
 
         public void OnAllocate(ref ArenaAllocator<TOptions> allocator, Pointer ptr)
@@ -290,17 +311,20 @@ namespace Sparrow
         }
 
         public void Dispose(ref ArenaAllocator<TOptions> allocator)
-        {
-            // Free old buffers not being used anymore
-            foreach (var unusedBuffer in allocator._olderBuffers)
+        {            
+            if (allocator._olderBuffers != null)
             {
-                _used += unusedBuffer.Size;
+                // Free the remanent buffers on local storage from last cycle regrowths
+                foreach (var unusedBuffer in allocator._olderBuffers)
+                {
+                    _used += unusedBuffer.Size;
 
-                Pointer ptr = unusedBuffer;
-                allocator._nativeAllocator.Release(ref _nativeAllocator, ref ptr);
+                    Pointer ptr = unusedBuffer;
+                    allocator._nativeAllocator.Release(ref _nativeAllocator, ref ptr);
+                }
             }
 
-            if (_ptrStart != null)
+            if (allocator._currentBuffer.IsValid)
             {
                 allocator._nativeAllocator.Release(ref _nativeAllocator, ref _currentBuffer);
             }
@@ -309,3 +333,4 @@ namespace Sparrow
         }
     }
 }
+

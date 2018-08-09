@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Sparrow.Global;
 
@@ -39,8 +40,30 @@ namespace Sparrow
             public bool HasOwnership => true;
             public IAllocatorComposer<Pointer> CreateAllocator()
             {
-                var allocator = new Allocator<NativeAllocator<PoolAllocator.Default>>();
-                allocator.Initialize(default(PoolAllocator.Default));
+                var allocator = new Allocator<NativeAllocator<Default>>();
+                allocator.Initialize(default(Default));
+                return allocator;
+            }
+        }
+
+        public struct Static : IFixedSizeThreadAffinePoolOptions, INativeOptions, INativeGlobalAllocatorOptions
+        {
+            public bool UseSecureMemory => false;
+            public bool ElectricFenceEnabled => false;
+            public bool Zeroed => false;
+
+            public int BlockSize => 1 * Constants.Size.Megabyte;
+            public int ItemsPerLane => 4;
+
+            public bool AcceptOnlyBlocks => true;
+
+            public ThreadAffineWorkload Workload => ThreadAffineWorkload.Default;
+
+            public bool HasOwnership => true;
+            public IAllocatorComposer<Pointer> CreateAllocator()
+            {
+                var allocator = new Allocator<NativeAllocator<Static>>();
+                allocator.Initialize(default(Static));
                 return allocator;
             }
         }
@@ -61,8 +84,8 @@ namespace Sparrow
             public bool HasOwnership => true;
             public IAllocatorComposer<Pointer> CreateAllocator()
             {
-                var allocator = new Allocator<NativeAllocator<PoolAllocator.Default>>();
-                allocator.Initialize(default(PoolAllocator.Default));
+                var allocator = new Allocator<NativeAllocator<DefaultAcceptArbitratySize>>();
+                allocator.Initialize(default(DefaultAcceptArbitratySize));
                 return allocator;
             }
         }
@@ -72,6 +95,7 @@ namespace Sparrow
             where TOptions : struct, IFixedSizeThreadAffinePoolOptions
     {
         private TOptions _options;
+
         // PERF: This should be devirtualized. 
         private IAllocatorComposer<Pointer> _internalAllocator;
 
@@ -85,11 +109,36 @@ namespace Sparrow
             public IntPtr Block4;
         }
 
-        public long Allocated { get; private set; }
+        public long TotalAllocated
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
+
+        public long Allocated
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
+        public long InUse
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
 
         public void Initialize(ref FixedSizeThreadAffinePoolAllocator<TOptions> allocator)
         {
-            allocator._container = new Container[(int)allocator._options.Workload]; // PERF: This should be a constant.            
+            allocator._container = new Container[(int)allocator._options.Workload]; // PERF: This should be a constant.       
+
+            allocator.TotalAllocated = 0;
+            allocator.Allocated = 0;
+            allocator.InUse = 0;
         }
 
         public void Configure<TConfig>(ref FixedSizeThreadAffinePoolAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
@@ -148,10 +197,15 @@ namespace Sparrow
             }
 
             Pointer ptr = allocator._internalAllocator.Allocate(size);
+            allocator.InUse += ptr.Size;
             allocator.Allocated += ptr.Size;
+            allocator.TotalAllocated += ptr.Size;
             return ptr;
 
             SUCCESS:
+
+            allocator.InUse += allocator._options.BlockSize;
+            allocator.TotalAllocated += allocator._options.BlockSize;
             return new Pointer(nakedPtr.ToPointer(), allocator._options.BlockSize);
         }
 
@@ -166,38 +220,51 @@ namespace Sparrow
 
             ref Container container = ref allocator._container[threadId];
             if (Interlocked.CompareExchange(ref container.Block1, (IntPtr)nakedPtr, IntPtr.Zero) == IntPtr.Zero)
-                return;
+                goto Success;
 
             // PERF: The items per lane check will get evicted because of constant elimination and therefore the complete code when items is higher. 
             if (allocator._options.ItemsPerLane > 1 && Interlocked.CompareExchange(ref container.Block2, (IntPtr)nakedPtr, IntPtr.Zero) == IntPtr.Zero)
-                return;
+                goto Success;
             if (allocator._options.ItemsPerLane > 2 && Interlocked.CompareExchange(ref container.Block3, (IntPtr)nakedPtr, IntPtr.Zero) == IntPtr.Zero)
-                return;
+                goto Success;
             if (allocator._options.ItemsPerLane > 3 && Interlocked.CompareExchange(ref container.Block4, (IntPtr)nakedPtr, IntPtr.Zero) == IntPtr.Zero)
-                return;
+                goto Success;
 
-            UnlikelyRelease:
+            goto UnlikelyRelease;
+
+        Success:
+            allocator.InUse -= ptr.Size;
+            ptr = new Pointer(); // Nullify the pointer
+            return;
+
+        UnlikelyRelease:
+
+            allocator.InUse -= ptr.Size;
             allocator.Allocated -= ptr.Size;
             allocator._internalAllocator.Release(ref ptr);
         }
 
         public void Reset(ref FixedSizeThreadAffinePoolAllocator<TOptions> allocator)
         {
-           // When we reset if we are in a low memory condition we will cleanup the pool 
-           if (Allocator.LowMemoryFlag.IsRaised())
-               CleanupPool(ref allocator);
+            CleanupPool(ref allocator);
 
+            allocator._internalAllocator.Reset();
+
+            allocator.TotalAllocated = 0;
             allocator.Allocated = 0;
-            allocator._internalAllocator.Renew();            
+            allocator.InUse = 0;
         }
 
         public void Renew(ref FixedSizeThreadAffinePoolAllocator<TOptions> allocator)
         {
             if (Allocator.LowMemoryFlag.IsRaised())
+            {
                 CleanupPool(ref allocator);
+                allocator.Allocated = 0;
+            }                
 
-            allocator.Allocated = 0;
             allocator._internalAllocator.Renew();
+            allocator.InUse = 0;
         }
 
         public void OnAllocate(ref FixedSizeThreadAffinePoolAllocator<TOptions> allocator, Pointer ptr) { }

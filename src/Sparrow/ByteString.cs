@@ -419,16 +419,16 @@ namespace Sparrow
     public sealed class ByteStringContext : ByteStringContext<ByteStringContext.Direct>
     {
         // PERF: These constants could be configured with runtime code emit facilities if we need to (some heavy engineering required but viable). 
-        private struct GlobalDefault : IFixedSizeThreadAffinePoolOptions, INativeOptions
+        private struct Static : IFixedSizeThreadAffinePoolOptions, INativeOptions, INativeGlobalAllocatorOptions
         {
             public bool UseSecureMemory => false;
             public bool ElectricFenceEnabled => false;
             public bool Zeroed => false;
 
-            // This block size will ensure that there are at most 128Mb of global ByteString ready for to be handed out.
+            // This block size will ensure that there are at most 256Kb of global ByteString memory ready for to be handed out.
             // It is high enough to not trigger many low memory notifications on small hardware, but high enough to support
             // heavy threading memory reuse. 
-            public int BlockSize => 4 * Constants.Size.Megabyte;
+            public int BlockSize => 256 * Constants.Size.Kilobyte;
             public int ItemsPerLane => 2;
 
             public bool AcceptOnlyBlocks => false;
@@ -438,18 +438,18 @@ namespace Sparrow
             public bool HasOwnership => true;
             public IAllocatorComposer<Pointer> CreateAllocator()
             {
-                var allocator = new Allocator<NativeAllocator<GlobalDefault>>();
-                allocator.Initialize(default(GlobalDefault));
+                var allocator = new Allocator<NativeAllocator<Static>>();
+                allocator.Initialize(default(Static));
                 return allocator;
             }
         }
 
-        private static readonly Allocator<FixedSizeThreadAffinePoolAllocator<FixedSizeThreadAffinePoolAllocator.DefaultAcceptArbitratySize>> _globalAllocator;
+        private static readonly Allocator<FixedSizeThreadAffinePoolAllocator<Static>> _globalAllocator;
 
         static ByteStringContext()
         {
-            _globalAllocator = new Allocator<FixedSizeThreadAffinePoolAllocator<FixedSizeThreadAffinePoolAllocator.DefaultAcceptArbitratySize>>();
-            _globalAllocator.Initialize(default(FixedSizeThreadAffinePoolAllocator.DefaultAcceptArbitratySize));
+            _globalAllocator = new Allocator<FixedSizeThreadAffinePoolAllocator<Static>>();
+            _globalAllocator.Initialize(default(Static));
         }
 
         public ByteStringContext(SharedMultipleUseFlag lowMemoryFlag) : base(lowMemoryFlag)
@@ -466,7 +466,7 @@ namespace Sparrow
             }
         }
 
-        public struct NoPool : IPoolAllocatorOptions
+        public struct WithoutPooling : IPoolAllocatorOptions
         {
             public bool HasOwnership => false;
             public IAllocatorComposer<Pointer> CreateAllocator()
@@ -481,7 +481,7 @@ namespace Sparrow
             public int MaxPoolSizeInBytes => 0; // We are effectively disabling the pooling. 
         }
 
-        public struct Pooled : IPoolAllocatorOptions
+        public struct WithPooling : IPoolAllocatorOptions
         {
             public bool HasOwnership => false;
             public IAllocatorComposer<Pointer> CreateAllocator()

@@ -43,14 +43,37 @@ namespace Sparrow
         // PERF: This should be devirtualized.        
         private IAllocatorComposer<Pointer> _internalAllocator;
 
-        public long Allocated { get; private set; }
-        public long Used { get; private set; }
+        public long TotalAllocated
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
+
+        public long Allocated
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
+        public long InUse
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
 
         public void Initialize(ref FixedSizePoolAllocator<TOptions> allocator)
         {
-            // Initialize the struct pointers structure used to navigate over the allocated memory.          
+            // Initialize the struct pointers structure used to navigate over the allocated memory. 
+            allocator._freed = new Pointer();
+
+            allocator.TotalAllocated = 0;
             allocator.Allocated = 0;
-            allocator.Used = 0;
+            allocator.InUse = 0;
         }
 
         public void Configure<TConfig>(ref FixedSizePoolAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
@@ -76,15 +99,17 @@ namespace Sparrow
 
                 // Pointer was holding the marker for the next released block instead. 
                 allocator._freed = *((Pointer*)section.Ptr);
-                allocator.Used += section.Size;
+                allocator.InUse += section.Size;
+                allocator.TotalAllocated += section.Size;
 
                 return section;
             }
-
-            allocator.Used += size;
-            allocator.Allocated += size;
-
+            
             var ptr = _internalAllocator.Allocate(size);
+            allocator.InUse += ptr.Size;
+            allocator.Allocated += ptr.Size;
+            allocator.TotalAllocated += ptr.Size;
+
             return new Pointer(ptr.Ptr, size);
         }
 
@@ -94,20 +119,28 @@ namespace Sparrow
             if (ptr.Size != allocator._options.MaxBlockSize)
                 ThrowMemoryDoesNotBelongToAllocator(ptr);
 
-            if (allocator.Used > allocator._options.MaxPoolSizeInBytes || Allocator.LowMemoryFlag.IsRaised())
+            if (allocator.InUse > allocator._options.MaxPoolSizeInBytes || Allocator.LowMemoryFlag.IsRaised())
                 goto UnlikelyRelease;
+
+            int originalSize = ptr.Size;
 
             var section = allocator._freed;
             if (section.IsValid)
             {
                 // Copy the section pointer that is already freed to the current memory. 
-                *(Pointer*)ptr.Ptr = section;
+                *(BlockPointer*)ptr.Ptr = section;
+            }
+            else
+            {
+                // Put a copy of the currently released memory block on the front. 
+                *(BlockPointer*)ptr.Ptr = new BlockPointer();
             }
 
             // Put a copy of the currently released memory block on the front. 
             allocator._freed = ptr;
-            allocator.Used -= ptr.Size;
+            allocator.InUse -= originalSize;
 
+            ptr = new Pointer(); // Nullify the pointer
             return;
 
         UnlikelyRelease:
@@ -116,7 +149,8 @@ namespace Sparrow
             // that allows us to release some steam at the cost of hitting cold code. 
             // https://github.com/dotnet/coreclr/issues/6024
 
-            allocator.Used -= ptr.Size;
+            allocator.InUse -= ptr.Size;
+            allocator.Allocated -= ptr.Size;
 
             Pointer nakedPtr = new Pointer(ptr.Ptr, ptr.Size);
             allocator._internalAllocator.Release(ref nakedPtr);
@@ -136,9 +170,13 @@ namespace Sparrow
         public void Renew(ref FixedSizePoolAllocator<TOptions> allocator)
         {
             if (Allocator.LowMemoryFlag.IsRaised())
+            {
                 ReleaseMemoryPool(ref allocator);
+                allocator.Allocated = 0;
+            }                
 
             allocator._internalAllocator.Renew();
+            allocator.InUse = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -150,6 +188,10 @@ namespace Sparrow
                 ResetMemoryPool(ref allocator);
 
             allocator._internalAllocator.Reset();
+
+            allocator.TotalAllocated = 0;
+            allocator.Allocated = 0;
+            allocator.InUse = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
