@@ -2,7 +2,6 @@
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
-using Raven.Server.Documents.PeriodicBackup;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Backups
