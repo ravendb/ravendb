@@ -123,7 +123,7 @@ namespace Sparrow
 
         public void Reset(ref NativeAllocator<TOptions> allocator)
         {
-            throw new NotSupportedException($"{nameof(NativeAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
+             // There is no reset action to do on this allocator. We wont fail, but nothing we can do to 'reclaim' or 'reuse' memory.
         }
 
         public void OnAllocate(ref NativeAllocator<TOptions> allocator, Pointer ptr)

@@ -147,8 +147,7 @@ namespace Sparrow
                 when (oom.Data?.Contains("Recoverable") != true) // this can be raised if the commit charge is low
             {
                 // we were too eager with memory allocations?
-                newBuffer = allocator._nativeAllocator.Allocate(ref allocator._nativeAllocator, requestedSize);                
-                newSize = requestedSize;           
+                newBuffer = allocator._nativeAllocator.Allocate(ref allocator._nativeAllocator, requestedSize);
             }            
 
             if (allocator._currentBuffer.IsValid)

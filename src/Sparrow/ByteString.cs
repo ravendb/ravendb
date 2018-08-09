@@ -425,7 +425,7 @@ namespace Sparrow
             public bool ElectricFenceEnabled => false;
             public bool Zeroed => false;
 
-            // This block size will ensure that there are at most 128Mb of global ByteString ready for to be handed out.
+            // This block size will ensure that there are at most 4Mb of global ByteString ready for to be handed out.
             // It is high enough to not trigger many low memory notifications on small hardware, but high enough to support
             // heavy threading memory reuse. 
             public int BlockSize => 4 * Constants.Size.Megabyte;

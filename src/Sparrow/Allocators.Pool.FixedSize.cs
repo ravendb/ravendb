@@ -101,7 +101,12 @@ namespace Sparrow
             if (section.IsValid)
             {
                 // Copy the section pointer that is already freed to the current memory. 
-                *(Pointer*)ptr.Ptr = section;
+                *(BlockPointer*)ptr.Ptr = section;
+            }
+            else
+            {
+                // Put a copy of the currently released memory block on the front. 
+                *(BlockPointer*)ptr.Ptr = new BlockPointer();
             }
 
             // Put a copy of the currently released memory block on the front. 

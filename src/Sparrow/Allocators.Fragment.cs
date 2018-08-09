@@ -183,6 +183,11 @@ namespace Sparrow
                 var ptr = segment;
                 allocator._internalAllocator.Release(ref ptr);
             }
+
+            allocator._allocatedSegments.Clear();
+            allocator._currentBuffer = new Pointer();
+            allocator._ptrCurrent = null;
+            allocator._used = 0;
         }
 
         public void OnAllocate(ref FragmentAllocator<TOptions> allocator, Pointer ptr) {}
@@ -200,6 +205,7 @@ namespace Sparrow
             }
 
             allocator._allocatedSegments.Clear();
+            allocator._currentBuffer = new Pointer();
             allocator._ptrCurrent = null;
             allocator._used = 0;
         }

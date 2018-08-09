@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Esprima;
+using FastTests.Voron.FixedSize;
 using Sparrow;
 using Sparrow.Global;
 using Xunit;
@@ -506,5 +509,285 @@ namespace FastTests.Sparrow
                 BeforeFinalizationCalled = true;
             }
         }
+
+        private struct HashedPointer
+        {
+            public ulong Hash;
+            public Pointer Pointer;
+        }
+
+        private const int InvalidSize = -1;
+
+        private void StressTester<TAllocator, TOptions>(Allocator<TAllocator> allocator, int seed, bool supportsRenew = true, int fixedSize = InvalidSize)
+            where TAllocator : struct, IAllocator<TAllocator, Pointer>
+            where TOptions : struct, IAllocatorOptions
+        {
+            var rnd = new Random(seed);
+
+            const int Allocate = 0;
+            const int Deallocate = Allocate + 3;
+            const int DeallocateLast = Deallocate + 1;
+            const int TouchMemory = DeallocateLast + 1;
+            const int CheckMemory = TouchMemory + 1;
+            const int Reset = CheckMemory + 1;
+            const int Renew = Reset + 1;
+
+            int potentialActions = supportsRenew ? Renew : Reset;
+
+            using (allocator)
+            {
+                allocator.Initialize(default(TOptions));
+
+                var allocated = new List<HashedPointer>();
+                for (int i = 0; i < 1000000; i++)
+                {
+                    int action = rnd.Next(potentialActions + 1);
+
+                    if (action < Deallocate) // We are allocating
+                    {
+                        int allocationSize = fixedSize != InvalidSize ? fixedSize : rnd.Next(16000) + 1;
+
+                        Pointer ptr = allocator.Allocate(allocationSize);
+                        var hash = Hashing.XXHash64.Calculate((byte*)ptr.Ptr, (ulong)ptr.Size);
+                        allocated.Add(new HashedPointer { Hash = hash, Pointer = ptr });
+                        continue;
+                    }
+
+                    if (allocated.Count == 0)
+                        continue; // Nothing to do here. 
+
+                    if (action == Deallocate || action == DeallocateLast)
+                    {
+                        int pointerIndex = action == DeallocateLast ? allocated.Count - 1 : rnd.Next(allocated.Count);
+
+                        Pointer a = allocated[pointerIndex].Pointer;
+                        allocated[pointerIndex] = allocated[allocated.Count - 1];
+                        allocated.RemoveAt(allocated.Count - 1);
+
+                        allocator.Release(ref a);
+                    }
+                    else if (action == TouchMemory)
+                    {
+                        for (int idx = 0; idx < allocated.Count; idx++)
+                        {
+                            var hashedPtr = allocated[idx];
+                            var localPtr = hashedPtr.Pointer;
+                            Assert.True(localPtr.IsValid);
+
+                            int location = rnd.Next(localPtr.Size);
+                            if (location >= localPtr.Size)
+                                throw new InvalidOperationException();
+
+                            var span = localPtr.AsSpan();
+                            span[location] = 1;
+
+                            var hash = Hashing.XXHash64.Calculate((byte*)localPtr.Ptr, (ulong)localPtr.Size);
+                            hashedPtr.Hash = hash;
+                            allocated[idx] = hashedPtr;
+                        }
+                    }
+                    else if (action == CheckMemory)
+                    {
+                        for (int idx = 0; idx < allocated.Count; idx++)
+                        {
+                            var hashedPtr = allocated[idx];
+                            var localPtr = hashedPtr.Pointer;
+                            Assert.True(localPtr.IsValid);
+
+                            var hash = Hashing.XXHash64.Calculate((byte*)localPtr.Ptr, (ulong)localPtr.Size);
+                            Assert.Equal(hashedPtr.Hash, hash);
+                        }
+                    }
+                    else if (action == Reset)
+                    {
+                        if (rnd.Next(10) == 0)
+                        {
+                            foreach (var block in allocated)
+                            {
+                                var ptr = block.Pointer;
+                                allocator.Release(ref ptr);
+                            }
+
+                            allocated.Clear();
+                            allocator.Reset();
+                        }
+                    }
+                    else if (action == Renew)
+                    {
+                        if (rnd.Next(10) == 0)
+                        {
+                            foreach (var block in allocated)
+                            {
+                                var ptr = block.Pointer;
+                                allocator.Release(ref ptr);
+                            }
+
+                            allocated.Clear();
+                            allocator.Renew();
+                        }
+                    }
+                }
+
+                foreach (var block in allocated)
+                {
+                    var ptr = block.Pointer;
+                    allocator.Release(ref ptr);
+                }
+            }
+        }
+
+        private struct HashedBlockPointer
+        {
+            public ulong Hash;
+            public BlockPointer Pointer;
+        }
+
+        private void StressBlockTester<TAllocator, TOptions>(BlockAllocator<TAllocator> allocator, int seed, bool supportsRenew = true)
+            where TAllocator : struct, IAllocator<TAllocator, BlockPointer>
+            where TOptions : struct, IAllocatorOptions
+        {
+            var rnd = new Random(seed);
+
+            const int Allocate = 0;
+            const int Deallocate = Allocate + 3;
+            const int DeallocateLast = Deallocate + 1;
+            const int TouchMemory = DeallocateLast + 1;
+            const int CheckMemory = TouchMemory + 1;
+            const int Reset = CheckMemory + 1;
+            const int Renew = Reset + 1;
+
+            int potentialActions = supportsRenew ? Renew : Reset;
+
+            using (allocator)
+            {
+                allocator.Initialize(default(TOptions));
+
+                var allocated = new List<HashedBlockPointer>();
+                for (int i = 0; i < 1000000; i++)
+                {
+                    int action = rnd.Next(potentialActions + 1);
+
+                    if (action < Deallocate) // We are allocating
+                    {
+                        BlockPointer ptr = allocator.Allocate(rnd.Next(16000) + 1);
+                        var hash = Hashing.XXHash64.Calculate((byte*)ptr.Ptr, (ulong)ptr.Size);
+                        allocated.Add(new HashedBlockPointer { Hash = hash, Pointer = ptr });
+                        continue;
+                    }
+
+                    if (allocated.Count == 0)
+                        continue; // Nothing to do here. 
+
+                    if (action == Deallocate || action == DeallocateLast)
+                    {
+                        int pointerIndex = action == DeallocateLast ? allocated.Count - 1 : rnd.Next(allocated.Count);
+
+                        BlockPointer a = allocated[pointerIndex].Pointer;
+                        allocated[pointerIndex] = allocated[allocated.Count - 1];
+                        allocated.RemoveAt(allocated.Count - 1);
+
+                        allocator.Release(ref a);
+                    }
+                    else if (action == TouchMemory)
+                    {
+                        for (int idx = 0; idx < allocated.Count; idx++)
+                        {
+                            var hashedPtr = allocated[idx];
+                            var localPtr = hashedPtr.Pointer;
+                            Assert.True(localPtr.IsValid);
+
+                            int location = rnd.Next(localPtr.Size);
+                            if (location >= localPtr.Size)
+                                throw new InvalidOperationException();
+
+                            var span = localPtr.AsSpan();
+                            span[location] = 1;
+
+                            var hash = Hashing.XXHash64.Calculate((byte*)localPtr.Ptr, (ulong)localPtr.Size);
+                            hashedPtr.Hash = hash;
+                            allocated[idx] = hashedPtr;
+                        }
+                    }
+                    else if (action == CheckMemory)
+                    {
+                        for (int idx = 0; idx < allocated.Count; idx++)
+                        {
+                            var hashedPtr = allocated[idx];
+                            var localPtr = hashedPtr.Pointer;
+                            Assert.True(localPtr.IsValid);
+
+                            var hash = Hashing.XXHash64.Calculate((byte*)localPtr.Ptr, (ulong)localPtr.Size);
+                            Assert.Equal(hashedPtr.Hash, hash);
+                        }
+                    }
+                    else if (action == Reset)
+                    {
+                        if (rnd.Next(10) == 0)
+                        {
+                            foreach (var block in allocated)
+                            {
+                                BlockPointer ptr = block.Pointer;
+                                allocator.Release(ref ptr);
+                            }
+
+                            allocated.Clear();
+                            allocator.Reset();
+                        }
+                    }
+                    else if (action == Renew)
+                    {
+                        if (rnd.Next(10) == 0)
+                        {
+                            foreach (var block in allocated)
+                            {
+                                BlockPointer ptr = block.Pointer;
+                                allocator.Release(ref ptr);
+                            }
+
+                            allocated.Clear();
+                            allocator.Renew();
+                        }
+                    }
+                }
+
+                foreach (var block in allocated)
+                {
+                    var ptr = block.Pointer;
+                    allocator.Release(ref ptr);
+                }
+            }
+        }
+
+        [Theory]
+        [InlineDataWithRandomSeed]
+        public void Arena_Stress_Testing(int seed)
+        {
+            StressTester<ArenaAllocator<ArenaAllocator.Default>, ArenaAllocator.Default>(new Allocator<ArenaAllocator<ArenaAllocator.Default>>(), seed);
+        }
+
+        [Theory]
+        [InlineDataWithRandomSeed]
+        public void Fragment_Stress_Testing(int seed)
+        {
+            StressTester<FragmentAllocator<FragmentAllocator.Default>, FragmentAllocator.Default>(new Allocator<FragmentAllocator<FragmentAllocator.Default>>(), seed, supportsRenew: false);
+        }
+
+        [Theory]
+        [InlineDataWithRandomSeed]
+        public void FixedSize_Stress_Testing(int seed)
+        {
+            int blockSize = default(FixedSizePoolAllocator.Default).MaxBlockSize;
+            StressTester<FixedSizePoolAllocator<FixedSizePoolAllocator.Default>, FixedSizePoolAllocator.Default>(new Allocator<FixedSizePoolAllocator<FixedSizePoolAllocator.Default>>(), seed, supportsRenew: false, fixedSize: blockSize);
+        }
+
+        
+
+        [Theory]
+        [InlineDataWithRandomSeed]
+        public void Pool_Stress_Testing(int seed)
+        {
+            StressBlockTester<PoolAllocator<PoolAllocator.Default>, PoolAllocator.Default>(new BlockAllocator<PoolAllocator<PoolAllocator.Default>>(), seed, supportsRenew: false);
+        }
+
     }
 }

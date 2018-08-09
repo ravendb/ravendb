@@ -79,7 +79,7 @@ namespace Sparrow
             {
                 int vsize = Bits.PowerOf2(Math.Max(sizeof(BlockPointer), size));
 
-                var index = Bits.MostSignificantBit(vsize) - 2; // We use -2 because we are not starting at 0. 
+                var index = Bits.MostSignificantBit(vsize) - 2; // We use -2 because we are not starting at 0.                                   
                 if (index < allocator._freed.Length && allocator._freed[index].IsValid)
                 {
                     // Stack copy of the pointer itself.
@@ -117,7 +117,7 @@ namespace Sparrow
             var index = Bits.MostSignificantBit(size) - 2; // We use -2 because we are not starting at 0. 
 
             // Retaining chunks bigger than the max chunk size could clutter the allocator, so we reroute it to the backing allocator.
-            if (index >= allocator._freed.Length)
+            if (index < 0 || index >= allocator._freed.Length)
                 goto UnlikelyRelease;
 
             var section = allocator._freed[index];
