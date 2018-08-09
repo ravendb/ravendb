@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Sparrow.Global;
 
 namespace Sparrow
@@ -57,14 +58,38 @@ namespace Sparrow
         // Buffers that has been used and cannot be cleaned until a reset happens.
         private List<Pointer> _allocatedSegments;
 
-        // How many bytes has this arena allocated from its memory provider since resets 
-        // This is the total memory from this allocator which is in customer's hands.
-        public long Allocated { get; private set; }
+        public long TotalAllocated
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
+
+        public long Allocated
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
+        public long InUse
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
 
         public void Initialize(ref FragmentAllocator<TOptions> allocator)
         {
+            // Initialize the struct pointers structure used to navigate over the allocated memory.    
             allocator._internalReadyToUseMemorySegments = new SortedList<int, Pointer>(new DuplicateKeyComparer<int>());
             allocator._allocatedSegments = new List<Pointer>();
+
+            allocator.TotalAllocated = 0;
+            allocator.Allocated = 0;
+            allocator.InUse = 0;
         }
 
         public void Configure<TConfig>(ref FragmentAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
@@ -91,7 +116,8 @@ namespace Sparrow
                 Pointer ptr = new Pointer(allocator._ptrCurrent, size);
                 allocator._ptrCurrent += size;
                 allocator._used += size;
-                allocator.Allocated += size;
+                allocator.TotalAllocated += size;
+                allocator.InUse += size;
 
                 return ptr;
             }
@@ -100,7 +126,8 @@ namespace Sparrow
             // PERF: For this kind of allocations we dont care if we hit cold code.
             Pointer segment = allocator._internalAllocator.Allocate(size);
             allocator._used += segment.Size;
-            allocator.Allocated += segment.Size;
+            allocator.TotalAllocated += segment.Size;
+            allocator.InUse += segment.Size;
 
             allocator._allocatedSegments.Add(segment);
             return segment;
@@ -143,6 +170,8 @@ namespace Sparrow
             else
             {
                 segment = allocator._internalAllocator.Allocate(allocator._options.BlockSize);
+                allocator.Allocated += segment.Size;
+
                 allocator._allocatedSegments.Add(segment);
             }
 
@@ -162,15 +191,17 @@ namespace Sparrow
                 // Consider to compose this allocator with a PoolAllocator instead if high fragmentation is expected. 
                 if (ptr.Size > allocator._options.ReuseBlocksBiggerThan)
                     allocator._internalReadyToUseMemorySegments.Add(ptr.Size, ptr);
-
-                return;
+            }
+            else
+            {
+                // since the returned allocation is at the end of the arena, we can just move
+                // the pointer back
+                allocator._used -= ptr.Size;
+                allocator._ptrCurrent -= ptr.Size;
             }
 
-            // since the returned allocation is at the end of the arena, we can just move
-            // the pointer back
-            allocator._used -= ptr.Size;
-            allocator.Allocated -= ptr.Size;
-            allocator._ptrCurrent -= ptr.Size;
+            allocator.InUse -= ptr.Size;
+            ptr = new Pointer();
         }
 
         public void Reset(ref FragmentAllocator<TOptions> allocator)
@@ -188,6 +219,10 @@ namespace Sparrow
             allocator._currentBuffer = new Pointer();
             allocator._ptrCurrent = null;
             allocator._used = 0;
+
+            allocator.TotalAllocated = 0;
+            allocator.Allocated = 0;
+            allocator.InUse = 0;
         }
 
         public void OnAllocate(ref FragmentAllocator<TOptions> allocator, Pointer ptr) {}
@@ -208,6 +243,10 @@ namespace Sparrow
             allocator._currentBuffer = new Pointer();
             allocator._ptrCurrent = null;
             allocator._used = 0;
+
+            allocator.TotalAllocated = 0;
+            allocator.Allocated = 0;
+            allocator.InUse = 0;
         }
     }
 }

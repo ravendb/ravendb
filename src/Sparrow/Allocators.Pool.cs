@@ -32,6 +32,25 @@ namespace Sparrow
                 return allocator;
             }
         }
+
+        public struct Static : IPoolAllocatorOptions, INativeOptions, INativeGlobalAllocatorOptions
+        {
+            public bool UseSecureMemory => false;
+            public bool ElectricFenceEnabled => false;
+            public bool Zeroed => false;
+
+            public int MaxBlockSize => 64 * Constants.Size.Megabyte;
+            public int MaxPoolSizeInBytes => 256 * Constants.Size.Megabyte;
+
+            public bool HasOwnership => true;
+
+            public IAllocatorComposer<Pointer> CreateAllocator()
+            {
+                var allocator = new Allocator<NativeAllocator<Static>>();
+                allocator.Initialize(default(Static));
+                return allocator;
+            }
+        }
     }
 
     /// <summary>
@@ -49,14 +68,34 @@ namespace Sparrow
         // PERF: This should be devirtualized. 
         private IAllocatorComposer<Pointer> _internalAllocator;
 
-        public long Allocated { get; private set; }
-        public long Used { get; private set; }
+        public long TotalAllocated
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
+
+        public long Allocated
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
+        public long InUse
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
 
         public void Initialize(ref PoolAllocator<TOptions> allocator)
         {
-            // Initialize the struct pointers structure used to navigate over the allocated memory.          
+            allocator.TotalAllocated = 0;
             allocator.Allocated = 0;
-            allocator.Used = 0;
+            allocator.InUse = 0;
         }
 
         public void Configure<TConfig>(ref PoolAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
@@ -66,6 +105,8 @@ namespace Sparrow
 
             // This cast will get evicted by the JIT.             
             allocator._options = (TOptions)(object)configuration;
+
+            // Initialize the struct pointers structure used to navigate over the allocated memory.    
             allocator._freed = new BlockPointer[Bits.MostSignificantBit(allocator._options.MaxBlockSize)];
             allocator._internalAllocator = allocator._options.CreateAllocator();
         }
@@ -87,16 +128,18 @@ namespace Sparrow
 
                     // Pointer was holding the marker for the next released block instead. 
                     allocator._freed[index] = *((BlockPointer*)section.Ptr);
-                    allocator.Used += section.Size;
+                    allocator.InUse += size;
+                    allocator.TotalAllocated += section.Size;
 
                     return new BlockPointer(section.Ptr, section.BlockSize, size);
                 }
             }        
 
-            allocator.Used += size;
-            allocator.Allocated += size;
-
             var ptr = _internalAllocator.Allocate(size);
+            allocator.InUse += size;
+            allocator.Allocated += ptr.Size;
+            allocator.TotalAllocated += ptr.Size;
+
             return new BlockPointer(ptr.Ptr, size, size);
         }
 
@@ -105,7 +148,7 @@ namespace Sparrow
         {
             // When MaxPoolSizeInBytes is zero, we are effectively disabling the pooling code generation.
             // It is useful for cases where composition is done through type chaining. 
-            if (allocator.Used > allocator._options.MaxPoolSizeInBytes || Allocator.LowMemoryFlag.IsRaised() || allocator._options.MaxPoolSizeInBytes == 0)
+            if (allocator.InUse > allocator._options.MaxPoolSizeInBytes || Allocator.LowMemoryFlag.IsRaised() || allocator._options.MaxPoolSizeInBytes == 0)
                 goto UnlikelyRelease;
 
             int originalSize = ptr.Size;
@@ -133,8 +176,9 @@ namespace Sparrow
             }
 
             allocator._freed[index] = ptr;
+            allocator.InUse -= originalSize;
 
-            allocator.Used -= originalSize;
+            ptr = new Pointer(); // Nullify the pointer
 
             return;
 
@@ -144,19 +188,26 @@ namespace Sparrow
             // that allows us to release some steam at the cost of hitting cold code. 
             // https://github.com/dotnet/coreclr/issues/6024
 
-            allocator.Used -= ptr.Size;
+            allocator.InUse -= ptr.Size;
+            allocator.Allocated -= ptr.BlockSize;
 
             Pointer nakedPtr = new Pointer(ptr.Ptr, ptr.BlockSize);
             allocator._internalAllocator.Release(ref nakedPtr);
+
+            ptr = new Pointer(); // Nullify the pointer
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Renew(ref PoolAllocator<TOptions> allocator)
         {
             if (Allocator.LowMemoryFlag.IsRaised())
+            {
                 ReleaseMemoryPool(ref allocator);
-
+                allocator.Allocated = 0;
+            }
+                
             _internalAllocator.Renew();
+            allocator.InUse = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -168,6 +219,10 @@ namespace Sparrow
                 ResetMemoryPool(ref allocator);
 
             _internalAllocator.Reset();
+
+            allocator.TotalAllocated = 0;
+            allocator.Allocated = 0;
+            allocator.InUse = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

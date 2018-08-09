@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using Esprima;
-using FastTests.Voron.FixedSize;
 using Sparrow;
 using Sparrow.Global;
 using Xunit;
@@ -11,18 +9,22 @@ namespace FastTests.Sparrow
 {
     public unsafe class AllocatorsTests : NoDisposalNeeded
     {
+        // We typically use the Static versions that bypasses the leaks checks because we are not looking into testing that condition.             
+
         [Fact]
         public void Alloc_NativeDefaultByBytes()
         {
-            var allocator = new Allocator<NativeAllocator<NativeAllocator.Default>>();
-            allocator.Initialize(default(NativeAllocator.Default));
+            using (var allocator = new Allocator<NativeAllocator<NativeAllocator.Default>>())
+            {
+                allocator.Initialize(default(NativeAllocator.Default));
 
-            var ptr = allocator.Allocate(1000);
-            Assert.Equal(1000, ptr.Size);
-            Assert.True(ptr.IsValid);
+                var ptr = allocator.Allocate(1000);
+                Assert.Equal(1000, ptr.Size);
+                Assert.True(ptr.IsValid);
 
-            allocator.Release(ref ptr);
-            Assert.False(ptr.IsValid);
+                allocator.Release(ref ptr);
+                Assert.False(ptr.IsValid);
+            }
         }
 
         [StructLayout(LayoutKind.Explicit, Size = 16)]
@@ -35,196 +37,190 @@ namespace FastTests.Sparrow
         [Fact]
         public void Alloc_NativeDefaultByType()
         {
-            var allocator = new Allocator<NativeAllocator<NativeAllocator.Default>>();
-            allocator.Initialize(default(NativeAllocator.Default));
+            using (var allocator = new Allocator<NativeAllocator<NativeAllocator.Default>>())
+            {                
+                allocator.Initialize(default(NativeAllocator.Default));
 
-            var ptr = allocator.Allocate<MyStruct>(10);
-            Assert.Equal(10, ptr.Size);
-            Assert.Equal(10 * sizeof(MyStruct), ptr.SizeAsBytes);
-            Assert.True(ptr.IsValid);
+                var ptr = allocator.Allocate<MyStruct>(10);
+                Assert.Equal(10, ptr.Size);
+                Assert.Equal(10 * sizeof(MyStruct), ptr.SizeAsBytes);
+                Assert.True(ptr.IsValid);
 
-            allocator.Release(ref ptr);
-            Assert.False(ptr.IsValid);
+                allocator.Release(ref ptr);
+                Assert.False(ptr.IsValid); 
+            }
         }
 
         [Fact]
         public void Alloc_NativeSpanByByte_Whole()
         {
-            var allocator = new Allocator<NativeAllocator<NativeAllocator.Default>>();
-            allocator.Initialize(default(NativeAllocator.Default));
+            using (var allocator = new Allocator<NativeAllocator<NativeAllocator.Default>>())
+            {
+                allocator.Initialize(default(NativeAllocator.Default));
 
-            var ptr = allocator.Allocate(1000);
+                var ptr = allocator.Allocate(1000);
 
-            var span = ptr.AsSpan();
-            Assert.Equal(span.Length, 1000);
-            Assert.False(span.IsEmpty);
-            for (int i = 0; i < span.Length; i++)
-                span[i] = 3;
+                var span = ptr.AsSpan();
+                Assert.Equal(span.Length, 1000);
+                Assert.False(span.IsEmpty);
+                for (int i = 0; i < span.Length; i++)
+                    span[i] = 3;
 
-            byte* nakedPtr = (byte*)ptr.Ptr;
-            for (int i = 0; i < 1000; i++)
-                Assert.Equal(3, nakedPtr[i]);
+                byte* nakedPtr = (byte*)ptr.Ptr;
+                for (int i = 0; i < 1000; i++)
+                    Assert.Equal(3, nakedPtr[i]);
+
+                allocator.Release(ref ptr);
+            }
         }
 
         [Fact]
         public void Alloc_NativeSpanByByte_Chunk()
         {
-            var allocator = new Allocator<NativeAllocator<NativeAllocator.DefaultZero>>();
-            allocator.Initialize(default(NativeAllocator.DefaultZero));
+            using (var allocator = new Allocator<NativeAllocator<NativeAllocator.DefaultZero>>())
+            {
+                allocator.Initialize(default(NativeAllocator.DefaultZero));
 
-            var ptr = allocator.Allocate(1000);
+                var ptr = allocator.Allocate(1000);
 
-            var span = ptr.AsSpan(100, 100);
-            Assert.Equal(span.Length, 100);
-            Assert.False(span.IsEmpty);
-            for (int i = 0; i < span.Length; i++)
-                span[i] = 3;
+                var span = ptr.AsSpan(100, 100);
+                Assert.Equal(span.Length, 100);
+                Assert.False(span.IsEmpty);
+                for (int i = 0; i < span.Length; i++)
+                    span[i] = 3;
 
-            var whole = ptr.AsSpan();
-            for (int i = 0; i < span.Length; i++)
-                Assert.Equal(i >= 100 && i < 200 ? 3 : 0, whole[i]);
+                var whole = ptr.AsSpan();
+                for (int i = 0; i < span.Length; i++)
+                    Assert.Equal(i >= 100 && i < 200 ? 3 : 0, whole[i]);
 
-            span = ptr.AsSpan(200);
-            for (int i = 0; i < span.Length; i++)
-                span[i] = 3;
+                span = ptr.AsSpan(200);
+                for (int i = 0; i < span.Length; i++)
+                    span[i] = 3;
 
-            for (int i = 0; i < span.Length; i++)
-                Assert.Equal(i < 200 ? 3 : 0, whole[i]);
-        }
+                for (int i = 0; i < span.Length; i++)
+                    Assert.Equal(i < 200 ? 3 : 0, whole[i]);
 
-        //[Fact]
-        //public void Alloc_NativeSpanByByte_4KAligned()
-        //{
-        //    var allocator = new Allocator<NativeAllocator<NativeAllocator.Default4K>>();
-        //    allocator.Initialize(default(NativeAllocator.Default4K));
-
-        //    var ptr = allocator.Allocate(1000);
-        //    Assert.True((long)ptr.Ptr % 4096 == 0);
-        //    Assert.Equal(1000, ptr.Size);
-        //    Assert.True(ptr.IsValid);
-
-        //    allocator.Release(ptr);
-        //    Assert.False(ptr.IsValid);
-        //}
-
-        [Fact]
-        public void Alloc_NativeUnsupported()
-        {
-            var allocator = new Allocator<NativeAllocator<NativeAllocator.Default>>();
-            Assert.Throws<NotSupportedException>(() => allocator.Initialize(default(NativeAllocator.DefaultZero)));
-
-            allocator.Initialize(default(NativeAllocator.Default));
-
-            Assert.Throws<NotSupportedException>(() => allocator.Reset());
-            Assert.Throws<NotSupportedException>(() => allocator.Renew());
+                allocator.Release(ref ptr);
+            }            
         }
 
         [Fact]
         public void Alloc_PoolDefaultByBytes()
         {
-            var allocator = new BlockAllocator<PoolAllocator<PoolAllocator.Default>>();
-            allocator.Initialize(default(PoolAllocator.Default));
+            using (var allocator = new BlockAllocator<PoolAllocator<PoolAllocator.Static>>())
+            {
+                allocator.Initialize(default(PoolAllocator.Static));
 
-            var ptr = allocator.Allocate(1000);
-            Assert.Equal(1000, ptr.Size);
-            Assert.True(ptr.IsValid);
+                var ptr = allocator.Allocate(1000);
+                Assert.Equal(1000, ptr.Size);
+                Assert.True(ptr.IsValid);
 
-            allocator.Release(ref ptr);
-            Assert.False(ptr.IsValid);
+                allocator.Release(ref ptr);
+                Assert.False(ptr.IsValid);
+            }
         }
 
         [Fact]
         public void Alloc_PoolReturnUsedBytes()
         {
-            var allocator = new BlockAllocator<PoolAllocator<PoolAllocator.Default>>();
-            allocator.Initialize(default(PoolAllocator.Default));
+            using (var allocator = new BlockAllocator<PoolAllocator<PoolAllocator.Static>>())
+            {
+                allocator.Initialize(default(PoolAllocator.Static));
 
-            int size = 1000;
+                int size = 1000;
 
-            var ptr = allocator.Allocate(1024);
-            Assert.Equal(1024, ptr.BlockSize);
-            Assert.True(ptr.IsValid);
+                var ptr = allocator.Allocate(1024);
+                Assert.Equal(1024, ptr.BlockSize);
+                Assert.True(ptr.IsValid);
 
-            long pointerAddress = (long)ptr.Ptr;
+                long pointerAddress = (long)ptr.Ptr;
 
-            allocator.Release(ref ptr);
-            Assert.False(ptr.IsValid);
+                allocator.Release(ref ptr);
+                Assert.False(ptr.IsValid);
 
-            ptr = allocator.Allocate(size);
-            Assert.Equal(size, ptr.Size);
-            Assert.True(ptr.IsValid);
+                ptr = allocator.Allocate(size);
+                Assert.Equal(size, ptr.Size);
+                Assert.True(ptr.IsValid);
 
-            Assert.Equal(pointerAddress, (long)ptr.Ptr);
+                Assert.Equal(pointerAddress, (long)ptr.Ptr);
+
+                allocator.Release(ref ptr);
+            }
         }
 
         [Fact]
         public void Alloc_PoolReturnBlockBytes()
         {
-            var allocator = new BlockAllocator<PoolAllocator<PoolAllocator.Default>>();
-            allocator.Initialize(default(PoolAllocator.Default));
-
-            int size = 1000;
-
-            long[] addresses = new long[5];
-            var pointers = new BlockPointer[5];
-            for (int i = 0; i < 5; i++)
+            using (var allocator = new BlockAllocator<PoolAllocator<PoolAllocator.Static>>())
             {
-                var ptr = allocator.Allocate(1024);
-                Assert.Equal(1024, ptr.Size);
-                Assert.True(ptr.IsValid);
-                Assert.Equal(1024, ptr.BlockSize);
+                allocator.Initialize(default(PoolAllocator.Static));
 
-                pointers[i] = ptr;
-                addresses[i] = (long)ptr.Ptr;
+                int size = 1000;
+
+                long[] addresses = new long[5];
+                var pointers = new BlockPointer[5];
+                for (int i = 0; i < 5; i++)
+                {
+                    var ptr = allocator.Allocate(1024);
+                    Assert.Equal(1024, ptr.Size);
+                    Assert.True(ptr.IsValid);
+                    Assert.Equal(1024, ptr.BlockSize);
+
+                    pointers[i] = ptr;
+                    addresses[i] = (long)ptr.Ptr;
+                }
+
+                for (int i = 0; i < 5; i++)
+                {
+                    allocator.Release(ref pointers[i]);
+                    Assert.False(pointers[i].IsValid);
+                }
+
+                for (int i = 0; i < 5; i++)
+                {
+                    var ptr = allocator.Allocate(size);
+                    Assert.Contains((long)ptr.Ptr, addresses);
+                    Assert.Equal(1024, ptr.BlockSize);
+                }
+
+                var nonReusedPtr = allocator.Allocate(size);
+                Assert.Equal(size, nonReusedPtr.Size);
+                Assert.Equal(size, nonReusedPtr.BlockSize);
+                Assert.True(nonReusedPtr.IsValid);
+
+                // Cannot check for actual different addresses because the memory system may return it back to us again. 
             }
-
-            for (int i = 0; i < 5; i++)
-            {
-                allocator.Release(ref pointers[i]);
-                Assert.False(pointers[i].IsValid);
-            }
-
-            for (int i = 0; i < 5; i++)
-            {
-                var ptr = allocator.Allocate(size);
-                Assert.Contains((long)ptr.Ptr, addresses);
-                Assert.Equal(1024, ptr.BlockSize);
-            }
-
-            var nonReusedPtr = allocator.Allocate(size);
-            Assert.Equal(size, nonReusedPtr.Size);
-            Assert.Equal(size, nonReusedPtr.BlockSize);
-            Assert.True(nonReusedPtr.IsValid);
-            // Cannot check for actual different addresses because the memory system may return it back to us again. 
         }
 
 
         [Fact]
         public void Alloc_ThreadAffinePoolReturnUsedBytes()
         {
-            var allocator = new FixedSizeAllocator<FixedSizeThreadAffinePoolAllocator<FixedSizeThreadAffinePoolAllocator.Default>>();
-            allocator.Initialize(default(FixedSizeThreadAffinePoolAllocator.Default));
+            using (var allocator = new FixedSizeAllocator<FixedSizeThreadAffinePoolAllocator<FixedSizeThreadAffinePoolAllocator.Static>>())
+            {
+                allocator.Initialize(default(FixedSizeThreadAffinePoolAllocator.Static));
 
-            var config = default(FixedSizeThreadAffinePoolAllocator.Default);
+                var config = default(FixedSizeThreadAffinePoolAllocator.Default);
 
-            var ptr = allocator.Allocate();
-            Assert.Equal(config.BlockSize, ptr.Size);
-            Assert.True(ptr.IsValid);
+                var ptr = allocator.Allocate();
+                Assert.Equal(config.BlockSize, ptr.Size);
+                Assert.True(ptr.IsValid);
 
-            long pointerAddress = (long)ptr.Ptr;
+                long pointerAddress = (long)ptr.Ptr;
 
-            allocator.Release(ref ptr);
-            Assert.False(ptr.IsValid);
+                allocator.Release(ref ptr);
+                Assert.False(ptr.IsValid);
 
-            ptr = allocator.Allocate();
-            Assert.Equal(config.BlockSize, ptr.Size);
-            Assert.True(ptr.IsValid);
+                ptr = allocator.Allocate();
+                Assert.Equal(config.BlockSize, ptr.Size);
+                Assert.True(ptr.IsValid);
 
-            Assert.Equal(pointerAddress, (long)ptr.Ptr);
+                Assert.Equal(pointerAddress, (long)ptr.Ptr);
+            }
         }
 
 
-        public struct FixedSize : IArenaAllocatorOptions
+        public struct FixedSize : IArenaAllocatorOptions, INativeGlobalAllocatorOptions
         {
             private struct Internal : IArenaGrowthStrategy
             {
@@ -259,149 +255,158 @@ namespace FastTests.Sparrow
         [Fact]
         public void Alloc_ArenaReturnBlockBytes()
         {
-            var allocator = new Allocator<ArenaAllocator<FixedSize>>();
-            allocator.Initialize(default(FixedSize));
-
-            int size = 1000;
-
-            long[] addresses = new long[5];
-            var pointers = new Pointer[5];
-            for (int i = 0; i < 5; i++)
+            using (var allocator = new Allocator<ArenaAllocator<FixedSize>>())
             {
-                var ptr = allocator.Allocate(size);
-                Assert.Equal(size, ptr.Size);
-                Assert.True(ptr.IsValid);
+                allocator.Initialize(default(FixedSize));
 
-                pointers[i] = ptr;
-                addresses[i] = (long)ptr.Ptr;
+                int size = 1000;
+
+                long[] addresses = new long[5];
+                var pointers = new Pointer[5];
+                for (int i = 0; i < 5; i++)
+                {
+                    var ptr = allocator.Allocate(size);
+                    Assert.Equal(size, ptr.Size);
+                    Assert.True(ptr.IsValid);
+
+                    pointers[i] = ptr;
+                    addresses[i] = (long)ptr.Ptr;
+                }
+
+                for (int i = 4; i >= 0; i--)
+                {
+                    allocator.Release(ref pointers[i]);
+                    Assert.False(pointers[i].IsValid);
+                }
+
+                for (int i = 0; i < 4; i++)
+                {
+                    var ptr = allocator.Allocate(size);
+                    Assert.Contains((long)ptr.Ptr, addresses);
+                }
+
+                var nonReusedPtr = allocator.Allocate(size);
+                Assert.Equal(size, nonReusedPtr.Size);
+                Assert.True(nonReusedPtr.IsValid);
+                // Cannot check for actual different addresses because the memory system may return it back to us again. 
             }
-
-            for (int i = 4; i >= 0; i--)
-            {
-                allocator.Release(ref pointers[i]);
-                Assert.False(pointers[i].IsValid);
-            }
-
-            for (int i = 0; i < 4; i++)
-            {
-                var ptr = allocator.Allocate(size);
-                Assert.Contains((long)ptr.Ptr, addresses);
-            }
-
-            var nonReusedPtr = allocator.Allocate(size);
-            Assert.Equal(size, nonReusedPtr.Size);
-            Assert.True(nonReusedPtr.IsValid);
-            // Cannot check for actual different addresses because the memory system may return it back to us again. 
         }
 
         [Fact]
         public void Alloc_ArenaGrowMultiple()
         {
-            var allocator = new Allocator<ArenaAllocator<FixedSize>>();
-            allocator.Initialize(default(FixedSize));
-
-            int size = 9000;
-            Pointer ptr;
-
-            int length = 10;
-
-            long[] addresses = new long[length];
-            var pointers = new Pointer[length];
-            for (int i = 0; i < length; i++)
+            using (var allocator = new Allocator<ArenaAllocator<FixedSize>>())
             {
+                allocator.Initialize(default(FixedSize));
+
+                int size = 9000;
+                Pointer ptr;
+
+                int length = 10;
+
+                long[] addresses = new long[length];
+                var pointers = new Pointer[length];
+                for (int i = 0; i < length; i++)
+                {
+                    ptr = allocator.Allocate(size);
+                    Assert.Equal(size, ptr.Size);
+                    Assert.True(ptr.IsValid);
+
+                    pointers[i] = ptr;
+                    addresses[i] = (long)ptr.Ptr;
+                }
+
+                for (int i = length - 1; i >= 0; i--)
+                {
+                    allocator.Release(ref pointers[i]);
+                    Assert.False(pointers[i].IsValid);
+                }
+
+                allocator.Reset();
+
                 ptr = allocator.Allocate(size);
                 Assert.Equal(size, ptr.Size);
                 Assert.True(ptr.IsValid);
-
-                pointers[i] = ptr;
-                addresses[i] = (long)ptr.Ptr;
             }
-
-            for (int i = length - 1; i >= 0; i--)
-            {
-                allocator.Release(ref pointers[i]);
-                Assert.False(pointers[i].IsValid);
-            }
-
-            allocator.Reset();
-
-            ptr = allocator.Allocate(size);
-            Assert.Equal(size, ptr.Size);
-            Assert.True(ptr.IsValid);
         }
 
         [Fact]
         public void Alloc_FragmentGrowMultiple()
         {
-            var allocator = new Allocator<FragmentAllocator<FragmentFixedSize>>();
-            allocator.Initialize(default(FragmentFixedSize));
-
-            int size = 4000;
-            Pointer ptr;
-
-            int length = 10;
-
-            long[] addresses = new long[length];
-            var pointers = new Pointer[length];
-            for (int i = 0; i < length; i++)
+            using (var allocator = new Allocator<FragmentAllocator<FragmentFixedSize>>())
             {
+                allocator.Initialize(default(FragmentFixedSize));
+
+                int size = 4000;
+                Pointer ptr;
+
+                int length = 10;
+
+                long[] addresses = new long[length];
+                var pointers = new Pointer[length];
+                for (int i = 0; i < length; i++)
+                {
+                    ptr = allocator.Allocate(size);
+                    Assert.Equal(size, ptr.Size);
+                    Assert.True(ptr.IsValid);
+
+                    pointers[i] = ptr;
+                    addresses[i] = (long)ptr.Ptr;
+                }
+
+                for (int i = length - 1; i >= 0; i--)
+                {
+                    allocator.Release(ref pointers[i]);
+                    Assert.False(pointers[i].IsValid);
+                }
+
+                allocator.Reset();
+
                 ptr = allocator.Allocate(size);
                 Assert.Equal(size, ptr.Size);
                 Assert.True(ptr.IsValid);
-
-                pointers[i] = ptr;
-                addresses[i] = (long)ptr.Ptr;
             }
-
-            for (int i = length - 1; i >= 0; i--)
-            {
-                allocator.Release(ref pointers[i]);
-                Assert.False(pointers[i].IsValid);
-            }
-
-            allocator.Reset();
-
-            ptr = allocator.Allocate(size);
-            Assert.Equal(size, ptr.Size);
-            Assert.True(ptr.IsValid);
         }
 
         [Fact]
         public void Alloc_ThreadAffinePoolReturnBlockBytes()
         {
-            var allocator = new FixedSizeAllocator<FixedSizeThreadAffinePoolAllocator<FixedSizeThreadAffinePoolAllocator.Default>>();
-            allocator.Initialize(default(FixedSizeThreadAffinePoolAllocator.Default));
-
-            var config = default(FixedSizeThreadAffinePoolAllocator.Default);
-
-            long[] addresses = new long[5];
-            var pointers = new Pointer[5];
-            for (int i = 0; i < 5; i++)
+            using (var allocator = new FixedSizeAllocator<FixedSizeThreadAffinePoolAllocator<FixedSizeThreadAffinePoolAllocator.Static>>())
             {
-                var ptr = allocator.Allocate();
-                Assert.Equal(config.BlockSize, ptr.Size);
-                Assert.True(ptr.IsValid);
+                allocator.Initialize(default(FixedSizeThreadAffinePoolAllocator.Static));
 
-                pointers[i] = ptr;
-                addresses[i] = (long)ptr.Ptr;
+                var config = default(FixedSizeThreadAffinePoolAllocator.Static);
+
+                long[] addresses = new long[5];
+                var pointers = new Pointer[5];
+                for (int i = 0; i < 5; i++)
+                {
+                    var ptr = allocator.Allocate();
+                    Assert.Equal(config.BlockSize, ptr.Size);
+                    Assert.True(ptr.IsValid);
+
+                    pointers[i] = ptr;
+                    addresses[i] = (long)ptr.Ptr;
+                }
+
+                for (int i = 0; i < 5; i++)
+                {
+                    allocator.Release(ref pointers[i]);
+                    Assert.False(pointers[i].IsValid);
+                }
+
+                for (int i = 0; i < 4; i++)
+                {
+                    var ptr = allocator.Allocate();
+                    Assert.Contains((long)ptr.Ptr, addresses);
+                }
+
+                var nonReusedPtr = allocator.Allocate();
+                Assert.Equal(config.BlockSize, nonReusedPtr.Size);
+                Assert.True(nonReusedPtr.IsValid);
+
+                // Cannot check for actual different addresses because the memory system may return it back to us again. 
             }
-
-            for (int i = 0; i < 5; i++)
-            {
-                allocator.Release(ref pointers[i]);
-                Assert.False(pointers[i].IsValid);
-            }
-
-            for (int i = 0; i < 4; i++)
-            {
-                var ptr = allocator.Allocate();
-                Assert.Contains((long)ptr.Ptr, addresses);
-            }
-
-            var nonReusedPtr = allocator.Allocate();
-            Assert.Equal(config.BlockSize, nonReusedPtr.Size);
-            Assert.True(nonReusedPtr.IsValid);
-            // Cannot check for actual different addresses because the memory system may return it back to us again. 
         }
 
         [Fact]
@@ -426,11 +431,15 @@ namespace FastTests.Sparrow
             {
             }
 
+            public long TotalAllocated { get; }
+
             public long Allocated
             {
                 get;
                 private set;
             }
+
+            public long InUse { get; }
 
             public void Initialize(ref StubAllocator<TOptions> allocator)
             {               
@@ -509,285 +518,5 @@ namespace FastTests.Sparrow
                 BeforeFinalizationCalled = true;
             }
         }
-
-        private struct HashedPointer
-        {
-            public ulong Hash;
-            public Pointer Pointer;
-        }
-
-        private const int InvalidSize = -1;
-
-        private void StressTester<TAllocator, TOptions>(Allocator<TAllocator> allocator, int seed, bool supportsRenew = true, int fixedSize = InvalidSize)
-            where TAllocator : struct, IAllocator<TAllocator, Pointer>
-            where TOptions : struct, IAllocatorOptions
-        {
-            var rnd = new Random(seed);
-
-            const int Allocate = 0;
-            const int Deallocate = Allocate + 3;
-            const int DeallocateLast = Deallocate + 1;
-            const int TouchMemory = DeallocateLast + 1;
-            const int CheckMemory = TouchMemory + 1;
-            const int Reset = CheckMemory + 1;
-            const int Renew = Reset + 1;
-
-            int potentialActions = supportsRenew ? Renew : Reset;
-
-            using (allocator)
-            {
-                allocator.Initialize(default(TOptions));
-
-                var allocated = new List<HashedPointer>();
-                for (int i = 0; i < 1000000; i++)
-                {
-                    int action = rnd.Next(potentialActions + 1);
-
-                    if (action < Deallocate) // We are allocating
-                    {
-                        int allocationSize = fixedSize != InvalidSize ? fixedSize : rnd.Next(16000) + 1;
-
-                        Pointer ptr = allocator.Allocate(allocationSize);
-                        var hash = Hashing.XXHash64.Calculate((byte*)ptr.Ptr, (ulong)ptr.Size);
-                        allocated.Add(new HashedPointer { Hash = hash, Pointer = ptr });
-                        continue;
-                    }
-
-                    if (allocated.Count == 0)
-                        continue; // Nothing to do here. 
-
-                    if (action == Deallocate || action == DeallocateLast)
-                    {
-                        int pointerIndex = action == DeallocateLast ? allocated.Count - 1 : rnd.Next(allocated.Count);
-
-                        Pointer a = allocated[pointerIndex].Pointer;
-                        allocated[pointerIndex] = allocated[allocated.Count - 1];
-                        allocated.RemoveAt(allocated.Count - 1);
-
-                        allocator.Release(ref a);
-                    }
-                    else if (action == TouchMemory)
-                    {
-                        for (int idx = 0; idx < allocated.Count; idx++)
-                        {
-                            var hashedPtr = allocated[idx];
-                            var localPtr = hashedPtr.Pointer;
-                            Assert.True(localPtr.IsValid);
-
-                            int location = rnd.Next(localPtr.Size);
-                            if (location >= localPtr.Size)
-                                throw new InvalidOperationException();
-
-                            var span = localPtr.AsSpan();
-                            span[location] = 1;
-
-                            var hash = Hashing.XXHash64.Calculate((byte*)localPtr.Ptr, (ulong)localPtr.Size);
-                            hashedPtr.Hash = hash;
-                            allocated[idx] = hashedPtr;
-                        }
-                    }
-                    else if (action == CheckMemory)
-                    {
-                        for (int idx = 0; idx < allocated.Count; idx++)
-                        {
-                            var hashedPtr = allocated[idx];
-                            var localPtr = hashedPtr.Pointer;
-                            Assert.True(localPtr.IsValid);
-
-                            var hash = Hashing.XXHash64.Calculate((byte*)localPtr.Ptr, (ulong)localPtr.Size);
-                            Assert.Equal(hashedPtr.Hash, hash);
-                        }
-                    }
-                    else if (action == Reset)
-                    {
-                        if (rnd.Next(10) == 0)
-                        {
-                            foreach (var block in allocated)
-                            {
-                                var ptr = block.Pointer;
-                                allocator.Release(ref ptr);
-                            }
-
-                            allocated.Clear();
-                            allocator.Reset();
-                        }
-                    }
-                    else if (action == Renew)
-                    {
-                        if (rnd.Next(10) == 0)
-                        {
-                            foreach (var block in allocated)
-                            {
-                                var ptr = block.Pointer;
-                                allocator.Release(ref ptr);
-                            }
-
-                            allocated.Clear();
-                            allocator.Renew();
-                        }
-                    }
-                }
-
-                foreach (var block in allocated)
-                {
-                    var ptr = block.Pointer;
-                    allocator.Release(ref ptr);
-                }
-            }
-        }
-
-        private struct HashedBlockPointer
-        {
-            public ulong Hash;
-            public BlockPointer Pointer;
-        }
-
-        private void StressBlockTester<TAllocator, TOptions>(BlockAllocator<TAllocator> allocator, int seed, bool supportsRenew = true)
-            where TAllocator : struct, IAllocator<TAllocator, BlockPointer>
-            where TOptions : struct, IAllocatorOptions
-        {
-            var rnd = new Random(seed);
-
-            const int Allocate = 0;
-            const int Deallocate = Allocate + 3;
-            const int DeallocateLast = Deallocate + 1;
-            const int TouchMemory = DeallocateLast + 1;
-            const int CheckMemory = TouchMemory + 1;
-            const int Reset = CheckMemory + 1;
-            const int Renew = Reset + 1;
-
-            int potentialActions = supportsRenew ? Renew : Reset;
-
-            using (allocator)
-            {
-                allocator.Initialize(default(TOptions));
-
-                var allocated = new List<HashedBlockPointer>();
-                for (int i = 0; i < 1000000; i++)
-                {
-                    int action = rnd.Next(potentialActions + 1);
-
-                    if (action < Deallocate) // We are allocating
-                    {
-                        BlockPointer ptr = allocator.Allocate(rnd.Next(16000) + 1);
-                        var hash = Hashing.XXHash64.Calculate((byte*)ptr.Ptr, (ulong)ptr.Size);
-                        allocated.Add(new HashedBlockPointer { Hash = hash, Pointer = ptr });
-                        continue;
-                    }
-
-                    if (allocated.Count == 0)
-                        continue; // Nothing to do here. 
-
-                    if (action == Deallocate || action == DeallocateLast)
-                    {
-                        int pointerIndex = action == DeallocateLast ? allocated.Count - 1 : rnd.Next(allocated.Count);
-
-                        BlockPointer a = allocated[pointerIndex].Pointer;
-                        allocated[pointerIndex] = allocated[allocated.Count - 1];
-                        allocated.RemoveAt(allocated.Count - 1);
-
-                        allocator.Release(ref a);
-                    }
-                    else if (action == TouchMemory)
-                    {
-                        for (int idx = 0; idx < allocated.Count; idx++)
-                        {
-                            var hashedPtr = allocated[idx];
-                            var localPtr = hashedPtr.Pointer;
-                            Assert.True(localPtr.IsValid);
-
-                            int location = rnd.Next(localPtr.Size);
-                            if (location >= localPtr.Size)
-                                throw new InvalidOperationException();
-
-                            var span = localPtr.AsSpan();
-                            span[location] = 1;
-
-                            var hash = Hashing.XXHash64.Calculate((byte*)localPtr.Ptr, (ulong)localPtr.Size);
-                            hashedPtr.Hash = hash;
-                            allocated[idx] = hashedPtr;
-                        }
-                    }
-                    else if (action == CheckMemory)
-                    {
-                        for (int idx = 0; idx < allocated.Count; idx++)
-                        {
-                            var hashedPtr = allocated[idx];
-                            var localPtr = hashedPtr.Pointer;
-                            Assert.True(localPtr.IsValid);
-
-                            var hash = Hashing.XXHash64.Calculate((byte*)localPtr.Ptr, (ulong)localPtr.Size);
-                            Assert.Equal(hashedPtr.Hash, hash);
-                        }
-                    }
-                    else if (action == Reset)
-                    {
-                        if (rnd.Next(10) == 0)
-                        {
-                            foreach (var block in allocated)
-                            {
-                                BlockPointer ptr = block.Pointer;
-                                allocator.Release(ref ptr);
-                            }
-
-                            allocated.Clear();
-                            allocator.Reset();
-                        }
-                    }
-                    else if (action == Renew)
-                    {
-                        if (rnd.Next(10) == 0)
-                        {
-                            foreach (var block in allocated)
-                            {
-                                BlockPointer ptr = block.Pointer;
-                                allocator.Release(ref ptr);
-                            }
-
-                            allocated.Clear();
-                            allocator.Renew();
-                        }
-                    }
-                }
-
-                foreach (var block in allocated)
-                {
-                    var ptr = block.Pointer;
-                    allocator.Release(ref ptr);
-                }
-            }
-        }
-
-        [Theory]
-        [InlineDataWithRandomSeed]
-        public void Arena_Stress_Testing(int seed)
-        {
-            StressTester<ArenaAllocator<ArenaAllocator.Default>, ArenaAllocator.Default>(new Allocator<ArenaAllocator<ArenaAllocator.Default>>(), seed);
-        }
-
-        [Theory]
-        [InlineDataWithRandomSeed]
-        public void Fragment_Stress_Testing(int seed)
-        {
-            StressTester<FragmentAllocator<FragmentAllocator.Default>, FragmentAllocator.Default>(new Allocator<FragmentAllocator<FragmentAllocator.Default>>(), seed, supportsRenew: false);
-        }
-
-        [Theory]
-        [InlineDataWithRandomSeed]
-        public void FixedSize_Stress_Testing(int seed)
-        {
-            int blockSize = default(FixedSizePoolAllocator.Default).MaxBlockSize;
-            StressTester<FixedSizePoolAllocator<FixedSizePoolAllocator.Default>, FixedSizePoolAllocator.Default>(new Allocator<FixedSizePoolAllocator<FixedSizePoolAllocator.Default>>(), seed, supportsRenew: false, fixedSize: blockSize);
-        }
-
-        
-
-        [Theory]
-        [InlineDataWithRandomSeed]
-        public void Pool_Stress_Testing(int seed)
-        {
-            StressBlockTester<PoolAllocator<PoolAllocator.Default>, PoolAllocator.Default>(new BlockAllocator<PoolAllocator<PoolAllocator.Default>>(), seed, supportsRenew: false);
-        }
-
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Sparrow.Platform;
@@ -12,6 +13,8 @@ namespace Sparrow
         bool ElectricFenceEnabled { get; }
         bool Zeroed { get; }
     }
+
+    public interface INativeGlobalAllocatorOptions { }
 
     public static class NativeAllocator
     {
@@ -68,7 +71,7 @@ namespace Sparrow
                 throw new NotSupportedException($"{nameof(TConfig)} is asking for secure, electric fenced memory. The combination is not supported.");
         }
 
-        public long Allocated
+        public long TotalAllocated
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get;
@@ -76,10 +79,23 @@ namespace Sparrow
             private set;
         }
 
+        public long Allocated
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set;
+        }
+        public long InUse
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return Allocated; }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Initialize(ref NativeAllocator<TOptions> allocator)
         {
-            allocator.Allocated = 0;
+            allocator.TotalAllocated = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -100,10 +116,9 @@ namespace Sparrow
                 Memory.Set(memory, 0, size);
 
             allocator.Allocated += size;
+            allocator.TotalAllocated += size;
 
-            var ptr = new Pointer(memory, size);
-            Console.WriteLine($"Pointer{ptr.Describe()} = _allocator.Allocate(ref {nameof(NativeAllocator<TOptions>)}, {size})");
-            return ptr;
+            return new Pointer(memory, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -119,11 +134,14 @@ namespace Sparrow
                 throw new NotImplementedException();
             else
                 NativeMemory.Free((byte*)ptr.Ptr, ptr.Size);
+
+            ptr = new Pointer();
         }
 
         public void Reset(ref NativeAllocator<TOptions> allocator)
         {
-             // There is no reset action to do on this allocator. We wont fail, but nothing we can do to 'reclaim' or 'reuse' memory.
+            // There is no reset action to do on this allocator. We wont fail, but nothing we can do to 'reclaim' or 'reuse' memory.            
+            CheckForLeaks(ref allocator);
         }
 
         public void OnAllocate(ref NativeAllocator<TOptions> allocator, Pointer ptr)
@@ -136,6 +154,24 @@ namespace Sparrow
             // This allocator does not keep track of anything.
         }
 
-        public void Dispose(ref NativeAllocator<TOptions> allocator) {}
+        public void Dispose(ref NativeAllocator<TOptions> allocator)
+        {
+            // Global allocators checks are built around the idea that the memory allocated by this allocator
+            // is static. It will go out of scope only when the process exit.
+            if (allocator._options is INativeGlobalAllocatorOptions)
+                return;
+
+            CheckForLeaks(ref allocator);
+        }
+
+        [Conditional("DEBUG")]
+        [Conditional("VALIDATE")]
+        private void CheckForLeaks(ref NativeAllocator<TOptions> allocator)
+        {
+            if (allocator.Allocated != 0)
+            {
+                throw new InvalidOperationException($"The allocator is leaking '{allocator.Allocated}' bytes of memory.");
+            }
+        }
     }
 }

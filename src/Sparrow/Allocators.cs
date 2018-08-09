@@ -55,7 +55,20 @@ namespace Sparrow
         where T : struct, IAllocator
         where TPointerType : struct, IPointerType
     {
+        /// <summary>
+        /// This is the total ammount of memory that has been allocated since the last Reset cycle.
+        /// </summary>
+        long TotalAllocated { get; }
+
+        /// <summary>
+        /// This is the total ammount of memory currently either InUse or on hold on internal buffers since the last Reset Cycle.
+        /// </summary>
         long Allocated { get; }
+
+        /// <summary>
+        /// This the is actual ammount of memory that is on the customer hands at the current moment.
+        /// </summary>
+        long InUse { get; }
 
         void Initialize(ref T allocator);
 
@@ -107,10 +120,31 @@ namespace Sparrow
                 b.AfterInitialize(ref _allocator);
         }
 
+        /// <summary>
+        /// This is the total ammount of memory that has been allocated since the last Reset cycle.
+        /// </summary>
+        public long TotalAllocated
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _allocator.TotalAllocated; }
+        }
+
+        /// <summary>
+        /// This is the total ammount of memory currently either InUse or on hold on internal buffers since the last Reset Cycle.
+        /// </summary>
         public long Allocated
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _allocator.Allocated; }
+        }
+
+        /// <summary>
+        /// This the is actual ammount of memory that is on the customer hands at the current moment.
+        /// </summary>
+        public long InUse
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _allocator.InUse; }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -176,8 +210,6 @@ namespace Sparrow
         {
             if (_allocator is IRenewable<TAllocator> a)
                 a.Renew(ref _allocator);
-            else
-                throw new NotSupportedException($".{nameof(Renew)}() is not supported for this allocator type.");
         }
 
         public void Reset()
@@ -238,10 +270,31 @@ namespace Sparrow
             
         }
 
+        /// <summary>
+        /// This is the total ammount of memory that has been allocated since the last Reset cycle.
+        /// </summary>
+        public long TotalAllocated
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _allocator.TotalAllocated; }
+        }
+
+        /// <summary>
+        /// This is the total ammount of memory currently either InUse or on hold on internal buffers since the last Reset Cycle.
+        /// </summary>
         public long Allocated
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _allocator.Allocated; }
+        }
+
+        /// <summary>
+        /// This the is actual ammount of memory that is on the customer hands at the current moment.
+        /// </summary>
+        public long InUse
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _allocator.InUse; }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -307,8 +360,6 @@ namespace Sparrow
         {
             if (_allocator is IRenewable<TAllocator> a)
                 a.Renew(ref _allocator);
-            else
-                throw new NotSupportedException($".{nameof(Renew)}() is not supported for this allocator type.");
         }
 
         public void Reset()
@@ -377,7 +428,7 @@ namespace Sparrow
         public long Allocated
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return _allocator.Allocated; }
+            get { return _allocator.TotalAllocated; }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -443,8 +494,6 @@ namespace Sparrow
         {
             if (_allocator is IRenewable<TAllocator> a)
                 a.Renew(ref _allocator);
-            else
-                throw new NotSupportedException($".{nameof(Renew)}() is not supported for this allocator type.");
         }
 
         public void Reset()
