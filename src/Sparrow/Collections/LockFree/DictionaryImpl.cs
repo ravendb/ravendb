@@ -87,7 +87,7 @@ namespace Sparrow.Collections.LockFree
             return (object)value;
         }
 
-        internal static DictionaryImpl<TKey, TValue> CreateRef<TKey, TValue>(ConcurrentDictionary<TKey, TValue> topDict, int capacity)
+        internal static DictionaryImpl<TKey, TValue> CreateRef<TKey, TValue>(LockFreeConcurrentDictionary<TKey, TValue> topDict, int capacity)
             where TKey : class
         {
             var result = new DictionaryImplRef<TKey, TKey, TValue>(capacity, topDict);

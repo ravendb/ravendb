@@ -13,7 +13,7 @@ namespace Sparrow.Collections.LockFree
     internal sealed class DictionaryImplULong<TValue>
                 : DictionaryImpl<ulong, long, TValue>
     {
-        internal DictionaryImplULong(int capacity, ConcurrentDictionary<ulong, TValue> topDict)
+        internal DictionaryImplULong(int capacity, LockFreeConcurrentDictionary<ulong, TValue> topDict)
             : base(capacity, topDict)
         {
         }
@@ -80,7 +80,7 @@ namespace Sparrow.Collections.LockFree
     internal sealed class DictionaryImplULongNoComparer<TValue>
             : DictionaryImpl<ulong, long, TValue>
     {
-        internal DictionaryImplULongNoComparer(int capacity, ConcurrentDictionary<ulong, TValue> topDict)
+        internal DictionaryImplULongNoComparer(int capacity, LockFreeConcurrentDictionary<ulong, TValue> topDict)
             : base(capacity, topDict)
         {
         }
