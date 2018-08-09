@@ -15,28 +15,22 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
-            var lastObjectCreation = node.DescendantNodes(descendIntoChildren: syntaxNode =>
-                {
-                    if (syntaxNode is ObjectCreationExpressionSyntax)
-                    {
-                        return false;
-                    }
-                    return true;
-                })
-                .LastOrDefault(x => x.IsKind(SyntaxKind.ObjectCreationExpression)) as ObjectCreationExpressionSyntax;
-
-            if (lastObjectCreation != null && IsDictionaryObjectCreationExpression(lastObjectCreation))
-            {
-                VisitObjectCreationExpression(lastObjectCreation);
-            }
+            CaptureFieldNames(node);
 
             return node;
         }
 
         public override SyntaxNode VisitQueryBody(QueryBodySyntax node)
         {
+            CaptureFieldNames(node);
+
+            return node;
+        }
+
+        private void CaptureFieldNames(SyntaxNode node)
+        {
             if (Fields != null)
-                return node;
+                return;
 
             var lastObjectCreation = node.DescendantNodes(descendIntoChildren: syntaxNode =>
                 {
@@ -52,8 +46,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             {
                 VisitObjectCreationExpression(lastObjectCreation);
             }
-
-            return node;
         }
 
         public override SyntaxNode VisitObjectCreationExpression(ObjectCreationExpressionSyntax node)
