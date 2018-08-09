@@ -40,5 +40,15 @@ namespace Raven.Server.Extensions
 
             return new string(chars);
         }
+
+        public static bool IsUpperLettersOnly(this string nodeTag)
+        {
+            foreach (var c in nodeTag)
+            {
+                if (char.IsUpper(c) == false)
+                    return false;
+            }
+            return true;
+        }
     }
 }

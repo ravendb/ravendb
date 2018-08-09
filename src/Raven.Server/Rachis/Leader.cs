@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Commands;
@@ -877,9 +878,16 @@ namespace Raven.Server.Rachis
 
         public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task, bool validateNotInTopology = false, Action<TransactionOperationContext> beforeCommit = null)
         {
-            if (nodeTag != null && nodeTag.Equals("RAFT"))
+            if (nodeTag != null)
             {
-                throw new ArgumentException("Can't set the node tag to 'RAFT'. It is a reserved tag.");
+                if (nodeTag.Equals("RAFT"))
+                    ThrowInvalidNodeTag(nodeTag, "It is a reserved tag.");
+                if (nodeTag.Length > 4)
+                    ThrowInvalidNodeTag(nodeTag, "Max node tag length is 4.");
+                // Node tag must not contain ':' or '-' chars as they are in use in change vector.
+                // The following check covers that as well.
+                if (nodeTag.IsUpperLettersOnly() == false)
+                    ThrowInvalidNodeTag(nodeTag, "Node tag must contain only upper case letters.");
             }
             
             using (_disposerLock.EnsureNotDisposed())
@@ -984,6 +992,11 @@ namespace Raven.Server.Rachis
 
                 return true;
             }
+        }
+
+        private static void ThrowInvalidNodeTag(string nodeTag, string reason)
+        {
+            throw new ArgumentException($"Can't set the node tag to '{nodeTag}'. {reason}");
         }
 
         public override string ToString()
