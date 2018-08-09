@@ -13,7 +13,7 @@ namespace Sparrow.Collections.LockFree
     internal sealed class DictionaryImplBoxed<TKey, TValue>
             : DictionaryImpl<TKey, Boxed<TKey>, TValue>
     {
-        internal DictionaryImplBoxed(int capacity, ConcurrentDictionary<TKey, TValue> topDict)
+        internal DictionaryImplBoxed(int capacity, LockFreeConcurrentDictionary<TKey, TValue> topDict)
             : base(capacity, topDict)
         {
         }

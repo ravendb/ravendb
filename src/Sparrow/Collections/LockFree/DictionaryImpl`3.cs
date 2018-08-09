@@ -23,7 +23,7 @@ namespace Sparrow.Collections.LockFree
         private readonly Entry[] _entries;
         internal DictionaryImpl<TKey, TKeyStore, TValue> _newTable;
 
-        protected readonly ConcurrentDictionary<TKey, TValue> _topDict;
+        protected readonly LockFreeConcurrentDictionary<TKey, TValue> _topDict;
         protected readonly Counter32 allocatedSlotCount = new Counter32();
         private Counter32 _size;
 
@@ -81,7 +81,7 @@ namespace Sparrow.Collections.LockFree
         // or getting existing slot suitable for storing a given key in its store form (could be boxed).
         protected abstract bool TryClaimSlotForCopy(ref TKeyStore entryKey, TKeyStore key);
 
-        internal DictionaryImpl(int capacity, ConcurrentDictionary<TKey, TValue> topDict)
+        internal DictionaryImpl(int capacity, LockFreeConcurrentDictionary<TKey, TValue> topDict)
         {
             capacity = Math.Max(capacity, MIN_SIZE);
 

@@ -24,10 +24,10 @@ namespace Sparrow.Collections.LockFree
     /// <typeparam name="TKey">The type of the keys in the dictionary.</typeparam>
     /// <typeparam name="TValue">The type of the values in the dictionary.</typeparam>
     /// <remarks>
-    /// All public and protected members of <see cref="ConcurrentDictionary{TKey,TValue}"/> are thread-safe and may be used
+    /// All public and protected members of <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/> are thread-safe and may be used
     /// concurrently from multiple threads.
     /// </remarks>
-    public class ConcurrentDictionary<TKey, TValue> :
+    public class LockFreeConcurrentDictionary<TKey, TValue> :
         IDictionary<TKey, TValue>,
         IReadOnlyDictionary<TKey, TValue>,
         IDictionary,
@@ -37,12 +37,12 @@ namespace Sparrow.Collections.LockFree
         internal uint _lastResizeTickMillis;
 
         private readonly static Func<object, TValue> objToValueS =
-                (typeof(TValue).GetTypeInfo().IsValueType)?
+                (typeof(TValue).GetTypeInfo().IsValueType) ?
                     (Func<object, TValue>)objToValValue :
                     objToValRef;
 
         internal readonly Func<object, TValue> objToValue = objToValueS;
-        
+
         private static TValue objToValRef(object value)
         {
             return Unsafe.As<object, TValue>(ref value);
@@ -55,14 +55,14 @@ namespace Sparrow.Collections.LockFree
 
         // System.Collections.Concurrent.ConcurrentDictionary<TKey, TValue>
         /// <summary>Initializes a new instance of the <see cref="T:System.Collections.Concurrent.ConcurrentDictionary`2" /> class that is empty, has the default initial capacity, and uses the default comparer for the key type.</summary>
-        public ConcurrentDictionary() : this(31)
+        public LockFreeConcurrentDictionary() : this(31)
         {
         }
 
         // System.Collections.Concurrent.ConcurrentDictionary<TKey, TValue>
         /// <param name="capacity">The initial number of elements that the <see cref="T:System.Collections.Concurrent.ConcurrentDictionary`2" /> can contain.</param>
         /// <summary>Initializes a new instance of the <see cref="T:System.Collections.Concurrent.ConcurrentDictionary`2" /> class that is empty and uses the default comparer for the key type.</summary>
-        public ConcurrentDictionary(int capacity) : this(capacity, null)
+        public LockFreeConcurrentDictionary(int capacity) : this(capacity, null)
         {
         }
 
@@ -72,7 +72,7 @@ namespace Sparrow.Collections.LockFree
         /// <param name="capacity">The initial number of elements that the <see cref="T:System.Collections.Concurrent.ConcurrentDictionary`2" /> can contain.</param>
         /// <exception cref="T:System.ArgumentOutOfRangeException">
         ///   <paramref name="concurrencyLevel" /> is less than 1.-or-<paramref name="capacity" /> is less than 0.</exception>
-        public ConcurrentDictionary(int concurrencyLevel, int capacity) : this(capacity)
+        public LockFreeConcurrentDictionary(int concurrencyLevel, int capacity) : this(capacity)
         {
             if (concurrencyLevel < 1)
             {
@@ -87,7 +87,7 @@ namespace Sparrow.Collections.LockFree
         ///   <paramref name="collection" /> or any of its keys is a null reference (Nothing in Visual Basic)</exception>
         /// <exception cref="T:System.ArgumentException">
         ///   <paramref name="collection" /> contains one or more duplicate keys.</exception>
-        public ConcurrentDictionary(IEnumerable<KeyValuePair<TKey, TValue>> collection) : this()
+        public LockFreeConcurrentDictionary(IEnumerable<KeyValuePair<TKey, TValue>> collection) : this()
         {
             if (collection == null)
             {
@@ -101,7 +101,7 @@ namespace Sparrow.Collections.LockFree
         /// <param name="comparer">The <see cref="T:System.Collections.Generic.IEqualityComparer{TKey}" /> implementation to use when comparing keys.</param>
         /// <exception cref="T:System.ArgumentNullException">
         ///   <paramref name="comparer" /> is a null reference (Nothing in Visual Basic).</exception>
-        public ConcurrentDictionary(IEqualityComparer<TKey> comparer) : this(31, comparer)
+        public LockFreeConcurrentDictionary(IEqualityComparer<TKey> comparer) : this(31, comparer)
         {
             if (comparer == null)
             {
@@ -115,7 +115,7 @@ namespace Sparrow.Collections.LockFree
         /// <param name="comparer">The <see cref="T:System.Collections.Generic.IEqualityComparer{TKey}" /> implementation to use when comparing keys.</param>
         /// <exception cref="T:System.ArgumentNullException">
         ///   <paramref name="collection" /> is a null reference (Nothing in Visual Basic). -or- <paramref name="comparer" /> is a null reference (Nothing in Visual Basic).</exception>
-        public ConcurrentDictionary(IEnumerable<KeyValuePair<TKey, TValue>> collection, IEqualityComparer<TKey> comparer) : this(comparer)
+        public LockFreeConcurrentDictionary(IEnumerable<KeyValuePair<TKey, TValue>> collection, IEqualityComparer<TKey> comparer) : this(comparer)
         {
             if (collection == null)
             {
@@ -139,7 +139,7 @@ namespace Sparrow.Collections.LockFree
         ///   <paramref name="concurrencyLevel" /> is less than 1.</exception>
         /// <exception cref="T:System.ArgumentException">
         ///   <paramref name="collection" /> contains one or more duplicate keys.</exception>
-        public ConcurrentDictionary(int concurrencyLevel, IEnumerable<KeyValuePair<TKey, TValue>> collection, IEqualityComparer<TKey> comparer) : this(comparer)
+        public LockFreeConcurrentDictionary(int concurrencyLevel, IEnumerable<KeyValuePair<TKey, TValue>> collection, IEqualityComparer<TKey> comparer) : this(comparer)
         {
             if (concurrencyLevel < 1)
             {
@@ -176,7 +176,7 @@ namespace Sparrow.Collections.LockFree
         ///   <paramref name="comparer" /> is a null reference (Nothing in Visual Basic).</exception>
         /// <exception cref="T:System.ArgumentOutOfRangeException">
         ///   <paramref name="concurrencyLevel" /> is less than 1. -or- <paramref name="capacity" /> is less than 0.</exception>
-        public ConcurrentDictionary(int concurrencyLevel, int capacity, IEqualityComparer<TKey> comparer) : this(capacity, comparer)
+        public LockFreeConcurrentDictionary(int concurrencyLevel, int capacity, IEqualityComparer<TKey> comparer) : this(capacity, comparer)
         {
             if (concurrencyLevel < 1)
             {
@@ -188,7 +188,7 @@ namespace Sparrow.Collections.LockFree
             }
         }
 
-        private ConcurrentDictionary(
+        private LockFreeConcurrentDictionary(
             int capacity,
             IEqualityComparer<TKey> comparer = null)
         {
@@ -213,11 +213,11 @@ namespace Sparrow.Collections.LockFree
                 {
                     if (comparer == null)
                     {
-                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplIntNoComparer<TValue>(capacity, (ConcurrentDictionary<int, TValue>)(object)this);
+                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplIntNoComparer<TValue>(capacity, (LockFreeConcurrentDictionary<int, TValue>)(object)this);
                     }
                     else
                     {
-                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplInt<TValue>(capacity, (ConcurrentDictionary<int, TValue>)(object)this);
+                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplInt<TValue>(capacity, (LockFreeConcurrentDictionary<int, TValue>)(object)this);
                         _table._keyComparer = comparer;
                     }
                     return;
@@ -227,25 +227,25 @@ namespace Sparrow.Collections.LockFree
                 {
                     if (comparer == null)
                     {
-                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplLongNoComparer<TValue>(capacity, (ConcurrentDictionary<long, TValue>)(object)this);
+                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplLongNoComparer<TValue>(capacity, (LockFreeConcurrentDictionary<long, TValue>)(object)this);
                     }
                     else
                     {
-                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplLong<TValue>(capacity, (ConcurrentDictionary<long, TValue>)(object)this);
+                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplLong<TValue>(capacity, (LockFreeConcurrentDictionary<long, TValue>)(object)this);
                         _table._keyComparer = comparer;
                     }
-                    return ;
+                    return;
                 }
 
                 if (typeof(TKey) == typeof(uint))
                 {
                     if (comparer == null)
                     {
-                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplUIntNoComparer<TValue>(capacity, (ConcurrentDictionary<uint, TValue>)(object)this);
+                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplUIntNoComparer<TValue>(capacity, (LockFreeConcurrentDictionary<uint, TValue>)(object)this);
                     }
                     else
                     {
-                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplUInt<TValue>(capacity, (ConcurrentDictionary<uint, TValue>)(object)this);
+                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplUInt<TValue>(capacity, (LockFreeConcurrentDictionary<uint, TValue>)(object)this);
                         _table._keyComparer = comparer;
                     }
                     return;
@@ -255,11 +255,11 @@ namespace Sparrow.Collections.LockFree
                 {
                     if (comparer == null)
                     {
-                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplULongNoComparer<TValue>(capacity, (ConcurrentDictionary<ulong, TValue>)(object)this);
+                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplULongNoComparer<TValue>(capacity, (LockFreeConcurrentDictionary<ulong, TValue>)(object)this);
                     }
                     else
                     {
-                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplULong<TValue>(capacity, (ConcurrentDictionary<ulong, TValue>)(object)this);
+                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplULong<TValue>(capacity, (LockFreeConcurrentDictionary<ulong, TValue>)(object)this);
                         _table._keyComparer = comparer;
                     }
                     return;
@@ -269,11 +269,11 @@ namespace Sparrow.Collections.LockFree
                 {
                     if (comparer == null)
                     {
-                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplIntPtrNoComparer<TValue>(capacity, (ConcurrentDictionary<IntPtr, TValue>)(object)this);
+                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplIntPtrNoComparer<TValue>(capacity, (LockFreeConcurrentDictionary<IntPtr, TValue>)(object)this);
                     }
                     else
                     {
-                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplIntPtr<TValue>(capacity, (ConcurrentDictionary<IntPtr, TValue>)(object)this);
+                        _table = (DictionaryImpl<TKey, TValue>)(object)new DictionaryImplIntPtr<TValue>(capacity, (LockFreeConcurrentDictionary<IntPtr, TValue>)(object)this);
                         _table._keyComparer = comparer;
                     }
                     return;
@@ -285,7 +285,7 @@ namespace Sparrow.Collections.LockFree
         }
 
         /// <summary>
-        /// Adds the specified key and value to the <see cref="ConcurrentDictionary{TKey,
+        /// Adds the specified key and value to the <see cref="LockFreeConcurrentDictionary{TKey,TValue}
         /// TValue}"/>.
         /// </summary>
         /// <param name="key">The object to use as the key of the element to add.</param>
@@ -296,7 +296,7 @@ namespace Sparrow.Collections.LockFree
         /// elements.</exception>
         /// <exception cref="T:System.ArgumentException">
         /// An element with the same key already exists in the <see
-        /// cref="ConcurrentDictionary{TKey,TValue}"/>.</exception>
+        /// cref="LockFreeConcurrentDictionary{TKey,TValue}"/>.</exception>
         public void Add(TKey key, TValue value)
         {
             if (!TryAdd(key, value))
@@ -306,18 +306,18 @@ namespace Sparrow.Collections.LockFree
         }
 
         /// <summary>
-        /// Attempts to add the specified key and value to the <see cref="ConcurrentDictionary{TKey,
+        /// Attempts to add the specified key and value to the <see cref="LockFreeConcurrentDictionary{TKey,TValue}
         /// TValue}"/>.
         /// </summary>
         /// <param name="key">The key of the element to add.</param>
         /// <param name="value">The value of the element to add. The value can be a null reference (Nothing
         /// in Visual Basic) for reference types.</param>
-        /// <returns>true if the key/value pair was added to the <see cref="ConcurrentDictionary{TKey,
+        /// <returns>true if the key/value pair was added to the <see cref="LockFreeConcurrentDictionary{TKey,TValue}
         /// TValue}"/>
         /// successfully; otherwise, false.</returns>
         /// <exception cref="T:System.ArgumentNullException"><paramref name="key"/> is null reference
         /// (Nothing in Visual Basic).</exception>
-        /// <exception cref="T:System.OverflowException">The <see cref="ConcurrentDictionary{TKey, TValue}"/>
+        /// <exception cref="T:System.OverflowException">The <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/>
         /// contains too many elements.</exception>
         public bool TryAdd(TKey key, TValue value)
         {
@@ -328,7 +328,7 @@ namespace Sparrow.Collections.LockFree
 
         /// <summary>
         /// Removes the element with the specified key from the         
-        /// <see cref="ConcurrentDictionary{TKey, TValue}"/>.
+        /// <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/>.
         /// </summary>
         /// <param name="key">The key of the element to remove.</param>
         /// <returns>true if the element is successfully removed; otherwise false. This method also returns
@@ -349,11 +349,11 @@ namespace Sparrow.Collections.LockFree
 
         /// <summary>
         /// Attempts to remove and return the value with the specified key from the
-        /// <see cref="ConcurrentDictionary{TKey, TValue}"/>.
+        /// <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/>.
         /// </summary>
         /// <param name="key">The key of the element to remove and return.</param>
         /// <param name="value">When this method returns, <paramref name="value"/> contains the object removed from the
-        /// <see cref="ConcurrentDictionary{TKey,TValue}"/> or the default value of <typeparamref
+        /// <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/> or the default value of <typeparamref
         /// name="TValue"/>
         /// if the operation failed.</param>
         /// <returns>true if an object was removed successfully; otherwise, false.</returns>
@@ -401,14 +401,14 @@ namespace Sparrow.Collections.LockFree
 
         /// <summary>
         /// Attempts to get the value associated with the specified key from the <see
-        /// cref="ConcurrentDictionary{TKey,TValue}"/>.
+        /// cref="LockFreeConcurrentDictionary{TKey,TValue}"/>.
         /// </summary>
         /// <param name="key">The key of the value to get.</param>
         /// <param name="value">When this method returns, <paramref name="value"/> contains the object from
         /// the
-        /// <see cref="ConcurrentDictionary{TKey,TValue}"/> with the specified key or the default value of
+        /// <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/> with the specified key or the default value of
         /// <typeparamref name="TValue"/>, if the operation failed.</param>
-        /// <returns>true if the key was found in the <see cref="ConcurrentDictionary{TKey,TValue}"/>;
+        /// <returns>true if the key was found in the <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/>;
         /// otherwise, false.</returns>
         /// <exception cref="T:System.ArgumentNullException"><paramref name="key"/> is a null reference
         /// (Nothing in Visual Basic).</exception>
@@ -509,12 +509,12 @@ namespace Sparrow.Collections.LockFree
         }
 
         /// <summary>
-        /// Determines whether the <see cref="ConcurrentDictionary{TKey, TValue}"/> contains the specified
+        /// Determines whether the <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/> contains the specified
         /// key.
         /// </summary>
-        /// <param name="key">The key to locate in the <see cref="ConcurrentDictionary{TKey,
+        /// <param name="key">The key to locate in the <see cref="LockFreeConcurrentDictionary{TKey,TValue}
         /// TValue}"/>.</param>
-        /// <returns>true if the <see cref="ConcurrentDictionary{TKey, TValue}"/> contains an element with
+        /// <returns>true if the <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/> contains an element with
         /// the specified key; otherwise, false.</returns>
         /// <exception cref="T:System.ArgumentNullException"><paramref name="key"/> is a null reference
         /// (Nothing in Visual Basic).</exception>
@@ -554,7 +554,7 @@ namespace Sparrow.Collections.LockFree
         bool ICollection<KeyValuePair<TKey, TValue>>.Contains(KeyValuePair<TKey, TValue> keyValuePair)
         {
             TValue value;
-            return TryGetValue(keyValuePair.Key, out value) && 
+            return TryGetValue(keyValuePair.Key, out value) &&
                 EqualityComparer<TValue>.Default.Equals(value, keyValuePair.Value);
         }
 
@@ -581,7 +581,7 @@ namespace Sparrow.Collections.LockFree
         }
 
         /// <summary>
-        /// Adds a key/value pair to the <see cref="ConcurrentDictionary{TKey,TValue}"/> 
+        /// Adds a key/value pair to the <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/> 
         /// if the key does not already exist.
         /// </summary>
         /// <param name="key">The key of the element to add.</param>
@@ -626,7 +626,7 @@ namespace Sparrow.Collections.LockFree
         }
 
         /// <summary>
-        /// Adds a key/value pair to the <see cref="ConcurrentDictionary{TKey,TValue}"/> 
+        /// Adds a key/value pair to the <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/> 
         /// if the key does not already exist.
         /// </summary>
         /// <param name="key">The key of the element to add.</param>
@@ -679,27 +679,27 @@ namespace Sparrow.Collections.LockFree
         bool ICollection<KeyValuePair<TKey, TValue>>.IsReadOnly => false;
 
         /// <summary>
-        /// Gets a value that indicates whether the <see cref="ConcurrentDictionary{TKey,TValue}"/> is empty.
+        /// Gets a value that indicates whether the <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/> is empty.
         /// </summary>
-        /// <value>true if the <see cref="ConcurrentDictionary{TKey,TValue}"/> is empty; otherwise,
+        /// <value>true if the <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/> is empty; otherwise,
         /// false.</value>
         public bool IsEmpty => _table.Count == 0;
 
         /// <summary>
         /// Gets the number of key/value pairs contained in the <see
-        /// cref="ConcurrentDictionary{TKey,TValue}"/>.
+        /// cref="LockFreeConcurrentDictionary{TKey,TValue}"/>.
         /// </summary>
         /// <exception cref="T:System.OverflowException">The dictionary contains too many
         /// elements.</exception>
         /// <value>The number of key/value pairs contained in the <see
-        /// cref="ConcurrentDictionary{TKey,TValue}"/>.</value>
+        /// cref="LockFreeConcurrentDictionary{TKey,TValue}"/>.</value>
         /// <remarks>Count has snapshot semantics and represents the number of items in the <see
-        /// cref="ConcurrentDictionary{TKey,TValue}"/>
+        /// cref="LockFreeConcurrentDictionary{TKey,TValue}"/>
         /// at the moment when Count was accessed.</remarks>
         public int Count => _table.Count;
 
         /// <summary>
-        /// Removes all keys and values from the <see cref="ConcurrentDictionary{TKey,TValue}"/>.
+        /// Removes all keys and values from the <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/>.
         /// </summary>
         public void Clear() => _table.Clear();
 
@@ -874,8 +874,8 @@ namespace Sparrow.Collections.LockFree
         }
 
         /// <summary>
-        /// Adds a key/value pair to the <see cref="ConcurrentDictionary{TKey,TValue}"/> if the key does not already 
-        /// exist, or updates a key/value pair in the <see cref="ConcurrentDictionary{TKey,TValue}"/> if the key 
+        /// Adds a key/value pair to the <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/> if the key does not already 
+        /// exist, or updates a key/value pair in the <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/> if the key 
         /// already exists.
         /// </summary>
         /// <param name="key">The key to be added or whose value should be updated</param>
@@ -927,8 +927,8 @@ namespace Sparrow.Collections.LockFree
         }
 
         /// <summary>
-        /// Adds a key/value pair to the <see cref="ConcurrentDictionary{TKey,TValue}"/> if the key does not already 
-        /// exist, or updates a key/value pair in the <see cref="ConcurrentDictionary{TKey,TValue}"/> if the key 
+        /// Adds a key/value pair to the <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/> if the key does not already 
+        /// exist, or updates a key/value pair in the <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/> if the key 
         /// already exists.
         /// </summary>
         /// <param name="key">The key to be added or whose value should be updated</param>
@@ -965,7 +965,7 @@ namespace Sparrow.Collections.LockFree
                 {
                     return addValue;
                 }
-            }            
+            }
         }
 
         /// <summary>
@@ -1063,8 +1063,8 @@ namespace Sparrow.Collections.LockFree
         }
 
         /// <summary>Returns an enumerator that iterates through the <see
-        /// cref="ConcurrentDictionary{TKey,TValue}"/>.</summary>
-        /// <returns>An enumerator for the <see cref="ConcurrentDictionary{TKey,TValue}"/>.</returns>
+        /// cref="LockFreeConcurrentDictionary{TKey,TValue}"/>.</summary>
+        /// <returns>An enumerator for the <see cref="LockFreeConcurrentDictionary{TKey,TValue}"/>.</returns>
         /// <remarks>
         /// The enumerator returned from the dictionary is safe to use concurrently with
         /// reads and writes to the dictionary, however it does not represent a moment-in-time snapshot

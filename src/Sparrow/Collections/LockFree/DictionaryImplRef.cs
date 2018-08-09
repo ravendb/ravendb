@@ -14,7 +14,7 @@ namespace Sparrow.Collections.LockFree
             : DictionaryImpl<TKey, TKey, TValue>
                     where TKey : class
     {
-        internal DictionaryImplRef(int capacity, ConcurrentDictionary<TKey, TValue> topDict)
+        internal DictionaryImplRef(int capacity, LockFreeConcurrentDictionary<TKey, TValue> topDict)
             : base(capacity, topDict)
         {
         }
