@@ -25,6 +25,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Server.Documents.PeriodicBackup;
 using Sparrow.Json;
 
 namespace Raven.Client.Json.Converters
@@ -134,6 +135,8 @@ namespace Raven.Client.Json.Converters
         internal static readonly Func<BlittableJsonReaderObject, ConfigureExpirationOperationResult> ConfigureExpirationOperationResult = GenerateJsonDeserializationRoutine<ConfigureExpirationOperationResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, UpdatePeriodicBackupOperationResult> ConfigurePeriodicBackupOperationResult = GenerateJsonDeserializationRoutine<UpdatePeriodicBackupOperationResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, BackupDatabaseNowResult> BackupDatabaseNowResult = GenerateJsonDeserializationRoutine<BackupDatabaseNowResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, GetPeriodicBackupStatusOperationResult> GetPeriodicBackupStatusOperationResult = GenerateJsonDeserializationRoutine<GetPeriodicBackupStatusOperationResult>();
 
