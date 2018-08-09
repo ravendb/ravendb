@@ -12,19 +12,19 @@ namespace Raven.Migrator
 
         private static readonly string MongoDbDescription =
             "Connect to MongoDB, pass configuration as JSON" + Environment.NewLine +
-            "   Command - available commands: databases, collections, export" + Environment.NewLine +
-            "   ConnectionString - MongoDB connection string" + Environment.NewLine +
-            "   DatbaseName - the database name, applicaple only for the collections and export commands" + Environment.NewLine +
-            "   MigrateGridFS - (Optional) migrate GridFS that is associated with the provided database" + Environment.NewLine +
-            "   CollectionsToMigrate - (Optional) a list of collections to rename during the export";
+            $"   {nameof(MongoDBConfiguration.Command)} - available commands: databases, collections, export" + Environment.NewLine +
+            $"   {nameof(MongoDBConfiguration.ConnectionString)} - MongoDB connection string" + Environment.NewLine +
+            $"   {nameof(MongoDBConfiguration.DatabaseName)} - the database name, applicaple only for the collections and export commands" + Environment.NewLine +
+            $"   {nameof(MongoDBConfiguration.MigrateGridFS)} - (Optional) migrate GridFS that is associated with the provided database" + Environment.NewLine +
+            $"   {nameof(MongoDBConfiguration.CollectionsToMigrate)} - (Optional) a list of collections to rename during the export";
 
         private static readonly string CosmosDbDescription =
             "Connect to CosmosDB, pass configuration as JSON" + Environment.NewLine +
-            "   Command - available commands: databases, collections, export" + Environment.NewLine +
-            "   AzureEndpointUrl - CosmosDB URL" + Environment.NewLine +
-            "   PrimaryKey - CosmosDB primary key" + Environment.NewLine +
-            "   DatbaseName - the database name, applicaple only for the collections and export commands" + Environment.NewLine +
-            "   CollectionsToMigrate - (Optional) a list of collections to rename during the export";
+            $"   {nameof(CosmosDBConfiguration.Command)} - available commands: databases, collections, export" + Environment.NewLine +
+            $"   {nameof(CosmosDBConfiguration.AzureEndpointUrl)} - CosmosDB URL" + Environment.NewLine +
+            $"   {nameof(CosmosDBConfiguration.PrimaryKey)} - CosmosDB primary key" + Environment.NewLine +
+            $"   {nameof(CosmosDBConfiguration.DatabaseName)} - the database name, applicaple only for the collections and export commands" + Environment.NewLine +
+            $"   {nameof(CosmosDBConfiguration.CollectionsToMigrate)} - (Optional) a list of collections to rename during the export";
 
         private static CommandLineApplication _app;
 

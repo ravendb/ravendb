@@ -19,7 +19,6 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -396,28 +395,28 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 if (string.IsNullOrWhiteSpace(migrationConfiguration.DatabaseTypeName))
                     throw new ArgumentException("DatabaseTypeName cannot be null or empty");
 
-                if (string.IsNullOrWhiteSpace(migrationConfiguration.FullPathToMigrator))
-                    throw new ArgumentException("FullPathToMigrator cannot be null or empty");
+                if (string.IsNullOrWhiteSpace(migrationConfiguration.MigratorFullPath))
+                    throw new ArgumentException("MigratorFullPath cannot be null or empty");
 
                 if (migrationConfiguration.InputConfiguration == null)
                     throw new ArgumentException("InputConfiguration cannot be null");
 
-                if (Directory.Exists(migrationConfiguration.FullPathToMigrator) == false)
-                    throw new InvalidOperationException($"Directory {migrationConfiguration.FullPathToMigrator} doesn't exist");
+                if (Directory.Exists(migrationConfiguration.MigratorFullPath) == false)
+                    throw new InvalidOperationException($"Directory {migrationConfiguration.MigratorFullPath} doesn't exist");
 
                 if (migrationConfiguration.InputConfiguration.TryGet("Command", out string command) == false)
                     throw new ArgumentException("Cannot find the Command property in the InputConfiguration");
 
                 const string migratorFileName = "Raven.Migrator.dll";
-                var path = Path.Combine(migrationConfiguration.FullPathToMigrator, migratorFileName);
+                var path = Path.Combine(migrationConfiguration.MigratorFullPath, migratorFileName);
                 if (File.Exists(path) == false)
-                    throw new InvalidOperationException($"The file '{migratorFileName}' doesn't exist in path: {migrationConfiguration.FullPathToMigrator}");
+                    throw new InvalidOperationException($"The file '{migratorFileName}' doesn't exist in path: {migrationConfiguration.MigratorFullPath}");
 
                 var processStartInfo = new ProcessStartInfo
                 {
                     FileName = "dotnet",
                     Arguments = $"{migratorFileName} {migrationConfiguration.DatabaseTypeName}",
-                    WorkingDirectory = migrationConfiguration.FullPathToMigrator,
+                    WorkingDirectory = migrationConfiguration.MigratorFullPath,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -432,8 +431,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 }
                 catch (Exception e)
                 {
-                    process?.Kill();
-                    throw new InvalidOperationException("Unable to execute Migrator." + Environment.NewLine +
+                    var killed = KillProcess(process);
+                    throw new InvalidOperationException($"Unable to execute Migrator. Process killed: {killed}" + Environment.NewLine +
                                                         "Command was: " + Environment.NewLine +
                                                         (processStartInfo.WorkingDirectory ?? Directory.GetCurrentDirectory()) + "> "
                                                         + processStartInfo.FileName + " " + processStartInfo.Arguments, e);
@@ -455,8 +454,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     catch (Exception e)
                     {
                         var errorString = await ReadOutput(process.StandardError).ConfigureAwait(false);
-                        process.Kill();
-                        throw new InvalidOperationException($"Process error: {errorString}, exception: {e}");
+                        var killed = KillProcess(process);
+                        throw new InvalidOperationException($"Process error: {errorString}, exception: {e}, process killed: {killed}");
                     }
 
                     return;
@@ -487,12 +486,12 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             }
                             catch (OperationCanceledException)
                             {
-                                process.Kill();
+                                KillProcess(process);
                                 throw;
                             }
                             catch (ObjectDisposedException)
                             {
-                                process.Kill();
+                                KillProcess(process);
                                 throw;
                             }
                             catch (Exception e)
@@ -500,8 +499,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                 var errorString = await ReadOutput(process.StandardError).ConfigureAwait(false);
                                 result.AddError($"Error occurred during migration. Process error: {errorString}, exception: {e}");
                                 onProgress.Invoke(result.Progress);
-                                process.Kill();
-                                throw new InvalidOperationException(errorString);
+                                var killed = KillProcess(process);
+                                throw new InvalidOperationException($"{errorString}, process killed: {killed}");
                             }
 
                             return (IOperationResult)result;
@@ -512,6 +511,19 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 {
                     writer.WriteOperationId(context, operationId);
                 }
+            }
+        }
+
+        private static bool KillProcess(Process process)
+        {
+            try
+            {
+                process?.Kill();
+                return true;
+            }
+            catch
+            {
+                return false;
             }
         }
 
