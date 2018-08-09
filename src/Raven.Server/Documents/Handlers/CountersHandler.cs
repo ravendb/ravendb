@@ -301,7 +301,15 @@ namespace Raven.Server.Documents.Handlers
                 docId, counterName))
             {
                 value = value ?? 0;
-                value = checked (value + val);
+                try
+                {
+                    value = checked(value + val);
+                }
+                catch (OverflowException e)
+                {
+                    throw new CounterOverflowException(
+                        $"Overflow detected in counter '{counterName}' from document '{docId}'.", e);
+                }
 
                 if (addFullValues)
                 {
