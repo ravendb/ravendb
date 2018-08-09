@@ -7,7 +7,7 @@ class backupNowCommand extends commandBase {
         super();
     }
  
-    execute(): JQueryPromise<Raven.Server.Documents.PeriodicBackup.BackupDatabaseNowResult> {
+    execute(): JQueryPromise<Raven.Client.Documents.Operations.Backups.StartBackupOperationResult> {
         const url = endpoints.databases.ongoingTasks.adminBackupDatabase +
             this.urlEncodeArgs({
                 taskId: this.taskId,
