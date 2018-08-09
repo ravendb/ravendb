@@ -20,9 +20,9 @@ namespace Tryouts
         {
             try
             {
-                using (var test = new AttachmentsSessionStress())
+                using (var test = new RavenDB_11705())
                 {
-                    test.StressPutLotOfAttachments(10_000);
+                    await test.CanHandleRevisionOperationBeingRolledBack();
                 }
             }
             catch (Exception e)
