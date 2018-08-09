@@ -4,6 +4,7 @@ import migrateDatabaseModel = require("models/database/tasks/migrateDatabaseMode
 import notificationCenter = require("common/notifications/notificationCenter");
 import eventsCollector = require("common/eventsCollector");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import popoverUtils = require("common/popoverUtils");
 
 interface databasesInfo {
     Databases: Array<string>;
@@ -44,6 +45,20 @@ class migrateDatabase extends viewModelBase {
         });
         this.model.mongoDbConfiguration.databaseName.subscribe(() => this.getCollections());
         this.model.cosmosDbConfiguration.databaseName.subscribe(() => this.getCollections());
+    }
+
+    compositionComplete() {
+        super.compositionComplete();
+
+        popoverUtils.longWithHover($(".migrator-path small"),
+            {
+                content: '<strong>Raven.Migrator.exe</strong> can be found in <strong>tools</strong><br /> package (for version v4.x) on <a target="_blank" href="http://ravendb.net/downloads">ravendb.net</a> website'
+            });
+
+        popoverUtils.longWithHover($(".migrate-gridfs small"),
+            {
+                content: 'GridFS attachments will be saved as documents with attachments in <strong>@files</strong> collection.'
+            });
     }
 
     getDatabases() {
