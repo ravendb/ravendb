@@ -15,13 +15,13 @@ namespace Sparrow.Collections.LockFree
         // TODO: move to leafs
         internal IEqualityComparer<TKey> _keyComparer;
 
-        internal static Func<ConcurrentDictionary<TKey, TValue>, int, DictionaryImpl<TKey, TValue>> CreateRefUnsafe =
-            (ConcurrentDictionary <TKey, TValue> topDict, int capacity) =>
+        internal static Func<LockFreeConcurrentDictionary<TKey, TValue>, int, DictionaryImpl<TKey, TValue>> CreateRefUnsafe =
+            (LockFreeConcurrentDictionary <TKey, TValue> topDict, int capacity) =>
             {
-                var mObj = new Func<ConcurrentDictionary<object, object>, int, DictionaryImpl<object, object>> (DictionaryImpl.CreateRef);
+                var mObj = new Func<LockFreeConcurrentDictionary<object, object>, int, DictionaryImpl<object, object>> (DictionaryImpl.CreateRef);
                 var method = mObj.GetMethodInfo().GetGenericMethodDefinition().MakeGenericMethod(new Type[] { typeof(TKey), typeof(TValue) });
-                var del = (Func<ConcurrentDictionary<TKey, TValue>, int, DictionaryImpl<TKey, TValue>>)method
-                    .CreateDelegate(typeof(Func<ConcurrentDictionary<TKey, TValue>, int, DictionaryImpl<TKey, TValue>>));
+                var del = (Func<LockFreeConcurrentDictionary<TKey, TValue>, int, DictionaryImpl<TKey, TValue>>)method
+                    .CreateDelegate(typeof(Func<LockFreeConcurrentDictionary<TKey, TValue>, int, DictionaryImpl<TKey, TValue>>));
 
                 var result = del(topDict, capacity);
                 CreateRefUnsafe = del;
