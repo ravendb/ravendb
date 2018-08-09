@@ -1034,7 +1034,7 @@ namespace Raven.Server
                         $"You can change the TCP port using one of the following options:{Environment.NewLine}" +
                         $"1) Change the ServerUrl.Tcp property in setting.json file.{Environment.NewLine}" +
                         $"2) Run the server from the command line with --ServerUrl.Tcp option.{Environment.NewLine}" +
-                        $"3) Add RAVEN_ServerUrl.Tcp to the Environment Variables.{Environment.NewLine}" +
+                        $"3) Add RAVEN_ServerUrl_Tcp to the Environment Variables.{Environment.NewLine}" +
                         "For more information go to https://ravendb.net/l/EJS81M/4.1";
 
                         errors.Add(new IOException(msg, ex));
