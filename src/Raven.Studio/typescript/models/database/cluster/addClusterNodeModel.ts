@@ -9,6 +9,7 @@ class addClusterNodeModel {
 
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
         serverUrl: this.serverUrl,
+        nodeTag: this.nodeTag,
         assignedCores: this.assignedCores
     });
 
@@ -28,6 +29,15 @@ class addClusterNodeModel {
         this.serverUrl.extend({
             required: true,
             validUrl: true
+        });
+
+        this.nodeTag.extend({
+            pattern: {
+                message: 'Node tag must contain only upper case letters.',
+                params: '^[A-Z]+$'
+            },
+            minLength: 1,
+            maxLength: 4,
         });
 
         this.assignedCores.extend({
