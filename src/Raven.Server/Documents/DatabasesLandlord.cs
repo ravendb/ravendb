@@ -73,7 +73,7 @@ namespace Raven.Server.Documents
                     return;
                 }
 
-                if (ShouldDeleteDatabase(databaseName, record)) 
+                if (ShouldDeleteDatabase(databaseName, record))
                     return;
 
                 if (record.Topology.RelevantFor(_serverStore.NodeTag) == false)
@@ -140,7 +140,7 @@ namespace Raven.Server.Documents
                         {
                             NotifyPendingClusterTransaction(databaseName, done);
                         });
-                        
+
                         break;
                     default:
                         ThrowUnknownClusterDatabaseChangeType(changeType);
@@ -177,7 +177,7 @@ namespace Raven.Server.Documents
                 }
             }
         }
-        
+
         public bool ShouldDeleteDatabase(string dbName, DatabaseRecord record)
         {
             var deletionInProgress = DeletionInProgressStatus.No;
@@ -185,10 +185,10 @@ namespace Raven.Server.Documents
                                record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
                                deletionInProgress != DeletionInProgressStatus.No;
 
-            if (directDelete && 
-                record.Topology.Count == record.Topology.ReplicationFactor) 
-                // If the deletion was issued form the cluster observer to maintain the replication factor we need to make sure
-                // the all the documents were replicated from this node, therefor the deletion will be called from the replication code.
+            if (directDelete &&
+                record.Topology.Count == record.Topology.ReplicationFactor)
+            // If the deletion was issued form the cluster observer to maintain the replication factor we need to make sure
+            // the all the documents were replicated from this node, therefor the deletion will be called from the replication code.
             {
                 DeleteDatabase(dbName, deletionInProgress, record);
                 return true;
@@ -205,7 +205,7 @@ namespace Raven.Server.Documents
                 {
                     removeLockAndReturn = DatabasesCache.RemoveLockAndReturn(dbName, CompleteDatabaseUnloading, out _);
                 }
-                catch (AggregateException ae ) when (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
+                catch (AggregateException ae) when (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
                 {
                     // this is already in the process of being deleted, we can just exit and let another thread handle it
                     return;
@@ -582,7 +582,7 @@ namespace Raven.Server.Documents
             {
                 string msg = txt;
                 msg = $"[Load Database] {DateTime.UtcNow} :: Database '{(string)databaseName}' : {msg}";
-                if(InitLog.TryGetValue(databaseName, out var q))
+                if (InitLog.TryGetValue(databaseName, out var q))
                     q.Enqueue(msg);
                 if (_logger.IsInfoEnabled)
                     _logger.Info(msg);
@@ -720,7 +720,7 @@ namespace Raven.Server.Documents
 
         public async Task<IDisposable> UnloadAndLockDatabase(string dbName, string reason)
         {
-            var tcs = Task.FromException<DocumentDatabase>(new DatabaseDisabledException($"The database {dbName} is currently locked because {reason}" )
+            var tcs = Task.FromException<DocumentDatabase>(new DatabaseDisabledException($"The database {dbName} is currently locked because {reason}")
             {
                 Data =
                 {
@@ -731,7 +731,7 @@ namespace Raven.Server.Documents
             try
             {
                 var existing = DatabasesCache.Replace(dbName, tcs);
-                if(existing != null)
+                if (existing != null)
                     (await existing)?.Dispose();
 
                 return new DisposableAction(() =>
@@ -809,7 +809,7 @@ namespace Raven.Server.Documents
                 timer.Dispose();
             }
 
-            if(wakeup.HasValue == false || wakeup.Value == DateTime.MaxValue)
+            if (wakeup.HasValue == false || wakeup.Value == DateTime.MaxValue)
                 return true;
 
             // if we have a small value or even a negative one, simply don't dispose the database.
