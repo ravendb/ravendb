@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -21,7 +22,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     session.Store(new User()
                     {
                         Name = "arek",
-                        Age = 32
+                        Age = 32,
                     });
 
                     session.Store(new User()
@@ -90,6 +91,105 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
+        [Fact]
+        public void CanIndexDictionaryWithComplexObjectsDirectly()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new IndexReturningDictionaryWithComplexObjects_MethodSyntax().Execute(store);
+                new IndexReturningDictionaryWithComplexObjects_QuerySyntax().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new PersonWithAddress()
+                    {
+                        Name = "joe",
+                        Address = new Address()
+                        {
+                            City = "NY",
+                            Country = "USA",
+                            ZipCode = 1
+                        }
+                    });
+
+                    session.Store(new PersonWithAddress()
+                    {
+                        Name = "doe",
+                        Address = new Address()
+                        {
+                            City = "LA",
+                            Country = "USA",
+                            ZipCode = 2
+                        }
+                    });
+
+                    session.SaveChanges();
+
+                    // IndexReturningDictionaryWithComplexObjects_MethodSyntax
+
+                    var people = session.Query<PersonWithAddress, IndexReturningDictionaryWithComplexObjects_MethodSyntax>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .ToList();
+
+                    Assert.Equal(2, people.Count);
+
+                    people = session.Query<PersonWithAddress, IndexReturningDictionaryWithComplexObjects_MethodSyntax>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Where(x => x.Address.ZipCode == 1).ToList();
+
+                    Assert.Equal(1, people.Count);
+                    Assert.Equal("joe", people[0].Name);
+
+                    people = session.Query<PersonWithAddress, IndexReturningDictionaryWithComplexObjects_MethodSyntax>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Search(x => x.Address, "LA").ToList();
+
+                    Assert.Equal(1, people.Count);
+                    Assert.Equal("doe", people[0].Name);
+
+                    people = session.Query<IndexReturningDictionaryWithComplexObjects_MethodSyntax.Result, IndexReturningDictionaryWithComplexObjects_MethodSyntax>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Search(x => x.DictField, "joe")
+                        .OfType<PersonWithAddress>()
+                        .ToList();
+
+                    Assert.Equal(1, people.Count);
+                    Assert.Equal("joe", people[0].Name);
+
+                    // IndexReturningDictionaryWithComplexObjects_QuerySyntax
+
+                    people = session.Query<PersonWithAddress, IndexReturningDictionaryWithComplexObjects_QuerySyntax>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .ToList();
+
+                    Assert.Equal(2, people.Count);
+
+                    people = session.Query<PersonWithAddress, IndexReturningDictionaryWithComplexObjects_QuerySyntax>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Where(x => x.Address.ZipCode == 1).ToList();
+
+                    Assert.Equal(1, people.Count);
+                    Assert.Equal("joe", people[0].Name);
+
+                    people = session.Query<PersonWithAddress, IndexReturningDictionaryWithComplexObjects_QuerySyntax>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Search(x => x.Address, "LA").ToList();
+
+                    Assert.Equal(1, people.Count);
+                    Assert.Equal("doe", people[0].Name);
+
+                    people = session.Query<IndexReturningDictionaryWithComplexObjects_MethodSyntax.Result, IndexReturningDictionaryWithComplexObjects_QuerySyntax>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Search(x => x.DictField, "joe")
+                        .OfType<PersonWithAddress>()
+                        .ToList();
+
+                    Assert.Equal(1, people.Count);
+                    Assert.Equal("joe", people[0].Name);
+                }
+            }
+        }
+
         private class IndexReturningDictionary_MethodSyntax : AbstractIndexCreationTask<User>
         {
             public IndexReturningDictionary_MethodSyntax()
@@ -151,6 +251,71 @@ namespace FastTests.Server.Documents.Indexing.Static
                         @"from user in docs.Users select new Dictionary<string, object>() { {""Age"", user.Age}, {""Count"", 1} }"
                     },
                     Reduce = @"from result in results group result by result.Age into g select new Dictionary<string, object>() { {""Age"", g.Key}, {""Count"", g.Sum(x => x.Count)} }"
+                };
+            }
+        }
+
+        private class IndexReturningDictionaryWithComplexObjects_MethodSyntax : AbstractIndexCreationTask<PersonWithAddress>
+        {
+            public class Result
+            {
+                public int Address_ZipCode { get; set; }
+                public Address Address { get; set; }
+                public Dictionary<string, object> DictField { get; set; }
+            }
+
+            public IndexReturningDictionaryWithComplexObjects_MethodSyntax()
+            {
+                Map = users => users.Select(x => new Dictionary<string, object>()
+                {
+                    {"Address_ZipCode", x.Address.ZipCode},
+                    {nameof(PersonWithAddress.Address), new Address
+                        {
+                            City = x.Address.City,
+                            Country = x.Address.Country
+                        }
+                    },
+                    {nameof(Result.DictField), new Dictionary<string, object>()
+                        {
+                            {"Name", x.Name}
+                        }
+                    }
+                });
+
+                Index(nameof(Result.Address), FieldIndexing.Search);
+                Index(nameof(Result.DictField), FieldIndexing.Search);
+            }
+        }
+
+        private class IndexReturningDictionaryWithComplexObjects_QuerySyntax : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Maps = new HashSet<string>
+                    {
+                        @"from person in docs.PersonWithAddresses select new Dictionary<string, object>() 
+                            { 
+                                {""Address_ZipCode"", person.Address.ZipCode},
+                                {""Address"", new
+                                    {
+                                        City = person.Address.City,
+                                        Country = person.Address.Country
+                                    }
+                                },
+                                {""DictField"", new Dictionary<string, object>()
+                                    {
+                                        {""Name"", person.Name}
+                                    }
+                                },
+                            }"
+                    },
+                    Fields =
+                    {
+                        {"Address", new IndexFieldOptions{ Indexing = FieldIndexing.Search }},
+                        {"DictField", new IndexFieldOptions{ Indexing = FieldIndexing.Search }}
+                    }
                 };
             }
         }
