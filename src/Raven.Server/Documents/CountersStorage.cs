@@ -16,6 +16,7 @@ using static Raven.Server.Documents.Replication.ReplicationBatchItem;
 using Raven.Server.Utils;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Server.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -321,7 +322,7 @@ namespace Raven.Server.Documents
             return tx.OpenTable(CountersSchema, tableName);
         }
 
-        public string IncrementCounter(DocumentsOperationContext context, string documentId, string collection, string name, long value)
+        public string IncrementCounter(DocumentsOperationContext context, string documentId, string collection, string name, long delta)
         {
             if (context.Transaction == null)
             {
@@ -334,11 +335,23 @@ namespace Raven.Server.Documents
             
             using (GetCounterKey(context, documentId, name, context.Environment.Base64Id, out var counterKey))
             {
-                long prev = 0;
+                var value = delta;
                 if (table.ReadByKey(counterKey, out var existing))
                 {
-                    prev = *(long*)existing.Read((int)CountersTable.Value, out var size);
+                    var prev = *(long*)existing.Read((int)CountersTable.Value, out var size);
                     Debug.Assert(size == sizeof(long));
+                    try
+                    {
+                        value = checked(prev + delta); //inc
+
+                    }
+                    catch (OverflowException e)
+                    {
+                        throw new CounterOverflowException(
+                            $"Could not increment counter '{name}' from document '{documentId}' " +
+                            $"with value '{prev}' by '{delta}'. " +
+                            "Arithmetic operation resulted in an overflow.", e);
+                    }
                 }
 
                 RemoveTombstoneIfExists(context, documentId, name);
@@ -355,7 +368,7 @@ namespace Raven.Server.Documents
                     tvb.Add(counterKey);
                     tvb.Add(nameSlice);
                     tvb.Add(Bits.SwapBytes(etag));
-                    tvb.Add(checked (prev + value)); //inc
+                    tvb.Add(value); 
                     tvb.Add(cv);
                     tvb.Add(collectionSlice);
                     tvb.Add(context.TransactionMarkerOffset);
@@ -411,7 +424,15 @@ namespace Raven.Server.Documents
                     value = value ?? 0;
                     var pCounterDbValue = result.Value.Reader.Read((int)CountersTable.Value, out var size);
                     Debug.Assert(size == sizeof(long));
-                    value = checked (value + *(long*)pCounterDbValue);
+                    try
+                    {
+                        value = checked(value + *(long*)pCounterDbValue);
+                    }
+                    catch (OverflowException e)
+                    {
+                        throw new CounterOverflowException(
+                            $"Overflow detected in counter '{counterName}' from document '{docId}'.", e);
+                    }
                 }
 
                 return value;

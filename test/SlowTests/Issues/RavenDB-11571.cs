@@ -40,7 +40,9 @@ namespace SlowTests.Issues
 
                     documentCounters.Increment("Downloads");
                     var e = Assert.Throws<RavenException>(() => session.SaveChanges());
-                    Assert.Contains("Arithmetic operation resulted in an overflow", e.Message);
+                    Assert.Contains("CounterOverflowException: Could not increment counter 'Downloads' " +
+                                    $"from document 'users/1' with value '{long.MaxValue}' by '1'. " +
+                                    "Arithmetic operation resulted in an overflow", e.Message);
                 }
             }
         }
@@ -108,7 +110,9 @@ namespace SlowTests.Issues
                     var documentCounters = session.CountersFor("users/1");
                     documentCounters.Increment("Downloads");
                     var e = Assert.Throws<RavenException>(() => session.SaveChanges());
-                    Assert.Contains("Arithmetic operation resulted in an overflow", e.Message);
+                    Assert.Contains("CounterOverflowException: Overflow detected " +
+                                    "in counter 'Downloads' from document 'users/1'"
+                                    , e.Message);
 
                 }
             }
