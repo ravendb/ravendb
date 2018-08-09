@@ -8,7 +8,7 @@ namespace Raven.Server.Smuggler.Migration
     {
         public string DatabaseTypeName { get; set; }
 
-        public string FullPathToMigrator { get; set; }
+        public string MigratorFullPath { get; set; }
 
         public BlittableJsonReaderObject InputConfiguration { get; set; }
 

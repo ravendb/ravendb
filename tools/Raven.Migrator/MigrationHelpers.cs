@@ -146,25 +146,19 @@ namespace Raven.Migrator
                 }
             }
 
-            if (attachments == null || attachments.Count == 0)
+            var metadata = new Dictionary<string, object>
             {
-                dictionary[MetadataProperty] = new Dictionary<string, object>
-                {
-                    {RavenDocumentId, documentId},
-                    {RavenCollection, collectionName}
-                };
-            }
-            else
+                {RavenDocumentId, documentId},
+                {RavenCollection, collectionName}
+            };
+
+            if (attachments != null && attachments.Count > 0)
             {
-                dictionary[MetadataProperty] = new Dictionary<string, object>
-                {
-                    {RavenDocumentId, documentId},
-                    {RavenCollection, collectionName},
-                    {MetadataPropertyFlags, MetadataPropertyFlagsValue},
-                    {MetadataPropertyAttachments, attachments}
-                };
+                metadata.Add(MetadataPropertyFlags, MetadataPropertyFlagsValue);
+                metadata.Add(MetadataPropertyAttachments, attachments);
             }
 
+            dictionary[MetadataProperty] = metadata;
             JsonSerializer.Value.Serialize(jsonTextWriter, document);
         }
 

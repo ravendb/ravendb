@@ -29,7 +29,7 @@ class migrateDatabase extends viewModelBase {
 
         aceEditorBindingHandler.install();
 
-        this.model.fullPathToMigrator.subscribe(() => this.getDatabases());
+        this.model.migratorFullPath.subscribe(() => this.getDatabases());
         this.model.mongoDbConfiguration.connectionString.subscribe(() => {
             this.getDatabases();
             this.getCollections();
