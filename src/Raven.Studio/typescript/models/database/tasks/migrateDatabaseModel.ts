@@ -133,7 +133,7 @@ class cosmosDbMigrationModel extends noSqlMigrationModel {
 
 class migrateDatabaseModel {
     selectMigrationOption = ko.observable<migrationOptions>("none");
-    fullPathToMigrator = ko.observable<string>();
+    migratorFullPath = ko.observable<string>();
     transformScript = ko.observable<string>();
 
     mongoDbConfiguration = new mongoDbMigrationModel();
@@ -168,7 +168,7 @@ class migrateDatabaseModel {
     }
     
     private initValidation() {
-        this.fullPathToMigrator.extend({
+        this.migratorFullPath.extend({
             required: true
         });
 
@@ -226,7 +226,7 @@ class migrateDatabaseModel {
         });
 
         this.validationGroup = ko.validatedObservable({
-            fullPathToMigrator: this.fullPathToMigrator,
+            migratorFullPath: this.migratorFullPath,
             selectMigrationOption: this.selectMigrationOption,
             mongoDbDatabaseName: this.mongoDbConfiguration.databaseName,
             connectionString: this.mongoDbConfiguration.connectionString,
@@ -236,7 +236,7 @@ class migrateDatabaseModel {
         });
 
         this.validationGroupDatabasesCommand = ko.validatedObservable({
-            fullPathToMigrator: this.fullPathToMigrator,
+            migratorFullPath: this.migratorFullPath,
             selectMigrationOption: this.selectMigrationOption,
             connectionString: this.mongoDbConfiguration.connectionString,
             azureEndpointUrl: this.cosmosDbConfiguration.azureEndpointUrl,
@@ -255,7 +255,7 @@ class migrateDatabaseModel {
         const type = this.selectMigrationOption().toLowerCase();
         return {
             DatabaseTypeName: type,
-            FullPathToMigrator: this.fullPathToMigrator(),
+            MigratorFullPath: this.migratorFullPath(),
             InputConfiguration: inputConfiguration,
             TransformScript: this.transformScript()
         };

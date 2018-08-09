@@ -82,7 +82,8 @@ namespace Raven.Migrator.MongoDB
                     foreach (var collectionDocument in cursor.Current)
                     {
                         var collectionName = collectionDocument["name"].ToString();
-                        if (collectionName.EndsWith(".chunks") || collectionName.EndsWith(".files"))
+                        if (collectionName.EndsWith(".chunks", StringComparison.OrdinalIgnoreCase) || 
+                            collectionName.EndsWith(".files", StringComparison.OrdinalIgnoreCase))
                             continue; // grid fs files will be handled separately
 
                         collections.Add(collectionName);
