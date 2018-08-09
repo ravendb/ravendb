@@ -58,6 +58,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         public override SyntaxNode VisitObjectCreationExpression(ObjectCreationExpressionSyntax node)
         {
+            if (Fields != null)
+                return node;
+
             Fields = new HashSet<string>();
 
             if (IsDictionaryObjectCreationExpression(node) == false)
@@ -89,7 +92,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     throw new InvalidOperationException("Duplicated field name in indexed dictionary");
             }
 
-            return base.VisitObjectCreationExpression(node);
+            return node;
         }
 
         public static bool IsDictionaryObjectCreationExpression(ObjectCreationExpressionSyntax node)
