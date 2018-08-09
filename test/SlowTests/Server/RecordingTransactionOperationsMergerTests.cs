@@ -99,8 +99,6 @@ namespace SlowTests.Server
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
 
-            Process.Start(@"C:\Program Files (x86)\Notepad++\notepad++.exe", recordFilePath);
-
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
@@ -406,6 +404,8 @@ namespace SlowTests.Server
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {
+                store.Maintenance.Server.Send(new ModifyConflictSolverOperation(store.Database));
+
                 var command = new GetNextOperationIdCommand();
                 store.Commands().Execute(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));

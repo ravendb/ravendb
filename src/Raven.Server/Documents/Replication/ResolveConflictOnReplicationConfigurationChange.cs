@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Patch;
@@ -152,8 +153,7 @@ namespace Raven.Server.Documents.Replication
                         // let's check if nothing has changed since we resolved the conflict in the read tx
                         // in particular the conflict could be resolved externally before the tx merger opened this write tx
 
-                        // Can be null in replay transaction commands
-                        if (_conflictsStorage != null && _conflictsStorage.ShouldThrowConcurrencyExceptionOnConflict(context, lowerId, item.MaxConflictEtag, out _))
+                        if (_conflictsStorage.ShouldThrowConcurrencyExceptionOnConflict(context, lowerId, item.MaxConflictEtag, out _))
                             continue;
                         RequiresRetry = true;
                     }
@@ -167,12 +167,15 @@ namespace Raven.Server.Documents.Replication
             public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 // The LowerId created as in memory LazyStringValue
-                // so EscapePositions set to empty to avoid reference to escape characters while serializing
-                _resolvedConflicts.ForEach(c => c.ResolvedConflict.LowerId.EscapePositions = Array.Empty<int>());
+                // so EscapePositions set to empty to avoid reference to escape bytes (after string bytes) while serializing
+                foreach (var conflict in _resolvedConflicts)
+                {
+                    conflict.ResolvedConflict.LowerId.EscapePositions = Array.Empty<int>();
+                }
 
                 return new PutResolvedConflictsCommandDto
                 {
-                    ResolvedConflicts = _resolvedConflicts
+                    ResolvedConflicts = _resolvedConflicts,
                 };
             }
         }
@@ -382,12 +385,12 @@ namespace Raven.Server.Documents.Replication
         public ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             var resolver = new ResolveConflictOnReplicationConfigurationChange(
-                database.ReplicationLoader, 
+                database.ReplicationLoader,
                 LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name));
 
             return new ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand(
-                conflictsStorage: null, 
-                ResolvedConflicts, 
+                database.DocumentsStorage.ConflictsStorage,
+                ResolvedConflicts,
                 resolver);
         }
     }
