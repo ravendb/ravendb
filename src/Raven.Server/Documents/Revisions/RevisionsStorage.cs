@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Revisions
         private readonly DocumentsStorage _documentsStorage;
         public RevisionsConfiguration Configuration { get; private set; }
         public readonly RevisionsOperations Operations;
-        private readonly HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly Logger _logger;
 
         public enum RevisionsTable
@@ -96,8 +96,26 @@ namespace Raven.Server.Documents.Revisions
         public Table EnsureRevisionTableCreated(Transaction tx, CollectionName collection)
         {
             var tableName = collection.GetTableName(CollectionTableType.Revisions);
-            if (_tableCreated.Add(collection.Name))
+
+            if (_tableCreated.Contains(collection.Name) == false)
+            {
+                // RavenDB-11705: It is possible that this will revert if the transaction
+                // aborts, so we must record this only after the transaction has been committed
+                // note that calling the Create() method multiple times is a noop
                 RevisionsSchema.Create(tx, tableName, 16);
+                tx.LowLevelTransaction.OnDispose += _ =>
+                 {
+                     if (tx.LowLevelTransaction.Committed == false)
+                         return;
+
+                     // not sure if we can _rely_ on the tx write lock here, so let's be safe and create
+                     // a new instance, just in case 
+                     _tableCreated = new HashSet<string>(_tableCreated, StringComparer.OrdinalIgnoreCase)
+                     {
+                         collection.Name
+                     };
+                 };
+            }
             return tx.OpenTable(RevisionsSchema, tableName);
         }
 
