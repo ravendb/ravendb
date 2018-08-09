@@ -486,11 +486,12 @@ namespace Raven.Server.Documents
                 var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config), TaskCreationOptions.RunContinuationsAsynchronously);
                 var database = DatabasesCache.GetOrAdd(databaseName, task);
                 if (database == task)
+                {
+                    DeleteIfNeeded(databaseName, task);
                     task.Start(); // the semaphore will be released here at the end of the task
+                }
                 else
                     _databaseSemaphore.Release();
-
-                DeleteIfNeeded(databaseName, database);
 
                 return database;
             }
@@ -563,7 +564,7 @@ namespace Raven.Server.Documents
                     if (record == null)
                         return;
 
-                    ShouldDeleteDatabase(databaseName.ToString(), record);
+                    ShouldDeleteDatabase(databaseName, record);
                 }
                 catch
                 {
