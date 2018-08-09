@@ -34,33 +34,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (KnonwMethodsToInsepct.Contains(mae.Name.Identifier.Text) == false)
                 return Visit(node.Expression);
 
-            var lastAnonymusObjectCreation = node.DescendantNodes(descendIntoChildren: syntaxNode =>
-                {
-                    if (syntaxNode is AnonymousObjectCreationExpressionSyntax || 
-                        syntaxNode is ObjectCreationExpressionSyntax oce && CaptureDictionaryFieldsNamesVisitor.IsDictionaryObjectCreationExpression(oce))
-                    {
-                        return false;
-                    }
-                    return true;
-                })
-                .LastOrDefault(x => x.IsKind(SyntaxKind.AnonymousObjectCreationExpression)) as AnonymousObjectCreationExpressionSyntax;
-
-            if (lastAnonymusObjectCreation != null)
-                VisitAnonymousObjectCreationExpression(lastAnonymusObjectCreation);
-            else
-            {
-                var dictVisitor = new CaptureDictionaryFieldsNamesVisitor();
-
-                dictVisitor.VisitInvocationExpression(node);
-
-                if (dictVisitor.Fields != null)
-                {
-                    Fields = dictVisitor.Fields;
-                    return node;
-                }
-
-                ThrowIndexingFunctionMustReturnAnonymousObjectOrDictionary();
-            }
+            CaptureFieldNames(node, x => x.VisitInvocationExpression(node));
 
             return node;
         }
@@ -70,35 +44,44 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (Fields != null)
                 return node;
 
-            var last = node.DescendantNodes(descendIntoChildren: syntaxNode =>
-                {
-                    if (syntaxNode is AnonymousObjectCreationExpressionSyntax ||
-                        syntaxNode is ObjectCreationExpressionSyntax oce && CaptureDictionaryFieldsNamesVisitor.IsDictionaryObjectCreationExpression(oce))
-                    {
-                        return false;
-                    }
-                    return true;
-                })
-                .LastOrDefault(x => x.IsKind(SyntaxKind.AnonymousObjectCreationExpression)) as AnonymousObjectCreationExpressionSyntax;
+            CaptureFieldNames(node, x => x.VisitQueryBody(node));
 
-            if (last != null)
-                VisitAnonymousObjectCreationExpression(last);
-            else
+            return node;
+        }
+
+        private void CaptureFieldNames(SyntaxNode node, Action<CaptureDictionaryFieldsNamesVisitor> visitDictionaryNodeExpression)
+        {
+            var nodes = node.DescendantNodes(descendIntoChildren: syntaxNode =>
+            {
+                if (syntaxNode is AnonymousObjectCreationExpressionSyntax ||
+                    syntaxNode is ObjectCreationExpressionSyntax oce && CaptureDictionaryFieldsNamesVisitor.IsDictionaryObjectCreationExpression(oce))
+                {
+                    return false;
+                }
+                return true;
+            }).ToList();
+
+            var lastObjectCreation = nodes.LastOrDefault(x => x.IsKind(SyntaxKind.AnonymousObjectCreationExpression) ||
+                                                              x.IsKind(SyntaxKind.ObjectCreationExpression) &&
+                                                              x is ObjectCreationExpressionSyntax oce &&
+                                                              CaptureDictionaryFieldsNamesVisitor.IsDictionaryObjectCreationExpression(oce));
+
+            if (lastObjectCreation is AnonymousObjectCreationExpressionSyntax lastAnonymousObjectCreation)
+            {
+                VisitAnonymousObjectCreationExpression(lastAnonymousObjectCreation);
+            }
+            else if (lastObjectCreation is ObjectCreationExpressionSyntax oce && CaptureDictionaryFieldsNamesVisitor.IsDictionaryObjectCreationExpression(oce))
             {
                 var dictVisitor = new CaptureDictionaryFieldsNamesVisitor();
 
-                dictVisitor.VisitQueryBody(node);
+                visitDictionaryNodeExpression(dictVisitor);
 
-                if (dictVisitor.Fields != null)
-                {
-                    Fields = dictVisitor.Fields;
-                    return node;
-                }
-
+                Fields = dictVisitor.Fields;
+            }
+            else
+            {
                 ThrowIndexingFunctionMustReturnAnonymousObjectOrDictionary();
             }
-
-            return node;
         }
 
         public override SyntaxNode VisitAnonymousObjectCreationExpression(AnonymousObjectCreationExpressionSyntax node)
