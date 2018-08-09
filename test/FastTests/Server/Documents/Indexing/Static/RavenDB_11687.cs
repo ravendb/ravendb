@@ -263,6 +263,34 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
+        [Fact]
+        public void CanIndexUsingDictionaryOutputPreceededBySelectWithAnonnymus()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new MixedSelectWithAnonymusAndDictionary().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Address()
+                    {
+                        City = "NY",
+                        Country = "USA"
+                    }, "addresses/1");
+
+                    session.Store(new Person()
+                    {
+                        AddressId = "addresses/1",
+                        Name = "joe"
+                    });
+
+                    session.SaveChanges();
+
+                    var persons = session.Query<Person, MixedSelectWithAnonymusAndDictionary>().Customize(x => x.WaitForNonStaleResults()).ToList();
+                }
+            }
+        }
+
         private class IndexReturningDictionary_MethodSyntax : AbstractIndexCreationTask<User>
         {
             public IndexReturningDictionary_MethodSyntax()
@@ -472,6 +500,23 @@ namespace FastTests.Server.Documents.Indexing.Static
                         {"Names", new IndexFieldOptions{ Indexing = FieldIndexing.Search }}
                     }
                 };
+            }
+        }
+
+        public class MixedSelectWithAnonymusAndDictionary : AbstractIndexCreationTask<Person>
+        {
+            public MixedSelectWithAnonymusAndDictionary()
+            {
+                Map = users => users.Select(x => new
+                {
+                    Name = x.Name,
+                    Address = LoadDocument<Address>(x.AddressId)
+                }).Select(x => new Dictionary<string, object>()
+                {
+                    {"Name", x.Name},
+                    {"Adddress_City", x.Address.City},
+                    {"Adddress_Country", x.Address.Country},
+                });
             }
         }
     }
