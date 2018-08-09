@@ -6,6 +6,7 @@ using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
@@ -281,6 +282,21 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 foreach (var item in enumerable)
                 {
                     Process(context, item, true);
+                }
+
+                return;
+            }
+
+            if (value is DynamicJsonValue djv)
+            {
+                _mode = Mode.MultipleValues;
+
+                if (_buffer == null)
+                    _buffer = _buffersPool.Allocate(16);
+
+                foreach (var item in djv.Properties)
+                {
+                    Process(context, item.Value, true);
                 }
 
                 return;
