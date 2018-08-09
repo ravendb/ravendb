@@ -16,6 +16,7 @@ using static Raven.Server.Documents.Replication.ReplicationBatchItem;
 using Raven.Server.Utils;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Server.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -28,7 +29,7 @@ namespace Raven.Server.Documents
 
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
-        
+
         private static readonly Slice CountersTombstonesSlice;
         private static readonly Slice AllCountersEtagSlice;
         private static readonly Slice CollectionCountersEtagsSlice;
@@ -58,10 +59,10 @@ namespace Raven.Server.Documents
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
-            	Slice.From(ctx, "AllCountersEtags", ByteStringType.Immutable, out AllCountersEtagSlice);
-            	Slice.From(ctx, "CollectionCountersEtags", ByteStringType.Immutable, out CollectionCountersEtagsSlice);
-            	Slice.From(ctx, "CounterKeys", ByteStringType.Immutable, out CounterKeysSlice);
-            	Slice.From(ctx, CountersTombstones, ByteStringType.Immutable, out CountersTombstonesSlice);
+                Slice.From(ctx, "AllCountersEtags", ByteStringType.Immutable, out AllCountersEtagSlice);
+                Slice.From(ctx, "CollectionCountersEtags", ByteStringType.Immutable, out CollectionCountersEtagsSlice);
+                Slice.From(ctx, "CounterKeys", ByteStringType.Immutable, out CounterKeysSlice);
+                Slice.From(ctx, CountersTombstones, ByteStringType.Immutable, out CountersTombstonesSlice);
             }
             CountersSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
@@ -91,7 +92,7 @@ namespace Raven.Server.Documents
             _documentsStorage = documentDatabase.DocumentsStorage;
 
             tx.CreateTree(CounterKeysSlice);
-            
+
             TombstonesSchema.Create(tx, CountersTombstonesSlice, 16);
         }
 
@@ -130,7 +131,7 @@ namespace Raven.Server.Documents
 
             if (table == null)
                 yield break;
-            
+
             foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice], etag, skip))
             {
                 if (take-- <= 0)
@@ -332,7 +333,7 @@ namespace Raven.Server.Documents
 
             var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
             var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
-            
+
             using (GetCounterKey(context, documentId, name, context.Environment.Base64Id, out var counterKey))
             {
                 var value = delta;
@@ -347,10 +348,7 @@ namespace Raven.Server.Documents
                     }
                     catch (OverflowException e)
                     {
-                        throw new CounterOverflowException(
-                            $"Could not increment counter '{name}' from document '{documentId}' " +
-                            $"with value '{prev}' by '{delta}'. " +
-                            "Arithmetic operation resulted in an overflow.", e);
+                        CounterOverflowException.ThrowFor(documentId, name, prev, delta, e);
                     }
                 }
 
@@ -368,7 +366,7 @@ namespace Raven.Server.Documents
                     tvb.Add(counterKey);
                     tvb.Add(nameSlice);
                     tvb.Add(Bits.SwapBytes(etag));
-                    tvb.Add(value); 
+                    tvb.Add(value);
                     tvb.Add(cv);
                     tvb.Add(collectionSlice);
                     tvb.Add(context.TransactionMarkerOffset);
@@ -430,8 +428,7 @@ namespace Raven.Server.Documents
                     }
                     catch (OverflowException e)
                     {
-                        throw new CounterOverflowException(
-                            $"Overflow detected in counter '{counterName}' from document '{docId}'.", e);
+                        CounterOverflowException.ThrowFor(docId, counterName, e);
                     }
                 }
 
@@ -453,14 +450,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static (string ChangeVector , long Value) ExtractDbIdAndValue((Slice Key, Table.TableValueHolder Value) result)
+        private static (string ChangeVector, long Value) ExtractDbIdAndValue((Slice Key, Table.TableValueHolder Value) result)
         {
             var counterKey = result.Value.Reader.Read((int)CountersTable.CounterKey, out var size);
             Debug.Assert(size > DbIdAsBase64Size);
             var pCounterDbValue = result.Value.Reader.Read((int)CountersTable.Value, out size);
             Debug.Assert(size == sizeof(long));
             var changeVector = result.Value.Reader.Read((int)CountersTable.ChangeVector, out size);
-            
+
             return (Encoding.UTF8.GetString(changeVector, size), *(long*)pCounterDbValue);
         }
 
@@ -522,7 +519,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public ByteStringContext.InternalScope GetCounterPartialKey(DocumentsOperationContext context, string documentId,  out Slice partialKeySlice)
+        public ByteStringContext.InternalScope GetCounterPartialKey(DocumentsOperationContext context, string documentId, out Slice partialKeySlice)
         {
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, documentId, out var docIdLower, out _))
             {
@@ -544,11 +541,11 @@ namespace Raven.Server.Documents
             // this will called as part of document's delete, so we don't bother creating
             // tombstones (existing tombstones will remain and be cleaned up by the usual
             // tombstone cleaner task
-            
+
             var table = GetCountersTable(context.Transaction.InnerTransaction, collection);
 
             if (table.NumberOfEntries == 0)
-                return; 
+                return;
 
             using (GetCounterPartialKey(context, documentId, out var keyPerfix))
             {
