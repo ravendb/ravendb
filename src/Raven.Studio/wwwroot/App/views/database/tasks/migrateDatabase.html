@@ -8,8 +8,11 @@
                 <div class="row" data-bind="with: model">
                     <div class="col-sm-8 col-lg-6 margin-top">
 
-                        <div class="form-group" data-bind="validationElement: fullPathToMigrator">
-                            <label class="control-label">Migrator Path</label>
+                        <div class="form-group" data-bind="validationElement: migratorFullPath">
+                            <label class="control-label migrator-path">
+                                Migrator Path
+                                <small><i class="icon-info text-info"></i></small>
+                            </label>
                             <div class="flex-grow">
                                 <input data-bind="textInput: migratorFullPath" type="text" class="form-control" placeholder="Full path to the migrator tool" />
                             </div>
@@ -43,7 +46,9 @@
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="control-label"></label>
+                                <label class="control-label migrate-gridfs">
+                                    <small><i class="icon-info text-info"></i></small>
+                                </label>
                                 <div class="toggle">
                                     <input class="styled" type="checkbox" id="migrate-gridfs" data-bind="checked: migrateGridFs">
                                     <label for="migrate-gridfs">Migrate GridFS</label>
