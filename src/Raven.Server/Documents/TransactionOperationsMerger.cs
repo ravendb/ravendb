@@ -16,6 +16,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json;
+using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
@@ -23,6 +24,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Exceptions;
 using Raven.Server.Json;
+using Raven.Server.Json.Converters;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -202,7 +204,7 @@ namespace Raven.Server.Documents
                         var dto = recordableCommand.ToDto(context);
                         using (var writer = new BlittableJsonWriter(context))
                         {
-                            var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+                            var jsonSerializer = GetJsonSerializer();
 
                             jsonSerializer.Serialize(writer, dto);
                             writer.FinalizeDocument();
@@ -1245,7 +1247,7 @@ namespace Raven.Server.Documents
                 //Todo To remove after all MergedTransactionCommand driven class include in switch
                 throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
             }
-            var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+            var jsonSerializer = GetJsonSerializer();
             using (var reader = new BlittableJsonReader(context))
             {
                 reader.Init(commandReader);
@@ -1256,6 +1258,7 @@ namespace Raven.Server.Documents
 
         private IReplayableCommandDto<MergedTransactionCommand> DeserializeCommandDto(string type, JsonSerializer jsonSerializer, BlittableJsonReader reader, PeepingTomStream peepingTomStream)
         {
+            //Todo Maybe should be simplified by convention & reflection
             switch (type)
             {
                 case nameof(BatchHandler.MergedBatchCommand):
@@ -1282,9 +1285,18 @@ namespace Raven.Server.Documents
                     return jsonSerializer.Deserialize<MergedHiLoReturnCommandDto>(reader);
                 case nameof(IncomingReplicationHandler.MergedDocumentReplicationCommand):
                     return jsonSerializer.Deserialize<MergedDocumentReplicationCommandDto>(reader);
+                case nameof(ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand):
+                    return jsonSerializer.Deserialize<DeleteExpiredDocumentsCommandDto>(reader);
                 default:
                     throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
             }
+        }
+
+        private static JsonSerializer GetJsonSerializer()
+        {
+            var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+            jsonSerializer.Converters.Add(SliceJsonConverter.Instance);
+            return jsonSerializer;
         }
 
         public class ReplayTransactionsException : Exception

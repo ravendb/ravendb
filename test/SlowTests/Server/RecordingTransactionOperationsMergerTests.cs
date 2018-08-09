@@ -65,6 +65,55 @@ namespace SlowTests.Server
         }
 
         [Fact]
+        public async Task RecordingDeleteExpiredDocumentsCommand()
+        {
+            var recordFilePath = NewDataPath();
+
+            const string id = "UsersA-1";
+            var user = new User { Name = "Avi" };
+
+            using (var store = GetDocumentStore())
+            {
+                //Recording
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+
+                await store.Maintenance.SendAsync(new ConfigureExpirationOperation(new ExpirationConfiguration
+                {
+                    Disabled = false,
+                    DeleteFrequencyInSec = 1
+                }));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user, id);
+
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    var expiry = DateTime.UtcNow.AddSeconds(1);
+                    metadata[Constants.Documents.Metadata.Expires] = expiry;
+
+                    await session.SaveChangesAsync();
+                }
+
+                await WaitFor(() => null == store.Commands().Get(id));
+
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+            }
+
+            Process.Start(@"C:\Program Files (x86)\Notepad++\notepad++.exe", recordFilePath);
+
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
+            {
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
+
+                //Assert
+                Assert.Null(store.Commands().Get(id));
+            }
+        }
+
+        [Fact]
         public async Task WaitForReplayTransactionsRecordingOperation()
         {
             var recordFilePath = NewDataPath();
