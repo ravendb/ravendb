@@ -634,14 +634,16 @@ namespace Raven.Server.Documents
                 ["SubProtocol"] = _webSocket.SubProtocol,
                 ["Age"] = Age,
                 ["WatchAllDocuments"] = _watchAllDocuments > 0,
-                ["WatchAllIndexes"] = false,
-                /*["WatchConfig"] = _watchConfig > 0,
-                ["WatchConflicts"] = _watchConflicts > 0,
-                ["WatchSync"] = _watchSync > 0,*/
+                ["WatchAllIndexes"] = _watchAllIndexes > 0,
+                ["WatchAllCounters"] = _watchAllCounters > 0,
+                ["WatchAllOperations"] = _watchAllOperations > 0,
                 ["WatchDocumentPrefixes"] = _matchingDocumentPrefixes.ToArray(),
                 ["WatchDocumentsInCollection"] = _matchingDocumentsInCollection.ToArray(),
                 ["WatchIndexes"] = _matchingIndexes.ToArray(),
-                ["WatchDocuments"] = _matchingDocuments.ToArray()
+                ["WatchDocuments"] = _matchingDocuments.ToArray(),
+                ["WatchCounters"] = _matchingCounters.ToArray(),
+                ["WatchCounterOfDocument"] = _matchingDocumentCounter.Select(x => x.ToJson()).ToArray(),
+                ["WatchCountersOfDocument"] = _matchingDocumentCounters.ToArray()
             };
         }
 
@@ -658,18 +660,18 @@ namespace Raven.Server.Documents
         {
             public DocumentIdAndCounterNamePair(string documentId, string counterName)
             {
-                _documentId = documentId;
-                _counterName = counterName;
+                DocumentId = documentId;
+                CounterName = counterName;
             }
 
-            private readonly string _documentId;
+            public readonly string DocumentId;
 
-            private readonly string _counterName;
+            public readonly string CounterName;
 
-            public bool Equals(DocumentIdAndCounterNamePair other)
+            private bool Equals(DocumentIdAndCounterNamePair other)
             {
-                return string.Equals(_documentId, other._documentId, StringComparison.OrdinalIgnoreCase)
-                       && string.Equals(_counterName, other._counterName, StringComparison.OrdinalIgnoreCase);
+                return string.Equals(DocumentId, other.DocumentId, StringComparison.OrdinalIgnoreCase)
+                       && string.Equals(CounterName, other.CounterName, StringComparison.OrdinalIgnoreCase);
             }
 
             public override bool Equals(object obj)
@@ -684,9 +686,18 @@ namespace Raven.Server.Documents
             {
                 unchecked
                 {
-                    return ((_documentId != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(_documentId) : 0) * 397)
-                           ^ (_counterName != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(_counterName) : 0);
+                    return ((DocumentId != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(DocumentId) : 0) * 397)
+                           ^ (CounterName != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(CounterName) : 0);
                 }
+            }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(DocumentId)] = DocumentId,
+                    [nameof(CounterName)] = CounterName
+                };
             }
         }
     }
