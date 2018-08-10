@@ -5,8 +5,10 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Explanation;
+using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.Tokens;
@@ -19,7 +21,7 @@ namespace Raven.Client.Documents.Session
     /// A query against a Raven index
     /// </summary>
     public partial class AsyncDocumentQuery<T> : AbstractDocumentQuery<T, AsyncDocumentQuery<T>>, IAsyncDocumentQuery<T>,
-        IAsyncRawDocumentQuery<T>
+        IAsyncRawDocumentQuery<T>, IDocumentQueryGenerator
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
@@ -916,5 +918,57 @@ namespace Raven.Client.Documents.Session
 
             return query;
         }
+
+        public IRavenQueryable<T> ToQueryable()
+        {
+            var type = typeof(T);
+
+            var queryStatistics = new QueryStatistics();
+            var highlightings = new LinqQueryHighlightings();
+
+            var ravenQueryInspector = new RavenQueryInspector<T>();
+            var ravenQueryProvider = new RavenQueryProvider<T>(
+                this,
+                IndexName,
+                CollectionName,
+                type,
+                queryStatistics,
+                highlightings,
+                IsGroupBy,
+                Conventions);
+
+            ravenQueryInspector.Init(ravenQueryProvider,
+                queryStatistics,
+                highlightings,
+                IndexName,
+                CollectionName,
+                null,
+                TheSession,
+                IsGroupBy);
+
+            return ravenQueryInspector;
+        }
+
+        InMemoryDocumentSessionOperations IDocumentQueryGenerator.Session { get => TheSession; }
+
+        RavenQueryInspector<TS> IDocumentQueryGenerator.CreateRavenQueryInspector<TS>()
+        {
+            return ((IDocumentQueryGenerator)Session).CreateRavenQueryInspector<TS>();
+        }
+        public IDocumentQuery<T1> Query<T1>(string indexName, string collectionName, bool isMapReduce)
+        {
+            throw new NotSupportedException("Cannot create an sync linq query from AsyncDocumentQuery, you need to use AsyncDocumentQuery for that");
+         
+        }
+
+        public IAsyncDocumentQuery<T1> AsyncQuery<T1>(string indexName, string collectionName, bool isMapReduce)
+        {
+            if (indexName != IndexName || collectionName != CollectionName)
+                throw new InvalidOperationException("DocumentQuery source is has (indexName: " + IndexName + ", collectionName: " + CollectionName + "), but got request for (indexName: " + indexName + ", collection: " + collectionName + "), you cannot change the indexName / collectionName when using DocumentQuery as the source");
+
+            return SelectFields<T1>();
+        }
+
+
     }
 }

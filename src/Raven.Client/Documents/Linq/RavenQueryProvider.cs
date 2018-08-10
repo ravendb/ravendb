@@ -136,7 +136,7 @@ namespace Raven.Client.Documents.Linq
                 _indexName,
                 _collectionName,
                 expression,
-                (InMemoryDocumentSessionOperations)_queryGenerator,
+                _queryGenerator.Session,
                 _isMapReduce);
 
             return a;

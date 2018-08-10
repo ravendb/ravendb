@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
@@ -131,5 +132,7 @@ namespace Raven.Client.Documents.Session
         IAsyncSuggestionDocumentQuery<T> SuggestUsing(SuggestionBase suggestion);
 
         IAsyncSuggestionDocumentQuery<T> SuggestUsing(Action<ISuggestionBuilder<T>> builder);
+
+        IRavenQueryable<T> ToQueryable();
     }
 }

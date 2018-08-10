@@ -1693,10 +1693,12 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 throw new InvalidOperationException("Alias cannot be null or empty");
 
             var tokens = GetCurrentWhereTokens();
-            foreach (var token in tokens)
+            var current = tokens.First;
+            while(current != null)
             {
-                var whereToken = token as WhereToken;
-                whereToken?.AddAlias(fromAlias);
+                if (current.Value is WhereToken w)
+                    current.Value = w.AddAlias(fromAlias);
+                current = current.Next;
             }
         }
 
