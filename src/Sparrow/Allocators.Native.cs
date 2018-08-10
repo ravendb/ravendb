@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Sparrow.Platform;
 using Sparrow.Utils;
 
@@ -50,7 +51,7 @@ namespace Sparrow
     /// <summary>
     /// The NativeAllocator is the barebones allocator, it will redirect the request straight to the OS system calls.
     /// It will not keep track of allocations (except when running in validation mode), that means that
-    /// this allocator can leak if used improperly. 
+    /// this allocator can leak if used improperly. This allocator is Thread-Safe.
     /// </summary>
     /// <typeparam name="TOptions">The options to use for the allocator.</typeparam>
     /// <remarks>The Options object must be properly implemented to achieve performance improvements. (use constants as much as you can)</remarks>
@@ -58,6 +59,8 @@ namespace Sparrow
         where TOptions : struct, INativeOptions
     {
         private TOptions _options;
+        private long _totalAllocated;
+        private long _allocated;
 
         public void Configure<TConfig>(ref NativeAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
         {
@@ -74,28 +77,25 @@ namespace Sparrow
         public long TotalAllocated
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private set;
+            get { return _totalAllocated; }
         }
 
         public long Allocated
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get;
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private set;
+            get { return _allocated; }
         }
+
         public long InUse
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return Allocated; }
+            get { return _allocated; }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Initialize(ref NativeAllocator<TOptions> allocator)
         {
-            allocator.TotalAllocated = 0;
+            allocator._totalAllocated = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -115,16 +115,16 @@ namespace Sparrow
             if (allocator._options.Zeroed)
                 Memory.Set(memory, 0, size);
 
-            allocator.Allocated += size;
-            allocator.TotalAllocated += size;
+            Interlocked.Add(ref allocator._allocated, size);
+            Interlocked.Add(ref allocator._totalAllocated, size);
 
             return new Pointer(memory, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Release(ref NativeAllocator<TOptions> allocator, ref Pointer ptr)
-        {            
-            allocator.Allocated -= ptr.Size;
+        {
+            Interlocked.Add(ref allocator._allocated, -ptr.Size);
 
             // PERF: Given that for the normal use case the INativeOptions we will use returns constants the
             //       JIT will be able to fold all this if sequence into a branchless single call.
