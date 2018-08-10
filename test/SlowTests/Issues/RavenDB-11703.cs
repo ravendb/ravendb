@@ -39,7 +39,7 @@ namespace SlowTests.Issues
                 Assert.True(list.TryTake(out var counterChange, TimeSpan.FromSeconds(1)));
 
                 Assert.Equal("users/1", counterChange.DocumentId);
-                Assert.Equal(CounterChangeTypes.Create, counterChange.Type);
+                Assert.Equal(CounterChangeTypes.Put, counterChange.Type);
                 Assert.Equal("Likes", counterChange.Name);
                 Assert.Equal(1L, counterChange.Value);
                 Assert.NotNull(counterChange.ChangeVector);
@@ -88,7 +88,7 @@ namespace SlowTests.Issues
                 Assert.True(list.TryTake(out var counterChange, TimeSpan.FromSeconds(1)));
 
                 Assert.Equal("users/1", counterChange.DocumentId);
-                Assert.Equal(CounterChangeTypes.Create, counterChange.Type);
+                Assert.Equal(CounterChangeTypes.Put, counterChange.Type);
                 Assert.Equal("Likes", counterChange.Name);
                 Assert.Equal(1L, counterChange.Value);
                 Assert.NotNull(counterChange.ChangeVector);

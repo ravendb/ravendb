@@ -118,7 +118,7 @@ namespace Raven.Client.Documents.Changes
     public enum CounterChangeTypes
     {
         None = 0,
-        Create = 1,
+        Put = 1,
         Delete = 2,
         Increment = 4
     }
