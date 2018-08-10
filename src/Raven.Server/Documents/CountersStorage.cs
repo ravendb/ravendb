@@ -275,7 +275,7 @@ namespace Raven.Server.Documents
                         DocumentId = documentId,
                         Name = name,
                         Value = value,
-                        Type = CounterChangeTypes.Create
+                        Type = CounterChangeTypes.Put
                     });
                 }
             }
@@ -379,7 +379,7 @@ namespace Raven.Server.Documents
                     ChangeVector = result.ChangeVector,
                     DocumentId = documentId,
                     Name = name,
-                    Type = exists ? CounterChangeTypes.Increment : CounterChangeTypes.Create,
+                    Type = exists ? CounterChangeTypes.Increment : CounterChangeTypes.Put,
                     Value = value
                 });
 
