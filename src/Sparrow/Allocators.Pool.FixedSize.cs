@@ -220,7 +220,7 @@ namespace Sparrow
         private void ResetMemoryPool(ref FixedSizePoolAllocator<TOptions> allocator)
         {
             // We dont own the memory pool, so we just reset the state and let the owner give us memory again on the next cycle.
-            // This is the typical mode of operation when the underlying allocator is able to reuse memory (ex. NativeAllocator).
+            // This is the typical mode of operation when the underlying allocator is able to reuse memory (ex. ArenaAllocator).
             allocator._freed = new Pointer();
         }
 
