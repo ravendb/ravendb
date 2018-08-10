@@ -13,6 +13,8 @@ namespace Raven.Client.Documents.Linq
         /// </summary>
         DocumentConventions Conventions { get; }
 
+        InMemoryDocumentSessionOperations Session { get; }
+
         /// <summary>
         /// Create a new query for <typeparam name="T"/>
         /// </summary>

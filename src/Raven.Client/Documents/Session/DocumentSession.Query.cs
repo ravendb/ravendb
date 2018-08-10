@@ -113,5 +113,7 @@ namespace Raven.Client.Documents.Session
         {
             return Advanced.DocumentQuery<T>(indexName, collectionName, isMapReduce);
         }
+
+        InMemoryDocumentSessionOperations IDocumentQueryGenerator.Session { get => this; }
     }
 }
