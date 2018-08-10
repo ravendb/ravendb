@@ -55,8 +55,8 @@ namespace Raven.Server.Documents.ETL
             LoadProcesses(record, record.RavenEtls, record.SqlEtls, toRemove: null);
         }
 
-        private void LoadProcesses(DatabaseRecord record, 
-            List<RavenEtlConfiguration> newRavenDestinations, 
+        private void LoadProcesses(DatabaseRecord record,
+            List<RavenEtlConfiguration> newRavenDestinations,
             List<SqlEtlConfiguration> newSqlDestinations,
             List<EtlProcess> toRemove)
         {
@@ -240,7 +240,7 @@ namespace Raven.Server.Documents.ETL
             if (Logger.IsInfoEnabled)
                 Logger.Info(errorMessage);
 
-            var alert = AlertRaised.Create(_database.Name,AlertTitle, errorMessage, AlertType.Etl_Error, NotificationSeverity.Error);
+            var alert = AlertRaised.Create(_database.Name, AlertTitle, errorMessage, AlertType.Etl_Error, NotificationSeverity.Error);
 
             _database.NotificationCenter.Add(alert);
         }
@@ -260,21 +260,21 @@ namespace Raven.Server.Documents.ETL
 
         private void OnCounterChange(CounterChange change)
         {
-            NotifyAboutWork(collectionName: null, isCounter: true);
+            NotifyAboutWork(documentChange: null, counterChange: change);
         }
 
         private void OnDocumentChange(DocumentChange change)
         {
-            NotifyAboutWork(collectionName: change.CollectionName, isCounter: false);
+            NotifyAboutWork(documentChange: change, counterChange: null);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void NotifyAboutWork(string collectionName, bool isCounter)
+        private void NotifyAboutWork(DocumentChange documentChange, CounterChange counterChange)
         {
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < _processes.Length; i++)
             {
-                _processes[i].NotifyAboutWork(collectionName, isCounter);
+                _processes[i].NotifyAboutWork(documentChange, counterChange);
             }
         }
 
