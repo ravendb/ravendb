@@ -11,6 +11,8 @@ namespace Raven.Server.Documents
 
         public event Action<DocumentChange> OnDocumentChange;
 
+        public event Action<CounterChange> OnCounterChange;
+
         public event Action<IndexChange> OnIndexChange;
 
         public event Action<OperationStatusChange> OnOperationStatusChange;
@@ -31,6 +33,17 @@ namespace Raven.Server.Documents
             {
                 if (!connection.Value.IsDisposed)
                     connection.Value.SendDocumentChanges(documentChange);
+            }
+        }
+
+        public void RaiseNotifications(CounterChange counterChange)
+        {
+            OnCounterChange?.Invoke(counterChange);
+
+            foreach (var connection in Connections)
+            {
+                if (!connection.Value.IsDisposed)
+                    connection.Value.SendCounterChanges(counterChange);
             }
         }
 

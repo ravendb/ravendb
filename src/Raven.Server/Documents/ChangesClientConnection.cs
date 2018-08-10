@@ -29,27 +29,28 @@ namespace Raven.Server.Documents
 
         private readonly DateTime _startedAt;
 
-        private readonly ConcurrentSet<string> _matchingIndexes =
-            new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentSet<string> _matchingIndexes = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentSet<string> _matchingDocuments =
-            new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentSet<string> _matchingDocuments = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentSet<string> _matchingDocumentPrefixes =
-            new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentSet<string> _matchingDocumentPrefixes = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentSet<string> _matchingDocumentsInCollection =
-            new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentSet<string> _matchingDocumentsInCollection = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentSet<string> _matchingDocumentsOfType =
-            new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentSet<string> _matchingDocumentsOfType = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        private readonly ConcurrentSet<long> _matchingOperations =
-          new ConcurrentSet<long>();
+        private readonly ConcurrentSet<string> _matchingCounters = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private readonly ConcurrentSet<string> _matchingDocumentCounters = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private readonly ConcurrentSet<DocumentIdAndCounterNamePair> _matchingDocumentCounter = new ConcurrentSet<DocumentIdAndCounterNamePair>();
+
+        private readonly ConcurrentSet<long> _matchingOperations = new ConcurrentSet<long>();
 
         private int _watchAllDocuments;
         private int _watchAllOperations;
         private int _watchAllIndexes;
+        private int _watchAllCounters;
 
         public class ChangeValue
         {
@@ -75,9 +76,9 @@ namespace Raven.Server.Documents
             _matchingDocuments.TryAdd(docId);
         }
 
-        public void UnwatchDocument(string name)
+        public void UnwatchDocument(string docId)
         {
-            _matchingDocuments.TryRemove(name);
+            _matchingDocuments.TryRemove(docId);
         }
 
         public void WatchAllDocuments()
@@ -88,6 +89,50 @@ namespace Raven.Server.Documents
         public void UnwatchAllDocuments()
         {
             Interlocked.Decrement(ref _watchAllDocuments);
+        }
+
+        public void WatchCounter(string name)
+        {
+            _matchingCounters.TryAdd(name);
+        }
+
+        public void UnwatchCounter(string name)
+        {
+            _matchingCounters.TryRemove(name);
+        }
+
+        public void WatchDocumentCounters(string docId)
+        {
+            _matchingDocumentCounters.TryAdd(docId);
+        }
+
+        public void UnwatchDocumentCounters(string docId)
+        {
+            _matchingDocumentCounters.TryRemove(docId);
+        }
+
+        public void WatchDocumentCounter(string parameter)
+        {
+            var parameters = GetDocumentCounterParameters(parameter);
+
+            _matchingDocumentCounter.TryAdd(parameters);
+        }
+
+        public void UnwatchDocumentCounter(string parameter)
+        {
+            var parameters = GetDocumentCounterParameters(parameter);
+
+            _matchingDocumentCounter.TryRemove(parameters);
+        }
+
+        public void WatchAllCounters()
+        {
+            Interlocked.Increment(ref _watchAllCounters);
+        }
+
+        public void UnwatchAllCounters()
+        {
+            Interlocked.Decrement(ref _watchAllCounters);
         }
 
         public void WatchDocumentPrefix(string name)
@@ -164,11 +209,36 @@ namespace Raven.Server.Documents
             return false;
         }
 
+        public void SendCounterChanges(CounterChange change)
+        {
+            if (IsDisposed)
+                return;
+
+            if (_watchAllCounters > 0)
+            {
+                Send(change);
+                return;
+            }
+
+            if (change.DocumentId != null && _matchingDocumentCounters.Contains(change.DocumentId))
+            {
+                Send(change);
+                return;
+            }
+
+            if (change.Name != null && _matchingCounters.Contains(change.Name))
+            {
+                Send(change);
+                return;
+            }
+        }
+
         public void SendDocumentChanges(DocumentChange change)
         {
             // this is a precaution, in order to overcome an observed race condition between change client disconnection and raising changes
             if (IsDisposed)
                 return;
+
             if (_watchAllDocuments > 0)
             {
                 Send(change);
@@ -213,6 +283,22 @@ namespace Raven.Server.Documents
             {
                 Send(change);
             }
+        }
+
+        private void Send(CounterChange change)
+        {
+            var value = new DynamicJsonValue
+            {
+                ["Type"] = nameof(CounterChange),
+                ["Value"] = change.ToJson()
+            };
+
+            if (_disposeToken.IsCancellationRequested == false)
+                _sendQueue.Enqueue(new ChangeValue
+                {
+                    ValueToSend = value,
+                    AllowSkip = true
+                });
         }
 
         private void Send(DocumentChange change)
@@ -484,6 +570,38 @@ namespace Raven.Server.Documents
             {
                 UnwatchAllOperations();
             }
+            else if (Match(command, "watch-counters"))
+            {
+                WatchAllCounters();
+            }
+            else if (Match(command, "unwatch-counters"))
+            {
+                UnwatchAllCounters();
+            }
+            else if (Match(command, "watch-counter"))
+            {
+                WatchCounter(commandParameter);
+            }
+            else if (Match(command, "unwatch-counter"))
+            {
+                UnwatchCounter(commandParameter);
+            }
+            else if (Match(command, "watch-document-counters"))
+            {
+                WatchDocumentCounters(commandParameter);
+            }
+            else if (Match(command, "unwatch-document-counters"))
+            {
+                UnwatchDocumentCounters(commandParameter);
+            }
+            else if (Match(command, "watch-document-counter"))
+            {
+                WatchDocumentCounter(commandParameter);
+            }
+            else if (Match(command, "unwatch-document-counter"))
+            {
+                UnwatchDocumentCounter(commandParameter);
+            }
             else
             {
                 throw new ArgumentOutOfRangeException(nameof(command), "Command argument is not valid");
@@ -515,6 +633,51 @@ namespace Raven.Server.Documents
                 ["WatchIndexes"] = _matchingIndexes.ToArray(),
                 ["WatchDocuments"] = _matchingDocuments.ToArray()
             };
+        }
+
+        private static DocumentIdAndCounterNamePair GetDocumentCounterParameters(string parameter)
+        {
+            var parameters = parameter.Split(DatabaseChanges.Separator, StringSplitOptions.RemoveEmptyEntries);
+            if (parameters.Length != 2)
+                throw new InvalidOperationException($"Invalid parameter value: {parameter}");
+
+            return new DocumentIdAndCounterNamePair(parameters[0], parameters[1]);
+        }
+
+        private struct DocumentIdAndCounterNamePair
+        {
+            public DocumentIdAndCounterNamePair(string documentId, string counterName)
+            {
+                _documentId = documentId;
+                _counterName = counterName;
+            }
+
+            private readonly string _documentId;
+
+            private readonly string _counterName;
+
+            public bool Equals(DocumentIdAndCounterNamePair other)
+            {
+                return string.Equals(_documentId, other._documentId, StringComparison.OrdinalIgnoreCase)
+                       && string.Equals(_counterName, other._counterName, StringComparison.OrdinalIgnoreCase);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj))
+                    return false;
+
+                return obj is DocumentIdAndCounterNamePair pair && Equals(pair);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return ((_documentId != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(_documentId) : 0) * 397)
+                           ^ (_counterName != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(_counterName) : 0);
+                }
+            }
         }
     }
 }

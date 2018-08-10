@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
@@ -84,6 +85,7 @@ namespace Raven.Server.Documents.Replication
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
             _connectionInfo = connectionInfo;
             _database.Changes.OnDocumentChange += OnDocumentChange;
+            _database.Changes.OnCounterChange += OnCounterChange;
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
         }
 
@@ -871,10 +873,20 @@ namespace Raven.Server.Documents.Replication
             return replicationBatchReply;
         }
 
-
         private void OnDocumentChange(DocumentChange change)
         {
-            if (change.TriggeredByReplicationThread)
+            OnChangeInternal(change.TriggeredByReplicationThread);
+        }
+
+        private void OnCounterChange(CounterChange change)
+        {
+            OnChangeInternal(change.TriggeredByReplicationThread);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void OnChangeInternal(bool triggeredByReplicatiionThread)
+        {
+            if (triggeredByReplicatiionThread)
                 return;
             _waitForChanges.Set();
         }
@@ -894,6 +906,7 @@ namespace Raven.Server.Documents.Replication
                 _log.Info($"Disposing OutgoingReplicationHandler ({FromToString}) [Timeout:{timeout}]");
 
             _database.Changes.OnDocumentChange -= OnDocumentChange;
+            _database.Changes.OnCounterChange -= OnCounterChange;
 
             _cts.Cancel();
 

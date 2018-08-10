@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.ETL
 
         public abstract void Reset();
 
-        public abstract void NotifyAboutWork(DocumentChange change);
+        public abstract void NotifyAboutWork(string collectionName, bool isCounter);
 
         public abstract EtlPerformanceStats[] GetPerformanceStats();
 
@@ -458,9 +458,9 @@ namespace Raven.Server.Documents.ETL
             _waitForChanges.Set();
         }
 
-        public override void NotifyAboutWork(DocumentChange change)
+        public override void NotifyAboutWork(string collectionName, bool isCounter)
         {
-            if (Transformation.ApplyToAllDocuments || _collections.Contains(change.CollectionName) || change.Type == DocumentChangeTypes.Counter)
+            if (Transformation.ApplyToAllDocuments || (collectionName != null && _collections.Contains(collectionName)) || isCounter)
                 _waitForChanges.Set();
         }
 

@@ -17,6 +17,8 @@ namespace Raven.Server.Documents
 
         private List<DocumentChange> _documentNotifications;
 
+        private List<CounterChange> _counterNotifications;
+
         private bool _replaced;
 
         public DocumentsTransaction(DocumentsOperationContext context, Transaction transaction, DocumentsChanges changes)
@@ -40,6 +42,15 @@ namespace Raven.Server.Documents
             if (_documentNotifications == null)
                 _documentNotifications = new List<DocumentChange>();
             _documentNotifications.Add(change);
+        }
+
+        public void AddAfterCommitNotification(CounterChange change)
+        {
+            change.TriggeredByReplicationThread = IncomingReplicationHandler.IsIncomingReplication;
+
+            if (_counterNotifications == null)
+                _counterNotifications = new List<CounterChange>();
+            _counterNotifications.Add(change);
         }
 
         private bool _isDisposed;
@@ -73,7 +84,7 @@ namespace Raven.Server.Documents
 
         private void AfterCommit()
         {
-            if (_documentNotifications == null)
+            if (_documentNotifications == null && _counterNotifications == null)
                 return;
 
             ThreadPool.QueueUserWorkItem(state => ((DocumentsTransaction)state).RaiseNotifications(), this);
@@ -81,9 +92,20 @@ namespace Raven.Server.Documents
 
         private void RaiseNotifications()
         {
-            foreach (var notification in _documentNotifications)
+            if (_documentNotifications?.Count > 0)
             {
-                _changes.RaiseNotifications(notification);
+                foreach (var notification in _documentNotifications)
+                {
+                    _changes.RaiseNotifications(notification);
+                }
+            }
+
+            if (_counterNotifications?.Count > 0)
+            {
+                foreach (var notification in _counterNotifications)
+                {
+                    _changes.RaiseNotifications(notification);
+                }
             }
         }
     }
