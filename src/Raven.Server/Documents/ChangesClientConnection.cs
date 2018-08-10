@@ -220,16 +220,26 @@ namespace Raven.Server.Documents
                 return;
             }
 
+            if (change.Name != null && _matchingCounters.Contains(change.Name))
+            {
+                Send(change);
+                return;
+            }
+
             if (change.DocumentId != null && _matchingDocumentCounters.Contains(change.DocumentId))
             {
                 Send(change);
                 return;
             }
 
-            if (change.Name != null && _matchingCounters.Contains(change.Name))
+            if (change.DocumentId != null && change.Name != null && _matchingDocumentCounter.Count > 0)
             {
-                Send(change);
-                return;
+                var parameters = new DocumentIdAndCounterNamePair(change.DocumentId, change.Name);
+                if (_matchingDocumentCounter.Contains(parameters))
+                {
+                    Send(change);
+                    return;
+                }
             }
         }
 
