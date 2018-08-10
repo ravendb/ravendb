@@ -16,10 +16,10 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var list = new BlockingCollection<DocumentChange>();
+                var list = new BlockingCollection<CounterChange>();
                 var taskObservable = store.Changes();
                 await taskObservable.EnsureConnectedNow();
-                var observableWithTask = taskObservable.ForDocument("users/1");
+                var observableWithTask = taskObservable.ForCountersOfDocument("users/1");
 
                 observableWithTask.Subscribe(list.Add);
                 await observableWithTask.EnsureSubscribedNow();
@@ -30,11 +30,19 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Assert.True(list.TryTake(out var documentChange, TimeSpan.FromSeconds(1)));
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.CountersFor("users/1").Increment("Likes");
+                    await session.SaveChangesAsync();
+                }
 
-                Assert.Equal("users/1", documentChange.Id);
-                Assert.Equal(DocumentChangeTypes.Put, documentChange.Type);
-                Assert.NotNull(documentChange.ChangeVector);
+                Assert.True(list.TryTake(out var counterChange, TimeSpan.FromSeconds(1)));
+
+                Assert.Equal("users/1", counterChange.DocumentId);
+                Assert.Equal(CounterChangeTypes.Create, counterChange.Type);
+                Assert.Equal("Likes", counterChange.Name);
+                Assert.Equal(1L, counterChange.Value);
+                Assert.NotNull(counterChange.ChangeVector);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -42,31 +50,13 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(1)));
+                Assert.True(list.TryTake(out counterChange, TimeSpan.FromSeconds(1)));
 
-                Assert.Equal("users/1", documentChange.Id);
-                Assert.Equal(DocumentChangeTypes.Counter, documentChange.Type);
-                Assert.Equal("Likes", documentChange.CounterName);
-                Assert.NotNull(documentChange.ChangeVector);
-
-                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(1)));
-
-                Assert.Equal("users/1", documentChange.Id);
-                Assert.Equal(DocumentChangeTypes.Put, documentChange.Type);
-                Assert.NotNull(documentChange.ChangeVector);
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    session.CountersFor("users/1").Increment("Likes");
-                    await session.SaveChangesAsync();
-                }
-
-                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(1)));
-
-                Assert.Equal("users/1", documentChange.Id);
-                Assert.Equal(DocumentChangeTypes.Counter, documentChange.Type);
-                Assert.Equal("Likes", documentChange.CounterName);
-                Assert.NotNull(documentChange.ChangeVector);
+                Assert.Equal("users/1", counterChange.DocumentId);
+                Assert.Equal(CounterChangeTypes.Increment, counterChange.Type);
+                Assert.Equal("Likes", counterChange.Name);
+                Assert.Equal(2L, counterChange.Value);
+                Assert.NotNull(counterChange.ChangeVector);
             }
         }
 
@@ -76,10 +66,10 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var list = new BlockingCollection<DocumentChange>();
+                var list = new BlockingCollection<CounterChange>();
                 var taskObservable = store.Changes();
                 await taskObservable.EnsureConnectedNow();
-                var observableWithTask = taskObservable.ForDocument("users/1");
+                var observableWithTask = taskObservable.ForCountersOfDocument("users/1");
 
                 observableWithTask.Subscribe(list.Add);
                 await observableWithTask.EnsureSubscribedNow();
@@ -90,30 +80,19 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Assert.True(list.TryTake(out var documentChange, TimeSpan.FromSeconds(1)));
-
-                Assert.Equal("users/1", documentChange.Id);
-                Assert.Equal(DocumentChangeTypes.Put, documentChange.Type);
-                Assert.NotNull(documentChange.ChangeVector);
-
                 using (var session = store.OpenAsyncSession())
                 {
                     session.CountersFor("users/1").Increment("Likes");
                     await session.SaveChangesAsync();
                 }
 
-                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(1)));
+                Assert.True(list.TryTake(out var counterChange, TimeSpan.FromSeconds(1)));
 
-                Assert.Equal("users/1", documentChange.Id);
-                Assert.Equal(DocumentChangeTypes.Counter, documentChange.Type);
-                Assert.Equal("Likes", documentChange.CounterName);
-                Assert.NotNull(documentChange.ChangeVector);
-
-                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(1)));
-
-                Assert.Equal("users/1", documentChange.Id);
-                Assert.Equal(DocumentChangeTypes.Put, documentChange.Type);
-                Assert.NotNull(documentChange.ChangeVector);
+                Assert.Equal("users/1", counterChange.DocumentId);
+                Assert.Equal(CounterChangeTypes.Create, counterChange.Type);
+                Assert.Equal("Likes", counterChange.Name);
+                Assert.Equal(1L, counterChange.Value);
+                Assert.NotNull(counterChange.ChangeVector);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -121,13 +100,13 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Assert.True(list.TryTake(out documentChange, TimeSpan.FromSeconds(1)));
+                Assert.True(list.TryTake(out counterChange, TimeSpan.FromSeconds(1)));
 
-                Assert.Equal("users/1", documentChange.Id);
-                Assert.Equal(DocumentChangeTypes.Counter, documentChange.Type);
-                Assert.Equal("Likes", documentChange.CounterName);
-                Assert.NotNull(documentChange.ChangeVector);
-
+                Assert.Equal("users/1", counterChange.DocumentId);
+                Assert.Equal(CounterChangeTypes.Delete, counterChange.Type);
+                Assert.Equal("Likes", counterChange.Name);
+                Assert.Equal(0, counterChange.Value);
+                Assert.NotNull(counterChange.ChangeVector);
             }
         }
     }

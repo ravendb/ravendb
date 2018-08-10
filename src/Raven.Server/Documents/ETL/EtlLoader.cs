@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -39,7 +40,8 @@ namespace Raven.Server.Documents.ETL
 
             _database = database;
             _serverStore = serverStore;
-            _database.Changes.OnDocumentChange += NotifyAboutWork;
+            _database.Changes.OnDocumentChange += OnDocumentChange;
+            _database.Changes.OnCounterChange += OnCounterChange;
         }
 
         public EtlProcess[] Processes => _processes;
@@ -256,18 +258,30 @@ namespace Raven.Server.Documents.ETL
             _database.NotificationCenter.Add(alert);
         }
 
-        private void NotifyAboutWork(DocumentChange documentChange)
+        private void OnCounterChange(CounterChange change)
+        {
+            NotifyAboutWork(collectionName: null, isCounter: true);
+        }
+
+        private void OnDocumentChange(DocumentChange change)
+        {
+            NotifyAboutWork(collectionName: change.CollectionName, isCounter: false);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void NotifyAboutWork(string collectionName, bool isCounter)
         {
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < _processes.Length; i++)
             {
-                _processes[i].NotifyAboutWork(documentChange);
+                _processes[i].NotifyAboutWork(collectionName, isCounter);
             }
         }
 
         public virtual void Dispose()
         {
-            _database.Changes.OnDocumentChange -= NotifyAboutWork;
+            _database.Changes.OnDocumentChange -= OnDocumentChange;
+            _database.Changes.OnCounterChange -= OnCounterChange;
 
             var ea = new ExceptionAggregator(Logger, "Could not dispose ETL loader");
 

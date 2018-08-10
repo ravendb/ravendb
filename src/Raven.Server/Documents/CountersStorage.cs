@@ -17,7 +17,6 @@ using Raven.Server.Utils;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.Counters;
-using Raven.Server.Exceptions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -270,12 +269,13 @@ namespace Raven.Server.Documents
                         table.Set(tvb);
                     }
 
-                    context.Transaction.AddAfterCommitNotification(new DocumentChange
+                    context.Transaction.AddAfterCommitNotification(new CounterChange
                     {
                         ChangeVector = changeVector,
-                        Id = documentId,
-                        CounterName = name,
-                        Type = DocumentChangeTypes.Counter
+                        DocumentId = documentId,
+                        Name = name,
+                        Value = value,
+                        Type = CounterChangeTypes.Create
                     });
                 }
             }
@@ -337,14 +337,14 @@ namespace Raven.Server.Documents
             using (GetCounterKey(context, documentId, name, context.Environment.Base64Id, out var counterKey))
             {
                 var value = delta;
-                if (table.ReadByKey(counterKey, out var existing))
+                var exists = table.ReadByKey(counterKey, out var existing);
+                if (exists)
                 {
                     var prev = *(long*)existing.Read((int)CountersTable.Value, out var size);
                     Debug.Assert(size == sizeof(long));
                     try
                     {
                         value = checked(prev + delta); //inc
-
                     }
                     catch (OverflowException e)
                     {
@@ -374,12 +374,13 @@ namespace Raven.Server.Documents
                     table.Set(tvb);
                 }
 
-                context.Transaction.AddAfterCommitNotification(new DocumentChange
+                context.Transaction.AddAfterCommitNotification(new CounterChange
                 {
                     ChangeVector = result.ChangeVector,
-                    Id = documentId,
-                    CounterName = name,
-                    Type = DocumentChangeTypes.Counter
+                    DocumentId = documentId,
+                    Name = name,
+                    Type = exists ? CounterChangeTypes.Increment : CounterChangeTypes.Create,
+                    Value = value
                 });
 
                 return result.ChangeVector;
@@ -578,14 +579,15 @@ namespace Raven.Server.Documents
             long deletedEtag = -1;
             string documentId = null;
             string name = null;
-            if (table.DeleteByPrimaryKeyPrefix(key, tvh =>
-                {
-                    long etag = *(long*)tvh.Reader.Read((int)CountersTable.Etag, out var size);
-                    deletedEtag = Math.Max(Bits.SwapBytes(etag), deletedEtag);
-                    Debug.Assert(size == sizeof(long));
-                    (documentId, name) = ExtractDocIdAndName(context, tvh.Reader);
-                }) == false
-                && forceTombstone == false)
+            var deleted = table.DeleteByPrimaryKeyPrefix(key, tvh =>
+            {
+                var etag = *(long*)tvh.Reader.Read((int)CountersTable.Etag, out var size);
+                deletedEtag = Math.Max(Bits.SwapBytes(etag), deletedEtag);
+                Debug.Assert(size == sizeof(long));
+                (documentId, name) = ExtractDocIdAndName(context, tvh.Reader);
+            });
+
+            if (deleted == false && forceTombstone == false)
                 return null;
 
             if (deletedEtag == -1)
@@ -595,12 +597,12 @@ namespace Raven.Server.Documents
 
             CreateTombstone(context, key, collection, deletedEtag, lastModifiedTicks, newEtag, newChangeVector);
 
-            context.Transaction.AddAfterCommitNotification(new DocumentChange
+            context.Transaction.AddAfterCommitNotification(new CounterChange
             {
                 ChangeVector = newChangeVector,
-                Id = documentId,
-                CounterName = name,
-                Type = DocumentChangeTypes.Counter
+                DocumentId = documentId,
+                Name = name,
+                Type = CounterChangeTypes.Delete
             });
 
             return newChangeVector;

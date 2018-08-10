@@ -52,6 +52,14 @@ namespace Raven.Client.Documents.Changes
         /// </summary>
         IChangesObservable<DocumentChange> ForDocumentsInCollection<TEntity>();
 
+        IChangesObservable<CounterChange> ForAllCounters();
+
+        IChangesObservable<CounterChange> ForCounter(string counterName);
+
+        IChangesObservable<CounterChange> ForCounterOfDocument(string documentId, string counterName);
+
+        IChangesObservable<CounterChange> ForCountersOfDocument(string documentId);
+
         /// <summary>
         /// Subscribe to changes for all documents that belong to specified type (Raven-Clr-Type).
         /// </summary>
