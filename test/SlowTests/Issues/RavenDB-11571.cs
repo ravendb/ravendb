@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Client.ServerWide;
 using Raven.Server.Utils;
@@ -42,8 +41,7 @@ namespace SlowTests.Issues
                     documentCounters.Increment("Downloads");
                     var e = Assert.Throws<CounterOverflowException>(() => session.SaveChanges());
                     Assert.Contains("CounterOverflowException: Could not increment counter 'Downloads' " +
-                                    $"from document 'users/1' with value '{long.MaxValue}' by '1'. " +
-                                    "Arithmetic operation resulted in an overflow", e.Message);
+                                    $"from document 'users/1' with value '{long.MaxValue}' by '1'.", e.Message);
                 }
             }
         }
