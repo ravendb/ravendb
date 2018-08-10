@@ -235,7 +235,7 @@ namespace Voron.Impl
             _journal = env.Journal;
             _id = id;
             _freeSpaceHandling = freeSpaceHandling;
-            _allocator = context ?? new ByteStringContext(SharedMultipleUseFlag.None);
+            _allocator = context ?? new ByteStringContext();
             _disposeAllocator = context == null;
             _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
 

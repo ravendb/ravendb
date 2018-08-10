@@ -44,9 +44,18 @@ namespace Sparrow
                 allocator.Initialize(default(Default));
                 return allocator;
             }
+
+            /// <summary>
+            /// By default whenever we create an allocator we are going to dispose it too when the time comes.
+            /// </summary>
+            /// <param name="allocator">the allocator to dispose.</param>
+            public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
+            {
+                allocator.Dispose(disposing);
+            }
         }
 
-        public struct Static : IFixedSizeThreadAffinePoolOptions, INativeOptions, INativeGlobalAllocatorOptions
+        public struct Static : IFixedSizeThreadAffinePoolOptions, INativeOptions
         {
             public bool UseSecureMemory => false;
             public bool ElectricFenceEnabled => false;
@@ -65,6 +74,13 @@ namespace Sparrow
                 var allocator = new Allocator<NativeAllocator<Static>>();
                 allocator.Initialize(default(Static));
                 return allocator;
+            }
+
+            public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
+            {
+                // For all uses and purposes the underlying Native Allocator will be finalized as Statics should
+                // never deallocate until the process dies. This way we also skip the leak checks. 
+                allocator.Dispose(false);
             }
         }
 
@@ -87,6 +103,15 @@ namespace Sparrow
                 var allocator = new Allocator<NativeAllocator<DefaultAcceptArbitratySize>>();
                 allocator.Initialize(default(DefaultAcceptArbitratySize));
                 return allocator;
+            }
+
+            /// <summary>
+            /// By default whenever we create an allocator we are going to dispose it too when the time comes.
+            /// </summary>
+            /// <param name="allocator">the allocator to dispose.</param>
+            public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
+            {
+                allocator.Dispose(disposing);
             }
         }
     }
@@ -215,6 +240,12 @@ namespace Sparrow
             if (ptr.Size != allocator._options.BlockSize || Allocator.LowMemoryFlag.IsRaised())
                 goto UnlikelyRelease;
 
+#if VALIDATE
+            // We are storing the pointer itself to return it in the future, therefore we have to 
+            // clear the generation.
+            ptr.Generation = 0;
+#endif
+
             // PERF: Bitwise add should emit a and instruction followed by a constant.
             int threadId = Thread.CurrentThread.ManagedThreadId & ((int)allocator._options.Workload - 1);
 
@@ -270,7 +301,7 @@ namespace Sparrow
         public void OnAllocate(ref FixedSizeThreadAffinePoolAllocator<TOptions> allocator, Pointer ptr) { }
         public void OnRelease(ref FixedSizeThreadAffinePoolAllocator<TOptions> allocator, Pointer ptr) { }
 
-        public void Dispose(ref FixedSizeThreadAffinePoolAllocator<TOptions> allocator)
+        public void Dispose(ref FixedSizeThreadAffinePoolAllocator<TOptions> allocator, bool disposing)
         {
             if (allocator._options.HasOwnership)
             {
@@ -278,7 +309,7 @@ namespace Sparrow
                 allocator.CleanupPool(ref allocator);
             }
 
-            allocator._internalAllocator.Dispose(); 
+            allocator._options.ReleaseAllocator(allocator._internalAllocator, disposing);
         }
 
         private void CleanupPool(ref FixedSizeThreadAffinePoolAllocator<TOptions> allocator)
@@ -322,9 +353,13 @@ namespace Sparrow
         {
             // We will try to release as much as we can. 
             CleanupPool(ref allocator);
+
+            _internalAllocator.LowMemory();
         }
 
-        public void NotifyLowMemoryOver(ref FixedSizeThreadAffinePoolAllocator<TOptions> allocator) {}
-
+        public void NotifyLowMemoryOver(ref FixedSizeThreadAffinePoolAllocator<TOptions> allocator)
+        {
+            _internalAllocator.LowMemoryOver();
+        }
     }
 }

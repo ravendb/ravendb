@@ -148,22 +148,19 @@ namespace Sparrow.Utils
 
         public static void UnregisterFileMapping(string name)
         {
-            ConcurrentDictionary<IntPtr, long> value;
-            FileMapping.TryRemove(name, out value);
+            FileMapping.TryRemove(name, out ConcurrentDictionary<IntPtr, long> _);
         }
 
         public static void UnregisterFileMapping(string name, IntPtr start, long size)
         {
-            ConcurrentDictionary<IntPtr, long> mapping;
-            if (FileMapping.TryGetValue(name, out mapping) == false)
+            if (FileMapping.TryGetValue(name, out var mapping) == false)
                 return;
 
             long _;
             mapping.TryRemove(start, out _);
             if (mapping.Count == 0)
             {
-                ConcurrentDictionary<IntPtr, long> value;
-                if (FileMapping.TryRemove(name, out value))
+                if (FileMapping.TryRemove(name, out var value))
                 {
                     if (value.Count > 0) // this shouldn't happen, but let us be on the safe side...
                     {

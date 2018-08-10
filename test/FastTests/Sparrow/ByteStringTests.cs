@@ -12,7 +12,7 @@ namespace FastTests.Sparrow
         [Fact]
         public void Lifecycle()
         {
-            using (var context = new ByteStringContext<PoolAllocator.Default>(SharedMultipleUseFlag.None))
+            using (var context = new ByteStringContext<PoolAllocator.Static>())
             {
                 context.Allocate(512, out var byteString);
 
@@ -40,7 +40,7 @@ namespace FastTests.Sparrow
         public void ConstructionInsideWholeSegment()
         {
             int blockSize = default(ByteStringContext.WithPooling).BlockSize;
-            using (var context = new ByteStringContext<ByteStringContext.WithPooling>(SharedMultipleUseFlag.None))
+            using (var context = new ByteStringContext<ByteStringContext.WithPooling>())
             {
                 context.Allocate((blockSize / 2) - sizeof(ByteStringStorage), out var byteStringInFirstSegment);
                 context.Allocate((blockSize / 2) - sizeof(ByteStringStorage), out var byteStringWholeSegment);
@@ -56,15 +56,15 @@ namespace FastTests.Sparrow
         public void ConstructionInsideWholeSegmentWithHistory()
         {
             int blockSize = default(ByteStringContext.WithPooling).BlockSize;
-            using (var context = new ByteStringContext<ByteStringContext.WithPooling>(SharedMultipleUseFlag.None))
+            using (var context = new ByteStringContext<ByteStringContext.WithPooling>())
             {
                 for (int i = 0; i < 10; i++)
                 {
                     context.Allocate(blockSize * 2, out var _);
                 }
             }
-            using (new ByteStringContext<ByteStringContext.WithPooling>(SharedMultipleUseFlag.None))
-            using (var context = new ByteStringContext<ByteStringContext.WithPooling>(SharedMultipleUseFlag.None))
+            using (new ByteStringContext<ByteStringContext.WithPooling>())
+            using (var context = new ByteStringContext<ByteStringContext.WithPooling>())
             {
                 context.Allocate((blockSize / 2) - sizeof(ByteStringStorage), out var byteStringInFirstSegment);
                 context.Allocate((blockSize / 2) - sizeof(ByteStringStorage), out var byteStringWholeSegment);
@@ -80,7 +80,7 @@ namespace FastTests.Sparrow
         public void ConstructionReleaseForReuseTheLeftOver()
         {
             int blockSize = default(ByteStringContext.WithPooling).BlockSize;
-            using (var context = new ByteStringContext<ByteStringContext.WithPooling>(SharedMultipleUseFlag.None))
+            using (var context = new ByteStringContext<ByteStringContext.WithPooling>())
             {
                 context.Allocate((blockSize / 2) - sizeof(ByteStringStorage), out var byteStringInFirstSegment);
                 context.Allocate((blockSize / 2) - sizeof(ByteStringStorage), out var byteStringInReusedSegment);
@@ -95,8 +95,8 @@ namespace FastTests.Sparrow
         [Fact]
         public void AllocateAndReleaseShouldReuse()
         {
-            int blockSize = default(ByteStringContext.WithPooling).BlockSize;
-            using (var context = new ByteStringContext<ByteStringContext.Direct>(SharedMultipleUseFlag.None))
+            int blockSize = default(ByteStringContext.Static).BlockSize;
+            using (var context = new ByteStringContext<ByteStringContext.Static>())
             {
                 context.Allocate(blockSize / 2 - sizeof(ByteStringStorage), out var byteStringInFirst);
                 context.Allocate(blockSize / 2 - sizeof(ByteStringStorage), out var byteStringInSecond);
@@ -120,7 +120,7 @@ namespace FastTests.Sparrow
         public void AllocateBiggerThanBlockSize()
         {
             int blockSize = default(ByteStringContext.WithoutPooling).BlockSize;
-            using (var context = new ByteStringContext<ByteStringContext.WithoutPooling>(SharedMultipleUseFlag.None))
+            using (var context = new ByteStringContext<ByteStringContext.WithoutPooling>())
             {
                 // Will be only 128 bytes left for the allocation unit.
                 context.Allocate(blockSize - 512, out var byteStringInFirst);
@@ -145,7 +145,7 @@ namespace FastTests.Sparrow
         public void AllocateAndReleaseShouldReuseAsSegment()
         {
             int blockSize = default(ByteStringContext.WithoutPooling).BlockSize;
-            using (var context = new ByteStringContext<ByteStringContext.WithoutPooling>(SharedMultipleUseFlag.None))
+            using (var context = new ByteStringContext<ByteStringContext.WithoutPooling>())
             {
                 // Will be only 128 bytes left for the allocation unit.
                 context.Allocate(blockSize - 128, out var byteStringInFirst);
@@ -166,7 +166,7 @@ namespace FastTests.Sparrow
         public void AllocateAndReleaseShouldReuseRepeatedly()
         {
             int blockSize = default(ByteStringContext.WithPooling).BlockSize;
-            using (var context = new ByteStringContext<ByteStringContext.WithPooling>(SharedMultipleUseFlag.None))
+            using (var context = new ByteStringContext<ByteStringContext.WithPooling>())
             {
                 context.Allocate(blockSize / 2 - sizeof(ByteStringStorage), out var first);
                 long ptrLocation = (long)first._pointer;

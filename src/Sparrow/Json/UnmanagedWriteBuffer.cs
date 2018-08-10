@@ -292,7 +292,7 @@ namespace Sparrow.Json
                 // If the current Segment does not have any space left, allocate a new one
                 if (availableSpace == 0)
                 {
-                    AllocateNextSegment(amountPending, true);
+                    AllocateNextSegment(amountPending);
                     head = _head;
                 }
 
@@ -310,7 +310,7 @@ namespace Sparrow.Json
             } while (amountPending > 0);
         }
 
-        private void AllocateNextSegment(int required, bool allowGrowth)
+        private void AllocateNextSegment(int required)
         {
             Debug.Assert(required > 0);
 
@@ -320,12 +320,6 @@ namespace Sparrow.Json
             const int oneMb = 1024 * 1024;
             if (segmentSize > oneMb && required <= oneMb)
                 segmentSize = oneMb;
-
-            // We can sometimes ask the context to grow the allocation size; 
-            // it may do so at its own discretion; if this happens, then we
-            // are good to go.
-            if (allowGrowth && _context.GrowAllocation(_head.Allocation, segmentSize))
-                return;
 
             // Can't change _head because there may be copies of the current
             // instance of UnmanagedWriteBuffer going around. Thus, we simply
@@ -365,7 +359,7 @@ Grow:
 
         private void WriteByteUnlikely(byte data)
         {
-            AllocateNextSegment(1, true);
+            AllocateNextSegment(1);
             var head = _head;
             head.AccumulatedSizeInBytes++;
             *(head.Address + head.Used) = data;
@@ -496,7 +490,7 @@ Grow:
                 // If we are here, then we have multiple chunks, we can't
                 // allow a growth of the last chunk, since we'll by copying over it
                 // so we force a whole new chunk
-                AllocateNextSegment(totalSize, false);
+                AllocateNextSegment(totalSize);
             }
 
             // Go back in time to before we had the last chunk

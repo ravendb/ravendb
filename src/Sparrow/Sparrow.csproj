@@ -3,8 +3,6 @@
     <TargetFrameworks>netstandard2.0;netcoreapp2.1</TargetFrameworks>
     <RuntimeFrameworkVersion>2.1.4</RuntimeFrameworkVersion>
     <RuntimeFrameworkVersion>2.1.2</RuntimeFrameworkVersion>
-    <RuntimeFrameworkVersion>2.1.1</RuntimeFrameworkVersion>
-    <TargetFrameworks>netstandard2.0;netcoreapp2.1</TargetFrameworks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Sparrow</AssemblyName>
     <PackageId>Sparrow</PackageId>
@@ -12,9 +10,6 @@
     <Configurations>Debug;Release;Validate</Configurations>
     <LangVersion>7.3</LangVersion>
   </PropertyGroup>
-  <ItemGroup>
-    <Compile Remove="Binary\BitVector.cs" />
-  </ItemGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <Compile Remove="Properties\AssemblyInfo.Linux.cs" />
     <Compile Include="..\CommonAssemblyInfo.Windows.cs" Link="Properties\CommonAssemblyInfo.Windows.cs" />
@@ -31,11 +26,11 @@
     <Optimize>true</Optimize>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Validate'">
-    <DefineConstants>$(DefineConstants);MEM_GUARD_STACK;VALIDATE</DefineConstants>
+    <DefineConstants>$(DefineConstants);TRACE;MEM_GUARD_STACK;VALIDATE</DefineConstants>
     <Optimize>true</Optimize>
+    <CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <None Include="Sodium.tt">
@@ -44,6 +39,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Ben.Demystifier" Version="0.1.1" />
     <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
     <PackageReference Include="System.Buffers" Version="4.5.0" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.1" />
@@ -53,7 +49,6 @@
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
   </ItemGroup>
-</Project>
   <ItemGroup Condition="$(TargetFramework) == 'netstandard1.3'">
     <PackageReference Include="System.Diagnostics.Contracts" Version="4.3.0" />
     <PackageReference Include="System.Diagnostics.Process" Version="4.3.0" />
@@ -66,6 +61,6 @@
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
     <PackageReference Include="System.Threading.ThreadPool" Version="4.3.0" />
     <PackageReference Include="System.ValueTuple" Version="4.5.0" />
-    <PackageReference Include="System.Memory" Version="4.5.0" />    
+    <PackageReference Include="System.Memory" Version="4.5.0" />
   </ItemGroup>
 </Project>

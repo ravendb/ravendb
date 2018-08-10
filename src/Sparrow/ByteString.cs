@@ -416,53 +416,24 @@ namespace Sparrow
         }
     }
 
-    public sealed class ByteStringContext : ByteStringContext<ByteStringContext.Direct>
+    public sealed class ByteStringContext : ByteStringContext<ByteStringContext.WithPooling>
     {
-        // PERF: These constants could be configured with runtime code emit facilities if we need to (some heavy engineering required but viable). 
-        private struct Static : IFixedSizeThreadAffinePoolOptions, INativeOptions, INativeGlobalAllocatorOptions
-        {
-            public bool UseSecureMemory => false;
-            public bool ElectricFenceEnabled => false;
-            public bool Zeroed => false;
-
-            // This block size will ensure that there are at most 256Kb of global ByteString memory ready for to be handed out.
-            // It is high enough to not trigger many low memory notifications on small hardware, but high enough to support
-            // heavy threading memory reuse. 
-            public int BlockSize => 256 * Constants.Size.Kilobyte;
-            public int ItemsPerLane => 2;
-
-            public bool AcceptOnlyBlocks => false;
-
-            public ThreadAffineWorkload Workload => ThreadAffineWorkload.Default;
-
-            public bool HasOwnership => true;
-            public IAllocatorComposer<Pointer> CreateAllocator()
-            {
-                var allocator = new Allocator<NativeAllocator<Static>>();
-                allocator.Initialize(default(Static));
-                return allocator;
-            }
-        }
-
-        private static readonly Allocator<FixedSizeThreadAffinePoolAllocator<Static>> _globalAllocator;
-
-        static ByteStringContext()
-        {
-            _globalAllocator = new Allocator<FixedSizeThreadAffinePoolAllocator<Static>>();
-            _globalAllocator.Initialize(default(Static));
-        }
-
-        public ByteStringContext(SharedMultipleUseFlag lowMemoryFlag) : base(lowMemoryFlag)
-        { }
-
         private struct FragmentPool : IFragmentAllocatorOptions
         {
             public int ReuseBlocksBiggerThan => 64 * Constants.Size.Kilobyte;
             public int BlockSize => default(FixedSizeThreadAffinePoolAllocator.Default).BlockSize;
 
+            public bool HasOwnership => true;
             public IAllocatorComposer<Pointer> CreateAllocator()
             {
-                return _globalAllocator;
+                var allocator = new Allocator<NativeAllocator<Direct>>();
+                allocator.Initialize(default(Direct));
+                return allocator;
+            }
+
+            public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
+            {
+                allocator.Dispose(disposing);
             }
         }
 
@@ -474,6 +445,15 @@ namespace Sparrow
                 var allocator = new Allocator<FragmentAllocator<FragmentPool>>();
                 allocator.Initialize(default(FragmentPool));
                 return allocator;
+            }
+
+            /// <summary>
+            /// By default whenever we create an allocator we are going to dispose it too when the time comes.
+            /// </summary>
+            /// <param name="allocator">the allocator to dispose.</param>
+            public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
+            {
+                allocator.Dispose(disposing);
             }
 
             public int BlockSize => default(FragmentPool).BlockSize;
@@ -489,6 +469,15 @@ namespace Sparrow
                 var allocator = new Allocator<FragmentAllocator<FragmentPool>>();
                 allocator.Initialize(default(FragmentPool));
                 return allocator;
+            }
+
+            /// <summary>
+            /// By default whenever we create an allocator we are going to dispose it too when the time comes.
+            /// </summary>
+            /// <param name="allocator">the allocator to dispose.</param>
+            public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
+            {
+                allocator.Dispose(disposing);
             }
 
             public int BlockSize => default(FragmentPool).BlockSize;
@@ -510,6 +499,41 @@ namespace Sparrow
                 return allocator;
             }
 
+            /// <summary>
+            /// By default whenever we create an allocator we are going to dispose it too when the time comes.
+            /// </summary>
+            /// <param name="allocator">the allocator to dispose.</param>
+            public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
+            {
+                allocator.Dispose(disposing);
+            }
+
+            public int BlockSize => default(FragmentPool).BlockSize;
+            public int MaxBlockSize => 1 * Constants.Size.Megabyte;
+            public int MaxPoolSizeInBytes => 64 * Constants.Size.Megabyte;
+        }
+
+        public struct Static : IPoolAllocatorOptions, INativeOptions
+        {
+            public bool UseSecureMemory => false;
+            public bool ElectricFenceEnabled => false;
+            public bool Zeroed => false;
+
+            public bool HasOwnership => false;
+            public IAllocatorComposer<Pointer> CreateAllocator()
+            {
+                var allocator = new Allocator<NativeAllocator<Direct>>();
+                allocator.Initialize(default(Direct));
+                return allocator;
+            }
+
+            public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
+            {
+                // For all uses and purposes the underlying Native Allocator will be finalized as Statics should
+                // never deallocate until the process dies. This way we also skip the leak checks. 
+                allocator.Dispose(false);
+            }
+
             public int BlockSize => default(FragmentPool).BlockSize;
             public int MaxBlockSize => 1 * Constants.Size.Megabyte;
             public int MaxPoolSizeInBytes => 64 * Constants.Size.Megabyte;
@@ -522,21 +546,20 @@ namespace Sparrow
         private PoolAllocator<TOptions> _allocator;       
 
         private long _totalAllocated, _currentlyAllocated;
+        private readonly SingleUseFlag _disposeFlag = new SingleUseFlag();
 
-        public ByteStringContext(SharedMultipleUseFlag lowMemoryFlag)
+        public ByteStringContext()
         {
             _allocator = new PoolAllocator<TOptions>();
             _allocator.Initialize(ref _allocator);
             _allocator.Configure(ref _allocator, ref _options);
-
-            _lowMemoryFlag = lowMemoryFlag;
 
             PrepareForValidation();
         }
 
         public void Reset()
         {
-            if (_disposed)
+            if (_disposeFlag.IsRaised())
                 ThrowObjectDisposed();
             
             _currentlyAllocated = 0;
@@ -577,7 +600,7 @@ namespace Sparrow
 
         private ByteString AllocateInternal(int length, ByteStringType type)
         {
-            if (_disposed)
+            if (_disposeFlag.IsRaised())
                 ThrowObjectDisposed();
 
             Debug.Assert(length >= 0);
@@ -645,7 +668,7 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ReleaseExternal(ref ByteString value)
         {
-            if (_disposed)
+            if (_disposeFlag.IsRaised())
                 ThrowObjectDisposed();
             
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
@@ -662,9 +685,10 @@ namespace Sparrow
             value._pointer->Flags = ByteStringType.Disposed;
 
             BlockPointer ptr = new BlockPointer(value._pointer, value._pointer->Size, value._pointer->Length);
-            _allocator.Release(ref _allocator, ref ptr);
 
 #if VALIDATE
+            // This must happen before the actual release, in case that the fragment allocator would decide to actually kill the memory instead.        
+
             // Setting the null key ensures that in between we can validate that no further deallocation
             // happens on this memory segment.
             value._pointer->Key = ByteStringStorage.NullKey;
@@ -674,13 +698,15 @@ namespace Sparrow
             value._pointer->Length = 0;
 #endif
 
+            _allocator.Release(ref _allocator, ref ptr);
+
             // WE WANT it to happen, no matter what. 
             value._pointer = null;
         }
 
         public void Release(ref ByteString value)
         {
-            if (_disposed)
+            if (_disposeFlag.IsRaised())
                 ThrowObjectDisposed();
             
             Debug.Assert(value._pointer != null, "Pointer cannot be null. You have a defect in your code.");
@@ -697,9 +723,10 @@ namespace Sparrow
             ValidateAndUnregister(value);
 
             BlockPointer ptr = new BlockPointer(value._pointer, value._pointer->Size, value._pointer->Length);
-            _allocator.Release(ref _allocator, ref ptr);
 
 #if VALIDATE
+            // This must happen before the actual release, in case that the fragment allocator would decide to actually kill the memory instead.        
+
             // Setting the null key ensures that in between we can validate that no further deallocation
             // happens on this memory segment.
             value._pointer->Key = ByteStringStorage.NullKey;
@@ -708,6 +735,8 @@ namespace Sparrow
             // fail with an AccessViolationException because there is garbage stored here.
             value._pointer->Length = 0;
 #endif
+
+            _allocator.Release(ref _allocator, ref ptr);
 
             // WE WANT it to happen, no matter what. 
             value._pointer = null;
@@ -722,7 +751,7 @@ namespace Sparrow
         {
             Debug.Assert(value._pointer != null, "ByteString cant be null.");
 
-            if (_disposed)
+            if (_disposeFlag.IsRaised())
                 ThrowObjectDisposed();
 
             if (bytesToSkip < 0)
@@ -1101,14 +1130,11 @@ namespace Sparrow
 
 #endif
 
-        private bool _disposed;
-
         ~ByteStringContext()
         {
-            _isFinalizerThread = true;
             try
-            {
-                Dispose();
+            {                
+                Dispose(false);
             }
             catch (ObjectDisposedException)
             {
@@ -1117,21 +1143,19 @@ namespace Sparrow
             }
         }
 
-        public void Dispose()
+        protected void Dispose(bool disposing)
         {
-            lock (this)
-            {
-                if (_disposed)
-                    return;
+            if (!_disposeFlag.Raise())
+                return;
 
-                GC.SuppressFinalize(this);
-
-                _disposed = true;
-            }
+            _allocator.Dispose(ref _allocator, disposing);
+            GC.SuppressFinalize(this);
         }
 
-        [ThreadStatic] private static bool _isFinalizerThread;
-        private readonly SharedMultipleUseFlag _lowMemoryFlag;
+        public void Dispose()
+        {
+            Dispose(true);            
+        }
     }
 
     public class ByteStringValidationException : Exception

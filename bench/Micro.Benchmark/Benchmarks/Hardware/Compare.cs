@@ -74,7 +74,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             if (Vector<byte>.Count != VectorBytes)
                 throw new NotSupportedException("");
 
-            _context = new ByteStringContext(SharedMultipleUseFlag.None);
+            _context = new ByteStringContext();
 
             _context.Allocate(size, out source);
             _context.Allocate(size, out destination);

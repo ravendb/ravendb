@@ -34,9 +34,55 @@ namespace Sparrow.Json
         private const int MaxInitialStreamSize = 16 * 1024 * 1024;
         private readonly int _initialSize;
         private readonly int _longLivedSize;
-        private readonly ArenaMemoryAllocator _arenaAllocator;
-        private ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
-        private AllocatedMemoryData _tempBuffer;
+
+        private bool _avoidOverAllocation;
+        private struct DynamicGrowthStrategy : IArenaGrowthStrategy
+        {
+            private readonly JsonOperationContext _parent;
+
+            public int GetPreferredSize(long allocated, long used)
+            {
+                if (used >= allocated && !_parent._avoidOverAllocation)
+                {
+                    long value = used * 2 / 3;
+                    if (value > int.MaxValue)
+                        return int.MaxValue;
+
+                    return (int)value;
+                }                
+
+                return (int)allocated;
+            }
+
+            public DynamicGrowthStrategy(JsonOperationContext context)
+            {
+                this._parent = context;
+            }
+        }
+
+        private struct ArenaAllocationOptions : IArenaAllocatorOptions
+        {
+            private readonly JsonOperationContext _parent;
+
+            public bool UseSecureMemory => false;
+            public bool ElectricFenceEnabled => false;
+            public bool Zeroed => false;
+            public int InitialArenaSize { get; }
+
+            // REVIEW: Check if this is correct. Currently there is no limit to the size, probably with DoubleGrowth we want to. 
+            public int MaxArenaSize => int.MaxValue;
+
+            public IArenaGrowthStrategy GrowthStrategy => new DynamicGrowthStrategy(_parent);
+
+            public ArenaAllocationOptions(JsonOperationContext parent, int initialSize)
+            {
+                this._parent = parent;
+                this.InitialArenaSize = initialSize;
+            }
+        }
+        private readonly Allocator<ArenaAllocator<ArenaAllocationOptions>> _arenaAllocator;
+        private Allocator<ArenaAllocator<ArenaAllocationOptions>> _arenaAllocatorForLongLivedValues;
+
         private List<string> _normalNumbersStringBuffers = new List<string>(5);
         private string _hugeNumbersBuffer;
 
@@ -297,7 +343,7 @@ namespace Sparrow.Json
 
         public int Generation => _generation;
 
-        public long AllocatedMemory => _arenaAllocator.TotalUsed;
+        public long AllocatedMemory => _arenaAllocator.Allocated;
 
         protected readonly SharedMultipleUseFlag LowMemoryFlag;
 
@@ -336,8 +382,12 @@ namespace Sparrow.Json
 
             _initialSize = initialSize;
             _longLivedSize = longLivedSize;
-            _arenaAllocator = new ArenaMemoryAllocator(lowMemoryFlag, initialSize);
-            _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(lowMemoryFlag, longLivedSize);
+
+            _arenaAllocator = new Allocator<ArenaAllocator<ArenaAllocationOptions>>();
+            _arenaAllocator.Initialize(new ArenaAllocationOptions(this, initialSize));
+            _arenaAllocatorForLongLivedValues = new Allocator<ArenaAllocator<ArenaAllocationOptions>>();
+            _arenaAllocatorForLongLivedValues.Initialize(new ArenaAllocationOptions(this, _longLivedSize));
+
             CachedProperties = new CachedProperties(this);
             _jsonParserState = new JsonParserState();
             _objectJsonParser = new ObjectJsonParser(_jsonParserState, this);
@@ -398,46 +448,43 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public AllocatedMemoryData GetMemory(int requestedSize)
+        public unsafe AllocatedMemoryData GetMemory(int requestedSize)
         {
 #if DEBUG || VALIDATE
             if (requestedSize <= 0)
                 throw new ArgumentException(nameof(requestedSize));
 #endif
-
-            var allocatedMemory = _arenaAllocator.Allocate(requestedSize);
-            allocatedMemory.ContextGeneration = Generation;
-            allocatedMemory.Parent = this;
+            Pointer ptr = _arenaAllocatorForLongLivedValues.Allocate(requestedSize);
+            return new AllocatedMemoryData
+            {
+                Address = (byte*)ptr.Ptr,
+                SizeInBytes = ptr.Size,
+                ContextGeneration = Generation,
+                Parent = this,
 #if DEBUG
-            allocatedMemory.IsLongLived = false;
+                IsLongLived = false
 #endif
-            return allocatedMemory;
+            };
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public AllocatedMemoryData GetLongLivedMemory(int requestedSize)
+        public unsafe AllocatedMemoryData GetLongLivedMemory(int requestedSize)
         {
 #if DEBUG || VALIDATE
             if (requestedSize <= 0)
                 throw new ArgumentException(nameof(requestedSize));
 #endif
-            //we should use JsonOperationContext in single thread
-            if (_arenaAllocatorForLongLivedValues == null)
+            Pointer ptr = _arenaAllocatorForLongLivedValues.Allocate(requestedSize);
+            return new AllocatedMemoryData
             {
-                //_arenaAllocatorForLongLivedValues == null when the context is after Reset() but before Renew()
-                ThrowAlreadyDisposedForLongLivedAllocator();
-
-                //make compiler happy, previous row will throw
-                return null;
-            }
-
-            var allocatedMemory = _arenaAllocatorForLongLivedValues.Allocate(requestedSize);
-            allocatedMemory.ContextGeneration = Generation;
-            allocatedMemory.Parent = this;
+                Address = (byte*)ptr.Ptr,
+                SizeInBytes = ptr.Size,
+                ContextGeneration = Generation,
+                Parent = this,
 #if DEBUG
-            allocatedMemory.IsLongLived = true;
+                IsLongLived = true
 #endif
-            return allocatedMemory;
+            };
         }
 
         private static void ThrowAlreadyDisposedForLongLivedAllocator()
@@ -915,22 +962,18 @@ namespace Sparrow.Json
 
         protected internal virtual void Renew()
         {
-            _arenaAllocator.RenewArena();
+            _arenaAllocator.Renew();
+
             if (_arenaAllocatorForLongLivedValues == null)
             {
-                _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(LowMemoryFlag, _longLivedSize);
+                _arenaAllocatorForLongLivedValues = new Allocator<ArenaAllocator<ArenaAllocationOptions>>();
+                _arenaAllocatorForLongLivedValues.Initialize(new ArenaAllocationOptions(this, _longLivedSize));
                 CachedProperties = new CachedProperties(this);
             }
         }
 
         protected internal virtual unsafe void Reset(bool forceReleaseLongLivedAllocator = false)
         {
-            if (_tempBuffer != null && _tempBuffer.Address != null)
-            {
-                _arenaAllocator.Return(_tempBuffer);
-                _tempBuffer = null;
-            }
-
             _documentBuilder.Reset();
 
             // We don't reset _arenaAllocatorForLongLivedValues. It's used as a cache buffer for long lived strings like field names.
@@ -942,7 +985,9 @@ namespace Sparrow.Json
             {
                 foreach (var mem in _fieldNames.Values)
                 {
-                    _arenaAllocatorForLongLivedValues.Return(mem.AllocatedMemoryData);
+                    Pointer ptr = new Pointer(mem.AllocatedMemoryData.Address, mem.AllocatedMemoryData.SizeInBytes);
+                    _arenaAllocatorForLongLivedValues.Release(ref ptr);
+
                     mem.AllocatedMemoryData = null;
                     mem.Dispose();
                 }
@@ -958,7 +1003,7 @@ namespace Sparrow.Json
                 CachedProperties = null; // need to release this so can be collected
             }
             _objectJsonParser.Reset(null);
-            _arenaAllocator.ResetArena();
+            _arenaAllocator.Reset();
             _numberOfAllocatedStringsValues = 0;
             _generation = _generation + 1;
 
@@ -1257,12 +1302,6 @@ namespace Sparrow.Json
             writer.WriteEndArray();
         }
 
-        public bool GrowAllocation(AllocatedMemoryData allocation, int sizeIncrease)
-        {
-            EnsureNotDisposed();
-            return _arenaAllocator.GrowAllocation(allocation, sizeIncrease);
-        }
-
         public MemoryStream CheckoutMemoryStream()
         {
             EnsureNotDisposed();
@@ -1281,13 +1320,14 @@ namespace Sparrow.Json
             _cachedMemoryStreams.Push(stream);
         }
 
-        public void ReturnMemory(AllocatedMemoryData allocation)
+        public unsafe void ReturnMemory(AllocatedMemoryData allocation)
         {
             EnsureNotDisposed();
             if (_generation != allocation.ContextGeneration)
                 ThrowUseAfterFree(allocation);
 
-            _arenaAllocator.Return(allocation);
+            Pointer ptr = new Pointer(allocation.Address, allocation.SizeInBytes);
+            _arenaAllocator.Release(ref ptr);
         }
 
         private static void ThrowUseAfterFree(AllocatedMemoryData allocation)
@@ -1304,7 +1344,7 @@ namespace Sparrow.Json
         public AvoidOverAllocationScope AvoidOverAllocation()
         {
             EnsureNotDisposed();
-            _arenaAllocator.AvoidOverAllocation = true;
+            _avoidOverAllocation = true;
             return new AvoidOverAllocationScope(this);
         }
 
@@ -1318,7 +1358,7 @@ namespace Sparrow.Json
 
             public void Dispose()
             {
-                _parent._arenaAllocator.AvoidOverAllocation = false;
+                _parent._avoidOverAllocation = false;
             }
         }
 
@@ -1328,8 +1368,6 @@ namespace Sparrow.Json
         {
             if (_pooledArrays == null)
                 _pooledArrays = new Dictionary<Type, (Action<Array> Releaser, List<Array> Array)>();
-            
-            
 
             if (_pooledArrays.TryGetValue(typeof(T), out var allocationsArray) == false)
             {

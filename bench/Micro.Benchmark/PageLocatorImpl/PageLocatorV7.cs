@@ -14,7 +14,7 @@ namespace Micro.Benchmark.PageLocatorImpl
     {
         private const ushort Invalid = 0;
 
-        private readonly ByteStringContext _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+        private readonly ByteStringContext _allocator = new ByteStringContext();
         private readonly LowLevelTransaction _tx;
 
         private readonly int _cacheSize;

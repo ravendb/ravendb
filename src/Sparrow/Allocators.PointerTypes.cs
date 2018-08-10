@@ -9,16 +9,27 @@ namespace Sparrow
     public interface IPointerType<T> : IPointerType where T : struct { }
 
     [StructLayout(LayoutKind.Sequential)]
-    public readonly unsafe struct Pointer : IPointerType, Meta.IDescribe
-    {
-        public readonly void* Ptr;
+#if !VALIDATE
+    // We do this to have the ability to perform extensive validation for pointers.
+    readonly
+#endif
+    public unsafe struct Pointer : IPointerType, Meta.IDescribe
+        {
+    public readonly void* Ptr;
 
         public readonly int Size;
+
+#if VALIDATE
+        public uint Generation;        
+#endif
 
         public Pointer(void* ptr, int size)
         {
             this.Ptr = ptr;
             this.Size = size;
+#if VALIDATE
+            this.Generation = 0;
+#endif
         }
 
         public bool IsValid
@@ -36,10 +47,8 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<byte> AsSpan(int length)
         {
-#if VALIDATE
             if (length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
-#endif
 
             return new Span<byte>(Ptr, length);
         }
@@ -47,10 +56,8 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<byte> AsSpan(int start, int length)
         {
-#if VALIDATE
             if (start + length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
-#endif
 
             return new Span<byte>((byte*)Ptr + start, length);
         }
@@ -65,10 +72,8 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> AsReadOnlySpan(int length)
         {
-#if VALIDATE
             if (length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
-#endif
 
             return new ReadOnlySpan<byte>(Ptr, length);
         }
@@ -76,12 +81,15 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> AsReadOnlySpan(int start, int length)
         {
-#if VALIDATE
             if (start + length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
-#endif
 
             return new ReadOnlySpan<byte>((byte*)Ptr + start, length);
+        }
+
+        public static implicit operator Pointer(Pointer<byte> ptr)
+        {
+            return new Pointer(ptr.Ptr, ptr.SizeAsBytes);
         }
 
         public string Describe()
@@ -99,11 +107,19 @@ namespace Sparrow
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public readonly unsafe struct Pointer<T> : Meta.IDescribe, IPointerType<T> where T : struct
+#if !VALIDATE
+    // We do this to have the ability to perform extensive validation for pointers.
+    readonly
+#endif
+    public unsafe struct Pointer<T> : Meta.IDescribe, IPointerType<T> where T : struct
     {
         public readonly void* Ptr;
 
         private readonly int _size;
+
+#if VALIDATE
+        public uint Generation;        
+#endif
 
         [MethodImpl(MethodImplOptions.NoOptimization)]
         static Pointer()
@@ -117,12 +133,20 @@ namespace Sparrow
         {
             this.Ptr = ptr.Ptr;
             this._size = ptr.Size / Unsafe.SizeOf<T>();
+
+#if VALIDATE
+            this.Generation = ptr.Generation;
+#endif
         }
 
         public Pointer(void* ptr, int size)
         {
             this.Ptr = ptr;
             this._size = size;
+
+#if VALIDATE
+            this.Generation = 0;
+#endif
         }
 
         public bool IsValid
@@ -140,20 +164,18 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<T> AsSpan(int length)
         {
-#if VALIDATE
             if (length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
-#endif
+
             return new Span<T>(Ptr, length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<T> AsSpan(int start, int length)
         {
-#if VALIDATE
             if (start + length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
-#endif
+
             return new Span<T>((byte*)Ptr + start * Unsafe.SizeOf<T>(), length);
         }
 
@@ -166,20 +188,18 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<T> AsReadOnlySpan(int length)
         {
-#if VALIDATE
             if (length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
-#endif
+
             return new ReadOnlySpan<T>(Ptr, length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<T> AsReadOnlySpan(int start, int length)
         {
-#if VALIDATE
             if (start + length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
-#endif
+
             return new ReadOnlySpan<T>((byte*)Ptr + start * Unsafe.SizeOf<T>(), length);
         }
 
@@ -239,7 +259,11 @@ namespace Sparrow
     /// a straight Pointer will have the same size for the allocation size and the actual size. 
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-    public readonly unsafe struct BlockPointer : IPointerType, Meta.IDescribe
+#if !VALIDATE
+    // We do this to have the ability to perform extensive validation for pointers.
+    readonly
+#endif
+    public unsafe struct BlockPointer : IPointerType, Meta.IDescribe
     {
         public readonly void* Ptr;
 
@@ -247,11 +271,19 @@ namespace Sparrow
 
         public readonly int BlockSize;
 
+#if VALIDATE
+        public uint Generation;        
+#endif
+
         public BlockPointer(void* ptr, int blockSize, int size)
         {
             this.Ptr = ptr;
             this.Size = size;
             this.BlockSize = blockSize;
+
+#if VALIDATE
+            this.Generation = 0;
+#endif
         }
 
         public bool IsValid
@@ -334,13 +366,21 @@ namespace Sparrow
     /// a straight Pointer will have the same size for the allocation size and the actual size. 
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-    public readonly unsafe struct BlockPointer<T> : Meta.IDescribe, IPointerType<T> where T : struct
+#if !VALIDATE
+    // We do this to have the ability to perform extensive validation for pointers.
+    readonly
+#endif
+    public unsafe struct BlockPointer<T> : Meta.IDescribe, IPointerType<T> where T : struct
     {
         public readonly void* Ptr;
 
         private readonly int _size;
 
         public readonly int BlockSize;
+
+#if VALIDATE
+        public uint Generation;        
+#endif
 
         [MethodImpl(MethodImplOptions.NoOptimization)]
         static BlockPointer()
@@ -355,6 +395,10 @@ namespace Sparrow
             this.Ptr = ptr.Ptr;
             this._size = ptr.Size / Unsafe.SizeOf<T>();
             this.BlockSize = ptr.BlockSize;
+
+#if VALIDATE
+            this.Generation = ptr.Generation;
+#endif
         }
 
         public BlockPointer(void* ptr, int blockSize, int size)
@@ -362,6 +406,10 @@ namespace Sparrow
             this.Ptr = ptr;
             this._size = size;
             this.BlockSize = blockSize;
+
+#if VALIDATE
+            this.Generation = 0;
+#endif
         }
 
         public bool IsValid

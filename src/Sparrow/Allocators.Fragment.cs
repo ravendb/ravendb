@@ -6,12 +6,10 @@ using Sparrow.Global;
 
 namespace Sparrow
 {
-    public interface IFragmentAllocatorOptions : IAllocatorOptions
+    public interface IFragmentAllocatorOptions : IAllocatorOptions, IComposableAllocator<Pointer>
     {
         int ReuseBlocksBiggerThan { get; }
         int BlockSize { get; }
-
-        IAllocatorComposer<Pointer> CreateAllocator();
     }
 
     public static class FragmentAllocator
@@ -25,11 +23,22 @@ namespace Sparrow
             public int ReuseBlocksBiggerThan => 128 * Constants.Size.Kilobyte;
             public int BlockSize => 4 * Constants.Size.Megabyte;
 
+            public bool HasOwnership => true;
+
             public IAllocatorComposer<Pointer> CreateAllocator()
             {
                 var allocator = new Allocator<NativeAllocator<Default>>();
                 allocator.Initialize(default(Default));
                 return allocator;
+            }
+
+            /// <summary>
+            /// By default whenever we create an allocator we are going to dispose it too when the time comes.
+            /// </summary>
+            /// <param name="allocator">the allocator to dispose.</param>
+            public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
+            {
+                allocator.Dispose(disposing);
             }
         }
     }
@@ -183,6 +192,11 @@ namespace Sparrow
 
         public void Release(ref FragmentAllocator<TOptions> allocator, ref Pointer ptr)
         {
+#if VALIDATION
+            // We dont want the internal composed allocator to check anything, if we messed, we messed here.
+            ptr.Generation = 0;
+#endif
+            
             byte* address = (byte*)ptr.Ptr;
             if (address < allocator._currentBuffer.Ptr || address != allocator._ptrCurrent - ptr.Size)
             {
@@ -230,7 +244,7 @@ namespace Sparrow
         public void OnAllocate(ref FragmentAllocator<TOptions> allocator, Pointer ptr) {}
         public void OnRelease(ref FragmentAllocator<TOptions> allocator, Pointer ptr) {}
 
-        public void Dispose(ref FragmentAllocator<TOptions> allocator)
+        public void Dispose(ref FragmentAllocator<TOptions> allocator, bool disposing)
         {
             // These are all partial memory segments that cannot be released individually, only as part of the 
             // whole segment; because if the underlying allocator does track the allocations they wont match.
@@ -250,7 +264,7 @@ namespace Sparrow
 
             allocator.TotalAllocated = 0;
             allocator.Allocated = 0;
-            allocator.InUse = 0;
+            allocator.InUse = 0;            
         }
     }
 }

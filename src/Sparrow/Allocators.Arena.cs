@@ -15,15 +15,6 @@ namespace Sparrow
         /// <param name="allocated">The currently allocated arena memory</param>
         /// <param name="used">The memory used from this arena on the current cycle.</param>
         int GetPreferredSize(long allocated, long used);
-
-        /// <summary>
-        /// Whenever the arena cannot allocate anymore, it will regrowth its memory space.
-        /// We can control how big that allocation by implementing this method.
-        /// </summary>
-        /// <param name="allocated">The currently allocated arena size</param>
-        /// <param name="used">The memory used from this arena on the current cycle.</param>
-        /// <returns>The new size for the arena memory</returns>
-        int GetGrowthSize(long allocated, long used);
     }
 
     public interface IArenaAllocatorOptions : INativeOptions
@@ -41,14 +32,16 @@ namespace Sparrow
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int GetPreferredSize(long allocated, long used)
             {
-                return (int)allocated;
-            }
+                if (used >= allocated)
+                {
+                    long value = used * 2;
+                    if (value > int.MaxValue)
+                        return int.MaxValue;
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int GetGrowthSize(long allocated, long used)
-            {
-                // Always multiply by 2
-                return (int)used * 2;
+                    return (int)value;
+                }
+
+                return (int)allocated;
             }
         }
 
@@ -56,14 +49,17 @@ namespace Sparrow
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int GetPreferredSize(long allocated, long used)
-            {
-                return (int)allocated;
-            }
+            {                
+                if (used >= allocated)
+                {
+                    long value = allocated;
+                    if (value > int.MaxValue)
+                        return int.MaxValue;
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public int GetGrowthSize(long allocated, long used)
-            {
-                return Bits.PowerOf2((int)used + 1);              
+                    return Bits.PowerOf2((int)value);
+                }
+
+                return (int)allocated;
             }
         }
 
@@ -310,7 +306,7 @@ namespace Sparrow
             // This allocator does not keep track of anything.
         }
 
-        public void Dispose(ref ArenaAllocator<TOptions> allocator)
+        public void Dispose(ref ArenaAllocator<TOptions> allocator, bool disposing)
         {            
             if (allocator._olderBuffers != null)
             {
@@ -329,7 +325,7 @@ namespace Sparrow
                 allocator._nativeAllocator.Release(ref _nativeAllocator, ref _currentBuffer);
             }
 
-            allocator._nativeAllocator.Dispose(ref allocator._nativeAllocator);
+            allocator._nativeAllocator.Dispose(ref allocator._nativeAllocator, disposing);
         }
     }
 }

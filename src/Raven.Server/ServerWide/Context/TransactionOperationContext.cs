@@ -40,8 +40,9 @@ namespace Raven.Server.ServerWide.Context
         protected TransactionOperationContext(int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag):
             base(initialSize, longLivedSize, lowMemoryFlag)
         {
+            // TODO: Figure out who signals the Low Memory Flag
             PersistentContext = new TransactionPersistentContext();
-            Allocator = new ByteStringContext(lowMemoryFlag);
+            Allocator = new ByteStringContext();
         }
 
         public TTransaction OpenReadTransaction()

@@ -220,7 +220,7 @@ namespace FastTests.Sparrow
         }
 
 
-        public struct FixedSize : IArenaAllocatorOptions, INativeGlobalAllocatorOptions
+        public struct FixedSize : IArenaAllocatorOptions
         {
             private struct Internal : IArenaGrowthStrategy
             {
@@ -249,7 +249,19 @@ namespace FastTests.Sparrow
         {
             public int ReuseBlocksBiggerThan => 1 * Constants.Size.Kilobyte;
             public int BlockSize => 10 * Constants.Size.Kilobyte;
+
+            public bool HasOwnership => true;
+
             public IAllocatorComposer<Pointer> CreateAllocator() => new Allocator<NativeAllocator<FixedSize>>();
+
+            /// <summary>
+            /// By default whenever we create an allocator we are going to dispose it too when the time comes.
+            /// </summary>
+            /// <param name="allocator">the allocator to dispose.</param>
+            public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
+            {
+                allocator.Dispose(disposing);
+            }
         }
 
         [Fact]
@@ -476,7 +488,7 @@ namespace FastTests.Sparrow
             {
             }
 
-            public void Dispose(ref StubAllocator<TOptions> allocator)
+            public void Dispose(ref StubAllocator<TOptions> allocator, bool disposing)
             {
             }
 
