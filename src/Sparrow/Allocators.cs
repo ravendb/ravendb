@@ -100,7 +100,9 @@ namespace Sparrow
             if (_allocator is ILifecycleHandler<TAllocator> a)
                 a.BeforeFinalization(ref _allocator);
 
-            Dispose();
+            // We are not going to double dispose, even if we hit here. 
+            if (_disposeFlag.Raise())
+                _allocator.Dispose(ref _allocator);
         }
 
         public void Initialize<TAllocatorOptions>(TAllocatorOptions options)

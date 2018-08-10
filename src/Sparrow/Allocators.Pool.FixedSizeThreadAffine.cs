@@ -40,8 +40,8 @@ namespace Sparrow
             public bool HasOwnership => true;
             public IAllocatorComposer<Pointer> CreateAllocator()
             {
-                var allocator = new Allocator<NativeAllocator<PoolAllocator.Default>>();
-                allocator.Initialize(default(PoolAllocator.Default));
+                var allocator = new Allocator<NativeAllocator<Default>>();
+                allocator.Initialize(default(Default));
                 return allocator;
             }
         }
@@ -84,8 +84,8 @@ namespace Sparrow
             public bool HasOwnership => true;
             public IAllocatorComposer<Pointer> CreateAllocator()
             {
-                var allocator = new Allocator<NativeAllocator<PoolAllocator.Default>>();
-                allocator.Initialize(default(PoolAllocator.Default));
+                var allocator = new Allocator<NativeAllocator<DefaultAcceptArbitratySize>>();
+                allocator.Initialize(default(DefaultAcceptArbitratySize));
                 return allocator;
             }
         }
@@ -95,6 +95,7 @@ namespace Sparrow
             where TOptions : struct, IFixedSizeThreadAffinePoolOptions
     {
         private TOptions _options;
+
         // PERF: This should be devirtualized. 
         private IAllocatorComposer<Pointer> _internalAllocator;
 

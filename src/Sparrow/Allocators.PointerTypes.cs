@@ -269,10 +269,8 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<byte> AsSpan(int length)
         {
-#if VALIDATE
             if (length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
-#endif
 
             return new Span<byte>(Ptr, length);
         }
@@ -280,10 +278,8 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<byte> AsSpan(int start, int length)
         {
-#if VALIDATE
             if (start + length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
-#endif
 
             return new Span<byte>((byte*)Ptr + start, length);
         }
@@ -298,10 +294,8 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> AsReadOnlySpan(int length)
         {
-#if VALIDATE
             if (length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
-#endif
 
             return new ReadOnlySpan<byte>(Ptr, length);
         }
@@ -309,10 +303,8 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> AsReadOnlySpan(int start, int length)
         {
-#if VALIDATE
             if (start + length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
-#endif
 
             return new ReadOnlySpan<byte>((byte*)Ptr + start, length);
         }
@@ -387,20 +379,18 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<T> AsSpan(int length)
         {
-#if VALIDATE
             if (length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
-#endif
+
             return new Span<T>(Ptr, length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<T> AsSpan(int start, int length)
         {
-#if VALIDATE
             if (start + length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
-#endif
+            
             return new Span<T>((byte*)Ptr + start * Unsafe.SizeOf<T>(), length);
         }
 
@@ -413,20 +403,18 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<T> AsReadOnlySpan(int length)
         {
-#if VALIDATE
             if (length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
-#endif
+
             return new ReadOnlySpan<T>(Ptr, length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<T> AsReadOnlySpan(int start, int length)
         {
-#if VALIDATE
             if (start + length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
-#endif
+
             return new ReadOnlySpan<T>((byte*)Ptr + start * Unsafe.SizeOf<T>(), length);
         }
 

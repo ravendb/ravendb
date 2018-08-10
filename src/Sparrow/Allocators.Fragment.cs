@@ -53,7 +53,7 @@ namespace Sparrow
         // How many bytes has this arena handed out to the customers.
         private long _used;
 
-        private SortedList<int, Pointer> _internalReadyToUseMemorySegments;
+        private SortedList<int, Pointer> _internalPartialReusedSegments;
     
         // Buffers that has been used and cannot be cleaned until a reset happens.
         private List<Pointer> _allocatedSegments;
@@ -84,7 +84,7 @@ namespace Sparrow
         public void Initialize(ref FragmentAllocator<TOptions> allocator)
         {
             // Initialize the struct pointers structure used to navigate over the allocated memory.    
-            allocator._internalReadyToUseMemorySegments = new SortedList<int, Pointer>(new DuplicateKeyComparer<int>());
+            allocator._internalPartialReusedSegments = new SortedList<int, Pointer>(new DuplicateKeyComparer<int>());
             allocator._allocatedSegments = new List<Pointer>();
 
             allocator.TotalAllocated = 0;
@@ -142,7 +142,7 @@ namespace Sparrow
         {
             public int Compare(TKey x, TKey y)
             {
-                int result = x.CompareTo(y);
+                int result = y.CompareTo(x);
 
                 if (result == 0)
                     return 1;   // Handle equality as beeing greater
@@ -156,16 +156,16 @@ namespace Sparrow
             if (bytesLeft > allocator._options.ReuseBlocksBiggerThan)
             {
                 // The allocation is bigger than ReuseBlocksBiggerThan and therefore we can leave this one available to be used later.
-                allocator._internalReadyToUseMemorySegments.Add(bytesLeft, new Pointer(allocator._ptrCurrent, bytesLeft));
+                allocator._internalPartialReusedSegments.Add(bytesLeft, new Pointer(allocator._ptrCurrent, bytesLeft));
             }
 
             // TODO: Time the impact of using a heap structure instead of a SortedList.
             // Get the biggest segment on the Heap and if size < the biggest one, we avoid the allocation.
             Pointer segment;
-            if (allocator._internalReadyToUseMemorySegments.Count > 0 && allocator._internalReadyToUseMemorySegments.Values[0].Size >= size)
+            if (allocator._internalPartialReusedSegments.Count > 0 && allocator._internalPartialReusedSegments.Values[0].Size >= size)
             {
-                segment = allocator._internalReadyToUseMemorySegments[0];
-                allocator._internalReadyToUseMemorySegments.RemoveAt(0);
+                segment = allocator._internalPartialReusedSegments.Values[0];
+                allocator._internalPartialReusedSegments.RemoveAt(0);
             }
             else
             {
@@ -190,7 +190,7 @@ namespace Sparrow
                 // trying to do this on the fly is too expensive unless the chunk is big enough to consider it a whole segment for himself.
                 // Consider to compose this allocator with a PoolAllocator instead if high fragmentation is expected. 
                 if (ptr.Size > allocator._options.ReuseBlocksBiggerThan)
-                    allocator._internalReadyToUseMemorySegments.Add(ptr.Size, ptr);
+                    allocator._internalPartialReusedSegments.Add(ptr.Size, ptr);
             }
             else
             {
@@ -206,9 +206,11 @@ namespace Sparrow
 
         public void Reset(ref FragmentAllocator<TOptions> allocator)
         {
-            // We are not going to track this memory chunks anymore.
-            allocator._internalReadyToUseMemorySegments.Clear();
+            // These are all partial memory segments that cannot be released individually, only as part of the 
+            // whole segment; because if the underlying allocator does track the allocations they wont match.
+            allocator._internalPartialReusedSegments.Clear();
 
+            // Now we release the whole segments that the underlying allocator knows about.
             foreach (var segment in allocator._allocatedSegments)
             {
                 var ptr = segment;
@@ -230,9 +232,11 @@ namespace Sparrow
 
         public void Dispose(ref FragmentAllocator<TOptions> allocator)
         {
-            // We are not going to track this memory chunks anymore.
-            allocator._internalReadyToUseMemorySegments.Clear();
+            // These are all partial memory segments that cannot be released individually, only as part of the 
+            // whole segment; because if the underlying allocator does track the allocations they wont match.
+            allocator._internalPartialReusedSegments.Clear();
 
+            // Now we release the whole segments that the underlying allocator knows about.
             foreach (var segment in allocator._allocatedSegments)
             {
                 var ptr = segment;
