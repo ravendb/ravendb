@@ -888,12 +888,12 @@ namespace Raven.Client.Documents.Session
                 queryData?.FromAlias)
             {
                 PageSize = PageSize,
-                SelectTokens = SelectTokens,
+                SelectTokens = new LinkedList<QueryToken>(SelectTokens),
                 FieldsToFetchToken = FieldsToFetchToken,
-                WhereTokens = WhereTokens,
-                OrderByTokens = OrderByTokens,
-                GroupByTokens = GroupByTokens,
-                QueryParameters = QueryParameters,
+                WhereTokens = new LinkedList<QueryToken>(WhereTokens),
+                OrderByTokens = new LinkedList<QueryToken>(OrderByTokens),
+                GroupByTokens = new LinkedList<QueryToken>(GroupByTokens),
+                QueryParameters = new Parameters(QueryParameters),
                 Start = Start,
                 Timeout = Timeout,
                 QueryStats = QueryStats,
@@ -949,26 +949,25 @@ namespace Raven.Client.Documents.Session
             return ravenQueryInspector;
         }
 
-        InMemoryDocumentSessionOperations IDocumentQueryGenerator.Session { get => TheSession; }
+        InMemoryDocumentSessionOperations IDocumentQueryGenerator.Session => TheSession;
 
         RavenQueryInspector<TS> IDocumentQueryGenerator.CreateRavenQueryInspector<TS>()
         {
-            return ((IDocumentQueryGenerator)Session).CreateRavenQueryInspector<TS>();
-        }
-        public IDocumentQuery<T1> Query<T1>(string indexName, string collectionName, bool isMapReduce)
-        {
-            throw new NotSupportedException("Cannot create an sync linq query from AsyncDocumentQuery, you need to use AsyncDocumentQuery for that");
-         
+            return ((IDocumentQueryGenerator)AsyncSession).CreateRavenQueryInspector<TS>();
         }
 
-        public IAsyncDocumentQuery<T1> AsyncQuery<T1>(string indexName, string collectionName, bool isMapReduce)
+        public IDocumentQuery<TResult> Query<TResult>(string indexName, string collectionName, bool isMapReduce)
+        {
+            throw new NotSupportedException("Cannot create an sync LINQ query from AsyncDocumentQuery, you need to use DocumentQuery for that");
+        }
+
+        public IAsyncDocumentQuery<TResult> AsyncQuery<TResult>(string indexName, string collectionName, bool isMapReduce)
         {
             if (indexName != IndexName || collectionName != CollectionName)
-                throw new InvalidOperationException("DocumentQuery source is has (indexName: " + IndexName + ", collectionName: " + CollectionName + "), but got request for (indexName: " + indexName + ", collection: " + collectionName + "), you cannot change the indexName / collectionName when using DocumentQuery as the source");
+                throw new InvalidOperationException(
+                    $"AsyncDocumentQuery source has (index name: {IndexName}, collection: {CollectionName}), but got request for (index name: {indexName}, collection: {collectionName}), you cannot change the index name / collection when using AsyncDocumentQuery as the source");
 
-            return SelectFields<T1>();
+            return SelectFields<TResult>();
         }
-
-
     }
 }

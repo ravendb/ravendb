@@ -21,7 +21,7 @@ namespace SlowTests.Issues
                     s.Store(new Address { Country = "Israel" }, "addresses/1");
                     s.Store(new User { Name = "Oren", AddressId = "addresses/1" });
                     s.SaveChanges();
-                    
+
                 }
 
                 using (var s = store.OpenSession())
@@ -55,7 +55,7 @@ namespace SlowTests.Issues
                         Assert.Equal("Israel", results[0].Country);
                         s.Advanced.Clear();
                     }
-                    }
+                }
             }
         }
 

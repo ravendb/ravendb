@@ -944,24 +944,26 @@ namespace Raven.Client.Documents.Session
 
             return ravenQueryInspector;
         }
-        InMemoryDocumentSessionOperations IDocumentQueryGenerator.Session { get => TheSession; }
+
+        InMemoryDocumentSessionOperations IDocumentQueryGenerator.Session => TheSession;
 
         RavenQueryInspector<TS> IDocumentQueryGenerator.CreateRavenQueryInspector<TS>()
         {
             return ((IDocumentQueryGenerator)Session).CreateRavenQueryInspector<TS>();
         }
-        public IDocumentQuery<T1> Query<T1>(string indexName, string collectionName, bool isMapReduce)
+
+        public IDocumentQuery<TResult> Query<TResult>(string indexName, string collectionName, bool isMapReduce)
         {
             if (indexName != IndexName || collectionName != CollectionName)
-                throw new InvalidOperationException("DocumentQuery source is has (indexName: " + IndexName + ", collectionName: " + CollectionName + "), but got request for (indexName: " + indexName + ", collection: " + collectionName + "), you cannot change the indexName / collectionName when using DocumentQuery as the source");
+                throw new InvalidOperationException(
+                    $"DocumentQuery source has (index name: {IndexName}, collection: {CollectionName}), but got request for (index name: {indexName}, collection: {collectionName}), you cannot change the index name / collection when using DocumentQuery as the source");
 
-            return SelectFields<T1>();
+            return SelectFields<TResult>();
         }
 
-        public IAsyncDocumentQuery<T1> AsyncQuery<T1>(string indexName, string collectionName, bool isMapReduce)
+        public IAsyncDocumentQuery<TResult> AsyncQuery<TResult>(string indexName, string collectionName, bool isMapReduce)
         {
-            throw new NotSupportedException("Cannot create an async linq query from DocumentQuery, you need to use AsyncDocumentQuery for that");
+            throw new NotSupportedException("Cannot create an async LINQ query from DocumentQuery, you need to use AsyncDocumentQuery for that");
         }
-
     }
 }
