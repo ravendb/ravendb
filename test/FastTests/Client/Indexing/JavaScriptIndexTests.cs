@@ -480,7 +480,7 @@ namespace FastTests.Client.Indexing
                 Line1 = "Home",
                 Line2 = "sweet home"
             };
-            var addressStr = "{\"line1\":\"home\",\"line2\":\"sweet home\"}";
+
             using (var store = GetDocumentStore())
             {
                 store.ExecuteIndex(new Users_ByAddress());
