@@ -20,11 +20,10 @@ namespace BulkInsert.Benchmark
 {
     public class BulkInsertBench : IDisposable
     {
-        private Random _seedRandom = new Random();
-        private int _seed;
-        private Random _random;
-        private string _logFilename;
-        private DocumentStore store;
+        private readonly Random _seedRandom = new Random();
+        private readonly int _seed;
+        private readonly Random _random;
+        private readonly DocumentStore store;
         private long _seqId;
 
         private class DocEntity
@@ -61,16 +60,16 @@ namespace BulkInsert.Benchmark
 
         private void Log(string txt, bool isError = false)
         {
-//            if (_logFilename == null)
-//            {
-//                _logFilename = Path.GetTempFileName();
-//                Console.ForegroundColor = ConsoleColor.Green;
-//                Console.WriteLine("Loggin into " + _logFilename);
-//                Console.ResetColor();
-//            }
+            //            if (_logFilename == null)
+            //            {
+            //                _logFilename = Path.GetTempFileName();
+            //                Console.ForegroundColor = ConsoleColor.Green;
+            //                Console.WriteLine("Loggin into " + _logFilename);
+            //                Console.ResetColor();
+            //            }
             var errorStr = isError ? " *** ERROR ***" : "";
             string txtToLog = SystemTime.UtcNow.ToString("G", new CultureInfo("he-il")) + errorStr + " : " + txt;
-//            File.AppendAllText(_logFilename, txtToLog + Environment.NewLine);
+            //            File.AppendAllText(_logFilename, txtToLog + Environment.NewLine);
 
             Console.WriteLine(txtToLog);
         }
@@ -107,8 +106,8 @@ namespace BulkInsert.Benchmark
                 str[i] = chars[_random.Next(chars.Length)];
             }
             return new string(str);
-//            return new string(Enumerable.Repeat(chars, length)
-//                .Select(s => s[_random.Next(s.Length)]).ToArray());
+            //            return new string(Enumerable.Repeat(chars, length)
+            //                .Select(s => s[_random.Next(s.Length)]).ToArray());
         }
 
         private static string[] _randStr;
@@ -118,7 +117,7 @@ namespace BulkInsert.Benchmark
             int docSize = sizeOfDocuments == null ? _random.Next(5 * 1024 * 1024) : sizeOfDocuments.Value;
             var sizeStr = sizeOfDocuments == null ? $"Random Size of {docSize:#,#}" : $"size of {sizeOfDocuments:#,#}";
             Log($"About to perform Store for {numberOfDocuments:##,###} documents with {sizeStr} from {numberOfClients} clients.");
-            
+
             var dummies = Math.Min(numberOfDocuments, 1024 * 1024 * 1024 / docSize + 1);
             Console.WriteLine("dummies==" + dummies);
             _randStr = new string[dummies];
@@ -126,7 +125,7 @@ namespace BulkInsert.Benchmark
             {
                 _randStr[index] = RandomString(docSize);
             }
-           
+
             var tasks = new Task[numberOfClients];
             for (int i = 0; i < numberOfClients; i++)
             {
@@ -146,11 +145,10 @@ namespace BulkInsert.Benchmark
         private async Task PerfomStore(string collection, long numberOfDocuments, int docsPerSession, long dummies, int docSize, int? sizeOfDocuments, bool useSeqId)
         {
             var entities = new DocEntity[3];
-            var ids = new long[] {-1, -1, -1};
+            var ids = new long[] { -1, -1, -1 };
             var sp = Stopwatch.StartNew();
 
             string[] tags = null;
-            long id = 1;
 
             var numberOfSessions = numberOfDocuments / docsPerSession;
             var i = 0;
@@ -274,9 +272,9 @@ namespace BulkInsert.Benchmark
 
             string[] tags = null;
             long id = 1;
-            var dummies = Math.Min(numberOfDocuments, 1024*1024*1024/docSize  + 1);
+            var dummies = Math.Min(numberOfDocuments, 1024 * 1024 * 1024 / docSize + 1);
             Console.WriteLine("dummies==" + dummies);
-            var randStr  = new string[dummies];
+            var randStr = new string[dummies];
             for (int index = 0; index < randStr.Length; index++)
             {
                 randStr[index] = RandomString(docSize);
@@ -402,9 +400,9 @@ namespace BulkInsert.Benchmark
                 using (var massiveObj = new BulkInsertBench("http://localhost:8090", 1805861237))
                 {
                     massiveObj.CreateDb();
-//                    var sp = Stopwatch.StartNew();
-//                    massiveObj.Write(64 * 1024, 1024);
-//                    Console.WriteLine(sp.Elapsed);
+                    //                    var sp = Stopwatch.StartNew();
+                    //                    massiveObj.Write(64 * 1024, 1024);
+                    //                    Console.WriteLine(sp.Elapsed);
 
                     var k = 1000;
                     var kb = 1024;
