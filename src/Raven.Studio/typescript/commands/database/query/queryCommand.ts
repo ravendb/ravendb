@@ -42,6 +42,14 @@ class queryCommand extends commandBase {
             return this.criteria.queryText();
         }
     }
+
+    private getQueryParameters() {
+        if (!this.criteria.queryParameters()) {
+            return undefined;
+        }
+
+        return this.criteria.queryParameters();
+    }
     
     getUrl() {
         const criteria = this.criteria;
@@ -53,7 +61,8 @@ class queryCommand extends commandBase {
             pageSize: this.take,
             debug: criteria.indexEntries() ? "entries" : undefined,
             disableCache: this.disableCache ? Date.now() : undefined,
-            metadataOnly: typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined
+            metadataOnly: typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined,
+            parameters: this.getQueryParameters(),
         });
         return url + urlArgs;
     }
