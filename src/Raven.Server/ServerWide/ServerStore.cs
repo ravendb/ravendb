@@ -1963,7 +1963,7 @@ namespace Raven.Server.ServerWide
                 if (clusterTopology.Members.TryGetValue(engineLeaderTag, out string leaderUrl) == false)
                     throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
 
-                var command = new PutRaftCommand(cmdJson);
+                var command = new PutRaftCommand(cmdJson, _engine.Url);
 
                 if (_clusterRequestExecutor == null
                     || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
@@ -1993,9 +1993,11 @@ namespace Raven.Server.ServerWide
             private bool _reachedLeader;
             public override bool IsReadRequest => false;
             public bool HasReachLeader() => _reachedLeader;
-            public PutRaftCommand(BlittableJsonReaderObject command)
+            private readonly string _source;
+            public PutRaftCommand(BlittableJsonReaderObject command, string source)
             {
                 _command = command;
+                _source = source;
             }
 
             public override void OnResponseFailure(HttpResponseMessage response)
@@ -2008,6 +2010,9 @@ namespace Raven.Server.ServerWide
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/rachis/send";
+                Console.WriteLine(_source);
+                if (string.IsNullOrWhiteSpace(_source) == false)
+                    url += $"?source={_source}";
 
                 var request = new HttpRequestMessage
                 {
@@ -2035,6 +2040,8 @@ namespace Raven.Server.ServerWide
             public long RaftCommandIndex { get; set; }
 
             public object Data { get; set; }
+
+            public string Source { get; set; }
         }
 
         public Task WaitForTopology(Leader.TopologyModification state)
