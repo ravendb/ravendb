@@ -125,14 +125,29 @@ namespace Raven.Client.Documents.Changes
 
     public class CounterChange : DatabaseChange
     {
+        /// <summary>
+        /// Counter name.
+        /// </summary>
         public string Name { get; set; }
 
+        /// <summary>
+        /// Counter value.
+        /// </summary>
         public long Value { get; set; }
 
+        /// <summary>
+        /// Counter document identifier.
+        /// </summary>
         public string DocumentId { get; set; }
 
+        /// <summary>
+        /// Counter change vector.
+        /// </summary>
         public string ChangeVector { get; set; }
 
+        /// <summary>
+        /// Type of change that occurred on counter.
+        /// </summary>
         public CounterChangeTypes Type { get; set; }
 
         internal bool TriggeredByReplicationThread;

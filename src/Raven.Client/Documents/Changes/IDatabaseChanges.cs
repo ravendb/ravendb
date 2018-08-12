@@ -52,12 +52,24 @@ namespace Raven.Client.Documents.Changes
         /// </summary>
         IChangesObservable<DocumentChange> ForDocumentsInCollection<TEntity>();
 
+        /// <summary>
+        /// Subscribe to changes for all counters.
+        /// </summary>
         IChangesObservable<CounterChange> ForAllCounters();
 
+        /// <summary>
+        /// Subscribe to changes for all counters with a given name.
+        /// </summary>
         IChangesObservable<CounterChange> ForCounter(string counterName);
 
+        /// <summary>
+        /// Subscribe to changes for counter from a given document and with given name.
+        /// </summary>
         IChangesObservable<CounterChange> ForCounterOfDocument(string documentId, string counterName);
 
+        /// <summary>
+        /// Subscribe to changes for all counters from a given document.
+        /// </summary>
         IChangesObservable<CounterChange> ForCountersOfDocument(string documentId);
 
         /// <summary>
