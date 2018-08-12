@@ -21,6 +21,7 @@ namespace Raven.Client.Documents.Operations.Configuration
         {
             None,
             Development,
+            Testing,
             Production
         }
     }

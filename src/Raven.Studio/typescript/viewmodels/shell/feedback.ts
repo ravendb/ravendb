@@ -54,7 +54,7 @@ class feedback extends dialogViewModelBase {
 
     spinners = {
         send: ko.observable<boolean>(false)
-    }
+    };
 
     constructor(studioVersion: string, serverVersion: string) {
         super();

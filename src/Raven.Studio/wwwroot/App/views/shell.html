@@ -33,10 +33,15 @@
         <a class="navbar-brand hidden-xs" data-bind="attr: { href: appUrls.serverDashboard }"><i class="icon-logo"></i></a>
     </div>
     <div id="navbar">
+        <div class="server-environment" data-bind="if: serverEnvironment, visible: serverEnvironment">
+            <small>Server environment</small>
+            <div><strong data-bind="text: serverEnvironment, attr: { class: 'text-uppercase ' + serverEnvironmentClass() }"></strong></div>
+        </div>
         <div class="inputs-container hidden-xs hidden-sm">
             <div class="database-switcher-container" data-bind="with: databaseSwitcher">
                 <div class="form-control btn-toggle database-switcher">
                     <span class="database" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
+                    <span data-bind="visible: $root.activeDatabase() ? $root.activeDatabase().environment() : false, text: $root.activeDatabase() ? $root.activeDatabase().environment(): '', attr: { class: 'label text-uppercase ' + ($root.activeDatabase() ? $root.activeDatabase().environmentClass() : '') }"></span>
                 </div>
                 <a data-bind="attr: { href: $root.appUrls.databases }" title="View all databases" class="resources-link"><i class="icon-resources"></i></a>
                 <div class="box-container">
@@ -50,6 +55,7 @@
                                 <li data-bind="visible: !disabled() && relevant()">
                                     <a href="#" data-bind="click: $parent.selectDatabase.bind($parent)" class="database">
                                         <span data-bind="text: name"></span>
+                                        <span data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></span>
                                         <span data-bind="visible: errored" class="badge badge-danger">Errored</span>
                                     </a>
                                 </li>
@@ -58,6 +64,7 @@
                                 <li data-bind="visible: !relevant()">
                                     <a class="database non-relevant">
                                         <span data-bind="text: name"></span>
+                                        <span data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></span>
                                         <span class="label label-default">Non-relevant</span>
                                         <span data-bind="visible: errored" class="label label-danger">Errored</span>
                                     </a>
@@ -67,6 +74,7 @@
                                 <li data-bind="visible: disabled">
                                     <a class="database disabled">
                                         <span data-bind="text: name"></span>
+                                        <span data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></span>
                                         <span class="label label-default">Disabled</span>
                                         <span data-bind="visible: errored" class="label label-danger">Errored</span>
                                     </a>

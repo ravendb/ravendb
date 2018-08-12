@@ -6,6 +6,7 @@ interface computedAppUrls {
     serverDashboard: KnockoutComputed<string>;
     manageDatabaseGroup: KnockoutComputed<string>;
     clientConfiguration: KnockoutComputed<string>;
+    studioConfiguration: KnockoutComputed<string>;
     documents: KnockoutComputed<string>;
     revisionsBin: KnockoutComputed<string>;
     conflicts: KnockoutComputed<string>;

@@ -15,18 +15,38 @@ class studioSettings {
 
     static default = new studioSettings();
 
+    private globalRemoteSettingsLoader: () => JQueryPromise<Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration>;
+    private databaseRemoteSettingsLoader: (db: database) => JQueryPromise<Raven.Client.Documents.Operations.Configuration.StudioConfiguration>;
+    private globalRemoteSettingsSaver: (settings: Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration) => JQueryPromise<void>;
+    private databaseRemoteSettingsSaver: (settings: Raven.Client.Documents.Operations.Configuration.StudioConfiguration, db: database) => JQueryPromise<void>;
+    
     private globalSettingsCached: JQueryPromise<globalSettings>;
     private readonly onSettingChangedHandlers = [] as Array<handlerItem>;
 
+    
+    configureLoaders(globalLoader:  () => JQueryPromise<Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration>, 
+                     dbSpecificLoader: (db: database) => JQueryPromise<Raven.Client.Documents.Operations.Configuration.StudioConfiguration>,
+                     globalSaver: (settings: Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration) => JQueryPromise<void>,
+                     dbSpecificSaver: (settings: Raven.Client.Documents.Operations.Configuration.StudioConfiguration, db: database) => JQueryPromise<void>) {
+        this.globalRemoteSettingsLoader = globalLoader;
+        this.databaseRemoteSettingsLoader = dbSpecificLoader;
+        this.globalRemoteSettingsSaver = globalSaver;
+        this.databaseRemoteSettingsSaver = dbSpecificSaver;
+    }
+    
     forDatabase(db: database): JQueryPromise<databaseSettings> {
-        const settings = new databaseSettings((key, value) => this.onSettingChanged(key, value), db);
+        const settings = new databaseSettings(this.databaseRemoteSettingsLoader, (key, value) => this.onSettingChanged(key, value), db);
 
         return settings.load();
     }
 
-    globalSettings(): JQueryPromise<globalSettings> {
+    globalSettings(forceRefresh = false): JQueryPromise<globalSettings> {
+        if (forceRefresh && this.globalSettingsCached && this.globalSettingsCached.state() !== "pending") {
+            this.globalSettingsCached = null;
+        }
+        
         if (!this.globalSettingsCached) {
-            const global = new globalSettings((key, value) => this.onSettingChanged(key, value));
+            const global = new globalSettings(this.globalRemoteSettingsLoader, this.globalRemoteSettingsSaver, (key, value) => this.onSettingChanged(key, value));
 
             this.globalSettingsCached = global.load();
         }
@@ -53,8 +73,8 @@ class studioSettings {
     private onSettingsChanged(container: abstractSettings, settingsDto: any) {
         _.forIn(settingsDto, (value, key) => {
             const setting = (container as any)[key];
-            if (setting && setting instanceof studioSetting && setting.serialize() !== value) {
-                setting.deserialize(value);
+            if (setting && setting instanceof studioSetting && setting.prepareValueForSave() !== value) {
+                setting.loadUsingValue(value);
                 this.onSettingChanged(key, setting);
             }
         });

@@ -464,7 +464,7 @@ body {
             -o-transition: opacity @menu-transition-ease;
             transition: opacity @menu-transition-ease;
             display: block;
-            text-align:center;
+            text-align: center;
         }
     }
 
@@ -586,6 +586,20 @@ body {
             &:hover {
                 color: @gray-light;
             }
+        }
+    }
+
+    .server-environment {
+        background-color: @gray-darker;
+        padding: 2px @grid-gutter-width/2;
+        height: 38px;
+        margin-right: @grid-gutter-width/2;
+        line-height: 13px;
+        text-align: center;
+
+        small {
+            text-transform: uppercase;
+            font-size: 10px;
         }
     }
 
@@ -760,8 +774,22 @@ body {
                     background-color: @gray;
                 }
             }
+            
+            .database-switcher {
+                .label {
+                    opacity: 1;
+                    transition: opacity .2s;
+                }
+            }
 
             &.active {
+                .database-switcher {
+                    padding-right: 80px;
+                    .label {
+                        opacity: 0;
+                    }
+                }
+
                 .resources-link {
                     display: block;
                 }
@@ -801,7 +829,6 @@ body {
                 z-index: 22;
 
                 &.active {
-                    right: (@grid-gutter-width / 2);
                 }
             }
         }
@@ -814,6 +841,10 @@ body {
         }
 
         .database-list {
+            .label {
+                text-transform: uppercase;
+                width: 97px;
+            }
         }
 
         @media (min-width: @screen-md) {
@@ -870,7 +901,16 @@ body {
             position: relative;
             z-index: 20;
             cursor: pointer;
-            padding-top: 4px;
+            display: flex;
+            align-items: center;
+            padding-top: 0px;
+            padding-bottom: 0px;
+            padding-right: 40px;
+            transition: padding-right .3s cubic-bezier(0, 0.4, 0.4, 1);
+
+            .database {
+                flex-grow: 1;
+            }
 
             &:after {
                 .icon-style;

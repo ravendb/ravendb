@@ -45,6 +45,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.clientConfiguration
         }),
         new leafMenuItem({
+            route: 'databases/settings/studioConfiguration',
+            moduleId: 'viewmodels/database/settings/studioConfiguration',
+            title: 'Studio Configuration',
+            nav: true,
+            css: 'icon-studio-configuration',
+            dynamicHash: appUrls.studioConfiguration
+        }),
+        new leafMenuItem({
             route: 'databases/settings/revisions',
             moduleId: 'viewmodels/database/settings/revisions',
             title: 'Document Revisions',

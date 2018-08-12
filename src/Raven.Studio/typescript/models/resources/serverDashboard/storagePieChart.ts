@@ -28,7 +28,7 @@ class storagePieChart {
             .attr("transform", "translate(" + (this.width / 2) + ", " + (this.width / 2) + ")");
         
         this.colorScale = d3.scale.ordinal<string>()
-            .range(["#046293", "#fed101", "#689f39", "#ac2258", "#66418c", "#313fa0", "#ec407a", "#ff7000", "#890e4f", "#a487ba"]);
+            .range(["#f75e71", "#f38861", "#f0ae5e", "#edcd51", "#7bd85d", "#37c4ac", "#2f9ef3", "#6972ee", "#9457b5", "#d45598"]);
     }
     
     onResize() {
