@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        private class DeleteRevisionsCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class DeleteRevisionsCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
         {
             private readonly StringValues _ids;
             private readonly DocumentDatabase _database;
@@ -53,11 +53,30 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
                 return 1;
             }
+
+            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new DeleteRevisionsCommandDto
+                {
+                    Ids = _ids
+                };
+            }
         }
 
         public class Parameters
         {
             public string[] DocumentIds { get; set; }
+        }
+    }
+
+    internal class DeleteRevisionsCommandDto : TransactionOperationsMerger.IReplayableCommandDto<AdminRevisionsHandler.DeleteRevisionsCommand>
+    {
+        public string[] Ids;
+
+        public AdminRevisionsHandler.DeleteRevisionsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            var command = new AdminRevisionsHandler.DeleteRevisionsCommand(Ids, database);
+            return command;
         }
     }
 }

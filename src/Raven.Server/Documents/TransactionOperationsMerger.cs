@@ -18,6 +18,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Json;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
@@ -1293,6 +1294,8 @@ namespace Raven.Server.Documents
                     return jsonSerializer.Deserialize<UpdateSiblingCurrentEtagDto>(reader);
                 case nameof(IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand):
                     return jsonSerializer.Deserialize<MergedUpdateDatabaseChangeVectorCommandDto>(reader);
+                case nameof(AdminRevisionsHandler.DeleteRevisionsCommand):
+                    return jsonSerializer.Deserialize<DeleteRevisionsCommandDto>(reader);
                 default:
                     throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
             }

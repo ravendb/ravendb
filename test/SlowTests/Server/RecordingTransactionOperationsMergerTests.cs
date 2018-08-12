@@ -9,6 +9,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Server.Documents.Revisions;
 using FastTests.Voron.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -23,6 +24,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
@@ -31,6 +33,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -64,6 +67,58 @@ namespace SlowTests.Server
                 var i = typeof(TransactionOperationsMerger.IRecordableCommand);
                 Assert.True(i.IsAssignableFrom(t), $"{t.Name} should implement {i.Name}");
             });
+        }
+
+        [Fact]
+        public async Task RecordingDeleteRevisionsCommand()
+        {
+            var recordFilePath = NewDataPath();
+
+            const string id = "UsersA-1";
+            var user = new User { Name = "Andre" };
+
+            using (var store = GetDocumentStore())
+            {
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration()
+                }));
+
+                //Recording
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+
+                store.Commands().Put(id, null, user);
+
+                store.Maintenance.Send(new RevisionsTests.DeleteRevisionsOperation(new AdminRevisionsHandler.Parameters
+                {
+                    DocumentIds = new[] { id }
+                }));
+
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+            }
+
+            Process.Start(@"C:\Program Files (x86)\Notepad++\notepad++.exe", recordFilePath);
+
+            //Replay
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
+            {
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration()
+                }));
+
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
+
+                using (var session = store.OpenSession())
+                {
+                    var revisions = session.Advanced.Revisions.GetFor<User>(id);
+                    //Assert
+                    Assert.Empty(revisions);
+                }
+            }
         }
 
         [Fact]
