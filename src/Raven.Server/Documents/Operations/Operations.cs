@@ -377,8 +377,8 @@ namespace Raven.Server.Documents.Operations
             [Description("Collection import from csv")]
             CollectionImportFromCsv,
 
-            [Description("Database migration")]
-            DatabaseMigration,
+            [Description("RavenDB Database migration")]
+            DatabaseMigrationRavenDb,
 
             [Description("Database Restore")]
             DatabaseRestore,
@@ -405,7 +405,10 @@ namespace Raven.Server.Documents.Operations
             DatabaseBackup,
             
             [Description("Migration from SQL")]
-            MigrationFromSql
+            MigrationFromSql,
+
+            [Description("Database Migration")]
+            DatabaseMigration
         }
     }
 }

@@ -1,8 +1,20 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Smuggler;
+using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Migration
 {
+    public class MigrationConfiguration
+    {
+        public string DatabaseTypeName { get; set; }
+
+        public string MigratorFullPath { get; set; }
+
+        public BlittableJsonReaderObject InputConfiguration { get; set; }
+
+        public string TransformScript { get; set; }
+    }
+
     public class SingleDatabaseMigrationConfiguration : MigrationConfigurationBase
     {
         public DatabaseMigrationSettings MigrationSettings { get; set; }
