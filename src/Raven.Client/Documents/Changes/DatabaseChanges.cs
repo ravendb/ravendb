@@ -259,7 +259,7 @@ namespace Raven.Client.Documents.Changes
             if (string.IsNullOrWhiteSpace(counterName))
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(counterName));
 
-            var counter = GetOrAddConnectionState($"counter/{counterName}/document/{documentId}", "watch-document-counter", "unwatch-document-counter", value: null, values: new[] { documentId, counterName });
+            var counter = GetOrAddConnectionState($"document/{documentId}/counter/{counterName}", "watch-document-counter", "unwatch-document-counter", value: null, values: new[] { documentId, counterName });
 
             var taskedObservable = new ChangesObservable<CounterChange, DatabaseConnectionState>(
                 counter,
@@ -273,7 +273,7 @@ namespace Raven.Client.Documents.Changes
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(documentId));
 
-            var counter = GetOrAddConnectionState($"counters/document/{documentId}", "watch-document-counters", "unwatch-document-counters", documentId);
+            var counter = GetOrAddConnectionState($"document/{documentId}/counter", "watch-document-counters", "unwatch-document-counters", documentId);
 
             var taskedObservable = new ChangesObservable<CounterChange, DatabaseConnectionState>(
                 counter,
