@@ -4,12 +4,11 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Changes;
 using Raven.Tests.Core.Utils.Entities;
-using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_11703 : ClusterTestBase
+    public class RavenDB_11703 : RavenTestBase
     {
         [Fact]
         public async Task CanGetNotificationAboutCounterIncrement()
