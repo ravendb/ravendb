@@ -2010,7 +2010,6 @@ namespace Raven.Server.ServerWide
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/rachis/send";
-                Console.WriteLine(_source);
                 if (string.IsNullOrWhiteSpace(_source) == false)
                     url += $"?source={_source}";
 
