@@ -70,6 +70,64 @@ namespace SlowTests.Server
         }
 
         [Fact]
+        public async Task RecordingDeleteRevisionsBeforeCommand()
+        {
+            var recordFilePath = NewDataPath();
+
+            const string id = "UsersA-1";
+            var user = new User { Name = "Andre" };
+
+            using (var store = GetDocumentStore())
+            {
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration()
+                }));
+
+                //Recording
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(user, id);
+                    session.SaveChanges();
+                }
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                database.DocumentsStorage.RevisionsStorage.Operations.DeleteRevisionsBefore("Users", DateTime.UtcNow);
+
+                using (var session = store.OpenSession())
+                {
+                    var revisions = session.Advanced.Revisions.GetFor<User>(id);
+                }
+
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+            }
+
+            //Replay
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
+            {
+                await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration
+                {
+                    Default = new RevisionsCollectionConfiguration()
+                }));
+
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
+
+                using (var session = store.OpenSession())
+                {
+                    var revisions = session.Advanced.Revisions.GetFor<User>(id);
+                    
+                    //Assert
+                    //Todo To consider what need to be the result because the revisions are newer then the date of delete before 
+                }
+            }
+        }
+
+        [Fact]
         public async Task RecordingDeleteRevisionsCommand()
         {
             var recordFilePath = NewDataPath();
@@ -96,8 +154,6 @@ namespace SlowTests.Server
 
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
-
-            Process.Start(@"C:\Program Files (x86)\Notepad++\notepad++.exe", recordFilePath);
 
             //Replay
             using (var store = GetDocumentStore())
