@@ -324,7 +324,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Theory]
+        [Theory(Skip = "Flaky")]
         [PropertyData("Storages")]
         public void AllClientsWith_WaitForFree_StrategyShouldGetAccessToSubscription(string storage)
         {

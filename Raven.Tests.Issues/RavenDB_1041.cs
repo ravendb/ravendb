@@ -156,7 +156,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Flaky")]
         public async Task ShouldThrowIfCannotReachEnoughDestinationServers()
         {
             var store1 = CreateStore();

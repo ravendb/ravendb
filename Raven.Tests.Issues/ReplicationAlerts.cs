@@ -34,7 +34,7 @@ namespace Raven.Tests.Issues
             configuration.RunInMemory = false;
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "Flaky"), Trait("Category", "Smuggler")]
         public void ImportingReplicationDestinationsDocumentWithInvalidSourceShouldReportOneAlertOnly()
         {
             var store1 = CreateStore();
