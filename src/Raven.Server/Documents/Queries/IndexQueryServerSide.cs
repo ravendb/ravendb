@@ -77,16 +77,6 @@ namespace Raven.Server.Documents.Queries
                 PageSize = pageSize,
             };
             
-            if (httpContext.Request.Query.TryGetValue("parameters", out var parameters) && 
-                 parameters.Count > 0 &&
-                 string.IsNullOrWhiteSpace(parameters[0]) == false)
-            {
-                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(parameters[0])))
-                {
-                    result.QueryParameters = context.Read(stream, "query parameters");
-                }
-            }
-
             foreach (var item in httpContext.Request.Query)
             {
                 try
@@ -94,6 +84,12 @@ namespace Raven.Server.Documents.Queries
                     switch (item.Key)
                     {
                         case "query":
+                            continue;
+                        case "parameters":
+                            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(item.Value[0])))
+                            {
+                                result.QueryParameters = context.Read(stream, "query parameters");
+                            }
                             continue;
                         case RequestHandler.StartParameter:
                         case RequestHandler.PageSizeParameter:
