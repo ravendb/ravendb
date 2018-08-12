@@ -16,6 +16,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -35,11 +36,12 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Server
 {
-    public class RecordingTransactionOperationsMergerTests : RavenTestBase
+    public class RecordingTransactionOperationsMergerTests : ClusterTestBase
     {
         [Fact]
         public void AllDerivedCommandsOfMergedTransactionCommand_MustBeRecordable_ExceptForExceptions()
@@ -62,6 +64,68 @@ namespace SlowTests.Server
                 var i = typeof(TransactionOperationsMerger.IRecordableCommand);
                 Assert.True(i.IsAssignableFrom(t), $"{t.Name} should implement {i.Name}");
             });
+        }
+
+        [Fact]
+        //Todo To split the test considering how to assert each separately
+        public async Task RecordingUpdateSiblingCurrentEtag_And_RecordingMergedUpdateDatabaseChangeVectorCommand()
+        {
+            var recordFilePath = NewDataPath();
+
+            var leader = await CreateRaftClusterAndGetLeader(2);
+            var dbName = GetDatabaseName();
+            var (_, servers) = await CreateDatabaseInCluster(dbName, 2, leader.WebUrl);
+
+            const string id = "UsersA-1";
+            var user = new User
+            {
+                Name = "Avi"
+            };
+
+            using (var master = new DocumentStore
+            {
+                Database = dbName,
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                },
+                Urls = new[] { servers[0].WebUrl }
+            }.Initialize())
+            using (var slave = new DocumentStore
+            {
+                Database = dbName,
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                },
+                Urls = new[] { servers[1].WebUrl }
+            }.Initialize())
+            {
+                //Recording
+                slave.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+
+                master.Commands().Put(id, null, user);
+
+                await WaitFor(() =>
+                    null != slave.Commands().Get(id));
+
+                //Todo To think how to wait for tested commands
+                await Task.Delay(TimeSpan.FromSeconds(15));
+
+                slave.Maintenance.Send(new StopTransactionsRecordingOperation());
+            }
+
+            //Replay
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
+            {
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
+
+                //Assert
+                //Todo To think how to assert
+            }
         }
 
         [Fact]
@@ -99,6 +163,7 @@ namespace SlowTests.Server
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
 
+            //Replay
             using (var store = GetDocumentStore())
             using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
             {

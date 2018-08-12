@@ -1221,8 +1221,10 @@ namespace Raven.Server.Documents
 
                         var cmd = DeserializeCommand(strType, item, context, peepingTomStream);
 
+                        //Todo To remove check after all MergedTransactionCommand driven class include in switch
                         cmd?.Execute(txCtx, null);
                         commandsProgress++;
+                        UpdateGlobalReplicationInfoBeforeCommit(context);
 
                         yield return new ReplayProgress
                         {
@@ -1287,6 +1289,10 @@ namespace Raven.Server.Documents
                     return jsonSerializer.Deserialize<MergedDocumentReplicationCommandDto>(reader);
                 case nameof(ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand):
                     return jsonSerializer.Deserialize<DeleteExpiredDocumentsCommandDto>(reader);
+                case nameof(OutgoingReplicationHandler.UpdateSiblingCurrentEtag):
+                    return jsonSerializer.Deserialize<UpdateSiblingCurrentEtagDto>(reader);
+                case nameof(IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand):
+                    return jsonSerializer.Deserialize<MergedUpdateDatabaseChangeVectorCommandDto>(reader);
                 default:
                     throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
             }

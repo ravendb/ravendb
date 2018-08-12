@@ -961,7 +961,7 @@ namespace Raven.Server.Documents.Replication
         protected void OnFailed(Exception exception, IncomingReplicationHandler instance) => Failed?.Invoke(instance, exception);
         protected void OnDocumentsReceived(IncomingReplicationHandler instance) => DocumentsReceived?.Invoke(instance);
 
-        private class MergedUpdateDatabaseChangeVectorCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class MergedUpdateDatabaseChangeVectorCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
         {
             private readonly string _changeVector;
             private readonly long _lastDocumentEtag;
@@ -1007,6 +1007,16 @@ namespace Raven.Server.Documents.Replication
                 };
 
                 return operationsCount;
+            }
+
+            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new MergedUpdateDatabaseChangeVectorCommandDto
+                {
+                    ChangeVector = _changeVector,
+                    LastDocumentEtag = _lastDocumentEtag,
+                    SourceDatabaseId = _sourceDatabaseId
+                };
             }
         }
 
@@ -1299,6 +1309,19 @@ namespace Raven.Server.Documents.Replication
 
                 return dto;
             }
+        }
+    }
+
+    internal class MergedUpdateDatabaseChangeVectorCommandDto : TransactionOperationsMerger.IReplayableCommandDto<IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand>
+    {
+        public string ChangeVector;
+        public long LastDocumentEtag;
+        public string SourceDatabaseId;
+
+        public IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            var command = new IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand(ChangeVector, LastDocumentEtag, SourceDatabaseId, new AsyncManualResetEvent());
+            return command;
         }
     }
 

@@ -594,7 +594,7 @@ namespace Raven.Server.Documents.Replication
             UpdateDestinationChangeVectorHeartbeat(replicationBatchReply);
         }
 
-        private class UpdateSiblingCurrentEtag : TransactionOperationsMerger.MergedTransactionCommand
+        internal class UpdateSiblingCurrentEtag : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
         {
             private readonly ReplicationMessageReply _replicationBatchReply;
             private readonly AsyncManualResetEvent _trigger;
@@ -608,12 +608,22 @@ namespace Raven.Server.Documents.Replication
 
             public bool InitAndValidate(long lastReceivedEtag)
             {
+                if (false == Init())
+                {
+                    return false;
+                }
+
+                return _replicationBatchReply.CurrentEtag > lastReceivedEtag;
+            }
+
+            internal bool Init()
+            {
                 if (Guid.TryParse(_replicationBatchReply.DatabaseId, out Guid dbGuid) == false)
                     return false;
 
                 _dbId = dbGuid.ToBase64Unpadded();
 
-                return _replicationBatchReply.CurrentEtag > lastReceivedEtag;
+                return true;
             }
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
@@ -653,6 +663,14 @@ namespace Raven.Server.Documents.Replication
                     };
                 }
                 return result.IsValid ? 1 : 0;
+            }
+
+            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new UpdateSiblingCurrentEtagDto
+                {
+                    ReplicationBatchReply = _replicationBatchReply
+                };
             }
         }
 
@@ -913,6 +931,18 @@ namespace Raven.Server.Documents.Replication
         }
 
         private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);
+    }
+
+    internal class UpdateSiblingCurrentEtagDto : TransactionOperationsMerger.IReplayableCommandDto<OutgoingReplicationHandler.UpdateSiblingCurrentEtag>
+    {
+        public ReplicationMessageReply ReplicationBatchReply;
+
+        public OutgoingReplicationHandler.UpdateSiblingCurrentEtag ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            var command = new OutgoingReplicationHandler.UpdateSiblingCurrentEtag(ReplicationBatchReply, new AsyncManualResetEvent());
+            command.Init();
+            return command;
+        }
     }
 
     public static class ReplicationMessageType
