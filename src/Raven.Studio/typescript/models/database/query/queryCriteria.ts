@@ -8,7 +8,6 @@ class queryCriteria {
     showFields = ko.observable<boolean>(false);
     indexEntries = ko.observable<boolean>(false);
     queryText = ko.observable<string>("");
-    queryParameters = ko.observableArray<[string, string]>();
     metadataOnly = ko.observable<boolean>(false);
     recentQuery = ko.observable<boolean>(false);
     
@@ -47,10 +46,6 @@ class queryCriteria {
                 this.showFields(false);
             }
         });
-
-        this.queryText.subscribe(queryText => {
-            this.mergeParameters(queryText);
-        });
     }
 
     updateUsing(storedQuery: storedQueryDto) {
@@ -86,23 +81,6 @@ class queryCriteria {
         this.name("");
         this.queryText(incoming.queryText);
         this.recentQuery(incoming.recentQuery);
-    }
-
-    private mergeParameters(queryText: string) {
-        const regex = /[$]\w+/g;
-        let match;
-        const keys = new Set<string>();
-        while (match = regex.exec(queryText))
-        {
-            keys.add(match[0]);
-        }
-        this.queryParameters.remove(([key, value]) => {
-            if (value){
-                keys.delete(key);
-            } 
-            return !value;
-        });
-        keys.forEach(key => this.queryParameters.push([key,  ""]));
     }
 }
 

@@ -43,18 +43,27 @@ class queryCommand extends commandBase {
         }
     }
 
-    private getQueryParameters() {
-        if (!this.criteria.queryParameters()) {
+    private extractQueryParameters() {
+        const queryText = this.criteria.queryText();
+        if (!queryText) {
             return undefined;
         }
 
-        return this.criteria.queryParameters();
+        const parametersRegex = /([$]\w+)\s*=\s*(.*)/g;
+        let match;
+        const parameters : any = {};
+        while (match = parametersRegex.exec(queryText))
+        {
+            parameters[match[0]] = match[1];
+        }
+        return parameters;
     }
     
     getUrl() {
         const criteria = this.criteria;
         const url = endpoints.databases.queries.queries;
-
+        const parameters = this.extractQueryParameters();
+        
         const urlArgs = this.urlEncodeArgs({
             query: this.getQueryText(),
             start: this.skip,
@@ -62,7 +71,7 @@ class queryCommand extends commandBase {
             debug: criteria.indexEntries() ? "entries" : undefined,
             disableCache: this.disableCache ? Date.now() : undefined,
             metadataOnly: typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined,
-            parameters: this.getQueryParameters(),
+            parameters: parameters,
         });
         return url + urlArgs;
     }
