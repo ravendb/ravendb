@@ -53,7 +53,7 @@
                                     <input class="styled" type="checkbox" id="migrate-gridfs" data-bind="checked: migrateGridFs">
                                     <label for="migrate-gridfs">Migrate GridFS</label>
                                 </div>
-                                
+
                             </div>
                         </div>
                         <!-- /ko -->
@@ -73,7 +73,6 @@
                             </div>
                         </div>
                         <!-- /ko -->
-
                         <!-- ko with: activeConfiguration -->
                         <div class="form-group" data-bind="validationElement: databaseName">
                             <label class="control-label">
@@ -129,7 +128,7 @@
                                             <div class="static">
                                                 <span class="raven-property-name" data-bind="text: newName, attr:{ title: newName }"></span> <span class="text-muted raven-property-type"></span>
                                             </div>
-                                            <input class="form-control input-sm" data-bind="textInput: newName, disable: !migrateCollection()"/>
+                                            <input class="form-control input-sm" data-bind="textInput: newName, disable: !migrateCollection()" />
                                         </div>
                                     </div>
                                     <!-- /ko -->
@@ -138,14 +137,25 @@
                         </div>
                         <!-- /ko -->
 
-                        <div class="form-group" data-bind="if: activeConfiguration">
-                            <label class="control-label">Transform Script</label>
-                            <div class="flex-grow">
+                        <!-- ko if: activeConfiguration -->
+                        <div class="form-group">
+                            <label class="control-label"></label>
+                            <div class="toggle">
+                                <input class="styled" type="checkbox" id="use-transform-script" data-bind="checked: showTransformScript">
+                                <label for="use-transform-script">Use Transform script</label>
+                                <a id="scriptPopover" tabindex="0"><small><i class="icon-info text-info"></i></small></a>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="control-label"></label>
+                            <div class="flex-grow" data-bind="collapse: showTransformScript">
                                 <pre class="form-control editor query-source"
                                      data-bind="aceEditor: { code: transformScript, allowResize: false, minHeight: 300, maxHeight: 300, lang:'ace/mode/javascript' }">
                                 </pre>
                             </div>
                         </div>
+                        <!-- /ko -->
                     </div>
                 </div>
 

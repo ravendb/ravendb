@@ -134,6 +134,7 @@ class cosmosDbMigrationModel extends noSqlMigrationModel {
 class migrateDatabaseModel {
     selectMigrationOption = ko.observable<migrationOptions>("none");
     migratorFullPath = ko.observable<string>();
+    showTransformScript = ko.observable<boolean>(false);
     transformScript = ko.observable<string>();
 
     mongoDbConfiguration = new mongoDbMigrationModel();
@@ -149,6 +150,16 @@ class migrateDatabaseModel {
     constructor() {
         this.initObservables();
         this.initValidation();
+
+        this.showTransformScript.subscribe(v => {
+            if (v) {
+                this.transformScript(
+                    "var id = this['@metadata']['@id'];\r\n" +
+                    "// current object is available under 'this' variable");
+            } else {
+                this.transformScript("");
+            }
+        });
     }
 
     private initObservables() {
