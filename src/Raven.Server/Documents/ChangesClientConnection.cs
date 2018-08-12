@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
@@ -111,18 +112,18 @@ namespace Raven.Server.Documents
             _matchingDocumentCounters.TryRemove(docId);
         }
 
-        public void WatchDocumentCounter(string parameter)
+        public void WatchDocumentCounter(BlittableJsonReaderArray parameters)
         {
-            var parameters = GetDocumentCounterParameters(parameter);
+            var val = GetDocumentCounterParameters(parameters);
 
-            _matchingDocumentCounter.TryAdd(parameters);
+            _matchingDocumentCounter.TryAdd(val);
         }
 
-        public void UnwatchDocumentCounter(string parameter)
+        public void UnwatchDocumentCounter(BlittableJsonReaderArray parameters)
         {
-            var parameters = GetDocumentCounterParameters(parameter);
+            var val = GetDocumentCounterParameters(parameters);
 
-            _matchingDocumentCounter.TryRemove(parameters);
+            _matchingDocumentCounter.TryRemove(val);
         }
 
         public void WatchAllCounters()
@@ -504,7 +505,7 @@ namespace Raven.Server.Documents
             });
         }
 
-        public void HandleCommand(string command, string commandParameter)
+        public void HandleCommand(string command, string commandParameter, BlittableJsonReaderArray commandParameters)
         {
             long.TryParse(commandParameter, out long commandParameterAsLong);
 
@@ -606,11 +607,11 @@ namespace Raven.Server.Documents
             }
             else if (Match(command, "watch-document-counter"))
             {
-                WatchDocumentCounter(commandParameter);
+                WatchDocumentCounter(commandParameters);
             }
             else if (Match(command, "unwatch-document-counter"))
             {
-                UnwatchDocumentCounter(commandParameter);
+                UnwatchDocumentCounter(commandParameters);
             }
             else
             {
@@ -647,13 +648,15 @@ namespace Raven.Server.Documents
             };
         }
 
-        private static DocumentIdAndCounterNamePair GetDocumentCounterParameters(string parameter)
+        private static DocumentIdAndCounterNamePair GetDocumentCounterParameters(BlittableJsonReaderArray parameters)
         {
-            var parameters = parameter.Split(DatabaseChanges.Separator, StringSplitOptions.RemoveEmptyEntries);
-            if (parameters.Length != 2)
-                throw new InvalidOperationException($"Invalid parameter value: {parameter}");
+            if (parameters == null)
+                throw new ArgumentNullException(nameof(parameters));
 
-            return new DocumentIdAndCounterNamePair(parameters[0], parameters[1]);
+            if (parameters.Length != 2)
+                throw new InvalidOperationException("Expected to get 2 parameters, but got " + parameters.Length);
+
+            return new DocumentIdAndCounterNamePair(parameters[0].ToString(), parameters[1].ToString());
         }
 
         private struct DocumentIdAndCounterNamePair
