@@ -113,6 +113,9 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<IndexChange> ForIndex(string indexName)
         {
+            if (string.IsNullOrWhiteSpace(indexName))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(indexName));
+
             var counter = GetOrAddConnectionState("indexes/" + indexName, "watch-index", "unwatch-index", indexName);
 
             var taskedObservable = new ChangesObservable<IndexChange, DatabaseConnectionState>(
@@ -136,6 +139,9 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<DocumentChange> ForDocument(string docId)
         {
+            if (string.IsNullOrWhiteSpace(docId))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(docId));
+
             var counter = GetOrAddConnectionState("docs/" + docId, "watch-doc", "unwatch-doc", docId);
 
             var taskedObservable = new ChangesObservable<DocumentChange, DatabaseConnectionState>(
@@ -191,6 +197,9 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<DocumentChange> ForDocumentsStartingWith(string docIdPrefix)
         {
+            if (string.IsNullOrWhiteSpace(docIdPrefix))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(docIdPrefix));
+
             var counter = GetOrAddConnectionState("prefixes/" + docIdPrefix, "watch-prefix", "unwatch-prefix", docIdPrefix);
 
             var taskedObservable = new ChangesObservable<DocumentChange, DatabaseConnectionState>(
@@ -202,8 +211,8 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<DocumentChange> ForDocumentsInCollection(string collectionName)
         {
-            if (collectionName == null)
-                throw new ArgumentNullException(nameof(collectionName));
+            if (string.IsNullOrWhiteSpace(collectionName))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(collectionName));
 
             var counter = GetOrAddConnectionState("collections/" + collectionName, "watch-collection", "unwatch-collection", collectionName);
 
@@ -233,6 +242,9 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<CounterChange> ForCounter(string counterName)
         {
+            if (string.IsNullOrWhiteSpace(counterName))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(counterName));
+
             var counter = GetOrAddConnectionState($"counter/{counterName}", "watch-counter", "unwatch-counter", counterName);
 
             var taskedObservable = new ChangesObservable<CounterChange, DatabaseConnectionState>(
@@ -244,6 +256,11 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<CounterChange> ForCounterOfDocument(string documentId, string counterName)
         {
+            if (string.IsNullOrWhiteSpace(documentId))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(documentId));
+            if (string.IsNullOrWhiteSpace(counterName))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(counterName));
+
             var counter = GetOrAddConnectionState($"counter/{counterName}/document/{documentId}", "watch-document-counter", "unwatch-document-counter", string.Join(Separator, documentId, counterName));
 
             var taskedObservable = new ChangesObservable<CounterChange, DatabaseConnectionState>(
@@ -255,6 +272,9 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<CounterChange> ForCountersOfDocument(string documentId)
         {
+            if (string.IsNullOrWhiteSpace(documentId))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(documentId));
+
             var counter = GetOrAddConnectionState($"counters/document/{documentId}", "watch-document-counters", "unwatch-document-counter", documentId);
 
             var taskedObservable = new ChangesObservable<CounterChange, DatabaseConnectionState>(
