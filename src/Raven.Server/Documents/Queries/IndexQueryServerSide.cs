@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Text;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -72,8 +74,18 @@ namespace Raven.Server.Documents.Queries
                 Query = Uri.UnescapeDataString(actualQuery),
                 // all defaults which need to have custom value
                 Start = start,
-                PageSize = pageSize
+                PageSize = pageSize,
             };
+            
+            if (httpContext.Request.Query.TryGetValue("parameters", out var parameters) && 
+                 parameters.Count > 0 &&
+                 string.IsNullOrWhiteSpace(parameters[0]) == false)
+            {
+                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(parameters[0])))
+                {
+                    result.QueryParameters = context.Read(stream, "query parameters");
+                }
+            }
 
             foreach (var item in httpContext.Request.Query)
             {
