@@ -121,7 +121,13 @@ namespace SlowTests.Server.Replication
                     TaskId = externalList.First().TaskId,
                     Disabled = true
                 };
+                var db1 = await GetDocumentDatabaseInstanceFor(store1);
+                var db2 = await GetDocumentDatabaseInstanceFor(store2);
                 var res = await store1.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external));
+
+                //make sure the command is processed
+                await db1.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
+                await db2.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
 
                 Assert.Equal(externalList.First().TaskId, res.TaskId);
                 
