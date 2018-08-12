@@ -53,6 +53,7 @@
                                     <input class="styled" type="checkbox" id="migrate-gridfs" data-bind="checked: migrateGridFs">
                                     <label for="migrate-gridfs">Migrate GridFS</label>
                                 </div>
+                                
                             </div>
                         </div>
                         <!-- /ko -->
@@ -75,7 +76,12 @@
 
                         <!-- ko with: activeConfiguration -->
                         <div class="form-group" data-bind="validationElement: databaseName">
-                            <label class="control-label">Database Name</label>
+                            <label class="control-label">
+                                <span data-bind="visible: $root.spinners.getDatabaseNames">
+                                    <i class="global-spinner spinner-xs"></i>
+                                </span>
+                                Database Name
+                            </label>
                             <div class="flex-grow">
                                 <div class="dropdown btn-block">
                                     <input type="text"
@@ -93,7 +99,11 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="control-label"></label>
+                            <label class="control-label">
+                                <span data-bind="visible: $root.spinners.getCollectionNames">
+                                    <i class="global-spinner spinner-xs"></i>
+                                </span>
+                            </label>
                             <div class="toggle">
                                 <input class="styled" type="checkbox" id="migrate-all-collections" data-bind="checked: migrateAllCollections, disable: !hasCollectionsToMigrate()">
                                 <label for="migrate-all-collections">
