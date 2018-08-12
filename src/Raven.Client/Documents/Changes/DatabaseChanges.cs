@@ -20,8 +20,6 @@ namespace Raven.Client.Documents.Changes
 {
     public class DatabaseChanges : IDatabaseChanges
     {
-        internal const string Separator = ":||:";
-
         private int _commandId;
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         private readonly MemoryStream _ms = new MemoryStream();
@@ -261,7 +259,7 @@ namespace Raven.Client.Documents.Changes
             if (string.IsNullOrWhiteSpace(counterName))
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(counterName));
 
-            var counter = GetOrAddConnectionState($"counter/{counterName}/document/{documentId}", "watch-document-counter", "unwatch-document-counter", string.Join(Separator, documentId, counterName));
+            var counter = GetOrAddConnectionState($"counter/{counterName}/document/{documentId}", "watch-document-counter", "unwatch-document-counter", value: null, values: new[] { documentId, counterName });
 
             var taskedObservable = new ChangesObservable<CounterChange, DatabaseConnectionState>(
                 counter,
@@ -275,7 +273,7 @@ namespace Raven.Client.Documents.Changes
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentException("Value cannot be null or whitespace.", nameof(documentId));
 
-            var counter = GetOrAddConnectionState($"counters/document/{documentId}", "watch-document-counters", "unwatch-document-counter", documentId);
+            var counter = GetOrAddConnectionState($"counters/document/{documentId}", "watch-document-counters", "unwatch-document-counters", documentId);
 
             var taskedObservable = new ChangesObservable<CounterChange, DatabaseConnectionState>(
                 counter,
@@ -325,7 +323,7 @@ namespace Raven.Client.Documents.Changes
             _onDispose?.Invoke();
         }
 
-        private DatabaseConnectionState GetOrAddConnectionState(string name, string watchCommand, string unwatchCommand, string value)
+        private DatabaseConnectionState GetOrAddConnectionState(string name, string watchCommand, string unwatchCommand, string value, string[] values = null)
         {
             bool newValue = false;
             var counter = _counters.GetOrAdd(name, s =>
@@ -335,7 +333,7 @@ namespace Raven.Client.Documents.Changes
                     try
                     {
                         if (Connected)
-                            await Send(unwatchCommand, value).ConfigureAwait(false);
+                            await Send(unwatchCommand, value, values).ConfigureAwait(false);
                     }
                     catch (WebSocketException)
                     {
@@ -349,7 +347,7 @@ namespace Raven.Client.Documents.Changes
 
                 async Task OnConnect()
                 {
-                    await Send(watchCommand, value).ConfigureAwait(false);
+                    await Send(watchCommand, value, values).ConfigureAwait(false);
                 }
 
                 newValue = true;
@@ -363,7 +361,7 @@ namespace Raven.Client.Documents.Changes
             return counter;
         }
 
-        private async Task Send(string command, string value)
+        private async Task Send(string command, string value, string[] values)
         {
             var taskCompletionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             int currentCommandId;
@@ -385,6 +383,12 @@ namespace Raven.Client.Documents.Changes
 
                     writer.WritePropertyName("Param");
                     writer.WriteString(value);
+
+                    if (values != null && values.Length > 0)
+                    {
+                        writer.WriteComma();
+                        writer.WriteArray("Params", values);
+                    }
 
                     writer.WriteEndObject();
                 }
