@@ -1,5 +1,7 @@
 using System;
+using System.Threading.Tasks;
 using RachisTests;
+using SlowTests.Server.Replication;
 
 namespace Tryouts
 {
@@ -9,15 +11,18 @@ namespace Tryouts
         {
             try
             {
-                for (int i = 0; i < 500; i++)
+                Parallel.For(0, 5000, new ParallelOptions
                 {
-                    Console.WriteLine(i);
+                    MaxDegreeOfParallelism = 16
+                }, _ =>
+                {
+                    Console.Write(".");
 
-                    using (var test = new AddNodeToClusterTests())
+                    using (var test = new ReplicationBasicTestsSlow())
                     {
-                        test.PutDatabaseOnHealthyNodes().Wait();
+                        test.DisableExternalReplication().Wait();
                     }
-                }
+                });
             }
             catch (Exception e)
             {
