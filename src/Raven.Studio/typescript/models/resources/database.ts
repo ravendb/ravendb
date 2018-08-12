@@ -11,14 +11,34 @@ class database {
     relevant = ko.observable<boolean>(true);
     hasRevisionsConfiguration = ko.observable<boolean>(false);
     isEncrypted = ko.observable<boolean>(false);
+    
+    environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
+    environmentClass = database.createEnvironmentColorComputed("label", this.environment);
 
     private clusterNodeTag: KnockoutObservable<string>;
-
 
     constructor(dbInfo: Raven.Client.ServerWide.Operations.DatabaseInfo, clusterNodeTag: KnockoutObservable<string>) {
         this.clusterNodeTag = clusterNodeTag;
 
         this.updateUsing(dbInfo);
+    }
+    
+    static createEnvironmentColorComputed(prefix: string, source: KnockoutObservable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>) {
+        return ko.pureComputed(() => {
+            const env = source();
+            if (env) {
+                switch (env) {
+                    case "Production":
+                        return prefix + "-danger";
+                    case "Testing":
+                        return prefix + "-success";
+                    case "Development":
+                        return prefix + "-info";
+                }
+            }
+
+            return null;
+        });
     }
 
     updateUsing(incomingCopy: Raven.Client.ServerWide.Operations.DatabaseInfo) {
@@ -27,6 +47,7 @@ class database {
         this.isAdminCurrentTenant(incomingCopy.IsAdmin);
         this.name = incomingCopy.Name;
         this.disabled(incomingCopy.Disabled);
+        this.environment(incomingCopy.Environment !== "None" ? incomingCopy.Environment : null);
         if (!!incomingCopy.LoadError) {
             this.errored(true);
         }

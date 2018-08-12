@@ -59,6 +59,7 @@ class accessManager {
         showAdminJSConsoleMenuItem: this.clusterAdminOrClusterNode,
         enableClusterMenuItem: this.allLevels,
         enableClientConfigurationMenuItem: this.clusterAdminOrClusterNode,
+        enableStudioConfigurationMenuItem: this.clusterAdminOrClusterNode,
         enableAdminJSConsoleMenuItem: this.clusterAdminOrClusterNode,
         enableCertificatesMenuItem: this.clusterAdminOrClusterNode,
         enableAdminLogsMenuItem: this.clusterAdminOrClusterNode,

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
@@ -292,6 +293,12 @@ namespace Raven.Server.Web.System
                 var clusterTopology = ServerStore.GetClusterTopology(context);
                 clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
 
+                var studioEnvironment = StudioConfiguration.StudioEnvironment.None;
+                if (dbRecord.Studio != null && !dbRecord.Disabled)
+                {
+                    studioEnvironment = dbRecord.Studio.Environment;
+                }
+                
                 var nodesTopology = new NodesTopology();
 
                 var statuses = ServerStore.GetNodesStatuses();
@@ -338,7 +345,8 @@ namespace Raven.Server.Web.System
                             [nameof(DatabaseInfo.Disabled)] = disabled,
                             [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus.ToString(),
                             [nameof(DatabaseInfo.NodesTopology)] = nodesTopology.ToJson(),
-                            [nameof(DatabaseInfo.DeletionInProgress)] = DynamicJsonValue.Convert(dbRecord.DeletionInProgress)
+                            [nameof(DatabaseInfo.DeletionInProgress)] = DynamicJsonValue.Convert(dbRecord.DeletionInProgress), 
+                            [nameof(DatabaseInfo.Environment)] = studioEnvironment
                         };
 
                         context.Write(writer, databaseInfoJson);
@@ -375,6 +383,7 @@ namespace Raven.Server.Web.System
                     HasExpirationConfiguration = db?.ExpiredDocumentsCleaner != null,
                     IndexesCount = db?.IndexStore?.GetIndexes()?.Count() ?? 0,
                     IndexingStatus = indexingStatus,
+                    Environment = studioEnvironment,
 
                     NodesTopology = nodesTopology,
                     ReplicationFactor = topology?.ReplicationFactor ?? -1,

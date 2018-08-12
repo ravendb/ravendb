@@ -217,8 +217,7 @@
                 transition-delay: .35s;
 
                 a {
-                    transition: opacity 0s;
-                    transition-delay: .35s;
+                    transition: opacity 0s .35s, background-color .1s;
                 }
             }
 
@@ -335,7 +334,7 @@
         font-size: 75%;
         display: flex;
         color: @gray-lighter;
-        background-color: @brand-primary;
+        background-color: @gray-dark;
         flex-shrink: 0;
 
         .value {

@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
@@ -32,6 +33,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Server.Commercial;
 using Raven.Server.Dashboard;
@@ -412,6 +414,11 @@ namespace TypingsGenerator
             
             // version info
             scripter.AddType(typeof(LatestVersionCheck.VersionInfo));
+            
+            
+            // studio configuration
+            scripter.AddType(typeof(ServerWideStudioConfiguration));
+            scripter.AddType(typeof(StudioConfiguration));
 
             return scripter;
         }

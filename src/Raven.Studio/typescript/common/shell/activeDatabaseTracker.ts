@@ -3,7 +3,6 @@ import database = require("models/resources/database");
 import databaseDisconnectedEventArgs = require("viewmodels/resources/databaseDisconnectedEventArgs");
 import router = require("plugins/router");
 import messagePublisher = require("common/messagePublisher");
-import appUrl = require("common/appUrl");
 import databaseSettings = require("common/settings/databaseSettings");
 import studioSettings = require("common/settings/studioSettings");
 
