@@ -95,12 +95,6 @@ namespace FastTests
                 {
                     options = options ?? Options.Default;
                     var serverToUse = options.Server ?? Server;
-
-                    if (options.ExternalReplicationEnabledForTests)
-                    {
-                        SetExternalReplicationToLicenseToTrue(serverToUse);
-                    }
-
                     var name = GetDatabaseName(caller);
 
                     if (options.ModifyDatabaseName != null)
@@ -261,30 +255,7 @@ namespace FastTests
                 throw new TimeoutException($"{te.Message} {Environment.NewLine} {te.StackTrace}{Environment.NewLine}Servers states:{Environment.NewLine}{GetLastStatesFromAllServersOrderedByTime()}");
             }
         }
-
-        private static void SetExternalReplicationToLicenseToTrue(RavenServer serverToUse)
-        {
-            var licenseManagerType = serverToUse.ServerStore.LicenseManager.GetType();
-            var licenseStatusField = licenseManagerType.GetField("_licenseStatus", BindingFlags.Instance | BindingFlags.NonPublic);
-            var licenseStatus = licenseStatusField.GetValue(serverToUse.ServerStore.LicenseManager);
-
-            var licenseStatusType = licenseStatus.GetType();
-            var attributesProp = licenseStatusType.GetProperty("Attributes", BindingFlags.Instance | BindingFlags.Public);
-
-            var getAttributesMethod = attributesProp.GetGetMethod();
-            var attributes = getAttributesMethod.Invoke(licenseStatus, new object[0]);
-            if (attributes == null)
-            {
-                var setAttributesMethod = attributesProp.GetSetMethod();
-                setAttributesMethod.Invoke(licenseStatus, new object[] {new Dictionary<string, object>()});
-                attributes = getAttributesMethod.Invoke(licenseStatus, new object[0]);
-            }
-
-            var attributesType = attributes.GetType();
-            var indexerSet = attributesType.GetMethod("set_Item");
-            indexerSet.Invoke(attributes, new object[] {"externalReplication", true});
-        }
-
+     
         protected string GetLastStatesFromAllServersOrderedByTime()
         {
             List<(string tag, RachisConsensus.StateTransition transition)> states = new List<(string tag, RachisConsensus.StateTransition transition)>();
@@ -763,17 +734,7 @@ namespace FastTests
                     _clientCertificate = value;
                 }
             }
-
-            public bool ExternalReplicationEnabledForTests
-            {
-                get => _isExternalReplicationEnabledForTests;
-                set
-                {
-                    AssertNotFrozen();                   
-                    _isExternalReplicationEnabledForTests = value;
-                }
-            }
-
+         
             private void AssertNotFrozen()
             {
                 if (_frozen)
