@@ -32,46 +32,56 @@ class queryCommand extends commandBase {
     }
 
     private getQueryText() {
-        if (!this.criteria.queryText()) {
-            return undefined;
-        }
-        
-        if (this.criteria.showFields()) {
-            return queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(this.criteria.queryText());
-        } else {
-            return this.criteria.queryText();
-        }
-    }
-
-    private extractQueryParameters() {
         const queryText = this.criteria.queryText();
         if (!queryText) {
-            return undefined;
+            return [undefined, undefined];
         }
 
-        const parametersRegex = /([$]\w+)\s*=\s*(.*)/g;
-        let match;
-        const parameters : any = {};
-        while (match = parametersRegex.exec(queryText))
-        {
-            parameters[match[0]] = match[1];
+        let [parameters, rql] = this.extractQueryParameters(queryText);
+
+        if (this.criteria.showFields()) {
+            rql = queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(rql);
+        } 
+        
+        return [parameters, rql];
+    }
+
+    private extractQueryParameters(queryText: string) {
+        const parametersEndRegex = /^(from|declare)/mi;
+        const match = parametersEndRegex.exec(queryText);
+        const parametersText = queryText.substring(0, match.index);
+        const parametersJs = `
+var f = function() {
+    ${parametersText}
+    var result = {};
+    for(var i in this) { 
+        if(i[0] == '$') {
+            result[i] = this[i];
         }
-        return parameters;
+    }
+    return JSON.stringify(result);
+}
+f();
+`;
+        let parameters = (<any>window).evalUnstrict(parametersJs);
+        parameters = parameters.replace(/["]\$/g, "\"");
+        const rql = queryText.substring(match.index);
+        return [parameters, rql];
     }
     
     getUrl() {
         const criteria = this.criteria;
         const url = endpoints.databases.queries.queries;
-        const parameters = this.extractQueryParameters();
+        const [parameters, rql] = this.getQueryText();
         
         const urlArgs = this.urlEncodeArgs({
-            query: this.getQueryText(),
+            query: rql,
+            parameters: parameters,
             start: this.skip,
             pageSize: this.take,
             debug: criteria.indexEntries() ? "entries" : undefined,
             disableCache: this.disableCache ? Date.now() : undefined,
             metadataOnly: typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined,
-            parameters: parameters,
         });
         return url + urlArgs;
     }
