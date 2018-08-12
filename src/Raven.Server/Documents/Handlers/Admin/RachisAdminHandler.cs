@@ -70,6 +70,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
 
                 var (etag, result) = await ServerStore.Engine.PutAsync(command);
+                var source = GetStringQueryString("source", required: false);
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                 var ms = context.CheckoutMemoryStream();
                 try
@@ -79,7 +80,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                         context.Write(writer, new DynamicJsonValue
                         {
                             [nameof(ServerStore.PutRaftCommandResult.RaftCommandIndex)] = etag,
-                            [nameof(ServerStore.PutRaftCommandResult.Data)] = result
+                            [nameof(ServerStore.PutRaftCommandResult.Data)] = result,
+                            [nameof(ServerStore.PutRaftCommandResult.Source)] = source
                         });
                         writer.Flush();
                     }
