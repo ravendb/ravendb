@@ -99,7 +99,8 @@ namespace Raven.Tests.Issues
                 var reasonForLowMemoryCallAdmin = resultsAdmin.LowMemoryCallsRecords.First().Reason;
                 var lowMemoryRecordsAdmin = resultsAdmin.LowMemoryCallsRecords.First().Operations;
                 var cpuUsageRecordsAdmin = resultsAdmin.CpuUsageCallsRecords;
-                Assert.Equal("System detected low memory", reasonForLowMemoryCallAdmin);
+                var lowMemoryMessage = "System detected low memory" == reasonForLowMemoryCall || reasonForLowMemoryCall == "System notification, low memory";
+                Assert.True(lowMemoryMessage);
             }
         }
 
@@ -149,7 +150,8 @@ namespace Raven.Tests.Issues
                 var reasonForLowMemoryCall = results.LowMemoryCallsRecords.First().Reason;
                 var lowMemoryRecords = results.LowMemoryCallsRecords.First().Operations;
                 //System notification, low memory
-                Assert.Equal("System detected low memory", reasonForLowMemoryCall);
+                var lowMemoryMessage = "System detected low memory" == reasonForLowMemoryCall || reasonForLowMemoryCall == "System notification, low memory";
+                Assert.True(lowMemoryMessage);
 
             }
         }
@@ -204,7 +206,8 @@ namespace Raven.Tests.Issues
                 var reasonForLowMemoryCallAdmin = resultsAdmin.LowMemoryCallsRecords.First().Reason;
                 var lowMemoryRecordsAdmin = resultsAdmin.LowMemoryCallsRecords.First().Operations;
                 var cpuUsageRecordsAdmin = resultsAdmin.CpuUsageCallsRecords;
-                Assert.Equal("System detected low memory", reasonForLowMemoryCallAdmin);
+                lowMemoryMessage = "System detected low memory" == reasonForLowMemoryCall || reasonForLowMemoryCall == "System notification, low memory";
+                Assert.True(lowMemoryMessage);
             }
         }
         [Fact]
@@ -254,7 +257,8 @@ namespace Raven.Tests.Issues
                 var reasonForLowMemoryCallAdmin = resultsAdmin.LowMemoryCallsRecords.First().Reason;
                 var lowMemoryRecordsAdmin = resultsAdmin.LowMemoryCallsRecords.First().Operations;
                 var cpuUsageRecordsAdmin = resultsAdmin.CpuUsageCallsRecords;
-                Assert.Equal("System detected low memory", reasonForLowMemoryCallAdmin);
+                var lowMemoryMessage = "System detected low memory" == reasonForLowMemoryCall || reasonForLowMemoryCall == "System notification, low memory";
+                Assert.True(lowMemoryMessage);
             }
         }
         [Fact]
@@ -307,7 +311,8 @@ namespace Raven.Tests.Issues
                 var reasonForLowMemoryCallAdmin = resultsAdmin.LowMemoryCallsRecords.First().Reason;
                 var lowMemoryRecordsAdmin = resultsAdmin.LowMemoryCallsRecords.First().Operations;
                 var cpuUsageRecordsAdmin = resultsAdmin.CpuUsageCallsRecords;
-                Assert.Equal("System detected low memory", reasonForLowMemoryCallAdmin);
+                var lowMemoryMessage = "System detected low memory" == reasonForLowMemoryCall || reasonForLowMemoryCall == "System notification, low memory";
+                Assert.True(lowMemoryMessage);
             }
         }
     }
