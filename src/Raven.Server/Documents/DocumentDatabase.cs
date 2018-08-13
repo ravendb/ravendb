@@ -372,7 +372,7 @@ namespace Raven.Server.Documents
                     return;
 
                 _hasClusterTransaction.Reset();
-               
+
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
@@ -391,14 +391,14 @@ namespace Raven.Server.Documents
                         {
                             TxMerger.Enqueue(mergedCommands).Wait(DatabaseShutdown);
                         }
-                        catch(Exception e)
+                        catch (Exception e)
                         {
                             if (_logger.IsInfoEnabled)
                             {
                                 _logger.Info($"Failed to execute cluster transaction batch (count: {batch.Count}), will retry them one-by-one.", e);
                             }
                             ExecuteClusterTransactionOneByOne(batch);
-                            return;
+                            continue;
                         }
                         foreach (var command in batch)
                         {
@@ -417,6 +417,8 @@ namespace Raven.Server.Documents
             }
         }
 
+        private int _clusterTransactionDelayOnFailure = 1000;
+
         private void ExecuteClusterTransactionOneByOne(List<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
         {
             foreach (var command in batch)
@@ -431,6 +433,7 @@ namespace Raven.Server.Documents
                     TxMerger.Enqueue(mergedCommand).Wait(DatabaseShutdown);
                     OnClusterTransactionCompletion(command.Index, mergedCommand);
                     _nextClusterCommand = command.PreviousCount + command.Commands.Length;
+                    _clusterTransactionDelayOnFailure = 1000;
                 }
                 catch (Exception e)
                 {
@@ -438,14 +441,17 @@ namespace Raven.Server.Documents
                     NotificationCenter.Add(AlertRaised.Create(
                         Name,
                         "Cluster transaction failed to execute",
-                        $"Failed to execute cluster transactions with raft index: {command.Index}. " +
-                        $"With the following document ids: {string.Join(", ",command.Commands.Select(item => JsonDeserializationServer.ClusterTransactionDataCommand((BlittableJsonReaderObject)item).Id))}" +
-                        " Performing cluster transactions on this database will be stopped until the issue resolved.",
+                        $"Failed to execute cluster transactions with raft index: {command.Index}. {Environment.NewLine}" +
+                        $"With the following document ids involved: {string.Join(", ",command.Commands.Select(item => JsonDeserializationServer.ClusterTransactionDataCommand((BlittableJsonReaderObject)item).Id))} {Environment.NewLine}" +
+                        "Performing cluster transactions on this database will be stopped until the issue is resolved.",
                         AlertType.ClusterTransactionFailure,
                         NotificationSeverity.Error,
                         $"{Name}/ClusterTransaction",
                         new ExceptionDetails(e)));
-                    Task.Delay(1000, DatabaseShutdown).Wait(DatabaseShutdown);
+
+                    Task.Delay(_clusterTransactionDelayOnFailure, DatabaseShutdown).Wait(DatabaseShutdown);
+                    _clusterTransactionDelayOnFailure = Math.Min(_clusterTransactionDelayOnFailure * 2, 15000);
+
                     return;
                 }
             }
