@@ -66,7 +66,7 @@ namespace Tests.Infrastructure
 
             var store = new DocumentStore
             {
-                Urls = new[] { serverUrl.ToString() },
+                Urls = new[] { serverUrl },
                 Database = name
             };
 
@@ -90,10 +90,10 @@ namespace Tests.Infrastructure
             string serverVersion,
             InterversionTestOptions options = null,
             [CallerMemberName] string database = null,
-            CancellationToken token = default(CancellationToken))
+            CancellationToken token = default)
         {
             var serverBuildInfo = ServerBuildDownloadInfo.Create(serverVersion);
-            var serverPath = await _serverBuildRetriever.GetServerPath(serverBuildInfo);
+            var serverPath = await _serverBuildRetriever.GetServerPath(serverBuildInfo, token);
             var testServerPath = NewDataPath(prefix: serverVersion);
             CopyFilesRecursively(new DirectoryInfo(serverPath), new DirectoryInfo(testServerPath));
 

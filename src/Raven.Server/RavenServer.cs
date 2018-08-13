@@ -173,7 +173,7 @@ namespace Raven.Server
                     }
                 }
 
-                _webHost = new WebHostBuilder()
+                var webHostBuilder = new WebHostBuilder()
                     .CaptureStartupErrors(captureStartupErrors: true)
                     .UseKestrel(ConfigureKestrel)
                     .UseUrls(Configuration.Core.ServerUrls)
@@ -200,9 +200,12 @@ namespace Raven.Server
                         services.AddSingleton(Router);
                         services.AddSingleton(this);
                         services.Configure<FormOptions>(options => { options.MultipartBodyLengthLimit = long.MaxValue; });
-                    })
-                    // ReSharper disable once AccessToDisposedClosure
-                    .Build();
+                    });
+
+                if (Configuration.Http.UseLibuv)
+                    webHostBuilder = webHostBuilder.UseLibuv();
+
+                _webHost = webHostBuilder.Build();
             }
             catch (Exception e)
             {
@@ -302,12 +305,16 @@ namespace Raven.Server
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations($"HTTPS is on. Setting up a new web host to redirect incoming HTTP traffic on port 80 to HTTPS on port 443. The new web host is listening to { string.Join(", ", serverUrlsToRedirect) }");
 
-                _redirectingWebHost = new WebHostBuilder()
+                var webHostBuilder = new WebHostBuilder()
                     .UseKestrel()
                     .UseUrls(serverUrlsToRedirect)
                     .UseStartup<RedirectServerStartup>()
-                    .UseShutdownTimeout(TimeSpan.FromSeconds(1))
-                    .Build();
+                    .UseShutdownTimeout(TimeSpan.FromSeconds(1));
+
+                if (Configuration.Http.UseLibuv)
+                    webHostBuilder = webHostBuilder.UseLibuv();
+
+                _redirectingWebHost = webHostBuilder.Build();
 
                 _redirectingWebHost.Start();
             }
@@ -484,7 +491,7 @@ namespace Raven.Server
                 if (ServerStore.IsLeader() == false)
                     return;
 
-                if(ClusterCommandsVersionManager.ClusterCommandsVersions.TryGetValue(nameof(ConfirmServerCertificateReplacedCommand), out var commandVersion) == false)
+                if (ClusterCommandsVersionManager.ClusterCommandsVersions.TryGetValue(nameof(ConfirmServerCertificateReplacedCommand), out var commandVersion) == false)
                     throw new InvalidOperationException($"Failed to get the command version of '{nameof(ConfirmServerCertificateReplacedCommand)}'.");
 
                 if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion < commandVersion)
@@ -1229,7 +1236,7 @@ namespace Raven.Server
 
                                         throw new ArgumentException(msg);
                                     }
-                                    
+
                                     if (Logger.IsInfoEnabled)
                                     {
                                         Logger.Info(
@@ -1313,7 +1320,7 @@ namespace Raven.Server
 
             using (var writer = new BlittableJsonTextWriter(context, stream))
             {
-                context.Write(writer,message);
+                context.Write(writer, message);
                 writer.Flush();
             }
         }
