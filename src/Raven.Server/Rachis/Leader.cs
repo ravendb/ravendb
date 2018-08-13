@@ -495,12 +495,9 @@ namespace Raven.Server.Rachis
                 }
             }
 
-            if (_entries.Count != 0)
-            {
-                // we have still items to process, run them in 1 node cluster
-                // and speed up the followers ambassadors if they can
-                _newEntry.Set();
-            }
+            // we have still items to process, run them in 1 node cluster
+            // and speed up the followers ambassadors if they can
+            _newEntry.Set();
 
             if (changedFromLeaderElectToLeader)
                 _engine.LeaderElectToLeaderChanged();
