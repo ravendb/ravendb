@@ -1783,7 +1783,7 @@ namespace Raven.Server.Commercial
                 {
                     var responder = new UniqueResponseResponder(guid);
 
-                    webHost = new WebHostBuilder()
+                    var webHostBuilder = new WebHostBuilder()
                         .CaptureStartupErrors(captureStartupErrors: true)
                         .UseKestrel(options =>
                         {
@@ -1803,12 +1803,13 @@ namespace Raven.Server.Commercial
                             }
                         })
                         .UseSetting(WebHostDefaults.ApplicationKey, "Setup simulation")
-                        .ConfigureServices(collection =>
-                        {
-                            collection.AddSingleton(typeof(IStartup), responder);
-                        })
-                        .UseShutdownTimeout(TimeSpan.FromMilliseconds(150))
-                        .Build();
+                        .ConfigureServices(collection => { collection.AddSingleton(typeof(IStartup), responder); })
+                        .UseShutdownTimeout(TimeSpan.FromMilliseconds(150));
+
+                    if (configuration.Http.UseLibuv)
+                        webHostBuilder = webHostBuilder.UseLibuv();
+
+                    webHost = webHostBuilder.Build();
 
                     await webHost.StartAsync(token);
                 }

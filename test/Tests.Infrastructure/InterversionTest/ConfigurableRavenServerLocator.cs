@@ -13,6 +13,8 @@ namespace Tests.Infrastructure.InterversionTest
             _serverDirPath = serverDirPath;
         }
 
+        public override string CommandArguments => "--Http.UseLibuv=true";
+
         public override string ServerPath => Path.Combine(
             _serverDirPath,
             "Server",
