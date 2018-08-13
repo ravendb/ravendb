@@ -192,8 +192,9 @@ namespace Raven.Tests.Issues
                 var reason = results.Reason;
                 var reasonForLowMemoryCall = results.LowMemoryCallsRecords.First().Reason;
                 var lowMemoryRecords = results.LowMemoryCallsRecords.First().Operations;
-
-                Assert.Equal("System detected low memory", reasonForLowMemoryCall);
+                //If there was a real low memory case during the test itself the message would be diffrent 
+                var lowMemoryMessage = "System detected low memory" == reasonForLowMemoryCall || reasonForLowMemoryCall == "System notification, low memory";
+                Assert.True(lowMemoryMessage);
 
                 var urlAdmin = $"http://localhost:8079/databases/{dbName}/admin/debug/auto-tuning-info";
                 var requestWithDbNameAdmin = documentStore.JsonRequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(null, url, HttpMethods.Get,

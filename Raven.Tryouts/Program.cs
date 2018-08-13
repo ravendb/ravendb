@@ -72,11 +72,23 @@ namespace Raven.Tryouts
     {
         public static void Main(string[] args)
         {
-            
-            using (var test = new WithFailovers())
+            for (var i = 0; i < 1000; i++)
             {
-                test.ReadFromAllWriteToLeaderWithFailoversAndMajorityDown(3, FailoverBehavior.ReadFromAllWriteToLeaderWithFailovers);
+                try
+                {
+                    Console.WriteLine(i);
+                    using (var test = new RavenDB_3539())
+                    {
+                        test.get_debug_info_ForSpecifiedDatabase_IndependentBatchSizeAutoTuner();
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    Console.Read();
+                }
             }
+           
             
         }
 
