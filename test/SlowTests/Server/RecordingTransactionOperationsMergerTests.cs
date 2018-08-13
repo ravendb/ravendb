@@ -18,6 +18,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -70,7 +71,112 @@ namespace SlowTests.Server
         }
 
         [Fact]
-        public async Task DeleteTombstonesCommandCommand()
+        public async Task ReplayOutputReduceToCollectionCommand()
+        {
+            var recordFilePath = NewDataPath();
+
+            var expected = new[]
+            {
+                new AgeGroup{Age = 120, Amount = 2},
+                new AgeGroup{Age = 24, Amount = 2},
+            };
+
+            var users = new[]
+            {
+                new User{Name = "Andre", Age = 120},
+                new User{Name = "Barbara", Age = 120},
+                new User{Name = "Charlotte", Age = 24},
+                new User{Name = "Dominic", Age = 24},
+            };
+
+            using (var store = GetDocumentStore())
+            {
+                //Recording
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+
+                using (var session = store.OpenSession())
+                {
+                    foreach (var user in users)
+                    {
+                        session.Store(user);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                await store.ExecuteIndexAsync(new DailyInvoicesIndex());
+
+                WaitForIndexing(store);
+
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+            }
+
+            //Replay
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
+            {
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
+
+                using (var session = store.OpenSession())
+                {
+                    var actual = session.Query<AgeGroup>(null, nameof(AgeGroup)).ToList();
+
+                    //Assert
+                    WaitForUserToContinueTheTest(store);
+                    Assert.Equal(expected.Length, actual.Count);
+                    Assert.All(expected, g => Assert.True(actual.Contains(g), $"Expected {g}"));
+                }
+            }
+        }
+
+        public class DailyInvoicesIndex : AbstractIndexCreationTask<User, AgeGroup>
+        {
+            public DailyInvoicesIndex()
+            {
+                Map = invoices =>
+                    from invoice in invoices
+                    select new AgeGroup
+                    {
+                        Age = invoice.Age,
+                        Amount = 1
+                    };
+
+                Reduce = results =>
+                    from r in results
+                    group r by r.Age
+                    into g
+                    select new AgeGroup
+                    {
+                        Age = g.Key,
+                        Amount = g.Sum(x => x.Amount)
+                    };
+
+                OutputReduceToCollection = "AgeGroup";
+            }
+        }
+
+        public class AgeGroup
+        {
+            public int Age { get; set; }
+            public int Amount { get; set; }
+
+            public override bool Equals(object otherObj)
+            {
+                return otherObj is AgeGroup other &&
+                    Age == other.Age &&
+                    Amount == other.Amount;
+            }
+
+            public override string ToString()
+            {
+                return $"AgeGroup: Age({Age}) Amount({Amount})";
+            }
+        }
+
+        [Fact]
+        public async Task ReplayDeleteTombstonesCommand()
         {
             var recordFilePath = NewDataPath();
 

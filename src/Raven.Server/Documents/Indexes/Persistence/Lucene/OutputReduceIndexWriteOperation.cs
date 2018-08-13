@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _outputReduceToCollectionCommand.DeleteReduce(reduceKeyHash);
         }
 
-        public class OutputReduceToCollectionCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
+        public class OutputReduceToCollectionCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand, IDisposable
         {
             private readonly DocumentDatabase _database;
             private readonly string _outputReduceToCollection;
@@ -73,15 +73,29 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             private readonly List<OutputReduceDocument> _reduceDocuments = new List<OutputReduceDocument>();
             private readonly JsonOperationContext _jsonContext;
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
+
             public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, MapReduceIndex index)
+                : this(database, outputReduceToCollection)
+            {
+                _index = index;
+            }
+
+            //This constructor should use for replay transaction operations only
+            internal OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, List<OutputReduceDocument> reduceDocuments)
+                : this(database, outputReduceToCollection)
+            {
+
+                _reduceDocuments = reduceDocuments;
+            }
+
+            public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection)
             {
                 _database = database;
                 _outputReduceToCollection = outputReduceToCollection;
-                _index = index;
                 _jsonContext = JsonOperationContext.ShortTermSingleUse();
             }
 
-            private class OutputReduceDocument
+            internal class OutputReduceDocument
             {
                 public bool IsDelete;
                 public string Key;
@@ -150,6 +164,27 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
                 _jsonContext?.Dispose();
             }
+
+            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new OutputReduceToCollectionCommandDto
+                {
+                    OutputReduceToCollection = _outputReduceToCollection,
+                    ReduceDocuments = _reduceDocuments
+                };
+            }
+        }
+    }
+
+    internal class OutputReduceToCollectionCommandDto : TransactionOperationsMerger.IReplayableCommandDto<OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand>
+    {
+        public string OutputReduceToCollection;
+        public  List<OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand.OutputReduceDocument> ReduceDocuments;
+
+        public OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            var command = new OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand(database, OutputReduceToCollection, ReduceDocuments);
+            return command;
         }
     }
 }

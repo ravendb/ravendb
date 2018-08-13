@@ -19,6 +19,7 @@ using Raven.Client.Json;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
@@ -1301,6 +1302,8 @@ namespace Raven.Server.Documents
                     return jsonSerializer.Deserialize<DeleteRevisionsBeforeCommandDto>(reader);
                 case nameof(TombstoneCleaner.DeleteTombstonesCommand):
                     return jsonSerializer.Deserialize<DeleteTombstonesCommandDto>(reader);
+                case nameof(OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand):
+                    return jsonSerializer.Deserialize<OutputReduceToCollectionCommandDto>(reader);
                 default:
                     throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
             }
