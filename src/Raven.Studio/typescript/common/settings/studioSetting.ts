@@ -36,7 +36,12 @@ abstract class studioSetting<T> {
             }
             this.value = JSON.parse(value);
         } else {
-            this.value = value;
+            if (_.isUndefined(value)) {
+                this.value = this.defaultValue;
+            } else {
+                this.value = value;    
+            }
+            
         }
     }
 }

@@ -14,6 +14,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/configuration/studio", "PUT", AuthorizationStatus.Operator)]
         public async Task PutStudioConfiguration()
         {
+            ServerStore.EnsureNotPassive();
+            
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 var studioConfigurationJson = await ctx.ReadForDiskAsync(RequestBodyStream(), Constants.Configuration.StudioId);
