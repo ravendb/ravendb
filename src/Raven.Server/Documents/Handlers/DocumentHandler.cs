@@ -473,7 +473,7 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    public class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand, IDisposable
+    public class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
     {
         private string _id;
         private readonly LazyStringValue _expectedChangeVector;
@@ -529,7 +529,7 @@ namespace Raven.Server.Documents.Handlers
             _document?.Dispose();
         }
 
-        public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
         {
             return new MergedPutCommandDto()
             {

@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Expiration
             }
         }
 
-        internal class DeleteExpiredDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
+        internal class DeleteExpiredDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> _expired;
             private readonly DocumentDatabase _database;
@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Expiration
                 return DeletionCount = _database.DocumentsStorage.ExpirationStorage.DeleteExpiredDocuments(context, _expired);
             }
 
-            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new DeleteExpiredDocumentsCommandDto
                 {

@@ -102,8 +102,7 @@ namespace Raven.Server.Documents
             T ToCommand(DocumentsOperationContext context, DocumentDatabase database); // receive some parameters here?
         }
 
-        //Todo To define MergedTransactionCommand implement IRecordableCommand after all drive do implement
-        public abstract class MergedTransactionCommand
+        public abstract class MergedTransactionCommand : IRecordableCommand
         {
             protected abstract int ExecuteCmd(DocumentsOperationContext context);
 
@@ -118,6 +117,9 @@ namespace Raven.Server.Documents
 
                 return ExecuteCmd(context);
             }
+
+            public abstract IReplayableCommandDto<MergedTransactionCommand> ToDto(JsonOperationContext context);
+
             [JsonIgnore]
             public readonly TaskCompletionSource<object> TaskCompletionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             public Exception Exception;
@@ -170,11 +172,13 @@ namespace Raven.Server.Documents
 
             public abstract void Prepare(ref RecordingState state);
 
-            private static BlittableJsonReaderObject SerializeRecordingCommandDetails(JsonOperationContext context, RecordingCommandDetails commandDetails)
+            private static BlittableJsonReaderObject SerializeRecordingCommandDetails(
+                JsonOperationContext context,
+                RecordingDetails commandDetails)
             {
                 using (var writer = new BlittableJsonWriter(context))
                 {
-                    var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+                    var jsonSerializer = GetJsonSerializer();
 
                     jsonSerializer.Serialize(writer, commandDetails);
                     writer.FinalizeDocument();
@@ -200,22 +204,8 @@ namespace Raven.Server.Documents
                     var obj = new RecordingCommandDetails
                     {
                         Type = operation.GetType().Name,
+                        Command = operation.ToDto(context)
                     };
-
-                    if (operation is IRecordableCommand recordableCommand)
-                    {
-                        var dto = recordableCommand.ToDto(context);
-                        using (var writer = new BlittableJsonWriter(context))
-                        {
-                            var jsonSerializer = GetJsonSerializer();
-
-                            jsonSerializer.Serialize(writer, dto);
-                            writer.FinalizeDocument();
-
-                            var reader = writer.CreateReader();
-                            obj.Command = reader;
-                        }
-                    }
 
                     Record(obj, context);
                 }
@@ -227,7 +217,7 @@ namespace Raven.Server.Documents
                         return;
                     }
 
-                    var commandDetails = new RecordingCommandDetails
+                    var commandDetails = new RecordingDetails
                     {
                         Type = tx.ToString(),
                     };
@@ -235,7 +225,7 @@ namespace Raven.Server.Documents
                     Record(commandDetails, ctx);
                 }
 
-                private void Record(RecordingCommandDetails commandDetails, JsonOperationContext context)
+                private void Record(RecordingDetails commandDetails, JsonOperationContext context)
                 {
                     commandDetails.DateTime = DateTime.Now;
                     var commandDetailsReader = SerializeRecordingCommandDetails(context, commandDetails);
@@ -1248,16 +1238,15 @@ namespace Raven.Server.Documents
         {
             if (!wrapCmdReader.TryGet(nameof(RecordingCommandDetails.Command), out BlittableJsonReaderObject commandReader))
             {
-                return null;
-                //Todo To remove after all MergedTransactionCommand driven class include in switch
                 throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
             }
+
             var jsonSerializer = GetJsonSerializer();
             using (var reader = new BlittableJsonReader(context))
             {
                 reader.Init(commandReader);
                 var dto = DeserializeCommandDto(type, jsonSerializer, reader, peepingTomStream);
-                return dto?.ToCommand(context, _parent);
+                return dto.ToCommand(context, _parent);
             }
         }
 
@@ -1335,11 +1324,15 @@ namespace Raven.Server.Documents
             }
         }
 
-        class RecordingCommandDetails
+        private class RecordingDetails
         {
             public string Type;
-            public BlittableJsonReaderObject Command;
             public DateTime DateTime;
+        }
+
+        private class RecordingCommandDetails : RecordingDetails
+        {
+            public IReplayableCommandDto<MergedTransactionCommand> Command;
         }
     }
 }

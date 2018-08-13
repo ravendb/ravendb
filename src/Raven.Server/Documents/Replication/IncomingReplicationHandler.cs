@@ -961,7 +961,7 @@ namespace Raven.Server.Documents.Replication
         protected void OnFailed(Exception exception, IncomingReplicationHandler instance) => Failed?.Invoke(instance, exception);
         protected void OnDocumentsReceived(IncomingReplicationHandler instance) => DocumentsReceived?.Invoke(instance);
 
-        internal class MergedUpdateDatabaseChangeVectorCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
+        internal class MergedUpdateDatabaseChangeVectorCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly string _changeVector;
             private readonly long _lastDocumentEtag;
@@ -1009,7 +1009,7 @@ namespace Raven.Server.Documents.Replication
                 return operationsCount;
             }
 
-            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new MergedUpdateDatabaseChangeVectorCommandDto
                 {
@@ -1020,7 +1020,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        internal unsafe class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand, IDisposable
+        internal unsafe class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             private readonly IncomingReplicationHandler _incoming;
 
@@ -1262,7 +1262,7 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 var buffer = new byte[_totalSize];
                 Marshal.Copy((IntPtr)_buffer, buffer, 0, _totalSize);

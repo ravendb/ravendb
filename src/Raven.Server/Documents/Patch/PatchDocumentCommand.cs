@@ -13,7 +13,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class PatchDocumentCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand, IDisposable
+    public class PatchDocumentCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
     {
         private readonly string _id;
         private readonly LazyStringValue _expectedChangeVector;
@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.Patch
             _returnRunIfMissing.Dispose();
         }
 
-        public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
         {
             return new PatchDocumentCommandDto
             {

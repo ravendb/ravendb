@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
 
-        public class MergedInsertBulkCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
+        public class MergedInsertBulkCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             public Logger Logger;
             public DocumentDatabase Database;
@@ -211,7 +211,7 @@ namespace Raven.Server.Documents.Handlers
                 return NumberOfCommands;
             }
 
-            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new MergedInsertBulkCommandDto
                 {

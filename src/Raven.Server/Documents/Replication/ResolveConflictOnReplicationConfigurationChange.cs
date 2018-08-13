@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        internal class PutResolvedConflictsCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
+        internal class PutResolvedConflictsCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly ConflictsStorage _conflictsStorage;
             private readonly List<(DocumentConflict ResolvedConflict, long MaxConflictEtag)> _resolvedConflicts;
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Replication
                 return count;
             }
 
-            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 // The LowerId created as in memory LazyStringValue
                 // so EscapePositions set to empty to avoid reference to escape bytes (after string bytes) while serializing

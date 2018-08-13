@@ -594,7 +594,7 @@ namespace Raven.Server.Documents.Replication
             UpdateDestinationChangeVectorHeartbeat(replicationBatchReply);
         }
 
-        internal class UpdateSiblingCurrentEtag : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
+        internal class UpdateSiblingCurrentEtag : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly ReplicationMessageReply _replicationBatchReply;
             private readonly AsyncManualResetEvent _trigger;
@@ -665,7 +665,7 @@ namespace Raven.Server.Documents.Replication
                 return result.IsValid ? 1 : 0;
             }
 
-            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new UpdateSiblingCurrentEtagDto
                 {

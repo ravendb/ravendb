@@ -119,7 +119,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        internal class DeleteTombstonesCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
+        internal class DeleteTombstonesCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly Dictionary<string, long> _tombstones;
             private readonly long _minAllDocsEtag;
@@ -165,7 +165,7 @@ namespace Raven.Server.Documents
                 return deletionCount;
             }
 
-            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new DeleteTombstonesCommandDto
                 {

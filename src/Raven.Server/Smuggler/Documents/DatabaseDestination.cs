@@ -414,7 +414,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public class MergedBatchPutCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand, IDisposable
+        public class MergedBatchPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             public bool IsRevision;
 
@@ -637,7 +637,7 @@ namespace Raven.Server.Smuggler.Documents
                 Documents.Add(document);
             }
 
-            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new MergedBatchPutCommandDto
                 {

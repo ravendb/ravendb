@@ -10,7 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.TransactionCommands
 {
-    public class DeleteDocumentCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
+    public class DeleteDocumentCommand : TransactionOperationsMerger.MergedTransactionCommand
     {
         private readonly string _id;
         private readonly string _expectedChangeVector;
@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.TransactionCommands
             return 1;
         }
 
-        public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
         {
             return new DeleteDocumentCommandDto()
             {

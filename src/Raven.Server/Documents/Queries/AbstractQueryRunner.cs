@@ -192,6 +192,11 @@ namespace Raven.Server.Documents.Queries
                 return count;
             }
 
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                throw new NotSupportedException($"ToDto() of {nameof(BulkOperationCommand<T>)} Should not be called");
+            }
+
             protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 throw new NotSupportedException("Should only call Execute() here");

@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        internal class DeleteRevisionsCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
+        internal class DeleteRevisionsCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly StringValues _ids;
             private readonly DocumentDatabase _database;
@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 return 1;
             }
 
-            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new DeleteRevisionsCommandDto
                 {

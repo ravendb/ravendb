@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        internal class MergedNextHiLoCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
+        internal class MergedNextHiLoCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             public string Key;
             public DocumentDatabase Database;
@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.Handlers
                 return 1;
             }
 
-            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new MergedNextHiLoCommandDto
                 {
@@ -184,7 +184,7 @@ namespace Raven.Server.Documents.Handlers
             NoContentStatus();
         }
 
-        internal class MergedHiLoReturnCommand : TransactionOperationsMerger.MergedTransactionCommand, TransactionOperationsMerger.IRecordableCommand
+        internal class MergedHiLoReturnCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             public string Key;
             public DocumentDatabase Database;
@@ -217,7 +217,7 @@ namespace Raven.Server.Documents.Handlers
                 return 1;
             }
 
-            public TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new MergedHiLoReturnCommandDto
                 {

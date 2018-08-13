@@ -146,6 +146,11 @@ namespace Raven.Server.Documents.Handlers
             return ExecuteDirectly(context);
         }
 
+        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+        {
+            return null;
+        }
+
         protected override int ExecuteCmd(DocumentsOperationContext context)
         {
             switch (_instruction)

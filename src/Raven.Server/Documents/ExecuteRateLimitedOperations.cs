@@ -5,6 +5,7 @@ using Lucene.Net.Util;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Constants = Voron.Global.Constants;
 
 namespace Raven.Server.Documents
@@ -76,6 +77,11 @@ namespace Raven.Server.Documents
             }
 
             return Processed;
+        }
+
+        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+        {
+            throw new NotSupportedException($"ToDto() of {nameof(ExecuteRateLimitedOperations<T>)} Should not be called");
         }
 
         protected override int ExecuteCmd(DocumentsOperationContext context)
