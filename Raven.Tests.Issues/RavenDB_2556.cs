@@ -37,20 +37,22 @@ namespace Raven.Tests.Issues
             }
             finally
             {
-                if (store1 != null)
+                var store1Snapshot = store1;
+                if (store1Snapshot != null)
                 {
-                    var serverClient = ((ServerClient)store1.DatabaseCommands);
+                    var serverClient = ((ServerClient)store1Snapshot.DatabaseCommands);
                     GetReplicationInformer(serverClient).ClearReplicationInformationLocalCache(serverClient);
 
-                    store1.Dispose();
+                    store1Snapshot.Dispose();
                 }
 
-                if (store2 != null)
+                var store2Snapshot = store2;
+                if (store2Snapshot != null)
                 {
-                    var serverClient = ((ServerClient)store2.DatabaseCommands);
+                    var serverClient = ((ServerClient)store2Snapshot.DatabaseCommands);
                     GetReplicationInformer(serverClient).ClearReplicationInformationLocalCache(serverClient);
 
-                    store2.Dispose();
+                    store2Snapshot.Dispose();
                 }
             }
 
