@@ -34,16 +34,7 @@ namespace rvn
                 {
                     var pipeName = Pipes.GetPipeName(Pipes.AdminConsolePipePrefix, pid.Value);
                     var client = new NamedPipeClientStream(pipeName);
-                    if (PlatformDetails.RunningOnPosix)
-                    {
-                        var pathField = client.GetType().GetField("_normalizedPipePath", BindingFlags.NonPublic | BindingFlags.Instance);
-                        if (pathField == null)
-                        {
-                            throw new InvalidOperationException("Unable to set the proper path for the admin pipe, admin channel will not be available");
-                        }
-                        var pipeDir = Path.Combine(Path.GetTempPath(), "ravendb-pipe");
-                        pathField.SetValue(client, Path.Combine(pipeDir, pipeName));
-                    }
+
                     try
                     {
                         client.Connect(3000);
