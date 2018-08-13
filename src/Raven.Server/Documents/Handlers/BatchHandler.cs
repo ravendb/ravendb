@@ -471,6 +471,14 @@ namespace Raven.Server.Documents.Handlers
                                 case CommandType.PUT:
                                     if (current < count)
                                     {
+                                        // delete the document to avoid exception if we put new document in a different collection.
+                                        // TODO: document this behavior 
+                                        using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
+                                        {
+                                            Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, expectedChangeVector: null,
+                                                nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreation);
+                                        }
+
                                         var putResult = Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document.Clone(context), changeVector: changeVector,
                                             flags: DocumentFlags.FromClusterTransaction);
                                         context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);

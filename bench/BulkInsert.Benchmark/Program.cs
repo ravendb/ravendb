@@ -11,6 +11,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -198,8 +199,12 @@ namespace BulkInsert.Benchmark
                         }
                         break;
                     }
-                    catch (TimeoutException)
+                    catch (RavenException e)
                     {
+                        Console.WriteLine(e.GetType());
+                        Console.WriteLine(e.GetBaseException());
+
+                        Console.WriteLine("-------- Retry ------------");
                         // retry
                     }
                     catch (Exception e)
@@ -397,7 +402,7 @@ namespace BulkInsert.Benchmark
         {
             public static void Main(string[] args)
             {
-                using (var massiveObj = new BulkInsertBench("http://localhost:8090", 1805861237))
+                using (var massiveObj = new BulkInsertBench("http://10.0.0.87:8080", 1805861237))
                 {
                     massiveObj.CreateDb();
                     //                    var sp = Stopwatch.StartNew();

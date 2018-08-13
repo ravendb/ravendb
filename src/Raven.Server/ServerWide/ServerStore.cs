@@ -1919,7 +1919,7 @@ namespace Raven.Server.ServerWide
                 catch (Exception ex)
                 {
                     if (Logger.IsInfoEnabled)
-                        Logger.Info("Tried to send message to leader, retrying", ex);
+                        Logger.Info($"Tried to send message to leader (reached: {reachedLeader.Value}), retrying", ex);
 
                     if (reachedLeader.Value)
                         throw;

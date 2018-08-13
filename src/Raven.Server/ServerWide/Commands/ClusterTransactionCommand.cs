@@ -104,6 +104,7 @@ namespace Raven.Server.ServerWide.Commands
             foreach (var commandData in commandParsedCommands)
             {
                 var command = ClusterTransactionDataCommand.FromCommandData(commandData);
+                ClusterCommandValidation(command);
                 switch (commandData.Type)
                 {
                     case CommandType.PUT:
@@ -120,6 +121,15 @@ namespace Raven.Server.ServerWide.Commands
             }
 
             DatabaseCommandsCount = DatabaseCommands.Count;
+        }
+
+        private static void ClusterCommandValidation(ClusterTransactionDataCommand command)
+        {
+            var lastChar = command.Id[command.Id.Length - 1];
+            if (lastChar == '/' || lastChar == '|')
+            {
+                throw new NotSupportedException($"Document id {command.Id} cannot end with '|' or '/' as part of cluster transaction");
+            }
         }
 
         public List<string> ExecuteCompareExchangeCommands(TransactionOperationContext context, long index, Table items)
