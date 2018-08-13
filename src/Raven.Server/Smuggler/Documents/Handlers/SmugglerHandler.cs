@@ -36,6 +36,7 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Raven.Server.Smuggler.Documents.Handlers
@@ -96,7 +97,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     var firstRead = await stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count);
                     buffer.Used = 0;
                     buffer.Valid = firstRead;
-                    if(firstRead != 0)
+                    if (firstRead != 0)
                     {
                         var blittableJson = await context.ParseToMemoryAsync(stream, "DownloadOptions", BlittableJsonDocumentBuilder.UsageMode.None, buffer);
                         options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
@@ -137,8 +138,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         private IOperationResult ExportDatabaseInternal(
             DatabaseSmugglerOptionsServerSide options,
             long startDocumentEtag,
-            Action<IOperationProgress> onProgress, 
-            DocumentsOperationContext context, 
+            Action<IOperationProgress> onProgress,
+            DocumentsOperationContext context,
             OperationCancelToken token)
         {
             using (token)
@@ -149,8 +150,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 return smuggler.Execute();
             }
         }
-        
-        
+
+
 
         [RavenAction("/databases/*/admin/smuggler/import", "GET", AuthorizationStatus.Operator)]
         public async Task GetImport()
@@ -160,7 +161,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             {
                 throw new ArgumentException("'file' or 'url' are mandatory when using GET /smuggler/import");
             }
-       
+
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext);
@@ -189,15 +190,15 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             var filesListing = XElement.Parse(dirTextXml);
             var ns = XNamespace.Get("http://s3.amazonaws.com/doc/2006-03-01/");
             var urls = from content in filesListing.Elements(ns + "Contents")
-                let requestUri = url.TrimEnd('/') + "/" + content.Element(ns + "Key").Value
-                select (Func<Task<Stream>>) (async () =>
-                {
-                    var respone = await HttpClient.GetAsync(requestUri);
-                    if (respone.IsSuccessStatusCode == false)
-                        throw new InvalidOperationException("Request failed on " + requestUri + " with " +
-                                                            await respone.Content.ReadAsStreamAsync());
-                    return await respone.Content.ReadAsStreamAsync();
-                });
+                       let requestUri = url.TrimEnd('/') + "/" + content.Element(ns + "Key").Value
+                       select (Func<Task<Stream>>)(async () =>
+                      {
+                          var respone = await HttpClient.GetAsync(requestUri);
+                          if (respone.IsSuccessStatusCode == false)
+                              throw new InvalidOperationException("Request failed on " + requestUri + " with " +
+                                                                  await respone.Content.ReadAsStreamAsync());
+                          return await respone.Content.ReadAsStreamAsync();
+                      });
 
             var files = new BlockingCollection<Func<Task<Stream>>>(new ConcurrentQueue<Func<Task<Stream>>>(urls));
             files.CompleteAdding();
@@ -401,20 +402,25 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 if (migrationConfiguration.InputConfiguration == null)
                     throw new ArgumentException("InputConfiguration cannot be null");
 
-                if (Directory.Exists(migrationConfiguration.MigratorFullPath) == false)
+                var migratorDirectory = new DirectoryInfo(migrationConfiguration.MigratorFullPath);
+                if (migratorDirectory.Exists == false)
                     throw new InvalidOperationException($"Directory {migrationConfiguration.MigratorFullPath} doesn't exist");
 
                 if (migrationConfiguration.InputConfiguration.TryGet("Command", out string command) == false)
                     throw new ArgumentException("Cannot find the Command property in the InputConfiguration");
 
-                const string migratorFileName = "Raven.Migrator.dll";
-                var path = Path.Combine(migrationConfiguration.MigratorFullPath, migratorFileName);
-                if (File.Exists(path) == false)
+                var migratorFileName = PlatformDetails.RunningOnPosix
+                    ? "Raven.Migrator"
+                    : "Raven.Migrator.exe";
+
+                var path = Path.Combine(migratorDirectory.FullName, migratorFileName);
+                var migratorFile = new FileInfo(path);
+                if (migratorFile.Exists == false)
                     throw new InvalidOperationException($"The file '{migratorFileName}' doesn't exist in path: {migrationConfiguration.MigratorFullPath}");
 
                 var processStartInfo = new ProcessStartInfo
                 {
-                    FileName = "dotnet",
+                    FileName = migratorFile.Name,
                     Arguments = $"{migratorFileName} {migrationConfiguration.DatabaseTypeName}",
                     WorkingDirectory = migrationConfiguration.MigratorFullPath,
                     CreateNoWindow = true,
@@ -469,7 +475,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     Operations.OperationType.DatabaseMigration,
                     onProgress =>
                     {
-                        return Task.Run(async() =>
+                        return Task.Run(async () =>
                         {
                             var result = new SmugglerResult();
 
@@ -697,7 +703,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                             var fileName = contentDisposition.FileName.ToString().Trim('\"');
                                             collection = Inflector.Pluralize(CSharpClassName.ConvertToValidClassName(Path.GetFileNameWithoutExtension(fileName)));
                                         }
-                                        
+
                                         var options = new DatabaseSmugglerOptionsServerSide();
                                         if (section.Headers.ContainsKey("Content-Encoding") && section.Headers["Content-Encoding"] == "gzip")
                                         {
@@ -721,7 +727,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             return (IOperationResult)result;
                         });
                     }, operationId, token: token);
-                
+
                 WriteImportResult(context, result, ResponseBodyStream());
             }
         }
@@ -758,7 +764,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             var file = GetStringQueryString("file", required: false);
             if (string.IsNullOrEmpty(file) == false)
             {
-                if(IsOperator() == false)
+                if (IsOperator() == false)
                     throw new AuthorizationException("The use of the 'file' query string parameters is limited operators and above");
                 return File.OpenRead(file);
             }
@@ -766,9 +772,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             var url = GetStringQueryString("url", required: false);
             if (string.IsNullOrEmpty(url) == false)
             {
-                if(IsOperator() == false)
+                if (IsOperator() == false)
                     throw new AuthorizationException("The use of the 'url' query string parameters is limited operators and above");
-                
+
                 if (HttpContext.Request.Method == "POST")
                 {
                     var msg = await HttpClient.PostAsync(url, new StreamContent(HttpContext.Request.Body)
@@ -780,7 +786,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     });
                     return await msg.Content.ReadAsStreamAsync();
                 }
-                
+
                 return await HttpClient.GetStreamAsync(url);
             }
 
