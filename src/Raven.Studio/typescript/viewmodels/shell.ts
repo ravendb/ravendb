@@ -365,21 +365,21 @@ class shell extends viewModelBase {
                 .done(settings => {
                     const shouldTraceUsageMetrics = settings.sendUsageStats.getValue();
                     if (_.isUndefined(shouldTraceUsageMetrics)) {
-                    // ask user about GA
-                    this.displayUsageStatsInfo(true);
-    
-                    this.trackingTask.done((accepted: boolean) => {
-                        this.displayUsageStatsInfo(false);
-    
-                        if (accepted) {
-                            this.configureAnalytics(true, buildVersionResult);
-                        }
-                        
-                        settings.sendUsageStats.setValue(accepted);
-                    });
-                } else {
-                    this.configureAnalytics(shouldTraceUsageMetrics, buildVersionResult);
-                }
+                        // ask user about GA
+                        this.displayUsageStatsInfo(true);
+        
+                        this.trackingTask.done((accepted: boolean) => {
+                            this.displayUsageStatsInfo(false);
+        
+                            if (accepted) {
+                                this.configureAnalytics(true, buildVersionResult);
+                            }
+                            
+                            settings.sendUsageStats.setValue(accepted);
+                        });
+                    } else {
+                        this.configureAnalytics(shouldTraceUsageMetrics, buildVersionResult);
+                    }
             });
         } else {
             // user has uBlock etc?
@@ -410,7 +410,7 @@ class shell extends viewModelBase {
         
         studioSettings.default.registerOnSettingChangedHandler(
             name => name === "sendUsageStats",
-            (name, track: simpleStudioSetting<boolean>) => eventsCollector.default.enabled = track.getValue());
+            (name, track: simpleStudioSetting<boolean>) => eventsCollector.default.enabled = track.getValue() && eventsCollector.gaDefined());
     }
 
     static openFeedbackForm() {
