@@ -1876,7 +1876,6 @@ namespace Raven.Server.ServerWide
         {
             //I think it is reasonable to expect timeout twice of error retry
             var timeoutTask = TimeoutManager.WaitFor(Engine.OperationTimeout, _shutdownNotification.Token);
-
             Exception requestException = null;
             while (true)
             {
@@ -1963,7 +1962,8 @@ namespace Raven.Server.ServerWide
                 if (clusterTopology.Members.TryGetValue(engineLeaderTag, out string leaderUrl) == false)
                     throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
 
-                var command = new PutRaftCommand(cmdJson, _engine.Url);
+                cmdJson.TryGet("Type", out string commandType);
+                var command = new PutRaftCommand(cmdJson, _engine.Url, commandType);
 
                 if (_clusterRequestExecutor == null
                     || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
@@ -1994,10 +1994,12 @@ namespace Raven.Server.ServerWide
             public override bool IsReadRequest => false;
             public bool HasReachLeader() => _reachedLeader;
             private readonly string _source;
-            public PutRaftCommand(BlittableJsonReaderObject command, string source)
+            private readonly string _commandType;
+            public PutRaftCommand(BlittableJsonReaderObject command, string source, string commandType)
             {
                 _command = command;
                 _source = source;
+                _commandType = commandType;
             }
 
             public override void OnResponseFailure(HttpResponseMessage response)
@@ -2009,10 +2011,7 @@ namespace Raven.Server.ServerWide
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/rachis/send";
-                if (string.IsNullOrWhiteSpace(_source) == false)
-                    url += $"?source={_source}";
-
+                url = $"{node.Url}/admin/rachis/send?source={_source}&commandType={_commandType}";
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
@@ -2039,8 +2038,6 @@ namespace Raven.Server.ServerWide
             public long RaftCommandIndex { get; set; }
 
             public object Data { get; set; }
-
-            public string Source { get; set; }
         }
 
         public Task WaitForTopology(Leader.TopologyModification state)
