@@ -12,16 +12,11 @@ namespace Tests.Infrastructure.InterversionTest
             _serverDirPath = serverDirPath;
         }
 
-        public override string ServerPath
-        {
-            get
-            {
-                return Path.Combine(
-                    _serverDirPath, 
-                    "Server", 
-                    PlatformDetails.RunningOnPosix ? "Raven.Server" : "Raven.Server.exe");
-            }
-        }
+        public override string CommandArguments => "--Http.UseLibuv=true";
 
+        public override string ServerPath => Path.Combine(
+            _serverDirPath,
+            "Server",
+            PlatformDetails.RunningOnPosix ? "Raven.Server" : "Raven.Server.exe");
     }
 }

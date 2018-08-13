@@ -320,7 +320,7 @@ namespace FastTests
 
         private readonly object _getNewServerSync = new object();
 
-        protected RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null, string customConfigPath = null)
+        protected virtual RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null, string customConfigPath = null)
         {
             lock (_getNewServerSync)
             {
