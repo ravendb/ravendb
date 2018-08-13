@@ -77,9 +77,9 @@ namespace Raven.Tryouts
                 try
                 {
                     Console.WriteLine(i);
-                    using (var test = new RavenDB_3539())
+                    using (var test = new RavenDB_2556())
                     {
-                        test.get_debug_info_ForSpecifiedDatabase_IndependentBatchSizeAutoTuner();
+                        test.FailoverBehaviorShouldBeReadFromServer();
                     }
                 }
                 catch (Exception e)
