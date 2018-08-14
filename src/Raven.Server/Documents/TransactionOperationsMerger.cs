@@ -52,7 +52,6 @@ namespace Raven.Server.Documents
     public class TransactionOperationsMerger : IDisposable
     {
 
-        private const string StartRecordingType = "StartRecording";
         private readonly DocumentDatabase _parent;
         private readonly CancellationToken _shutdown;
         private bool _runTransactions = true;
@@ -201,9 +200,8 @@ namespace Raven.Server.Documents
 
                 public override void Record(DocumentsOperationContext context, MergedTransactionCommand operation)
                 {
-                    var obj = new RecordingCommandDetails
+                    var obj = new RecordingCommandDetails(operation.GetType().Name)
                     {
-                        Type = operation.GetType().Name,
                         Command = operation.ToDto(context)
                     };
 
@@ -217,19 +215,14 @@ namespace Raven.Server.Documents
                         return;
                     }
 
-                    var commandDetails = new RecordingDetails
-                    {
-                        Type = tx.ToString(),
-                    };
+                    var commandDetails = new RecordingDetails(tx.ToString());
 
                     Record(commandDetails, ctx);
                 }
 
                 private void Record(RecordingDetails commandDetails, JsonOperationContext context)
                 {
-                    commandDetails.DateTime = DateTime.Now;
-                    var commandDetailsReader = SerializeRecordingCommandDetails(context, commandDetails);
-
+                    using (var commandDetailsReader = SerializeRecordingCommandDetails(context, commandDetails))
                     using (var writer = new BlittableJsonTextWriter(context, _recordingFileStream))
                     {
                         writer.WriteComma();
@@ -304,11 +297,7 @@ namespace Raven.Server.Documents
                     {
                         writer.WriteStartArray();
 
-                        var commandDetails = new RecordingCommandDetails
-                        {
-                            Type = StartRecordingType,
-                            DateTime = DateTime.Now
-                        };
+                        var commandDetails = new StartRecordingDetails();
                         var commandDetailsReader = SerializeRecordingCommandDetails(context, commandDetails);
 
                         context.Write(writer, commandDetailsReader);
@@ -1172,65 +1161,102 @@ namespace Raven.Server.Documents
                 var parser = new UnmanagedJsonParser(context, state, "file");
 
                 var commandsProgress = 0;
-                foreach (var item in UnmanagedJsonParserHelper.ReadArrayToMemory(context, peepingTomStream, parser, state, buffer))
+                var readers = UnmanagedJsonParserHelper.ReadArrayToMemory(context, peepingTomStream, parser, state, buffer);
+                using (var readersItr = readers.GetEnumerator())
                 {
-                    using (item)
+                    ReadStartRecordingDetails(readersItr, context, peepingTomStream);
+                    while (readersItr.MoveNext())
                     {
-                        if (item.TryGet(nameof(RecordingCommandDetails.Type), out string strType) == false)
-                            continue;
-
-                        if (strType == StartRecordingType)
-                            continue;
-
-                        if (Enum.TryParse<TxInstruction>(strType, true, out var type))
+                        using (readersItr.Current)
                         {
-                            switch (type)
+                            if (readersItr.Current.TryGet(nameof(RecordingDetails.Type), out string strType) == false)
                             {
-                                case TxInstruction.BeginTx:
-                                    txDisposable = _parent.DocumentsStorage.ContextPool.AllocateOperationContext(out txCtx);
-                                    txCtx.OpenWriteTransaction();
-                                    break;
-                                case TxInstruction.Commit:
-                                    txCtx.Transaction.Commit();
-                                    break;
-                                case TxInstruction.DisposeTx:
-                                    txDisposable.Dispose();
-                                    break;
-                                case TxInstruction.BeginAsyncCommitAndStartNewTransaction:
-                                    var previousTx = txCtx.Transaction;
-                                    txCtx.Transaction = txCtx.Transaction.BeginAsyncCommitAndStartNewTransaction();
-                                    txDisposable = txCtx.Transaction;
-
-                                    previousTx.EndAsyncCommit();
-                                    previousTx.Dispose();
-                                    break;
-                                case TxInstruction.EndAsyncCommit:
-                                    //Todo I think this is not relevant all the async instruction can run as one unit in  BeginAsyncCommitAndStartNewTransaction
-                                    //previousTx.EndAsyncCommit();
-                                    break;
+                                throw new ReplayTransactionsException($"Can't read {nameof(RecordingDetails.Type)} of replay detail", peepingTomStream);
                             }
-                            continue;
-                        }
 
-                        try
-                        {
-                            var cmd = DeserializeCommand(strType, item, context, peepingTomStream);
-                            cmd.Execute(txCtx, null);
-                            commandsProgress++;
-                            UpdateGlobalReplicationInfoBeforeCommit(context);
-                        }
-                        catch (Exception)
-                        {
-                            //Todo To accept exceptions that was thrown while recording
-                            txDisposable.Dispose();
-                            throw;
-                        }
+                            if (Enum.TryParse<TxInstruction>(strType, true, out var type))
+                            {
+                                switch (type)
+                                {
+                                    case TxInstruction.BeginTx:
+                                        txDisposable = _parent.DocumentsStorage.ContextPool.AllocateOperationContext(out txCtx);
+                                        txCtx.OpenWriteTransaction();
+                                        break;
+                                    case TxInstruction.Commit:
+                                        txCtx.Transaction.Commit();
+                                        break;
+                                    case TxInstruction.DisposeTx:
+                                        txDisposable.Dispose();
+                                        break;
+                                    case TxInstruction.BeginAsyncCommitAndStartNewTransaction:
+                                        var previousTx = txCtx.Transaction;
+                                        txCtx.Transaction = txCtx.Transaction.BeginAsyncCommitAndStartNewTransaction();
+                                        txDisposable = txCtx.Transaction;
 
-                        yield return new ReplayProgress
-                        {
-                            CommandsProgress = commandsProgress
-                        };
+                                        previousTx.EndAsyncCommit();
+                                        previousTx.Dispose();
+                                        break;
+                                    case TxInstruction.EndAsyncCommit:
+                                        //Todo I think this is not relevant all the async instruction can run as one unit in  BeginAsyncCommitAndStartNewTransaction
+                                        //previousTx.EndAsyncCommit();
+                                        break;
+                                }
+                                continue;
+                            }
+
+                            try
+                            {
+                                var cmd = DeserializeCommand(strType, readersItr.Current, context, peepingTomStream);
+                                cmd.ExecuteDirectly(txCtx);
+                                commandsProgress++;
+                                UpdateGlobalReplicationInfoBeforeCommit(context);
+                            }
+                            catch (Exception)
+                            {
+                                //Todo To accept exceptions that was thrown while recording
+                                txDisposable.Dispose();
+                                throw;
+                            }
+
+                            yield return new ReplayProgress
+                            {
+                                CommandsProgress = commandsProgress
+                            };
+                        }
                     }
+                }
+            }
+        }
+
+        private static void ReadStartRecordingDetails(IEnumerator<BlittableJsonReaderObject> iterator, DocumentsOperationContext context, PeepingTomStream peepingTomStream)
+        {
+            if (false == iterator.MoveNext())
+            {
+                throw new ReplayTransactionsException("Replay stream is empty", peepingTomStream);
+            }
+            using (iterator.Current)
+            {
+                var jsonSerializer = GetJsonSerializer();
+                StartRecordingDetails startDetail;
+                using (var reader = new BlittableJsonReader(context))
+                {
+                    reader.Init(iterator.Current);
+                    startDetail = jsonSerializer.Deserialize<StartRecordingDetails>(reader);
+                }
+
+                if (string.IsNullOrEmpty(startDetail.Type))
+                {
+                    throw new ReplayTransactionsException($"Can't read {nameof(RecordingDetails.Type)} of replay detail", peepingTomStream);
+                }
+
+                if (string.IsNullOrEmpty(startDetail.Type))
+                {
+                    throw new ReplayTransactionsException($"Can't read {nameof(StartRecordingDetails.Version)} of replay instructions", peepingTomStream);
+                }
+
+                if (startDetail.Version != ServerVersion.FullVersion)
+                {
+                    throw new ReplayTransactionsException($"Can't replay transaction instructions of different server version - Current version({ServerVersion.FullVersion}), Record version({startDetail.Version})", peepingTomStream);
                 }
             }
         }
@@ -1296,7 +1322,7 @@ namespace Raven.Server.Documents
                     return jsonSerializer.Deserialize<DeleteRevisionsCommandDto>(reader);
                 case nameof(RevisionsOperations.DeleteRevisionsBeforeCommand):
                     throw new ReplayTransactionsException(
-                        "Because this command is deleting according to revisions' date & the revisions that created by replaying have different date an in place decision needed to be made", 
+                        "Because this command is deleting according to revisions' date & the revisions that created by replaying have different date an in place decision needed to be made",
                         peepingTomStream);
                 case nameof(TombstoneCleaner.DeleteTombstonesCommand):
                     return jsonSerializer.Deserialize<DeleteTombstonesCommandDto>(reader);
@@ -1336,13 +1362,35 @@ namespace Raven.Server.Documents
 
         private class RecordingDetails
         {
-            public string Type;
-            public DateTime DateTime;
+            public string Type { get; }
+            public DateTime DateTime { get; }
+
+            public RecordingDetails(string type)
+            {
+                Type = type;
+                DateTime = DateTime.Now;
+            }
+        }
+
+        private class StartRecordingDetails : RecordingDetails
+        {
+            private const string DetailsType = "StartRecording";
+            public string Version { get; }
+
+            public StartRecordingDetails()
+            : base(DetailsType)
+            {
+                Version = ServerVersion.FullVersion;
+            }
         }
 
         private class RecordingCommandDetails : RecordingDetails
         {
             public IReplayableCommandDto<MergedTransactionCommand> Command;
+
+            public RecordingCommandDetails(string type) : base(type)
+            {
+            }
         }
     }
 }
