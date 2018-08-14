@@ -292,8 +292,24 @@ namespace Raven.Server.Documents
                     }
                 }, null);
 
-                Task.Run(() => ExectueClusterTransactionTask(), DatabaseShutdown);
-
+                Task.Factory.StartNew(async _ =>
+                {
+                    try
+                    {
+                        await ExecuteClusterTransactionTask();
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // database shutdown
+                    }
+                    catch (Exception e)
+                    {
+                        if (_logger.IsInfoEnabled)
+                        {
+                            _logger.Info("An unhandled exception closed the cluster transaction task", e);
+                        }
+                    }
+                }, DatabaseShutdown, TaskCreationOptions.LongRunning);
             }
             catch (Exception)
             {
@@ -354,7 +370,7 @@ namespace Raven.Server.Documents
             return new DatabaseDisabledException("The database " + Name + " is shutting down", e);
         }
 
-        private readonly ManualResetEventSlim _hasClusterTransaction = new ManualResetEventSlim(false);
+        private readonly AsyncManualResetEvent _hasClusterTransaction = new AsyncManualResetEvent();
 
         public void NotifyOnPendingClusterTransaction()
         {
@@ -363,11 +379,11 @@ namespace Raven.Server.Documents
 
         private long? _nextClusterCommand;
      
-        private void ExectueClusterTransactionTask()
+        private async Task ExecuteClusterTransactionTask()
         {
             while (DatabaseShutdown.IsCancellationRequested == false)
             {
-                _hasClusterTransaction.Wait(DatabaseShutdown);
+                await _hasClusterTransaction.WaitAsync(DatabaseShutdown);
                 if (DatabaseShutdown.IsCancellationRequested)
                     return;
 
@@ -389,7 +405,7 @@ namespace Raven.Server.Documents
                         var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch);
                         try
                         {
-                            TxMerger.Enqueue(mergedCommands).Wait(DatabaseShutdown);
+                            await TxMerger.Enqueue(mergedCommands).WithCancellation(DatabaseShutdown);
                         }
                         catch (Exception e)
                         {
@@ -397,7 +413,7 @@ namespace Raven.Server.Documents
                             {
                                 _logger.Info($"Failed to execute cluster transaction batch (count: {batch.Count}), will retry them one-by-one.", e);
                             }
-                            ExecuteClusterTransactionOneByOne(batch);
+                            await ExecuteClusterTransactionOneByOne(batch);
                             continue;
                         }
                         foreach (var command in batch)
@@ -419,7 +435,7 @@ namespace Raven.Server.Documents
 
         private int _clusterTransactionDelayOnFailure = 1000;
 
-        private void ExecuteClusterTransactionOneByOne(List<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
+        private async Task ExecuteClusterTransactionOneByOne(List<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
         {
             foreach (var command in batch)
             {
@@ -430,7 +446,7 @@ namespace Raven.Server.Documents
                 var mergedCommand = new BatchHandler.ClusterTransactionMergedCommand(this, singleCommand);
                 try
                 {
-                    TxMerger.Enqueue(mergedCommand).Wait(DatabaseShutdown);
+                    await TxMerger.Enqueue(mergedCommand).WithCancellation(DatabaseShutdown);
                     OnClusterTransactionCompletion(command.Index, mergedCommand);
                     _nextClusterCommand = command.PreviousCount + command.Commands.Length;
                     _clusterTransactionDelayOnFailure = 1000;
@@ -449,7 +465,7 @@ namespace Raven.Server.Documents
                         $"{Name}/ClusterTransaction",
                         new ExceptionDetails(e)));
 
-                    Task.Delay(_clusterTransactionDelayOnFailure, DatabaseShutdown).Wait(DatabaseShutdown);
+                    await Task.Delay(_clusterTransactionDelayOnFailure, DatabaseShutdown);
                     _clusterTransactionDelayOnFailure = Math.Min(_clusterTransactionDelayOnFailure * 2, 15000);
 
                     return;
