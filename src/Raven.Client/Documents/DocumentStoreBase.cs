@@ -146,7 +146,7 @@ namespace Raven.Client.Documents
 
         private readonly ConcurrentDictionary<string, long?> _lastRaftIndexPerDatabase = new ConcurrentDictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
 
-        public long? GetLastTransactionIndex(string database)
+        internal long? GetLastTransactionIndex(string database)
         {
             if (_lastRaftIndexPerDatabase.TryGetValue(database, out var index) == false)
                 return null;
@@ -155,7 +155,7 @@ namespace Raven.Client.Documents
             return index;
         }
 
-        public void SetLastTransactionIndex(string database, long? index)
+        internal void SetLastTransactionIndex(string database, long? index)
         {
             if (index.HasValue == false)
                 return;
