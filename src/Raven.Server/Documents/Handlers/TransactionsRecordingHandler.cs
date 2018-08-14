@@ -22,8 +22,6 @@ namespace Raven.Server.Documents.Handlers
             using (var operationCancelToken = CreateOperationToken())
             {
                 var replayStream = RequestBodyStream();
-                //Todo to use zip
-                //using (var gZipStreamDocuments = new GZipStream(fileStream, CompressionMode.Compress, true))
 
                 var result = await Database.Operations.AddOperation(
                     database: Database,

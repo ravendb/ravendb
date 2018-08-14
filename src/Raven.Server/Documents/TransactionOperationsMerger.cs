@@ -263,7 +263,7 @@ namespace Raven.Server.Documents
                             writer.WriteEndArray();
                         }
                     }
-                    _recordingFileStream?.Dispose();
+                    _recordingFileStream.Dispose();
                 }
             }
 
@@ -297,11 +297,10 @@ namespace Raven.Server.Documents
                     }
 
                     var recordingFileStream = new FileStream(_filePath, FileMode.Create);
-                    //Todo to use zip
-                    var gZiprecordingFileStream = new GZipStream(recordingFileStream, CompressionMode.Compress);
+                    var gZipRecordingFileStream = new GZipStream(recordingFileStream, CompressionMode.Compress);
 
                     using (_txOpMerger._parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (var writer = new BlittableJsonTextWriter(context, recordingFileStream))
+                    using (var writer = new BlittableJsonTextWriter(context, gZipRecordingFileStream))
                     {
                         writer.WriteStartArray();
 
@@ -315,7 +314,7 @@ namespace Raven.Server.Documents
                         context.Write(writer, commandDetailsReader);
                     }
 
-                    state = new EnabledRecordingState(_txOpMerger, recordingFileStream);
+                    state = new EnabledRecordingState(_txOpMerger, gZipRecordingFileStream);
                 }
 
                 public override void Dispose()
@@ -1166,8 +1165,9 @@ namespace Raven.Server.Documents
 
             using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.GetManagedBuffer(out var buffer))
+            using (var gZipStream = new GZipStream(replayStream, CompressionMode.Decompress, leaveOpen: true))
             {
-                var peepingTomStream = new PeepingTomStream(replayStream, context);
+                var peepingTomStream = new PeepingTomStream(gZipStream, context);
                 var state = new JsonParserState();
                 var parser = new UnmanagedJsonParser(context, state, "file");
 

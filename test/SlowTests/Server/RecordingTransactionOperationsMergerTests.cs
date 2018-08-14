@@ -912,16 +912,13 @@ namespace SlowTests.Server
                 store.Maintenance.Send(new StartTransactionsRecordingOperation(filePath));
             }
 
-            //Todo to change to zip after recording will change to zip
-            //            using (var fileStream = File.OpenRead(filePath))
-            //            using (var zippedStream = new GZipStream(fileStream, CompressionMode.Decompress))
-            //            using (var reader = new StreamReader(zippedStream))
-            //            {
-            //                var fileContent = File.ReadAllText(filePath);
-            //                JToken.Parse(fileContent);
-            //            }
-            var fileContent = File.ReadAllText(filePath);
-            JToken.Parse(fileContent);
+            using (var fileStream = File.OpenRead(filePath))
+            using (var zippedStream = new GZipStream(fileStream, CompressionMode.Decompress))
+            using (var reader = new StreamReader(zippedStream))
+            {
+                var fileContent = reader.ReadToEnd();
+                JToken.Parse(fileContent);
+            }
         }
 
         [Fact]
