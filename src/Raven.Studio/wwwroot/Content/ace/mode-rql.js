@@ -1037,7 +1037,3 @@ oop.inherits(Mode, TextMode);
 exports.Mode = Mode;
 
 });
-
-this.window.evalUnstrict = function (str) {
-    return eval(str);
-};

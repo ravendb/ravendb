@@ -49,22 +49,20 @@ class queryCommand extends commandBase {
     private extractQueryParameters(queryText: string) {
         const parametersEndRegex = /^(from|declare)/mi;
         const match = parametersEndRegex.exec(queryText);
+        if (!match) {
+            return [undefined, queryText];
+        }
         const parametersText = queryText.substring(0, match.index);
+        const params = parametersText.replace(/(?:^|;\s*)[$]/gm, "result.");
         const parametersJs = `
 var f = function() {
-    ${parametersText}
     var result = {};
-    for(var i in this) { 
-        if(i[0] == '$') {
-            result[i] = this[i];
-        }
-    }
+    ${params}
     return JSON.stringify(result);
 }
 f();
 `;
-        let parameters = (<any>window).evalUnstrict(parametersJs);
-        parameters = parameters.replace(/["]\$/g, "\"");
+        let parameters = eval(parametersJs);
         const rql = queryText.substring(match.index);
         return [parameters, rql];
     }
