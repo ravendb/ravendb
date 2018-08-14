@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Net;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
@@ -43,7 +44,8 @@ namespace Raven.Server.Documents.TcpHandlers
         }
 
         public IEnumerable<(Document Doc, Exception Exception)> GetDataToSend(
-            DocumentsOperationContext docsContext, 
+            DocumentsOperationContext docsContext,
+            IncludeDocumentsCommand includesCmd,
             long startEtag)
         {
             if (string.IsNullOrEmpty(_collection))
@@ -55,14 +57,15 @@ namespace Raven.Server.Documents.TcpHandlers
                     _db.DocumentsStorage.RevisionsStorage.GetRevisionsConfiguration(_collection).Disabled)
                     throw new SubscriptionInvalidStateException($"Cannot use a revisions subscription, database {_db.Name} does not have revisions configuration.");
 
-                return GetRevisionsToSend(docsContext, startEtag);
+                return GetRevisionsToSend(docsContext, includesCmd, startEtag);
             }
 
 
-            return GetDocumentsToSend(docsContext, startEtag);
+            return GetDocumentsToSend(docsContext, includesCmd, startEtag);
         }
 
-        private IEnumerable<(Document Doc, Exception Exception)> GetDocumentsToSend(DocumentsOperationContext docsContext, 
+        private IEnumerable<(Document Doc, Exception Exception)> GetDocumentsToSend(DocumentsOperationContext docsContext,
+             IncludeDocumentsCommand includesCmd,
             long startEtag)
         {
             int size = 0;
@@ -94,6 +97,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                         else
                         {
+                            includesCmd.AddRange(run.Includes);
                             using (transformResult)
                             {
                                 if (transformResult == null)
@@ -123,7 +127,8 @@ namespace Raven.Server.Documents.TcpHandlers
         }
 
         private IEnumerable<(Document Doc, Exception Exception)> GetRevisionsToSend(
-            DocumentsOperationContext docsContext, 
+            DocumentsOperationContext docsContext,
+            IncludeDocumentsCommand includesCmd,
             long startEtag)
         {
             int size = 0;
@@ -138,6 +143,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     if (ShouldSendDocumentWithRevisions(_subscription, run, _patch, docsContext, item, revisionTuple, out var transformResult, out var exception) == false)
                     {
+                        includesCmd.AddRange(run.Includes);
                         if (exception != null)
                         {
                             yield return (item, exception);
