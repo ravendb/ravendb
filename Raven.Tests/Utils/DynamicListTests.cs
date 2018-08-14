@@ -30,7 +30,8 @@ namespace Raven.Tests.Utils
                 "ThenBy", // applies to IOrderedEnumerable
                 "ThenByDescending", // applies to IOrderedEnumerable,
                 "Prepend",
-                "Append"
+                "Append",
+                "ToHashSet"
             };
 
             var enumerableMethodsNames = enumerableMethods.Select(x => x.Name).Except(exceptFor).Distinct().ToList();
