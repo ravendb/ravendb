@@ -1058,6 +1058,8 @@ namespace Raven.Server.Rachis
                 {
                     // ignored
                 }
+
+                throw;
             }
         }
 

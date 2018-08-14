@@ -6,6 +6,10 @@ namespace Raven.Server.NotificationCenter.Notifications
 {
     public abstract class Notification
     {
+        public const string ServerWide = null;
+
+        public const string AllDatabases = "*";
+
         protected Notification(NotificationType type, string database)
         {
             CreatedAt = SystemTime.UtcNow;
