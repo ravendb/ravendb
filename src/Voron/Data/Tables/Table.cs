@@ -30,7 +30,7 @@ namespace Voron.Data.Tables
 
         public readonly Slice Name;
         private readonly byte _tableType;
-        
+
         public long NumberOfEntries { get; private set; }
 
         private long _overflowPageCount;
@@ -233,7 +233,7 @@ namespace Voron.Data.Tables
                     var tvr = new TableValueReader(oldData, oldDataSize);
                     UpdateValuesFromIndex(id,
                         ref tvr,
-                        builder, 
+                        builder,
                         forceUpdate);
 
                     builder.CopyTo(pos);
@@ -465,7 +465,7 @@ namespace Voron.Data.Tables
 
             if (size + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
             {
-                id = AllocateFromSmallActiveSection(builder,size);
+                id = AllocateFromSmallActiveSection(builder, size);
 
                 if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
                     throw new VoronErrorException(
@@ -670,7 +670,7 @@ namespace Voron.Data.Tables
 
         public FixedSizeTree GetFixedSizeTree(TableSchema.FixedSizeSchemaIndexDef indexDef)
         {
-            
+
             if (indexDef.IsGlobal)
                 return _tx.GetGlobalFixedSizeTree(indexDef.Name, sizeof(long), isIndexTree: true, newPageAllocator: _globalPageAllocator);
 
@@ -826,7 +826,7 @@ namespace Voron.Data.Tables
                     {
                         it.Seek(long.MaxValue);
                     }
-                    
+
                     var result = new TableValueHolder();
                     while (it.MovePrev())
                     {
@@ -1009,7 +1009,7 @@ namespace Voron.Data.Tables
                 } while (it.MovePrev());
             }
         }
-        
+
         public TableValueHolder SeekOneBackwardFrom(TableSchema.SchemaIndexDef index, Slice prefix, Slice last)
         {
             var tree = GetTree(index);
@@ -1025,7 +1025,7 @@ namespace Voron.Data.Tables
                 if (SliceComparer.StartWith(it.CurrentKey, it.RequiredPrefix) == false)
                 {
                     if (it.MovePrev() == false)
-                    return null;
+                        return null;
                 }
 
                 do
@@ -1142,7 +1142,7 @@ namespace Voron.Data.Tables
                     }
                 }
             }
-            finally 
+            finally
             {
                 value.Release(_tx.Allocator);
             }
@@ -1232,8 +1232,8 @@ namespace Voron.Data.Tables
             {
                 if (it.SeekToLast() == false)
                     yield break;
-                
-                if(it.Skip(-skip) == false)
+
+                if (it.Skip(-skip) == false)
                     yield break;
 
                 var result = new TableValueHolder();
@@ -1264,7 +1264,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public bool HasEntriesBetween(TableSchema.FixedSizeSchemaIndexDef index, long start, long end)
+        public bool HasEntriesBetween(TableSchema.FixedSizeSchemaIndexDef index, long start, long end, bool inclusive)
         {
             var fst = GetFixedSizeTree(index);
 
@@ -1273,6 +1273,8 @@ namespace Voron.Data.Tables
                 if (it.Seek(start) == false)
                     return false;
 
+                if (inclusive)
+                    return it.CurrentKey <= end;
 
                 return it.CurrentKey < end;
             }
@@ -1542,7 +1544,7 @@ namespace Voron.Data.Tables
                 {
                     if (NumberOfEntries != indexNumberOfEntries)
                         ThrowInconsistentItemsCountInIndexes(fsi.Key.ToString(), NumberOfEntries, indexNumberOfEntries);
-                        
+
                 }
                 else
                 {
@@ -1552,7 +1554,7 @@ namespace Voron.Data.Tables
                         ThrowInconsistentItemsCountInIndexes(fsi.Key.ToString(), NumberOfEntries, indexNumberOfEntries);
                 }
             }
-           
+
             if (_schema.Key == null)
                 return;
 
