@@ -962,7 +962,7 @@ namespace Raven.Server.Documents
             return TableValueToEtag(1, ref result.Reader);
         }
 
-        public bool HasTombstonesWithDocumentEtagBetween(DocumentsOperationContext context, string collection,
+        public bool HasTombstonesWithEtagBetween(DocumentsOperationContext context, string collection,
             long start,
             long end)
         {
@@ -979,7 +979,7 @@ namespace Raven.Server.Documents
             if (table == null)
                 return false;
 
-            return table.HasEntriesBetween(TombstonesSchema.FixedSizeIndexes[DeletedEtagsSlice], start, end);
+            return table.HasEntriesBetween(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], start, end, inclusive: true);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
