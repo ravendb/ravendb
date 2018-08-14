@@ -46,6 +46,30 @@ namespace Raven.Client.Documents.Session
             return props;
         }
 
+
+        internal static object ConvertToBlittableIfNeeded(
+            object value,
+            DocumentConventions conventions,
+            JsonOperationContext context,
+            JsonSerializer serializer,
+            DocumentInfo documentInfo)
+        {
+            if (value is ValueType || 
+                value is string || 
+                value is BlittableJsonReaderArray || 
+                value is BlittableJsonReaderArray)
+                return value;
+
+            if (value is IEnumerable && !(value is IDictionary))
+            {
+                return ((IEnumerable)value).Cast<object>()
+                    .Select(v=> ConvertToBlittableIfNeeded(v, conventions, context, serializer, documentInfo));
+            }
+            
+            using (var writer = new BlittableJsonWriter(context, documentInfo))
+                return ConvertEntityToBlittableInternal(value, conventions, context, serializer, writer);
+        }
+
         internal static BlittableJsonReaderObject ConvertEntityToBlittable(
             object entity,
             DocumentConventions conventions,
@@ -319,6 +343,22 @@ namespace Raven.Client.Documents.Session
                 return type == typeof(Enumerable);
 
             return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
+        }
+
+        public object ConvertToBlittableIfNeeded(object value)
+        {
+            if (value is ValueType ||
+                  value is string ||
+                  value is BlittableJsonReaderArray ||
+                  value is BlittableJsonReaderArray)
+                return value;
+
+            if (value is IEnumerable && !(value is IDictionary))
+            {
+                return ((IEnumerable)value).Cast<object>().Select(ConvertToBlittableIfNeeded);
+
+            }
+            return ConvertEntityToBlittable(value, documentInfo: null);
         }
     }
 }
