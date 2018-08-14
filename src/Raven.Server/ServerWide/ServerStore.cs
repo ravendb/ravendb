@@ -2052,7 +2052,15 @@ namespace Raven.Server.ServerWide
 
         public void ClusterAcceptNewConnection(Stream client, Action disconnect, EndPoint remoteEndpoint)
         {
-            _engine.AcceptNewConnection(client, disconnect, remoteEndpoint);
+            try
+            {
+                _engine.AcceptNewConnection(client, disconnect, remoteEndpoint);
+            }
+            catch (Exception e)
+            {
+                NotificationCenter.Add(AlertRaised.Create(Notification.ServerWide, "Failed to accept RAFT connection", "Exception during accepting new TCP connection",
+                    AlertType.ClusterTopologyWarning, NotificationSeverity.Error, key: e.Message, details: new ExceptionDetails(e)));
+            }
         }
 
         public async Task WaitForCommitIndexChange(RachisConsensus.CommitIndexModification modification, long value)
