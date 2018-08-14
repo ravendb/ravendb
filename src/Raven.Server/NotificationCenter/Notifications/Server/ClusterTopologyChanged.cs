@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Server.Commercial;
 using Sparrow.Json.Parsing;
 
@@ -23,6 +24,8 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
         
         public long CurrentTerm { get; private set; }
 
+        public RachisState CurrentState { get; private set; }
+
         public Dictionary<string, DetailsPerNode> NodeLicenseDetails { get; private set; }
 
         public override DynamicJsonValue ToJson()
@@ -40,7 +43,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
         }
 
         public static ClusterTopologyChanged Create(ClusterTopology clusterTopology, 
-            string leaderTag, string nodeTag, long term, 
+            string leaderTag, string nodeTag, long term, RachisState state,
             Dictionary<string, NodeStatus> status,
             Dictionary<string, DetailsPerNode> nodeLicenseDetails)
         {
@@ -51,6 +54,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
                 Topology = clusterTopology,
                 Leader = leaderTag,
                 NodeTag = nodeTag,
+                CurrentState = state,
                 Status = status,
                 CurrentTerm = term,
                 NodeLicenseDetails = nodeLicenseDetails,
