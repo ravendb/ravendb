@@ -25,6 +25,8 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
 
             var newTableName = pagesTableName + "_new";
 
+            Api.JetCommitTransaction(session, CommitTransactionGrbit.None);
+
             try
             {
                 Api.JetDeleteTable(session, dbid, newTableName);
@@ -34,6 +36,8 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
                 //if there is no such table - then it is not important
                 //this is a precaution against partially failed upgrade process
             }
+
+            Api.JetBeginTransaction2(session, BeginTransactionGrbit.None);
 
             SchemaCreator.CreatePagesTable(dbid, newTableName, session);
 
@@ -145,18 +149,24 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
                 }
             }
 
-            output("Starting to delete 'by_page_id' index (necessary for migration purposes)");
+            Api.JetCommitTransaction(session, CommitTransactionGrbit.None);
 
-            using (var usage = new Table(session, dbid, "usage", OpenTableGrbit.None))
+            try
             {
-                // delete no longer necessary index, created in schema upgrade From07To08
+                output("Starting to delete 'by_page_id' index (needed for migration purposes)");
 
-                Api.JetDeleteIndex(session, usage, "by_page_id");
+                using (var usage = new Table(session, dbid, "usage", OpenTableGrbit.None))
+                {
+                    // delete no longer necessary index, created in schema upgrade From07To08
+
+                    Api.JetDeleteIndex(session, usage, "by_page_id");
+                }
+            }
+            catch (Exception e)
+            {
+                output("It didn't succeed in deleting 'by_page_id' index. We can safely leave it in the schema. It failed due to: " + e);
             }
 
-            output("'by_page_id' deleted");
-
-            Api.JetCommitTransaction(session, CommitTransactionGrbit.None);
             Api.JetDeleteTable(session, dbid, pagesTableName);
             Api.JetRenameTable(session, dbid, newTableName, pagesTableName);
             Api.JetBeginTransaction2(session, BeginTransactionGrbit.None);
