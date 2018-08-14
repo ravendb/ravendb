@@ -8,7 +8,7 @@ function CopyAckFile ( $targetDir ) {
     Copy-Item "$licensePath" -Destination "$targetDir"
 }
 
-function CopyReadmeFile ( $target, $targetDir ) {
+function CopyServerReadmeFile ( $target, $targetDir ) {
     if ($target.IsUnix -eq $False) {
         $readmeFile = 'readme.windows.txt'
     } else {
@@ -20,7 +20,7 @@ function CopyReadmeFile ( $target, $targetDir ) {
     Copy-Item "$readmePath" -Destination "$targetFile"
 }
 
-function CopyStartScript ( $projectDir, $targetDir, $packOpts ) {
+function CopyServerStartScript ( $projectDir, $targetDir, $packOpts ) {
     if ($packOpts.Target.IsUnix -eq $False) {
         CopyStartCmd $projectDir $targetDir $packOpts
     } else {
@@ -28,7 +28,7 @@ function CopyStartScript ( $projectDir, $targetDir, $packOpts ) {
     }
 }
 
-function CopyStartAsServiceScript ( $projectDir, $targetDir, $packOpts ) {
+function CopyServerStartAsServiceScript ( $projectDir, $targetDir, $packOpts ) {
     if ($packOpts.Target.IsUnix -eq $False) {
         CopyStartAsServiceCmd $projectDir $targetDir $packOpts
     }

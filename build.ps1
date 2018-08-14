@@ -70,6 +70,7 @@ $STUDIO_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio", "build
 
 $RVN_SRC_DIR = [io.path]::combine($PROJECT_DIR, "tools", "rvn")
 $DRTOOL_SRC_DIR = [io.path]::combine($PROJECT_DIR, "tools", "Voron.Recovery")
+$MIGRATOR_SRC_DIR = [io.path]::combine($PROJECT_DIR, "tools", "Raven.Migrator")
 
 if ([string]::IsNullOrEmpty($Target) -eq $false) {
     $Target = $Target.Split(",")
@@ -180,6 +181,7 @@ Foreach ($target in $targets) {
     BuildServer $SERVER_SRC_DIR $specOutDir $target $Debug
     BuildTool rvn $RVN_SRC_DIR $specOutDir $target $Debug
     BuildTool drtools $DRTOOL_SRC_DIR $specOutDir $target $Debug
+    BuildTool migrator $MIGRATOR_SRC_DIR $specOutDir $target $Debug
 
     $specOutDirs = @{
         "Main" = $specOutDir;
@@ -189,6 +191,7 @@ Foreach ($target in $targets) {
         "Studio" = $STUDIO_OUT_DIR;
         "Sparrow" = $SPARROW_OUT_DIR;
         "Drtools" = $([io.path]::combine($specOutDir, "drtools"));
+        "Migrator" = $([io.path]::combine($specOutDir, "migrator"));
     }
 
     if ($target.Name -eq "windows-x64") {
@@ -196,6 +199,8 @@ Foreach ($target in $targets) {
         Validate-AssemblyVersion $(Join-Path -Path $specOutDirs.Server -ChildPath "Sparrow.dll" ) $versionObj
         Validate-AssemblyVersion $(Join-Path -Path $specOutDirs.Server -ChildPath "Voron.dll" ) $versionObj
         Validate-AssemblyVersion $(Join-Path -Path $specOutDirs.Rvn -ChildPath "rvn.dll" ) $versionObj
+        Validate-AssemblyVersion $(Join-Path -Path $specOutDirs.Migrator -ChildPath "Raven.Migrator.dll" ) $versionObj
+        Validate-AssemblyVersion $(Join-Path -Path $specOutDirs.Drtools -ChildPath "Voron.Recovery.dll" ) $versionObj
 
         Validate-AssemblyVersion $(Join-Path -Path $specOutDirs.Client -ChildPath "netstandard2.0/Raven.Client.dll" ) $versionObj
         Validate-AssemblyVersion $(Join-Path -Path $TESTDRIVER_OUT_DIR -ChildPath "netstandard2.0/Raven.TestDriver.dll" ) $versionObj
@@ -214,14 +219,17 @@ Foreach ($target in $targets) {
             $serverPath = [io.path]::combine($specOutDirs.Server, "Raven.Server.exe");
             $rvnPath = [io.path]::combine($specOutDirs.Rvn, "rvn.exe");
             $drtoolsPath = [io.path]::combine($specOutDirs.Drtools, "Voron.Recovery.exe");
+            $migratorPath = [io.path]::combine($specOutDirs.Migrator, "Raven.Migrator.exe");
             
             SignFile $PROJECT_DIR $serverPath $DryRunSign
             SignFile $PROJECT_DIR $rvnPath $DryRunSign
             SignFile $PROJECT_DIR $drtoolsPath $DryRunSign
+            SignFile $PROJECT_DIR $migratorPath $DryRunSign
         }
     }
 
-    CreateRavenPackage $PROJECT_DIR $RELEASE_DIR $packOpts
+    CreateServerPackage $PROJECT_DIR $RELEASE_DIR $packOpts
+    CreateToolsPackage $PROJECT_DIR $RELEASE_DIR $packOpts
 }
 
 write-host "Done creating packages."

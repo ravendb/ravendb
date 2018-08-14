@@ -1,11 +1,11 @@
 
-function CreateRavenPackage ( $projectDir, $releaseDir, $packOpts ) {
+function CreateServerPackage ( $projectDir, $releaseDir, $packOpts ) {
     $target = $packOpts.Target
-    write-host "Create package for $($target.runtime)..."
-    $packageDir = [io.path]::combine($packOpts.outDirs.Main, "package")
+    write-host "Create server package for $($target.runtime)..."
+    $packageDir = [io.path]::combine($packOpts.outDirs.Main, "ServerPackage")
     New-Item -ItemType Directory -Path $packageDir | Out-Null
 
-    CreatePackageLayout $packageDir $projectDir $packOpts
+    LayoutServerPackage $packageDir $projectDir $packOpts
 
     $releaseArchiveFile = GetRavenArchiveFileName $packOpts.VersionInfo.Version $target
     $releaseArchivePath = [io.path]::combine($releaseDir, $releaseArchiveFile)
@@ -17,30 +17,67 @@ function CreateRavenPackage ( $projectDir, $releaseDir, $packOpts ) {
     
     Remove-Item -Recurse -ErrorAction SilentlyContinue "$($packOpts.OutDirs.Server)"
     Remove-Item -Recurse -ErrorAction SilentlyContinue "$($packOpts.OutDirs.Rvn)"
+}
+
+function CreateToolsPackage( $projectDir, $releaseDir, $packOpts ) {
+    $target = $packOpts.Target
+    write-host "Create tools package for $($target.runtime)..."
+    $packageDir = [io.path]::combine($packOpts.outDirs.Main, "ToolsPackage")
+    New-Item -ItemType Directory -Path $packageDir | Out-Null
+
+    LayoutToolsPackage $packageDir $projectDir $packOpts
+
+    $releaseArchiveFile = GetRavenArchiveFileName $packOpts.VersionInfo.Version $target "Tools"
+    $releaseArchivePath = [io.path]::combine($releaseDir, $releaseArchiveFile)
+    if ($target.IsUnix) {
+        CreateArchiveFromDir $releaseArchivePath $packageDir $target "RavenDB-Tools"
+    } else {
+        CreateArchiveFromDir $releaseArchivePath $packageDir $target
+    }
+    
+    Remove-Item -Recurse -ErrorAction SilentlyContinue "$($packOpts.OutDirs.Migrator)"
     Remove-Item -Recurse -ErrorAction SilentlyContinue "$($packOpts.OutDirs.Drtools)"
 }
 
-function GetRavenArchiveFileName ( $version, $target ) {
-    "RavenDB-$version-$($target.Name)"
+function GetRavenArchiveFileName ( $version, $target, $packageSuffix ) {
+    $name = "RavenDB-$version-$($target.Name)"
+    if ($packageSuffix) {
+        $name = "$name.$packageSuffix"
+    }
+
+    return $name
 }
 
-function CreatePackageLayout ( $packageDir, $projectDir, $packOpts ) {
-    LayoutRegularPackage $packageDir $projectDir $packOpts
-}
-
-function LayoutRegularPackage ( $packageDir, $projectDir, $packOpts ) {
+function LayoutServerPackage ( $packageDir, $projectDir, $packOpts ) {
     $target = $packOpts.Target
-
-    CopyStudioPackage $packOpts
+    CopyStudioPackageToServerOutputDirectory $packOpts
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
-    CopyStartScript $projectDir $packageDir $packOpts
-    CopyStartAsServiceScript $projectDir $packageDir $packOpts
-    CopyTools $packOpts.OutDirs
-    CopyReadmeFile $target $packageDir
-    CreatePackageServerLayout $projectDir $($packOpts.OutDirs.Server) $packageDir $target
+    CopyServerStartScript $projectDir $packageDir $packOpts
+    CopyServerStartAsServiceScript $projectDir $packageDir $packOpts
+    CopyServerToolsToServerOutputDirectory $packOpts.OutDirs
+    CopyServerReadmeFile $target $packageDir
+    LayoutServerDirectory $projectDir $($packOpts.OutDirs.Server) $packageDir $target
 }
-function CopyStudioPackage ( $packOpts ) {
+
+function LayoutToolsPackage ( $packageDir, $projectDir, $packOpts ) {
+    CopyLicenseFile $packageDir
+    CopyAckFile $packageDir
+
+    $toolsSubDir = Join-Path -Path $packageDir -ChildPath "Tools";
+    New-Item -ItemType Directory -Path $toolsSubDir;
+
+    CopyDirectoryContents "Raven.Migrator" $packOpts.OutDirs.Migrator $toolsSubDir
+    CopyDirectoryContents "Voron.Recovery" $packOpts.OutDirs.Drtools $toolsSubDir
+}
+
+function CopyDirectoryContents ( $tag, $src, $dst ) {
+    $contents = [io.path]::combine($src, "*")
+    write-host "Copy $tag files: $contents -> $dst"
+    Copy-Item -Recurse "$contents" -Destination "$dst" -Force 
+}
+
+function CopyStudioPackageToServerOutputDirectory ( $packOpts ) {
     if ($packOpts.SkipCopyStudioPackage) {
         write-host "Skip copying Studio..."
         return;
@@ -65,17 +102,11 @@ function CopyDaemonScripts ( $projectDir, $packageDir ) {
     }
 }
 
-function CopyTools ( $outDirs ) {
-    $rvnContents = [io.path]::combine($outDirs.Rvn, "*")
-    write-host "Copy rvn files: $rvnContents -> $($outDirs.Server)"
-    Copy-Item -Recurse "$rvnContents" -Destination "$($outDirs.Server)" -Force 
-
-    $drtoolsContents = [io.path]::combine($outDirs.Drtools, "*")
-    write-host "Copy Voron.Recovery files: $drToolsContents -> $($outDirs.Server)"
-    Copy-Item -Recurse "$drtoolsContents" -Destination "$($outDirs.Server)" -Force 
+function CopyServerToolsToServerOutputDirectory ( $outDirs ) {
+    CopyDirectoryContents "RVN" $outDirs.Rvn $outDirs.Server
 }
 
-function CreatePackageServerLayout ( $projectDir, $serverOutDir, $packageDir, $target ) {
+function LayoutServerDirectory ( $projectDir, $serverOutDir, $packageDir, $target ) {
     write-host "Create package server directory layout..."
 
     $settingsTargetPath = [io.path]::combine($serverOutDir, "settings.default.json")
