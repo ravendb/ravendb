@@ -517,6 +517,7 @@ namespace Raven.Server.ServerWide
                         if (record.Topology.Count == 0)
                         {
                             DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
+                            OnTransactionDispose(context, index);
                             continue;
                         }
                     }
