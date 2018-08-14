@@ -45,8 +45,13 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                     }
                     else
                     {
-                        var convereted = EntityToBlittable.ConvertToEntity(typeof(T), null, val, conventions);
-                        results[key] = new CompareExchangeValue<T>(key, index, (T)convereted);
+                        T convereted;
+                        if (typeof(T) == typeof(BlittableJsonReaderObject))
+                            convereted = (T)(object)val;
+                        else
+                            convereted = (T)EntityToBlittable.ConvertToEntity(typeof(T), null, val, conventions);
+
+                        results[key] = new CompareExchangeValue<T>(key, index, convereted);
                     }
                 }
             }
