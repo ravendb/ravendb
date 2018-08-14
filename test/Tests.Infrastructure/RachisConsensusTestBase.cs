@@ -174,22 +174,28 @@ namespace Tests.Infrastructure
                     break;
                 }
                 var stream = tcpClient.GetStream();
-                rachis.AcceptNewConnection(stream, () => tcpClient.Client.Disconnect(false), tcpClient.Client.RemoteEndPoint, hello =>
+                try
                 {
-                    lock (this)
+                    rachis.AcceptNewConnection(stream, () => tcpClient.Client.Disconnect(false), tcpClient.Client.RemoteEndPoint, hello =>
                     {
-                        if (_rejectionList.TryGetValue(rachis.Url, out var set))
+                        lock (this)
                         {
-                            if (set.Contains(hello.DebugSourceIdentifier))
+                            if (_rejectionList.TryGetValue(rachis.Url, out var set))
                             {
-                                throw new InvalidComObjectException("Simulated failure");
+                                if (set.Contains(hello.DebugSourceIdentifier))
+                                {
+                                    throw new InvalidComObjectException("Simulated failure");
+                                }
                             }
+                            var connections = _connections.GetOrAdd(rachis.Url, _ => new ConcurrentSet<Tuple<string, TcpClient>>());
+                            connections.Add(Tuple.Create(hello.DebugSourceIdentifier, tcpClient));
                         }
-                        var connections = _connections.GetOrAdd(rachis.Url, _ => new ConcurrentSet<Tuple<string, TcpClient>>());
-                        connections.Add(Tuple.Create(hello.DebugSourceIdentifier, tcpClient));
-                    }
-                });
-
+                    });
+                }
+                catch
+                {
+                  // expected
+                }
             }
         }
 
