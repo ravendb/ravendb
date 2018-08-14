@@ -97,7 +97,8 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                         else
                         {
-                            includesCmd.AddRange(run.Includes);
+                            if(run != null)
+                                includesCmd.AddRange(run.Includes);
                             using (transformResult)
                             {
                                 if (transformResult == null)
