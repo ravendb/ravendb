@@ -36,6 +36,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Indexes.Static.Extensions;
+using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -54,19 +55,29 @@ namespace SlowTests.Server
             {
                 typeof(TransactionOperationsMerger.MergedTransactionCommand),
                 typeof(ExecuteRateLimitedOperations<>),
-                typeof(TransactionsRecordingCommand)
+                typeof(TransactionsRecordingCommand),
+                //Todo To check if it make sense to changed the accessibility of this type for adding it to the list and if not to find alternative
+                typeof(AbstractQueryRunner.BulkOperationCommand<>)
             };
 
-            var baseType = typeof(TransactionOperationsMerger.MergedTransactionCommand);
-            var types = baseType.Assembly.GetTypes();
-            var deriveTypes = types
-            .Where(t => baseType.IsAssignableFrom(t)
-                        && exceptions.Contains(t) == false);
-            Assert.All(deriveTypes, t =>
+            var commandBaseType = typeof(TransactionOperationsMerger.MergedTransactionCommand);
+            var types = commandBaseType.Assembly.GetTypes();
+            var commandDeriveTypes = types
+            .Where(t => commandBaseType.IsAssignableFrom(t)
+                        && exceptions.Contains(t) == false).ToList();
+
+            var iRecordableType = typeof(TransactionOperationsMerger.IReplayableCommandDto<>);
+            var genericTypes = iRecordableType.Assembly.GetTypes()
+                .Select(t => t
+                    .GetInterfaces()
+                    .Where(i => i.IsGenericType)
+                    .FirstOrDefault(i => iRecordableType.IsAssignableFrom(i.GetGenericTypeDefinition())))
+                .Where(t => t != null)
+                .Select(t => t.GetGenericArguments()[0]);
+
+            Assert.All(commandDeriveTypes, dt =>
             {
-                //Todo To consider how to check the deseialize possibility
-                var i = typeof(TransactionOperationsMerger.IRecordableCommand);
-                Assert.True(i.IsAssignableFrom(t), $"{t.Name} should implement {i.Name}");
+                Assert.True(genericTypes.Contains(dt), $"{dt.Name} should has equivalent dto - {dt.Name}Dto : {iRecordableType.Name}");
             });
         }
 
