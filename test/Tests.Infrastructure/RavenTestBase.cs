@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -18,6 +19,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -93,7 +95,6 @@ namespace FastTests
                 {
                     options = options ?? Options.Default;
                     var serverToUse = options.Server ?? Server;
-
                     var name = GetDatabaseName(caller);
 
                     if (options.ModifyDatabaseName != null)
@@ -254,7 +255,7 @@ namespace FastTests
                 throw new TimeoutException($"{te.Message} {Environment.NewLine} {te.StackTrace}{Environment.NewLine}Servers states:{Environment.NewLine}{GetLastStatesFromAllServersOrderedByTime()}");
             }
         }
-
+     
         protected string GetLastStatesFromAllServersOrderedByTime()
         {
             List<(string tag, RachisConsensus.StateTransition transition)> states = new List<(string tag, RachisConsensus.StateTransition transition)>();
@@ -607,6 +608,7 @@ namespace FastTests
             private Action<DatabaseRecord> _modifyDatabaseRecord;
             private Func<string, string> _modifyDatabaseName;
             private string _path;
+            private bool _isExternalReplicationEnabledForTests;
 
             public static readonly Options Default = new Options(true);
 
@@ -732,7 +734,7 @@ namespace FastTests
                     _clientCertificate = value;
                 }
             }
-
+         
             private void AssertNotFrozen()
             {
                 if (_frozen)
