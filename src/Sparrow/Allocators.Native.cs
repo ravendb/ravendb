@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Diagnostics;
+using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using Sparrow.Platform;
 using Sparrow.Utils;
@@ -62,6 +65,10 @@ namespace Sparrow
         private long _totalAllocated;
         private long _allocated;
 
+#if VALIDATE || DEBUG
+        private EnhancedStackTrace _initializeStackTrace;
+#endif
+
         public void Configure<TConfig>(ref NativeAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
         {
             if (!typeof(TOptions).GetTypeInfo().IsAssignableFrom(typeof(TConfig)))
@@ -96,6 +103,10 @@ namespace Sparrow
         public void Initialize(ref NativeAllocator<TOptions> allocator)
         {
             allocator._totalAllocated = 0;
+
+#if VALIDATE || DEBUG
+            allocator._initializeStackTrace = EnhancedStackTrace.Current();
+#endif
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -170,7 +181,25 @@ namespace Sparrow
         {
             if (allocator.Allocated != 0)
             {
-                throw new InvalidOperationException($"The allocator is leaking '{allocator.Allocated}' bytes of memory.");
+#if VALIDATE || DEBUG
+
+                StringBuilder stackFrameAppender = new StringBuilder();
+                using (var reader = new StringReader(allocator._initializeStackTrace.ToString()))
+                {
+                    int i = 0;
+                    string line = reader.ReadLine();
+                    while (line != null && i < 10)
+                    {
+                        stackFrameAppender.AppendLine(line);
+                        line = reader.ReadLine();
+                    }                   
+                }
+
+                string stackFrame = $"{Environment.NewLine}Construction Stack Trace: {Environment.NewLine}{stackFrameAppender}{Environment.NewLine}End Construction Stack Trace";                
+#else
+                string stackFrame = string.Empty;
+#endif                
+                throw new NotSupportedException ($"The allocator is leaking '{allocator.Allocated}' bytes of memory. {stackFrame}");
             }
         }
     }
