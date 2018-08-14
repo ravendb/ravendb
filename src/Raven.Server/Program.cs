@@ -190,10 +190,10 @@ namespace Raven.Server
                         }
                         catch (Exception e)
                         {
-                            var message = e.Message;
+                            string message = null;
                             if (e.InnerException is AddressInUseException)
                             {
-                                message +=
+                                message =
                                     $"{Environment.NewLine}Port might be already in use.{Environment.NewLine}Try running with an unused port.{Environment.NewLine}" +
                                     $"You can change the port using one of the following options:{Environment.NewLine}" +
                                     $"1) Change the ServerUrl property in setting.json file.{Environment.NewLine}" +
@@ -202,14 +202,22 @@ namespace Raven.Server
                                     "For more information go to https://ravendb.net/l/EJS81M/4.1";
                             }else if (e is SocketException && PlatformDetails.RunningOnPosix)
                             {
-                                message +=
+                                message =
                                     $"{Environment.NewLine}In Linux low-level port (below 1024) will need a special permission, if this is your case please run{Environment.NewLine}" +
                                     $"sudo setcap CAP_NET_BIND_SERVICE=+eip {typeof(RavenServer).Assembly.Location}";
                             }
 
                             if (Logger.IsOperationsEnabled)
+                            {
                                 Logger.Operations("Failed to initialize the server", e);
+                                Logger.Operations(message);
+                            }
+
                             Console.WriteLine(message);
+
+                            Console.WriteLine();
+
+                            Console.WriteLine(e);
 
                             return -1;
                         }
