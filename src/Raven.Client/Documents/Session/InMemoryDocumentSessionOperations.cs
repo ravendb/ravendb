@@ -842,11 +842,11 @@ more responsive application.
             {
                 foreach (var item in clusterTransactionOperations.StoreCompareExchange)
                 {
-                    var tuple = new Dictionary<string, object>
+                    var djv = new DynamicJsonValue
                     {
-                        ["Object"] = item.Value.Entity
+                        ["Object"] = EntityToBlittable.ConvertEntityToBlittable(item.Value.Entity, documentInfo: null)
                     };
-                    var blittable = EntityToBlittable.ConvertCommandToBlittable(tuple, Context);
+                    var blittable = Context.ReadObject(djv, item.Key);
                     result.SessionCommands.Add(new PutCompareExchangeCommandData(item.Key, blittable, item.Value.Index));
                 }
             }

@@ -8,6 +8,7 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.CompareExchange
 {
@@ -54,19 +55,18 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/cmpxchg?key={_key}&index={_index}";
-                //var tuple = ("Object", _value);
-                var tuple = new Dictionary<string, T>
+                var djv = new DynamicJsonValue
                 {
-                    ["Object"] = _value
+                    ["Object"] = EntityToBlittable.ConvertEntityToBlittable(_value, _conventions, ctx, _conventions.CreateSerializer(), documentInfo: null)
                 };
-                var blit = EntityToBlittable.ConvertCommandToBlittable(tuple, ctx);
+                var blittable = ctx.ReadObject(djv,_key);
 
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        ctx.Write(stream, blit);
+                        ctx.Write(stream, blittable);
                     })
                 };
                 return request;
