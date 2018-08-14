@@ -615,13 +615,10 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 using (docsContext.OpenReadTransaction())
                 {
-                    IncludeDocumentsCommand includeCmd = null;
-                    if (Subscription.Includes != null)
-                    {
-                        includeCmd = new IncludeDocumentsCommand(TcpConnection.DocumentDatabase.DocumentsStorage,
+                    var includeCmd = new IncludeDocumentsCommand(TcpConnection.DocumentDatabase.DocumentsStorage,
                                 docsContext, Subscription.Includes);
-                    }
-                    foreach (var result in _documentsFetcher.GetDataToSend(docsContext, _startEtag))
+                   
+                    foreach (var result in _documentsFetcher.GetDataToSend(docsContext, includeCmd, _startEtag))
                     {
                         _startEtag = result.Doc.Etag;
                         _lastChangeVector = string.IsNullOrEmpty(SubscriptionState.ChangeVectorForNextBatchStartingPoint)

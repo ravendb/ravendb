@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         var first = true;
 
-                        foreach (var itemDetails in fetcher.GetDataToSend(context, 0))
+                        foreach (var itemDetails in fetcher.GetDataToSend(context, includeCmd, 0))
                         {
                             if (itemDetails.Doc.Data == null)
                                 continue;
