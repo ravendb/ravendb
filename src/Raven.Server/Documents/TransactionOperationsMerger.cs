@@ -1212,12 +1212,19 @@ namespace Raven.Server.Documents
                             continue;
                         }
 
-                        var cmd = DeserializeCommand(strType, item, context, peepingTomStream);
-
-                        //Todo To remove check after all MergedTransactionCommand driven class include in switch
-                        cmd?.Execute(txCtx, null);
-                        commandsProgress++;
-                        UpdateGlobalReplicationInfoBeforeCommit(context);
+                        try
+                        {
+                            var cmd = DeserializeCommand(strType, item, context, peepingTomStream);
+                            cmd.Execute(txCtx, null);
+                            commandsProgress++;
+                            UpdateGlobalReplicationInfoBeforeCommit(context);
+                        }
+                        catch (Exception)
+                        {
+                            //Todo To accept exceptions that was thrown while recording
+                            txDisposable.Dispose();
+                            throw;
+                        }
 
                         yield return new ReplayProgress
                         {
@@ -1288,7 +1295,9 @@ namespace Raven.Server.Documents
                 case nameof(AdminRevisionsHandler.DeleteRevisionsCommand):
                     return jsonSerializer.Deserialize<DeleteRevisionsCommandDto>(reader);
                 case nameof(RevisionsOperations.DeleteRevisionsBeforeCommand):
-                    return jsonSerializer.Deserialize<DeleteRevisionsBeforeCommandDto>(reader);
+                    throw new ReplayTransactionsException(
+                        "Because this command is deleting according to revisions' date & the revisions that created by replaying have different date an in place decision needed to be made", 
+                        peepingTomStream);
                 case nameof(TombstoneCleaner.DeleteTombstonesCommand):
                     return jsonSerializer.Deserialize<DeleteTombstonesCommandDto>(reader);
                 case nameof(OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand):
@@ -1320,8 +1329,9 @@ namespace Raven.Server.Documents
                 {
                     Context = "Failed to generated peepedWindow: " + e;
                 }
-
             }
+
+            public override string Message => base.Message + ";\rContext:\r" + Context;
         }
 
         private class RecordingDetails

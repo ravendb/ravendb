@@ -270,11 +270,6 @@ namespace SlowTests.Server
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 database.DocumentsStorage.RevisionsStorage.Operations.DeleteRevisionsBefore("Users", DateTime.UtcNow);
 
-                using (var session = store.OpenSession())
-                {
-                    var revisions = session.Advanced.Revisions.GetFor<User>(id);
-                }
-
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
 
@@ -289,15 +284,18 @@ namespace SlowTests.Server
 
                 var command = new GetNextOperationIdCommand();
                 store.Commands().Execute(command);
-                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
-
-                using (var session = store.OpenSession())
+                Exception error = null;
+                try
                 {
-                    var revisions = session.Advanced.Revisions.GetFor<User>(id);
-
-                    //Assert
-                    //Todo To consider what need to be the result because the revisions are newer then the date of delete before 
+                    store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
                 }
+                catch (Exception e)
+                {
+                    error = e;
+                }
+                Assert.NotNull(error);
+                Assert.NotNull(error.InnerException);
+                Assert.True(error.InnerException.GetType() == typeof(InvalidOperationException));
             }
         }
 
@@ -351,7 +349,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        //        [Fact]
         //Todo To split the test considering how to assert each separately
         public async Task RecordingUpdateSiblingCurrentEtag_And_RecordingMergedUpdateDatabaseChangeVectorCommand()
         {
