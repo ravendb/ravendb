@@ -136,7 +136,7 @@ namespace Raven.Client.Util
             }
             
             tcpClient.NoDelay = true;            
-            tcpClient.LingerState = new LingerOption(true, 0);
+            tcpClient.LingerState = new LingerOption(true, 5);
 
             if (timeout.HasValue)
                 SetTimeouts(tcpClient, timeout.Value);
