@@ -20,9 +20,9 @@ namespace Tryouts
         {
             try
             {
-                using (var test = new RavenDB_11705())
+                using (var test = new RavenDB_11734())
                 {
-                    await test.CanHandleRevisionOperationBeingRolledBack();
+                    await test.Index_Queries_Should_Not_Return_Deleted_Documents();
                 }
             }
             catch (Exception e)

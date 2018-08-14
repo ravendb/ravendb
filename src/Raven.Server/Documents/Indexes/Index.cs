@@ -825,7 +825,7 @@ namespace Raven.Server.Documents.Indexes
                         stalenessReasons.Add(message);
                     }
 
-                    var hasTombstones = DocumentDatabase.DocumentsStorage.HasTombstonesWithDocumentEtagBetween(databaseContext,
+                    var hasTombstones = DocumentDatabase.DocumentsStorage.HasTombstonesWithEtagBetween(databaseContext,
                         collection,
                         lastProcessedTombstoneEtag,
                         cutoff.Value);
