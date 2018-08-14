@@ -268,8 +268,10 @@ namespace Raven.Tests.Issues
 
                     WaitForAllRequestsToComplete(server);
 
+                    WaitForIndexing(store);
+
                     //wait for indexing to complete and for document change notification to arrive
-                    Assert.True(canProceedEvent.Wait(Debugger.IsAttached ? TimeSpan.FromMinutes(30) : TimeSpan.FromSeconds(10)));
+                    Assert.True(canProceedEvent.Wait(TimeSpan.FromMinutes(60) ));
 
                     server.Server.ResetNumberOfRequests();
 
