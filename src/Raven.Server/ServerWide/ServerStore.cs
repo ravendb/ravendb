@@ -722,7 +722,7 @@ namespace Raven.Server.ServerWide
                 return;
 
             NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag,
-                NodeTag, _engine.CurrentTerm, GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails), 
+                NodeTag, _engine.CurrentTerm, _engine.CurrentState, GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails), 
                 DateTime.MinValue); 
             // we set the postpone time to the minimum in order to overwrite it and to send this notification every time when a new client connects. 
         }
