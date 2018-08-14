@@ -113,7 +113,7 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Flaky")]
         public void RequestsWillBumpRequestTimeMetric()
         {
             using (var store1 = CreateStore(configureStore: s => s.Conventions.FailoverBehavior = FailoverBehavior.AllowReadFromSecondariesWhenRequestTimeSlaThresholdIsReached))

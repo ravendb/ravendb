@@ -17,7 +17,7 @@ namespace Raven.Tests.FileSystem.Issues
 {
     public class RavenDB_3887 : RavenFilesTestBase
     {
-        [Theory]
+        [Theory(Skip = "Flaky")]
         [InlineData(4194304, "esent")]
         [InlineData(4194304, "voron")]
         [InlineData(4194305, "esent")]
