@@ -183,7 +183,6 @@ namespace Raven.Server.Routing
             }
 
             var authenticationStatus = feature?.Status;
-
             switch (route.AuthorizationStatus)
             {
                 case AuthorizationStatus.UnauthenticatedClients:
@@ -198,7 +197,7 @@ namespace Raven.Server.Routing
                             case RavenServer.AuthenticationStatus.NotYetValid:
                             case RavenServer.AuthenticationStatus.None:
                             case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
-                                UnlikelyFailAuthorization(context, database?.Name, feature);
+                                UnlikelyFailAuthorization(context, database?.Name, feature, route.AuthorizationStatus);
                                 return false;
                         }
                     }
@@ -217,7 +216,7 @@ namespace Raven.Server.Routing
                         case RavenServer.AuthenticationStatus.NotYetValid:
                         case RavenServer.AuthenticationStatus.None:
                         case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
-                            UnlikelyFailAuthorization(context, database?.Name, feature);
+                            UnlikelyFailAuthorization(context, database?.Name, feature, route.AuthorizationStatus);
                             return false;
                         case RavenServer.AuthenticationStatus.Allowed:
                             if (route.AuthorizationStatus == AuthorizationStatus.Operator || route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin)
@@ -225,7 +224,6 @@ namespace Raven.Server.Routing
 
                             if (database == null)
                                 return true;
-
                             if (feature.CanAccess(database.Name, route.AuthorizationStatus == AuthorizationStatus.DatabaseAdmin))
                                 return true;
 
@@ -250,10 +248,14 @@ namespace Raven.Server.Routing
             throw new ArgumentOutOfRangeException("Unknown route auth status: " + route.AuthorizationStatus);
         }
 
-        public void UnlikelyFailAuthorization(HttpContext context, string database, RavenServer.AuthenticateConnection feature)
+        public void UnlikelyFailAuthorization(HttpContext context, string database, 
+            RavenServer.AuthenticateConnection feature,
+            AuthorizationStatus authorizationStatus)
         {
             string message;
-            if (feature == null || feature.Status == RavenServer.AuthenticationStatus.None || feature.Status == RavenServer.AuthenticationStatus.NoCertificateProvided)
+            if (feature == null || 
+                feature.Status == RavenServer.AuthenticationStatus.None || 
+                feature.Status == RavenServer.AuthenticationStatus.NoCertificateProvided)
             {
                 message = "This server requires client certificate for authentication, but none was provided by the client.";
             }
@@ -292,6 +294,19 @@ namespace Raven.Server.Routing
                     message = "Access to the server was denied.";
                 }
             }
+            switch (authorizationStatus)
+            {
+                case AuthorizationStatus.ClusterAdmin:
+                    message += " ClusterAdmin access is required but not given to this certificate";
+                    break;
+                case AuthorizationStatus.Operator:
+                    message += " Operator/ClusterAdmin access is required but not given to this certificate";
+                    break;
+                case AuthorizationStatus.DatabaseAdmin:
+                    message += " DatabaseAdmin access is required but not given to this certificate";
+                    break;
+            }
+
             context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))

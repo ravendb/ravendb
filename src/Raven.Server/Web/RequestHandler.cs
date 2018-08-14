@@ -408,7 +408,8 @@ namespace Raven.Server.Web
                     if (Server.Configuration.Security.AuthenticationEnabled == false)
                         return true;
 
-                    Server.Router.UnlikelyFailAuthorization(HttpContext, null, feature);
+                    Server.Router.UnlikelyFailAuthorization(HttpContext, null, feature, 
+                        AuthorizationStatus.Operator);
                     return false;
                 case RavenServer.AuthenticationStatus.Operator:
                 case RavenServer.AuthenticationStatus.ClusterAdmin:
@@ -435,7 +436,7 @@ namespace Raven.Server.Web
                     if (Server.Configuration.Security.AuthenticationEnabled == false)
                         return true;
 
-                    Server.Router.UnlikelyFailAuthorization(HttpContext, dbName, null);
+                    Server.Router.UnlikelyFailAuthorization(HttpContext, dbName, null, requireAdmin ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser);
                     return false;
                 case RavenServer.AuthenticationStatus.ClusterAdmin:
                 case RavenServer.AuthenticationStatus.Operator:
@@ -443,7 +444,7 @@ namespace Raven.Server.Web
                 case RavenServer.AuthenticationStatus.Allowed:
                     if (dbName != null && feature.CanAccess(dbName, requireAdmin) == false)
                     {
-                        Server.Router.UnlikelyFailAuthorization(HttpContext, dbName, null);
+                        Server.Router.UnlikelyFailAuthorization(HttpContext, dbName, null, requireAdmin ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser);
                         return false;
                     }
 
