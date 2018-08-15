@@ -15,6 +15,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
@@ -443,22 +444,32 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var isExportCommand = command == "export";
                 if (isExportCommand == false)
                 {
+                    var errorReadTask = ReadOutput(process.StandardError);
+                    var outputReadTask = ReadOutput(process.StandardOutput);
+
+                    await Task.WhenAll(new Task[] {errorReadTask, outputReadTask}).ConfigureAwait(false);
+
+                    Debug.Assert(process.HasExited, "Migrator is still running!");
+
+                    if (process.ExitCode == -1)
+                    {
+                        await ExitWithException(errorReadTask, null).ConfigureAwait(false);
+                    }
+
                     try
                     {
-                        var line = process.StandardOutput.ReadLine();
+                        var line = await outputReadTask.ConfigureAwait(false);
                         using (var sw = new StreamWriter(ResponseBodyStream()))
                         {
                             await sw.WriteAsync(line);
                         }
+
+                        return;
                     }
                     catch (Exception e)
                     {
-                        var errorString = await ReadOutput(process.StandardError).ConfigureAwait(false);
-                        var killed = KillProcess(process);
-                        throw new InvalidOperationException($"Process error: {errorString}, exception: {e}, process killed: {killed}");
+                        await ExitWithException(errorReadTask, e).ConfigureAwait(false);
                     }
-
-                    return;
                 }
 
                 var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
@@ -512,6 +523,17 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     writer.WriteOperationId(context, operationId);
                 }
             }
+        }
+
+        private static async Task ExitWithException(Task<string> errorReadTask, Exception exception)
+        {
+            var errorString = await errorReadTask.ConfigureAwait(false);
+            if (exception == null)
+            {
+                throw new InvalidOperationException(errorString);
+            }
+
+            throw new InvalidOperationException($"Process error: {errorString}, exception: {exception}");
         }
 
         private FileInfo ResolveMigratorPath(MigrationConfiguration migrationConfiguration)

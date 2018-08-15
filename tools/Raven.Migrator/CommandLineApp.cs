@@ -118,7 +118,7 @@ namespace Raven.Migrator
         {
             cmd.Error.WriteLine(errMsg);
             cmd.ShowHelp();
-            return 1;
+            return -1;
         }
     }
 }
