@@ -13,14 +13,15 @@
                                 Migrator Path
                                 <small><i class="icon-info text-info"></i></small>
                             </label>
-                            <div class="flex-grow">
+                            <div class="flex-grow has-feedback">
                                 <input data-bind="textInput: migratorFullPath" type="text" class="form-control" placeholder="Full path to the migrator tool" />
+                                <span class="glyphicon glyphicon-ok text-success form-control-feedback" title="Raven.Migrator was found under specified path" data-bind="visible: migratorFullPath() && migratorFullPath.isValid() && !migratorFullPath.isValidating()"></span>
                             </div>
                         </div>
 
                         <div class="form-group" data-bind="validationElement: selectMigrationOption, validationOptions: { insertMessages: false }">
                             <label class="control-label">Database Source</label>
-                            <div class="flex-grow">
+                            <div>
                                 <div class="btn-group">
                                     <button type="button" class="btn btn-default"
                                             data-bind="click: _.partial(selectMigrationOption, 'MongoDB'), css: { active: selectMigrationOption() === 'MongoDB' }">
@@ -88,7 +89,7 @@
                                            data-toggle="dropdown"
                                            id="database-name"
                                            placeholder="Database Name"
-                                           data-bind="textInput: databaseName">
+                                           data-bind="textInput: databaseName, hasFocus: $root.databaseNameHasFocus">
                                     <ul class="dropdown-menu max-height" data-bind="foreach: createDatabaseNamesAutoCompleter(), autoComplete: '#database-name'">
                                         <li data-bind="click: $parent.selectDatabaseName.bind($parent, $data)">
                                             <a href="#" data-bind="text: $data"></a>
@@ -107,18 +108,16 @@
                                 <input class="styled" type="checkbox" id="migrate-all-collections" data-bind="checked: migrateAllCollections, disable: !hasCollectionsToMigrate()">
                                 <label for="migrate-all-collections">
                                     Migrate all collections
-                                    <span data-bind="if: hasCollectionsToMigrate">(<span data-bind="text: collectionsToMigrate().length"></span>)</span>
                                 </label>
                             </div>
                         </div>
                         <div class="form-group" data-bind="if: hasCollectionsToMigrate && !migrateAllCollections()">
                             <label class="control-label">Collections</label>
                             <div class="flex-grow">
-                                <label data-bind="text: migratingCollectionsText"></label>
                                 <div class="prop-table">
                                     <!-- ko foreach: collectionsToMigrate -->
                                     <div class="prop-table-row">
-                                        <div class="toggle">
+                                        <div class="checkbox">
                                             <input class="styled" type="checkbox" data-bind="checked: migrateCollection, attr: { 'id': 'migrate-collection' + $index() }">
                                             <label data-bind="attr: { 'for': 'migrate-collection' + $index() }"></label>
                                         </div>
@@ -137,13 +136,15 @@
                         </div>
                         <!-- /ko -->
 
-                        <!-- ko if: activeConfiguration -->
-                        <div class="form-group">
-                            <label class="control-label"></label>
+                        <div class="form-group" data-bind="visible: activeConfiguration">
+
+                            <label class="control-label" id="scriptPopover">
+                                <small><i class="icon-info text-info"></i></small>
+                            </label>
+                            
                             <div class="toggle">
                                 <input class="styled" type="checkbox" id="use-transform-script" data-bind="checked: showTransformScript">
-                                <label for="use-transform-script">Use Transform script</label>
-                                <a id="scriptPopover" tabindex="0"><small><i class="icon-info text-info"></i></small></a>
+                                <label for="use-transform-script" class="margin-right">Use Transform script</label>
                             </div>
                         </div>
 
@@ -155,13 +156,13 @@
                                 </pre>
                             </div>
                         </div>
-                        <!-- /ko -->
                     </div>
                 </div>
 
                 <hr />
-                <button class="btn btn-primary" type="submit" data-bind="css: { 'btn-spinner': spinners.migration() }, disable: spinners.migration">
-                    <span class="icon-import"></span> <span>Migrate Database</span>
+                <button class="btn btn-primary" type="submit" data-bind="css: { 'btn-spinner': spinners.migration() }, disable: spinners.migration() || !submitButtonEnabled()">
+                    <span class="icon-import"></span>
+                    <span data-bind="text: submitButtonText"></span>
                 </button>
             </form>
         </div>

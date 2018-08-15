@@ -1,7 +1,6 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
-type migrationOptions = "none" | "MongoDB" | "CosmosDB";
-type availableNoSqlCommands = "databases" | "collections" | "export";
+type migrationOptions = "MongoDB" | "CosmosDB";
 
 interface IMongoDbMigrationConfiguration extends IAbstractMigrationConfiguration {
     ConnectionString: string;
@@ -51,23 +50,11 @@ abstract class noSqlMigrationModel {
     databaseNames = ko.observableArray<string>([]);
     migrateAllCollections = ko.observable<boolean>(true);
     hasCollectionsToMigrate: KnockoutComputed<boolean>;
-    migratingCollectionsText: KnockoutComputed<string>;
-    actualCollectionsToMigrate: KnockoutComputed<collection[]>;
+    selectedCollectionsCount: KnockoutComputed<number>;
 
     constructor() {
         this.hasCollectionsToMigrate = ko.pureComputed(() => this.collectionsToMigrate().length > 0);
-
-        this.actualCollectionsToMigrate = ko.pureComputed(() => this.collectionsToMigrate().filter(x => x.migrateCollection()));
-
-        this.migratingCollectionsText = ko.pureComputed(() => {
-            const collectionsToMigrate = this.actualCollectionsToMigrate().length;
-            if (collectionsToMigrate === 0) {
-                return "No collections were selected for migration";
-            }
-
-            const pluralize = collectionsToMigrate > 1 ? "s" : "";
-            return `Migarte ${collectionsToMigrate} collection${pluralize}`;
-        });
+        this.selectedCollectionsCount = ko.pureComputed(() => this.collectionsToMigrate().filter(x => x.migrateCollection()).length);
     }
 
     createDatabaseNamesAutoCompleter() {
@@ -94,11 +81,13 @@ abstract class noSqlMigrationModel {
         this.migrateAllCollections(true);
     }
 
-    toDto(command: string): IAbstractMigrationConfiguration {
-        const collectionsToMigrate = this.migrateAllCollections() ? null : this.actualCollectionsToMigrate().map(x => x.toDto());
+    toDto(): IAbstractMigrationConfiguration {
+        const collectionsToMigrate = this.migrateAllCollections() 
+            ? null 
+            : this.collectionsToMigrate().filter(x => x.migrateCollection()).map(x => x.toDto());
         return {
             DatabaseName: this.databaseName(),
-            Command: command,
+            Command: null, // will be filled in later
             CollectionsToMigrate: collectionsToMigrate,
             ConsoleExport: true,
             ExportFilePath: null
@@ -106,13 +95,13 @@ abstract class noSqlMigrationModel {
     }
 }
 
-class mongoDbMigrationModel extends noSqlMigrationModel{
+class mongoDbMigrationModel extends noSqlMigrationModel {
     connectionString = ko.observable<string>();
     migrateGridFs = ko.observable<boolean>(false);
     hasGridFs = ko.observable<boolean>();
 
-    toDto(command: string): IMongoDbMigrationConfiguration {
-        const dto = super.toDto(command) as IMongoDbMigrationConfiguration;
+    toDto(): IMongoDbMigrationConfiguration {
+        const dto = super.toDto() as IMongoDbMigrationConfiguration;
         dto.ConnectionString = this.connectionString();
         dto.MigrateGridFS = this.migrateGridFs();
         return dto;
@@ -123,8 +112,8 @@ class cosmosDbMigrationModel extends noSqlMigrationModel {
     azureEndpointUrl = ko.observable<string>();
     primaryKey = ko.observable<string>();
 
-    toDto(command: string): ICosmosDbMigrationConfiguration {
-        const dto = super.toDto(command) as ICosmosDbMigrationConfiguration;
+    toDto(): ICosmosDbMigrationConfiguration {
+        const dto = super.toDto() as ICosmosDbMigrationConfiguration;
         dto.AzureEndpointUrl = this.azureEndpointUrl();
         dto.PrimaryKey = this.primaryKey();
         return dto;
@@ -132,7 +121,7 @@ class cosmosDbMigrationModel extends noSqlMigrationModel {
 }
 
 class migrateDatabaseModel {
-    selectMigrationOption = ko.observable<migrationOptions>("none");
+    selectMigrationOption = ko.observable<migrationOptions>();
     migratorFullPath = ko.observable<string>();
     showTransformScript = ko.observable<boolean>(false);
     transformScript = ko.observable<string>();
@@ -145,7 +134,7 @@ class migrateDatabaseModel {
     showCosmosDbOptions: KnockoutComputed<boolean>;
 
     validationGroup: KnockoutValidationGroup;
-    validationGroupDatabasesCommand: KnockoutValidationGroup;
+    validationGroupDatabaseNames: KnockoutValidationGroup;
 
     constructor() {
         this.initObservables();
@@ -186,8 +175,8 @@ class migrateDatabaseModel {
         this.selectMigrationOption.extend({
             validation: [
                 {
-                    validator: (value: migrationOptions) => value !== "none",
-                    message: "Please choose a database source"
+                    validator: (value: migrationOptions) => !!value,
+                    message: "Please choose source"
                 }
             ]
         });
@@ -246,7 +235,7 @@ class migrateDatabaseModel {
             primaryKey: this.cosmosDbConfiguration.primaryKey
         });
 
-        this.validationGroupDatabasesCommand = ko.validatedObservable({
+        this.validationGroupDatabaseNames = ko.validatedObservable({
             migratorFullPath: this.migratorFullPath,
             selectMigrationOption: this.selectMigrationOption,
             connectionString: this.mongoDbConfiguration.connectionString,
@@ -255,13 +244,13 @@ class migrateDatabaseModel {
         });
     }
 
-    toDto(command: availableNoSqlCommands): Raven.Server.Smuggler.Migration.MigrationConfiguration {
+    toDto(): Raven.Server.Smuggler.Migration.MigrationConfiguration {
         const activeConfiguration = this.activeConfiguration();
         if (!activeConfiguration) {
             return null;
         }
 
-        const inputConfiguration = activeConfiguration.toDto(command);
+        const inputConfiguration = activeConfiguration.toDto();
 
         const type = this.selectMigrationOption().toLowerCase();
         return {

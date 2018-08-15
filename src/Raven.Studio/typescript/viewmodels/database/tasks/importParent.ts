@@ -23,7 +23,7 @@ class importParent extends viewModelBase {
                     route: 'databases/tasks/import/migrateRavenDB',
                     moduleId: 'viewmodels/database/tasks/migrateRavenDbDatabase',
                     title: 'Import database from another RavenDB',
-                    tabName: "From another RavenDB Server",
+                    tabName: "From RavenDB",
                     nav: true,
                     dynamicHash: appUrl.forCurrentDatabase().migrateRavenDbDatabaseUrl
                 },
@@ -47,7 +47,7 @@ class importParent extends viewModelBase {
                     route: 'databases/tasks/import/migrate',
                     moduleId: 'viewmodels/database/tasks/migrateDatabase',
                     title: 'Migrate database',
-                    tabName: "From another database",
+                    tabName: "From other",
                     nav: true,
                     dynamicHash: appUrl.forCurrentDatabase().migrateDatabaseUrl
                 }

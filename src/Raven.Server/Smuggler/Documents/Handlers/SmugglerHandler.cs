@@ -393,36 +393,30 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var blittable = await context.ReadForMemoryAsync(RequestBodyStream(), "migration-configuration");
                 var migrationConfiguration = JsonDeserializationServer.MigrationConfiguration(blittable);
 
-                if (string.IsNullOrWhiteSpace(migrationConfiguration.DatabaseTypeName))
-                    throw new ArgumentException("DatabaseTypeName cannot be null or empty");
-
                 if (string.IsNullOrWhiteSpace(migrationConfiguration.MigratorFullPath))
                     throw new ArgumentException("MigratorFullPath cannot be null or empty");
 
                 if (migrationConfiguration.InputConfiguration == null)
                     throw new ArgumentException("InputConfiguration cannot be null");
 
-                var migratorDirectory = new DirectoryInfo(migrationConfiguration.MigratorFullPath);
-                if (migratorDirectory.Exists == false)
-                    throw new InvalidOperationException($"Directory {migrationConfiguration.MigratorFullPath} doesn't exist");
-
                 if (migrationConfiguration.InputConfiguration.TryGet("Command", out string command) == false)
                     throw new ArgumentException("Cannot find the Command property in the InputConfiguration");
 
-                var migratorFileName = PlatformDetails.RunningOnPosix
-                    ? "Raven.Migrator"
-                    : "Raven.Migrator.exe";
-
-                var path = Path.Combine(migratorDirectory.FullName, migratorFileName);
-                var migratorFile = new FileInfo(path);
-                if (migratorFile.Exists == false)
-                    throw new InvalidOperationException($"The file '{migratorFileName}' doesn't exist in path: {migrationConfiguration.MigratorFullPath}");
-
+                var migratorFile = ResolveMigratorPath(migrationConfiguration);
+                if (command == "validateMigratorPath")
+                {
+                    NoContentStatus();
+                    return;
+                }
+                
+                if (string.IsNullOrWhiteSpace(migrationConfiguration.DatabaseTypeName))
+                    throw new ArgumentException("DatabaseTypeName cannot be null or empty");
+                
                 var processStartInfo = new ProcessStartInfo
                 {
-                    FileName = migratorFile.Name,
-                    Arguments = $"{migratorFileName} {migrationConfiguration.DatabaseTypeName}",
-                    WorkingDirectory = migrationConfiguration.MigratorFullPath,
+                    FileName = migratorFile.FullName,
+                    Arguments = $"{migrationConfiguration.DatabaseTypeName}",
+                    WorkingDirectory = migratorFile.Directory.FullName,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -518,6 +512,24 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     writer.WriteOperationId(context, operationId);
                 }
             }
+        }
+
+        private FileInfo ResolveMigratorPath(MigrationConfiguration migrationConfiguration)
+        {
+            var migratorDirectory = new DirectoryInfo(migrationConfiguration.MigratorFullPath);
+            if (migratorDirectory.Exists == false)
+                throw new InvalidOperationException($"Directory {migrationConfiguration.MigratorFullPath} doesn't exist");
+
+            var migratorFileName = PlatformDetails.RunningOnPosix
+                ? "Raven.Migrator"
+                : "Raven.Migrator.exe";
+
+            var path = Path.Combine(migratorDirectory.FullName, migratorFileName);
+            var migratorFile = new FileInfo(path);
+            if (migratorFile.Exists == false)
+                throw new InvalidOperationException($"The file '{migratorFileName}' doesn't exist in path: {migrationConfiguration.MigratorFullPath}");
+
+            return migratorFile;
         }
 
         private static bool KillProcess(Process process)
