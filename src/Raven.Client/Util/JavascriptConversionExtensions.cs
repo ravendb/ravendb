@@ -385,6 +385,8 @@ namespace Raven.Client.Util
                             }
                             return;
                         }
+                    case "Single":
+                    case "SingleOrDefault":
                     case "FirstOrDefault":
                     case "First":
                         {
