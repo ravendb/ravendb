@@ -66,7 +66,7 @@ class cluster extends viewModelBase {
 
         this.graph.init($("#clusterGraphContainer"), this.topology().nodes().length);
 
-        this.graph.draw(this.topology().nodes(), this.topology().leader());
+        this.graph.draw(this.topology().nodes(), this.topology().leader(), this.topology().isPassive());
 
         const serverWideClient = changesContext.default.serverNotifications();
 
@@ -211,7 +211,7 @@ class cluster extends viewModelBase {
 
     private refresh() {
         $('.cluster [data-toggle="tooltip"]').tooltip();
-        this.graph.draw(this.topology().nodes(), this.topology().leader());
+        this.graph.draw(this.topology().nodes(), this.topology().leader(), this.topology().isPassive());
     }
 
     showErrorDetails(tag: string) {
