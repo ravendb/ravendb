@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Operations.CompareExchange;
@@ -19,7 +16,8 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options: new Options
             {
-                ModifyDocumentStore = ss => ss.Conventions.CustomizeJsonSerializer = s => {
+                ModifyDocumentStore = ss => ss.Conventions.CustomizeJsonSerializer = s =>
+                {
                     s.ContractResolver = new CamelCasePropertyNamesContractResolver();
                 }
             }))
