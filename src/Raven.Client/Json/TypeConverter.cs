@@ -76,10 +76,17 @@ namespace Raven.Client.Json
             {
                 var serializer = conventions.CreateSerializer();
 
+                writer.WriteStartObject();
+                writer.WritePropertyName("Value");
+
                 serializer.Serialize(writer, value);
+
+                writer.WriteEndObject();
+
                 writer.FinalizeDocument();
 
-                return writer.CreateReader();
+                var reader = writer.CreateReader();
+                return reader["Value"];
             }
         }
     }
