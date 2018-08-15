@@ -189,13 +189,37 @@ namespace Raven.Server.Documents
             protected class EnabledRecordingState : RecordingState
             {
                 private readonly TransactionOperationsMerger _txOpMerger;
-                private readonly Stream _recordingFileStream;
+                private Stream _recordingStream;
                 private bool _isDisposed = false;
 
-                public EnabledRecordingState(TransactionOperationsMerger txOpMerger, Stream recordingFileStream)
+                public EnabledRecordingState(TransactionOperationsMerger txOpMerger)
                 {
                     _txOpMerger = txOpMerger;
-                    _recordingFileStream = recordingFileStream;
+                }
+
+                public void Init(string filePath)
+                {
+                    var recordingFileStream = new FileStream(filePath, FileMode.Create);
+                    _recordingStream = new GZipStream(recordingFileStream, CompressionMode.Compress);
+
+                    try
+                    {
+                        using (_txOpMerger._parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (var writer = new BlittableJsonTextWriter(context, _recordingStream))
+                        {
+                            writer.WriteStartArray();
+
+                            var commandDetails = new StartRecordingDetails();
+                            var commandDetailsReader = SerializeRecordingCommandDetails(context, commandDetails);
+
+                            context.Write(writer, commandDetailsReader);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        _recordingStream.Dispose();
+                        throw;
+                    }
                 }
 
                 public override void Record(DocumentsOperationContext context, MergedTransactionCommand operation)
@@ -223,7 +247,7 @@ namespace Raven.Server.Documents
                 private void Record(RecordingDetails commandDetails, JsonOperationContext context)
                 {
                     using (var commandDetailsReader = SerializeRecordingCommandDetails(context, commandDetails))
-                    using (var writer = new BlittableJsonTextWriter(context, _recordingFileStream))
+                    using (var writer = new BlittableJsonTextWriter(context, _recordingStream))
                     {
                         writer.WriteComma();
                         context.Write(writer, commandDetailsReader);
@@ -251,12 +275,12 @@ namespace Raven.Server.Documents
 
                     using (_txOpMerger._parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     {
-                        using (var writer = new BlittableJsonTextWriter(ctx, _recordingFileStream))
+                        using (var writer = new BlittableJsonTextWriter(ctx, _recordingStream))
                         {
                             writer.WriteEndArray();
                         }
                     }
-                    _recordingFileStream.Dispose();
+                    _recordingStream.Dispose();
                 }
             }
 
@@ -289,21 +313,9 @@ namespace Raven.Server.Documents
                         return;
                     }
 
-                    var recordingFileStream = new FileStream(_filePath, FileMode.Create);
-                    var gZipRecordingFileStream = new GZipStream(recordingFileStream, CompressionMode.Compress);
-
-                    using (_txOpMerger._parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (var writer = new BlittableJsonTextWriter(context, gZipRecordingFileStream))
-                    {
-                        writer.WriteStartArray();
-
-                        var commandDetails = new StartRecordingDetails();
-                        var commandDetailsReader = SerializeRecordingCommandDetails(context, commandDetails);
-
-                        context.Write(writer, commandDetailsReader);
-                    }
-
-                    state = new EnabledRecordingState(_txOpMerger, gZipRecordingFileStream);
+                    var enabledRecordingState = new EnabledRecordingState(_txOpMerger);
+                    enabledRecordingState.Init(_filePath);
+                    state = enabledRecordingState;
                 }
 
                 public override void Dispose()
