@@ -190,6 +190,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
                         report.NumberOfDocuments = documentsStorage.GetNumberOfDocuments(context);
                         report.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                        report.LastCompletedClusterTransaction = dbInstance.LastCompletedClusterTransaction;
                         report.UpTime = now - dbInstance.StartTime;
 
                         foreach (var outgoing in dbInstance.ReplicationLoader.OutgoingHandlers)

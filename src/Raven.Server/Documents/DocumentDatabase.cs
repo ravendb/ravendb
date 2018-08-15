@@ -378,7 +378,10 @@ namespace Raven.Server.Documents
         }
 
         private long? _nextClusterCommand;
-     
+        private long _lastCompletedClusterTransaction;
+        public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
+        private int _clusterTransactionDelayOnFailure = 1000;
+
         private async Task ExecuteClusterTransactionTask()
         {
             while (DatabaseShutdown.IsCancellationRequested == false)
@@ -395,7 +398,7 @@ namespace Raven.Server.Documents
                     try
                     {
                         var batch = new List<ClusterTransactionCommand.SingleClusterDatabaseCommand>(
-                            ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand));
+                            ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take:  256));
 
                         if (batch.Count == 0)
                         {
@@ -418,8 +421,7 @@ namespace Raven.Server.Documents
                         }
                         foreach (var command in batch)
                         {
-                            OnClusterTransactionCompletion(command.Index, mergedCommands);
-                            _nextClusterCommand = command.PreviousCount + command.Commands.Length;
+                            OnClusterTransactionCompletion(command, mergedCommands);
                         }
                     }
                     catch (Exception e)
@@ -433,8 +435,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        private int _clusterTransactionDelayOnFailure = 1000;
-
         private async Task ExecuteClusterTransactionOneByOne(List<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
         {
             foreach (var command in batch)
@@ -447,13 +447,13 @@ namespace Raven.Server.Documents
                 try
                 {
                     await TxMerger.Enqueue(mergedCommand).WithCancellation(DatabaseShutdown);
-                    OnClusterTransactionCompletion(command.Index, mergedCommand);
-                    _nextClusterCommand = command.PreviousCount + command.Commands.Length;
+                    OnClusterTransactionCompletion(command, mergedCommand);
+                    
                     _clusterTransactionDelayOnFailure = 1000;
                 }
                 catch (Exception e)
                 {
-                    OnClusterTransactionCompletion(command.Index, mergedCommand, exception: e);
+                    OnClusterTransactionCompletion(command, mergedCommand, exception: e);
                     NotificationCenter.Add(AlertRaised.Create(
                         Name,
                         "Cluster transaction failed to execute",
@@ -473,12 +473,12 @@ namespace Raven.Server.Documents
             }
         }
 
-
-        private void OnClusterTransactionCompletion(long index,
+        private void OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command,
             BatchHandler.ClusterTransactionMergedCommand mergedCommands, Exception exception = null)
         {
             try
             {
+                var index = command.Index;
                 var options = mergedCommands.Options[index];
                 if (exception == null)
                 {
@@ -496,6 +496,8 @@ namespace Raven.Server.Documents
                         IndexTask = indexTask,
                     };
                     ClusterTransactionWaiter.SetResult(options.TaskId, index, result);
+                    _nextClusterCommand = command.PreviousCount + command.Commands.Length;
+                    _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
                     return;
                 }
 

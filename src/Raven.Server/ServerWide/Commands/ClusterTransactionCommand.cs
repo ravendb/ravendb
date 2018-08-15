@@ -271,13 +271,25 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        public class SingleClusterDatabaseCommand
+        public class SingleClusterDatabaseCommand : IDynamicJson
         {
             public ClusterTransactionOptions Options;
             public BlittableJsonReaderArray Commands;
             public long Index;
             public long PreviousCount;
             public string Database;
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(Database)] = Database,
+                    [nameof(PreviousCount)] = PreviousCount,
+                    [nameof(Index)] = Index,
+                    [nameof(Options)] = Options.ToJson(),
+                    [nameof(Index)] = new DynamicJsonArray(Commands)
+                };
+            }
         }
 
         public static SingleClusterDatabaseCommand ReadSingleCommand(TransactionOperationContext context, string database, long? fromCount)

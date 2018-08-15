@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -42,6 +44,22 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     ["tx-info"] = ToJson(results)
                 });
             }
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/admin/debug/clustertxinfo", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
+        public Task ClusterTxInfo()
+        {
+            var from = GetLongQueryString("from", false);
+            var take = GetIntValueQueryString("take", false) ?? int.MaxValue;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, new DynamicJsonArray(ClusterTransactionCommand.ReadCommandsBatch(context, Database.Name, from, take)));
+            }
+
             return Task.CompletedTask;
         }
 

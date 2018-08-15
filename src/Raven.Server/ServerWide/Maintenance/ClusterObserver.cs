@@ -360,8 +360,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (nodeReport.Report.TryGetValue(database, out var report) == false)
                     return null;
 
-                var last = ChangeVectorUtils.GetEtagById(report.DatabaseChangeVector, record.Topology.DatabaseTopologyIdBase64);
-                commandCount = Math.Min(commandCount, last);
+                commandCount = Math.Min(commandCount, report.LastCompletedClusterTransaction);
             }
 
             if (commandCount <= record.TruncatedClusterTransactionCommandsCount)
