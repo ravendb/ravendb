@@ -37,10 +37,12 @@ using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -348,54 +350,36 @@ namespace SlowTests.Server
                 }
             }
         }
-
-        //        [Fact]
-        //Todo To split the test considering how to assert each separately
-        public async Task RecordingUpdateSiblingCurrentEtag_And_RecordingMergedUpdateDatabaseChangeVectorCommand()
+        [Fact]
+        public async Task RecordingUpdateSiblingCurrentEtag()
         {
             var recordFilePath = NewDataPath();
 
-            var leader = await CreateRaftClusterAndGetLeader(2);
-            var dbName = GetDatabaseName();
-            var (_, servers) = await CreateDatabaseInCluster(dbName, 2, leader.WebUrl);
+            const int expectedEtag = 5;
+            var senderDatabaseId = Guid.NewGuid().ToString();
 
-            const string id = "UsersA-1";
-            var user = new User
+            using (var store = GetDocumentStore())
             {
-                Name = "Avi"
-            };
 
-            using (var master = new DocumentStore
-            {
-                Database = dbName,
-                Conventions = new DocumentConventions
-                {
-                    DisableTopologyUpdates = true
-                },
-                Urls = new[] { servers[0].WebUrl }
-            }.Initialize())
-            using (var slave = new DocumentStore
-            {
-                Database = dbName,
-                Conventions = new DocumentConventions
-                {
-                    DisableTopologyUpdates = true
-                },
-                Urls = new[] { servers[1].WebUrl }
-            }.Initialize())
-            {
                 //Recording
-                slave.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
 
-                master.Commands().Put(id, null, user);
+                var message = new ReplicationMessageReply
+                {
+                    Type = ReplicationMessageReply.ReplyType.Ok,
+                    MessageType = "Heartbeat",
+                    NodeTag = "C",
+                    CurrentEtag = expectedEtag,
+                    DatabaseId = senderDatabaseId,
+                };
 
-                await WaitFor(() =>
-                    null != slave.Commands().Get(id));
+                var command = new OutgoingReplicationHandler.UpdateSiblingCurrentEtag(message, new AsyncManualResetEvent());
+                command.Init();
 
-                //Todo To think how to wait for tested commands
-                await Task.Delay(TimeSpan.FromSeconds(15));
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await database.TxMerger.Enqueue(command);
 
-                slave.Maintenance.Send(new StopTransactionsRecordingOperation());
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }
 
             //Replay
@@ -406,8 +390,55 @@ namespace SlowTests.Server
                 store.Commands().Execute(command);
                 store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
 
-                //Assert
-                //Todo To think how to assert
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    //Assert
+                    var actualEtag = DocumentsStorage.GetLastReplicatedEtagFrom(context, senderDatabaseId);
+                    Assert.Equal(expectedEtag, actualEtag);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task RecordingMergedUpdateDatabaseChangeVectorCommand()
+        {
+            var recordFilePath = NewDataPath();
+
+            var expectedChangeVector = "A:1-r8gQ6pvUAEyEWKO64hoG5A";
+
+            using (var store = GetDocumentStore())
+            {
+
+                //Recording
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+
+                var command = new IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand(
+                    expectedChangeVector, 5, Guid.NewGuid().ToString(), new AsyncManualResetEvent());
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await database.TxMerger.Enqueue(command);
+
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+            }
+
+            //Replay
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
+            {
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    //Assert
+                    var actualChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                    Assert.Equal(expectedChangeVector, actualChangeVector);
+                }
             }
         }
 

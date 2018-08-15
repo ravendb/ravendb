@@ -1209,7 +1209,7 @@ namespace Raven.Server.Documents
                                 var cmd = DeserializeCommand(strType, readersItr.Current, context, peepingTomStream);
                                 cmd.ExecuteDirectly(txCtx);
                                 commandsProgress++;
-                                UpdateGlobalReplicationInfoBeforeCommit(context);
+                                UpdateGlobalReplicationInfoBeforeCommit(txCtx);
                             }
                             catch (Exception)
                             {
