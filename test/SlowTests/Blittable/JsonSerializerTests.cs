@@ -164,7 +164,6 @@ namespace SlowTests.Blittable
                     }
                 }
 
-                //Todo To check how to force test fail if actual.BlittableObject is on writeContext 
                 Assert.Equal(expected, actual.LazyString);
             }
         }
@@ -201,7 +200,6 @@ namespace SlowTests.Blittable
                     }
                 }
 
-                //Todo To check how to force test fail if actual.BlittableObject is on writeContext 
                 Assert.Equal(expected, actual.BlittableObject);
             }
         }
@@ -286,7 +284,9 @@ namespace SlowTests.Blittable
         public void JsonSerialize_WhenNestedBlittableObjectIsProperty_ShouldSerialize()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonWriter(context))
+            //TODO To consider if should support direct couple of write on the same context
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context2))
+            using (var writer = new BlittableJsonWriter(context2))
             {
                 var data = new { ParentProperty = new { NestedProperty = "Some Value" } };
                 var parentBlittable = EntityToBlittable.ConvertCommandToBlittable(data, context);
@@ -305,7 +305,7 @@ namespace SlowTests.Blittable
                 //Assert
                 var reader = writer.CreateReader();
                 reader.TryGet(nameof(Command.BlittableObject), out BlittableJsonReaderObject actual);
-                Assert.Equal(parentBlittable, actual);
+                Assert.Equal(expected, actual);
             }
         }
 

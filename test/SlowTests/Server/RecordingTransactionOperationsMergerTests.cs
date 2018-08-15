@@ -286,18 +286,13 @@ namespace SlowTests.Server
 
                 var command = new GetNextOperationIdCommand();
                 store.Commands().Execute(command);
-                Exception error = null;
-                try
+
+                var error = Assert.Throws<RavenException>(() =>
                 {
                     store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
-                }
-                catch (Exception e)
-                {
-                    error = e;
-                }
-                Assert.NotNull(error);
-                Assert.NotNull(error.InnerException);
-                Assert.True(error.InnerException.GetType() == typeof(InvalidOperationException));
+                });
+
+                Assert.IsType<InvalidOperationException>(error.InnerException);
             }
         }
 

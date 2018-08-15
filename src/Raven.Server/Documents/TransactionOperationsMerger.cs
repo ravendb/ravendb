@@ -733,7 +733,7 @@ namespace Raven.Server.Documents
                             return;
                         }
 
-                        //_recordingState?.Record(context, TxInstruction.DisposeTx, previous.Disposed == false);
+                        _recordingState?.Record(context, TxInstruction.DisposePrevTx, previous.Disposed == false);
                         previous.Dispose();
 
                         switch (result)
@@ -1122,9 +1122,8 @@ namespace Raven.Server.Documents
             Rollback,
             DisposeTx,
             BeginAsyncCommitAndStartNewTransaction,
-
-            //Todo I think this is not relevant all the async instruction can run as one unit in  BeginAsyncCommitAndStartNewTransaction
-            EndAsyncCommit
+            EndAsyncCommit,
+            DisposePrevTx
         }
 
         private RecordingState _recordingState = null;
@@ -1151,6 +1150,7 @@ namespace Raven.Server.Documents
         {
             DocumentsOperationContext txCtx = null;
             IDisposable txDisposable = null;
+            DocumentsTransaction previousTx = null;
 
             using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.GetManagedBuffer(out var buffer))
@@ -1189,16 +1189,15 @@ namespace Raven.Server.Documents
                                         txDisposable.Dispose();
                                         break;
                                     case TxInstruction.BeginAsyncCommitAndStartNewTransaction:
-                                        var previousTx = txCtx.Transaction;
+                                        previousTx = txCtx.Transaction;
                                         txCtx.Transaction = txCtx.Transaction.BeginAsyncCommitAndStartNewTransaction();
                                         txDisposable = txCtx.Transaction;
-
-                                        previousTx.EndAsyncCommit();
-                                        previousTx.Dispose();
                                         break;
                                     case TxInstruction.EndAsyncCommit:
-                                        //Todo I think this is not relevant all the async instruction can run as one unit in  BeginAsyncCommitAndStartNewTransaction
-                                        //previousTx.EndAsyncCommit();
+                                        previousTx.EndAsyncCommit();
+                                        break;
+                                    case TxInstruction.DisposePrevTx:
+                                        previousTx.Dispose();
                                         break;
                                 }
                                 continue;
@@ -1213,7 +1212,7 @@ namespace Raven.Server.Documents
                             }
                             catch (Exception)
                             {
-                                //Todo To accept exceptions that was thrown while recording
+                                //TODO To accept exceptions that was thrown while recording
                                 txDisposable.Dispose();
                                 throw;
                             }

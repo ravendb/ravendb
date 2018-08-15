@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Handlers
                     foreach (var replayProgress in Database.TxMerger.Replay(replayStream))
                     {
                         commandsProgress = replayProgress.CommandsProgress;
-                        //Todo Maybe should be relative to time of size
+                        //TODO Maybe should be relative to time or size
                         if (replayProgress.CommandsProgress % commandAmountBetweenRespond == 0)
                         {
                             onProgress(new ReplayTrxProgress

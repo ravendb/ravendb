@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Revisions
                 return new DeleteRevisionsBeforeCommandDto
                 {
                     Collection = _collection,
-                    //Todo To consider what need to be the result because while replying the revisions are newer then the date of delete before 
+                    //TODO To consider what should be the result because while replaying, the revisions are newer then the date of recorded DeleteRevisionsBeforeCommand 
                     Time = _time
                 };
             }

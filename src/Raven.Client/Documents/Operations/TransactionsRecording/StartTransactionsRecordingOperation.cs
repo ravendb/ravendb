@@ -41,7 +41,6 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
                     Content = new BlittableJsonContent(stream =>
                     {
                         var jsonReaderObject = EntityToBlittable.ConvertCommandToBlittable(
-                            //Todo To think where it should be created
                                 new Parameters{ File = _filePath },
                                 ctx
                             );
@@ -52,7 +51,6 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
             }
         }
 
-        //Todo To think where to put this 
         public class Parameters
         {
             public string File { get; set; }

@@ -52,7 +52,7 @@ namespace Raven.Server.Json.Converters
                 throw new SerializationException($"Try to read {nameof(Slice)} from non string value");
             }
 
-            //Todo To create slice by JsonOperationContext
+            //TODO To create slice by JsonOperationContext
             if (!(blittableReader.Context is DocumentsOperationContext context))
             {
                 throw new SerializationException($"{nameof(DocumentsOperationContext)} must to be used for reading {nameof(Slice)}");
