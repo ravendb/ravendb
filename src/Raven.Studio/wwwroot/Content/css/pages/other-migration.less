@@ -1,0 +1,102 @@
+.migrate-database {
+    .prop-table {
+        display: grid;
+        grid-template-columns: auto auto auto auto 1fr;
+    }
+
+    .prop-table, .inner-table {
+        grid-column: ~"1/-1";
+
+        .prop-table-row {
+            display: contents;
+
+            .checkbox {
+                grid-column-start: 1;
+            }
+            .name {
+                line-height: 30px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+        }
+    }
+
+    .arrow {
+        padding: 0 @grid-gutter-width/2;
+        line-height: 30px;
+
+        i {
+            font-size: 14px;
+            color: @gray;
+            opacity: .8;
+        }
+    }
+
+    .inline-edit {
+        .static {
+            display: flex;
+            align-items: center;
+            height: 29px;
+        }
+
+        .raven-property-name {
+            flex-grow: 1;
+            margin-right: @grid-gutter-width/2;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .raven-property-type {
+            width: 85px;
+        }
+    }
+
+    .inline-edit {
+        border: solid 1px transparent;
+        padding-left: @grid-gutter-width/4;
+        position: relative;
+        height: 30px;
+        padding-right: 30px;
+
+        input {
+            display: none;
+            position: absolute;
+            top: -1px;
+            bottom: -1px;
+            left: -1px;
+            right: -1px;
+        }
+
+        &.edit-mode {
+            input {
+                display: block;
+                z-index: 2;
+                padding-left: @grid-gutter-width/4;
+                padding-right: @grid-gutter-width/4;
+            }
+
+            .static {
+                visibility: hidden;
+                z-index: 1;
+            }
+        }
+
+        &:hover:not(.edit-mode):not(.edit-disabled) {
+            border: solid 1px @gray;
+            position: relative;
+
+            &:after {
+                position: absolute;
+                right: 0px;
+                top: 0;
+                bottom: 0;
+                content: "\e92a";
+                font-family: 'icomoon' !important;
+                background-color: @gray;
+                padding: 2px 4px;
+            }
+
+            cursor: pointer;
+        }
+    }
+}

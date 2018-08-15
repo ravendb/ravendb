@@ -6,20 +6,19 @@ import eventsCollector = require("common/eventsCollector");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import defaultAceCompleter = require("common/defaultAceCompleter");
 import popoverUtils = require("common/popoverUtils");
-
-interface databasesInfo {
-    Databases: Array<string>;
-}
-
-interface collectionInfo {
-    Collections: Array<string>;
-    HasGridFS: boolean;
-}
+import generalUtils = require("common/generalUtils");
+import recentError = require("common/notifications/models/recentError");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 
 class migrateDatabase extends viewModelBase {
 
     model = new migrateDatabaseModel();
     completer = defaultAceCompleter.completer();
+    
+    submitButtonEnabled: KnockoutComputed<boolean>;
+    submitButtonText: KnockoutComputed<string>;
+    
+    databaseNameHasFocus = ko.observable<boolean>(false);
 
     spinners = {
         getDatabaseNames: ko.observable<boolean>(false),
@@ -31,22 +30,75 @@ class migrateDatabase extends viewModelBase {
         super();
 
         aceEditorBindingHandler.install();
+        this.initObservables();
+        this.initValidation();
+        
+        this.databaseNameHasFocus.subscribe(focus => {
+            if (focus) {
+                const configuration = this.model.activeConfiguration();
+                
+                configuration.databaseNames([]);
+                
+                viewHelpers.asyncValidationCompleted(this.model.validationGroupDatabaseNames, () => {
+                   if (this.isValid(this.model.validationGroupDatabaseNames)) {
+                       this.getDatabases();
+                   }
+                });
+            }
+        });
+        
+        const getCollectionsDebounced = _.debounce(() => this.getCollections(), 500);
+        
+        const mongoConfiguration = this.model.mongoDbConfiguration;
+        mongoConfiguration.connectionString.subscribe(() => getCollectionsDebounced());
+        mongoConfiguration.databaseName.subscribe(() => getCollectionsDebounced());
+        
+        const cosmosConfiguration = this.model.cosmosDbConfiguration;
+        cosmosConfiguration.azureEndpointUrl.subscribe(() => getCollectionsDebounced());
+        cosmosConfiguration.primaryKey.subscribe(() => getCollectionsDebounced());
+        cosmosConfiguration.databaseName.subscribe(() => getCollectionsDebounced());
+    }
+    
+    private initObservables() {
+        this.submitButtonText = ko.pureComputed(() => {
+            const configuration = this.model.activeConfiguration();
+            if (configuration && !configuration.migrateAllCollections()) {
+                return `Migrate ${this.pluralize(configuration.selectedCollectionsCount(), 'collecton', 'collections')}`;
+            }
 
-        this.model.migratorFullPath.subscribe(() => this.getDatabases());
-        this.model.mongoDbConfiguration.connectionString.subscribe(() => {
-            this.getDatabases();
-            this.getCollections();
+            return "Migrate all collections";
         });
-        this.model.cosmosDbConfiguration.azureEndpointUrl.subscribe(() => {
-            this.getDatabases();
-            this.getCollections();
+
+        this.submitButtonEnabled = ko.pureComputed(() => {
+            const configuration = this.model.activeConfiguration();
+            if (configuration && !configuration.migrateAllCollections()) {
+                return configuration.selectedCollectionsCount() > 0;
+            }
+
+            return true;
         });
-        this.model.cosmosDbConfiguration.primaryKey.subscribe(() => {
-            this.getDatabases();
-            this.getCollections();
+    }
+    
+    private initValidation() {
+        const checkMigratorFullPath = (val: string, params: any, callback: (currentValue: string, result: string | boolean) => void) => {
+            migrateDatabaseCommand.validateMigratorPath(this.activeDatabase(), this.model.migratorFullPath())
+                .execute()
+                .done(() => {
+                    callback(this.model.migratorFullPath(), true);
+                })
+                .fail((response: JQueryXHR) => {
+                    const messageAndOptionalException = recentError.tryExtractMessageAndException(response.responseText);
+                    callback(this.model.migratorFullPath(), messageAndOptionalException.message);
+                })
+            };
+        
+        this.model.migratorFullPath.extend({
+            required: true,
+            validation: {
+                async: true,
+                validator: generalUtils.debounceAndFunnel(checkMigratorFullPath)
+            }
         });
-        this.model.mongoDbConfiguration.databaseName.subscribe(() => this.getCollections());
-        this.model.cosmosDbConfiguration.databaseName.subscribe(() => this.getCollections());
     }
 
     compositionComplete() {
@@ -72,33 +124,49 @@ class migrateDatabase extends viewModelBase {
                         "<span class=\"token keyword\">this</span>.Freight = <span class=\"token number\">15.3</span>;<br />" +
                         "</pre>"
             });
+        
+        this.initInlineEdit();
+    }
+    
+    private initInlineEdit() {
+        const $body = $("body");
+
+        this.registerDisposableHandler($body, "click", (event: JQueryEventObject) => {
+            if ($(event.target).closest(".inline-edit").length === 0) {
+                // click outside edit area - close all of them
+
+                $(".inline-edit.edit-mode")
+                    .removeClass("edit-mode");
+            }
+        });
+
+        $(".migrate-database").on("click", ".inline-edit", event => {
+            event.preventDefault();
+
+            $(".inline-edit.edit-mode")
+                .removeClass("edit-mode");
+
+            const container = $(event.target).closest(".inline-edit");
+            if (!container.hasClass("edit-disabled")) {
+                container.addClass("edit-mode");
+                $("input", container).focus();
+            }
+        });
     }
 
-    getDatabases() {
+    private getDatabases() {
         const activeConfiguration = this.model.activeConfiguration();
-        if (!this.isValid(this.model.validationGroupDatabasesCommand) || !activeConfiguration) {
-            if (!activeConfiguration) {
-                activeConfiguration.collectionsToMigrate([]);
-            }
-            return;
-        }
 
         this.spinners.getDatabaseNames(true);
         const selectMigrationOption = this.model.selectMigrationOption();
         const db = this.activeDatabase();
-        
-        new migrateDatabaseCommand<databasesInfo>(db, this.model.toDto("databases"), true)
-            .execute()
-            .done((databasesInfo: databasesInfo) => {
-                if (selectMigrationOption !== this.model.selectMigrationOption()) {
-                    return;
-                }
 
+        return migrateDatabaseCommand.getDatabaseNames(db, this.model.toDto())
+            .execute()
+            .done((databasesInfo) => {
                 activeConfiguration.databaseNames(databasesInfo.Databases);
             })
             .fail(() => {
-                activeConfiguration.databaseNames([]);
-                activeConfiguration.setCollections([]);
                 if (selectMigrationOption === "MongoDB") {
                     this.model.mongoDbConfiguration.hasGridFs(false);
                 }
@@ -109,19 +177,16 @@ class migrateDatabase extends viewModelBase {
     getCollections() {
         const activeConfiguration = this.model.activeConfiguration();
         if (!this.isValid(this.model.validationGroup) || !activeConfiguration) {
-            if (!activeConfiguration) {
-                activeConfiguration.collectionsToMigrate([]);
-            }
             return;
         }
 
         this.spinners.getCollectionNames(true);
         const db = this.activeDatabase();
         const selectMigrationOption = this.model.selectMigrationOption();
-
-        new migrateDatabaseCommand<collectionInfo>(db, this.model.toDto("collections"), true)
+        
+        migrateDatabaseCommand.getCollections(db, this.model.toDto())
             .execute()
-            .done((collectionInfo: collectionInfo) => {
+            .done((collectionInfo) => {
                 if (selectMigrationOption !== this.model.selectMigrationOption()) {
                     return;
                 }
@@ -141,22 +206,24 @@ class migrateDatabase extends viewModelBase {
     }
     
     migrateDb() {
-        if (!this.isValid(this.model.validationGroup)) {
-            return;
-        }
+        viewHelpers.asyncValidationCompleted(this.model.validationGroup, () => {
+            if (!this.isValid(this.model.validationGroup)) {
+                return;
+            }
 
-        eventsCollector.default.reportEvent("database", "migrate");
-        this.spinners.migration(true);
+            eventsCollector.default.reportEvent("database", "migrate");
+            this.spinners.migration(true);
 
-        const db = this.activeDatabase();
+            const db = this.activeDatabase();
 
-        new migrateDatabaseCommand<operationIdDto>(db, this.model.toDto("export"), false)
-            .execute()
-            .done((operationIdDto: operationIdDto) => {
-                const operationId = operationIdDto.OperationId;
-                notificationCenter.instance.openDetailsForOperationById(db, operationId);
-            })
-            .always(() => this.spinners.migration(false));
+            migrateDatabaseCommand.migrate(db, this.model.toDto())
+                .execute()
+                .done((operationIdDto: operationIdDto) => {
+                    const operationId = operationIdDto.OperationId;
+                    notificationCenter.instance.openDetailsForOperationById(db, operationId);
+                })
+                .always(() => this.spinners.migration(false));
+        });
     }
 }
 

@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class migrateDatabaseCommand<T> extends commandBase {
 
-    constructor(private db: database,
+    private constructor(private db: database,
         private dto: Raven.Server.Smuggler.Migration.MigrationConfiguration,
         private skipErrorReporting: boolean) {
         super();
@@ -21,6 +21,31 @@ class migrateDatabaseCommand<T> extends commandBase {
 
                 this.reportError("Failed to migrate database", response.responseText, response.statusText);
             });
+    }
+    
+    static migrate(db: database, dto: Raven.Server.Smuggler.Migration.MigrationConfiguration) {
+        dto.InputConfiguration.Command = "export";
+        return new migrateDatabaseCommand<operationIdDto>(db, dto, false);
+    }
+    
+    static validateMigratorPath(db: database, fullPath: string) {
+        const dto = {
+            MigratorFullPath: fullPath,
+            InputConfiguration: {
+                Command: "validateMigratorPath"
+            }
+        } as Raven.Server.Smuggler.Migration.MigrationConfiguration; 
+        return new migrateDatabaseCommand<void>(db, dto, true);
+    }
+    
+    static getDatabaseNames(db: database, dto: Raven.Server.Smuggler.Migration.MigrationConfiguration) {
+        dto.InputConfiguration.Command = "databases";
+        return new migrateDatabaseCommand<{ Databases: Array<string> }>(db, dto, true);
+    }
+    
+    static getCollections(db: database, dto: Raven.Server.Smuggler.Migration.MigrationConfiguration) {
+        dto.InputConfiguration.Command = "collections";
+        return new migrateDatabaseCommand<{ Collections: Array<string>; HasGridFS: boolean; }>(db, dto, true);
     }
 }
 
