@@ -21,6 +21,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Exceptions.Documents.Session;
 using Raven.Client.Extensions;
@@ -139,7 +140,7 @@ namespace Raven.Client.Documents.Session
 
         public RequestExecutor RequestExecutor => _requestExecutor;
 
-        internal OperationExecutor Operations => _operationExecutor ?? (_operationExecutor = DocumentStore.Operations.ForDatabase(DatabaseName));
+        internal OperationExecutor Operations => _operationExecutor ?? (_operationExecutor = new SessionOperationExecutor(this));
 
         public JsonOperationContext Context => _context;
 
