@@ -312,6 +312,11 @@ namespace FastTests.Sparrow
                 allocator.Initialize(default(FixedSizeDefault));
                 return allocator;
             }
+
+            public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
+            {
+                allocator.Dispose(disposing);
+            }
         }
 
         [Theory]
@@ -341,6 +346,11 @@ namespace FastTests.Sparrow
                 var allocator = new Allocator<NativeAllocator<PoolAllocator.Default>>();
                 allocator.Initialize(default(PoolAllocator.Default));
                 return allocator;
+            }
+
+            public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
+            {
+                allocator.Dispose(disposing);
             }
         }
 

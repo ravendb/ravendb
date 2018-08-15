@@ -18,8 +18,6 @@ namespace Sparrow
         bool Zeroed { get; }
     }
 
-    public interface INativeGlobalAllocatorOptions { }
-
     public static class NativeAllocator
     {
         public struct Default : INativeOptions
@@ -165,14 +163,12 @@ namespace Sparrow
             // This allocator does not keep track of anything.
         }
 
-        public void Dispose(ref NativeAllocator<TOptions> allocator)
+        public void Dispose(ref NativeAllocator<TOptions> allocator, bool disposing)
         {
-            // Global allocators checks are built around the idea that the memory allocated by this allocator
-            // is static. It will go out of scope only when the process exit.
-            if (allocator._options is INativeGlobalAllocatorOptions)
-                return;
-
-            CheckForLeaks(ref allocator);
+            // If we use the leak detector when finalizing an object, the dotnet process will explode
+            // with an unhandled exception. Therefore, we cannot check for leaks and throw in those cases. 
+            if (disposing)
+                CheckForLeaks(ref allocator);
         }
 
         [Conditional("DEBUG")]
@@ -188,10 +184,12 @@ namespace Sparrow
                 {
                     int i = 0;
                     string line = reader.ReadLine();
-                    while (line != null && i < 10)
+                    while (line != null)
                     {
-                        stackFrameAppender.AppendLine(line);
+                        if (i > 2)
+                            stackFrameAppender.AppendLine(line);
                         line = reader.ReadLine();
+                        i++;
                     }                   
                 }
 

@@ -35,8 +35,15 @@ namespace Sparrow
 
     public interface IComposableAllocator<TPointerType> where TPointerType : struct, IPointerType
     {
+        /// <summary>
+        /// Returns true if the parent allocator will have to take care of the memory requested to the
+        /// underlying allocator. Whenever the allocator would ignore this property, it has to default
+        /// to true and handle the release process appropriately.
+        /// </summary>
         bool HasOwnership { get; }
+
         IAllocatorComposer<TPointerType> CreateAllocator();
+        void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing);
     }
 
     public interface IAllocatorComposer<TPointerType> where TPointerType : struct, IPointerType
@@ -48,7 +55,7 @@ namespace Sparrow
 
         void Renew();
         void Reset();
-        void Dispose();
+        void Dispose(bool disposing);
     }
 
     public interface IAllocator<T, TPointerType> : IAllocator
@@ -81,7 +88,7 @@ namespace Sparrow
         void OnAllocate(ref T allocator, TPointerType ptr);
         void OnRelease(ref T allocator, TPointerType ptr);
 
-        void Dispose(ref T allocator);
+        void Dispose(ref T allocator, bool disposing);
     }
 
     public static class Allocator
@@ -100,9 +107,9 @@ namespace Sparrow
             if (_allocator is ILifecycleHandler<TAllocator> a)
                 a.BeforeFinalization(ref _allocator);
 
-            // We are not going to double dispose, even if we hit here. 
+            // We are not going to dispose twice, even if we hit here. 
             if (_disposeFlag.Raise())
-                _allocator.Dispose(ref _allocator);
+                Dispose(false);
         }
 
         public void Initialize<TAllocatorOptions>(TAllocatorOptions options)
@@ -221,8 +228,13 @@ namespace Sparrow
 
         public void Dispose()
         {
+            Dispose(true);
+        }
+
+        public void Dispose(bool disposing)
+        {
             if (_disposeFlag.Raise())
-                _allocator.Dispose(ref _allocator);
+                _allocator.Dispose(ref _allocator, disposing);
 
             GC.SuppressFinalize(this);
         }
@@ -251,7 +263,9 @@ namespace Sparrow
             if (_allocator is ILifecycleHandler<TAllocator> a)
                 a.BeforeFinalization(ref _allocator);
 
-            Dispose();
+            // We are not going to dispose twice, even if we hit here. 
+            if (_disposeFlag.Raise())
+                Dispose(false);
         }
 
         public void Initialize<TAllocatorOptions>(TAllocatorOptions options)
@@ -371,8 +385,13 @@ namespace Sparrow
 
         public void Dispose()
         {
+            Dispose(true);
+        }
+
+        public void Dispose(bool disposing)
+        {
             if (_disposeFlag.Raise())
-                _allocator.Dispose(ref _allocator);
+                _allocator.Dispose(ref _allocator, disposing);
 
             GC.SuppressFinalize(this);
         }
@@ -402,7 +421,9 @@ namespace Sparrow
             if (_allocator is ILifecycleHandler<TAllocator> a)
                 a.BeforeFinalization(ref _allocator);
 
-            Dispose();
+            // We are not going to dispose twice, even if we hit here. 
+            if (_disposeFlag.Raise())
+                _allocator.Dispose(ref _allocator, false);
         }
 
         public void Initialize<TConfig>(TConfig options)
@@ -506,7 +527,7 @@ namespace Sparrow
         public void Dispose()
         {
             if (_disposeFlag.Raise())
-                _allocator.Dispose(ref _allocator);
+                _allocator.Dispose(ref _allocator, true);
 
             GC.SuppressFinalize(this);
         }

@@ -13,7 +13,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         public void Invalid_hash_calculation_on_null()
         {
             using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling("RavenDB_9535"))
-            using (var bsc = new ByteStringContext(SharedMultipleUseFlag.None))
+            using (var bsc = new ByteStringContext())
             {
                 var sut = new ReduceKeyProcessor(1, bufferPool);
 

@@ -306,7 +306,7 @@ namespace Sparrow
             // This allocator does not keep track of anything.
         }
 
-        public void Dispose(ref ArenaAllocator<TOptions> allocator)
+        public void Dispose(ref ArenaAllocator<TOptions> allocator, bool disposing)
         {            
             if (allocator._olderBuffers != null)
             {
@@ -325,7 +325,7 @@ namespace Sparrow
                 allocator._nativeAllocator.Release(ref _nativeAllocator, ref _currentBuffer);
             }
 
-            allocator._nativeAllocator.Dispose(ref allocator._nativeAllocator);
+            allocator._nativeAllocator.Dispose(ref allocator._nativeAllocator, disposing);
         }
     }
 }

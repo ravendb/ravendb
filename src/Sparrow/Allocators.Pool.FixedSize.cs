@@ -25,6 +25,15 @@ namespace Sparrow
                 allocator.Initialize(default(Default));
                 return allocator;
             }
+
+            /// <summary>
+            /// By default whenever we create an allocator we are going to dispose it too when the time comes.
+            /// </summary>
+            /// <param name="allocator">the allocator to dispose.</param>
+            public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
+            {
+                allocator.Dispose(disposing);
+            }
         }
     }
 
@@ -206,7 +215,7 @@ namespace Sparrow
             // Nothing to do here.
         }
 
-        public void Dispose(ref FixedSizePoolAllocator<TOptions> allocator)
+        public void Dispose(ref FixedSizePoolAllocator<TOptions> allocator, bool disposing)
         {
             if (allocator._options.HasOwnership)
             {
@@ -214,7 +223,7 @@ namespace Sparrow
                 allocator.ReleaseMemoryPool(ref allocator);
             }
 
-            allocator._internalAllocator.Dispose();
+            allocator._options.ReleaseAllocator(allocator._internalAllocator, disposing);
         }
 
         private void ResetMemoryPool(ref FixedSizePoolAllocator<TOptions> allocator)

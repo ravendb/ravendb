@@ -31,10 +31,19 @@ namespace Sparrow
                 allocator.Initialize(default(Default));
                 return allocator;
             }
+
+            /// <summary>
+            /// By default whenever we create an allocator we are going to dispose it too when the time comes.
+            /// </summary>
+            /// <param name="allocator">the allocator to dispose.</param>
+            public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
+            {
+                allocator.Dispose(disposing);
+            }
         }
 
-        public struct Static : IPoolAllocatorOptions, INativeOptions, INativeGlobalAllocatorOptions
-        {
+        public struct Static : IPoolAllocatorOptions, INativeOptions
+        { 
             public bool UseSecureMemory => false;
             public bool ElectricFenceEnabled => false;
             public bool Zeroed => false;
@@ -49,6 +58,13 @@ namespace Sparrow
                 var allocator = new Allocator<NativeAllocator<Static>>();
                 allocator.Initialize(default(Static));
                 return allocator;
+            }
+
+            public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
+            {
+                // For all uses and purposes the underlying Native Allocator will be finalized as Statics should
+                // never deallocate until the process dies. This way we also skip the leak checks. 
+                allocator.Dispose(false);
             }
         }
     }
@@ -237,13 +253,13 @@ namespace Sparrow
             // Nothing to do here.
         }
 
-        public void Dispose(ref PoolAllocator<TOptions> allocator)
+        public void Dispose(ref PoolAllocator<TOptions> allocator, bool disposing)
         {
             if (allocator._options.HasOwnership)
                 // We are going to be disposed, we then release all holded memory. 
                 allocator.ReleaseMemoryPool(ref allocator);
 
-            allocator._internalAllocator.Dispose();
+            allocator._options.ReleaseAllocator(allocator._internalAllocator, disposing);
         }
 
         private void ResetMemoryPool(ref PoolAllocator<TOptions> allocator)

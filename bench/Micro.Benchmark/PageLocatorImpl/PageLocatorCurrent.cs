@@ -19,7 +19,7 @@ namespace Micro.Benchmark.PageLocatorImpl
     {
         private const ushort Invalid = 0;
 
-        private readonly ByteStringContext _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+        private readonly ByteStringContext _allocator = new ByteStringContext();
         private readonly LowLevelTransactionStub _tx;
 
         [StructLayout(LayoutKind.Explicit, Size = 20)]
