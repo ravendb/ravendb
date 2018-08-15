@@ -29,7 +29,7 @@ class clusterGraph {
     private width: number;
     private height: number;
     private svg: d3.Selection<void>;
-    private zoom: d3.behavior.Zoom<void>
+    private zoom: d3.behavior.Zoom<void>;
     private nodesGroup: d3.Selection<void>;
     private edgesGroup: d3.Selection<void>;
     private nodes: d3.Selection<clusterNode>;
@@ -98,18 +98,16 @@ class clusterGraph {
             .attr("transform", "translate(" + event.translate + ")scale(" + event.scale + ")");
     }
 
-    draw(nodes: clusterNode[], leaderTag: string) {
+    draw(nodes: clusterNode[], leaderTag: string, isPassive: boolean) {
         this.layout(nodes);
 
         const edges = this.extractEdges(nodes as clusterNodeWithLayout[]);
 
-        this.drawNodes(nodes, leaderTag);
+        this.drawNodes(nodes, leaderTag, isPassive);
         this.drawEdges(edges, leaderTag);
     }
 
-    private drawNodes(nodes: clusterNode[], leaderTag: string) {
-        const isPassive = nodes.length === 1 && nodes[0].tag() === "?";
-
+    private drawNodes(nodes: clusterNode[], leaderTag: string, isPassive: boolean) {
         this.nodesGroup
             .classed("passive", isPassive)
             .classed("voting", !leaderTag);
@@ -122,7 +120,7 @@ class clusterGraph {
             .data(nodes as clusterNodeWithLayout[], x => x.tag());
 
         nodesBinding
-            .call(selection => this.updateNodes(selection, leaderTag));
+            .call(selection => this.updateNodes(selection, leaderTag, isPassive));
 
         nodesBinding
             .exit()
@@ -164,7 +162,7 @@ class clusterGraph {
             .attr("class", "icon-style node-icon");
 
         enteringGroups
-            .call(selection => this.updateNodes(selection, leaderTag));
+            .call(selection => this.updateNodes(selection, leaderTag, isPassive));
     }
 
     private drawEdges(edges: clusterGraphEdge<clusterNodeWithLayout>[], leaderTag: string) {
@@ -212,7 +210,7 @@ class clusterGraph {
         return edges;
     }
 
-    private updateNodes(selection: d3.Selection<clusterNodeWithLayout>, leaderTag: string) {
+    private updateNodes(selection: d3.Selection<clusterNodeWithLayout>, leaderTag: string, isPassive: boolean) {
         selection
             .attr("class", x => "node " + x.type() + (x.tag() === leaderTag ? " leader" : "") + (x.connected() ? "" : " disconnected"))
             .transition()
@@ -245,11 +243,11 @@ class clusterGraph {
             if (node.type() === "Watcher") {
                 return "WAITING";
             }
-            if (node.tag() === "?") {
+            if (isPassive) {
                 return "PASSIVE";
             }
             return "VOTING";
-        }
+        };
 
         selection
             .select(".state")

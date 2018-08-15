@@ -75,9 +75,7 @@ class clusterTopologyManager {
                 return false;
             }
 
-            const leader = topology.leader();
-            const isPassive = topology.nodeTag() === "?";
-            return !leader && !isPassive;
+            return topology.currentState() === "Candidate";
         });
     }
 }
