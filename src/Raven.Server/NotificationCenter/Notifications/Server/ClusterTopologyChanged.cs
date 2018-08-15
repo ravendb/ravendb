@@ -38,6 +38,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
             json[nameof(Status)] = DynamicJsonValue.Convert(Status);
             json[nameof(CurrentTerm)] = CurrentTerm;
             json[nameof(NodeLicenseDetails)] = DynamicJsonValue.Convert(NodeLicenseDetails);
+            json[nameof(CurrentState)] = CurrentState;
 
             return json;
         }
