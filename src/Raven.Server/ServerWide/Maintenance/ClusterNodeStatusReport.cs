@@ -39,6 +39,7 @@ namespace Raven.Server.ServerWide.Maintenance
         public long LastTombstoneEtag;
         public long NumberOfConflicts;
         public long NumberOfDocuments;
+        public long LastCompletedClusterTransaction;
 
         public DatabaseStatus Status;
         public string Error;
@@ -56,6 +57,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 [nameof(NumberOfConflicts)] = NumberOfConflicts,
                 [nameof(NumberOfDocuments)] = NumberOfDocuments,
                 [nameof(DatabaseChangeVector)] = DatabaseChangeVector,
+                [nameof(LastCompletedClusterTransaction)] = LastCompletedClusterTransaction,
                 [nameof(LastSentEtag)] = DynamicJsonValue.Convert(LastSentEtag),
                 [nameof(Error)] = Error,
                 [nameof(UpTime)] = UpTime
