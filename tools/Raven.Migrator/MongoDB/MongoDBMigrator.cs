@@ -34,6 +34,8 @@ namespace Raven.Migrator.MongoDB
             var databases = new List<string>();
 
             var client = CreateNewMongoClient();
+            AssertOnline(client, client.GetDatabase("database"));
+
             using (var cursor = await client.ListDatabasesAsync())
             {
                 while (await cursor.MoveNextAsync())
@@ -62,6 +64,7 @@ namespace Raven.Migrator.MongoDB
 
             var client = CreateNewMongoClient();
             var database = client.GetDatabase(_configuration.DatabaseName);
+            AssertOnline(client, database);
 
             MigrationHelpers.OutputClass(_configuration,
                 new ExtendedCollectionsInfo
@@ -111,6 +114,7 @@ namespace Raven.Migrator.MongoDB
 
             var client = CreateNewMongoClient();
             var database = client.GetDatabase(_configuration.DatabaseName);
+            AssertOnline(client, database);
 
             if (_configuration.CollectionsToMigrate == null || 
                 _configuration.CollectionsToMigrate.Count == 0 && _configuration.MigrateGridFS == false)
@@ -260,6 +264,13 @@ namespace Raven.Migrator.MongoDB
         private MongoClient CreateNewMongoClient()
         {
             return new MongoClient(_configuration.ConnectionString);
+        }
+
+        public void AssertOnline(MongoClient client, IMongoDatabase database)
+        {
+            var online = database.RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(TimeSpan.FromSeconds(5));
+            if (online == false)
+                throw new InvalidOperationException($"Couldn't conncet to: {_configuration.ConnectionString}");
         }
     }
 }

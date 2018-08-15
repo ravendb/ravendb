@@ -36,36 +36,40 @@ namespace Raven.Migrator.CosmosDB
         {
             var databases = new List<string>();
 
-            var client = CreateNewCosmosClient();
-            var azureDatabases = client.CreateDatabaseQuery().AsEnumerable().ToList();
-            foreach (var azureDatabase in azureDatabases)
+            using (var client = CreateNewCosmosClient())
             {
-                databases.Add(azureDatabase.Id);
-            }
-
-            MigrationHelpers.OutputClass(_configuration,
-                new DatabasesInfo
+                var azureDatabases = client.CreateDatabaseQuery().AsEnumerable().ToList();
+                foreach (var azureDatabase in azureDatabases)
                 {
-                    Databases = databases
-                });
+                    databases.Add(azureDatabase.Id);
+                }
 
-            return Task.CompletedTask;
+                MigrationHelpers.OutputClass(_configuration,
+                    new DatabasesInfo
+                    {
+                        Databases = databases
+                    });
+
+                return Task.CompletedTask;
+            }
         }
 
         public async Task GetCollectionsInfo()
         {
             AssertDatabaseName();
 
-            var client = CreateNewCosmosClient();
-            var databaseUri = UriFactory.CreateDatabaseUri(_configuration.DatabaseName);
-            var database = (await client.ReadDatabaseAsync(databaseUri)).Resource;
-            var collections = GetCollections(client, database).ToList();
+            using (var client = CreateNewCosmosClient())
+            {
+                var databaseUri = UriFactory.CreateDatabaseUri(_configuration.DatabaseName);
+                var database = (await client.ReadDatabaseAsync(databaseUri)).Resource;
+                var collections = GetCollections(client, database).ToList();
 
-            MigrationHelpers.OutputClass(_configuration,
-                new CollectionsInfo
-                {
-                    Collections = collections
-                });
+                MigrationHelpers.OutputClass(_configuration,
+                    new CollectionsInfo
+                    {
+                        Collections = collections
+                    });
+            }
         }
 
         private static IEnumerable<string> GetCollections(DocumentClient client, Database database)
@@ -81,20 +85,22 @@ namespace Raven.Migrator.CosmosDB
         {
             AssertDatabaseName();
 
-            var client = CreateNewCosmosClient();
-            var databaseUri = UriFactory.CreateDatabaseUri(_configuration.DatabaseName);
-            var database = (await client.ReadDatabaseAsync(databaseUri)).Resource;
-
-            if (_configuration.CollectionsToMigrate == null ||
-                _configuration.CollectionsToMigrate.Count == 0)
+            using (var client = CreateNewCosmosClient())
             {
-                _configuration.CollectionsToMigrate = GetCollectionsToMigrate(client, database);
-            }
+                var databaseUri = UriFactory.CreateDatabaseUri(_configuration.DatabaseName);
+                var database = (await client.ReadDatabaseAsync(databaseUri)).Resource;
 
-            await MigrationHelpers.MigrateNoSqlDatabase(
-                _configuration,
-                async (mongoCollectionName, ravenCollectionName, jsonTextWriter, streamWriter) =>
-                    await MigrateSingleCollection(client, database, mongoCollectionName, ravenCollectionName, jsonTextWriter, streamWriter));
+                if (_configuration.CollectionsToMigrate == null ||
+                    _configuration.CollectionsToMigrate.Count == 0)
+                {
+                    _configuration.CollectionsToMigrate = GetCollectionsToMigrate(client, database);
+                }
+
+                await MigrationHelpers.MigrateNoSqlDatabase(
+                    _configuration,
+                    async (mongoCollectionName, ravenCollectionName, jsonTextWriter, streamWriter) =>
+                        await MigrateSingleCollection(client, database, mongoCollectionName, ravenCollectionName, jsonTextWriter, streamWriter));
+            }
         }
 
         private static async Task MigrateSingleCollection(
@@ -177,7 +183,9 @@ namespace Raven.Migrator.CosmosDB
 
         private DocumentClient CreateNewCosmosClient()
         {
-            return new DocumentClient(new Uri(_configuration.AzureEndpointUrl), _configuration.PrimaryKey);
+            var documentClient = new DocumentClient(new Uri(_configuration.AzureEndpointUrl), _configuration.PrimaryKey);
+            documentClient.OpenAsync().Wait(TimeSpan.FromSeconds(5));
+            return documentClient;
         }
     }
 }
