@@ -4,9 +4,12 @@ import nodeInfo = require("models/wizard/nodeInfo");
 import serverSetup = require("models/wizard/serverSetup");
 import popoverUtils = require("common/popoverUtils");
 import ipEntry = require("models/wizard/ipEntry");
+import databaseStudioConfigurationModel = require("models/database/settings/databaseStudioConfigurationModel");
 
 class nodes extends setupStep {
 
+    static environments = databaseStudioConfigurationModel.environments;
+    
     currentStep: number;
     
     remoteNodeIpOptions = ko.observableArray<string>(['0.0.0.0']);

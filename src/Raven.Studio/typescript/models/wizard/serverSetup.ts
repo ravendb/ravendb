@@ -24,6 +24,8 @@ class serverSetup {
     certificate = ko.observable<certificateInfo>(new certificateInfo());
     registerClientCertificate = ko.observable<boolean>(true);
     agreementUrl = ko.observable<string>();
+
+    environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>("None");
     
     fixedLocalPort = ko.observable<number>();
     fixPortNumberOnLocalNode = ko.pureComputed(() => this.fixedLocalPort() != null);
@@ -113,6 +115,7 @@ class serverSetup {
             EnableExperimentalFeatures: this.useExperimentalFeatures(),
             Port: setup.port() ? parseInt(setup.port(), 10) : 8080,
             Addresses: [setup.ip().ip()],
+            Environment: this.environment(),
             TcpPort: setup.tcpPort() ? parseInt(setup.tcpPort(), 10) : 38888
         }
     }
@@ -126,6 +129,7 @@ class serverSetup {
 
         return {
             EnableExperimentalFeatures: this.useExperimentalFeatures(),
+            Environment: this.environment(),
             License: this.license().toDto(),
             Email: this.domain().userEmail(),
             Domain: this.domain().domain(),

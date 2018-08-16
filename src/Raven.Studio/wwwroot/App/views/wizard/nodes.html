@@ -188,9 +188,30 @@
             </div>
         </div>
         <div class="panel padding">
-            <div class="checkbox">
-                <input id="installClientCertificate" type="checkbox" data-bind="checked: model.registerClientCertificate()">
-                <label for="installClientCertificate">Automatically register the admin client certificate in this (local) OS</label>
+            <div class="form-group" data-bind="validationElement: model.environment, with: $root.model">
+                <label for="port" class="control-label">Environment</label>
+                <div style="position: relative">
+                    <button class="btn btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                        <span data-bind="text: environment"></span>
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" data-bind="foreach: $root.constructor.environments">
+                        <li><a href="#" data-bind="text: $data, click: $parent.environment.bind($parent.environment, $data)"></a></li>
+                    </ul>
+                    <span class="help-block" data-bind="validationMessage: environment"></span>
+                </div>
+            </div>
+            
+            <hr />
+
+            <div class="form-group">
+                <label class="control-label"> &nbsp; </label>
+                <div class="flex-grow">
+                    <div class="checkbox">
+                        <input id="installClientCertificate" type="checkbox" data-bind="checked: model.registerClientCertificate()">
+                        <label for="installClientCertificate">Automatically register the admin client certificate in this (local) OS</label>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="panel padding" data-bind="if: showAgreement, visible: showAgreement">
