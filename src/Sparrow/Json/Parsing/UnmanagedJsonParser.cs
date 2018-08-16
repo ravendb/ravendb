@@ -831,6 +831,7 @@ ReturnFalse:
             byte b;
             int val = 0;
 
+            var start = pos;
             byte* inputBuffer = _inputBuffer;
             uint bufferSize = _bufSize;
             for (int i = 0; i < 4; i++)
@@ -858,6 +859,16 @@ ReturnFalse:
                 {
                     ThrowException("Invalid hex value , numeric value is: " + b);
                 }
+            }
+
+            if (char.IsControl((char)val))
+            {
+                var prefix = stackalloc byte[2];
+                prefix[0] = (byte)'\\';
+                prefix[1] = (byte)'u';
+                _unmanagedWriteBuffer.Write(prefix, 2);
+                _unmanagedWriteBuffer.Write(inputBuffer + start, 4);
+                return true;
             }
             WriteUnicodeCharacterToStringBuffer(val);
             return true;

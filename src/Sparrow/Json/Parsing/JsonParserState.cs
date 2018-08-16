@@ -43,13 +43,14 @@ namespace Sparrow.Json.Parsing
             return count;
         }
 
-        public static int FindEscapePositionsMaxSize(string str)
+        public static (int MaxEscapes, int ExactControls) FindEscapePositionsMaxSize(string str)
         {
             var count = 0;
+            var controlCount = 0;
             
             for (int i = 0; i < str.Length; i++)
             {
-                byte value = (byte)str[i];
+                char value = str[i];
 
                 // PERF: We use the values directly because it is 5x faster than iterating over a constant array.
                 // 8  => '\b' => 0000 1000
@@ -61,22 +62,31 @@ namespace Sparrow.Json.Parsing
                 // 92 =>  '"' => 0101 1100
 
                 if (value == 92 || value == 34 || (value >= 8 && value <= 13 && value != 11))
+                {
                     count++;
+                    continue;
+                }
+
+                if (value < 32 || value >= 127 && value <= 159)
+                {
+                    controlCount++;
+                }
+
             }
 
             // we take 5 because that is the max number of bytes for variable size int
             // plus 1 for the actual number of positions
 
             // NOTE: this is used by FindEscapePositionsIn, change only if you also modify FindEscapePositionsIn
-            return (count + 1) * EscapePositionItemSize; 
+            return ((count + 1) * EscapePositionItemSize, controlCount);
         }
 
-        public void FindEscapePositionsIn(byte* str, int len, int previousComputedMaxSize)
+        public void FindEscapePositionsIn(byte* str, ref int len, int previousComputedMaxSize)
         {
-            FindEscapePositionsIn(EscapePositions, str, len, previousComputedMaxSize);
+            FindEscapePositionsIn(EscapePositions, str, ref len, previousComputedMaxSize);
         }
 
-        public static void FindEscapePositionsIn(FastList<int> buffer, byte* str, int len, int previousComputedMaxSize)
+        public static void FindEscapePositionsIn(FastList<int> buffer, byte* str, ref int len, int previousComputedMaxSize)
         {
             buffer.Clear();
             if (previousComputedMaxSize == EscapePositionItemSize)
@@ -104,6 +114,15 @@ namespace Sparrow.Json.Parsing
                 {
                     buffer.Add(i - lastEscape);
                     lastEscape = i + 1;
+                    continue;
+                }
+
+
+                if (value < 32 || value >= 127 && value <= 159)
+                {
+                    // move rest of buffer 
+                    // write \u0000
+                    // update size
                 }
             }
         }
