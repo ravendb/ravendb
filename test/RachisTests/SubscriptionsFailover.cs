@@ -296,6 +296,7 @@ namespace RachisTests
                 {
                     subscription = store.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId)
                     {
+                        MaxErroneousPeriod = TimeSpan.FromSeconds(5),
                         MaxDocsPerBatch = 1,
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(100)
                     });
@@ -325,7 +326,12 @@ namespace RachisTests
                     {
                         started.Set();
                         HandleSubscriptionBatch(nodesAmount, b, uniqueDocs, ref docsCount, uniqueRevisions, reachedMaxDocCountMre, ref revisionsCount);
-                    });
+                    }).ContinueWith(t =>
+                    {
+                        reachedMaxDocCountMre.SetException(t.Exception);
+                        ackSent.SetException(t.Exception);
+
+                    }, TaskContinuationOptions.OnlyOnFaulted);
 
                     await Task.WhenAny(task, started.WaitAsync());
 
