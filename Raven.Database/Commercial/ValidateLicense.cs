@@ -99,10 +99,20 @@ namespace Raven.Database.Commercial
 				},firstTime:firstTime);
 
 				var attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.OrdinalIgnoreCase);
-				foreach (var licenseAttribute in licenseValidator.LicenseAttributes)
-				{
-					attributes[licenseAttribute.Key] = licenseAttribute.Value;
-				}
+
+			    Monitor.Enter(licenseValidator.LicenseAttributesLock);
+
+			    try
+			    {
+			        foreach (var licenseAttribute in licenseValidator.LicenseAttributes)
+			        {
+			            attributes[licenseAttribute.Key] = licenseAttribute.Value;
+			        }
+			    }
+			    finally
+			    {
+			        Monitor.Exit(licenseValidator.LicenseAttributesLock);
+                }
 
 				var message = "Valid license at " + licensePath;
 				var status = "Commercial";
