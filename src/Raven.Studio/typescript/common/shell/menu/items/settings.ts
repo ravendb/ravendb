@@ -49,7 +49,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/settings/studioConfiguration',
             title: 'Studio Configuration',
             nav: true,
-            css: 'icon-studio-configuration',
+            css: 'icon-database-studio-configuration',
             dynamicHash: appUrls.studioConfiguration
         }),
         new leafMenuItem({

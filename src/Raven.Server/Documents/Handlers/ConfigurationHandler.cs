@@ -16,15 +16,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/configuration/studio", "GET", AuthorizationStatus.ValidUser)]
         public Task GetStudioConfiguration()
         {
-            var inherit = GetBoolValueQueryString("inherit", required: false) ?? true;
-
             var configuration = Database.StudioConfiguration;
-            var serverConfiguration = GetServerStudioConfiguration(out var serverIndex);
-            if (inherit)
-            {
-                if (configuration == null || configuration.Disabled)
-                    configuration = serverConfiguration;
-            }
 
             if (configuration == null)
             {
