@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -102,6 +103,17 @@ namespace FastTests
             var converted = regex.Replace(expected, Environment.NewLine);
 
             Assert.Equal(converted, actual);
+        }
+
+        public static void AreEquivalent<T>(IEnumerable<T> expected, IEnumerable<T> actual)
+        {
+            var forMonitor = actual.ToList();
+            Assert.All(expected, e =>
+            {
+                Assert.Contains(e, forMonitor);
+                forMonitor.Remove(e);
+            });
+            Assert.Empty(forMonitor);
         }
     }
 }
