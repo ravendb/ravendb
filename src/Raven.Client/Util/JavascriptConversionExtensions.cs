@@ -606,7 +606,7 @@ namespace Raven.Client.Util
                         HandleCount(context, methodCallExpression.Arguments[0]);
                         return;
                     default:
-                        throw new NotSupportedException($"Unable to translate '{methodName}' to RQL operation because not this method is not familiar to the RavenDB query provider.")
+                        throw new NotSupportedException($"Unable to translate '{methodName}' to RQL operation because this method is not familiar to the RavenDB query provider.")
                         {
                             HelpLink = "DoNotWrap"
                         };
