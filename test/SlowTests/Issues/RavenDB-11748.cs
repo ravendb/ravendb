@@ -97,10 +97,9 @@ namespace SlowTests.Issues
                             ModelName = model != null ? model.Name : "UNKNOWN_MODEL"
                         };
 
-                    var actualResults = results.ToList();
-                    Assert.Equal(1, actualResults.Count);
-                    Assert.Equal("Car1", actualResults[0].CarName);
-                    Assert.Equal("Ford", actualResults[0].ModelName);
+                    var e = Assert.Throws<NotSupportedException>(() => results.ToList());
+                    Assert.Equal("Unable to transalte SingleOrDefault to RQL operation because not this method is not familiar to the RavenDB query provider.", e.Message);
+                    
                 }
             }
         }
