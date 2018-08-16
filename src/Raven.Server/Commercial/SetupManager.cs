@@ -29,6 +29,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Https;
@@ -47,6 +48,7 @@ using Sparrow.Platform.Posix;
 using Sparrow.Utils;
 using Voron.Platform.Posix;
 using OpenFlags = System.Security.Cryptography.X509Certificates.OpenFlags;
+using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 
 namespace Raven.Server.Commercial
 {
@@ -1475,6 +1477,16 @@ namespace Raven.Server.Commercial
                         if (setupInfo.EnableExperimentalFeatures)
                         {
                             settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
+                        }
+
+                        if (setupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
+                        {
+                            var res = await serverStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(new ServerWideStudioConfiguration
+                            {
+                                Disabled = false,
+                                Environment = setupInfo.Environment
+                            }));
+                            await serverStore.Cluster.WaitForIndexNotification(res.Index);
                         }
 
                         var certificateFileName = $"cluster.server.certificate.{name}.pfx";

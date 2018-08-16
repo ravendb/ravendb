@@ -15,15 +15,18 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
 
 namespace Raven.Server.Web.System
 {
@@ -481,7 +484,7 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/setup/unsecured", "POST", AuthorizationStatus.UnauthenticatedClients)]
-        public Task SetupUnsecured()
+        public async Task SetupUnsecured()
         {
             AssertOnlyInSetupMode();
 
@@ -532,13 +535,24 @@ namespace Raven.Server.Web.System
                     settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
                 }
                 
+                if (setupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
+                {
+                    ServerStore.EnsureNotPassive();
+                    var res = await ServerStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(new ServerWideStudioConfiguration
+                    {
+                        Disabled = false,
+                        Environment = setupInfo.Environment
+                    }));
+                    await ServerStore.Cluster.WaitForIndexNotification(res.Index);
+                }
+                
                 var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
 
                 var indentedJson = SetupManager.IndentJsonString(modifiedJsonObj.ToString());
                 SetupManager.WriteSettingsJsonLocally(ServerStore.Configuration.ConfigPath, indentedJson);
             }
 
-            return NoContent();
+            NoContentStatus();
         }
 
         [RavenAction("/setup/secured", "POST", AuthorizationStatus.UnauthenticatedClients)]

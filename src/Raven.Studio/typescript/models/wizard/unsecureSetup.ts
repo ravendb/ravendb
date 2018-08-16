@@ -2,6 +2,7 @@
 import ipEntry = require("models/wizard/ipEntry");
 
 class unsecureSetup {
+
     port = ko.observable<string>();
     tcpPort = ko.observable<string>();
     ip = ko.observable<ipEntry>();
