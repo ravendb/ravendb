@@ -90,16 +90,16 @@ namespace SlowTests.Issues
                         from result in session.Query<Car, CarsIndex>().Where(x => x.Name == "Car1")
                         let modelConfig = RavenQuery.Load<ModelConfig>("ModelConfig")
                         let model = modelConfig.Models.SingleOrDefault(x => x.ModelId == result.ModelId)
-                       //     let model = modelConfig.Models.FirstOrDefault(x => x.ModelId == result.ModelId) // Changing this to FirstOrDefault works
-                            select new CarOutput
+                        //     let model = modelConfig.Models.FirstOrDefault(x => x.ModelId == result.ModelId) // Changing this to FirstOrDefault works
+                        select new CarOutput
                         {
                             CarName = result.Name,
                             ModelName = model != null ? model.Name : "UNKNOWN_MODEL"
                         };
 
                     var e = Assert.Throws<NotSupportedException>(() => results.ToList());
-                    Assert.Equal("Unable to transalte SingleOrDefault to RQL operation because not this method is not familiar to the RavenDB query provider.", e.Message);
-                    
+                    Assert.Equal("Unable to translate 'SingleOrDefault' to RQL operation because not this method is not familiar to the RavenDB query provider.", e.Message);
+
                 }
             }
         }

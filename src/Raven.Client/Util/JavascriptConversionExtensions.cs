@@ -260,9 +260,11 @@ namespace Raven.Client.Util
                 }
 
                 var methodCallExpression = context.Node as MethodCallExpression;
-                var methodName = methodCallExpression?
-                    .Method.Name;
+                var method = methodCallExpression?.Method;
+                if (method == null || method.IsSpecialName)
+                    return;
 
+                var methodName = method.Name;
                 if (methodName == null || IsCollection(methodCallExpression.Method.DeclaringType) == false)
                     return;
 
@@ -590,7 +592,7 @@ namespace Raven.Client.Util
                         HandleCount(context, methodCallExpression.Arguments[0]);
                         return;
                     default:
-                        throw new NotSupportedException("Unable to transalte " + methodName + " to RQL operation because not this method is not familiar to the RavenDB query provider.")
+                        throw new NotSupportedException($"Unable to translate '{methodName}' to RQL operation because not this method is not familiar to the RavenDB query provider.")
                         {
                             HelpLink = "DoNotWrap"
                         };
