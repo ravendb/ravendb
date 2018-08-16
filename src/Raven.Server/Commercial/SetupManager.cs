@@ -32,8 +32,10 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Raven.Server.Extensions;
 using Raven.Server.Https;
 using Raven.Server.Json;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -55,7 +57,6 @@ namespace Raven.Server.Commercial
     public static class SetupManager
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
-        public const string LocalNodeTag = "A";
         public const string GoogleDnsApi = "https://dns.google.com";
 
         public static string BuildHostName(string nodeTag, string userDomain, string rootDomain)
@@ -848,7 +849,7 @@ namespace Raven.Server.Commercial
 
         public static async Task AssertLocalNodeCanListenToEndpoints(SetupInfo setupInfo, ServerStore serverStore)
         {
-            var localNode = setupInfo.NodeSetupInfos[LocalNodeTag];
+            var localNode = setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag];
             var localIps = new List<IPEndPoint>();
 
             // Because we can get from user either an ip or a hostname, we resolve the hostname and get the actual ips it is mapped to 
@@ -896,7 +897,7 @@ namespace Raven.Server.Commercial
 
         public static async Task ValidateServerCanRunWithSuppliedSettings(SetupInfo setupInfo, ServerStore serverStore, SetupMode setupMode, CancellationToken token)
         {
-            var localNode = setupInfo.NodeSetupInfos[LocalNodeTag];
+            var localNode = setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag];
             var localIps = new List<IPEndPoint>();
 
             foreach (var hostnameOrIp in localNode.Addresses)
@@ -913,7 +914,7 @@ namespace Raven.Server.Commercial
 
             var serverCert = setupInfo.GetX509Certificate();
 
-            var localServerUrl = GetServerUrlFromCertificate(serverCert, setupInfo, LocalNodeTag, localNode.Port, localNode.TcpPort, out _, out _);
+            var localServerUrl = GetServerUrlFromCertificate(serverCert, setupInfo, setupInfo.LocalNodeTag, localNode.Port, localNode.TcpPort, out _, out _);
 
             try
             {
@@ -939,7 +940,7 @@ namespace Raven.Server.Commercial
                 }
 
                 // Here we send the actual ips we will bind to in the local machine.
-                await SimulateRunningServer(serverCert, localServerUrl, localIps.ToArray(), localNode.Port, serverStore.Configuration.ConfigPath, setupMode, token);
+                await SimulateRunningServer(serverCert, localServerUrl, setupInfo.LocalNodeTag, localIps.ToArray(), localNode.Port, serverStore.Configuration.ConfigPath, setupMode, token);
             }
             catch (Exception e)
             {
@@ -995,7 +996,7 @@ namespace Raven.Server.Commercial
                 }
 
                 // Here we send the actual ips we will bind to in the local machine.
-                await SimulateRunningServer(cert, publicServerUrl, localIps.ToArray(), port, serverStore.Configuration.ConfigPath, setupMode, token);
+                await SimulateRunningServer(cert, publicServerUrl, nodeTag, localIps.ToArray(), port, serverStore.Configuration.ConfigPath, setupMode, token);
             }
             catch (Exception e)
             {
@@ -1007,7 +1008,7 @@ namespace Raven.Server.Commercial
         {
             if (SetupParameters.Get(serverStore).IsDocker)
             {
-                if (setupInfo.NodeSetupInfos[LocalNodeTag].Addresses.Any(ip => ip.StartsWith("127.")))
+                if (setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag].Addresses.Any(ip => ip.StartsWith("127.")))
                 {
                     throw new InvalidOperationException("When the server is running in Docker, you cannot bind to ip 127.X.X.X, please use the hostname instead.");
                 }
@@ -1015,8 +1016,8 @@ namespace Raven.Server.Commercial
 
             if (setupMode == SetupMode.LetsEncrypt)
             {
-                if (setupInfo.NodeSetupInfos.ContainsKey(LocalNodeTag) == false)
-                    throw new ArgumentException($"At least one of the nodes must have the node tag '{LocalNodeTag}'.");
+                if (setupInfo.NodeSetupInfos.ContainsKey(setupInfo.LocalNodeTag) == false)
+                    throw new ArgumentException($"At least one of the nodes must have the node tag '{setupInfo.LocalNodeTag}'.");
                 if (IsValidEmail(setupInfo.Email) == false)
                     throw new ArgumentException("Invalid email address.");
                 if (IsValidDomain(setupInfo.Domain + "." + setupInfo.RootDomain) == false)
@@ -1028,8 +1029,7 @@ namespace Raven.Server.Commercial
 
             foreach (var node in setupInfo.NodeSetupInfos)
             {
-                if (string.IsNullOrWhiteSpace(node.Key) || node.Key.Length != 1 || !char.IsLetter(node.Key[0]) || !char.IsUpper(node.Key[0]))
-                    throw new ArgumentException("Node Tag [A-Z] (capital) is a mandatory property for a secured setup");
+                Leader.ValidateNodeTag(node.Key);
 
                 if (node.Value.Port == 0)
                     setupInfo.NodeSetupInfos[node.Key].Port = 443;
@@ -1346,8 +1346,9 @@ namespace Raven.Server.Commercial
                             serverCertBytes = Convert.FromBase64String(base64);
                             serverCert = new X509Certificate2(serverCertBytes, setupInfo.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
 
-                            publicServerUrl = GetServerUrlFromCertificate(serverCert, setupInfo, LocalNodeTag, setupInfo.NodeSetupInfos[LocalNodeTag].Port,
-                                setupInfo.NodeSetupInfos[LocalNodeTag].TcpPort, out var _, out domainFromCert);
+                            var localNodeTag = setupInfo.LocalNodeTag;
+                            publicServerUrl = GetServerUrlFromCertificate(serverCert, setupInfo, localNodeTag, setupInfo.NodeSetupInfos[localNodeTag].Port,
+                                setupInfo.NodeSetupInfos[localNodeTag].TcpPort, out _, out domainFromCert);
 
                             try
                             {
@@ -1371,14 +1372,14 @@ namespace Raven.Server.Commercial
 
                             foreach (var node in setupInfo.NodeSetupInfos)
                             {
-                                if (node.Key == LocalNodeTag)
+                                if (node.Key == setupInfo.LocalNodeTag)
                                     continue;
 
                                 progress.AddInfo($"Adding node '{node.Key}' to the cluster.");
                                 onProgress(progress);
 
                                 setupInfo.NodeSetupInfos[node.Key].PublicServerUrl = GetServerUrlFromCertificate(serverCert, setupInfo, node.Key, node.Value.Port,
-                                    node.Value.TcpPort, out var _, out var _);
+                                    node.Value.TcpPort, out _, out _);
 
                                 try
                                 {
@@ -1535,7 +1536,7 @@ namespace Raven.Server.Commercial
                             var modifiedJsonObj = context.ReadObject(currentNodeSettingsJson, "modified-settings-json");
 
                             var indentedJson = IndentJsonString(modifiedJsonObj.ToString());
-                            if (node.Key == LocalNodeTag && setupInfo.ModifyLocalServer)
+                            if (node.Key == setupInfo.LocalNodeTag && setupInfo.ModifyLocalServer)
                             {
                                 try
                                 {
@@ -1756,7 +1757,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static async Task SimulateRunningServer(X509Certificate2 serverCertificate, string serverUrl, IPEndPoint[] addresses, int port, string settingsPath, SetupMode setupMode, CancellationToken token)
+        public static async Task SimulateRunningServer(X509Certificate2 serverCertificate, string serverUrl, string nodeTag, IPEndPoint[] addresses, int port, string settingsPath, SetupMode setupMode, CancellationToken token)
         {
             var configuration = new RavenConfiguration(null, ResourceType.Server, settingsPath);
             configuration.Initialize();
@@ -1779,7 +1780,7 @@ namespace Raven.Server.Commercial
                                 options.Listen(defaultIp,
                                     listenOptions => listenOptions.ConnectionAdapters.Add(new HttpsConnectionAdapter(serverCertificate)));
                                 if (Logger.IsInfoEnabled)
-                                    Logger.Info($"List of ip addresses for node '{LocalNodeTag}' is empty. Webhost listening to {defaultIp}");
+                                    Logger.Info($"List of ip addresses for node '{nodeTag}' is empty. Webhost listening to {defaultIp}");
                             }
 
                             foreach (var addr in addresses)
@@ -1812,7 +1813,7 @@ namespace Raven.Server.Commercial
                         ? $"It can {also} happen if the ip is external (behind a firewall, docker). If this is the case, try going back to the previous screen and add the same ip as an external ip."
                         : "";
                     
-                    throw new InvalidOperationException($"Failed to start webhost on node '{LocalNodeTag}'. The specified ip address might not be reachable due to network issues. {linuxMsg}{Environment.NewLine}{externalIpMsg}{Environment.NewLine}" +
+                    throw new InvalidOperationException($"Failed to start webhost on node '{nodeTag}'. The specified ip address might not be reachable due to network issues. {linuxMsg}{Environment.NewLine}{externalIpMsg}{Environment.NewLine}" +
                                                         $"Settings file:{settingsPath}.{Environment.NewLine}" +
                                                         $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.", e);
                 }
