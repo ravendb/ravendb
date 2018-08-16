@@ -30,17 +30,17 @@ namespace Raven.Client.Json
             var docChanges = changes != null ? new List<DocumentsChanges>() : null;
 
             if (documentInfo.IsNewDocument == false && documentInfo.Document != null)
-                return CompareBlittable(documentInfo.Id, documentInfo.Document, newObj, changes, docChanges);
+                return CompareBlittable("", documentInfo.Id, documentInfo.Document, newObj, changes, docChanges);
 
             if (changes == null)
                 return true;
 
-            NewChange(null, null, null, docChanges, DocumentsChanges.ChangeType.DocumentAdded);
+            NewChange(null, null, null, null, docChanges, DocumentsChanges.ChangeType.DocumentAdded);
             changes[documentInfo.Id] = docChanges.ToArray();
             return true;
         }
 
-        private static bool CompareBlittable(string id, BlittableJsonReaderObject originalBlittable,
+        private static bool CompareBlittable(string fieldPath, string id, BlittableJsonReaderObject originalBlittable,
             BlittableJsonReaderObject newBlittable, IDictionary<string, DocumentsChanges[]> changes,
             List<DocumentsChanges> docChanges)
         {
@@ -58,7 +58,7 @@ namespace Raven.Client.Json
             {
                 if (changes == null)
                     return true;
-                NewChange(field, null, null, docChanges, DocumentsChanges.ChangeType.RemovedField);
+                NewChange(fieldPath, field, null, null, docChanges, DocumentsChanges.ChangeType.RemovedField);
             }
 
             var newProp = new BlittableJsonReaderObject.PropertyDetails();
@@ -78,7 +78,7 @@ namespace Raven.Client.Json
                 {
                     if (changes == null)
                         return true;
-                    NewChange(newProp.Name, newProp.Value, null, docChanges, DocumentsChanges.ChangeType.NewField);
+                    NewChange(fieldPath, newProp.Name, newProp.Value, null, docChanges, DocumentsChanges.ChangeType.NewField);
                     continue;
                 }
 
@@ -93,10 +93,10 @@ namespace Raven.Client.Json
                     case BlittableJsonToken.CompressedString:
                     case BlittableJsonToken.String:
                         if (newProp.Value.Equals(oldProp.Value) || ComapreValues(oldProp, newProp))
-                            break;                       
+                            break;
                         if (changes == null)
                             return true;
-                        NewChange(newProp.Name, newProp.Value, oldProp.Value, docChanges,
+                        NewChange(fieldPath, newProp.Name, newProp.Value, oldProp.Value, docChanges,
                             DocumentsChanges.ChangeType.FieldChanged);
                         break;
                     case BlittableJsonToken.Null:
@@ -104,7 +104,7 @@ namespace Raven.Client.Json
                             break;
                         if (changes == null)
                             return true;
-                        NewChange(newProp.Name, null, oldProp.Value, docChanges,
+                        NewChange(fieldPath, newProp.Name, null, oldProp.Value, docChanges,
                             DocumentsChanges.ChangeType.FieldChanged);
                         break;
                     case BlittableJsonToken.StartArray:
@@ -119,13 +119,13 @@ namespace Raven.Client.Json
                             if (changes == null)
                                 return true;
 
-                            NewChange(newProp.Name, newProp.Value, oldProp.Value, docChanges, 
+                            NewChange(fieldPath, newProp.Name, newProp.Value, oldProp.Value, docChanges,
                                 DocumentsChanges.ChangeType.FieldChanged);
 
                             break;
                         }
 
-                        var changed = CompareBlittableArray(id, oldArray, newArray, changes, docChanges, newProp.Name);
+                        var changed = CompareBlittableArray(FieldPathCombine(fieldPath, newProp.Name), id, oldArray, newArray, changes, docChanges, newProp.Name);
                         if (changes == null && changed)
                             return true;
 
@@ -136,13 +136,12 @@ namespace Raven.Client.Json
                             if (changes == null)
                                 return true;
 
-                            NewChange(newProp.Name, newProp.Value, null, docChanges,
+                            NewChange(fieldPath, newProp.Name, newProp.Value, null, docChanges,
                                 DocumentsChanges.ChangeType.FieldChanged);
                             break;
                         }
 
-                        changed = CompareBlittable(id, oldProp.Value as BlittableJsonReaderObject,
-                            newProp.Value as BlittableJsonReaderObject, changes, docChanges);
+                        changed = CompareBlittable(FieldPathCombine(fieldPath, newProp.Name), id, oldProp.Value as BlittableJsonReaderObject, newProp.Value as BlittableJsonReaderObject, changes, docChanges);
 
                         if (changes == null && changed)
                             return true;
@@ -158,6 +157,9 @@ namespace Raven.Client.Json
             changes[id] = docChanges.ToArray();
             return true;
         }
+
+        private static string FieldPathCombine(string path1, string path2) 
+            => string.IsNullOrEmpty(path1) ? path2 : path1 + "." + path2;
 
         private static bool ComapreValues(BlittableJsonReaderObject.PropertyDetails oldProp, BlittableJsonReaderObject.PropertyDetails newProp)
         {
@@ -180,7 +182,8 @@ namespace Raven.Client.Json
             return false;
         }
 
-        private static bool CompareBlittableArray(string id, BlittableJsonReaderArray oldArray, BlittableJsonReaderArray newArray, IDictionary<string, DocumentsChanges[]> changes, List<DocumentsChanges> docChanges, LazyStringValue propName)
+        private static bool CompareBlittableArray(string fieldPath, string id, BlittableJsonReaderArray oldArray, BlittableJsonReaderArray newArray,
+            IDictionary<string, DocumentsChanges[]> changes, List<DocumentsChanges> docChanges, LazyStringValue propName)
         {
             // if we don't care about the changes
             if (oldArray.Length != newArray.Length && changes == null)
@@ -195,14 +198,14 @@ namespace Raven.Client.Json
                     case BlittableJsonReaderObject bjro1:
                         if (newArray[position] is BlittableJsonReaderObject bjro2)
                         {
-                            changed |= CompareBlittable(id, bjro1, bjro2, changes, docChanges);
+                            changed |= CompareBlittable(AddIndexFieldPath(fieldPath, position), id, bjro1, bjro2, changes, docChanges);
                         }
                         else
                         {
                             changed = true;
                             if (changes != null)
                             {
-                                NewChange(propName, newArray[position], oldArray[position], docChanges,
+                                NewChange(AddIndexFieldPath(fieldPath, position), propName, newArray[position], oldArray[position], docChanges,
                                     DocumentsChanges.ChangeType.ArrayValueChanged);
                             }
 
@@ -211,14 +214,14 @@ namespace Raven.Client.Json
                     case BlittableJsonReaderArray bjra1:
                         if (newArray[position] is BlittableJsonReaderArray bjra2)
                         {
-                            changed |= CompareBlittableArray(id, bjra1, bjra2, changes, docChanges, propName);
+                            changed |= CompareBlittableArray(AddIndexFieldPath(fieldPath, position), id, bjra1, bjra2, changes, docChanges, propName);
                         }
                         else
                         {
                             changed = true;
                             if (changes != null)
                             {
-                                NewChange(propName, newArray[position], oldArray[position], docChanges,
+                                NewChange(AddIndexFieldPath(fieldPath, position), propName, newArray[position], oldArray[position], docChanges,
                                     DocumentsChanges.ChangeType.ArrayValueChanged);
                             }
                         }
@@ -229,7 +232,7 @@ namespace Raven.Client.Json
                             changed = true;
                             if (changes != null)
                             {
-                                NewChange(propName, newArray[position], oldArray[position], docChanges,
+                                NewChange(AddIndexFieldPath(fieldPath, position), propName, newArray[position], oldArray[position], docChanges,
                                     DocumentsChanges.ChangeType.ArrayValueChanged);
                             }
                         }
@@ -239,7 +242,7 @@ namespace Raven.Client.Json
                         {
                             if (changes != null)
                             {
-                                NewChange(propName, newArray[position], oldArray[position], docChanges,
+                                NewChange(AddIndexFieldPath(fieldPath, position), propName, newArray[position], oldArray[position], docChanges,
                                     DocumentsChanges.ChangeType.ArrayValueChanged);
                             }
                             changed = true;
@@ -256,14 +259,14 @@ namespace Raven.Client.Json
             // if one of the arrays is larger than the other
             while (position < oldArray.Length)
             {
-                NewChange(propName, null, oldArray[position], docChanges,
+                NewChange(fieldPath, propName, null, oldArray[position], docChanges,
                     DocumentsChanges.ChangeType.ArrayValueRemoved);
                 position++;
             }
 
             while (position < newArray.Length)
             {
-                NewChange(propName, newArray[position], null, docChanges,
+                NewChange(fieldPath, propName, newArray[position], null, docChanges,
                     DocumentsChanges.ChangeType.ArrayValueAdded);
                 position++;
             }
@@ -271,14 +274,21 @@ namespace Raven.Client.Json
             return changed;
         }
 
-        private static void NewChange(string name, object newValue, object oldValue, List<DocumentsChanges> docChanges, DocumentsChanges.ChangeType change)
+        private static string AddIndexFieldPath(string fieldPath, int position)
+        {
+            return fieldPath + $"[{position}]";
+        }
+
+        private static void NewChange(string fieldPath, string name, object newValue, object oldValue, List<DocumentsChanges> docChanges,
+            DocumentsChanges.ChangeType change)
         {
             docChanges.Add(new DocumentsChanges
             {
                 FieldName = name,
                 FieldNewValue = newValue,
                 FieldOldValue = oldValue,
-                Change = change
+                Change = change,
+                FieldPath = fieldPath
             });
         }
     }

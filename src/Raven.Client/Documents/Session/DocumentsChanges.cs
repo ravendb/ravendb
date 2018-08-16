@@ -34,6 +34,16 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public string FieldName { get; set; }
 
+        /// <summary>
+        /// Path of field on which the change occurred.
+        /// </summary>
+        public string FieldPath { get; set; }
+
+        /// <summary>
+        /// Path + Name of field on which the change occurred.
+        /// </summary>
+        public string FieldFullName => string.IsNullOrEmpty(FieldPath) ? FieldName : FieldPath + "." + FieldName;
+
         public enum ChangeType
         {
             DocumentDeleted,
@@ -54,6 +64,7 @@ namespace Raven.Client.Documents.Session
                    && Equals(FieldNewValue, other.FieldNewValue)
                    && Equals(FieldOldType, other.FieldOldType)
                    && string.Equals(FieldName, other.FieldName)
+                   && string.Equals(FieldPath, other.FieldPath)
                    && Equals(FieldNewType, other.FieldNewType)
                    && Change == other.Change;
         }
@@ -67,6 +78,7 @@ namespace Raven.Client.Documents.Session
                 hashCode = (hashCode * 397) ^ (FieldOldType.GetHashCode());
                 hashCode = (hashCode * 397) ^ (FieldNewType.GetHashCode());
                 hashCode = (hashCode * 397) ^ (FieldName?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (FieldPath?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (Change.GetHashCode());
                 return hashCode;
             }
