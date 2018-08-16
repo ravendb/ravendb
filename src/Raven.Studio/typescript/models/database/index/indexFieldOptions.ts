@@ -151,6 +151,8 @@ class indexFieldOptions {
                     this.analyzer(null);
                     this.indexing("Search");
                     
+                    // make sure advanced options are visible
+                    this.showAdvancedOptions(true);
                 } else {
                     this.analyzer(null);
                     this.indexing("Default");
@@ -350,8 +352,8 @@ class indexFieldOptions {
     }
 
     toDto(): Raven.Client.Documents.Indexes.IndexFieldOptions {
-         const analyzer = indexFieldOptions.analyzersNamesDictionary.find(x => x.shortName === this.analyzer()); 
-         const analyzerFullName = analyzer ? analyzer.fullName : (this.analyzer() || null);
+        const analyzer = indexFieldOptions.analyzersNamesDictionary.find(x => x.shortName === this.analyzer()); 
+        const analyzerFullName = analyzer ? analyzer.fullName : (this.analyzer() || null);
         
         return {
             Analyzer: analyzerFullName, 
