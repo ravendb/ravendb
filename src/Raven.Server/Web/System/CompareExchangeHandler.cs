@@ -136,16 +136,16 @@ namespace Raven.Server.Web.System
                 var command = new AddOrUpdateCompareExchangeCommand(key, updateJson, index, context);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    (var raftIndex, var res) = await ServerStore.SendToLeaderAsync(command);
+                    (var raftIndex, var response) = await ServerStore.SendToLeaderAsync(context, command);
                     await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
                     using (context.OpenReadTransaction())
                     {
-                        var tuple = (AddOrUpdateCompareExchangeCommand.CompareExchangeResult)res;
+                        var result = (CompareExchangeCommandBase.CompareExchangeResult)response;
                         context.Write(writer, new DynamicJsonValue
                         {
-                            [nameof(CompareExchangeResult<object>.Index)] = tuple.Index,
-                            [nameof(CompareExchangeResult<object>.Value)] = tuple.Value,
-                            [nameof(CompareExchangeResult<object>.Successful)] = tuple.Index == raftIndex
+                            [nameof(CompareExchangeResult<object>.Index)] = result.Index,
+                            [nameof(CompareExchangeResult<object>.Value)] = result.Value,
+                            [nameof(CompareExchangeResult<object>.Successful)] = result.Index == raftIndex
                         });
                     }
                 }
@@ -168,16 +168,16 @@ namespace Raven.Server.Web.System
                 var command = new RemoveCompareExchangeCommand(key, index, context);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    (var raftIndex, var res) = await ServerStore.SendToLeaderAsync(command);
+                    (var raftIndex, var response) = await ServerStore.SendToLeaderAsync(context, command);
                     await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
                     using (context.OpenReadTransaction())
                     {
-                        var tuple = (AddOrUpdateCompareExchangeCommand.CompareExchangeResult)res;
+                        var result = (CompareExchangeCommandBase.CompareExchangeResult)response;
                         context.Write(writer, new DynamicJsonValue
                         {
-                            [nameof(CompareExchangeResult<object>.Index)] = tuple.Index,
-                            [nameof(CompareExchangeResult<object>.Value)] = tuple.Value,
-                            [nameof(CompareExchangeResult<object>.Successful)] = tuple.Index == raftIndex
+                            [nameof(CompareExchangeResult<object>.Index)] = result.Index,
+                            [nameof(CompareExchangeResult<object>.Value)] = result.Value,
+                            [nameof(CompareExchangeResult<object>.Successful)] = result.Index == raftIndex
                         });
                     }
                 }
