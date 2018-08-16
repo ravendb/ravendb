@@ -98,7 +98,7 @@ namespace SlowTests.Issues
                         };
 
                     var e = Assert.Throws<NotSupportedException>(() => results.ToList());
-                    Assert.Equal("Unable to translate 'SingleOrDefault' to RQL operation because not this method is not familiar to the RavenDB query provider.", e.Message);
+                    Assert.Equal("Unable to translate 'SingleOrDefault' to RQL operation because this method is not familiar to the RavenDB query provider.", e.Message);
 
                 }
             }
