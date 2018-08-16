@@ -99,12 +99,16 @@ namespace Raven.Database.Commercial
 				},firstTime:firstTime);
 
 				var attributes = new Dictionary<string, string>(alwaysOnAttributes, StringComparer.OrdinalIgnoreCase);
-				foreach (var licenseAttribute in licenseValidator.LicenseAttributes)
-				{
-					attributes[licenseAttribute.Key] = licenseAttribute.Value;
-				}
 
-				var message = "Valid license at " + licensePath;
+			    var licenseAttributes = new Dictionary<string, string>();
+			    foreach (var licenseAttribute in licenseValidator.LicenseAttributes)
+			    {
+			        licenseAttributes[licenseAttribute.Key] = licenseAttribute.Value;
+			    }
+
+			    LicenseAttributes = licenseAttributes;
+
+                var message = "Valid license at " + licensePath;
 				var status = "Commercial";
 				if (licenseValidator.LicenseType != LicenseType.Standard)
 					status += " - " + licenseValidator.LicenseType;
@@ -220,8 +224,14 @@ namespace Raven.Database.Commercial
             return false;
         }
 
-        private void AssertForV2(IDictionary<string, string> licenseAttributes)
+        private void AssertForV2(IDictionary<string, string> currentlicenseAttributes)
 		{
+            var licenseAttributes = new Dictionary<string, string>();
+		    foreach (var attribute in currentlicenseAttributes)
+		    {
+		        licenseAttributes.Add(attribute.Key, attribute.Value);
+            }
+
 			string version;
 			if (licenseAttributes.TryGetValue("version", out version) == false)
 			{
@@ -299,6 +309,8 @@ namespace Raven.Database.Commercial
 				if (clasterInspector.IsRavenRunningAsClusterGenericService())
 					throw new InvalidOperationException("Your license does not allow clustering, but RavenDB is running in clustered mode");
 			}
+
+		    LicenseAttributes = licenseAttributes;
 		}
 
 		[Import(AllowDefault = true)]

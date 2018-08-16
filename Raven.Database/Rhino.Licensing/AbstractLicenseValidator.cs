@@ -245,8 +245,9 @@ namespace Rhino.Licensing
         /// </summary>
 		public virtual void AssertValidLicense(Action onValidLicense, bool turnOffDiscoveryClient = false, bool firstTime = false)
         {
-            LicenseAttributes.Clear();
-			if (IsLicenseValid(firstTime))
+            LicenseAttributes = new Dictionary<string, string>();
+
+            if (IsLicenseValid(firstTime))
             {
                 onValidLicense();
 
@@ -266,19 +267,23 @@ namespace Rhino.Licensing
                         // we explicitly don't want bad things to happen if we can't do that
                         Logger.ErrorException("Could not setup node discovery", e);
                     }
+
                     if (discoveryClient == null)
                     {
                         lock (this)
                         {
                             if (discoveryClient == null)
                             {
-                                discoveryClient = new DiscoveryClient(senderId, UserId, Environment.MachineName, Environment.UserName);
+                                discoveryClient = new DiscoveryClient(senderId, UserId, Environment.MachineName,
+                                    Environment.UserName);
                             }
                         }
                     }
+
                     discoveryClient.PublishMyPresence();
 
                 }
+
                 return;
             }
 
@@ -625,13 +630,17 @@ namespace Rhino.Licensing
             Name = name.Value;
 
             var license = doc.SelectSingleNode("/license");
+
+            var licenseAttributes = new Dictionary<string, string>();
             foreach (XmlAttribute attrib in license.Attributes)
             {
                 if (attrib.Name == "type" || attrib.Name == "expiration" || attrib.Name == "id")
                     continue;
 
-                LicenseAttributes[attrib.Name] = attrib.Value;
+                licenseAttributes[attrib.Name] = attrib.Value;
             }
+
+            LicenseAttributes = licenseAttributes;
 
             return true;
         }
