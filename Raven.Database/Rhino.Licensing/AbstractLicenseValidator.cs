@@ -240,12 +240,24 @@ namespace Rhino.Licensing
             AssertValidLicense(() => { });
         }
 
+        public object LicenseAttributesLock = new object();
+
         /// <summary>
         /// Validates loaded license
         /// </summary>
 		public virtual void AssertValidLicense(Action onValidLicense, bool turnOffDiscoveryClient = false, bool firstTime = false)
         {
-            LicenseAttributes.Clear();
+            Monitor.Enter(LicenseAttributesLock);
+
+            try
+            {
+                LicenseAttributes.Clear();
+            }
+            finally
+            {
+                Monitor.Exit(LicenseAttributesLock);
+            }
+            
 			if (IsLicenseValid(firstTime))
             {
                 onValidLicense();
@@ -625,12 +637,22 @@ namespace Rhino.Licensing
             Name = name.Value;
 
             var license = doc.SelectSingleNode("/license");
-            foreach (XmlAttribute attrib in license.Attributes)
-            {
-                if (attrib.Name == "type" || attrib.Name == "expiration" || attrib.Name == "id")
-                    continue;
 
-                LicenseAttributes[attrib.Name] = attrib.Value;
+            Monitor.Enter(LicenseAttributesLock);
+
+            try
+            {
+                foreach (XmlAttribute attrib in license.Attributes)
+                {
+                    if (attrib.Name == "type" || attrib.Name == "expiration" || attrib.Name == "id")
+                        continue;
+
+                    LicenseAttributes[attrib.Name] = attrib.Value;
+                }
+            }
+            finally
+            {
+                Monitor.Exit(LicenseAttributesLock);
             }
 
             return true;
