@@ -7,6 +7,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Raven.Client.Properties;
 
 namespace Raven.Migrator
 {
@@ -87,6 +88,10 @@ namespace Raven.Migrator
                     jsonTextWriter.Formatting = Formatting.Indented;
 
                 await jsonTextWriter.WriteStartObjectAsync();
+
+                await jsonTextWriter.WritePropertyNameAsync("BuildVersion");
+                await jsonTextWriter.WriteValueAsync(RavenVersionAttribute.Instance.BuildVersion);
+
                 await jsonTextWriter.WritePropertyNameAsync("Docs");
                 await jsonTextWriter.WriteStartArrayAsync();
 

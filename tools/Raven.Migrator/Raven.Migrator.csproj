@@ -9,7 +9,9 @@
   </PropertyGroup>
   
   <ItemGroup>
-     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+    <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+    <Compile Include="..\..\src\Raven.Client\Properties\VersionInfo.cs" Link="Properties\VersionInfo.cs" />
+    <Compile Include="..\..\src\Raven.Client\Extensions\StringExtensions.cs" Link="Extensions\StringExtensions.cs" />
   </ItemGroup>
 
   <ItemGroup>
