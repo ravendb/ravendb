@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/admin/debug/clustertxinfo", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/admin/debug/cluster/txinfo", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
         public Task ClusterTxInfo()
         {
             var from = GetLongQueryString("from", false);
@@ -57,7 +57,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (context.OpenReadTransaction())
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                context.Write(writer, new DynamicJsonArray(ClusterTransactionCommand.ReadCommandsBatch(context, Database.Name, from, take)));
+                context.Write(writer, new DynamicJsonValue
+                {
+                    ["Results"] = new DynamicJsonArray(ClusterTransactionCommand.ReadCommandsBatch(context, Database.Name, from, take))
+                });
             }
 
             return Task.CompletedTask;
