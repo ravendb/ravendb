@@ -121,6 +121,9 @@ class indexFieldOptions {
                 if (newValue) {
                     this.analyzer(null);
                     this.indexing("Search");
+                    
+                    // make sure advanced options are visible
+                    this.showAdvancedOptions(true);
                 } else {
                     this.analyzer(null);
                     this.indexing("Default");
