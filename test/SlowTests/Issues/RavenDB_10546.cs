@@ -44,8 +44,7 @@ namespace SlowTests.Issues
 
                 studioConfiguration = store.Maintenance.Send(new GetStudioConfigurationOperation());
 
-                Assert.NotNull(studioConfiguration);
-                Assert.Equal(StudioConfiguration.StudioEnvironment.Development, studioConfiguration.Environment); // from server
+                Assert.Null(studioConfiguration);
 
                 store.Maintenance.Send(new PutStudioConfigurationOperation(new StudioConfiguration
                 {
@@ -76,7 +75,8 @@ namespace SlowTests.Issues
                 studioConfiguration = store.Maintenance.Send(new GetStudioConfigurationOperation());
 
                 Assert.NotNull(studioConfiguration);
-                Assert.Equal(StudioConfiguration.StudioEnvironment.None, studioConfiguration.Environment); // from server
+                Assert.True(studioConfiguration.Disabled);
+                Assert.Equal(StudioConfiguration.StudioEnvironment.Production, studioConfiguration.Environment); // from database
             }
         }
 
