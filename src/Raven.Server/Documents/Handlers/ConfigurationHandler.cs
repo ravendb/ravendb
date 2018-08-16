@@ -94,20 +94,6 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        private ServerWideStudioConfiguration GetServerStudioConfiguration(out long index)
-        {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                using (context.OpenReadTransaction())
-                {
-                    var studioConfigurationJson = ServerStore.Cluster.Read(context, Constants.Configuration.StudioId, out index);
-                    return studioConfigurationJson != null
-                        ? JsonDeserializationServer.ServerWideStudioConfiguration(studioConfigurationJson)
-                        : null;
-                }
-            }
-        }
-
         private ClientConfiguration GetServerClientConfiguration(out long index)
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
