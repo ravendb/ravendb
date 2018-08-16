@@ -371,8 +371,6 @@ namespace Raven.Client.Util
                             }
                             return;
                         }
-                    case "Single":
-                    case "SingleOrDefault":
                     case "FirstOrDefault":
                     case "First":
                         {
@@ -592,7 +590,10 @@ namespace Raven.Client.Util
                         HandleCount(context, methodCallExpression.Arguments[0]);
                         return;
                     default:
-                        return;
+                        throw new NotSupportedException("Unable to transalte " + methodName + " to RQL operation because not this method is not familiar to the RavenDB query provider.")
+                        {
+                            HelpLink = "DoNotWrap"
+                        };
                 }
 
                 var javascriptWriter = context.GetWriter();
