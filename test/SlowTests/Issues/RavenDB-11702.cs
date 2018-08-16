@@ -1,5 +1,7 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using FastTests;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
@@ -51,13 +53,13 @@ namespace SlowTests.Issues
                     TransactionMode = TransactionMode.ClusterWide
                 }))
                 {
-                    var r = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<BlittableJsonReaderObject>("usernames/ayende");
-                    Assert.True(r.Value.TryGet("name", out string name));
-                    Assert.Equal("Karmel", name);
+                    var r = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<JObject>("usernames/ayende");
+                    Assert.True(r.Value.TryGetValue("name", StringComparison.Ordinal, out JToken name));
+                    Assert.Equal("Karmel", name.ToString());
 
-                    r = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<BlittableJsonReaderObject>("usersname/viaComamnd");
-                    Assert.True(r.Value.TryGet("name", out name));
-                    Assert.Equal("Karmel2", name);
+                    r = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<JObject>("usersname/viaComamnd");
+                    Assert.True(r.Value.TryGetValue("name", StringComparison.Ordinal, out name));
+                    Assert.Equal("Karmel2", name.ToString());
                 }
             }
 

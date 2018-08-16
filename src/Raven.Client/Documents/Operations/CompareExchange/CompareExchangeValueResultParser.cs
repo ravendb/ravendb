@@ -13,14 +13,14 @@ namespace Raven.Client.Documents.Operations.CompareExchange
         public static Dictionary<string, CompareExchangeValue<T>> GetValues(BlittableJsonReaderObject response, DocumentConventions conventions)
         {
             if (response.TryGet("Results", out BlittableJsonReaderArray items) == false)
-                    throw new InvalidDataException("Response is invalid. Results is missing.");
+                throw new InvalidDataException("Response is invalid. Results is missing.");
 
             var results = new Dictionary<string, CompareExchangeValue<T>>();
             foreach (BlittableJsonReaderObject item in items)
             {
                 if (item == null)
                     throw new InvalidDataException("Response is invalid. Item is null.");
-                
+
                 if (item.TryGet("Key", out string key) == false)
                     throw new InvalidDataException("Response is invalid. Key is missing.");
                 if (item.TryGet("Index", out long index) == false)
@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                 if (typeof(T).GetTypeInfo().IsPrimitive || typeof(T) == typeof(string))
                 {
                     // simple
-                    T value = default(T);
+                    T value = default;
                     raw?.TryGet("Object", out value);
                     results[key] = new CompareExchangeValue<T>(key, index, value);
                 }
@@ -41,24 +41,19 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                     raw?.TryGet("Object", out val);
                     if (val == null)
                     {
-                        results[key] = new CompareExchangeValue<T>(key, index, default(T));
+                        results[key] = new CompareExchangeValue<T>(key, index, default);
                     }
                     else
                     {
-                        T convereted;
-                        if (typeof(T) == typeof(BlittableJsonReaderObject))
-                            convereted = (T)(object)val;
-                        else
-                            convereted = (T)EntityToBlittable.ConvertToEntity(typeof(T), null, val, conventions);
-
-                        results[key] = new CompareExchangeValue<T>(key, index, convereted);
+                        var converted = (T)EntityToBlittable.ConvertToEntity(typeof(T), null, val, conventions);
+                        results[key] = new CompareExchangeValue<T>(key, index, converted);
                     }
                 }
             }
 
             return results;
         }
-        
+
         public static CompareExchangeValue<T> GetValue(BlittableJsonReaderObject response, DocumentConventions conventions)
         {
             if (response == null)
