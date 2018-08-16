@@ -144,7 +144,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     if (ShouldSendDocumentWithRevisions(_subscription, run, _patch, docsContext, item, revisionTuple, out var transformResult, out var exception) == false)
                     {
-                        includesCmd.AddRange(run.Includes);
+                        if(run != null)
+                            includesCmd.AddRange(run.Includes);
                         if (exception != null)
                         {
                             yield return (item, exception);
