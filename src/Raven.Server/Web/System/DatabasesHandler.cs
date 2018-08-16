@@ -294,7 +294,7 @@ namespace Raven.Server.Web.System
                 clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
 
                 var studioEnvironment = StudioConfiguration.StudioEnvironment.None;
-                if (dbRecord.Studio != null && !dbRecord.Disabled)
+                if (dbRecord.Studio != null && !dbRecord.Studio.Disabled)
                 {
                     studioEnvironment = dbRecord.Studio.Environment;
                 }

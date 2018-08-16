@@ -9,10 +9,7 @@ class getStudioConfigurationCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.Configuration.StudioConfiguration> {
-        const args = {
-            inherit: false
-        };
-        const url = endpoints.global.adminConfiguration.configurationStudio + this.urlEncodeArgs(args);
+        const url = endpoints.global.adminConfiguration.configurationStudio;
         const loadTask = $.Deferred<Raven.Client.Documents.Operations.Configuration.StudioConfiguration>();
 
         this.query<Raven.Client.Documents.Operations.Configuration.StudioConfiguration>(url, null, this.db)
