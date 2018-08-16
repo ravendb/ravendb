@@ -86,7 +86,9 @@ class setCounterDialog extends dialogViewModelBase {
         
         this.newTotalValue.extend({
             required: true, 
-            number: true
+            number: true,
+            min: Number.MIN_SAFE_INTEGER,
+            max: Number.MAX_SAFE_INTEGER
         });
     }
 }
