@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Xunit;
 
 namespace Tests.Infrastructure
 {
@@ -21,6 +24,20 @@ namespace Tests.Infrastructure
             if (task.Exception != null)
                 throw task.Exception.GetBaseException();
             throw new Exception($"Should never reach this code path. {task.Status}, timeout: {timeout}");
+        }
+    }
+
+    public static class AssertExt
+    {
+        public static void AreEquivalent<T>(IEnumerable<T> expected, IEnumerable<T> actual)
+        {
+            var forMonitor = actual.ToList();
+            Assert.All(expected, e =>
+            {
+                Assert.Contains(e, forMonitor);
+                forMonitor.Remove(e);
+            });
+            Assert.Empty(forMonitor);
         }
     }
 }
