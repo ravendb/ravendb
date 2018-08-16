@@ -21,6 +21,7 @@ namespace Raven.Server.Commercial
         public string Domain { get; set; }
         public string RootDomain { get; set; }
         public bool ModifyLocalServer { get; set; }
+        public string LocalNodeTag { get; set; }
         public string Certificate { get; set; }
         public string Password { get; set; }
 

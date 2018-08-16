@@ -135,6 +135,7 @@ class serverSetup {
             Domain: this.domain().domain(),
             RootDomain: this.domain().rootDomain(),
             ModifyLocalServer: true,
+            LocalNodeTag: "A",
             RegisterClientCert: this.registerClientCertificate(), 
             NodeSetupInfos: nodesInfo,
             Certificate: this.certificate().certificate(),
