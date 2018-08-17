@@ -211,6 +211,9 @@ namespace Raven.Client.Documents.Session
         {
             Id = id;
             DatabaseName = options.Database ?? documentStore.Database;
+            if (string.IsNullOrWhiteSpace(DatabaseName))
+                ThrowNoDatabase();
+
             _documentStore = documentStore;
             _requestExecutor = options.RequestExecutor ?? documentStore.GetRequestExecutor(DatabaseName);
             _releaseOperationContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
@@ -1015,6 +1018,12 @@ more responsive application.
         {
             throw new InvalidOperationException(
                 $"Cannot perform save because document {resultCommand.Id} has been modified by the session and is also taking part in deferred {resultCommand.Type} command");
+        }
+
+        private static void ThrowNoDatabase()
+        {
+            throw new InvalidOperationException(
+                $"Cannot open a Session without specifying a name of a database to operate on. Database name can be passed as an argument when Session is being opened or default database can be defined using '{nameof(DocumentStore)}.{nameof(IDocumentStore.Database)}' property.");
         }
 
         protected bool EntityChanged(BlittableJsonReaderObject newObj, DocumentInfo documentInfo, IDictionary<string, DocumentsChanges[]> changes)
