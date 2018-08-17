@@ -2,6 +2,13 @@
 <form class="flex-form" data-bind="with: model.unsecureSetup, submit: save">
     <div class="panel padding padding-lg">
         <div class="margin-bottom">
+            <div class="form-group" data-bind="validationElement: localNodeTag">
+                <label for="localNodeTag" class="control-label">Node Tag</label>
+                <div class="flex-grow">
+                    <input type="text" autocomplete="off" class="form-control" id="localNodeTag" data-bind="textInput: localNodeTag">
+                </div>
+            </div>
+            
             <div class="form-group" data-bind="validationElement: port">
                 <label for="port" class="control-label">HTTP Port</label>
                 <div class="flex-grow">
@@ -18,6 +25,7 @@
                            data-bind="textInput: tcpPort, disable: $root.model.fixTcpPortNumberOnLocalNode, attr: { title: $root.model.fixTcpPortNumberOnLocalNode() ? 'Fixed by startup parameter': '' }">
                 </div>
             </div>
+            
             <div data-bind="with: ip">
                 <div class="form-group" data-bind="validationElement: ip">
                     <label class="control-label" data-bind="attr: { for: 'ipInput' }">
@@ -63,7 +71,7 @@
         
         <div class="form-group" data-bind="validationElement: $root.model.environment, with: $root.model">
             <label for="port" class="control-label">Environment</label>
-            <div class="flex-grow">
+            <div style="position: relative">
                 <button class="btn btn-block dropdown-toggle" type="button" data-toggle="dropdown">
                     <span data-bind="text: environment"></span>
                     <span class="caret"></span>

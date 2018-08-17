@@ -21,7 +21,7 @@ class clusterGraphEdge<T extends  clusterNode> {
 
 class clusterGraph {
 
-    private static readonly circleRadius = 42;
+    private static readonly circleRadius = 50;
     private static readonly minDrawRadius = 170;
     private static readonly minDistanceBetweenCircles = 145;
 
@@ -29,7 +29,7 @@ class clusterGraph {
     private width: number;
     private height: number;
     private svg: d3.Selection<void>;
-    private zoom: d3.behavior.Zoom<void>
+    private zoom: d3.behavior.Zoom<void>;
     private nodesGroup: d3.Selection<void>;
     private edgesGroup: d3.Selection<void>;
     private nodes: d3.Selection<clusterNode>;
@@ -152,7 +152,7 @@ class clusterGraph {
             .append("text")
             .attr("class", "node-tag")
             .text(x => x.tag() === "?" ? "" : x.tag()) // dont display '?' as tag, when passive
-            .attr("y", 25);
+            .attr("y", 26);
 
         enteringGroups
             .append("text")

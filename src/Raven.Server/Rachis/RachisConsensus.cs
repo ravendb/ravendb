@@ -1635,7 +1635,7 @@ namespace Raven.Server.Rachis
             public Guid? TopologyId;
         }
 
-        public void Bootstrap(string selfUrl)
+        public void Bootstrap(string selfUrl, string nodeTag)
         {
             if (selfUrl == null)
                 throw new ArgumentNullException(nameof(selfUrl));
@@ -1648,7 +1648,7 @@ namespace Raven.Server.Rachis
 
                 if(_tag == InitialTag)
                 {
-                    UpdateNodeTag(ctx, "A");
+                    UpdateNodeTag(ctx, nodeTag);
                 }
 
                 var topologyId = Guid.NewGuid().ToString();
@@ -1661,7 +1661,7 @@ namespace Raven.Server.Rachis
                     },
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
-                    "A"
+                    nodeTag
                 );
 
                 SetTopology(null, ctx, topology);
@@ -1674,13 +1674,13 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public string HardResetToNewCluster()
+        public string HardResetToNewCluster(string nodeTag = "A")
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
                 var lastNode =  GetTopology(ctx).LastNodeId;
-                UpdateNodeTag(ctx, "A");
+                UpdateNodeTag(ctx, nodeTag);
 
                 var topologyId = Guid.NewGuid().ToString();
                 var topology = new ClusterTopology(
