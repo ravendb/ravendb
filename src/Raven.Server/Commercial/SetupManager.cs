@@ -197,6 +197,7 @@ namespace Raven.Server.Commercial
                 BlittableJsonReaderObject settingsJsonObject;
                 License license;
                 Dictionary<string, string> otherNodesUrls;
+                string localNodeTag;
 
                 try
                 {
@@ -215,7 +216,8 @@ namespace Raven.Server.Commercial
                 {
                     try
                     {
-                        settingsJsonObject = ExtractCertificatesAndSettingsJsonFromZip(zipBytes, continueSetupInfo.NodeTag, context, out serverCertBytes, out serverCert, out clientCert, out otherNodesUrls, out license);
+                        settingsJsonObject = ExtractCertificatesAndSettingsJsonFromZip(zipBytes, continueSetupInfo.NodeTag, context, out serverCertBytes, 
+                            out serverCert, out clientCert, out localNodeTag, out otherNodesUrls, out license);
                     }
                     catch (Exception e)
                     {
@@ -242,7 +244,8 @@ namespace Raven.Server.Commercial
 
                     try
                     {
-                        await CompleteConfigurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, serverCertBytes, serverCert, clientCert, serverStore, otherNodesUrls, license);
+                        await CompleteConfigurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, serverCertBytes, serverCert, 
+                            clientCert, serverStore, localNodeTag, otherNodesUrls, license);
                     }
                     catch (Exception e)
                     {
@@ -264,7 +267,7 @@ namespace Raven.Server.Commercial
             return progress;
         }
 
-        public static BlittableJsonReaderObject ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string nodeTag, JsonOperationContext context, out byte[] certBytes, out X509Certificate2 serverCert, out X509Certificate2 clientCert, out Dictionary<string, string> otherNodesUrls, out License license)
+        public static BlittableJsonReaderObject ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string nodeTag, JsonOperationContext context, out byte[] certBytes, out X509Certificate2 serverCert, out X509Certificate2 clientCert, out string localNodeTag, out Dictionary<string, string> otherNodesUrls, out License license)
         {
             certBytes = null;
             byte[] clientCertBytes = null;
@@ -273,9 +276,27 @@ namespace Raven.Server.Commercial
 
             otherNodesUrls = new Dictionary<string, string>();
 
+            localNodeTag = "A";
+
             using (var msZip = new MemoryStream(zipBytes))
             using (var archive = new ZipArchive(msZip, ZipArchiveMode.Read, false))
             {
+                foreach (var entry in archive.Entries)
+                {
+                    // try to find setup.json file first, as we make decisions based on its contents 
+                    if (entry.Name.Equals("setup.json"))
+                    {
+                        var json = context.Read(entry.Open(), "license/json");
+
+                        SetupSettings setupSettings = JsonDeserializationServer.SetupSettings(json);
+                        localNodeTag = setupSettings.Nodes[0].Tag;
+                        
+                        // since we allow to customize node tags, we stored information about order nodes into setup.json file
+                        // first node is local node on which cluster should be initialized 
+                        // if file was not found we are using old codebase - it means local node has tag = 'A'
+                    }
+                }
+                
                 foreach (var entry in archive.Entries)
                 {
                     if (entry.FullName.StartsWith($"{nodeTag}/") && entry.Name.EndsWith(".pfx"))
@@ -313,8 +334,12 @@ namespace Raven.Server.Commercial
                                 currentNodeSettingsJson = settingsJson.Clone(context);
                             }
 
-                            if (entry.FullName.StartsWith("A/") == false && publicServerUrl != null)
-                                otherNodesUrls.Add(entry.FullName[0].ToString(), publicServerUrl);
+                            if (entry.FullName.StartsWith(localNodeTag + "/") == false && publicServerUrl != null)
+                            {
+                                var tag = entry.FullName.Substring(0, entry.FullName.Length - "/settings.json".Length);
+                                otherNodesUrls.Add(tag, publicServerUrl);
+                            }
+                                
                         }
                     }
                 }
@@ -783,11 +808,14 @@ namespace Raven.Server.Commercial
                         $"Got unsuccessful response from registration request: {response.StatusCode}.{Environment.NewLine}{responseString}");
                 }
 
-
-                if (challenge == null && registrationInfo.SubDomains.Exists(x => x.SubDomain.StartsWith("A.", StringComparison.OrdinalIgnoreCase)) == false)
+                if (challenge == null)
                 {
-                    progress.AddInfo("DNS update started successfully, since current node (A) DNS record didn't change, not waiting for full DNS propogation.");
-                    return;
+                    var existingSubDomain = registrationInfo.SubDomains.FirstOrDefault(x => x.SubDomain.StartsWith(setupInfo.LocalNodeTag + ".", StringComparison.OrdinalIgnoreCase));
+                    if (existingSubDomain != null && new HashSet<string>(existingSubDomain.Ips).SetEquals(setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag].Addresses))
+                    {
+                        progress.AddInfo("DNS update started successfully, since current node (" + setupInfo.LocalNodeTag + ") DNS record didn't change, not waiting for full DNS propogation."); 
+                        return;
+                    }
                 }
 
                 var id = JsonConvert.DeserializeObject<Dictionary<string, string>>(responseString).First().Value;
@@ -1193,6 +1221,7 @@ namespace Raven.Server.Commercial
             X509Certificate2 serverCert,
             X509Certificate2 clientCert,
             ServerStore serverStore,
+            string localNodeTag,
             Dictionary<string, string> otherNodesUrls,
             License license)
         {
@@ -1213,9 +1242,9 @@ namespace Raven.Server.Commercial
 
             serverStore.Server.Certificate = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes, certPassword, serverStore);
             
-            if (continueSetupInfo.NodeTag.Equals("A"))
+            if (continueSetupInfo.NodeTag.Equals(localNodeTag))
             {
-                serverStore.EnsureNotPassive(publicServerUrl);
+                serverStore.EnsureNotPassive(publicServerUrl, localNodeTag);
 
                 await DeleteAllExistingCertificates(serverStore);
 
@@ -1253,7 +1282,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                if (continueSetupInfo.NodeTag.Equals("A"))
+                if (continueSetupInfo.NodeTag.Equals(localNodeTag))
                 {
                     var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + clientCert.Thumbprint, certDef));
                     await serverStore.Cluster.WaitForIndexNotification(res.Index);
@@ -1360,7 +1389,7 @@ namespace Raven.Server.Commercial
                                 throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
                             }
 
-                            serverStore.EnsureNotPassive(publicServerUrl);
+                            serverStore.EnsureNotPassive(publicServerUrl, setupInfo.LocalNodeTag);
 
                             await DeleteAllExistingCertificates(serverStore);
 
@@ -1580,7 +1609,7 @@ namespace Raven.Server.Commercial
 
                         progress.AddInfo("Adding readme file to zip archive.");
                         onProgress(progress);
-                        string readmeString = CreateReadmeText("A", publicServerUrl, setupInfo.NodeSetupInfos.Count > 1, setupInfo.RegisterClientCert);
+                        string readmeString = CreateReadmeText(setupInfo.LocalNodeTag, publicServerUrl, setupInfo.NodeSetupInfos.Count > 1, setupInfo.RegisterClientCert);
 
                         progress.Readme = readmeString;
                         try
@@ -1600,6 +1629,39 @@ namespace Raven.Server.Commercial
                         catch (Exception e)
                         {
                             throw new InvalidOperationException("Failed to write readme.txt to zip archive.", e);
+                        }
+                        
+                        progress.AddInfo("Adding setup.json file to zip archive.");
+                        onProgress(progress);
+
+                        try
+                        {
+                            var settings = new SetupSettings
+                            {
+                                Nodes = setupInfo.NodeSetupInfos.Select(tag => new SetupSettings.Node
+                                {
+                                    Tag = tag.Key
+                                }).ToArray()
+                            };
+                            
+                            var modifiedJsonObj = context.ReadObject(settings.ToJson(), "setup-json");
+
+                            var indentedJson = IndentJsonString(modifiedJsonObj.ToString());
+                            
+                            var entry = archive.CreateEntry("setup.json");
+                            entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
+                            
+                            using (var entryStream = entry.Open())
+                            using (var writer = new StreamWriter(entryStream))
+                            {
+                                writer.Write(indentedJson);
+                                writer.Flush();
+                                await entryStream.FlushAsync(token);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            throw new InvalidOperationException("Failed to write setup.json to zip archive.", e);
                         }
                     }
                     return ms.ToArray();
