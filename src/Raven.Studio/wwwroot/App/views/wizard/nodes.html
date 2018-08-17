@@ -24,7 +24,7 @@
                         <div class="flex-grow">
                             <div class="padding-xs">
                                 <i class="icon-cluster-node"></i>
-                                <span>Node <strong><span data-bind="text: nodeTag"></span></strong></span>    
+                                <span>Node <strong><span data-bind="text: nodeTag"></span></strong> <span data-bind="visible: $root.model.createIsLocalNodeObservable($data)" class="text-info">(local node)</span></span>    
                             </div>
                         </div>
                         <button data-bind="click: $root.editNode" class="btn btn-default" title="Edit this node">
@@ -60,12 +60,18 @@
                             <span class="help-block" data-bind="validationMessage: hostname"></span>
                         </div>
                     </div>
+                    <div class="form-group" data-bind="validationElement: nodeTag">
+                        <label for="nodeTag" class="control-label">Node Tag</label>
+                        <div class="flex-grow">
+                            <input type="text" autocomplete="off" class="form-control" id="nodeTag" data-bind="textInput: nodeTag" />
+                        </div>
+                    </div>
                     <div class="form-group" data-bind="validationElement: port">
                         <label for="port" class="control-label">HTTPS Port</label>
                         <div class="flex-grow">
                             <input type="text" autocomplete="off" class="form-control" id="port"
                                    placeholder="Default: 443"
-                                   data-bind="textInput: port, disable: $root.model.fixPortNumberOnLocalNode() && isLocal(), attr: { title: $root.model.fixPortNumberOnLocalNode() && isLocal() ? 'Fixed by startup parameter' : '' }">
+                                   data-bind="textInput: port, disable: $root.model.fixPortNumberOnLocalNode() && $root.model.createIsLocalNodeObservable($data)(), attr: { title: $root.model.fixPortNumberOnLocalNode() && isLocal() ? 'Fixed by startup parameter' : '' }">
                         </div>
                     </div>
                     <div class="form-group" data-bind="validationElement: tcpPort">
@@ -73,7 +79,7 @@
                         <div class="flex-grow">
                             <input type="text" autocomplete="off" class="form-control" id="tcpPort"
                                    placeholder="Default: 38888"
-                                   data-bind="textInput: tcpPort, disable: $root.model.fixTcpPortNumberOnLocalNode() && isLocal(), attr: { title: $root.model.fixTcpPortNumberOnLocalNode() && isLocal() ? 'Fixed by startup parameter' : '' }">
+                                   data-bind="textInput: tcpPort, disable: $root.model.fixTcpPortNumberOnLocalNode() && $root.model.createIsLocalNodeObservable($data)(), attr: { title: $root.model.fixTcpPortNumberOnLocalNode() && isLocal() ? 'Fixed by startup parameter' : '' }">
                         </div>
                     </div>
                     <div data-bind="foreach: ips">
@@ -90,7 +96,7 @@
                                        data-bind="textInput: ip, attr: { id: 'inInput_' + $index() }">
                                 <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                 <ul class="dropdown-menu" role="menu" style="display: none;"
-                                    data-bind="autoComplete: '#inInput_' + $index(), foreach: $parent.isLocal() ? $root.model.localIps : $root.remoteNodeIpOptions">
+                                    data-bind="autoComplete: '#inInput_' + $index(), foreach: $root.model.createIsLocalNodeObservable($parent)() ? $root.model.localIps : $root.remoteNodeIpOptions">
                                     <li role="presentation" data-bind="click: $parent.ip.bind($parent, $data)">
                                         <a role="menuitem" tabindex="-1" href="#">
                                             <span data-bind="text: $data"></span>

@@ -96,6 +96,10 @@ class serverSetup {
         ipEntry.runningOnDocker = params.IsDocker;
     }
 
+    private getLocalNode() {
+        return this.nodes()[0];
+    }
+    
     private getPortPart() {
         const port = this.nodes()[0].port();
         return port && port !== "443" ? ":" + port : "";
@@ -115,6 +119,7 @@ class serverSetup {
             EnableExperimentalFeatures: this.useExperimentalFeatures(),
             Port: setup.port() ? parseInt(setup.port(), 10) : 8080,
             Addresses: [setup.ip().ip()],
+            LocalNodeTag: setup.localNodeTag(),
             Environment: this.environment(),
             TcpPort: setup.tcpPort() ? parseInt(setup.tcpPort(), 10) : 38888
         }
@@ -123,8 +128,7 @@ class serverSetup {
     toSecuredDto(): Raven.Server.Commercial.SetupInfo {
         const nodesInfo = {} as dictionary<Raven.Server.Commercial.SetupInfo.NodeInfo>;
         this.nodes().forEach((node, idx) => {
-            const nodeTag = serverSetup.nodesTags[idx];
-            nodesInfo[nodeTag] = node.toDto();
+            nodesInfo[node.nodeTag()] = node.toDto();
         });
 
         return {
@@ -135,7 +139,7 @@ class serverSetup {
             Domain: this.domain().domain(),
             RootDomain: this.domain().rootDomain(),
             ModifyLocalServer: true,
-            LocalNodeTag: "A",
+            LocalNodeTag: this.getLocalNode().nodeTag(),
             RegisterClientCert: this.registerClientCertificate(), 
             NodeSetupInfos: nodesInfo,
             Certificate: this.certificate().certificate(),
@@ -174,12 +178,12 @@ class serverSetup {
                 return `http://${host}:${port}`;
                 
             case "LetsEncrypt":
-                return "https://a." + this.domain().domain() + "." + this.domain().rootDomain() + this.getPortPart();
+                return "https://" + this.getLocalNode().nodeTag().toLocaleLowerCase() + "." + this.domain().domain() + "." + this.domain().rootDomain() + this.getPortPart();
                 
             case "Secured":
                 const wildcard = this.certificate().wildcardCertificate();
                 if (wildcard) {
-                    const domain = this.getDomainForWildcard("a");
+                    const domain = this.getDomainForWildcard(this.getLocalNode().nodeTag().toLocaleLowerCase());
                     return "https://" + domain + this.getPortPart();
                 } else {
                     return this.nodes()[0].getServerUrl();
@@ -188,6 +192,12 @@ class serverSetup {
             default:
                 return null;
         }
+    }
+    
+    createIsLocalNodeObservable(node: nodeInfo) {
+        return ko.pureComputed(() => {
+            return this.nodes().indexOf(node) === 0;
+        });
     }
     
     createFullNodeNameObservable(node: nodeInfo) {

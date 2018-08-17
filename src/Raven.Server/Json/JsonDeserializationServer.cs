@@ -94,6 +94,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, LatestVersionCheck.VersionInfo> LatestVersionCheckVersionInfo = GenerateJsonDeserializationRoutine<LatestVersionCheck.VersionInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, License> License = GenerateJsonDeserializationRoutine<License>();
+        
+        public static readonly Func<BlittableJsonReaderObject, SetupSettings> SetupSettings = GenerateJsonDeserializationRoutine<SetupSettings>();
 
         public static readonly Func<BlittableJsonReaderObject, LicenseInfo> LicenseInfo = GenerateJsonDeserializationRoutine<LicenseInfo>();
 

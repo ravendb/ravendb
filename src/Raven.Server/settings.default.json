@@ -1,5 +1,5 @@
 ﻿{
     "ServerUrl": "http://127.0.0.1:8080",
-    "Setup.Mode": "Initial",
+    "Setup.Mode": "None",
     "License.Eula.Accepted": true
 }

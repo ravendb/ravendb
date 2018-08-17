@@ -9,7 +9,6 @@ class nodeInfo {
     port = ko.observable<string>();
     tcpPort = ko.observable<string>();
     hostname = ko.observable<string>();
-    isLocal: KnockoutComputed<boolean>;
     mode: KnockoutObservable<Raven.Server.Commercial.SetupMode | "Continue">;
     isLoopbackOnly: KnockoutComputed<boolean>;
     
@@ -36,12 +35,27 @@ class nodeInfo {
         this.initObservables();
         this.initValidation();
     }
+    
+    static setupNodeTagValidation(target: KnockoutObservable<string>) {
+        const upperRegexp = /^[A-Z]*$/;
+
+        target.extend({
+            required: true,
+            maxLength: 4,
+            validation: [
+                {
+                    validator: (val: string) => val !== "RAFT",
+                    message: "It is a reserved tag."
+                },
+                {
+                    validator: (val: string) => upperRegexp.test(val),
+                    message: "Node tag must contain only upper case letters."
+                }
+            ]
+        });
+    }
 
     private initObservables() {
-        this.isLocal = ko.pureComputed(() => {
-            return this.nodeTag() === 'A';
-        });
-        
         this.isLoopbackOnly = ko.pureComputed(() => {
             const ips = this.ips();
             return ips.length === 1 && ips[0].isLocalNetwork();
@@ -123,6 +137,8 @@ class nodeInfo {
         this.externalTcpPort.extend({
             number: true
         });
+        
+        nodeInfo.setupNodeTagValidation(this.nodeTag);
         
         this.externalIpAddress.extend({
             required: {   
