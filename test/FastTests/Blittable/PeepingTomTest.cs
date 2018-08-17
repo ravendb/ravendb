@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
 using FastTests.Voron.FixedSize;
 using Sparrow;
 using Sparrow.Json;
@@ -21,8 +22,9 @@ namespace FastTests.Blittable
         [InlineData(0, 0, 0)]
         public void PeepingTomStreamShouldPeepCorrectly(int originalSize, int chunkSizeToRead, int offset)
         {
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
             using (var context = JsonOperationContext.ShortTermSingleUse())
-                PeepingTomStreamTest(originalSize, chunkSizeToRead, offset, context);
+                PeepingTomStreamTest(originalSize, chunkSizeToRead, offset, context, cts.Token);
         }
 
         [Theory]
@@ -33,19 +35,20 @@ namespace FastTests.Blittable
         {
             var random = new Random(seed);
 
-           using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
+            using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 for (int i = 0; i < 10; i++)
                 {
                     var originalSize = random.Next(0, 128 * 1024);
                     var chunkSizeToRead = random.Next(0, originalSize);
                     var offset = chunkSizeToRead / 4;
-                    PeepingTomStreamTest(originalSize, chunkSizeToRead, offset, context);
+                    PeepingTomStreamTest(originalSize, chunkSizeToRead, offset, context, cts.Token);
                 }
             }
         }
 
-        public void PeepingTomStreamTest(int originalSize, int chunkSizeToRead, int offset, JsonOperationContext context)
+        private static void PeepingTomStreamTest(int originalSize, int chunkSizeToRead, int offset, JsonOperationContext context, CancellationToken token)
         {
             try
             {
@@ -65,9 +68,13 @@ namespace FastTests.Blittable
                     var totalRead = 0;
                     do
                     {
+                        token.ThrowIfCancellationRequested();
+
                         int read = -1;
                         do
                         {
+                            token.ThrowIfCancellationRequested();
+
                             var buffer = new byte[originalSize + offset];
                             read = peeping.Read(buffer, offset, chunkSizeToRead);
                             totalRead += read;
@@ -97,6 +104,8 @@ namespace FastTests.Blittable
 
                     for (var i = 0; i < peepWindow.Length; i++)
                     {
+                        token.ThrowIfCancellationRequested();
+
                         try
                         {
                             var expectedByte = (byte)(((originalSize - peepWindow.Length + i) % 26) + 'a');
