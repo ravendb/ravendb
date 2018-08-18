@@ -1455,7 +1455,7 @@ namespace Raven.Client.Util
                     // if we have a number, write the value without quatation
                     if (_numericTypes.Contains(valueType) || _numericTypes.Contains(Nullable.GetUnderlyingType(valueType)))
                     {
-                        writer.Write(value);
+                        writer.Write(value.ToInvariantString());
                     }
                     else
                     {
@@ -1466,7 +1466,7 @@ namespace Raven.Client.Util
                 }
             }
 
-            private static HashSet<Type> _numericTypes = new HashSet<Type>
+            private static readonly HashSet<Type> _numericTypes = new HashSet<Type>
             {
                 typeof(Byte),
                 typeof(SByte),

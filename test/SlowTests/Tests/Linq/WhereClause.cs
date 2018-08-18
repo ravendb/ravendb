@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Globalization;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
@@ -1027,7 +1028,7 @@ namespace SlowTests.Tests.Linq
                 {
                     var indexedUsers = GetRavenQueryInspector(session);
                     var q = from user in indexedUsers
-                            where user.Birthday >= DateTime.Parse("2010-05-15")
+                            where user.Birthday >= DateTime.Parse("2010-05-15", CultureInfo.InvariantCulture)
                             select new { user.Name, user.Age };
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
