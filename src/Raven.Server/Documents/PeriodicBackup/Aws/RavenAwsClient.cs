@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -51,13 +52,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             using (var hash = new HMACSHA256(signingKey))
             {
                 var regionForRequest = IsRegionInvariantRequest ? DefaultRegion : AwsRegion;
-                var scope = $"{date:yyyyMMdd}/{regionForRequest}/{ServiceName}/aws4_request";
+                var scope = $"{date.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}/{regionForRequest}/{ServiceName}/aws4_request";
                 var stringToHash = $"AWS4-HMAC-SHA256\n{RavenAwsHelper.ConvertToString(date)}\n{scope}\n{canonicalRequestHash}";
 
                 var hashedString = hash.ComputeHash(Encoding.UTF8.GetBytes(stringToHash));
                 var signature = RavenAwsHelper.ConvertToHex(hashedString);
 
-                var credentials = $"{_awsAccessKey}/{date:yyyyMMdd}/{regionForRequest}/{ServiceName}/aws4_request";
+                var credentials = $"{_awsAccessKey}/{date.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}/{regionForRequest}/{ServiceName}/aws4_request";
 
                 return new AuthenticationHeaderValue("AWS4-HMAC-SHA256", $"Credential={credentials},SignedHeaders={signedHeaders},Signature={signature}");
             }
@@ -120,7 +121,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         {
             byte[] key;
             using (var hash = new HMACSHA256(_awsSecretKey))
-                key = hash.ComputeHash(Encoding.UTF8.GetBytes(date.ToString("yyyyMMdd")));
+                key = hash.ComputeHash(Encoding.UTF8.GetBytes(date.ToString("yyyyMMdd", CultureInfo.InvariantCulture)));
 
             var regionForRequest = IsRegionInvariantRequest ? DefaultRegion : AwsRegion;
             using (var hash = new HMACSHA256(key))
