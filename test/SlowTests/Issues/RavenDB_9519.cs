@@ -2,8 +2,11 @@
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
@@ -17,11 +20,11 @@ namespace SlowTests.Issues
         [Fact]
         public async Task NestedObjectShouldBeExportedAndImportedProperly()
         {
-            var id = "companies/1";
-            string cv;
+            const string id = "companies/1";
 
             using (var store = GetDocumentStore())
             {
+                string cv;
                 using (var session = store.OpenSession())
                 {
                     session.Store(_testCompany, id);
@@ -53,7 +56,25 @@ namespace SlowTests.Issues
                 {
                     var res = session.Load<Company>(id);
                     Assert.NotEqual(session.Advanced.GetChangeVectorFor(res), cv);
-                    Assert.Equal(res, _testCompany);
+
+                    try
+                    {
+                        Assert.Equal(res, _testCompany);
+                    }
+                    catch (Exception)
+                    {
+                        var sb = new StringBuilder();
+                        sb.AppendLine("Expected:");
+                        sb.AppendLine(JObject.FromObject(res).ToString(Formatting.Indented));
+                        sb.AppendLine();
+                        sb.AppendLine("Actual:");
+                        sb.AppendLine(JObject.FromObject(_testCompany).ToString(Formatting.Indented));
+
+                        Console.WriteLine(sb);
+
+                        throw;
+                    }
+
                 }
             }
         }
