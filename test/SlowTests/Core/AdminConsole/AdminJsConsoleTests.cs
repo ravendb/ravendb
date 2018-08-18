@@ -13,6 +13,11 @@ namespace SlowTests.Core.AdminConsole
 {
     public class AdminJsConsoleTests : RavenTestBase
     {
+        public AdminJsConsoleTests()
+        {
+            DoNotReuseServer();
+        }
+
         [Fact]
         public async Task CanGetSettings()
         {

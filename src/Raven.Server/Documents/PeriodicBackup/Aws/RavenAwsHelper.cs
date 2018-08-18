@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -17,7 +18,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public static string ConvertToString(DateTime date)
         {
-            return date.ToString("yyyyMMddTHHmmssZ");
+            return date.ToString("yyyyMMddTHHmmssZ", CultureInfo.InvariantCulture);
         }
 
         public static string ConvertToHex(byte[] array)
