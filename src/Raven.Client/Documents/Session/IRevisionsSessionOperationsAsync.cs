@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,12 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public interface IRevisionsSessionOperationsAsync
     {
+        /// <summary>
+        /// Returns the first revision for this document that happens before or at
+        /// the specified date
+        /// </summary>
+        Task<T> GetBeforeAsync<T>(string id, DateTime date, CancellationToken token = default);
+
         /// <summary>
         /// Returns all previous document revisions for specified document (with paging).
         /// </summary>

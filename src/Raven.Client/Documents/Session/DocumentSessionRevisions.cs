@@ -4,7 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Json;
 
@@ -17,6 +19,15 @@ namespace Raven.Client.Documents.Session
     {
         public DocumentSessionRevisions(InMemoryDocumentSessionOperations session) : base(session)
         {
+        }
+
+        public T GetBefore<T>(string id, DateTime before)
+        {
+            var operation = new GetRevisionOperation(Session, id, before);
+            var command = operation.CreateRequest();
+            RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
+            operation.SetResult(command.Result);
+            return operation.GetRevisionsFor<T>().FirstOrDefault();
         }
 
         public List<T> GetFor<T>(string id, int start = 0, int pageSize = 25)
