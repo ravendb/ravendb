@@ -778,15 +778,20 @@ namespace Raven.Server.Documents.Revisions
             return scope;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static ByteStringContext.InternalScope GetLastKey(DocumentsOperationContext context, Slice lowerId, out Slice prefixSlice)
+        {
+            return GetKeyWithEtag(context, lowerId, long.MaxValue, out prefixSlice);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static ByteStringContext<ByteStringMemoryCache>.InternalScope GetKeyWithEtag(DocumentsOperationContext context, Slice lowerId, long etag, out Slice prefixSlice)
         {
             var scope = context.Allocator.Allocate(lowerId.Size + 1 + sizeof(long), out ByteString keyMem);
 
             Memory.Copy(keyMem.Ptr, lowerId.Content.Ptr, lowerId.Size);
             keyMem.Ptr[lowerId.Size] = SpecialChars.RecordSeparator;
 
-            var maxValue = Bits.SwapBytes(long.MaxValue);
+            var maxValue = Bits.SwapBytes(etag);
             Memory.Copy(keyMem.Ptr + lowerId.Size + 1, (byte*)&maxValue, sizeof(long));
 
             prefixSlice = new Slice(SliceOptions.Key, keyMem);
@@ -807,6 +812,33 @@ namespace Raven.Server.Documents.Revisions
         {
             var numbers = context.Transaction.InnerTransaction.ReadTree(RevisionsCountSlice);
             return numbers.Read(prefix)?.Reader.ReadLittleEndianInt64() ?? 0;
+        }
+
+        public Document GetRevisionBefore(DocumentsOperationContext context, string id, DateTime max)
+        {
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
+            using (GetLastKey(context, lowerId, out Slice lastKey))
+            {
+                // Here we assume a reasonable number of revisions and scan the entire history
+                // This is because we want to handle out of order revisions from multiple nodes so the local etag
+                // order is different than the last modified order
+                Document result = null;
+                var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+                foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, 0))
+                {
+                    var document = TableValueToRevision(context, ref tvr.Result.Reader);
+                    if (document.LastModified > max)
+                        continue;
+                    if(result == null || 
+                        result.LastModified < document.LastModified)
+                    {
+                        result = document;
+                    }
+                }
+                return result;
+            }
+
         }
 
         public (Document[] Revisions, long Count) GetRevisions(DocumentsOperationContext context, string id, int start, int take)
