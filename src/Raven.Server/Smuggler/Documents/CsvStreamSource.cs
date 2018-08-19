@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using CsvHelper;
@@ -282,12 +283,12 @@ namespace Raven.Server.Smuggler.Documents
             {
                 if (s.IndexOf('.') > 0)
                 {
-                    if (decimal.TryParse(s, out var dec))
+                    if (decimal.TryParse(s, NumberStyles.Number, CultureInfo.InvariantCulture, out var dec))
                         return dec;
                 }
                 else
                 {
-                    if (long.TryParse(s, out var l))
+                    if (long.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var l))
                         return l;
                 }
             }
