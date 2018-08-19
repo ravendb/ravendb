@@ -247,10 +247,9 @@ namespace Sparrow.Json
 
             var size = str.Size;
 
-            if (size == 1 && str.IsControlCodeCharacter(out var b))
+            if (size == 1 && char.IsControl((char)str[0]))
             {
-                WriteString($@"\u{b:X4}", skipEscaping: true);
-                return;
+                
             }
 
             var strBuffer = str.Buffer;

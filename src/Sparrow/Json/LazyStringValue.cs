@@ -982,17 +982,5 @@ namespace Sparrow.Json
             IsDisposed = false;
             AllocatedMemoryData = null;
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IsControlCodeCharacter(out byte b)
-        {
-            Debug.Assert(Size == 1);
-
-            b = Buffer[0];
-            // control code characters
-            return b < 32 || (b >= 127 && b <= 159);
-        }
-
-
     }
 }
