@@ -168,11 +168,28 @@ namespace Raven.Server.Documents.Handlers
             var sw = Stopwatch.StartNew();
 
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+            var before = GetDateTimeQueryString("before");
             var start = GetStart();
             var pageSize = GetPageSize();
-            var revisions = Database.DocumentsStorage.RevisionsStorage.GetRevisions(context, id, start, pageSize);
 
-            var actualChangeVector = revisions.Revisions.Length == 0 ? "" : revisions.Revisions[0].ChangeVector;
+            Document[] revisions = Array.Empty<Document>();
+            long count = 0;
+            if (before != null)
+            {
+                var revision = Database.DocumentsStorage.RevisionsStorage.GetRevisionBefore(context, id, before.Value);
+                if (revision != null)
+                {
+                    count = 1;
+                    revisions = new[] { revision };
+                }
+            }
+            else
+            {
+                (revisions, count) = Database.DocumentsStorage.RevisionsStorage.GetRevisions(context, id, start, pageSize);
+            }
+            
+
+            var actualChangeVector = revisions.Length == 0 ? "" : revisions[0].ChangeVector;
 
             if (GetStringFromHeaders("If-None-Match") == actualChangeVector)
             {
@@ -182,21 +199,21 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers["ETag"] = "\"" + actualChangeVector + "\"";
 
-            int count;
+            int loadedRevisionsCount;
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
-                writer.WriteDocuments(context, revisions.Revisions, metadataOnly, out count);
+                writer.WriteDocuments(context, revisions, metadataOnly, out loadedRevisionsCount);
 
                 writer.WriteComma();
 
                 writer.WritePropertyName("TotalResults");
-                writer.WriteInteger(revisions.Count);
+                writer.WriteInteger(count);
                 writer.WriteEndObject();
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), HttpContext.Request.QueryString.Value, count, pageSize, sw.ElapsedMilliseconds);
+            AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), HttpContext.Request.QueryString.Value, loadedRevisionsCount, pageSize, sw.ElapsedMilliseconds);
         }
 
         [RavenAction("/databases/*/revisions/resolved", "GET", AuthorizationStatus.ValidUser)]
