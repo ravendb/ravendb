@@ -1,0 +1,173 @@
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.TransactionsRecording;
+using Raven.Client.Documents.Session;
+using Raven.Server.Json;
+using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+
+namespace Raven.Server.Documents.Handlers
+{
+    public class TransactionsRecordingHandler : DatabaseRequestHandler
+    {
+        [RavenAction("/databases/*/transactions/replay", "POST", AuthorizationStatus.ValidUser)]
+        public async Task ReplayRecording()
+        {
+            var operationId = GetLongQueryString("operationId");
+            using (var operationCancelToken = CreateOperationToken())
+            {
+                var replayStream = RequestBodyStream();
+
+                var result = await Database.Operations.AddOperation(
+                    database: Database,
+                    description: "Replay transaction commands",
+                    operationType: Operations.Operations.OperationType.ReplayTransactionCommands,
+                    taskFactory: async progress => await DoReplay(progress, replayStream, operationCancelToken.Token),
+                    id: operationId,
+                    token: operationCancelToken
+                );
+
+                using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, result.ToJson());
+                }
+            }
+        }
+
+        private async Task<IOperationResult> DoReplay(
+            Action<IOperationProgress> onProgress,
+            Stream replayStream,
+            CancellationToken token)
+        {
+            const int commandAmountBetweenRespond = 15;
+
+            try
+            {
+                return await Task.Run(() =>
+                {
+                    long commandsProgress = 0;
+                    var stopwatch = Stopwatch.StartNew();
+                    stopwatch.Start();
+                    foreach (var replayProgress in Database.TxMerger.Replay(replayStream))
+                    {
+                        commandsProgress = replayProgress.CommandsProgress;
+                        //TODO Maybe should be relative to time or size
+                        if (replayProgress.CommandsProgress % commandAmountBetweenRespond == 0)
+                        {
+                            onProgress(new ReplayTrxProgress
+                            {
+                                ProcessedCommand = replayProgress.CommandsProgress,
+                                PassedTime = stopwatch.Elapsed
+                            });
+                        }
+
+                        token.ThrowIfCancellationRequested();
+                    }
+                    stopwatch.Stop();
+
+                    return new ReplayTrxOperationResult
+                    {
+                        ExecutedCommandsAmount = commandsProgress,
+                        PassedTime = stopwatch.Elapsed
+                    };
+                }, token);
+            }
+            catch (Exception e)
+            {
+                HttpContext.Response.Headers["Connection"] = "close";
+                throw new InvalidOperationException("Failed to process replay transaction commands", e);
+            }
+
+        }
+
+        [RavenAction("/databases/*/admin/transactions/start-recording", "POST", AuthorizationStatus.ClusterAdmin)]
+        public async Task StartRecording()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
+                var parameters = JsonDeserializationServer.StartTransactionsRecordingOperationParameters(json);
+                if (parameters.File == null)
+                {
+                    ThrowRequiredPropertyNameInRequest(nameof(parameters.File));
+                }
+
+                var command = new TransactionsRecordingCommand(
+                        Database.TxMerger,
+                        TransactionsRecordingCommand.Instruction.Start,
+                        parameters.File
+                    );
+
+                await Database.TxMerger.Enqueue(command);
+            }
+        }
+
+        [RavenAction("/databases/*/admin/transactions/stop-recording", "POST", AuthorizationStatus.ClusterAdmin)]
+        public async Task StopRecording()
+        {
+            var command = new TransactionsRecordingCommand(
+                Database.TxMerger,
+                TransactionsRecordingCommand.Instruction.Stop
+            );
+
+            await Database.TxMerger.Enqueue(command);
+        }
+    }
+
+    public class TransactionsRecordingCommand : TransactionOperationsMerger.MergedTransactionCommand
+    {
+        public enum Instruction
+        {
+            Stop,
+            Start
+        }
+
+        private readonly TransactionOperationsMerger _databaseTxMerger;
+        private readonly Instruction _instruction;
+        private readonly string _filePath;
+
+        public TransactionsRecordingCommand(TransactionOperationsMerger databaseTxMerger, Instruction instruction, string filePath = null)
+        {
+            _databaseTxMerger = databaseTxMerger;
+            _instruction = instruction;
+            _filePath = filePath;
+        }
+
+        public override int Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recordingState)
+        {
+            return ExecuteDirectly(context);
+        }
+
+        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+        {
+            return null;
+        }
+
+        protected override int ExecuteCmd(DocumentsOperationContext context)
+        {
+            switch (_instruction)
+            {
+                case Instruction.Start:
+                    _databaseTxMerger.StartRecording(_filePath);
+                    break;
+                case Instruction.Stop:
+                    _databaseTxMerger.StopRecording();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException($"The value {_instruction} was out of the range of valid values");
+            }
+            return 0;
+        }
+
+        public override string ToString()
+        {
+            return base.ToString() + $", {nameof(Instruction)}:{_instruction}";
+        }
+    }
+}

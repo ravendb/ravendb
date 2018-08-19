@@ -2,14 +2,39 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
 using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices.ComTypes;
+using System.Runtime.Serialization.Json;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Json;
+using Raven.Server.Documents.Expiration;
+using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.Admin;
+using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Revisions;
+using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Exceptions;
+using Raven.Server.Json;
+using Raven.Server.Json.Converters;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Debugging;
@@ -26,6 +51,7 @@ namespace Raven.Server.Documents
     /// </summary>
     public class TransactionOperationsMerger : IDisposable
     {
+
         private readonly DocumentDatabase _parent;
         private readonly CancellationToken _shutdown;
         private bool _runTransactions = true;
@@ -65,9 +91,35 @@ namespace Raven.Server.Documents
             _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => MergeOperationThreadProc(), null, TransactionMergerThreadName);
         }
 
-        public abstract class MergedTransactionCommand
+        public interface IRecordableCommand
         {
-            public abstract int Execute(DocumentsOperationContext context);
+            IReplayableCommandDto<MergedTransactionCommand> ToDto(JsonOperationContext context);
+        }
+
+        public interface IReplayableCommandDto<out T> where T : MergedTransactionCommand
+        {
+            T ToCommand(DocumentsOperationContext context, DocumentDatabase database); // receive some parameters here?
+        }
+
+        public abstract class MergedTransactionCommand : IRecordableCommand
+        {
+            protected abstract int ExecuteCmd(DocumentsOperationContext context);
+
+            internal int ExecuteDirectly(DocumentsOperationContext context)
+            {
+                return ExecuteCmd(context);
+            }
+
+            public virtual int Execute(DocumentsOperationContext context, RecordingState recordingState)
+            {
+                recordingState?.Record(context, this);
+
+                return ExecuteCmd(context);
+            }
+
+            public abstract IReplayableCommandDto<MergedTransactionCommand> ToDto(JsonOperationContext context);
+
+            [JsonIgnore]
             public readonly TaskCompletionSource<object> TaskCompletionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             public Exception Exception;
 
@@ -81,9 +133,9 @@ namespace Raven.Server.Documents
         public async Task Enqueue(MergedTransactionCommand cmd)
         {
             _edi?.Throw();
-
             _operations.Enqueue(cmd);
             _waitHandle.Set();
+
 
             if (_concurrentOperations.TryAddCount() == false)
                 ThrowTxMergerWasDisposed();
@@ -110,6 +162,178 @@ namespace Raven.Server.Documents
             throw new ObjectDisposedException("Transaction Merger");
         }
 
+
+        public abstract class RecordingState : IDisposable
+        {
+            public abstract void Record(DocumentsOperationContext context, MergedTransactionCommand cmd);
+
+            public abstract void Record(DocumentsOperationContext context, TxInstruction tx, bool doRecord = true);
+
+            public abstract void Prepare(ref RecordingState state);
+
+            private static BlittableJsonReaderObject SerializeRecordingCommandDetails(
+                JsonOperationContext context,
+                RecordingDetails commandDetails)
+            {
+                using (var writer = new BlittableJsonWriter(context))
+                {
+                    var jsonSerializer = GetJsonSerializer();
+
+                    jsonSerializer.Serialize(writer, commandDetails);
+                    writer.FinalizeDocument();
+
+                    return writer.CreateReader();
+                }
+            }
+
+            protected class EnabledRecordingState : RecordingState
+            {
+                private readonly TransactionOperationsMerger _txOpMerger;
+                private Stream _recordingStream;
+                private bool _isDisposed = false;
+
+                public EnabledRecordingState(TransactionOperationsMerger txOpMerger)
+                {
+                    _txOpMerger = txOpMerger;
+                }
+
+                public void Init(string filePath)
+                {
+                    var recordingFileStream = new FileStream(filePath, FileMode.Create);
+                    _recordingStream = new GZipStream(recordingFileStream, CompressionMode.Compress);
+
+                    try
+                    {
+                        using (_txOpMerger._parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (var writer = new BlittableJsonTextWriter(context, _recordingStream))
+                        {
+                            writer.WriteStartArray();
+
+                            var commandDetails = new StartRecordingDetails();
+                            var commandDetailsReader = SerializeRecordingCommandDetails(context, commandDetails);
+
+                            context.Write(writer, commandDetailsReader);
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        _recordingStream.Dispose();
+                        throw;
+                    }
+                }
+
+                public override void Record(DocumentsOperationContext context, MergedTransactionCommand operation)
+                {
+                    var obj = new RecordingCommandDetails(operation.GetType().Name)
+                    {
+                        Command = operation.ToDto(context)
+                    };
+
+                    Record(obj, context);
+                }
+
+                public override void Record(DocumentsOperationContext ctx, TxInstruction tx, bool doRecord = true)
+                {
+                    if (doRecord == false)
+                    {
+                        return;
+                    }
+
+                    var commandDetails = new RecordingDetails(tx.ToString());
+
+                    Record(commandDetails, ctx);
+                }
+
+                private void Record(RecordingDetails commandDetails, JsonOperationContext context)
+                {
+                    using (var commandDetailsReader = SerializeRecordingCommandDetails(context, commandDetails))
+                    using (var writer = new BlittableJsonTextWriter(context, _recordingStream))
+                    {
+                        writer.WriteComma();
+                        context.Write(writer, commandDetailsReader);
+                    }
+                }
+
+                public override void Prepare(ref RecordingState state)
+                {
+                    if (IsShutdown == false)
+                        return;
+
+                    state = null;
+
+                    Dispose();
+                }
+
+                public override void Dispose()
+                {
+                    if (_isDisposed)
+                    {
+                        return;
+                    }
+
+                    _isDisposed = true;
+
+                    using (_txOpMerger._parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    {
+                        using (var writer = new BlittableJsonTextWriter(ctx, _recordingStream))
+                        {
+                            writer.WriteEndArray();
+                        }
+                    }
+                    _recordingStream.Dispose();
+                }
+            }
+
+            public class BeforeEnabledRecordingState : RecordingState
+            {
+                private readonly string _filePath;
+                private readonly TransactionOperationsMerger _txOpMerger;
+
+                public BeforeEnabledRecordingState(TransactionOperationsMerger txOpMerger, string filePath)
+                {
+                    _txOpMerger = txOpMerger;
+                    _filePath = filePath;
+                }
+
+                public override void Record(DocumentsOperationContext context, MergedTransactionCommand cmd)
+                {
+
+                }
+
+                public override void Record(DocumentsOperationContext context, TxInstruction tx, bool doRecord = true)
+                {
+
+                }
+
+                public override void Prepare(ref RecordingState state)
+                {
+                    if (IsShutdown)
+                    {
+                        state = null;
+                        return;
+                    }
+
+                    var enabledRecordingState = new EnabledRecordingState(_txOpMerger);
+                    enabledRecordingState.Init(_filePath);
+                    state = enabledRecordingState;
+                }
+
+                public override void Dispose()
+                {
+
+                }
+            }
+
+            protected bool IsShutdown { private set; get; }
+
+            public void Shutdown()
+            {
+                IsShutdown = true;
+            }
+
+            public abstract void Dispose();
+        }
+
         private void MergeOperationThreadProc()
         {
             try
@@ -133,6 +357,8 @@ namespace Raven.Server.Documents
                 {
                     while (_runTransactions)
                     {
+                        _recordingState?.Prepare(ref _recordingState);
+
                         if (_operations.IsEmpty)
                         {
                             using (var generalMeter = GeneralWaitPerformanceMetrics.MeterPerformanceRate())
@@ -284,6 +510,7 @@ namespace Raven.Server.Documents
                 {
                     try
                     {
+                        _recordingState?.Record(context, TxInstruction.BeginTx);
                         tx = context.OpenWriteTransaction();
                     }
                     catch (Exception e)
@@ -299,7 +526,11 @@ namespace Raven.Server.Documents
                         }
                         finally
                         {
-                            tx?.Dispose();
+                            if (tx != null)
+                            {
+                                _recordingState?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
+                                tx.Dispose();
+                            }
                         }
                     }
                     PendingOperations result;
@@ -326,7 +557,11 @@ namespace Raven.Server.Documents
                         }
 
                         // need to dispose here since we are going to open new tx for each operation
-                        tx?.Dispose();
+                        if (tx != null)
+                        {
+                            _recordingState?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
+                            tx.Dispose();
+                        }
 
                         NotifyTransactionFailureAndRerunIndependently(pendingOps, e);
                         return;
@@ -338,8 +573,12 @@ namespace Raven.Server.Documents
                             try
                             {
                                 tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
+
+                                _recordingState?.Record(context, TxInstruction.Commit);
                                 tx.Commit();
+
                                 SlowWriteNotification.Notify(stats, _parent);
+                                _recordingState?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
                                 tx.Dispose();
                             }
                             catch (Exception e)
@@ -365,9 +604,18 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                tx?.Dispose();
+                if (tx != null)
+                {
+                    using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        _recordingState?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
+                    }
+                    tx.Dispose();
+                }
             }
         }
+
+
 
         private static void UpdateGlobalReplicationInfoBeforeCommit(DocumentsOperationContext context)
         {
@@ -416,6 +664,8 @@ namespace Raven.Server.Documents
                     try
                     {
                         previous.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out commitStats);
+
+                        _recordingState?.Record(context, TxInstruction.BeginAsyncCommitAndStartNewTransaction);
                         context.Transaction = previous.BeginAsyncCommitAndStartNewTransaction();
                     }
                     catch (Exception e)
@@ -431,7 +681,7 @@ namespace Raven.Server.Documents
                             try
                             {
                                 //already throwing, attempt to complete previous tx
-                                CompletePreviousTransaction(previous, commitStats, ref previousPendingOps, throwOnError: false);
+                                CompletePreviousTransaction(context, previous, commitStats, ref previousPendingOps, throwOnError: false);
                             }
                             finally
                             {
@@ -462,7 +712,7 @@ namespace Raven.Server.Documents
                                 transactionMeter.Dispose();
                             }
                             calledCompletePreviousTx = true;
-                            CompletePreviousTransaction(previous, commitStats, ref previousPendingOps, throwOnError: true);
+                            CompletePreviousTransaction(context, previous, commitStats, ref previousPendingOps, throwOnError: true);
                         }
                         catch (Exception e)
                         {
@@ -478,7 +728,9 @@ namespace Raven.Server.Documents
                             {
                                 if (calledCompletePreviousTx == false)
                                 {
-                                    CompletePreviousTransaction(previous,
+                                    CompletePreviousTransaction(
+                                        context,
+                                        previous,
                                         commitStats,
                                         ref previousPendingOps,
                                         // if this previous threw, it won't throw again
@@ -492,6 +744,8 @@ namespace Raven.Server.Documents
                             NotifyTransactionFailureAndRerunIndependently(currentPendingOps, e);
                             return;
                         }
+
+                        _recordingState?.Record(context, TxInstruction.DisposePrevTx, previous.Disposed == false);
                         previous.Dispose();
 
                         switch (result)
@@ -500,8 +754,13 @@ namespace Raven.Server.Documents
                                 try
                                 {
                                     context.Transaction.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
+
+                                    _recordingState?.Record(context, TxInstruction.Commit);
                                     context.Transaction.Commit();
+
                                     SlowWriteNotification.Notify(stats, _parent);
+
+                                    _recordingState?.Record(context, TxInstruction.DisposeTx, context.Transaction.Disposed == false);
                                     context.Transaction.Dispose();
                                 }
                                 catch (Exception e)
@@ -526,17 +785,23 @@ namespace Raven.Server.Documents
                     }
                     finally
                     {
-                        context.Transaction?.Dispose();
+                        if (context.Transaction != null)
+                        {
+                            _recordingState?.Record(context, TxInstruction.DisposeTx, context.Transaction.Disposed == false);
+                            context.Transaction.Dispose();
+                        }
                     }
                 }
             }
             finally
             {
+                _recordingState?.Record(context, TxInstruction.DisposeTx, previous.Disposed == false);
                 previous.Dispose();
             }
         }
 
         private void CompletePreviousTransaction(
+            DocumentsOperationContext context,
             RavenTransaction previous,
             CommitStats commitStats,
             ref List<MergedTransactionCommand> previousPendingOps,
@@ -544,6 +809,7 @@ namespace Raven.Server.Documents
         {
             try
             {
+                _recordingState?.Record(context, TxInstruction.EndAsyncCommit);
                 previous.EndAsyncCommit();
 
                 //not sure about this 'if'
@@ -599,7 +865,8 @@ namespace Raven.Server.Documents
 
                 pendingOps.Add(op);
                 meter.IncrementCounter(1);
-                meter.IncrementCommands(op.Execute(context));
+
+                meter.IncrementCommands(op.Execute(context, _recordingState));
 
                 var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
                 var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
@@ -781,11 +1048,17 @@ namespace Raven.Server.Documents
                         {
                             using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                             {
+                                _recordingState?.Record(context, TxInstruction.BeginTx);
                                 using (var tx = context.OpenWriteTransaction())
                                 {
+
                                     op.RetryOnError = false;
-                                    op.Execute(context);
+
+                                    op.Execute(context, _recordingState);
+
                                     tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
+
+                                    _recordingState?.Record(context, TxInstruction.Commit);
                                     tx.Commit();
                                     SlowWriteNotification.Notify(stats, _parent);
                                 }
@@ -794,7 +1067,7 @@ namespace Raven.Server.Documents
                         }
                         catch (Exception e)
                         {
-                            if(alreadyRetried == false && op.RetryOnError)
+                            if (alreadyRetried == false && op.RetryOnError)
                             {
                                 alreadyRetried = true;
                                 continue;
@@ -816,6 +1089,8 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
+            StopRecording();
+
             _runTransactions = false;
 
             // once all the concurrent transactions are done, this will signal the event, preventing
@@ -824,7 +1099,9 @@ namespace Raven.Server.Documents
 
             _waitHandle.Set();
             _txLongRunningOperation?.Join(int.MaxValue);
+
             _waitHandle.Dispose();
+            _recordingState?.Dispose();
 
             // make sure that the queue is empty and there are no pending 
             // transactions waiting. 
@@ -846,6 +1123,284 @@ namespace Raven.Server.Documents
             while (_operations.TryDequeue(out MergedTransactionCommand result))
             {
                 result.TaskCompletionSource.TrySetCanceled();
+            }
+        }
+
+
+        public enum TxInstruction
+        {
+            BeginTx,
+            Commit,
+            Rollback,
+            DisposeTx,
+            BeginAsyncCommitAndStartNewTransaction,
+            EndAsyncCommit,
+            DisposePrevTx
+        }
+
+        private RecordingState _recordingState = null;
+
+        public void StartRecording(string filePath)
+        {
+            if (_recordingState != null)
+                return;
+            Interlocked.CompareExchange(ref _recordingState, new RecordingState.BeforeEnabledRecordingState(this, filePath), null);
+            _waitHandle.Set();
+        }
+
+        public void StopRecording()
+        {
+            var recordingState = _recordingState;
+            if (recordingState != null)
+            {
+                recordingState.Shutdown();
+                _waitHandle.Set();
+            }
+        }
+
+        public IEnumerable<ReplayProgress> Replay(Stream replayStream)
+        {
+            DocumentsOperationContext txCtx = null;
+            IDisposable txDisposable = null;
+            DocumentsTransaction previousTx = null;
+
+            using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.GetManagedBuffer(out var buffer))
+            using (var gZipStream = new GZipStream(replayStream, CompressionMode.Decompress, leaveOpen: true))
+            {
+                var peepingTomStream = new PeepingTomStream(gZipStream, context);
+                var state = new JsonParserState();
+                var parser = new UnmanagedJsonParser(context, state, "file");
+
+                var commandsProgress = 0;
+                var readers = UnmanagedJsonParserHelper.ReadArrayToMemory(context, peepingTomStream, parser, state, buffer);
+                using (var readersItr = readers.GetEnumerator())
+                {
+                    ReadStartRecordingDetails(readersItr, context, peepingTomStream);
+                    while (readersItr.MoveNext())
+                    {
+                        using (readersItr.Current)
+                        {
+                            if (readersItr.Current.TryGet(nameof(RecordingDetails.Type), out string strType) == false)
+                            {
+                                throw new ReplayTransactionsException($"Can't read {nameof(RecordingDetails.Type)} of replay detail", peepingTomStream);
+                            }
+
+                            if (Enum.TryParse<TxInstruction>(strType, true, out var type))
+                            {
+                                switch (type)
+                                {
+                                    case TxInstruction.BeginTx:
+                                        txDisposable = _parent.DocumentsStorage.ContextPool.AllocateOperationContext(out txCtx);
+                                        txCtx.OpenWriteTransaction();
+                                        break;
+                                    case TxInstruction.Commit:
+                                        txCtx.Transaction.Commit();
+                                        break;
+                                    case TxInstruction.DisposeTx:
+                                        txDisposable.Dispose();
+                                        break;
+                                    case TxInstruction.BeginAsyncCommitAndStartNewTransaction:
+                                        previousTx = txCtx.Transaction;
+                                        txCtx.Transaction = txCtx.Transaction.BeginAsyncCommitAndStartNewTransaction();
+                                        txDisposable = txCtx.Transaction;
+                                        break;
+                                    case TxInstruction.EndAsyncCommit:
+                                        previousTx.EndAsyncCommit();
+                                        break;
+                                    case TxInstruction.DisposePrevTx:
+                                        previousTx.Dispose();
+                                        break;
+                                }
+                                continue;
+                            }
+
+                            try
+                            {
+                                var cmd = DeserializeCommand(strType, readersItr.Current, context, peepingTomStream);
+                                cmd.ExecuteDirectly(txCtx);
+                                commandsProgress++;
+                                UpdateGlobalReplicationInfoBeforeCommit(txCtx);
+                            }
+                            catch (Exception)
+                            {
+                                //TODO To accept exceptions that was thrown while recording
+                                txDisposable.Dispose();
+                                throw;
+                            }
+
+                            yield return new ReplayProgress
+                            {
+                                CommandsProgress = commandsProgress
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void ReadStartRecordingDetails(IEnumerator<BlittableJsonReaderObject> iterator, DocumentsOperationContext context, PeepingTomStream peepingTomStream)
+        {
+            if (false == iterator.MoveNext())
+            {
+                throw new ReplayTransactionsException("Replay stream is empty", peepingTomStream);
+            }
+            using (iterator.Current)
+            {
+                var jsonSerializer = GetJsonSerializer();
+                StartRecordingDetails startDetail;
+                using (var reader = new BlittableJsonReader(context))
+                {
+                    reader.Init(iterator.Current);
+                    startDetail = jsonSerializer.Deserialize<StartRecordingDetails>(reader);
+                }
+
+                if (string.IsNullOrEmpty(startDetail.Type))
+                {
+                    throw new ReplayTransactionsException($"Can't read {nameof(RecordingDetails.Type)} of replay detail", peepingTomStream);
+                }
+
+                if (string.IsNullOrEmpty(startDetail.Type))
+                {
+                    throw new ReplayTransactionsException($"Can't read {nameof(StartRecordingDetails.Version)} of replay instructions", peepingTomStream);
+                }
+
+                if (startDetail.Version != ServerVersion.FullVersion)
+                {
+                    throw new ReplayTransactionsException($"Can't replay transaction instructions of different server version - Current version({ServerVersion.FullVersion}), Record version({startDetail.Version})", peepingTomStream);
+                }
+            }
+        }
+
+        public class ReplayProgress
+        {
+            public long CommandsProgress;
+        }
+
+        private MergedTransactionCommand DeserializeCommand(string type, BlittableJsonReaderObject wrapCmdReader, DocumentsOperationContext context,
+            PeepingTomStream peepingTomStream)
+        {
+            if (!wrapCmdReader.TryGet(nameof(RecordingCommandDetails.Command), out BlittableJsonReaderObject commandReader))
+            {
+                throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
+            }
+
+            var jsonSerializer = GetJsonSerializer();
+            using (var reader = new BlittableJsonReader(context))
+            {
+                reader.Init(commandReader);
+                var dto = DeserializeCommandDto(type, jsonSerializer, reader, peepingTomStream);
+                return dto.ToCommand(context, _parent);
+            }
+        }
+
+        private IReplayableCommandDto<MergedTransactionCommand> DeserializeCommandDto(string type, JsonSerializer jsonSerializer, BlittableJsonReader reader, PeepingTomStream peepingTomStream)
+        {
+            //Todo Maybe should be simplified by convention & reflection
+            switch (type)
+            {
+                case nameof(BatchHandler.MergedBatchCommand):
+                    return jsonSerializer.Deserialize<MergedBatchCommandDto>(reader);
+                case nameof(DeleteDocumentCommand):
+                    return jsonSerializer.Deserialize<DeleteDocumentCommandDto>(reader);
+                case nameof(PatchDocumentCommand):
+                    return jsonSerializer.Deserialize<PatchDocumentCommandDto>(reader);
+                case nameof(DatabaseDestination.MergedBatchPutCommand):
+                    return jsonSerializer.Deserialize<MergedBatchPutCommandDto>(reader);
+                case nameof(MergedPutCommand):
+                    return jsonSerializer.Deserialize<MergedPutCommand.MergedPutCommandDto>(reader);
+                case nameof(BulkInsertHandler.MergedInsertBulkCommand):
+                    return jsonSerializer.Deserialize<MergedInsertBulkCommandDto>(reader);
+                case nameof(AttachmentHandler.MergedPutAttachmentCommand):
+                    return jsonSerializer.Deserialize<MergedPutAttachmentCommandDto>(reader);
+                case nameof(AttachmentHandler.MergedDeleteAttachmentCommand):
+                    return jsonSerializer.Deserialize<MergedDeleteAttachmentCommandDto>(reader);
+                case nameof(ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand):
+                    return jsonSerializer.Deserialize<PutResolvedConflictsCommandDto>(reader);
+                case nameof(HiLoHandler.MergedNextHiLoCommand):
+                    return jsonSerializer.Deserialize<MergedNextHiLoCommandDto>(reader);
+                case nameof(HiLoHandler.MergedHiLoReturnCommand):
+                    return jsonSerializer.Deserialize<MergedHiLoReturnCommandDto>(reader);
+                case nameof(IncomingReplicationHandler.MergedDocumentReplicationCommand):
+                    return jsonSerializer.Deserialize<MergedDocumentReplicationCommandDto>(reader);
+                case nameof(ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand):
+                    return jsonSerializer.Deserialize<DeleteExpiredDocumentsCommandDto>(reader);
+                case nameof(OutgoingReplicationHandler.UpdateSiblingCurrentEtag):
+                    return jsonSerializer.Deserialize<UpdateSiblingCurrentEtagDto>(reader);
+                case nameof(IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand):
+                    return jsonSerializer.Deserialize<MergedUpdateDatabaseChangeVectorCommandDto>(reader);
+                case nameof(AdminRevisionsHandler.DeleteRevisionsCommand):
+                    return jsonSerializer.Deserialize<DeleteRevisionsCommandDto>(reader);
+                case nameof(RevisionsOperations.DeleteRevisionsBeforeCommand):
+                    throw new ReplayTransactionsException(
+                        "Because this command is deleting according to revisions' date & the revisions that created by replaying have different date an in place decision needed to be made",
+                        peepingTomStream);
+                case nameof(TombstoneCleaner.DeleteTombstonesCommand):
+                    return jsonSerializer.Deserialize<DeleteTombstonesCommandDto>(reader);
+                case nameof(OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand):
+                    return jsonSerializer.Deserialize<OutputReduceToCollectionCommandDto>(reader);
+                default:
+                    throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
+            }
+        }
+
+        private static JsonSerializer GetJsonSerializer()
+        {
+            var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+            jsonSerializer.Converters.Add(SliceJsonConverter.Instance);
+            return jsonSerializer;
+        }
+
+        public class ReplayTransactionsException : Exception
+        {
+            public string Context { get; }
+
+            public ReplayTransactionsException(string message, PeepingTomStream peepingTomStream)
+            : base(message)
+            {
+                try
+                {
+                    Context = Encodings.Utf8.GetString(peepingTomStream.PeepInReadStream());
+                }
+                catch (Exception e)
+                {
+                    Context = "Failed to generated peepedWindow: " + e;
+                }
+            }
+
+            public override string Message => base.Message + ";\rContext:\r" + Context;
+        }
+
+        private class RecordingDetails
+        {
+            public string Type { get; }
+            public DateTime DateTime { get; }
+
+            public RecordingDetails(string type)
+            {
+                Type = type;
+                DateTime = DateTime.Now;
+            }
+        }
+
+        private class StartRecordingDetails : RecordingDetails
+        {
+            private const string DetailsType = "StartRecording";
+            public string Version { get; }
+
+            public StartRecordingDetails()
+            : base(DetailsType)
+            {
+                Version = ServerVersion.FullVersion;
+            }
+        }
+
+        private class RecordingCommandDetails : RecordingDetails
+        {
+            public IReplayableCommandDto<MergedTransactionCommand> Command;
+
+            public RecordingCommandDetails(string type) : base(type)
+            {
             }
         }
     }

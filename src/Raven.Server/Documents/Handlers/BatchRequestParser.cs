@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Patch;
@@ -31,6 +32,7 @@ namespace Raven.Server.Documents.Handlers
             public LazyStringValue ChangeVector;
             public bool IdPrefixed;
 
+            [JsonIgnore]
             public PatchDocumentCommand PatchCommand;
 
             #region Attachment
@@ -41,7 +43,6 @@ namespace Raven.Server.Documents.Handlers
             #endregion
         }
 
-    
         private static readonly CommandData[] Empty = new CommandData[0];
         private static readonly int MaxSizeOfCommandsInBatchToCache = 128;
 

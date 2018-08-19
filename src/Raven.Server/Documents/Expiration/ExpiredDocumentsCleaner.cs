@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.ServerWide;
@@ -110,7 +111,7 @@ namespace Raven.Server.Documents.Expiration
             }
         }
 
-        private class DeleteExpiredDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class DeleteExpiredDocumentsCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> _expired;
             private readonly DocumentDatabase _database;
@@ -123,10 +124,30 @@ namespace Raven.Server.Documents.Expiration
                 _database = database;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 return DeletionCount = _database.DocumentsStorage.ExpirationStorage.DeleteExpiredDocuments(context, _expired);
             }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new DeleteExpiredDocumentsCommandDto
+                {
+                    Expired = _expired.ToArray()
+                };
+            }
         }
+    }
+
+    internal class DeleteExpiredDocumentsCommandDto : TransactionOperationsMerger.IReplayableCommandDto<ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand>
+    {
+        public ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> expired = Expired.ToDictionary(kv => kv.Key, kv => kv.Value);
+            var command = new ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand(expired, database);
+            return command;
+        }
+
+        public KeyValuePair<Slice, List<(Slice LowerId, LazyStringValue Id)>>[] Expired { get; set; }
     }
 }

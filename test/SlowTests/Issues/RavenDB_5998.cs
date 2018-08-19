@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reflection;
 using FastTests;
 using Raven.Client.Documents.Smuggler;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -22,7 +23,7 @@ namespace SlowTests.Issues
             {
                 Assert.NotNull(stream);
 
-                using (var database = CreateDocumentDatabase())
+                using (DocumentDatabase database = CreateDocumentDatabase())
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (var source = new StreamSource(stream, context, database))
                 {

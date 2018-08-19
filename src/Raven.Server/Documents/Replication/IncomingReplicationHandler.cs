@@ -11,6 +11,7 @@ using Sparrow.Logging;
 using System.Text;
 using Sparrow;
 using Sparrow.Json.Parsing;
+using System.Runtime.InteropServices;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -71,6 +72,26 @@ namespace Raven.Server.Documents.Replication
             _attachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("replication");
 
             _copiedBuffer = bufferToCopy.Clone(_connectionOptions.ContextPool);
+        }
+
+        ///<summary>
+        ///This constructor should be used for replay transaction commands only!!!
+        ///</summary>
+        internal IncomingReplicationHandler(
+            DocumentDatabase database, 
+            List<ReplicationItem> replicatedItems, 
+            IncomingConnectionInfo connectionInfo,
+            ReplicationLoader parent,
+            ReplicationAttachmentStream[] replicatedAttachmentStreams)
+        {
+            _parent = parent;
+            _database = database;
+            _replicatedItems = replicatedItems;
+            ConnectionInfo = connectionInfo;
+            _replicatedAttachmentStreams = replicatedAttachmentStreams.ToDictionary(i => i.Base64Hash, SliceComparer.Instance);
+            _attachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("replication");
+            _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
+            _conflictManager = new ConflictManager(_database, _parent.ConflictResolver);
         }
 
         public IncomingReplicationPerformanceStats[] GetReplicationPerformance()
@@ -643,7 +664,7 @@ namespace Raven.Server.Documents.Replication
         private (IDisposable ReleaseBuffer, JsonOperationContext.ManagedPinnedBuffer Buffer) _copiedBuffer;
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
 
-        private struct ReplicationItem : IDisposable
+        internal struct ReplicationItem : IDisposable
         {
             public short TransactionMarker;
             public ReplicationBatchItem.ReplicationItemType Type;
@@ -693,7 +714,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private struct ReplicationAttachmentStream : IDisposable
+        internal struct ReplicationAttachmentStream : IDisposable
         {
             public Slice Base64Hash;
             public ByteStringContext.InternalScope Base64HashDispose;
@@ -940,7 +961,7 @@ namespace Raven.Server.Documents.Replication
         protected void OnFailed(Exception exception, IncomingReplicationHandler instance) => Failed?.Invoke(instance, exception);
         protected void OnDocumentsReceived(IncomingReplicationHandler instance) => DocumentsReceived?.Invoke(instance);
 
-        private class MergedUpdateDatabaseChangeVectorCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class MergedUpdateDatabaseChangeVectorCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly string _changeVector;
             private readonly long _lastDocumentEtag;
@@ -955,7 +976,7 @@ namespace Raven.Server.Documents.Replication
                 _trigger = trigger;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 var operationsCount = 0;
                 var lastReplicatedEtag = DocumentsStorage.GetLastReplicatedEtagFrom(context, _sourceDatabaseId);
@@ -987,9 +1008,19 @@ namespace Raven.Server.Documents.Replication
 
                 return operationsCount;
             }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new MergedUpdateDatabaseChangeVectorCommandDto
+                {
+                    ChangeVector = _changeVector,
+                    LastDocumentEtag = _lastDocumentEtag,
+                    SourceDatabaseId = _sourceDatabaseId
+                };
+            }
         }
 
-        private unsafe class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
+        internal unsafe class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             private readonly IncomingReplicationHandler _incoming;
 
@@ -1006,7 +1037,7 @@ namespace Raven.Server.Documents.Replication
                 _lastEtag = lastEtag;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 try
                 {
@@ -1230,6 +1261,167 @@ namespace Raven.Server.Documents.Replication
                     disposable?.Dispose();
                 }
             }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                var buffer = new byte[_totalSize];
+                Marshal.Copy((IntPtr)_buffer, buffer, 0, _totalSize);
+                var strBuffer = Convert.ToBase64String(buffer);
+
+                var replicatedAttachmentStreams = _incoming._replicatedAttachmentStreams
+                    .Select(kv => KeyValuePair.Create(kv.Key.ToString(), kv.Value.Stream))
+                    .ToArray();
+
+                return new MergedDocumentReplicationCommandDto
+                {
+                    LastEtag = _lastEtag,
+                    Buffer = strBuffer,
+                    ReplicatedItemDtos = _incoming._replicatedItems.Select(i => ReplicationItemToDto(context, i)).ToArray(),
+                    SourceDatabaseId = _incoming.ConnectionInfo.SourceDatabaseId,
+                    ReplicatedAttachmentStreams = replicatedAttachmentStreams
+                };
+            }
+
+            private static ReplicationItemDto ReplicationItemToDto(JsonOperationContext context, ReplicationItem item)
+            {
+                var dto = new ReplicationItemDto
+                {
+                    TransactionMarker = item.TransactionMarker,
+                    Type = item.Type,
+                    Id = item.Id,
+                    Position = item.Position,
+                    ChangeVector = item.ChangeVector,
+                    DocumentSize = item.DocumentSize,
+                    Collection = item.Collection,
+                    LastModifiedTicks = item.LastModifiedTicks,
+                    Flags = item.Flags,
+                    Key = item.Key.ToString(),
+                    Base64Hash = item.Base64Hash.ToString()
+                };
+
+                dto.Name = item.Name.Content.HasValue
+                    ? context.GetLazyStringValue(item.Name.Content.Ptr)
+                    : null;
+
+                dto.ContentType = item.Name.Content.HasValue
+                    ? context.GetLazyStringValue(item.ContentType.Content.Ptr)
+                    : null;
+
+                return dto;
+            }
+        }
+    }
+
+    internal class MergedUpdateDatabaseChangeVectorCommandDto : TransactionOperationsMerger.IReplayableCommandDto<IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand>
+    {
+        public string ChangeVector;
+        public long LastDocumentEtag;
+        public string SourceDatabaseId;
+
+        public IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            var command = new IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand(ChangeVector, LastDocumentEtag, SourceDatabaseId, new AsyncManualResetEvent());
+            return command;
+        }
+    }
+
+
+    internal class MergedDocumentReplicationCommandDto : TransactionOperationsMerger.IReplayableCommandDto<IncomingReplicationHandler.MergedDocumentReplicationCommand>
+    {
+        public ReplicationItemDto[] ReplicatedItemDtos;
+        public long LastEtag;
+        public string Buffer;
+        public string SourceDatabaseId;
+        public KeyValuePair<string, Stream>[] ReplicatedAttachmentStreams;
+
+        public IncomingReplicationHandler.MergedDocumentReplicationCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            var connectionInfo = new IncomingConnectionInfo
+            {
+                SourceDatabaseId = SourceDatabaseId
+            };
+            var replicationItems = ReplicatedItemDtos.Select(d => d.ToItem(context)).ToList();
+
+            var replicatedAttachmentStreams = ReplicatedAttachmentStreams.Select(i => CreateReplicationAttachmentStream(context, i)).ToArray();
+            var replicationHandler = new IncomingReplicationHandler(database, replicationItems, connectionInfo, database.ReplicationLoader, replicatedAttachmentStreams);
+
+            unsafe
+            {
+                var buffer = Convert.FromBase64String(Buffer);
+                fixed (byte* pBuffer = buffer)
+                {
+                    var memory = context.GetMemory(buffer.Length);
+                    Memory.Copy(memory.Address, pBuffer, buffer.Length);
+                    return new IncomingReplicationHandler.MergedDocumentReplicationCommand(replicationHandler, memory.Address, Buffer.Length, LastEtag);
+                }
+            }
+        }
+
+        private IncomingReplicationHandler.ReplicationAttachmentStream CreateReplicationAttachmentStream(DocumentsOperationContext context, KeyValuePair<string, Stream> arg)
+        {
+
+            var attachmentStream = new IncomingReplicationHandler.ReplicationAttachmentStream();
+            attachmentStream.Stream = arg.Value;
+            attachmentStream.Base64HashDispose = Slice.From(context.Allocator, arg.Key, ByteStringType.Immutable, out attachmentStream.Base64Hash);
+            return attachmentStream;
+        }
+    }
+
+    internal class ReplicationItemDto
+    {
+        public short TransactionMarker;
+        public ReplicationBatchItem.ReplicationItemType Type;
+
+        #region Document
+
+        public string Id;
+        public int Position;
+        public string ChangeVector;
+        public int DocumentSize;
+        public string Collection;
+        public long LastModifiedTicks;
+        public DocumentFlags Flags;
+
+        #endregion
+
+        #region Attachment
+
+        public string Key;
+        public string Name;
+        public string ContentType;
+        public string Base64Hash;
+
+        #endregion
+
+        public IncomingReplicationHandler.ReplicationItem ToItem(DocumentsOperationContext context)
+        {
+            var item = new IncomingReplicationHandler.ReplicationItem
+            {
+                TransactionMarker = TransactionMarker,
+                Type = Type,
+                Id = Id,
+                Position = Position,
+                ChangeVector = ChangeVector,
+                DocumentSize = DocumentSize,
+                Collection = Collection,
+                LastModifiedTicks = LastModifiedTicks,
+                Flags = Flags
+            };
+
+            if (Name != null)
+            {
+                item.NameDispose = DocumentIdWorker.GetStringPreserveCase(context, Name, out item.Name);
+            }
+
+            if (ContentType != null)
+            {
+                item.ContentTypeDispose = DocumentIdWorker.GetStringPreserveCase(context, ContentType, out item.ContentType);
+            }
+
+            item.KeyDispose = Slice.From(context.Allocator, Key, ByteStringType.Immutable, out item.Key);
+            item.Base64HashDispose = Slice.From(context.Allocator, Base64Hash, ByteStringType.Immutable, out item.Base64Hash);
+
+            return item;
         }
     }
 }

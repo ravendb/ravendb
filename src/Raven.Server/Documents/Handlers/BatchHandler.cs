@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -20,7 +21,11 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Server.Documents.Replication;
 using System.Runtime.ExceptionServices;
+using Newtonsoft.Json;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
+using Raven.Server.Documents.Patch;
+using Raven.Server.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -38,7 +43,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     command.ParsedCommands = await BatchRequestParser.BuildCommandsAsync(context, RequestBodyStream(), Database, ServerStore);
                 }
-                else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) || 
+                else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
                     contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                 {
                     await ParseMultipart(context, command);
@@ -255,7 +260,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         indexesToCheck.Add(index);
                     }
-                        
+
                 }
             }
             return indexesToCheck;
@@ -293,6 +298,15 @@ namespace Raven.Server.Documents.Handlers
                 return sb.ToString();
             }
 
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new MergedBatchCommandDto
+                {
+                    ParsedCommands = ParsedCommands.ToArray(),
+                    AttachmentStreams = AttachmentStreams
+                };
+            }
+
             private bool CanAvoidThrowingToMerger(ConcurrencyException e, int commandOffset)
             {
                 // if a concurrency exception has been thrown, because the user passed a change vector,
@@ -306,7 +320,7 @@ namespace Raven.Server.Documents.Handlers
                 return false;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 _disposables.Clear();
                 Reply = new DynamicJsonArray();
@@ -366,7 +380,7 @@ namespace Raven.Server.Documents.Handlers
                         case CommandType.PATCH:
                             try
                             {
-                                cmd.PatchCommand.Execute(context);
+                                cmd.PatchCommand.ExecuteDirectly(context);
                             }
                             catch (ConcurrencyException e) when (CanAvoidThrowingToMerger(e, i))
                             {
@@ -523,6 +537,50 @@ namespace Raven.Server.Documents.Handlers
             public Index Index;
             public AsyncManualResetEvent.FrozenAwaiter IndexBatchAwaiter;
             public AsyncWaitForIndexing WaitForIndexing;
+        }
+    }
+
+    public class MergedBatchCommandDto : TransactionOperationsMerger.IReplayableCommandDto<BatchHandler.MergedBatchCommand>
+    {
+        public BatchRequestParser.CommandData[] ParsedCommands { get; set; }
+        public Queue<BatchHandler.MergedBatchCommand.AttachmentStream> AttachmentStreams;
+
+        public BatchHandler.MergedBatchCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            if (ParsedCommands == null || ParsedCommands.Any() == false)
+            {
+                //Todo To check if empty array can append & if it is make sense to check it here 
+                throw new InvalidDataException("There should be at least one command");
+            }
+
+            for (var i = 0; i < ParsedCommands.Length; i++)
+            {
+                if (ParsedCommands[i].Type != CommandType.PATCH)
+                {
+                    continue;
+                }
+
+                ParsedCommands[i].PatchCommand = new PatchDocumentCommand(context, 
+                    ParsedCommands[i].Id, 
+                    ParsedCommands[i].ChangeVector,
+                    false,
+                    (ParsedCommands[i].Patch, ParsedCommands[i].PatchArgs),
+                    (ParsedCommands[i].PatchIfMissing, ParsedCommands[i].PatchIfMissingArgs),
+                    database,
+                    false,
+                    false,
+                    true
+                );
+            }
+
+            var newCmd = new BatchHandler.MergedBatchCommand
+            {
+                Database = database,
+                ParsedCommands = ParsedCommands,
+                AttachmentStreams = AttachmentStreams
+            };
+
+            return newCmd;
         }
     }
 }

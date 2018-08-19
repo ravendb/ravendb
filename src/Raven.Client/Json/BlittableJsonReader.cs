@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Sparrow;
 using Sparrow.Json;
@@ -25,6 +26,18 @@ namespace Raven.Client.Json
         private readonly Action<JsonReader, State> _setState = ExpressionHelper.CreateFieldSetter<JsonReader, State>("_currentState");
         private readonly Action<JsonReader, JsonToken> _setToken = ExpressionHelper.CreateFieldSetter<JsonReader, JsonToken>("_tokenType");
 
+        public JsonOperationContext Context { get; }
+
+        public BlittableJsonReader()
+        {
+
+        }
+
+        public BlittableJsonReader(JsonOperationContext context)
+        {
+            Context = context;
+        }
+
         public void Init(BlittableJsonReaderObject root)
         {
             _items.Clear();
@@ -47,7 +60,7 @@ namespace Raven.Client.Json
 
 
         private bool _readAsLazyNumber = false;
-       
+
 
         public override bool Read()
         {
@@ -127,7 +140,7 @@ namespace Raven.Client.Json
             if (val is IEnumerable)
                 return BlittableJsonToken.StartArray;
             if (val is decimal asDec)
-            {                
+            {
                 return BlittableJsonToken.LazyNumber;
             }
             return BlittableJsonToken.StartObject;
@@ -137,6 +150,9 @@ namespace Raven.Client.Json
         {
             switch (token & BlittableJsonReaderBase.TypesMask)
             {
+                case BlittableJsonToken.EmbeddedBlittable:
+                    SetToken(JsonToken.Raw, value);
+                    return true;
                 case BlittableJsonToken.StartObject:
                     var newObject = new CurrentItem
                     {
@@ -145,7 +161,9 @@ namespace Raven.Client.Json
                     };
                     _items.Push(newObject);
                     newObject.Object.GetPropertiesByInsertionOrder(newObject.Buffers);
-                    SetToken(JsonToken.StartObject);
+
+                    //The value is passed in case the field/property should remains BlittableJsonReaderObject
+                    SetToken(JsonToken.StartObject, value);
                     return true;
                 case BlittableJsonToken.StartArray:
                     var newArray = new CurrentItem
@@ -155,7 +173,7 @@ namespace Raven.Client.Json
                     _items.Push(newArray);
                     SetToken(JsonToken.StartArray);
                     return true;
-                case BlittableJsonToken.Integer:                  
+                case BlittableJsonToken.Integer:
                     SetToken(JsonToken.Integer, (long)value);
                     return true;
                 case BlittableJsonToken.LazyNumber:
@@ -171,15 +189,15 @@ namespace Raven.Client.Json
                             SetToken(JsonToken.Integer, ulongValue);
                         }
                         else if (lnv.TryParseDecimal(out var decimalValue))
-                        {                            
+                        {
                             SetToken(JsonToken.Float, decimalValue);
                         }
                         else
                         {
                             SetToken(JsonToken.Float, (double)lnv);
                         }
-                        
-                    }                    
+
+                    }
 
                     return true;
                 case BlittableJsonToken.String:
@@ -251,11 +269,11 @@ namespace Raven.Client.Json
                 return null;
             }
             return Value?.ToString();
-        }               
+        }
 
         public override byte[] ReadAsBytes()
-        {            
-            var str = ReadAsString();            
+        {
+            var str = ReadAsString();
             if (str == null)
                 return null;
             return Convert.FromBase64String(str);
@@ -265,7 +283,7 @@ namespace Raven.Client.Json
         {
             _readAsLazyNumber = true;
             try
-            { 
+            {
                 if (!Read())
                 {
                     SetToken(JsonToken.None);
@@ -288,7 +306,7 @@ namespace Raven.Client.Json
                 }
             }
 
-            return (decimal)Convert.ChangeType(Value, typeof(decimal), CultureInfo.InvariantCulture);            
+            return (decimal)Convert.ChangeType(Value, typeof(decimal), CultureInfo.InvariantCulture);
         }
 
         public override double? ReadAsDouble()
@@ -317,9 +335,9 @@ namespace Raven.Client.Json
                     return doubleVal;
                 }
             }
-           
+
             return (double)Convert.ChangeType(Value, typeof(double), CultureInfo.InvariantCulture);
-        }                
+        }
 
         public override DateTime? ReadAsDateTime()
         {
@@ -336,6 +354,11 @@ namespace Raven.Client.Json
                 return null;
             return DateTimeOffset.ParseExact(str, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
         }
-    }
 
+        public void SkipBlittableInside()
+        {
+            SetToken(JsonToken.EndObject);
+            _items.Pop();
+        }
+    }
 }
