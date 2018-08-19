@@ -1743,10 +1743,8 @@ namespace Raven.Server.ServerWide
         {
             var response = await SendToLeaderAsyncInternal(cmd);
 
-            #if DEBUG
+            #if DEBUG || VALIDATE
             
-            //this is a temporary measure until RavenDB-11761 is done
-            //(http://issues.hibernatingrhinos.com/issue/RavenDB-11761)
             if (response.Result.ContainsBlittableObject())
             {
                 throw new InvalidOperationException($"{nameof(ServerStore)}::{nameof(SendToLeaderAsync)}(CommandBase) should not return command results with blittable json objects. This is not supposed to happen and should be reported.");
