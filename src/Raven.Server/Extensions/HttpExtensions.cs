@@ -35,7 +35,7 @@ namespace Raven.Server.Extensions
                 var uriBuilder = new UriBuilder(
                     request.Scheme,
                     request.Host.Host,
-                    request.Host.Port ?? 8080,
+                    request.Host.Port ?? (request.IsHttps ? 443 : 80),
                     string.Empty);
                 requestUrl = uriBuilder.ToString().TrimEnd('/');
             }
