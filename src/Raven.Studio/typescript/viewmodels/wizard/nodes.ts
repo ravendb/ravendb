@@ -88,7 +88,7 @@ class nodes extends setupStep {
     activate(args: any) {
         super.activate(args);
         
-        this.updateNodeTags();
+        this.updatePorts();
         
         switch (this.model.mode()) {
             case "LetsEncrypt":
@@ -187,8 +187,20 @@ class nodes extends setupStep {
         const node = new nodeInfo(this.model.hostnameIsNotRequired, this.model.mode);
         this.model.nodes.push(node);
         this.editedNode(node);
-        this.updateNodeTags();
+        node.nodeTag(this.findFirstAvailableNodeTag());
+        
+        this.updatePorts();
         this.initTooltips();
+    }
+    
+    private findFirstAvailableNodeTag() {
+        for (let nodesTagsKey of serverSetup.nodesTags) {
+            if (!this.model.nodes().find(x => x.nodeTag() === nodesTagsKey)) {
+                return nodesTagsKey;
+            }
+        }
+        
+        return "";
     }
 
     editNode(node: nodeInfo) {
@@ -202,13 +214,12 @@ class nodes extends setupStep {
             this.editedNode(null);
         }
         
-        this.updateNodeTags();
+        this.updatePorts();
     }
     
-    updateNodeTags() {
+    updatePorts() {
         let idx = 0;
         this.model.nodes().forEach(node => {
-           node.nodeTag(serverSetup.nodesTags[idx]);
            
            if (idx === 0 && this.model.fixPortNumberOnLocalNode()) {
                node.port(this.model.fixedLocalPort().toString());

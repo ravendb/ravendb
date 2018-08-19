@@ -21,6 +21,7 @@ namespace Raven.Server.Commercial
         public string Domain { get; set; }
         public string RootDomain { get; set; }
         public bool ModifyLocalServer { get; set; }
+        public string LocalNodeTag { get; set; }
         public string Certificate { get; set; }
         public string Password { get; set; }
 
@@ -94,6 +95,7 @@ namespace Raven.Server.Commercial
         public List<string> Addresses { get; set; }
         public int Port { get; set; }
         public int TcpPort { get; set; }
+        public string LocalNodeTag { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -103,7 +105,8 @@ namespace Raven.Server.Commercial
                 [nameof(Port)] = Port,
                 [nameof(TcpPort)] = TcpPort,
                 [nameof(EnableExperimentalFeatures)] = EnableExperimentalFeatures,
-                [nameof(Environment)] = Environment
+                [nameof(Environment)] = Environment,
+                [nameof(LocalNodeTag)] = LocalNodeTag
             };
         }
     }
@@ -351,5 +354,31 @@ namespace Raven.Server.Commercial
         }
 
         public bool ShouldPersist => false;
+    }
+
+    public class SetupSettings
+    {
+        public Node[] Nodes;
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Nodes)] = Nodes != null ? new DynamicJsonArray(Nodes.Select(x => x.ToJson())) : null
+            };
+        }
+
+        public class Node
+        {
+            public string Tag { get; set; }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(Tag)] = Tag
+                }; 
+            }
+        }
     }
 }

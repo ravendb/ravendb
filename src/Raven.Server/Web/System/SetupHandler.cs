@@ -535,9 +535,10 @@ namespace Raven.Server.Web.System
                     settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
                 }
                 
+                ServerStore.EnsureNotPassive(nodeTag: setupInfo.LocalNodeTag);
+                
                 if (setupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
                 {
-                    ServerStore.EnsureNotPassive();
                     var res = await ServerStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(new ServerWideStudioConfiguration
                     {
                         Disabled = false,
@@ -682,7 +683,7 @@ namespace Raven.Server.Web.System
                             if (entry.Name.Equals("settings.json") == false)
                                 continue;
 
-                            var tag = entry.FullName[0].ToString();
+                            var tag = entry.FullName.Substring(0, entry.FullName.Length - "/settings.json".Length);
 
                             using (var settingsJson = context.ReadForMemory(entry.Open(), "settings-json"))
                                 if (settingsJson.TryGet(nameof(ConfigurationNodeInfo.PublicServerUrl), out string publicServerUrl))
