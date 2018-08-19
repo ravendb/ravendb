@@ -438,6 +438,7 @@ namespace Tests.Infrastructure
                 {
                     [RavenConfiguration.GetKey(x=>x.Cluster.MoveToRehabGraceTime)] = "1",
                     [RavenConfiguration.GetKey(x=>x.Cluster.ElectionTimeout)] = _electionTimeoutInMs.ToString(),
+                    [RavenConfiguration.GetKey(x=>x.Cluster.StabilizationTime)] = "1",
                 };
                 string serverUrl;
 
