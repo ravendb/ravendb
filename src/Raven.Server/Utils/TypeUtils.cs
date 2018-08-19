@@ -4,26 +4,54 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using CsvHelper;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Utils
 {
+    public sealed class ReferenceEqualityComparer : IEqualityComparer<object>
+    {
+        public static readonly ReferenceEqualityComparer Default = new ReferenceEqualityComparer();
+
+        bool IEqualityComparer<object>.Equals(object x, object y) => ReferenceEquals(x, y);
+        public int GetHashCode(object obj) => RuntimeHelpers.GetHashCode(obj);
+    }
+
     public static class TypeUtils
     {
+        private struct VisitedResetBehavior : IResetSupport<HashSet<object>>
+        {
+            public void Reset(HashSet<object> value)
+            {
+                value.Clear();
+            }
+        }
+
+        private static readonly ObjectPool<HashSet<object>,VisitedResetBehavior> VisitedHashsets = 
+            new ObjectPool<HashSet<object>, VisitedResetBehavior>(() => new HashSet<object>(ReferenceEqualityComparer.Default));
+
         //detect if an object is a blittable or has any blittable objects somewhere in its object hierarchy
         public static bool ContainsBlittableObject(this object obj)
         {
-            return obj.ContainsBlittableObject(new List<object>());
+            var visited = VisitedHashsets.Allocate();
+            try
+            {
+                return obj.ContainsBlittableObject(visited);
+            }
+            finally
+            {
+                VisitedHashsets.Free(visited);
+            }
         }
 
         //credit : modified code from https://stackoverflow.com/q/17520839
-        private static bool ContainsBlittableObject(this object obj, List<object> visited)
+        private static bool ContainsBlittableObject(this object obj, HashSet<object> visited)
         {
             if (obj == null)
                 return false;
 
             //prevent infinite loops
-            if (visited.Any(item => ReferenceEquals(item, obj)))
+            if (visited.Contains(obj))
                 return false;
 
             visited.Add(obj);
@@ -35,20 +63,15 @@ namespace Raven.Server.Utils
 
             if (obj is BlittableJsonReaderObject || obj is BlittableJsonReaderArray)
                 return true;
-
-            if (typeof(IEnumerable).IsAssignableFrom(type))
+            
+            if (obj is IEnumerable array)
             {
-                if (obj is IEnumerable array) //precaution, should be true at this stage
+                foreach (var item in array)
                 {
-                    foreach (var item in array)
+                    if (item.ContainsBlittableObject(visited))
                     {
-                        if (item.ContainsBlittableObject(visited))
-                        {
-                            return true;
-                        }
+                        return true;
                     }
-
-                    return false;
                 }
 
                 return false;
@@ -87,12 +110,11 @@ namespace Raven.Server.Utils
                         return true;
                     }
                 }
-                
+
                 return false;
             }
 
             return false;
         }
-
     }
 }
