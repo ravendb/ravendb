@@ -4,6 +4,7 @@ using System.Text;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
+using Sparrow.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
@@ -17,6 +18,13 @@ namespace Raven.Client.Documents.Commands
         private readonly int? _start;
         private readonly int? _pageSize;
         private readonly bool _metadataOnly;
+        private readonly DateTime? _before;
+
+        public GetRevisionsCommand(string id, DateTime before)
+        {
+            _id = id ?? throw new ArgumentNullException(nameof(id));
+            _before = before;
+        }
 
         public GetRevisionsCommand(string id, int? start, int? pageSize, bool metadataOnly = false)
         {
@@ -61,7 +69,8 @@ namespace Raven.Client.Documents.Commands
                     pathBuilder.Append("&changeVector=").Append(Uri.EscapeDataString(changeVector));
                 }
             }
-
+            if(_before.HasValue)
+                pathBuilder.Append("&before=").Append(_before.Value.GetDefaultRavenFormat(_before.Value.Kind == DateTimeKind.Utc));
             if (_start.HasValue)
                 pathBuilder.Append("&start=").Append(_start);
             if (_pageSize.HasValue)

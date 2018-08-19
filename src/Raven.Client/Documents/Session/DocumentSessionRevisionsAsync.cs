@@ -4,7 +4,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Session.Operations;
@@ -19,6 +21,16 @@ namespace Raven.Client.Documents.Session
     {
         public DocumentSessionRevisionsAsync(InMemoryDocumentSessionOperations session) : base(session)
         {
+        }
+
+
+        public async Task<T> GetBeforeAsync<T>(string id, DateTime date, CancellationToken token = default)
+        {
+            var operation = new GetRevisionOperation(Session, id, date);
+            var command = operation.CreateRequest();
+            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
+            operation.SetResult(command.Result);
+            return operation.GetRevisionsFor<T>().FirstOrDefault();
         }
 
         public async Task<List<T>> GetForAsync<T>(string id, int start = 0, int pageSize = 25, CancellationToken token = default)

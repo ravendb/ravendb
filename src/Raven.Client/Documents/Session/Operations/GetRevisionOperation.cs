@@ -21,6 +21,13 @@ namespace Raven.Client.Documents.Session.Operations
             _command = new GetRevisionsCommand(id, start, pageSize, metadataOnly);
         }
 
+
+        public GetRevisionOperation(InMemoryDocumentSessionOperations session, string id, DateTime before)
+        {
+            _session = session ?? throw new ArgumentNullException(nameof(session));
+            _command = new GetRevisionsCommand(id, before);
+        }
+
         public GetRevisionOperation(InMemoryDocumentSessionOperations session, string changeVector)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));

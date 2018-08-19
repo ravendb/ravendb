@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using Raven.Client.Json;
 
@@ -14,6 +15,12 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public interface IRevisionsSessionOperations
     {
+        /// <summary>
+        /// Returns the first revision for this document that happens before or at
+        /// the specified date
+        /// </summary>
+        T GetBefore<T>(string id, DateTime date);
+
         /// <summary>
         /// Returns all previous document revisions for specified document (with paging) ordered by most recent reivions first.
         /// </summary>
