@@ -197,7 +197,7 @@ namespace Raven.Server.Commercial
                 BlittableJsonReaderObject settingsJsonObject;
                 License license;
                 Dictionary<string, string> otherNodesUrls;
-                string localNodeTag;
+                string firstNodeTag;
 
                 try
                 {
@@ -217,7 +217,7 @@ namespace Raven.Server.Commercial
                     try
                     {
                         settingsJsonObject = ExtractCertificatesAndSettingsJsonFromZip(zipBytes, continueSetupInfo.NodeTag, context, out serverCertBytes, 
-                            out serverCert, out clientCert, out localNodeTag, out otherNodesUrls, out license);
+                            out serverCert, out clientCert, out firstNodeTag, out otherNodesUrls, out license);
                     }
                     catch (Exception e)
                     {
@@ -245,7 +245,7 @@ namespace Raven.Server.Commercial
                     try
                     {
                         await CompleteConfigurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, serverCertBytes, serverCert, 
-                            clientCert, serverStore, localNodeTag, otherNodesUrls, license);
+                            clientCert, serverStore, firstNodeTag, otherNodesUrls, license);
                     }
                     catch (Exception e)
                     {
@@ -267,7 +267,7 @@ namespace Raven.Server.Commercial
             return progress;
         }
 
-        public static BlittableJsonReaderObject ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string nodeTag, JsonOperationContext context, out byte[] certBytes, out X509Certificate2 serverCert, out X509Certificate2 clientCert, out string localNodeTag, out Dictionary<string, string> otherNodesUrls, out License license)
+        public static BlittableJsonReaderObject ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string currentNodeTag, JsonOperationContext context, out byte[] certBytes, out X509Certificate2 serverCert, out X509Certificate2 clientCert, out string firstNodeTag, out Dictionary<string, string> otherNodesUrls, out License license)
         {
             certBytes = null;
             byte[] clientCertBytes = null;
@@ -276,7 +276,7 @@ namespace Raven.Server.Commercial
 
             otherNodesUrls = new Dictionary<string, string>();
 
-            localNodeTag = "A";
+            firstNodeTag = "A";
 
             using (var msZip = new MemoryStream(zipBytes))
             using (var archive = new ZipArchive(msZip, ZipArchiveMode.Read, false))
@@ -289,17 +289,17 @@ namespace Raven.Server.Commercial
                         var json = context.Read(entry.Open(), "license/json");
 
                         SetupSettings setupSettings = JsonDeserializationServer.SetupSettings(json);
-                        localNodeTag = setupSettings.Nodes[0].Tag;
+                        firstNodeTag = setupSettings.Nodes[0].Tag;
                         
-                        // since we allow to customize node tags, we stored information about order nodes into setup.json file
-                        // first node is local node on which cluster should be initialized 
-                        // if file was not found we are using old codebase - it means local node has tag = 'A'
+                        // Since we allow to customize node tags, we stored information about the order of nodes into setup.json file
+                        // The first node is the one in which the cluster should be initialized.
+                        // If the file isn't found, it means we are using a zip which was created in the old codebase => first node has the tag 'A'
                     }
                 }
                 
                 foreach (var entry in archive.Entries)
                 {
-                    if (entry.FullName.StartsWith($"{nodeTag}/") && entry.Name.EndsWith(".pfx"))
+                    if (entry.FullName.StartsWith($"{currentNodeTag}/") && entry.Name.EndsWith(".pfx"))
                     {
                         using (var ms = new MemoryStream())
                         {
@@ -329,12 +329,15 @@ namespace Raven.Server.Commercial
                         {
                             settingsJson.TryGet(RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), out string publicServerUrl);
                             
-                            if (entry.FullName.StartsWith($"{nodeTag}/"))
+                            if (entry.FullName.StartsWith($"{currentNodeTag}/"))
                             {
                                 currentNodeSettingsJson = settingsJson.Clone(context);
                             }
 
-                            if (entry.FullName.StartsWith(localNodeTag + "/") == false && publicServerUrl != null)
+                            // This is for the case where we take the zip file and use it to setup the first node as well.
+                            // If this is the first node, we must collect the urls of the other nodes so that
+                            // we will be able to add them to the cluster when we bootstrap the cluster.
+                            if (entry.FullName.StartsWith(firstNodeTag + "/") == false && publicServerUrl != null)
                             {
                                 var tag = entry.FullName.Substring(0, entry.FullName.Length - "/settings.json".Length);
                                 otherNodesUrls.Add(tag, publicServerUrl);
@@ -346,11 +349,11 @@ namespace Raven.Server.Commercial
             }
 
             if (certBytes == null)
-                throw new InvalidOperationException($"Could not extract the server certificate of node '{nodeTag}'. Are you using the correct zip file?");
+                throw new InvalidOperationException($"Could not extract the server certificate of node '{currentNodeTag}'. Are you using the correct zip file?");
             if (clientCertBytes == null)
                 throw new InvalidOperationException("Could not extract the client certificate. Are you using the correct zip file?");
             if (currentNodeSettingsJson == null)
-                throw new InvalidOperationException($"Could not extract settings.json of node '{nodeTag}'. Are you using the correct zip file?");
+                throw new InvalidOperationException($"Could not extract settings.json of node '{currentNodeTag}'. Are you using the correct zip file?");
 
             try
             {
@@ -360,7 +363,7 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Unable to load the server certificate of node '{nodeTag}'.", e);
+                throw new InvalidOperationException($"Unable to load the server certificate of node '{currentNodeTag}'.", e);
             }
 
             try
@@ -1221,7 +1224,7 @@ namespace Raven.Server.Commercial
             X509Certificate2 serverCert,
             X509Certificate2 clientCert,
             ServerStore serverStore,
-            string localNodeTag,
+            string firstNodeTag,
             Dictionary<string, string> otherNodesUrls,
             License license)
         {
@@ -1242,9 +1245,9 @@ namespace Raven.Server.Commercial
 
             serverStore.Server.Certificate = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes, certPassword, serverStore);
             
-            if (continueSetupInfo.NodeTag.Equals(localNodeTag))
+            if (continueSetupInfo.NodeTag.Equals(firstNodeTag))
             {
-                serverStore.EnsureNotPassive(publicServerUrl, localNodeTag);
+                serverStore.EnsureNotPassive(publicServerUrl, firstNodeTag);
 
                 await DeleteAllExistingCertificates(serverStore);
 
@@ -1282,7 +1285,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                if (continueSetupInfo.NodeTag.Equals(localNodeTag))
+                if (continueSetupInfo.NodeTag.Equals(firstNodeTag))
                 {
                     var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + clientCert.Thumbprint, certDef));
                     await serverStore.Cluster.WaitForIndexNotification(res.Index);
@@ -1784,7 +1787,7 @@ namespace Raven.Server.Commercial
                     "The new server node will join the already existing cluster." +
                     Environment.NewLine +
                     Environment.NewLine +
-                    "When the wizard is done and the new node was restared, the cluster will automatically detect it. " +
+                    "When the wizard is done and the new node was restarted, the cluster will automatically detect it. " +
                     Environment.NewLine +
                     "There is no need to manually add it again from the studio. Simply access the 'Cluster' view and " +
                     Environment.NewLine +
