@@ -11,13 +11,13 @@ namespace InterversionTests
         [Fact]
         public async Task Test()
         {
-            var getStoreTask405 = GetDocumentStoreAsync("4.0.5");
-            var getStoreTask406Patch = GetDocumentStoreAsync("4.0.6-patch-40047");
+            var getStoreTask1 = GetDocumentStoreAsync("4.0.7-nightly-20180818-0400");
+            var getStoreTask2 = GetDocumentStoreAsync("4.0.7-nightly-20180820-0400");
 
-            await Task.WhenAll(getStoreTask405, getStoreTask406Patch);
+            await Task.WhenAll(getStoreTask1, getStoreTask2);
 
-            AssertStore(await getStoreTask405);
-            AssertStore(await getStoreTask406Patch);
+            AssertStore(await getStoreTask1);
+            AssertStore(await getStoreTask2);
             AssertStore(GetDocumentStore());
         }
 
