@@ -395,7 +395,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 NotificationSeverity.Warning
             );
 
-            NotificationCenter.Add(alert);
+            NotificationCenter.Add(alert, updateExisting: false);
             if (_logger.IsOperationsEnabled)
             {
                 _logger.Operations(alertMsg);
@@ -412,7 +412,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 NotificationSeverity.Warning
             );
 
-            NotificationCenter.Add(alert);
+            NotificationCenter.Add(alert, updateExisting: false);
             if (_logger.IsOperationsEnabled)
             {
                 _logger.Operations(alertMsg);

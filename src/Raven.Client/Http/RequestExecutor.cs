@@ -1216,9 +1216,9 @@ namespace Raven.Client.Http
             {
                 Url = request.RequestUri.ToString(),
                 Message = e.Message,
-                Error = e.ToString(),
+                Error = $"An exception occurred while contacting {request.RequestUri}.{Environment.NewLine}{e}.",
                 Type = e.GetType().FullName
-            }, HttpStatusCode.InternalServerError));
+            }, HttpStatusCode.ServiceUnavailable));
         }
 
         protected Task _firstTopologyUpdate;
