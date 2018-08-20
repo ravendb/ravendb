@@ -908,9 +908,6 @@ namespace Raven.Server.Rachis
                 topologyJson.CopyTo(ptr);
             }
 
-            if (engine == null)
-                return null;
-
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
             {
                 clusterTopology.AllNodes.TryGetValue(engine.Tag, out var key);
@@ -1658,7 +1655,7 @@ namespace Raven.Server.Rachis
                     "A"
                 );
 
-                SetTopology(null, ctx, topology);
+                SetTopology(this, ctx, topology);
 
                 SwitchToSingleLeader(ctx);
 
@@ -1686,7 +1683,7 @@ namespace Raven.Server.Rachis
                     lastNode
                 );
 
-                SetTopology(null, ctx, topology);
+                SetTopology(this, ctx, topology);
 
                 SwitchToSingleLeader(ctx);
 
@@ -1714,7 +1711,7 @@ namespace Raven.Server.Rachis
                     string.Empty
                 );
 
-                SetTopology(null, ctx, topology);
+                SetTopology(this, ctx, topology);
 
                 SetNewStateInTx(ctx, RachisState.Passive, null, CurrentTerm,
                     "Hard reset to passive by admin");

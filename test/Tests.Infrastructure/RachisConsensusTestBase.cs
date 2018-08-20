@@ -178,6 +178,9 @@ namespace Tests.Infrastructure
                 {
                     rachis.AcceptNewConnection(stream, () => tcpClient.Client.Disconnect(false), tcpClient.Client.RemoteEndPoint, hello =>
                     {
+                        if (rachis.Url == null)
+                            return;
+                        
                         lock (this)
                         {
                             if (_rejectionList.TryGetValue(rachis.Url, out var set))
