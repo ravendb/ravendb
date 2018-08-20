@@ -24,6 +24,17 @@ namespace InterversionTests
             public string Url;
         }
 
+        protected override RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null,
+            string customConfigPath = null)
+        {
+            if (customSettings == null)
+                customSettings = new Dictionary<string, string>();
+            var key = RavenConfiguration.GetKey(x => x.Http.UseLibuv);
+            if (customSettings.ContainsKey(key) == false)
+                customSettings[key] = "true";
+            return base.GetNewServer(customSettings, deletePrevious, runInMemory, partialPath, customConfigPath);
+        }
+
         protected async Task<(RavenServer Leader, List<ProcessNode> Peers, List<RavenServer> LocalPeers)> CreateMixedCluster(
             string[] peers, int localPeers = 0, IDictionary<string, string> customSettings = null)
         {
