@@ -207,8 +207,14 @@ namespace Raven.Client.Documents.Operations
                         StopProcessing();
                         var exceptionResult = (OperationExceptionResult)change.State.Result;
                         Debug.Assert(exceptionResult != null);
-                        _result.TrySetException(ExceptionDispatcher.Get(exceptionResult.Message, exceptionResult.Error, exceptionResult.Type,
-                            exceptionResult.StatusCode));
+                        var ex = new ExceptionDispatcher.ExceptionSchema
+                        {
+                            Error = exceptionResult.Error,
+                            Message = exceptionResult.Message,
+                            Type = exceptionResult.Type,
+                            Url = _requestExecutor.Url
+                        };
+                        _result.TrySetException(ExceptionDispatcher.Get(ex, exceptionResult.StatusCode));
                         break;
                     case OperationStatus.Canceled:
                         StopProcessing();

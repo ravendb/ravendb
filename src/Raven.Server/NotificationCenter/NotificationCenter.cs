@@ -53,7 +53,7 @@ namespace Raven.Server.NotificationCenter
 
         public readonly NotificationCenterOptions Options;
 
-        public void Add(Notification notification, DateTime? postponeUntil = null)
+        public void Add(Notification notification, DateTime? postponeUntil = null, bool updateExisting = true)
         {
             try
             {
@@ -61,7 +61,7 @@ namespace Raven.Server.NotificationCenter
                 {
                     try
                     {
-                        if (_notificationsStorage.Store(notification, postponeUntil) == false)
+                        if (_notificationsStorage.Store(notification, postponeUntil, updateExisting) == false)
                             return;
                     }
                     catch (Exception e)

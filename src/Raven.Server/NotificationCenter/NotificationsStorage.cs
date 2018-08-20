@@ -78,7 +78,7 @@ namespace Raven.Server.NotificationCenter
             Cleanup();
         }
 
-        public bool Store(Notification notification, DateTime? postponeUntil = null)
+        public bool Store(Notification notification, DateTime? postponeUntil = null, bool updateExisting = true)
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -86,6 +86,9 @@ namespace Raven.Server.NotificationCenter
                 {
                     // if previous notification had postponed until value pass this value to newly saved notification
                     var existing = Get(notification.Id, context, tx);
+
+                    if (existing != null && updateExisting == false)
+                        return false;
 
                     if (postponeUntil == null)
                     {

@@ -26,10 +26,11 @@ namespace Raven.Client.Exceptions
             public string Error { get; set; }
         }
 
-        public static Exception Get(ExceptionSchema schema, HttpStatusCode code) => Get(schema.Message, schema.Error, schema.Type, code);
-
-        public static Exception Get(string message, string error, string typeAsString, HttpStatusCode code)
+        public static Exception Get(ExceptionSchema schema, HttpStatusCode code)
         {
+            var message = schema.Message;
+            var typeAsString = schema.Type;
+
             if (code == HttpStatusCode.Conflict)
             {
                 if (typeAsString.Contains(nameof(DocumentConflictException)))
@@ -39,7 +40,8 @@ namespace Raven.Client.Exceptions
             }
 
             // We throw the same error for different status codes: GatewayTimeout,RequestTimeout,BadGateway,ServiceUnavailable.
-            error += $"{Environment.NewLine}Response.StatusCode - {code}";
+            var error = $"{schema.Error}{Environment.NewLine}" +
+                        $"The server at {schema.Url} responded with status code: {code}.";
 
             var type = GetType(typeAsString);
             if (type == null)
