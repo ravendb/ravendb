@@ -6,17 +6,11 @@ using System.Runtime.CompilerServices;
 using CsvHelper;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.Utils
 {
-    public sealed class ReferenceEqualityComparer : IEqualityComparer<object>
-    {
-        public static readonly ReferenceEqualityComparer Default = new ReferenceEqualityComparer();
-
-        bool IEqualityComparer<object>.Equals(object x, object y) => ReferenceEquals(x, y);
-        public int GetHashCode(object obj) => RuntimeHelpers.GetHashCode(obj);
-    }
-
+    
     public static class TypeUtils
     {
         private struct VisitedResetBehavior : IResetSupport<HashSet<object>>
