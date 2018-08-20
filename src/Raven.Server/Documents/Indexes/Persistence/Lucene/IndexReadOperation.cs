@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (query.Metadata.IsOptimizedSortOnly && _index.Definition.HasDynamicFields == false)
             {
-                foreach (var result in QuerySortOnly(query, retriever, position, pageSize))
+                foreach (var result in QuerySortOnly(query, retriever, position, pageSize, totalResults, token))
                     yield return result;
 
                 yield break;
@@ -212,7 +212,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> QuerySortOnly(IndexQueryServerSide query, IQueryResultRetriever retriever, int start, int pageSize)
+        private IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> QuerySortOnly(
+            IndexQueryServerSide query, IQueryResultRetriever retriever, int start, int pageSize, Reference<int> totalResults, CancellationToken token)
         {
             int FindDocument(bool isAsc, int i, (int Index, StringIndex Item, IndexReader IndexReader)[] items)
             {
@@ -238,6 +239,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 return innerDoc;
             }
 
+            totalResults.Value = _searcher.IndexReader.NumDocs();
+
             var returnedResults = 0;
 
             var order = query.Metadata.OrderBy[0];
@@ -255,6 +258,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             while (true)
             {
+                token.ThrowIfCancellationRequested();
+
                 var idx = -1;
                 var doc = -1;
                 string docTerm = null;

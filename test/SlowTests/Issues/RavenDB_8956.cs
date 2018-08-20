@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -71,10 +72,12 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
+                QueryStatistics allStatistics;
                 List<string> allCompanies;
                 using (var session = store.OpenSession())
                 {
                     allCompanies = session.Query<Company, Companies_ByName>()
+                        .Statistics(out allStatistics)
                         .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Name != Guid.NewGuid().ToString())
                         .OrderBy(x => x.Name)
@@ -85,25 +88,30 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var companies = session.Query<Company, Companies_ByName>()
+                        .Statistics(out var stats)
                         .Customize(x => x.WaitForNonStaleResults())
                         .OrderBy(x => x.Name)
                         .Select(x => x.Name)
                         .ToList();
 
                     Assert.Equal(allCompanies.OrderBy(x => x), companies);
+                    Assert.Equal(allStatistics.TotalResults, stats.TotalResults);
 
                     companies = session.Query<Company, Companies_ByName>()
+                        .Statistics(out stats)
                         .Customize(x => x.WaitForNonStaleResults())
                         .OrderByDescending(x => x.Name)
                         .Select(x => x.Name)
                         .ToList();
 
                     Assert.Equal(allCompanies.OrderByDescending(x => x), companies);
+                    Assert.Equal(allStatistics.TotalResults, stats.TotalResults);
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var companies = session.Query<Company, Companies_ByName>()
+                        .Statistics(out var stats)
                         .Customize(x => x.WaitForNonStaleResults())
                         .OrderBy(x => x.Name)
                         .Select(x => x.Name)
@@ -112,8 +120,10 @@ namespace SlowTests.Issues
                         .ToList();
 
                     Assert.Equal(allCompanies.OrderBy(x => x).Skip(1).Take(3), companies);
+                    Assert.Equal(allStatistics.TotalResults, stats.TotalResults);
 
                     companies = session.Query<Company, Companies_ByName>()
+                        .Statistics(out stats)
                         .Customize(x => x.WaitForNonStaleResults())
                         .OrderByDescending(x => x.Name)
                         .Select(x => x.Name)
@@ -122,6 +132,7 @@ namespace SlowTests.Issues
                         .ToList();
 
                     Assert.Equal(allCompanies.OrderByDescending(x => x).Skip(2).Take(4), companies);
+                    Assert.Equal(allStatistics.TotalResults, stats.TotalResults);
                 }
             }
         }
