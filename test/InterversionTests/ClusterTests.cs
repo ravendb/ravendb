@@ -18,8 +18,8 @@ namespace InterversionTests
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.1.0-nightly-20180801-0430",
-                "4.1.0-nightly-20180801-0430"
+                "4.1.0-rc-41000",
+                "4.1.0-rc-41000"
             });
 
             leader.ServerStore.Engine.CurrentLeader.StepDown();
@@ -58,8 +58,8 @@ namespace InterversionTests
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.1.0-nightly-20180801-0430",
-                "4.1.0-nightly-20180801-0430"
+                "4.1.0-rc-41000",
+                "4.1.0-rc-41000"
             });
 
             var stores = await GetStores(leader, peers);
@@ -93,9 +93,9 @@ namespace InterversionTests
         [Fact]
         public async Task ReplicationInCluster_v41Nodes_v40Client()
         {
-            (var urlA, var serverA) = await GetServerAsync("4.1.0-nightly-20180801-0430");
-            (var urlB, var serverB) = await GetServerAsync("4.1.0-nightly-20180801-0430");
-            (var urlc, var serverC) = await GetServerAsync("4.1.0-nightly-20180801-0430");
+            (var urlA, var serverA) = await GetServerAsync("4.1.0-rc-41000");
+            (var urlB, var serverB) = await GetServerAsync("4.1.0-rc-41000");
+            (var urlc, var serverC) = await GetServerAsync("4.1.0-rc-41000");
 
             using (var storeA = await GetStore(urlA, serverA, null, new InterversionTestOptions
             {
