@@ -11,7 +11,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Raven.Client;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
@@ -615,15 +617,7 @@ namespace Raven.Server.Commercial
             Func<HttpResponseMessage, Task> onFailure = null, 
             Func<LeasedLicense, License> onSuccess = null)
         {
-            var leaseLicenseInfo = new LeaseLicenseInfo
-            {
-                License = currentLicense,
-                BuildInfo = BuildInfo,
-                ClusterId = _serverStore.GetClusterTopology().TopologyId,
-                UtilizedCores = GetUtilizedCores(),
-                NodeTag = _serverStore.NodeTag
-            };
-
+            var leaseLicenseInfo = GetLeaseLicenseInfo(currentLicense);
             var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/lease",
                     new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"))
                 .ConfigureAwait(false);
@@ -648,6 +642,36 @@ namespace Raven.Server.Commercial
                     return leasedLicense.License;
 
                 return onSuccess.Invoke(leasedLicense);
+            }
+        }
+
+        private LeaseLicenseInfo GetLeaseLicenseInfo(License license)
+        {
+            return new LeaseLicenseInfo
+            {
+                License = license,
+                BuildInfo = BuildInfo,
+                ClusterId = _serverStore.GetClusterTopology().TopologyId,
+                UtilizedCores = GetUtilizedCores(),
+                NodeTag = _serverStore.NodeTag,
+                StudioEnvironment = GetStudioEnvironment()
+            };
+        }
+
+        private StudioConfiguration.StudioEnvironment GetStudioEnvironment()
+        {
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var studioConfigurationJson = _serverStore.Cluster.Read(context, Constants.Configuration.StudioId, out long _);
+                if (studioConfigurationJson == null)
+                    return StudioConfiguration.StudioEnvironment.None;
+
+                var studioConfiguration = JsonDeserializationServer.ServerWideStudioConfiguration(studioConfigurationJson);
+
+                return studioConfiguration.Disabled ? 
+                    StudioConfiguration.StudioEnvironment.None : 
+                    studioConfiguration.Environment;
             }
         }
 
@@ -1466,14 +1490,7 @@ namespace Raven.Server.Commercial
                 throw new InvalidOperationException("License doesn't exist");
             }
 
-            var leaseLicenseInfo = new LeaseLicenseInfo
-            {
-                License = license,
-                BuildInfo = BuildInfo,
-                ClusterId = _serverStore.GetClusterTopology().TopologyId,
-                UtilizedCores = GetUtilizedCores()
-            };
-
+            var leaseLicenseInfo = GetLeaseLicenseInfo(license);
             const int timeoutInSec = 5;
             try
             {
