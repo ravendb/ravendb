@@ -1,6 +1,12 @@
 ﻿using System.Runtime.ExceptionServices;
+using System.Runtime.Serialization;
+using Newtonsoft.Json;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
+using Raven.Client.Json;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.TransactionCommands
 {
@@ -23,7 +29,7 @@ namespace Raven.Server.Documents.TransactionCommands
             _catchConcurrencyErrors = catchConcurrencyErrors;
         }
 
-        public override int Execute(DocumentsOperationContext context)
+        protected override int ExecuteCmd(DocumentsOperationContext context)
         {
             try
             {
@@ -37,6 +43,28 @@ namespace Raven.Server.Documents.TransactionCommands
                 ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
             }
             return 1;
+        }
+
+        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+        {
+            return new DeleteDocumentCommandDto()
+            {
+                Id = _id,
+                ChangeVector = _expectedChangeVector,
+                CatchConcurrencyErrors = _catchConcurrencyErrors
+            };
+        }
+    }
+
+    public class DeleteDocumentCommandDto : TransactionOperationsMerger.IReplayableCommandDto<DeleteDocumentCommand>
+    {
+        public string Id { get; set; }
+        public string ChangeVector { get; set; }
+        public bool CatchConcurrencyErrors { get; set; }
+
+        public DeleteDocumentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            return new DeleteDocumentCommand(Id, ChangeVector, database, CatchConcurrencyErrors);
         }
     }
 }

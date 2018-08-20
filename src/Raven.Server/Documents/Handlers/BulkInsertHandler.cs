@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using Sparrow;
 using System.Net;
 using System.Threading;
@@ -8,7 +10,9 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler.Documents;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers
@@ -161,14 +165,14 @@ namespace Raven.Server.Documents.Handlers
         }
 
 
-        private class MergedInsertBulkCommand : TransactionOperationsMerger.MergedTransactionCommand
+        public class MergedInsertBulkCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             public Logger Logger;
             public DocumentDatabase Database;
             public BatchRequestParser.CommandData[] Commands;
             public int NumberOfCommands;
             public long TotalSize;
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 for (int i = 0; i < NumberOfCommands; i++)
                 {
@@ -206,6 +210,38 @@ namespace Raven.Server.Documents.Handlers
                 }
                 return NumberOfCommands;
             }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new MergedInsertBulkCommandDto
+                {
+                    Commands = Commands.Take(NumberOfCommands).ToArray()
+                };
+            }
+        }
+    }
+
+    public class MergedInsertBulkCommandDto : TransactionOperationsMerger.IReplayableCommandDto<BulkInsertHandler.MergedInsertBulkCommand>
+    {
+        public BatchRequestParser.CommandData[] Commands { get; set; }
+
+        public BulkInsertHandler.MergedInsertBulkCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            if (Commands == null || Commands.Any() == false) 
+            {
+                //Todo To check if empty array can append & if it is make sense to check it here 
+                throw new InvalidDataException("There should be at least one command");
+            }
+
+            return new BulkInsertHandler.MergedInsertBulkCommand
+            {
+                NumberOfCommands = Commands.Length,
+                //Todo Maybe should not check, catch the exception in higher level and throw it with descriptive message
+                TotalSize = Commands.Sum(c => c.Document?.Size ?? 0),
+                Commands = Commands,
+                Database = database,
+                Logger = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name)
+            };
         }
     }
 }

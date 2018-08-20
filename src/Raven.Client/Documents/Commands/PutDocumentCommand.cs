@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Dynamic;
 using System.Net.Http;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Http;

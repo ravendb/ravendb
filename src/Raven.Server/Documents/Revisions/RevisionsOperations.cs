@@ -1,6 +1,7 @@
 using System;
 using Raven.Client.Exceptions.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Revisions
 {
@@ -21,7 +22,7 @@ namespace Raven.Server.Documents.Revisions
             _database.TxMerger.Enqueue(new DeleteRevisionsBeforeCommand(collection, time, _database)).GetAwaiter().GetResult();
         }
 
-        private class DeleteRevisionsBeforeCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class DeleteRevisionsBeforeCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly string _collection;
             private readonly DateTime _time;
@@ -34,11 +35,33 @@ namespace Raven.Server.Documents.Revisions
                 _database = database;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 _database.DocumentsStorage.RevisionsStorage.DeleteRevisionsBefore(context, _collection, _time);
                 return 1;
             }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new DeleteRevisionsBeforeCommandDto
+                {
+                    Collection = _collection,
+                    //TODO To consider what should be the result because while replaying, the revisions are newer then the date of recorded DeleteRevisionsBeforeCommand 
+                    Time = _time
+                };
+            }
+        }
+    }
+
+    internal class DeleteRevisionsBeforeCommandDto : TransactionOperationsMerger.IReplayableCommandDto<RevisionsOperations.DeleteRevisionsBeforeCommand>
+    {
+        public string Collection;
+        public DateTime Time;
+
+        public RevisionsOperations.DeleteRevisionsBeforeCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            var command = new RevisionsOperations.DeleteRevisionsBeforeCommand(Collection, Time, database);
+            return command;
         }
     }
 }

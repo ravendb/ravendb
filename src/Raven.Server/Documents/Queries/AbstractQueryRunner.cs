@@ -169,7 +169,8 @@ namespace Raven.Server.Documents.Queries
             };
         }
 
-        private class BulkOperationCommand<T> : TransactionOperationsMerger.MergedTransactionCommand where T : TransactionOperationsMerger.MergedTransactionCommand
+        //Todo To check if it make sense to changed the accessibility of this type for adding it to the test list and if not to find alternative
+        internal class BulkOperationCommand<T> : TransactionOperationsMerger.MergedTransactionCommand where T : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly T _command;
             private readonly bool _retieveDetails;
@@ -182,14 +183,24 @@ namespace Raven.Server.Documents.Queries
                 _getDetails = getDetails;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            public override int Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recording)
             {
-                var count = _command.Execute(context);
+                var count = _command.Execute(context, recording);
 
                 if (_retieveDetails)
                     AfterExecute?.Invoke(_getDetails(_command));
 
                 return count;
+            }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                throw new NotSupportedException($"ToDto() of {nameof(BulkOperationCommand<T>)} Should not be called");
+            }
+
+            protected override int ExecuteCmd(DocumentsOperationContext context)
+            {
+                throw new NotSupportedException("Should only call Execute() here");
             }
 
             public Action<IBulkOperationDetails> AfterExecute { private get; set; }
