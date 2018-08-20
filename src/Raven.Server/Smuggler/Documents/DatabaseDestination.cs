@@ -269,12 +269,12 @@ namespace Raven.Server.Smuggler.Documents
             public void WriteKeyValue(string key, BlittableJsonReaderObject value)
             {
                 const int batchSize = 1024;
-                    _compareExchangeCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context));
+                _compareExchangeCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context));
 
-                    if (_compareExchangeCommands.Count < batchSize)
-                        return;
+                if (_compareExchangeCommands.Count < batchSize)
+                    return;
 
-                    SendCommands(_context);
+                SendCommands(_context);
             }
 
             public void Dispose()
@@ -651,24 +651,24 @@ namespace Raven.Server.Smuggler.Documents
                 };
             }
         }
-    }
 
-    public class MergedBatchPutCommandDto : TransactionOperationsMerger.IReplayableCommandDto<DatabaseDestination.MergedBatchPutCommand>
-    {
-        public BuildVersionType BuildType;
-        public List<DocumentItem> Documents;
-        public bool IsRevision;
-
-        public DatabaseDestination.MergedBatchPutCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        public class MergedBatchPutCommandDto : TransactionOperationsMerger.IReplayableCommandDto<MergedBatchPutCommand>
         {
-            var log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
-            var command = new DatabaseDestination.MergedBatchPutCommand(database, BuildType, log)
-            {
-                IsRevision = IsRevision
-            };
-            Documents.ForEach(d => command.Add(d));
+            public BuildVersionType BuildType;
+            public List<DocumentItem> Documents;
+            public bool IsRevision;
 
-            return command;
+            public MergedBatchPutCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+            {
+                var log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
+                var command = new MergedBatchPutCommand(database, BuildType, log)
+                {
+                    IsRevision = IsRevision
+                };
+                Documents.ForEach(d => command.Add(d));
+
+                return command;
+            }
         }
 
         private class CounterActions : ICounterActions
@@ -729,7 +729,7 @@ namespace Raven.Server.Smuggler.Documents
                 _prevCommandTask = commandTask;
 
                 if (prevCommand != null)
-                {                   
+                {
                     AsyncHelpers.RunSync(() => prevCommandTask);
                 }
 
@@ -757,6 +757,5 @@ namespace Raven.Server.Smuggler.Documents
                 _cmd = null;
             }
         }
-
     }
 }

@@ -311,7 +311,7 @@ namespace SlowTests.Blittable
                         Patch = new PatchRequest("Some Script", PatchRequestType.None)
                     }
                 };
-                var expected = new BatchHandler.MergedBatchCommand
+                var expected = new BatchHandler.MergedBatchCommand(null)
                 {
                     ParsedCommands = commands
                 };
@@ -379,7 +379,7 @@ namespace SlowTests.Blittable
                 {
                     reader.Init(fromStream);
 
-                    var dto = jsonSerializer.Deserialize<MergedBatchPutCommandDto>(reader);
+                    var dto = jsonSerializer.Deserialize<DatabaseDestination.MergedBatchPutCommandDto>(reader);
                     actual = dto.ToCommand(context, database);
                 }
 

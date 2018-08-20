@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 if (_database.ServerStore.Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
                     FeaturesAvailabilityException.Throw("Counters");
@@ -199,6 +199,11 @@ namespace Raven.Server.Documents.Handlers
                 return CountersDetail.Counters.Count;
             }
 
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                throw new NotImplementedException();
+            }
+
             private static void ThrowArtificialDocument(Document doc)
             {
                 throw new InvalidOperationException($"Document '{doc.Id}' has '{nameof(DocumentFlags.Artificial)}' flag set. " +
@@ -282,7 +287,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     using (context.OpenReadTransaction())
                     {
-                        cmd.Execute(context);
+                        cmd.ExecuteDirectly(context);
                     }
                 }
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

@@ -354,7 +354,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
 
-        public abstract class TranscationMergedCommand : TransactionOperationsMerger.MergedTransactionCommand
+        public abstract class TransactionMergedCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             protected readonly DocumentDatabase Database;
             public HashSet<string> ModifiedCollections;
@@ -363,7 +363,7 @@ namespace Raven.Server.Documents.Handlers
 
             public DynamicJsonArray Reply = new DynamicJsonArray();
 
-            protected TranscationMergedCommand(DocumentDatabase database)
+            protected TransactionMergedCommand(DocumentDatabase database)
             {
                 Database = database;
             }
@@ -431,7 +431,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        public class ClusterTransactionMergedCommand : TranscationMergedCommand
+        public class ClusterTransactionMergedCommand : TransactionMergedCommand
         {
             private readonly List<ClusterTransactionCommand.SingleClusterDatabaseCommand> _batch;
             public Dictionary<long, DynamicJsonArray> Replies = new Dictionary<long, DynamicJsonArray>();
@@ -442,7 +442,7 @@ namespace Raven.Server.Documents.Handlers
                 _batch = batch;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 if (Database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
                     FeaturesAvailabilityException.Throw("Cluster Transactions");
@@ -606,9 +606,14 @@ namespace Raven.Server.Documents.Handlers
                     return null;
                 return Database.DocumentsStorage.ExtractCollectionName(context, conflicts[0].Collection);
             }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                throw new NotImplementedException();
+            }
         }
 
-        public class MergedBatchCommand : TranscationMergedCommand, IDisposable
+        public class MergedBatchCommand : TransactionMergedCommand, IDisposable
         {
             public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;
             public Queue<AttachmentStream> AttachmentStreams;
@@ -654,7 +659,7 @@ namespace Raven.Server.Documents.Handlers
                 };
             }
 
-            private bool CanAvoidThrowingToMerger(ConcurrencyException e, int commandOffset)
+            private bool CanAvoidThrowingToMerger(Exception e, int commandOffset)
             {
                 // if a concurrency exception has been thrown, because the user passed a change vector,
                 // we need to check if we are on the very first command and can abort immediately without
@@ -894,7 +899,7 @@ namespace Raven.Server.Documents.Handlers
                             });
                             try
                             {
-                                counterBatchCmd.Execute(context);
+                                counterBatchCmd.ExecuteDirectly(context);
                             }
                             catch (DocumentDoesNotExistException e) when (CanAvoidThrowingToMerger(e, i))
                             {
@@ -999,9 +1004,8 @@ namespace Raven.Server.Documents.Handlers
                 );
             }
 
-            var newCmd = new BatchHandler.MergedBatchCommand
+            var newCmd = new BatchHandler.MergedBatchCommand(database)
             {
-                Database = database,
                 ParsedCommands = ParsedCommands,
                 AttachmentStreams = AttachmentStreams
             };

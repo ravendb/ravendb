@@ -1306,7 +1306,7 @@ namespace Raven.Server.Documents
                 case nameof(PatchDocumentCommand):
                     return jsonSerializer.Deserialize<PatchDocumentCommandDto>(reader);
                 case nameof(DatabaseDestination.MergedBatchPutCommand):
-                    return jsonSerializer.Deserialize<MergedBatchPutCommandDto>(reader);
+                    return jsonSerializer.Deserialize<DatabaseDestination.MergedBatchPutCommandDto>(reader);
                 case nameof(MergedPutCommand):
                     return jsonSerializer.Deserialize<MergedPutCommand.MergedPutCommandDto>(reader);
                 case nameof(BulkInsertHandler.MergedInsertBulkCommand):
