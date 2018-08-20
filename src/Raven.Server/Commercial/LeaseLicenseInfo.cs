@@ -1,3 +1,4 @@
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.ServerWide.Operations;
 
 namespace Raven.Server.Commercial
@@ -13,5 +14,7 @@ namespace Raven.Server.Commercial
         public int UtilizedCores { get; set; }
 
         public string NodeTag { get; set; }
+
+        public StudioConfiguration.StudioEnvironment StudioEnvironment { get; set; }
     }
 }
