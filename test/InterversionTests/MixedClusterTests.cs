@@ -8,15 +8,18 @@ using System.Threading.Tasks;
 using FastTests.Server.Documents.Revisions;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
-using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Cluster;
 using Sparrow;
@@ -31,7 +34,7 @@ namespace InterversionTests
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.6"
+                "4.0.7-nightly-20180820-0400"
             }, 1);
 
             var peer = local[0];
@@ -93,8 +96,8 @@ namespace InterversionTests
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.6",
-                "4.0.6"
+                "4.0.7-nightly-20180820-0400",
+                "4.0.7-nightly-20180820-0400"
             });
             leader.ServerStore.Engine.CurrentLeader.StepDown();
             await leader.ServerStore.Engine.WaitForState(RachisState.Follower, CancellationToken.None);
@@ -131,8 +134,8 @@ namespace InterversionTests
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.6",
-                "4.0.6"
+                "4.0.7-nightly-20180820-0400",
+                "4.0.7-nightly-20180820-0400"
             });
 
             var stores = await GetStores(leader, peers);
@@ -167,8 +170,8 @@ namespace InterversionTests
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.6",
-                "4.0.6"
+                "4.0.7-nightly-20180820-0400",
+                "4.0.7-nightly-20180820-0400"
             }, 1);
 
             var stores = await GetStores(leader, peers, local);
@@ -263,8 +266,8 @@ namespace InterversionTests
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.1.0-nightly-20180807-0430",
-                "4.0.6"
+                "4.0.7-nightly-20180820-0400",
+                "4.0.7-nightly-20180820-0400"
             });
 
             var stores = await GetStores(leader, peers,
@@ -273,12 +276,11 @@ namespace InterversionTests
             using (stores.Disposable)
             {
                 var storeA = stores.Stores[0]; //4.1
-                var storeB = stores.Stores[1]; //4.1
 
                 var dbName = await CreateDatabase(storeA, 3);
                 await Task.Delay(500);
 
-                using (var session = storeB.OpenSession(dbName))
+                using (var session = storeA.OpenSession(dbName))
                 {
                     session.Store(new User
                     {
@@ -294,11 +296,10 @@ namespace InterversionTests
                     stores.Stores,
                     dbName));
 
-                // kill node B
-                var nodeB = peers.Single(p => p.Url == storeB.Urls[0]).Process;
-                KillSlavedServerProcess(nodeB);
+                // kill node A (4.1)              
+                DisposeServerAndWaitForFinishOfDisposal(leader);
 
-                using (var session = storeB.OpenSession(dbName))
+                using (var session = storeA.OpenSession(dbName))
                 {
                     session.Store(new User
                     {
@@ -324,7 +325,7 @@ namespace InterversionTests
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.6"
+                "4.0.7-nightly-20180820-0400"
             }, 1);
 
             var stores = await GetStores(leader, peers, local,
@@ -380,13 +381,13 @@ namespace InterversionTests
         }
 
         [Fact]
-        public async Task SubscriptionFailoverInMixedCluster_41Mentor()
+        public async Task SubscriptionsInMixedCluster_FailoverFrom41To40()
         {
             var batchSize = 5;
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.1.0-nightly-20180807-0430",
-                "4.0.6"
+                "4.0.7-nightly-20180820-0400",
+                "4.0.7-nightly-20180820-0400"
             }, customSettings: new Dictionary<string, string>
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1"
@@ -395,8 +396,7 @@ namespace InterversionTests
             var stores = await GetStores(leader, peers, modifyDocumentStore: s => s.Conventions.DisableTopologyUpdates = false);
             using (stores.Disposable)
             {
-                var storeA = stores.Stores[0]; 
-                var storeB = stores.Stores[1];
+                var storeA = stores.Stores[0];
 
                 var dbName = await CreateDatabase(storeA, 3);
                 await Task.Delay(500);
@@ -404,9 +404,9 @@ namespace InterversionTests
                 var usersCount = new List<User>();
                 var reachedMaxDocCountMre = new AsyncManualResetEvent();
 
-                await CreateDocuments(storeA, dbName ,10);
+                await CreateDocuments(storeA, dbName, 10);
 
-                var mentor = "B";
+                var mentor = "A";
                 var subscription = await CreateAndInitiateSubscription(leader, storeA, dbName, usersCount, reachedMaxDocCountMre, batchSize, mentor);
 
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime), $"Reached {usersCount.Count}/10");
@@ -414,13 +414,10 @@ namespace InterversionTests
                 usersCount.Clear();
                 reachedMaxDocCountMre.Reset();
 
-                // kill mentor node
-                var tag = await GetTagOfServerWhereSubscriptionWorks(leader, dbName, subscription.SubscriptionName);
-                Assert.Equal(tag, mentor);
-                var nodeB = peers.Single(p => p.Url == storeB.Urls[0]);
-                Assert.Equal("4.1.0-nightly-20180807-0430", nodeB.Version);
-
-                KillSlavedServerProcess(nodeB.Process);
+                // kill mentor node (4.1)
+                var tag = await GetTagOfServerWhereSubscriptionWorks(storeA, dbName, subscription.SubscriptionName);
+                Assert.Equal(mentor, tag);
+                DisposeServerAndWaitForFinishOfDisposal(leader);
 
                 await CreateDocuments(storeA, dbName, 10);
 
@@ -432,12 +429,12 @@ namespace InterversionTests
         }
 
         [Fact]
-        public async Task SubscriptionFailoverInMixedCluster_40Mentor()
+        public async Task SubscriptionsInMixedCluster_FailoverFrom410To41()
         {
             var batchSize = 5;
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.6"
+                "4.0.7-nightly-20180820-0400"
             }, localPeers: 1, customSettings: new Dictionary<string, string>
             {
                 [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1"
@@ -466,11 +463,11 @@ namespace InterversionTests
                 reachedMaxDocCountMre.Reset();
 
                 // kill mentor node
-                var tag = await GetTagOfServerWhereSubscriptionWorks(leader, dbName, subscription.SubscriptionName);
+                var tag = await GetTagOfServerWhereSubscriptionWorks(storeA, dbName, subscription.SubscriptionName);
                 Assert.Equal(tag, mentor);
                 var nodeC = peers[0];
                 Assert.Equal(storeC.Urls[0], nodeC.Url);
-                Assert.Equal("4.0.6", nodeC.Version);
+                Assert.Equal("4.0.7-nightly-20180820-0400", nodeC.Version);
 
                 KillSlavedServerProcess(nodeC.Process);
 
@@ -486,9 +483,9 @@ namespace InterversionTests
         [Fact]
         public async Task V40Cluster_V41Client_BasicReplication()
         {
-            (var urlA, var serverA) = await GetServerAsync("4.0.6");
-            (var urlB, var serverB) = await GetServerAsync("4.0.6");
-            (var urlc, var serverC) = await GetServerAsync("4.0.6");
+            (var urlA, var serverA) = await GetServerAsync("4.0.7-nightly-20180820-0400");
+            (var urlB, var serverB) = await GetServerAsync("4.0.7-nightly-20180820-0400");
+            (var urlc, var serverC) = await GetServerAsync("4.0.7-nightly-20180820-0400");
 
             using (var storeA = await GetStore(urlA, serverA, null, new InterversionTestOptions
             {
@@ -541,9 +538,9 @@ namespace InterversionTests
         [Fact]
         public async Task V40Cluster_V41Client_Counters()
         {
-            (var urlA, var serverA) = await GetServerAsync("4.0.6");
-            (var urlB, var serverB) = await GetServerAsync("4.0.6");
-            (var urlc, var serverC) = await GetServerAsync("4.0.6");
+            (var urlA, var serverA) = await GetServerAsync("4.0.7-nightly-20180820-0400");
+            (var urlB, var serverB) = await GetServerAsync("4.0.7-nightly-20180820-0400");
+            (var urlc, var serverC) = await GetServerAsync("4.0.7-nightly-20180820-0400");
 
             using (var storeA = await GetStore(urlA, serverA, null, new InterversionTestOptions
             {
@@ -612,9 +609,9 @@ namespace InterversionTests
         [Fact]
         public async Task V40Cluster_V41Client_ClusterTransactions()
         {
-            (var urlA, var serverA) = await GetServerAsync("4.0.6");
-            (var urlB, var serverB) = await GetServerAsync("4.0.6");
-            (var urlc, var serverC) = await GetServerAsync("4.0.6");
+            (var urlA, var serverA) = await GetServerAsync("4.0.7-nightly-20180820-0400");
+            (var urlB, var serverB) = await GetServerAsync("4.0.7-nightly-20180820-0400");
+            (var urlc, var serverC) = await GetServerAsync("4.0.7-nightly-20180820-0400");
 
             using (var storeA = await GetStore(urlA, serverA, null, new InterversionTestOptions
             {
@@ -674,8 +671,8 @@ namespace InterversionTests
 
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.6",
-                "4.0.6"
+                "4.0.7-nightly-20180820-0400",
+                "4.0.7-nightly-20180820-0400"
             });
 
             var stores = await GetStores(leader, peers);
@@ -729,8 +726,8 @@ namespace InterversionTests
 
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.6",
-                "4.0.6"
+                "4.0.7-nightly-20180820-0400",
+                "4.0.7-nightly-20180820-0400"
             });
 
             var stores = await GetStores(leader, peers);
@@ -769,8 +766,8 @@ namespace InterversionTests
         {
             var (leader, peers, local) = await CreateMixedCluster(new[]
             {
-                "4.0.6",
-                "4.0.6"
+                "4.0.7-nightly-20180820-0400",
+                "4.0.7-nightly-20180820-0400"
             });
 
             var stores = await GetStores(leader, peers);
@@ -786,6 +783,267 @@ namespace InterversionTests
                 await ClusterOperationTests.FailSuccessfully(storeA, dbName);
             }
 
+        }
+
+        [Fact]
+        public async Task MixedCluster_DistributedRevisionsSubscription()
+        {
+            var uniqueRevisions = new HashSet<string>();
+            var uniqueDocs = new HashSet<string>();
+            var nodesAmount = 5;
+            var (leader, peers, local) = await CreateMixedCluster(new[]
+            {
+                "4.0.7-nightly-20180820-0400",
+                "4.0.7-nightly-20180820-0400"
+            }, 2, new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.MoveToRehabGraceTime)] = "1"
+            });
+            var stores = await GetStores(leader, peers, local, modifyDocumentStore: s => s.Conventions.DisableTopologyUpdates = false);
+
+            using (stores.Disposable)
+            {
+                var storeA = stores.Stores[0];
+                var dbName = await CreateDatabase(storeA, nodesAmount);
+                await Task.Delay(500);
+
+                await RevisionsHelper.SetupRevisions(leader.ServerStore, dbName).ConfigureAwait(false);
+
+                var reachedMaxDocCountMre = new AsyncManualResetEvent();
+                var ackSent = new AsyncManualResetEvent();
+
+                var continueMre = new AsyncManualResetEvent();
+                GenerateDistributedRevisionsData(dbName, stores.Stores);
+
+                var subscriptionId = await storeA.Subscriptions.CreateAsync<Revision<User>>(database: dbName).ConfigureAwait(false);
+                var docsCount = 0;
+                var revisionsCount = 0;
+                var expectedRevisionsCount = 0;
+                SubscriptionWorker<Revision<User>> subscription = null;
+                int i;
+                for (i = 0; i < 10; i++)
+                {
+                    subscription = storeA.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId)
+                    {
+                        MaxDocsPerBatch = 1,
+                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(100)
+                    }, dbName);
+
+                    subscription.AfterAcknowledgment += async b =>
+                    {
+                        await continueMre.WaitAsync();
+
+                        try
+                        {
+                            if (revisionsCount == expectedRevisionsCount)
+                            {
+                                continueMre.Reset();
+                                ackSent.Set();
+                            }
+
+                            await continueMre.WaitAsync();
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                    };
+                    var started = new AsyncManualResetEvent();
+
+                    var task = subscription.Run(b =>
+                    {
+                        started.Set();
+                        HandleSubscriptionBatch(nodesAmount, b, uniqueDocs, ref docsCount, uniqueRevisions, reachedMaxDocCountMre, ref revisionsCount);
+                    });
+
+                    await Task.WhenAny(task, started.WaitAsync());
+
+                    if (started.IsSet)
+                        break;
+
+                    Assert.IsType<SubscriptionDoesNotExistException>(task.Exception.InnerException);
+
+                    subscription.Dispose();
+                }
+
+                Assert.NotEqual(i, 10);
+
+                expectedRevisionsCount = nodesAmount + 2;
+                continueMre.Set();
+
+                Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (1st assert)");
+                ackSent.Reset(true);
+
+                await KillServerWhereSubscriptionWorks(storeA, dbName, subscription.SubscriptionName, (leader, peers, local)).ConfigureAwait(false);
+
+                continueMre.Set();
+                expectedRevisionsCount += 2;
+
+                Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (2nd assert)");
+                ackSent.Reset(true);
+                continueMre.Set();
+                expectedRevisionsCount = (int)Math.Pow(nodesAmount, 2);
+
+                await KillServerWhereSubscriptionWorks(storeA, dbName, subscription.SubscriptionName, (leader, peers, local)).ConfigureAwait(false);
+
+                Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (3rd assert)");
+            }
+        }
+
+        private async Task KillServerWhereSubscriptionWorks(IDocumentStore store, string databaseName, string subscriptionName, (RavenServer Leader, List<ProcessNode> Peers, List<RavenServer> LocalPeers) servers)
+        {
+            var tag = await GetTagOfServerWhereSubscriptionWorks(store, databaseName, subscriptionName);
+            Assert.NotNull(tag);
+
+            switch (tag)
+            {
+                case "A":
+                    DisposeServerAndWaitForFinishOfDisposal(servers.Leader);
+                    break;
+                case "B":
+                    DisposeServerAndWaitForFinishOfDisposal(servers.LocalPeers[0]);
+                    break;
+                case "C":
+                    DisposeServerAndWaitForFinishOfDisposal(servers.LocalPeers[1]);
+                    break;
+                case "D":
+                    KillSlavedServerProcess(servers.Peers[0].Process);
+                    break;
+                case "E":
+                    KillSlavedServerProcess(servers.Peers[1].Process);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unexpected node tag : {tag} ");
+            }
+        }
+
+        private void GenerateDistributedRevisionsData(string databaseName, List<DocumentStore> stores)
+        {
+            using (var store = new DocumentStore
+            {
+                Urls = stores[0].Urls,
+                Database = databaseName
+            }.Initialize())
+            {
+                AsyncHelpers.RunSync(() => store.GetRequestExecutor()
+                    .UpdateTopologyAsync(new ServerNode
+                    {
+                        Url = store.Urls[0],
+                        Database = databaseName,
+                    }, Timeout.Infinite));
+            }
+
+            var storesWithoutTopologyUpdates = new List<DocumentStore>();
+            foreach (var s in stores)
+            {
+                storesWithoutTopologyUpdates.Add((DocumentStore)new DocumentStore
+                {
+                    Urls = s.Urls,
+                    Database = databaseName,
+                    Conventions = new DocumentConventions
+                    {
+                        DisableTopologyUpdates = true
+                    }
+                }.Initialize());
+            }
+
+
+            var rnd = new Random(1);
+            for (var index = 0; index < stores.Count; index++)
+            {
+                var curVer = 0;
+                foreach (var s in stores.OrderBy(x => rnd.Next()))
+                {
+                    using (var curStore = new DocumentStore
+                    {
+                        Urls = s.Urls,
+                        Database = databaseName,
+                        Conventions = new DocumentConventions
+                        {
+                            DisableTopologyUpdates = true
+                        }
+                    }.Initialize())
+                    {
+                        var curDocName = $"user {index} revision {curVer}";
+                        using (var session = (DocumentSession)curStore.OpenSession(databaseName))
+                        {
+                            if (curVer == 0)
+                            {
+                                session.Store(new User
+                                {
+                                    Name = curDocName,
+                                    Age = curVer,
+                                    Id = $"users/{index}"
+                                }, $"users/{index}");
+                            }
+                            else
+                            {
+                                var user = session.Load<User>($"users/{index}");
+                                user.Age = curVer;
+                                user.Name = curDocName;
+                                session.Store(user, $"users/{index}");
+                            }
+
+                            session.SaveChanges();
+
+                            Assert.True(
+                                AsyncHelpers.RunSync(() => WaitForDocumentInClusterAsync<User>(
+                                    "users/" + index,
+                                    x => x.Name == curDocName,
+                                    _reasonableWaitTime,
+                                    storesWithoutTopologyUpdates,
+                                    databaseName))
+                                );
+                        }
+                    }
+                    curVer++;
+                }
+
+            }
+
+            foreach (var s in storesWithoutTopologyUpdates)
+            {
+                s.Dispose();
+            }
+        }
+
+        private static void HandleSubscriptionBatch(int nodesAmount, SubscriptionBatch<Revision<User>> b, HashSet<string> uniqueDocs, ref int docsCount, HashSet<string> uniqueRevisions,
+            AsyncManualResetEvent reachedMaxDocCountMre, ref int revisionsCount)
+        {
+            foreach (var item in b.Items)
+            {
+                var x = item.Result;
+                try
+                {
+                    if (x == null)
+                    {
+                    }
+                    else if (x.Previous == null)
+                    {
+                        if (uniqueDocs.Add(x.Current.Id))
+                            docsCount++;
+                        if (uniqueRevisions.Add(x.Current.Name))
+                            revisionsCount++;
+                    }
+                    else if (x.Current == null)
+                    {
+                    }
+                    else
+                    {
+                        if (x.Current.Age > x.Previous.Age)
+                        {
+                            if (uniqueRevisions.Add(x.Current.Name))
+                                revisionsCount++;
+                        }
+                    }
+
+                    if (docsCount == nodesAmount && revisionsCount == Math.Pow(nodesAmount, 2))
+                        reachedMaxDocCountMre.Set();
+                }
+                catch (Exception)
+                {
+                }
+            }
         }
 
         private static async Task AddNodeToCluster(DocumentStore store, string url)
@@ -877,16 +1135,11 @@ namespace InterversionTests
             return subscription;
         }
 
-        private static async Task<string> GetTagOfServerWhereSubscriptionWorks(RavenServer server, string database, string subscriptionName)
+        private static async Task<string> GetTagOfServerWhereSubscriptionWorks(IDocumentStore store, string database, string subscriptionName)
         {
-            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var databaseRecord = server.ServerStore.Cluster.ReadDatabase(context, database);
-                var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database).ConfigureAwait(false);
-                var subscriptionState = db.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
-                return databaseRecord.Topology.WhoseTaskIsIt(server.ServerStore.Engine.CurrentState, subscriptionState, null);
-            }
+            var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database));
+            var subscriptionState = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, database);
+            return databaseRecord.Topology.WhoseTaskIsIt(RachisState.Follower, subscriptionState, null);
         }
 
         private static void DisposeServerAndWaitForFinishOfDisposal(RavenServer serverToDispose)
