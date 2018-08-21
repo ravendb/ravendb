@@ -97,8 +97,9 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task DisableExternalReplication()
         {
-            using (var store1 = GetDocumentStore(new Options
-            {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {    
                 ExternalReplicationEnabledForTests = true
             }))
             using (var store2 = GetDocumentStore(new Options
