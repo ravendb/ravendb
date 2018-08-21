@@ -70,7 +70,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         public static MapReduceIndex CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase, bool isIndexReset = false)
         {
             var instance = CreateIndexInstance(definition, documentDatabase.Configuration);
-            ValidateReduceResultsCollectionName(definition, instance._compiled, documentDatabase, isIndexReset);
+            ValidateReduceResultsCollectionName(definition, instance._compiled, documentDatabase,
+                validateMapReduceCollectionName: isIndexReset == false);
 
             instance.Initialize(documentDatabase,
                 new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
@@ -79,7 +80,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return instance;
         }
 
-        public static void ValidateReduceResultsCollectionName(IndexDefinition definition, StaticIndexBase index, DocumentDatabase database, bool isIndexReset = false)
+        public static void ValidateReduceResultsCollectionName(IndexDefinition definition, StaticIndexBase index, DocumentDatabase database, bool validateMapReduceCollectionName)
         {
             var outputReduceToCollection = definition.OutputReduceToCollection;
             if (string.IsNullOrWhiteSpace(outputReduceToCollection))
@@ -150,7 +151,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 }
             }
 
-            if (isIndexReset == false)
+            if (validateMapReduceCollectionName)
             {
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
