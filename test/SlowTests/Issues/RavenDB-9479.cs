@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
+using Newtonsoft.Json;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -42,11 +43,43 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public void GetStoreAndGetStringWithControlCharacter()
+        {
+            var testSentence = "Hello \u0001 World";
+            using (var store = GetDocumentStore())
+            {
+                string documentId;
+                using (var session = store.OpenSession())
+                {
+                    var question = new Question
+                    {
+                        Sentence = testSentence
+                    };
+                   
+                    session.Store(question);
+                    session.SaveChanges();
+
+                    documentId = question.Id;
+                }
+
+                WaitForUserToContinueTheTest(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var question = session.Load<Question>(documentId);
+                    Assert.Equal(testSentence, question.Sentence);
+                }
+            }
+        }
+
         public class Question
         {
             public string Id { get; set; }
 
             public char Letter { get; set; }
+
+            public string Sentence { get; set; }
         }
     }
 }
