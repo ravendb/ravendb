@@ -320,7 +320,7 @@ namespace Raven.TestDriver
 
                 using (var session = store.OpenSession())
                 {
-                    if (session.Load<object>("Debug/Done") != null)
+                    if (session.Advanced.Exists("Debug/Done"))
                     {
                         session.Delete("Debug/Done");
                         session.SaveChanges();
