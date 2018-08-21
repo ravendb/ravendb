@@ -421,6 +421,16 @@ namespace Sparrow.Json
             if (requestedSize <= 0)
                 throw new ArgumentException(nameof(requestedSize));
 #endif
+            //we should use JsonOperationContext in single thread
+            if (_arenaAllocatorForLongLivedValues == null)
+            {
+                //_arenaAllocatorForLongLivedValues == null when the context is after Reset() but before Renew()
+                ThrowAlreadyDisposedForLongLivedAllocator();
+
+                //make compiler happy, previous row will throw
+                return null;
+            }
+
             var allocatedMemory = _arenaAllocatorForLongLivedValues.Allocate(requestedSize);
             allocatedMemory.ContextGeneration = Generation;
             allocatedMemory.Parent = this;
@@ -428,6 +438,11 @@ namespace Sparrow.Json
             allocatedMemory.IsLongLived = true;
 #endif
             return allocatedMemory;
+        }
+
+        private static void ThrowAlreadyDisposedForLongLivedAllocator()
+        {
+            throw new ObjectDisposedException("Could not allocated long lived memory, because the context is after Reset() but before Renew(). Is it possible that you have tried to use the context AFTER it was returned to the context pool?");
         }
 
         /// <summary>
@@ -925,7 +940,6 @@ namespace Sparrow.Json
                 }
 
                 _arenaAllocatorForLongLivedValues = null;
-
                 // at this point, the long lived section is far too large, this is something that can happen
                 // if we have dynamic properties. A back of the envelope calculation gives us roughly 32K 
                 // property names before this kicks in, which is a true abuse of the system. In this case, 
