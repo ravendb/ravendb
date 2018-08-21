@@ -39,14 +39,17 @@ namespace RachisTests
                 Database = databaseName
             }.Initialize())
             {
-                var doc = new DatabaseRecord(databaseName);
-                doc.Topology = new DatabaseTopology
+                var doc = new DatabaseRecord(databaseName)
                 {
-                    Members = new List<string>
+                    Topology = new DatabaseTopology
                     {
-                        "B"
+                        Members = new List<string>
+                        {
+                            "B"
+                        }
                     }
                 };
+
                 var res = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc));
                 Assert.NotEqual(res.Topology.Members.First(), leader.ServerStore.NodeTag);
 
