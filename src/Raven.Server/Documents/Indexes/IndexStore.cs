@@ -379,14 +379,14 @@ namespace Raven.Server.Documents.Indexes
 
             var instance = IndexCompilationCache.GetIndexInstance(definition, _documentDatabase.Configuration); // pre-compile it and validate
 
-            if (NeedToUpdateIndex(definition, out Index currentIndex, out var validateMapReduceCollectionName) == false)
+            if (NeedToUpdateIndex(definition, out Index currentIndex, out var checkIfCollectionEmpty) == false)
             {
                 Debug.Assert(currentIndex != null);
                 return currentIndex;
             }
 
             if (definition.Type == IndexType.MapReduce)
-                MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase, validateMapReduceCollectionName);
+                MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase, checkIfCollectionEmpty);
 
             var command = new PutIndexCommand(definition, _documentDatabase.Name);
 
@@ -404,13 +404,13 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private bool NeedToUpdateIndex(IndexDefinition definition, out Index currentIndex, out bool validateMapReduceCollectionName)
+        private bool NeedToUpdateIndex(IndexDefinition definition, out Index currentIndex, out bool checkIfCollectionEmpty)
         {
             currentIndex = GetIndex(definition.Name);
             if (currentIndex == null)
             {
                 // new index
-                validateMapReduceCollectionName = true;
+                checkIfCollectionEmpty = true;
                 return true;
             }
 
@@ -418,7 +418,7 @@ namespace Raven.Server.Documents.Indexes
             if (creationOptions != IndexCreationOptions.Noop)
             {
                 // update/create an index definition
-                validateMapReduceCollectionName = creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
+                checkIfCollectionEmpty = creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
                 return true;
             }
 
@@ -429,11 +429,11 @@ namespace Raven.Server.Documents.Indexes
                 // we restored the original index definition
                 // need to delete the side by side index
                 // this is done on each server separately so we need to send the create index command
-                validateMapReduceCollectionName = false;
+                checkIfCollectionEmpty = false;
                 return true;
             }
 
-            validateMapReduceCollectionName = false;
+            checkIfCollectionEmpty = false;
             return false;
         }
 
