@@ -572,7 +572,14 @@ namespace Tests.Infrastructure
 
         public async Task<(long, List<RavenServer>)> CreateDatabaseInCluster(DatabaseRecord record, int replicationFactor, string leadersUrl)
         {
+            var serverCount = Servers.Count(s => s.Disposed == false);
+            if(serverCount < replicationFactor)
+            {
+                throw new InvalidOperationException($"Cannot create database with replication factor = {replicationFactor} when there is only {serverCount} servers in the cluster.");
+            }
+
             DatabasePutResult databaseResult;
+            string[] urls;
             using (var store = new DocumentStore()
             {
                 Urls = new[] { leadersUrl },
@@ -580,23 +587,49 @@ namespace Tests.Infrastructure
             }.Initialize())
             {
                 databaseResult = store.Maintenance.Server.Send(new CreateDatabaseOperation(record, replicationFactor));
+                urls = await GetClusterNodeUrlsAsync(leadersUrl, store);
             }
-            var currentServers = Servers.Where(s => s.Disposed == false && s.ServerStore.GetClusterTopology().TryGetNodeTagByUrl(leadersUrl).HasUrl).ToArray();
+
+            var currentServers = Servers.Where(s => s.Disposed == false && 
+                                                    urls.Contains(s.WebUrl)).ToArray();
             int numberOfInstances = 0;
             foreach (var server in currentServers)
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
             }
-
+            
             foreach (var server in currentServers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)))
             {
                 await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(record.DatabaseName);
                 numberOfInstances++;
             }
+
             if (numberOfInstances != replicationFactor)
                 throw new InvalidOperationException("Couldn't create the db on all nodes, just on " + numberOfInstances + " out of " + replicationFactor);
             return (databaseResult.RaftCommandIndex,
                 currentServers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)).ToList());
+        }
+
+        private static async Task<string[]> GetClusterNodeUrlsAsync(string leadersUrl, IDocumentStore store)
+        {
+            string[] urls;
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leadersUrl, store.Certificate))
+            {
+                try
+                {
+                    await requestExecutor.UpdateTopologyAsync(new ServerNode
+                        {Url = leadersUrl}, 15000, true);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
+
+                urls = requestExecutor.Topology.Nodes.Select(x => x.Url).ToArray();
+            }
+
+            return urls;
         }
 
         public Task<(long Index, List<RavenServer> Servers)> CreateDatabaseInCluster(string databaseName, int replicationFactor, string leadersUrl)
