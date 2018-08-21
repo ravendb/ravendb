@@ -82,6 +82,7 @@ namespace SlowTests.Authentication
                 RegisterClientCert = false, // N/A here
                 Password = null,
                 Certificate = null,
+                LocalNodeTag = "A",
                 License = license,
                 Email = email,
                 NodeSetupInfos = new Dictionary<string, SetupInfo.NodeInfo>()
