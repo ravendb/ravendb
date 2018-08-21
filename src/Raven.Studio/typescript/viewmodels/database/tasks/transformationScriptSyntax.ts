@@ -12,6 +12,8 @@ class transformationScriptSyntax extends dialogViewModelBase {
 for (var i = 0; i < this.Lines.length; i++) {
     var line = this.Lines[i];
     orderData.TotalCost += line.PricePerUnit;
+    
+    // Load to SQL table 'OrderLines'
     loadToOrderLines({
         OrderId: id(this),
         Qty: line.Quantity,
@@ -21,6 +23,7 @@ for (var i = 0; i < this.Lines.length; i++) {
 }
 orderData.TotalCost = Math.round(orderData.TotalCost  * 100) / 100;
 
+// Load to SQL table 'Orders'
 loadToOrders(orderData);`;
 
     scriptHtml = ko.pureComputed(() => {

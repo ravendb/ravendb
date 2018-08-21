@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             IPropertyAccessor accessor;
 
             if (_isMultiMap == false)
-                accessor = _propertyAccessor ?? (_propertyAccessor = PropertyAccessor.Create(documentToProcess.GetType()));
+                accessor = _propertyAccessor ?? (_propertyAccessor = PropertyAccessor.Create(documentToProcess.GetType(), documentToProcess));
             else
                 accessor = TypeConverter.GetPropertyAccessor(documentToProcess);
 

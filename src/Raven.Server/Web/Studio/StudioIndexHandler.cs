@@ -60,7 +60,7 @@ namespace Raven.Server.Web.Studio
 
                     try
                     {
-                        var compiledIndex = IndexCompilationCache.GenerateIndex(indexDefinition, Database.Configuration);
+                        var compiledIndex = IndexCompilationCache.GetIndexInstance(indexDefinition, Database.Configuration);
 
                         var outputFields = compiledIndex.OutputFields;
 

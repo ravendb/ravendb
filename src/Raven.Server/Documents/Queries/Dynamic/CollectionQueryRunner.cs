@@ -110,6 +110,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 var fieldsToFetch = new FieldsToFetch(query, null);
                 var totalResults = new Reference<int>();
                 var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, queryScope, context, includeDocumentsCommand, totalResults);
+	            IncludeCountersCommand includeCountersCommand = null;
+	            if (query.Metadata.HasCounters)
+	            {
+	                includeCountersCommand = new IncludeCountersCommand(
+	                    Database,
+	                    context,
+	                    query.Metadata.CounterIncludes.Counters);
+	            }
+
                 try
                 {
                     foreach (var document in documents)
@@ -120,6 +129,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                         using (gatherScope?.Start())
                             includeDocumentsCommand.Gather(document);
+
+						includeCountersCommand?.Fill(document);
                     }
                 }
                 catch (Exception e)
@@ -132,6 +143,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 using (fillScope?.Start())
                     includeDocumentsCommand.Fill(resultToFill.Includes);
+
+                if (includeCountersCommand != null)
+                    resultToFill.AddCounterIncludes(includeCountersCommand);
 
                 resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
             }

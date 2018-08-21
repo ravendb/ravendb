@@ -23,11 +23,6 @@ namespace Raven.Client.Documents.Changes
         public string Id { get; set; }
 
         /// <summary>
-        /// The name of the counter  being modified
-        /// </summary>
-        public string CounterName { get; set; }
-
-        /// <summary>
         /// Document collection name.
         /// </summary>
         public string CollectionName { get; set; }
@@ -41,7 +36,7 @@ namespace Raven.Client.Documents.Changes
         /// <summary>
         /// Document change vector
         /// </summary>
-        public string ChangeVector { get; set; } 
+        public string ChangeVector { get; set; }
 
         internal bool TriggeredByReplicationThread;
 
@@ -90,7 +85,6 @@ namespace Raven.Client.Documents.Changes
         BulkInsertError = 16,
         DeleteOnTombstoneReplication = 32,
         Conflict = 64,
-        Counter = 128,
 
         Common = Put | Delete
     }
@@ -118,6 +112,75 @@ namespace Raven.Client.Documents.Changes
         IndexPaused = 4096,
         LockModeChanged = 8192,
         PriorityChanged = 16384
+    }
+
+    [Flags]
+    public enum CounterChangeTypes
+    {
+        None = 0,
+        Put = 1,
+        Delete = 2,
+        Increment = 4
+    }
+
+    public class CounterChange : DatabaseChange
+    {
+        /// <summary>
+        /// Counter name.
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// Counter value.
+        /// </summary>
+        public long Value { get; set; }
+
+        /// <summary>
+        /// Counter document identifier.
+        /// </summary>
+        public string DocumentId { get; set; }
+
+        /// <summary>
+        /// Counter change vector.
+        /// </summary>
+        public string ChangeVector { get; set; }
+
+        /// <summary>
+        /// Type of change that occurred on counter.
+        /// </summary>
+        public CounterChangeTypes Type { get; set; }
+
+        internal bool TriggeredByReplicationThread;
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Name)] = Name,
+                [nameof(Value)] = Value,
+                [nameof(DocumentId)] = DocumentId,
+                [nameof(ChangeVector)] = ChangeVector,
+                [nameof(Type)] = Type.ToString()
+            };
+        }
+
+        internal static CounterChange FromJson(BlittableJsonReaderObject value)
+        {
+            value.TryGet(nameof(Name), out string name);
+            value.TryGet(nameof(Value), out long val);
+            value.TryGet(nameof(DocumentId), out string documentId);
+            value.TryGet(nameof(ChangeVector), out string changeVector);
+            value.TryGet(nameof(Type), out string type);
+
+            return new CounterChange
+            {
+                Name = name,
+                Value = val,
+                DocumentId = documentId,
+                ChangeVector = changeVector,
+                Type = (CounterChangeTypes)Enum.Parse(typeof(CounterChangeTypes), type, ignoreCase: true)
+            };
+        }
     }
 
     public class IndexChange : DatabaseChange

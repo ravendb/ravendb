@@ -20,7 +20,7 @@ packages/*/
 *.InstallLog
 /test/storage.raven
 /Raven.Web/Data/
-VERSION
+/VERSION
 /Samples/*/Server/*.dll
 /Samples/*/Server/Raven.Server.exe
 /Samples/*/Server/Raven.Server.log
@@ -117,3 +117,4 @@ temp
 .vscode
 /test/Tryouts/Databases/*
 bench/Micro.Benchmark/BenchmarkDotNet.Artifacts/
+/src/Raven.Server/*.DotSettings

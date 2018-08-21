@@ -9,6 +9,7 @@ import accessManager = require("common/shell/accessManager");
 import eventsCollector = require("common/eventsCollector");
 
 class databaseRecord extends viewModelBase {
+    autoCollapseMode = ko.observable<boolean>(false);
     document = ko.observable<document>();
     documentText = ko.observable<string>().extend({ required: true });
     docEditor: AceAjax.Editor;
@@ -30,6 +31,8 @@ class databaseRecord extends viewModelBase {
                 this.documentText(docText);
             }
         });
+        
+        this.bindToCurrentInstance("toggleAutoCollapse");
     }
 
     canActivate(args: any) {
@@ -62,12 +65,27 @@ class databaseRecord extends viewModelBase {
         super.compositionComplete();
 
         var editorElement = $("#dbDocEditor");
-        if (editorElement.length > 0)
-        {
+        if (editorElement.length > 0) {
             this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
         }
     }
 
+    toggleAutoCollapse() {
+        this.autoCollapseMode.toggle();
+        if (this.autoCollapseMode()) {
+            this.foldAll();
+        } else {
+            this.docEditor.getSession().unfold(null, true);
+        }
+    }
+
+    foldAll() {
+        const AceRange = ace.require("ace/range").Range;
+        this.docEditor.getSession().foldAll();
+        const folds = <any[]> this.docEditor.getSession().getFoldsInRange(new AceRange(0, 0, this.docEditor.getSession().getLength(), 0));
+        folds.map(f => this.docEditor.getSession().expandFold(f));
+    }
+    
     refreshFromServer() {
         eventsCollector.default.reportEvent("database-settings", "refresh");
 

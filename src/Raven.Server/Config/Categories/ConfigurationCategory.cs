@@ -36,26 +36,44 @@ namespace Raven.Server.Config.Categories
 
         public virtual void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
         {
-            string GetConfiguration(IConfigurationRoot cfg, string name)
+            string GetValue(IConfiguration cfg, string name)
+            {
+                var section = cfg.GetSection(name);
+                if (section == null) 
+                    return null;
+
+                if (section.Value != null)
+                    return section.Value;
+
+                var children = section.GetChildren().ToList();
+
+                return children.Count != 0 
+                    ? string.Join(";", children.Where(x => x.Value != null).Select(x => x.Value)) 
+                    : null;
+            }
+
+            string GetConfiguration(IConfiguration cfg, string name)
             {
                 if (cfg == null || name == null)
                     return null;
-                var val = cfg[name];
+
+                var val = GetValue(cfg, name);
                 if (val != null)
                     return val;
 
                 var sb = new StringBuilder(name);
 
-                int lastPeriod = name.LastIndexOf('.');
+                var lastPeriod = name.LastIndexOf('.');
                 while (lastPeriod != -1)
                 {
                     sb[lastPeriod] = ':';
                     var tmpName = sb.ToString();
-                    val = cfg[tmpName];
+                    val = GetValue(cfg, tmpName);
                     if (val != null)
                         return val;
                     lastPeriod = name.LastIndexOf('.', lastPeriod - 1);
                 }
+
                 return null;
             }
 

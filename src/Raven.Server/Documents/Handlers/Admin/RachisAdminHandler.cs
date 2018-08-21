@@ -58,13 +58,6 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 switch (command)
                 {
-                    case AddDatabaseCommand addDatabase:
-                        if (addDatabase.Record.Topology.Count == 0)
-                        {
-                            ServerStore.AssignNodesToDatabase(ServerStore.GetClusterTopology(), addDatabase.Record);
-                        }
-                        Debug.Assert(addDatabase.Record.Topology.Count != 0, "Empty topology after AssignNodesToDatabase");
-                        break;
                     case AddOrUpdateCompareExchangeBatchCommand batchCmpExchange:
                         batchCmpExchange.ContextToWriteResult = context;
                         break;
@@ -86,7 +79,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         context.Write(writer, new DynamicJsonValue
                         {
                             [nameof(ServerStore.PutRaftCommandResult.RaftCommandIndex)] = etag,
-                            [nameof(ServerStore.PutRaftCommandResult.Data)] = result
+                            [nameof(ServerStore.PutRaftCommandResult.Data)] = result,
                         });
                         writer.Flush();
                     }
@@ -323,6 +316,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             SetupCORSHeaders();
 
             var nodeUrl = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
+            var tag = GetStringQueryString("tag", false);
             var watcher = GetBoolValueQueryString("watcher", false);
             var assignedCores = GetIntValueQueryString("assignedCores", false);
             if (assignedCores <= 0)
@@ -413,7 +407,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         }
                     }
 
-                    var nodeTag = nodeInfo.NodeTag == RachisConsensus.InitialTag ? null : nodeInfo.NodeTag;
+                    var nodeTag = nodeInfo.NodeTag == RachisConsensus.InitialTag ? tag : nodeInfo.NodeTag;
                     CertificateDefinition oldServerCert = null;
                     X509Certificate2 certificate = null;
 
@@ -470,7 +464,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         }
                     }
 
-                    await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology: false, asWatcher: watcher ?? false);
+                    await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology: true, asWatcher: watcher ?? false);
 
                     using (ctx.OpenReadTransaction())
                     {

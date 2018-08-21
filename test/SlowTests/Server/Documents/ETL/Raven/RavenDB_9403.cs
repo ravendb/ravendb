@@ -31,7 +31,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 using (var session = dest.OpenSession())
                 {
                     var person = session.Load<Person>("users/1-A/people/0000000000000000001-A");
-                    
+
                     Assert.NotNull(person);
                     Assert.Equal("Joe Doe", person.Name);
                 }

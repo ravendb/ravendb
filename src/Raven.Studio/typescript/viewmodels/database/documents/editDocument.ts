@@ -91,6 +91,10 @@ class editDocument extends viewModelBase {
     editedDocId: KnockoutComputed<string>;
     displayLastModifiedDate: KnockoutComputed<boolean>;
     collectionTracker = collectionsTracker.default;
+
+    canViewAttachments: KnockoutComputed<boolean>;
+    canViewCounters: KnockoutComputed<boolean>;
+    canViewRelated: KnockoutComputed<boolean>;
     
     constructor() {
         super();
@@ -121,6 +125,8 @@ class editDocument extends viewModelBase {
         if (!navigationArgs || !navigationArgs.id) {
             return this.editNewDocument(navigationArgs ? navigationArgs.new : null);
         }
+
+        this.setActiveTab();
     }
 
     // Called when the view is attached to the DOM.
@@ -249,10 +255,15 @@ class editDocument extends viewModelBase {
        
         this.countersCount = ko.pureComputed(() => {
             const doc = this.document();
+            
+            if (doc && doc.__metadata && doc.__metadata.revisionCounters().length) {
+                return doc.__metadata.revisionCounters().length;
+            }
+            
             if (!doc || !doc.__metadata || !doc.__metadata.counters()) {
                 return 0;
             }
-
+            
             return doc.__metadata.counters().length;
         });
         
@@ -370,6 +381,18 @@ class editDocument extends viewModelBase {
         this.latestRevisionUrl = ko.pureComputed(() => {
             const id = this.document().getId();
             return appUrl.forEditDoc(id, this.activeDatabase());
+        });
+
+        this.canViewAttachments = ko.pureComputed(() => {
+            return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument() && !this.isDeleteRevision();
+        });
+
+        this.canViewCounters = ko.pureComputed(() => {
+            return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument() && !this.isDeleteRevision();
+        });
+
+        this.canViewRelated = ko.pureComputed(() => {
+            return !this.isDeleteRevision();
         });
     }
 
@@ -523,6 +546,8 @@ class editDocument extends viewModelBase {
         this.metadata().changeVector(undefined);
 
         this.userSpecifiedId(docId);
+
+        this.setActiveTab();
     }
 
     saveDocument() {
@@ -807,6 +832,18 @@ class editDocument extends viewModelBase {
         const deferred = generate.execute();
         deferred.done((code: string) => app.showBootstrapDialog(new showDataDialog("The Generated C# Class", code, "csharp", null)));
     }
+    
+    private setActiveTab() {
+        if (this.isDeleteRevision()) {
+            this.connectedDocuments.activateRevisions(true);
+        } else if (!this.canViewAttachments() || !this.canViewCounters()) {
+            this.connectedDocuments.activateRecent();
+        } else if (this.inReadOnlyMode()) { // revision mostly..
+            this.connectedDocuments.activateRevisions(false);
+        } else {
+            this.connectedDocuments.activateAttachments();
+        }
+    }    
 }
 
 export = editDocument;

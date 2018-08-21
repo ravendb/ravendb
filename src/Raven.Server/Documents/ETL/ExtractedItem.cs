@@ -1,4 +1,6 @@
-﻿using Raven.Client;
+﻿using System;
+using System.Diagnostics;
+using Raven.Client;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL
@@ -10,29 +12,44 @@ namespace Raven.Server.Documents.ETL
             
         }
 
-        protected ExtractedItem(Document document, string collection)
+        protected ExtractedItem(Document document, string collection, EtlItemType type)
         {
             DocumentId = document.Id;
             Etag = document.Etag;
             Document = document;
             Collection = collection;
             ChangeVector = document.ChangeVector;
+            Type = type;
 
-            if (collection == null &&
+            if (collection == null && type == EtlItemType.Document &&
                 document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
                 metadata.TryGet(Constants.Documents.Metadata.Collection, out LazyStringValue docCollection))
                 CollectionFromMetadata = docCollection;
         }
 
-        protected ExtractedItem(Tombstone tombstone, string collection)
+        protected ExtractedItem(Tombstone tombstone, string collection, EtlItemType type)
         {
             Etag = tombstone.Etag;
-            DocumentId = tombstone.LowerId;
-            IsDelete = true;
-            Collection = collection;
-            ChangeVector = tombstone.ChangeVector;
 
-            if (collection == null)
+            switch (type)
+            {
+                case EtlItemType.Document:
+                    Debug.Assert(tombstone.Type == Tombstone.TombstoneType.Document || tombstone.Type == Tombstone.TombstoneType.Attachment);
+                    DocumentId = tombstone.LowerId;
+                    Collection = collection;
+                    break;
+                case EtlItemType.Counter:
+                    Debug.Assert(tombstone.Type == Tombstone.TombstoneType.Counter);
+                    Collection = tombstone.Collection;
+                    CounterTombstoneId = tombstone.LowerId;
+                    break;
+            }
+
+            IsDelete = true;
+            ChangeVector = tombstone.ChangeVector;
+            Type = type;
+
+            if (Collection == null)
                 CollectionFromMetadata = tombstone.Collection;
         }
 
@@ -49,5 +66,13 @@ namespace Raven.Server.Documents.ETL
         public string Collection { get; protected set; }
 
         public LazyStringValue CollectionFromMetadata { get; }
+
+        public EtlItemType Type { get; protected set; }
+
+        public string CounterName { get; protected set; }
+
+        public long CounterValue { get; protected set; }
+
+        public LazyStringValue CounterTombstoneId { get; protected set; }
     }
 }

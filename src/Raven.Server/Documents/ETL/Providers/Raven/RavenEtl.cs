@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -27,7 +28,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         public RavenEtl(Transformation transformation, RavenEtlConfiguration configuration, DocumentDatabase database, ServerStore serverStore) : base(transformation, configuration, database, serverStore, RavenEtlTag)
         {
             Metrics = new EtlMetricsCountersManager();
-            _requestExecutor = RequestExecutor.Create(configuration.Connection.TopologyDiscoveryUrls, configuration.Connection.Database, serverStore.Server.Certificate.Certificate, DocumentConventions.Default);
+
+            if (configuration.TestMode == false)
+                _requestExecutor = RequestExecutor.Create(configuration.Connection.TopologyDiscoveryUrls, configuration.Connection.Database, serverStore.Server.Certificate.Certificate, DocumentConventions.Default);
+            
             _script = new RavenEtlDocumentTransformer.ScriptInput(transformation);            
         }
 
@@ -36,9 +40,30 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return new DocumentsToRavenEtlItems(docs, collection);
         }
 
-        protected override IEnumerator<RavenEtlItem> ConvertTombstonesEnumerator(IEnumerator<Tombstone> tombstones, string collection)
+        protected override IEnumerator<RavenEtlItem> ConvertTombstonesEnumerator(IEnumerator<Tombstone> tombstones, string collection, EtlItemType type)
         {
-            return new TombstonesToRavenEtlItems(tombstones, collection);
+            return new TombstonesToRavenEtlItems(tombstones, collection, type);
+        }
+
+        protected override IEnumerator<RavenEtlItem> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters, string collection)
+        {
+            return new CountersToRavenEtlItems(counters, collection);
+        }
+
+        protected override bool ShouldTrackAttachmentTombstones()
+        {
+            // if script isn't empty and we have addAttachment() calls there we send DELETE doc command before sending transformation results (docs and attachments)
+
+            return string.IsNullOrEmpty(Transformation.Script);
+        }
+
+        protected override bool ShouldTrackCounters()
+        {
+            // we track counters only if script is empty (then we send all counters together with documents) or
+            // when load counter behavior functions are defined, otherwise counters are send on document updates
+            // when addCounter() is called during transformation
+
+            return string.IsNullOrEmpty(Transformation.Script) || Transformation.CollectionToLoadCounterBehaviorFunction != null;
         }
 
         protected override EtlTransformer<RavenEtlItem, ICommandData> GetTransformer(DocumentsOperationContext context)

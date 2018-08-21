@@ -137,11 +137,6 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<(string ChangeVector, long Value)> GetCounterValues(string docId, string counter)
-        {
-            return _database.DocumentsStorage.CountersStorage.GetCounterValues(_context, docId, counter);
-        }
-
         public IEnumerable<Tombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
         {
             var tombstones = collectionsToExport.Count > 0
@@ -241,7 +236,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<CounterDetail> GetCounterValues()
         {
-            return _database.DocumentsStorage.CountersStorage.GetAllCounters(_context);
+            return _database.DocumentsStorage.CountersStorage.GetCountersFrom(_context, _startDocumentEtag, 0, int.MaxValue);
         }
 
         public long SkipType(DatabaseItemType type, Action<long> onSkipped)

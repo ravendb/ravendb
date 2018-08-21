@@ -20,7 +20,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             {
                 var etlDone = WaitForEtl(master, (n, statistics) => statistics.LoadSuccesses != 0);
 
-                AddEtl(master, slave, "users", 
+                AddEtl(master, slave, "users",
                     @"this.Name = 'patched ' + this.Name;
                       loadToUsers(this)");
 
@@ -35,7 +35,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     {
                         Name = "Arek"
                     }, "users/1");
-                    
+
                     session.SaveChanges();
                 }
 

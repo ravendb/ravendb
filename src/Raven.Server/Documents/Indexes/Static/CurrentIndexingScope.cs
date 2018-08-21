@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -42,6 +43,8 @@ namespace Raven.Server.Documents.Indexes.Static
         public readonly TransactionOperationContext IndexContext;
 
         public readonly IndexDefinitionBase IndexDefinition;
+
+        public LuceneDocumentConverter CreateFieldConverter;
 
         public CurrentIndexingScope(DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext, IndexDefinitionBase indexDefinition, TransactionOperationContext indexContext, Func<string, SpatialField> getSpatialField, UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool)
         {

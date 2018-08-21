@@ -370,7 +370,8 @@ namespace Raven.Server.Documents.Indexes
                 throw new ArgumentNullException(nameof(definition));
 
             if (_serverStore.Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable && definition.Type.IsJavaScript())
-                throw new IndexCreationException($"Could not create index '{definition.Name}'. Server does not support 'JavaScript' indexes. Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
+                throw new IndexCreationException($"Could not create index '{definition.Name}'. The experimental 'JavaScript' indexes feature is not enabled in your current server configuration. " +
+                                                 $"In order to use, please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
 
             ValidateIndexName(definition.Name, isStatic: true);
             definition.RemoveDefaultValues();
@@ -404,9 +405,9 @@ namespace Raven.Server.Documents.Indexes
 
             if (definition is MapIndexDefinition)
                 return await CreateIndex(((MapIndexDefinition)definition).IndexDefinition);
-            
-            ValidateIndexName(definition.Name, isStatic: false); 
-            
+
+            ValidateIndexName(definition.Name, isStatic: false);
+
             try
             {
                 var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBase)definition, _documentDatabase.Name);
@@ -556,10 +557,10 @@ namespace Raven.Server.Documents.Indexes
         public static bool IsValidIndexName(string name, bool isStatic, out string errorMessage)
         {
             errorMessage = null;
-            
+
             try
             {
-               ValidateIndexName(name, isStatic);
+                ValidateIndexName(name, isStatic);
             }
             catch (Exception e)
             {
@@ -569,7 +570,7 @@ namespace Raven.Server.Documents.Indexes
 
             return true;
         }
-        
+
         public static void ValidateIndexName(string name, bool isStatic)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -1237,23 +1238,26 @@ namespace Raven.Server.Documents.Indexes
 
             _indexes.ReplaceIndex(oldIndexName, oldIndex, newIndex);
 
-            var needToStop = PoolOfThreads.LongRunningWork.Current != newIndex._indexingThread;
+            using (newIndex.DrainRunningQueries()) // to ensure nobody will start index meanwhile if we stop it here
+            {
+                var needToStop = newIndex.Status == IndexRunningStatus.Running && PoolOfThreads.LongRunningWork.Current != newIndex._indexingThread;
 
-            if (needToStop)
-            {
-                // stop the indexing to allow renaming the index 
-                // the write tx required to rename it might be hold by indexing thread
-                ExecuteIndexAction(() => newIndex.Stop());
-            }
-
-            try
-            {
-                newIndex.Rename(oldIndexName);
-            }
-            finally
-            {
                 if (needToStop)
-                    ExecuteIndexAction(newIndex.Start);
+                {
+                    // stop the indexing to allow renaming the index 
+                    // the write tx required to rename it might be hold by indexing thread
+                    ExecuteIndexAction(() => newIndex.Stop());
+                }
+
+                try
+                {
+                    newIndex.Rename(oldIndexName);
+                }
+                finally
+                {
+                    if (needToStop)
+                        ExecuteIndexAction(newIndex.Start);
+                }
             }
 
             newIndex.ResetIsSideBySideAfterReplacement();

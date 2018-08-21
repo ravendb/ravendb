@@ -54,8 +54,7 @@ class statistics {
                 const newType = new indexesWithType(index.indexType);
                 newType.add(index);
                 indexesByTypeTemp.push(newType);
-            }
-            else {
+            } else {
                 // Type already exists, only add the index
                 existingEntry.add(index);
             }

@@ -104,7 +104,7 @@ class rqlTestUtils {
     
     static emptyProvider() {
         const completer = new queryCompleter({
-            terms: (indexName, field, pageSize, callback) => callback([]),
+            terms: (indexName, collection, field, pageSize, callback) => callback([]),
             collections: callback => callback([]),
             indexFields: (indexName, callback) => callback([]),
             collectionFields: (collectionName, prefix, callback) => callback({}),
@@ -116,7 +116,37 @@ class rqlTestUtils {
 
     static northwindProvider() {
         const providers: queryCompleterProviders = {
-            terms: (indexName, field, pageSize, callback) => callback([]),
+            terms: (indexName, collection, field, pageSize, callback) => {
+                if (indexName){
+                    // TODO
+                } else {
+                    if (collection === "Orders" && field === "OrderedAt"){
+                        return callback([
+                            "1996-07-04T00:00:00.0000000",
+                            "1996-07-05T00:00:00.0000000",
+                            "1996-07-08T00:00:00.0000000",
+                            "1996-07-09T00:00:00.0000000",
+                            "1996-07-10T00:00:00.0000000",
+                            "1996-07-11T00:00:00.0000000",
+                            "1996-07-12T00:00:00.0000000",
+                            "1996-07-15T00:00:00.0000000",
+                            "1996-07-16T00:00:00.0000000",
+                            "1996-07-17T00:00:00.0000000",
+                            "1996-07-18T00:00:00.0000000",
+                            "1996-07-19T00:00:00.0000000",
+                            "1996-07-22T00:00:00.0000000",
+                            "1996-07-23T00:00:00.0000000",
+                            "1996-07-24T00:00:00.0000000",
+                            "1996-07-25T00:00:00.0000000",
+                            "1996-07-26T00:00:00.0000000",
+                            "1996-07-29T00:00:00.0000000",
+                            "1996-07-30T00:00:00.0000000",
+                            "1996-07-31T00:00:00.0000000"
+                        ]);
+                    }
+                }
+                return callback([]);
+            },
             collections: callback => {
                 callback([
                     "Regions",
@@ -159,24 +189,33 @@ class rqlTestUtils {
                                     "Region": "String",
                                     "PostalCode": "String",
                                     "Country": "String",
-                                    "Nested": "Object",
+                                    "Location": "Object",
                                 });
                                 break;
-                            case "ShipTo.Nested":
+                            case "ShipTo.Location":
                                 callback({
+                                    "Latitude": "Number",
+                                    "Longitude": "Number",
                                     "L1": "String",
                                     "L2": "Null",
-                                    "C": "String",
-                                    "R": "String",
                                     "P": "String",
                                     "NestedObject": "Object",
                                 });
                                 break;
-                            case "ShipTo.Nested.NestedObject":
+                            case "ShipTo.Location.NestedObject":
                                 callback({
                                     "C2": "String",
                                     "R2": "String",
                                     "P2": "String"
+                                });
+                                break;
+                            case "Lines":
+                                callback({
+                                    "Discount": "Number",
+                                    "PricePerUnit": "Number",
+                                    "Product": "String",
+                                    "ProductName": "String",
+                                    "Quantity": "Number"
                                 });
                                 break;
                             default:

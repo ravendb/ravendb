@@ -13,6 +13,8 @@ class serverSetup {
 
     userDomains = ko.observable<Raven.Server.Commercial.UserDomainsWithIps>();
     
+    useExperimentalFeatures = ko.observable<boolean>(false);
+    
     mode = ko.observable<Raven.Server.Commercial.SetupMode | "Continue">();
     license = ko.observable<licenseInfo>(new licenseInfo());
     domain = ko.observable<domainInfo>(new domainInfo(() => this.license().toDto()));
@@ -22,6 +24,8 @@ class serverSetup {
     certificate = ko.observable<certificateInfo>(new certificateInfo());
     registerClientCertificate = ko.observable<boolean>(true);
     agreementUrl = ko.observable<string>();
+
+    environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>("None");
     
     fixedLocalPort = ko.observable<number>();
     fixPortNumberOnLocalNode = ko.pureComputed(() => this.fixedLocalPort() != null);
@@ -92,6 +96,10 @@ class serverSetup {
         ipEntry.runningOnDocker = params.IsDocker;
     }
 
+    private getLocalNode() {
+        return this.nodes()[0];
+    }
+    
     private getPortPart() {
         const port = this.nodes()[0].port();
         return port && port !== "443" ? ":" + port : "";
@@ -104,20 +112,34 @@ class serverSetup {
             RegisterClientCert: this.registerClientCertificate()
         } as Raven.Server.Commercial.ContinueSetupInfo;
     }
+
+    toUnsecuredDto() : Raven.Server.Commercial.UnsecuredSetupInfo {
+        const setup = this.unsecureSetup();
+        return {
+            EnableExperimentalFeatures: this.useExperimentalFeatures(),
+            Port: setup.port() ? parseInt(setup.port(), 10) : 8080,
+            Addresses: [setup.ip().ip()],
+            LocalNodeTag: setup.localNodeTag(),
+            Environment: this.environment(),
+            TcpPort: setup.tcpPort() ? parseInt(setup.tcpPort(), 10) : 38888
+        }
+    }
     
     toSecuredDto(): Raven.Server.Commercial.SetupInfo {
         const nodesInfo = {} as dictionary<Raven.Server.Commercial.SetupInfo.NodeInfo>;
         this.nodes().forEach((node, idx) => {
-            const nodeTag = serverSetup.nodesTags[idx];
-            nodesInfo[nodeTag] = node.toDto();
+            nodesInfo[node.nodeTag()] = node.toDto();
         });
 
         return {
+            EnableExperimentalFeatures: this.useExperimentalFeatures(),
+            Environment: this.environment(),
             License: this.license().toDto(),
             Email: this.domain().userEmail(),
             Domain: this.domain().domain(),
             RootDomain: this.domain().rootDomain(),
             ModifyLocalServer: true,
+            LocalNodeTag: this.getLocalNode().nodeTag(),
             RegisterClientCert: this.registerClientCertificate(), 
             NodeSetupInfos: nodesInfo,
             Certificate: this.certificate().certificate(),
@@ -156,12 +178,12 @@ class serverSetup {
                 return `http://${host}:${port}`;
                 
             case "LetsEncrypt":
-                return "https://a." + this.domain().domain() + "." + this.domain().rootDomain() + this.getPortPart();
+                return "https://" + this.getLocalNode().nodeTag().toLocaleLowerCase() + "." + this.domain().domain() + "." + this.domain().rootDomain() + this.getPortPart();
                 
             case "Secured":
                 const wildcard = this.certificate().wildcardCertificate();
                 if (wildcard) {
-                    const domain = this.getDomainForWildcard("a");
+                    const domain = this.getDomainForWildcard(this.getLocalNode().nodeTag().toLocaleLowerCase());
                     return "https://" + domain + this.getPortPart();
                 } else {
                     return this.nodes()[0].getServerUrl();
@@ -170,6 +192,12 @@ class serverSetup {
             default:
                 return null;
         }
+    }
+    
+    createIsLocalNodeObservable(node: nodeInfo) {
+        return ko.pureComputed(() => {
+            return this.nodes().indexOf(node) === 0;
+        });
     }
     
     createFullNodeNameObservable(node: nodeInfo) {

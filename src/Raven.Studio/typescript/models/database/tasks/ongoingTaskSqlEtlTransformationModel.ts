@@ -73,7 +73,7 @@ class ongoingTaskSqlEtlTransformationModel {
     update(dto: Raven.Client.Documents.Operations.ETL.Transformation, isNew: boolean, resetScript: boolean) {
         this.name(dto.Name);
         this.script(dto.Script); 
-        this.collection(dto.Collections[0]); // todo: check this..  
+        this.collection(dto.Collections[0]);
         this.isNew(isNew);
         this.resetScript(resetScript);
     }

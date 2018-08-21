@@ -163,9 +163,9 @@ class aceEditorBindingHandler {
         const readOnly = bindingValues.readOnly || this.defaults.readOnly;
         const code = typeof bindingValues.code === "function" ? bindingValues.code : bindingContext.$rawData;
         const completer = bindingValues.completer;
-        this.minHeight = bindingValues.minHeight ? bindingValues.minHeight : 140;
-        this.maxHeight = bindingValues.maxHeight ? bindingValues.maxHeight : 400;
-        this.allowResize = bindingValues.allowResize ? bindingValues.allowResize : false;
+        this.minHeight = bindingValues.minHeight || 140;
+        this.maxHeight = bindingValues.maxHeight || 400;
+        this.allowResize = bindingValues.allowResize || false;
         const selectAll = bindingValues.selectAll || this.defaults.selectAll;
         const bubbleEscKey = bindingValues.bubbleEscKey || this.defaults.bubbleEscKey;
         const bubbleEnterKey = bindingValues.bubbleEnterKey || this.defaults.bubbleEnterKey;
@@ -263,7 +263,6 @@ class aceEditorBindingHandler {
         ko.utils.domNodeDisposal.addDisposeCallback(element, () => {
             $(element).off('keyup', aceFocusElement);
             $(element).off('focus', aceFocusElement);
-            //TODO: $(element).resizable("destroy");
             aceEditor.getSession().setUseWorker(false);
             aceEditor.destroy();
             

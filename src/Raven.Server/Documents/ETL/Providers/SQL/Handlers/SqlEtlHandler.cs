@@ -8,6 +8,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
+using Raven.Server.Documents.ETL.Providers.SQL.Test;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -62,21 +63,22 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/admin/etl/sql/simulate", "POST", AuthorizationStatus.Operator)]
-        public Task PostSimulateSqlReplication()
+        [RavenAction("/databases/*/admin/etl/sql/test", "POST", AuthorizationStatus.Operator)]
+        public Task PostScriptTest()
         {
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 context.OpenReadTransaction();
 
-                var dbDoc = context.ReadForMemory(RequestBodyStream(), "SimulateSqlReplicationResult");
-                var simulateSqlReplication = JsonDeserializationServer.SimulateSqlReplication(dbDoc);
-                var result = SqlEtl.SimulateSqlEtl(simulateSqlReplication, Database, ServerStore, context);
+                var dbDoc = context.ReadForMemory(RequestBodyStream(), "TestSqlEtlScript");
+                var testScript = JsonDeserializationServer.TestSqlEtlScript(dbDoc);
+
+                var result = (SqlEtlTestScriptResult)SqlEtl.TestScript(testScript, Database, ServerStore, context);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(result);
-                    writer.WriteObject(context.ReadObject(djv, "et/sql/simulate"));
+                    writer.WriteObject(context.ReadObject(djv, "et/sql/test"));
                 }
             }
 

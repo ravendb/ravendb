@@ -200,7 +200,7 @@ namespace Sparrow.Platform.Posix
         {
             if (PlatformDetails.Is32Bits)
             {
-                var rc = (long)pwrite(fd, (IntPtr)buf, (UIntPtr)count, (long)offset);
+                var rc = (long)pwrite64(fd, (IntPtr)buf, (UIntPtr)count, (long)offset);
                 return rc;
             }
 

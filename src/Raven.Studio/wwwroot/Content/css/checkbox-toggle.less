@@ -90,20 +90,12 @@
 
 .toggle {
     height: 37px;
+    display: flex;
+    align-items: center;
 
     &.input-sm {
         height: 29px;
         padding: 0;
-
-        label {
-            &:before {
-                top: 6px;
-            }
-
-            &:after {
-                top: 0px;
-            }
-        }
     }
 
     &:hover {
@@ -118,7 +110,7 @@
         vertical-align: middle;
         position: relative;
         padding-left: 8px;
-        min-height: 27px;
+        line-height: 27px;
         margin-bottom: 0;
         font-weight: normal;
         cursor: pointer;
@@ -162,8 +154,8 @@
         width: 32px;
         height: 19px;
         position: relative;
-        top: 5px;
         cursor: pointer;
+        flex-shrink: 0;
 
         &:focus + label::before {
         }
@@ -179,7 +171,7 @@
             //box-shadow: 0 0 0 1px @gray-darker;
         }
 
-        &:disabled + label {
+        &:disabled + label, &.disabled + label {
             opacity: 0.45;
             cursor: not-allowed;
 
@@ -221,6 +213,7 @@
 
 .checkbox {
     padding-left: 20px;
+    flex-shrink: 0;
 
     label {
         display: inline-block;
@@ -289,13 +282,25 @@
             margin-top: 12px;
         }
 
-        &:disabled + label {
+        &:disabled + label, &.disabled + label {
             opacity: 0.65;
 
             &::before {
                 background-color: @input-bg-disabled;
                 cursor: not-allowed;
             }
+        }
+
+        &:checked:disabled + label, &:checked.disabled + label {
+             &::before {
+                 background-color: @gray !important;
+                 border-color: @gray !important;
+                 opacity: .3;
+             }
+   
+             &::after {
+                 opacity: .4
+             }
         }
     }
 
@@ -342,6 +347,7 @@
 
     &.nocheck {
         padding-left: @grid-gutter-width/2 !important;
+
         input {
             display: none;
         }
@@ -393,6 +399,7 @@
 
 .radio {
     padding-left: 20px;
+    flex-shrink: 0;
 
     label {
         display: inline-block;
@@ -408,7 +415,7 @@
             height: floor(@line-height-computed/4*3);
             left: 0;
             margin-left: -22px;
-            margin-top:2px;
+            margin-top: 2px;
             border: 1px solid @gray;
             border-radius: 50%;
             background-color: @gray-dark;
@@ -449,7 +456,7 @@
             border-color: @gray;
         }
 
-        &:disabled + label {
+        &:disabled + label, &.disabled + label {
             opacity: 0.65;
 
             &::before {

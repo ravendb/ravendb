@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Revisions
         private readonly DocumentsStorage _documentsStorage;
         public RevisionsConfiguration Configuration { get; private set; }
         public readonly RevisionsOperations Operations;
-        private readonly HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly Logger _logger;
 
         public enum RevisionsTable
@@ -96,8 +96,26 @@ namespace Raven.Server.Documents.Revisions
         public Table EnsureRevisionTableCreated(Transaction tx, CollectionName collection)
         {
             var tableName = collection.GetTableName(CollectionTableType.Revisions);
-            if (_tableCreated.Add(collection.Name))
+
+            if (_tableCreated.Contains(collection.Name) == false)
+            {
+                // RavenDB-11705: It is possible that this will revert if the transaction
+                // aborts, so we must record this only after the transaction has been committed
+                // note that calling the Create() method multiple times is a noop
                 RevisionsSchema.Create(tx, tableName, 16);
+                tx.LowLevelTransaction.OnDispose += _ =>
+                 {
+                     if (tx.LowLevelTransaction.Committed == false)
+                         return;
+
+                     // not sure if we can _rely_ on the tx write lock here, so let's be safe and create
+                     // a new instance, just in case 
+                     _tableCreated = new HashSet<string>(_tableCreated, StringComparer.OrdinalIgnoreCase)
+                     {
+                         collection.Name
+                     };
+                 };
+            }
             return tx.OpenTable(RevisionsSchema, tableName);
         }
 
@@ -290,20 +308,21 @@ namespace Raven.Server.Documents.Revisions
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
-                var fromSmuggler = (nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) == NonPersistentDocumentFlags.FromSmuggler;
                 var fromReplication = (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) == NonPersistentDocumentFlags.FromReplication;
 
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
                 // We want the revision's attachments to have a lower etag than the revision itself
-                if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments &&
-                    fromSmuggler == false)
+                if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                 {
-                    using (Slice.From(context.Allocator, changeVector, out Slice changeVectorSlice))
+                    if (flags.Contain(DocumentFlags.Revision) == false)
                     {
-                        if (table.VerifyKeyExists(changeVectorSlice) == false)
+                        using (Slice.From(context.Allocator, changeVector, out Slice changeVectorSlice))
                         {
-                            _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerId, changeVectorSlice);
+                            if (table.VerifyKeyExists(changeVectorSlice) == false)
+                            {
+                                _documentsStorage.AttachmentsStorage.RevisionAttachments(context, lowerId, changeVectorSlice);
+                            }
                         }
                     }
                 }
@@ -660,15 +679,17 @@ namespace Raven.Server.Documents.Revisions
                 flags &= ~DocumentFlags.HasAttachments;
             }
 
+            var fromReplication = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication);
+
             var configuration = GetRevisionsConfiguration(collectionName.Name, flags);
-            if (configuration.Disabled)
+            if (configuration.Disabled && fromReplication == false)
                 return;
 
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
-            if (configuration.PurgeOnDelete)
+            if (configuration.Disabled == false && configuration.PurgeOnDelete)
             {
-                using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
+                using (GetKeyPrefix(context, lowerId, out var prefixSlice))
                 {
                     DeleteRevisions(context, table, prefixSlice, collectionName, long.MaxValue, null, changeVector, lastModifiedTicks);
                     DeleteCountOfRevisions(context, prefixSlice);
@@ -677,7 +698,6 @@ namespace Raven.Server.Documents.Revisions
                 return;
             }
 
-            var fromReplication = (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) == NonPersistentDocumentFlags.FromReplication;
             if (fromReplication)
             {
                 void DeleteFromRevisionIfChangeVectorIsGreater()
@@ -758,15 +778,20 @@ namespace Raven.Server.Documents.Revisions
             return scope;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static ByteStringContext.InternalScope GetLastKey(DocumentsOperationContext context, Slice lowerId, out Slice prefixSlice)
+        {
+            return GetKeyWithEtag(context, lowerId, long.MaxValue, out prefixSlice);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static ByteStringContext<ByteStringMemoryCache>.InternalScope GetKeyWithEtag(DocumentsOperationContext context, Slice lowerId, long etag, out Slice prefixSlice)
         {
             var scope = context.Allocator.Allocate(lowerId.Size + 1 + sizeof(long), out ByteString keyMem);
 
             Memory.Copy(keyMem.Ptr, lowerId.Content.Ptr, lowerId.Size);
             keyMem.Ptr[lowerId.Size] = SpecialChars.RecordSeparator;
 
-            var maxValue = Bits.SwapBytes(long.MaxValue);
+            var maxValue = Bits.SwapBytes(etag);
             Memory.Copy(keyMem.Ptr + lowerId.Size + 1, (byte*)&maxValue, sizeof(long));
 
             prefixSlice = new Slice(SliceOptions.Key, keyMem);
@@ -787,6 +812,33 @@ namespace Raven.Server.Documents.Revisions
         {
             var numbers = context.Transaction.InnerTransaction.ReadTree(RevisionsCountSlice);
             return numbers.Read(prefix)?.Reader.ReadLittleEndianInt64() ?? 0;
+        }
+
+        public Document GetRevisionBefore(DocumentsOperationContext context, string id, DateTime max)
+        {
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
+            using (GetLastKey(context, lowerId, out Slice lastKey))
+            {
+                // Here we assume a reasonable number of revisions and scan the entire history
+                // This is because we want to handle out of order revisions from multiple nodes so the local etag
+                // order is different than the last modified order
+                Document result = null;
+                var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+                foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, 0))
+                {
+                    var document = TableValueToRevision(context, ref tvr.Result.Reader);
+                    if (document.LastModified > max)
+                        continue;
+                    if(result == null || 
+                        result.LastModified < document.LastModified)
+                    {
+                        result = document;
+                    }
+                }
+                return result;
+            }
+
         }
 
         public (Document[] Revisions, long Count) GetRevisions(DocumentsOperationContext context, string id, int start, int take)

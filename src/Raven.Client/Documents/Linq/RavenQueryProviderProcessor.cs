@@ -24,6 +24,7 @@ using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -57,8 +58,15 @@ namespace Raven.Client.Documents.Linq
         private StringBuilder _declareBuilder;
         private DeclareToken _declareToken;
         private List<LoadToken> _loadTokens;
+        private HashSet<string> _loadAliases;
         private readonly HashSet<string> _loadAliasesMovedToOutputFuction;
         private int _insideLet = 0;
+        private string _loadAlias;
+        private bool _selectLoad;
+        private const string DefaultLoadAlias = "__load";
+        private const string DefaultAliasPrefix = "__alias";
+        private bool _addedDefaultAlias;
+
         private readonly HashSet<string> _aliasKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "AS",
@@ -541,21 +549,52 @@ namespace Raven.Client.Documents.Linq
             var convertMatch = ConvertRemover.Match(result.Path);
             if (convertMatch.Success)
                 result.Path = result.Path.Replace(convertMatch.Groups[1].Value, convertMatch.Groups[2].Value);
-            result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
-            result.Path = CastingRemover.Replace(result.Path, string.Empty); // removing cast remains
 
-            if (expression.NodeType == ExpressionType.ArrayLength)
-                result.Path += ".Length";
+            var propertyName = GetPropertyName(result.Path, expression.NodeType);
 
-            var propertyName = IndexName == null && _collectionName != null
-                                   ? QueryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof(T), IndexName, CurrentPath,
-                                                                                                result.Path)
-                                   : QueryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), IndexName, CurrentPath,
-                                                                                         result.Path);
             return new ExpressionInfo(propertyName, result.MemberType, result.IsNestedPath, result.Args)
             {
                 MaybeProperty = result.MaybeProperty
             };
+        }
+
+        private string GetPropertyName(string selectPath, ExpressionType type)
+        {
+            selectPath = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(selectPath);
+
+            var indexOf = selectPath.IndexOf('.');
+            string alias = null;
+            if (indexOf != -1)
+            {
+                alias = selectPath.Substring(0, indexOf);
+                selectPath = selectPath.Substring(indexOf + 1);
+            }
+
+            selectPath = CastingRemover.Replace(selectPath, string.Empty); // removing cast remains
+
+            if (type == ExpressionType.ArrayLength)
+            {
+                selectPath += ".Length";
+            }
+
+            var propertyName = IndexName == null && _collectionName != null
+                ? QueryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof(T), IndexName, CurrentPath,
+                    selectPath)
+                : QueryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), IndexName, CurrentPath,
+                    selectPath);
+
+            return AddAliasToPathIfNeeded(alias, propertyName);
+        }
+
+        private string AddAliasToPathIfNeeded(string alias, string prop)
+        {
+            if (alias != null &&
+                (alias == _fromAlias ||
+                 _loadAliases != null &&
+                 _loadAliases.Contains(alias)))
+                return $"{alias}.{prop}";
+
+            return prop;
         }
 
         private static ParameterExpression GetParameterExpressionIncludingConvertions(Expression expression)
@@ -1083,9 +1122,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case nameof(LinqExtensions.Include):
                     VisitExpression(expression.Arguments[0]);
 
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var includePath);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var includeArg);
 
-                    _documentQuery.Include((string)includePath);
+                    if (includeArg is IncludeBuilder includeBuilder)
+                    {
+                        _documentQuery.Include(includeBuilder);
+                    }
+                    else if (includeArg is string str)
+                    {
+                        _documentQuery.Include(str);
+                    }
                     break;
                 case nameof(LinqExtensions.OrderBy):
                 case nameof(LinqExtensions.ThenBy):
@@ -1459,12 +1505,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             _documentQuery.AddRootType(expression.Arguments[0].Type.GetGenericArguments()[0]);
                         }
 
-                        if (expression.Arguments.Count > 1 && expression.Arguments[1] is UnaryExpression unaryExpression
-                            && unaryExpression.Operand is LambdaExpression lambdaExpression
-                            && lambdaExpression.Parameters[0] != null
-                            && lambdaExpression.Parameters[0].Name.StartsWith(LinqPathProvider.TransparentIdentifier))
+                        if (ExpressionHasNestedLambda(expression, out var lambdaExpression))
                         {
-                            _insideLet++;
+                            CheckForLetOrLoadFromSelect(expression, lambdaExpression);
                         }
 
                         VisitExpression(expression.Arguments[0]);
@@ -1476,6 +1519,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             VisitSelectAfterGroupBy(operand, _groupByElementSelector);
                             _groupByElementSelector = null;
                         }
+                        else if (_selectLoad)
+                        {
+                            AddFromAlias(lambdaExpression.Parameters[0].Name);
+                            _selectLoad = false;
+                        }
+
                         else
                             VisitSelect(operand);
                         break;
@@ -1633,6 +1682,126 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         throw new NotSupportedException("Method not supported: " + expression.Method.Name);
                     }
             }
+        }
+
+        private void CheckForLetOrLoadFromSelect(MethodCallExpression expression, LambdaExpression lambdaExpression)
+        {
+            var parameterName = lambdaExpression.Parameters[0].Name;
+
+            if (parameterName.StartsWith(JavascriptConversionExtensions.TransparentIdentifier))
+            {
+                _insideLet++;
+                return;
+            }
+
+            if (_loadAlias != null)
+            {
+                HandleLoadFromSelectIfNeeded(lambdaExpression);
+                _loadAlias = null;
+                return;
+            }
+
+            if (expression.Arguments[0] is MethodCallExpression mce &&
+                mce.Method.Name == "Select" &&
+                ExpressionHasNestedLambda(mce, out var innerLambda) &&
+                innerLambda.Body is MethodCallExpression innerMce &&
+                CheckForLoad(innerMce))
+            {
+                _loadAlias = parameterName;
+                return;
+            }
+
+            HandleLoadFromSelectIfNeeded(lambdaExpression);
+        }
+
+        private bool CheckForLoad(MethodCallExpression mce)
+        {
+            return mce.Method.Name == nameof(RavenQuery.Load) &&
+                   (mce.Method.DeclaringType == typeof(RavenQuery) ||
+                    mce.Object?.Type == typeof(IDocumentSession));
+        }
+
+        private bool CheckForNestedLoad(LambdaExpression lambdaExpression, out MethodCallExpression mce, out string selectPath)
+        {
+            if (lambdaExpression.Body is MemberExpression memberExpression)
+            {
+                if (JavascriptConversionExtensions.GetInnermostExpression(memberExpression, out string path) 
+                        is MethodCallExpression methodCallExpression &&
+                    CheckForLoad(methodCallExpression))
+                {
+                    selectPath = path == string.Empty
+                        ? memberExpression.Member.Name
+                        : $"{path}.{memberExpression.Member.Name}";
+                    mce = methodCallExpression;
+                    return true;
+                }
+            }
+
+            selectPath = null;
+            mce = null;
+            return false;
+
+        }
+
+        private void HandleLoadFromSelectIfNeeded(LambdaExpression lambdaExpression)
+        {
+            if (CheckForNestedLoad(lambdaExpression, out var mce, out var member) == false)
+            {
+                if (!(lambdaExpression.Body is MethodCallExpression methodCall) ||
+                    CheckForLoad(methodCall) == false)
+                        return;
+                
+                mce = methodCall;
+            }
+
+            //add load token
+
+            if (_loadTokens == null)
+            {
+                _loadTokens = new List<LoadToken>();
+                _loadAliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            string arg;
+            if (mce.Arguments[0] is ConstantExpression constantExpression && 
+                constantExpression.Type == typeof(string))
+            {
+                arg = _documentQuery.ProjectionParameter(constantExpression.Value);
+            }
+            else
+            {
+                arg = ToJs(mce.Arguments[0]);
+            }
+
+            AddLoadToken(arg, _loadAlias ?? DefaultLoadAlias);
+
+            if (_loadAlias == null)
+            {
+                var path = DefaultLoadAlias;
+                if (member != null)
+                {
+                    path = $"{path}.{member}";
+                }
+
+                AddToFieldsToFetch(path, path);
+            }
+
+            _selectLoad = true;
+        }
+
+        private static bool ExpressionHasNestedLambda(MethodCallExpression expression, out LambdaExpression lambdaExpression)
+        {
+            if (expression.Arguments.Count > 1 &&
+                expression.Arguments[1] is UnaryExpression unaryExpression &&
+                unaryExpression.Operand is LambdaExpression lambda &&
+                lambda.Parameters[0] != null)
+            {
+                lambdaExpression = lambda;
+                return true;
+            }
+
+            lambdaExpression = null;
+            return false;
         }
 
         private void VisitGroupBy(Expression expression, GroupByArrayBehavior arrayBehavior)
@@ -1869,9 +2038,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     break;
                 case ExpressionType.MemberAccess:
                     var memberExpression = ((MemberExpression)body);
-                    var selectPath = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(GetSelectPath(memberExpression));
 
+                    var selectPath = GetSelectPath(memberExpression);
                     AddToFieldsToFetch(selectPath, selectPath);
+
                     if (_insideSelect == false)
                     {
                         foreach (var fieldToFetch in FieldsToFetch)
@@ -1926,14 +2096,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                         if (newExpression.Arguments[index] is MethodCallExpression mce && LinqPathProvider.IsCounterCall(mce))
                         {
-                            var counterInfo = LinqPathProvider.CreateCounterResult(mce);
-                            if (_fromAlias == null && counterInfo.Args[0] == lambdaExpression?.Parameters[0].Name)
-                            {
-                                AddFromAlias(counterInfo.Args[0]);
-                            }
-
-                            AddCallArgumentsToPath(counterInfo.Args, ref counterInfo.Path, out _);
-                            AddToFieldsToFetch(counterInfo.Path, GetSelectPath(newExpression.Members[index]));
+                            HandleSelectCounter(mce, lambdaExpression, newExpression.Members[index]);                            
                             continue;
                         }
 
@@ -1988,14 +2151,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                         if (field.Expression is MethodCallExpression mce && LinqPathProvider.IsCounterCall(mce))
                         {
-                            var counterInfo = LinqPathProvider.CreateCounterResult(mce);
-                            if (_fromAlias == null && counterInfo.Args[0] == lambdaExpression?.Parameters[0].Name)
-                            {
-                                AddFromAlias(counterInfo.Args[0]);
-                            }
-
-                            AddCallArgumentsToPath(counterInfo.Args, ref counterInfo.Path, out _);
-                            AddToFieldsToFetch(counterInfo.Path, GetSelectPath(field.Member));
+                            HandleSelectCounter(mce, lambdaExpression, field.Member);
                             continue;
                         }
 
@@ -2021,10 +2177,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                                       
                     if (expressionInfo.Args != null)
                     {
-                        if (_fromAlias == null 
-                            && expressionInfo.Args[0] == lambdaExpression?.Parameters[0].Name)
+                        if (expressionInfo.Args[0] == lambdaExpression?.Parameters[0].Name)
                         {
-                            AddFromAlias(expressionInfo.Args[0]);
+                            AddFromAliasOrRenameArgument(ref expressionInfo.Args[0]);
                         }
 
                         AddCallArgumentsToPath(expressionInfo.Args, ref path, out alias);
@@ -2036,6 +2191,30 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 default:
                     throw new NotSupportedException("Node not supported: " + body.NodeType);
             }
+        }
+
+        private void AddFromAliasOrRenameArgument(ref string arg)
+        {
+            if (_fromAlias == null)
+            {
+                AddFromAlias(arg);
+            }
+            else
+            {
+                arg = _fromAlias;
+            }
+        }
+
+        private void HandleSelectCounter(MethodCallExpression methodCallExpression, LambdaExpression lambdaExpression, MemberInfo member)
+        {
+            var counterInfo = LinqPathProvider.CreateCounterResult(methodCallExpression);
+            if (counterInfo.Args[0] == lambdaExpression?.Parameters[0].Name)
+            {
+                AddFromAliasOrRenameArgument(ref counterInfo.Args[0]);
+            }
+
+            AddCallArgumentsToPath(counterInfo.Args, ref counterInfo.Path, out _);
+            AddToFieldsToFetch(counterInfo.Path, GetSelectPath(member));
         }
 
         private static void AddCallArgumentsToPath(string[] mceArgs, ref string path, out string alias)
@@ -2172,7 +2351,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 // if memberExpression is <>h__TransparentIdentifierN...TransparentIdentifier1.TransparentIdentifier0.something
                 // then the load-argument is 'something' which is not a real path (a real path should be 'x.something')
-                // but a name of a variable that was previously defined in a 'let' statment.
+                // but a name of a variable that was previously defined in a 'let' statement.
 
                 var param = memberExpression.Expression is ParameterExpression parameter
                     ? parameter.Name
@@ -2180,17 +2359,17 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         ? innerMemberExpression.Member.Name
                         : string.Empty;
 
-                if (param == "<>h__TransparentIdentifier0" || _fromAlias.StartsWith("__ravenDefaultAlias") || _aliasKeywords.Contains(param))
+                if (param == "<>h__TransparentIdentifier0" || _fromAlias.StartsWith(DefaultAliasPrefix) || _aliasKeywords.Contains(param))
                 {
-                    // (1) the load argument was defined in a previous let statment, i.e :
+                    // (1) the load argument was defined in a previous let statement, i.e :
                     //     let detailId = "details/1-A" 
-                    //     let deatil = session.Load<Detail>(detailId)
+                    //     let detail = session.Load<Detail>(detailId)
                     //     ...
-                    // (2) OR the from-alias was a reserved word and we have a let statment,
+                    // (2) OR the from-alias was a reserved word and we have a let statement,
                     //     so we changed it to "__ravenDefaultAlias".
                     //     the load-argument might be a path with respect to the original from-alias name.
                     // (3) OR the parameter name of the load argument is a reserved word
-                    //     that was defined in a previous let statment, i.e : 
+                    //     that was defined in a previous let statement, i.e : 
                     //     let update = session.Load<Order>("orders/1-A")
                     //     let employee = session.Load<Employee>(update.Employee)
 
@@ -2212,6 +2391,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (_loadTokens == null)
             {
                 _loadTokens = new List<LoadToken>();
+                _loadAliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             }
 
             name = RenameAliasIfNeeded(name);
@@ -2238,16 +2418,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 }
             }
 
+            string alias;
             if (js == string.Empty)
             {
-                if (loadSupport.IsEnumerable)
-                {
-                    _loadTokens.Add(LoadToken.Create(arg, $"{name}[]"));
-                }
-                else
-                {
-                    _loadTokens.Add(LoadToken.Create(arg, name));
-                }
+                alias = loadSupport.IsEnumerable 
+                    ? $"{name}[]" 
+                    : name;
+
+                AddLoadToken(arg, alias);
                 return;
             }
 
@@ -2259,13 +2437,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (loadSupport.IsEnumerable)
             {
                 doc = $"_docs_{_loadTokens.Count}";
-                _loadTokens.Add(LoadToken.Create(arg, $"{doc}[]"));
+                alias = $"{doc}[]";
             }
             else
             {
                 doc = $"_doc_{_loadTokens.Count}";
-                _loadTokens.Add(LoadToken.Create(arg, doc));
+                alias = doc;
             }
+
+            AddLoadToken(arg, alias);
 
             //add name to the list of aliases that were moved to the output function
             _loadAliasesMovedToOutputFuction.Add(name);
@@ -2276,6 +2456,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             AppendLineToOutputFunction(name, doc + js);
+        }
+
+        private void AddLoadToken(string arg, string alias)
+        {
+            _loadTokens.Add(LoadToken.Create(arg, alias));
+            _loadAliases.Add(alias);
         }
 
         private void AppendLineToOutputFunction(string name, string js)
@@ -2296,6 +2482,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
             _documentQuery.AddFromAliasToWhereTokens(_fromAlias);
         }
 
+        private void AddAliasToCounterIncludesIfNeeded()
+        {
+            _fromAlias = _documentQuery.AddAliasToCounterIncludesTokens(_fromAlias);
+        }
+
         private string RenameAliasIfNeeded(string alias)
         {
             if (_aliasKeywords.Contains(alias) == false)
@@ -2303,7 +2494,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (_insideLet > 0)
             {
-                var newAlias = $"__ravenDefaultAlias{_aliasesCount++}";
+                var newAlias = $"{DefaultAliasPrefix}{_aliasesCount++}";
                 AppendLineToOutputFunction(alias, newAlias);
                 return newAlias;
             }
@@ -2710,11 +2901,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void AddToFieldsToFetch(string field, string alias)
         {
-            if (string.Equals(alias, "load", StringComparison.OrdinalIgnoreCase) ||
-                _aliasKeywords.Contains(alias))
-            {
-                alias = "'" + alias + "'";
-            }
+            HandleKeywordsIfNeeded(ref field, ref alias);
 
             var identityProperty = _documentQuery.Conventions.GetIdentityProperty(_originalQueryType);
             if (identityProperty != null && identityProperty.Name == field)
@@ -2724,6 +2911,74 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             FieldsToFetch.Add(new FieldToFetch(field, alias));
+        }
+
+        private void HandleKeywordsIfNeeded(ref string field, ref string alias)
+        {
+            if (NeedToAddFromAliasToField(field))
+            {
+                AddFromAliasToFieldToFetch(ref field, ref alias);
+            }
+            else if (_aliasKeywords.Contains(field))
+            {
+                AddDefaultAliasToQuery();
+                AddFromAliasToFieldToFetch(ref field, ref alias, true);
+            }
+
+            var indexOf = field.IndexOf(".", StringComparison.OrdinalIgnoreCase);
+            if (indexOf != -1)
+            {
+                var parameter = field.Substring(0, indexOf);
+                if (_aliasKeywords.Contains(parameter))
+                {
+                    // field is a nested path that starts with RQL keyword,
+                    // need to quote the keyword
+
+                    var nestedPath = field.Substring(indexOf + 1);
+                    AddDefaultAliasToQuery();
+                    AddFromAliasToFieldToFetch(ref parameter, ref alias, true);
+                    field = $"{parameter}.{nestedPath}";
+                }
+            }
+
+            if (string.Equals(alias, "load", StringComparison.OrdinalIgnoreCase) ||
+                _aliasKeywords.Contains(alias))
+            {
+                alias = "'" + alias + "'";
+            }
+        }
+
+        private bool NeedToAddFromAliasToField(string field)
+        {
+            return _addedDefaultAlias &&
+                   field.StartsWith($"{_fromAlias}.") == false &&
+                   field.StartsWith("id(") == false &&
+                   field.StartsWith("counter(") == false &&
+                   field.StartsWith("counterRaw(") == false;
+        }
+
+        private void AddFromAliasToFieldToFetch(ref string field, ref string alias, bool quote = false)
+        {
+            if (field == alias)
+            {
+                alias = null;
+            }
+
+            field = quote
+                ? $"{_fromAlias}.'{field}'"
+                : $"{_fromAlias}.{field}";
+        }
+
+        private void AddDefaultAliasToQuery()
+        {
+            var fromAlias = $"{DefaultAliasPrefix}{_aliasesCount++}";
+            AddFromAlias(fromAlias);
+            foreach (var fieldToFetch in FieldsToFetch)
+            {
+                fieldToFetch.Name = $"{fromAlias}.{fieldToFetch.Name}";
+            }
+
+            _addedDefaultAlias = true;
         }
 
         private void VisitSkip(ConstantExpression constantExpression)
@@ -2843,6 +3098,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             _customizeQuery?.Invoke((IDocumentQueryCustomization)_documentQuery);
 
+            AddAliasToCounterIncludesIfNeeded();
+
             if (_jsSelectBody != null)
             {
                 return documentQuery.SelectFields<T>(new QueryData(new[] { _jsSelectBody }, _jsProjectionNames, _fromAlias, _declareToken, _loadTokens, true));
@@ -2885,6 +3142,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
 
             _customizeQuery?.Invoke((IDocumentQueryCustomization)asyncDocumentQuery);
+
+            AddAliasToCounterIncludesIfNeeded();
 
             if (_jsSelectBody != null)
             {
@@ -3038,7 +3297,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             Alias = name != alias ? alias : null;
         }
 
-        public string Name { get; }
+        public string Name { get; internal set; }
         public string Alias { get; internal set; }
 
         protected bool Equals(FieldToFetch other)

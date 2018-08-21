@@ -71,8 +71,7 @@ class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Do
             if (!existingEnv) {
                 // A new 'environment', add it to mergedData
                 this.mergedData.Environments.push(env);
-            }
-            else {
+            } else {
                 // An existing 'environment', add the new recent items to mergedData
                 env.Files.forEach(x => existingEnv.Files.push(x));
             }

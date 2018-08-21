@@ -13,6 +13,7 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Counters;
 using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Highlightings;
@@ -99,6 +100,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasTimings { get; private set; }
 
+        public bool HasCounters { get; private set; }
+
         public bool IsCollectionQuery { get; private set; } = true;
 
         public Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> DeclaredFunctions { get; }
@@ -126,6 +129,8 @@ namespace Raven.Server.Documents.Queries
         public HighlightingField[] Highlightings;
 
         public ExplanationField Explanation;
+
+        public CounterIncludesField CounterIncludes;
 
         public readonly ulong CacheKey;
 
@@ -306,7 +311,7 @@ namespace Raven.Server.Documents.Queries
             {
                 if (callExpression.Callee is Identifier identifier)
                 {
-                    if (identifier.Name == "load")
+                    if (identifier.Name == "load" || identifier.Name == "include")
                     {
                         HasIncludeOrLoad = true;
                     }
@@ -380,6 +385,17 @@ namespace Raven.Server.Documents.Queries
                             case MethodType.Timings:
                                 QueryValidator.ValidateTimings(me.Arguments, QueryText, parameters);
                                 HasTimings = true;
+                                break;
+                            case MethodType.Counters:
+                                QueryValidator.ValidateIncludeCounter(me.Arguments, QueryText, parameters);
+
+                                if (CounterIncludes == null)
+                                {
+                                    CounterIncludes = new CounterIncludesField();
+                                    HasCounters = true;
+                                }
+
+                                AddToCounterIncludes(CounterIncludes, me, parameters);
                                 break;
                             default:
                                 throw new InvalidQueryException($"Unable to figure out how to deal with include method '{methodType}'", QueryText, parameters);
@@ -484,6 +500,79 @@ namespace Raven.Server.Documents.Queries
                 ThrowUseOfReserveFunctionBodyMethodName(parameters);
 
             SelectFields = new[] { SelectField.CreateMethodCall(name, null, args) };
+        }
+
+        private void AddToCounterIncludes(CounterIncludesField counterIncludes, MethodExpression expression, BlittableJsonReaderObject parameters)
+        {
+            string sourcePath = null;
+            var start = 0;
+            if (expression.Arguments.Count > 0 &&
+                expression.Arguments[0] is FieldExpression fe)
+            {
+                start = 1;
+
+                if (Query.From.Alias?.Value != fe.FieldValue)
+                {
+                    if (RootAliasPaths.TryGetValue(fe.FieldValue, out var value))
+                    {
+                        sourcePath = value.PropertyPath;
+                    }
+
+                    else if (fe.FieldValue != null)
+                    {
+                        if (Query.From.Alias?.Value == null)
+                        {
+                            sourcePath = fe.FieldValue;
+                        }
+                        else
+                        {
+                            var split = fe.FieldValue.Split('.');
+                            if (split.Length >= 2 &&
+                                split[0] == Query.From.Alias.Value)
+                            {
+                                sourcePath = fe.FieldValue.Substring(split[0].Length + 1);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (start == expression.Arguments.Count)
+            {
+                counterIncludes.Counters[sourcePath ?? string.Empty] = new HashSet<string>();
+                return;
+            }
+
+            for (var index = start; index < expression.Arguments.Count; index++)
+            {
+                if (!(expression.Arguments[index] is ValueExpression vt))
+                    continue;
+
+                if (vt.Value == ValueTokenType.Parameter)
+                {
+                    foreach (var v in QueryBuilder.GetValues(Query, this, parameters, vt))
+                    {
+                        AddCounterToInclude(counterIncludes, parameters, v, sourcePath);
+                    }
+
+                    continue;
+                }
+
+                var value = QueryBuilder.GetValue(Query, this, parameters, vt);
+
+                AddCounterToInclude(counterIncludes, parameters, value, sourcePath);
+
+            }
+        }
+
+        private void AddCounterToInclude(CounterIncludesField counterIncludes, BlittableJsonReaderObject parameters, 
+            (object Value, ValueTokenType Type) parameterValue, string sourcePath)
+        {
+            if (parameterValue.Type != ValueTokenType.String)
+                throw new InvalidQueryException("Parameters of method `counters` must be of type `string` or `string[]`, " +
+                                                $"but got `{parameterValue.Value}` of type `{parameterValue.Type}`", QueryText, parameters);
+
+            counterIncludes.AddCounter(parameterValue.Value.ToString(), sourcePath);
         }
 
         private void ThrowUseOfReserveFunctionBodyMethodName(BlittableJsonReaderObject parameters)

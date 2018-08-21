@@ -50,12 +50,12 @@ namespace rvn
                 _exitCode = 1;
                 Stop();
             }, null, 0, ServerAliveCheckInterval);
-            
+
             try
             {
                 var pipeName = Pipes.GetPipeName(Pipes.LogStreamPipePrefix, _pid);
                 _client = new NamedPipeClientStream(pipeName);
-                WorkaroundSetPipePathForPosix(_client, pipeName);
+
                 try
                 {
                     _client.Connect(3000);
@@ -92,20 +92,6 @@ namespace rvn
             {
                 Console.WriteLine(e);
                 throw;
-            }
-        }
-
-        private static void WorkaroundSetPipePathForPosix(NamedPipeClientStream client, string pipeName)
-        {
-            if (PlatformDetails.RunningOnPosix)
-            {
-                var pathField = client.GetType().GetField("_normalizedPipePath", BindingFlags.NonPublic | BindingFlags.Instance);
-                if (pathField == null)
-                {
-                    throw new InvalidOperationException("Unable to set the proper path for the admin pipe, admin channel will not be available");
-                }
-                var pipeDir = Path.Combine(Path.GetTempPath(), "ravendb-pipe");
-                pathField.SetValue(client, Path.Combine(pipeDir, pipeName));
             }
         }
 

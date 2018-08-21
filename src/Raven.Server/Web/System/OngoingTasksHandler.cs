@@ -267,9 +267,12 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/periodic-backup/config", "GET", AuthorizationStatus.DatabaseAdmin)]
         public Task GetConfiguration()
         {
+            // FullPath removes the trailing '/' so adding it back for the studio
+            var localRootPath = ServerStore.Configuration.Backup.LocalRootPath;
+            var localRootFullPath = localRootPath != null ? localRootPath.FullPath + Path.DirectorySeparatorChar : null;
             var result = new DynamicJsonValue
             {
-                [nameof(ServerStore.Configuration.Backup.LocalRootPath)] = ServerStore.Configuration.Backup.LocalRootPath?.FullPath,
+                [nameof(ServerStore.Configuration.Backup.LocalRootPath)] = localRootFullPath,
                 [nameof(ServerStore.Configuration.Backup.AllowedAwsRegions)] = ServerStore.Configuration.Backup.AllowedAwsRegions,
                 [nameof(ServerStore.Configuration.Backup.AllowedDestinations)] = ServerStore.Configuration.Backup.AllowedDestinations
             };
@@ -450,10 +453,10 @@ namespace Raven.Server.Web.System
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WritePropertyName(nameof(BackupDatabaseNowResult.ResponsibleNode));
+                    writer.WritePropertyName(nameof(StartBackupOperationResult.ResponsibleNode));
                     writer.WriteString(ServerStore.NodeTag);
                     writer.WriteComma();
-                    writer.WritePropertyName(nameof(BackupDatabaseNowResult.OperationId));
+                    writer.WritePropertyName(nameof(StartBackupOperationResult.OperationId));
                     writer.WriteInteger(operationId);
                     writer.WriteEndObject();
                 }

@@ -137,7 +137,7 @@ namespace FastTests.Server.Documents.Indexing
             throw new NotImplementedException();
         }
 
-        public override int HandleMap(LazyStringValue lowerId, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        public override int HandleMap(LazyStringValue lowerId, LazyStringValue id, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             throw new NotImplementedException();
         }
@@ -153,7 +153,7 @@ namespace FastTests.Server.Documents.Indexing
     {
         public TestIndexDefinitions()
         {
-            Collections = new HashSet<string>{Constants.Documents.Collections.AllDocumentsCollection};
+            Collections = new HashSet<string> { Constants.Documents.Collections.AllDocumentsCollection };
         }
         public override void Persist(TransactionOperationContext context, StorageEnvironmentOptions options)
         {

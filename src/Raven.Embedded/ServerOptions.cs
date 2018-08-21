@@ -7,7 +7,7 @@ namespace Raven.Embedded
 {
     public class ServerOptions
     {
-        public string FrameworkVersion { get; set; } = "2.1.1";
+        public string FrameworkVersion { get; set; } = "2.1.2";
 
         public string DataDirectory { get; set; } = Path.Combine(AppContext.BaseDirectory, "RavenDB");
 
@@ -16,6 +16,10 @@ namespace Raven.Embedded
         public string DotNetPath { get; set; } = "dotnet";
 
         public bool AcceptEula { get; set; } = true;
+
+        public string ServerUrl { get; set; }
+
+        public TimeSpan GracefulShutdownTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
         public TimeSpan MaxServerStartupTimeDuration { get; set; } = TimeSpan.FromMinutes(1);
 

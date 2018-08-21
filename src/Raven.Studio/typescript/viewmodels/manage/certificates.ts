@@ -42,6 +42,8 @@ class certificates extends viewModelBase {
     certificates = ko.observableArray<unifiedCertificateDefinition>();
     serverCertificateThumbprint = ko.observable<string>();
     serverCertificateSetupMode = ko.observable<Raven.Server.Commercial.SetupMode>();
+    wellKnownAdminCerts = ko.observableArray<string>([]);
+    wellKnownAdminCertsVisible = ko.observable<boolean>(false);
     
     domainsForServerCertificate = ko.observableArray<string>([]);
     
@@ -112,12 +114,25 @@ class certificates extends viewModelBase {
         this.certificates().forEach(certificate => {
             const nameMatch = !certificate || certificate.Name.toLocaleLowerCase().includes(filter);
             const clearanceMatch = !clearance || certificate.SecurityClearance === clearance;
-            certificate.Visible(nameMatch && clearanceMatch);
+            const thumbprintMatch = !certificate || _.some(certificate.Thumbprints, x => x.toLocaleLowerCase().includes(filter));
+            certificate.Visible((nameMatch || thumbprintMatch) && clearanceMatch);
         });
+        
+        const wellKnownAdminCerts = this.wellKnownAdminCerts();
+        
+        if (wellKnownAdminCerts.length) {
+            const clearanceMatch = !clearance || clearance === "ClusterAdmin";
+            const thumbprintMatch = _.some(wellKnownAdminCerts, x => x.toLocaleLowerCase().includes(filter));
+            this.wellKnownAdminCertsVisible(thumbprintMatch && clearanceMatch);
+        } else {
+            this.wellKnownAdminCertsVisible(false);
+        }
     }
     
     private onAlert(alert: Raven.Server.NotificationCenter.Notifications.AlertRaised) {
-        if (alert.AlertType === "Certificates_ReplaceError" || alert.AlertType === "Certificates_ReplaceSuccess") {
+        if (alert.AlertType === "Certificates_ReplaceError" ||
+            alert.AlertType === "Certificates_ReplaceSuccess" ||
+            alert.AlertType === "Certificates_EntireClusterReplaceSuccess") {
             this.loadCertificates();
         }
     }
@@ -357,7 +372,8 @@ class certificates extends viewModelBase {
                 
                 mergedCertificates = _.sortBy(mergedCertificates, x => x.Name.toLocaleLowerCase());
                 this.updateCache(mergedCertificates);
-                this.certificates(mergedCertificates); 
+                this.certificates(mergedCertificates);
+                this.wellKnownAdminCerts(certificatesInfo.WellKnownAdminCerts || []);
                 this.filterCertificates();
             });
     }

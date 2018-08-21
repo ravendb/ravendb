@@ -117,7 +117,6 @@ namespace SlowTests.Issues
                 if (queryExpOptimized.ToString() == x.Item3)
                     continue;
 
-                Console.WriteLine($"{i}: {queryExpOptimized}");
             }
 
             for (int i = 0; i < expressions.Count; i++)

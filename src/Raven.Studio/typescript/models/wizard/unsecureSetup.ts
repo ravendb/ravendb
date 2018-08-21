@@ -1,11 +1,14 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 import ipEntry = require("models/wizard/ipEntry");
+import nodeInfo = require("models/wizard/nodeInfo");
 
 class unsecureSetup {
+
     port = ko.observable<string>();
     tcpPort = ko.observable<string>();
     ip = ko.observable<ipEntry>();
     unsafeNetworkConfirm = ko.observable<boolean>(false);
+    localNodeTag = ko.observable<string>("A");
     
     validationGroup: KnockoutValidationGroup;
     shouldDisplayUnsafeModeWarning: KnockoutComputed<boolean>;
@@ -32,6 +35,8 @@ class unsecureSetup {
         this.tcpPort.extend({
             number: true
         });
+
+        nodeInfo.setupNodeTagValidation(this.localNodeTag);
         
         this.unsafeNetworkConfirm.extend({
             validation: [
@@ -49,14 +54,6 @@ class unsecureSetup {
             unsafeNetworkConfirm: this.unsafeNetworkConfirm,
             tcpPort: this.tcpPort
         })
-    }
-
-    toDto() : Raven.Server.Commercial.UnsecuredSetupInfo {
-        return {
-            Port: this.port() ? parseInt(this.port(), 10) : 8080,
-            Addresses: [this.ip().ip()],
-            TcpPort: this.tcpPort() ? parseInt(this.tcpPort(), 10) : 38888
-        }
     }
     
 }

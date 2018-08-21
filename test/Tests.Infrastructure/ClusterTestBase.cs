@@ -36,7 +36,7 @@ namespace Tests.Infrastructure
                 Console.WriteLine($"\tTo attach debugger to test process ({(PlatformDetails.Is32Bits ? "x86" : "x64")}), use proc-id: {currentProcess.Id}.");
         }
 
-        private const int ElectionTimeoutInMs = 300;
+        private int _electionTimeoutInMs = 300;
 
         protected readonly ConcurrentBag<IDisposable> _toDispose = new ConcurrentBag<IDisposable>();
 
@@ -144,39 +144,41 @@ namespace Tests.Infrastructure
             Exception err = null;
             while (retries-- > 0)
             {
-                if (retries != 4)
-                {
-                    await Task.Delay(TimeSpan.FromMilliseconds(500));
-                }
-
                 try
                 {
                     var leader = Servers.FirstOrDefault(s => s.ServerStore.IsLeader());
-                    if (leader == null)
-                        continue;
-                    await act(leader);
-                    return leader;
+                    if (leader != null)
+                    {
+                        await act(leader);
+                        return leader;
+                    }
                 }
                 catch (RachisTopologyChangeException e)
                 {
                     // The leader cannot remove itself, so we stepdown and try again to remove this node.
                     err = e;
                     var leader = Servers.FirstOrDefault(s => s.ServerStore.IsLeader());
-                    if (leader == null)
-                        continue;
-                    leader.ServerStore.Engine.CurrentLeader?.StepDown();
-                    using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
-                    {
-                        await leader.ServerStore.Engine.WaitForState(RachisState.Follower, cts.Token);
-                    }
+                    leader?.ServerStore.Engine.CurrentLeader?.StepDown();
                 }
                 catch (Exception e) when (e is NotLeadingException)
                 {
                     err = e;
                 }
-                
+
+                await Task.Delay(TimeSpan.FromSeconds(1));
             }
-            throw new InvalidOperationException("Failed to get leader after 5 retries.", err);
+
+            throw new InvalidOperationException($"Failed to get leader after 5 retries. {Environment.NewLine}{GetNodesStatus()}", err);
+        }
+
+        private string GetNodesStatus()
+        {
+            var servers = Servers.Select(s =>
+            {
+                var engine = s.ServerStore.Engine;
+                return $"{s.ServerStore.NodeTag} in {engine.CurrentState} at term {engine.CurrentTerm}";
+            });
+            return string.Join(Environment.NewLine, servers);
         }
 
         protected async Task<T> WaitForValueOnGroupAsync<T>(DatabaseTopology topology, Func<ServerStore, T> func, T expected)
@@ -345,13 +347,13 @@ namespace Tests.Infrastructure
             mre.Wait();
         }
 
-        protected static async Task DisposeServerAndWaitForFinishOfDisposalAsync(RavenServer serverToDispose)
+        protected static async Task DisposeServerAndWaitForFinishOfDisposalAsync(RavenServer serverToDispose, CancellationToken token = default)
         {
             var mre = new AsyncManualResetEvent();
             serverToDispose.AfterDisposal += () => mre.Set();
             serverToDispose.Dispose();
 
-            await mre.WaitAsync().ConfigureAwait(false);
+            await mre.WaitAsync(token).ConfigureAwait(false);
         }
 
         protected async Task DisposeAndRemoveServer(RavenServer serverToDispose)
@@ -418,7 +420,7 @@ namespace Tests.Infrastructure
                 await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
             // ReSharper disable once PossibleNullReferenceException
-            Assert.True(await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * ElectionTimeoutInMs),
+            Assert.True(await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * _electionTimeoutInMs),
                 "The leader has changed while waiting for cluster to become stable. Status: " + leader.ServerStore.LastStateChangeReason());
             return leader;
         }
@@ -429,11 +431,14 @@ namespace Tests.Infrastructure
             RavenServer leader = null;
             var serversToPorts = new Dictionary<RavenServer, string>();
             var clustersServers = new List<RavenServer>();
+            _electionTimeoutInMs = Math.Max(300, numberOfNodes * 80);
             for (var i = 0; i < numberOfNodes; i++)
             {
                 customSettings = customSettings ?? new Dictionary<string, string>()
                 {
                     [RavenConfiguration.GetKey(x=>x.Cluster.MoveToRehabGraceTime)] = "1",
+                    [RavenConfiguration.GetKey(x=>x.Cluster.ElectionTimeout)] = _electionTimeoutInMs.ToString(),
+                    [RavenConfiguration.GetKey(x=>x.Cluster.StabilizationTime)] = "1",
                 };
                 string serverUrl;
 
@@ -474,7 +479,7 @@ namespace Tests.Infrastructure
                 await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
             // ReSharper disable once PossibleNullReferenceException
-            var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * ElectionTimeoutInMs * 5);
+            var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * _electionTimeoutInMs * 5);
             var states = string.Empty;
             if (condition == false)
             {
@@ -524,7 +529,7 @@ namespace Tests.Infrastructure
                 await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
             }
             // ReSharper disable once PossibleNullReferenceException
-            var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * ElectionTimeoutInMs * 5);
+            var condition = await leader.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).WaitAsync(numberOfNodes * _electionTimeoutInMs * 5);
             var states = string.Empty;
             if (condition == false)
             {

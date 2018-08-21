@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Session;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -22,6 +23,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public PatchRequest Patch { get; }
         public PatchRequest PatchIfMissing { get; }
         public CommandType Type { get; } = CommandType.PATCH;
+        public bool ReturnDocument { get; private set; }
 
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
@@ -36,7 +38,15 @@ namespace Raven.Client.Documents.Commands.Batches
             if (PatchIfMissing != null)
                 json[nameof(PatchIfMissing)] = PatchIfMissing.ToJson(conventions, context);
 
+            if (ReturnDocument)
+                json[nameof(ReturnDocument)] = ReturnDocument;
+
             return json;
+        }
+
+        public void OnBeforeSaveChanges(InMemoryDocumentSessionOperations session)
+        {
+            ReturnDocument = session.IsLoaded(Id);
         }
     }
 }

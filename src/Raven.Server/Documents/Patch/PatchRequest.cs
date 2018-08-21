@@ -13,7 +13,8 @@ namespace Raven.Server.Documents.Patch
         Conflict,        
         SqlEtl,
         RavenEtl,
-        Smuggler
+        Smuggler,
+        EtlBehaviorFunctions
     }
 
     /// <summary>
@@ -97,6 +98,8 @@ function resolve(docs, hasTombstone, resolveToTombstone){{
 {Script}
 
 }}";
+                case PatchRequestType.EtlBehaviorFunctions:
+                    return Script;
                 default:
                     throw new ArgumentOutOfRangeException();
             }

@@ -313,7 +313,6 @@ class query extends viewModelBase {
         this.containsAsterixQuery = ko.pureComputed(() => this.criteria().queryText().includes("*.*"));
 
         this.staleResult = ko.pureComputed(() => {
-            //TODO: return false for test index
             const stats = this.queryStats();
             return stats ? stats.IsStale : false;
         });
@@ -594,6 +593,8 @@ class query extends viewModelBase {
         
         eventsCollector.default.reportEvent("query", "run");
         const criteria = this.criteria();
+        
+        const criteriaDto = criteria.toStorageDto();
 
         if (criteria.queryText()) {
             this.isLoading(true);
@@ -686,7 +687,7 @@ class query extends viewModelBase {
                             this.onTimingsLoaded(queryResults.timings);
                         }
                         this.saveLastQuery("");
-                        this.saveRecentQuery(optionalSavedQueryName);
+                        this.saveRecentQuery(criteriaDto, optionalSavedQueryName);
 
                         this.setupDisableReasons(); 
                     })
@@ -721,12 +722,11 @@ class query extends viewModelBase {
                     this.confirmationMessage(`Query ${this.querySaveName()} already exists`, `Overwrite existing query ?`, ["No", "Overwrite"])
                         .done(result => {
                             if (result.can) {
-                                this.saveQueryToStorage();   
+                                this.saveQueryToStorage(this.criteria().toStorageDto());   
                             }
                         });  
-                }    
-                else {
-                    this.saveQueryToStorage();
+                } else {
+                    this.saveQueryToStorage(this.criteria().toStorageDto());
                 }
             }
         } else {
@@ -736,24 +736,23 @@ class query extends viewModelBase {
         }
     }
     
-    private saveQueryToStorage() {
-        this.criteria().name(this.querySaveName());
-        this.saveQueryInStorage(false);
+    private saveQueryToStorage(criteria: storedQueryDto) {
+        criteria.name = this.querySaveName();
+        this.saveQueryInStorage(criteria, false);
         this.querySaveName(null);
         this.saveQueryValidationGroup.errors.showAllMessages(false);
         messagePublisher.reportSuccess("Query saved successfully");
     }
 
-    private saveRecentQuery(optionalSavedQueryName?: string) {
+    private saveRecentQuery(criteria: storedQueryDto, optionalSavedQueryName?: string) {
         const name = optionalSavedQueryName || this.getRecentQueryName();
-        this.criteria().name(name);
-        this.saveQueryInStorage(!optionalSavedQueryName);
+        criteria.name = name;
+        this.saveQueryInStorage(criteria, !optionalSavedQueryName);
     }
 
-    private saveQueryInStorage(isRecent: boolean) {
-        const dto = this.criteria().toStorageDto();
-        dto.recentQuery = isRecent;
-        this.appendQuery(dto);
+    private saveQueryInStorage(criteria: storedQueryDto, isRecent: boolean) {
+        criteria.recentQuery = isRecent;
+        this.appendQuery(criteria);
         savedQueriesStorage.storeSavedQueries(this.activeDatabase(), this.savedQueries());
 
         this.criteria().name("");

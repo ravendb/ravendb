@@ -24,7 +24,8 @@ import databaseGroupNode = require("models/resources/info/databaseGroupNode");
 import databaseNotificationCenterClient = require("common/databaseNotificationCenterClient");
 import changeSubscription = require("common/changeSubscription");
 import databasesManager = require("common/shell/databasesManager");
-import generalUtils = require("common/generalUtils"); 
+import generalUtils = require("common/generalUtils");
+import popoverUtils = require("common/popoverUtils");
 
 class databases extends viewModelBase {
 
@@ -144,6 +145,9 @@ class databases extends viewModelBase {
             this.statsSubscription.off();
             this.statsSubscription = null;
         }
+        
+        // make we all propovers are hidden
+        $('[data-toggle="more-nodes-tooltip"]').popover('hide');
     }
 
     private fetchDatabases(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
@@ -189,17 +193,43 @@ class databases extends viewModelBase {
     
     private initTooltips() {
         const self = this;
-        $('.databases [data-toggle="size-tooltip"]').tooltip({
-            container: "body",
-            html: true,
-            title: function() {
-                const $data = ko.dataFor(this) as databaseInfo;
-                return `Data: <strong>${self.formatBytes($data.totalSize())}</strong><br />
-                Temp: <strong>${self.formatBytes($data.totalTempBuffersSize())}</strong><br />
-                Total: <strong>${self.formatBytes($data.totalSize() + $data.totalTempBuffersSize())}</strong>
+
+        const contentProvider = (dbInfo: databaseInfo) => {
+            const nodesPart = dbInfo.nodes().map(node => {
+                return `
+                <a href="${this.createAllDocumentsUrlObservableForNode(dbInfo, node)()}" 
+                    target="${node.tag() === this.clusterManager.localNodeTag() ? "" : "_blank"}" 
+                    class="margin-left margin-right ${dbInfo.isBeingDeleted() ? "link-disabled" : ''}" 
+                    title="${node.type()}">
+                        <i class="${node.cssIcon()}"></i> <span>Node ${node.tag()}</span>
+                    </a>
                 `
-            }
-        });
+            }).join(" ");
+            
+            return `<div class="more-nodes-tooltip">
+                <div>
+                    <i class="icon-dbgroup"></i>
+                    <span>
+                        Database Group for ${dbInfo.name}
+                    </span>
+                </div>
+                <hr />
+                <div class="flex-horizontal flex-wrap">
+                    ${nodesPart}    
+                </div>
+            </div>`;
+        };
+        
+        $('.databases [data-toggle="more-nodes-tooltip"]').each((idx, element) => {
+            popoverUtils.longWithHover($(element), {
+                content: () => { 
+                    const context = ko.dataFor(element);
+                    return contentProvider(context);
+                },
+                placement: "top",
+                container: "body"
+            });
+        })
     }
 
     private filterDatabases(): void {

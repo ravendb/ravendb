@@ -1,11 +1,12 @@
 ﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
+using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
-    public class StartBackupOperation : IMaintenanceOperation
+    public class StartBackupOperation : IMaintenanceOperation<StartBackupOperationResult>
     {
         private readonly bool _isFullBackup;
         private readonly long _taskId;
@@ -16,12 +17,12 @@ namespace Raven.Client.Documents.Operations.Backups
             _taskId = taskId;
         }
 
-        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<StartBackupOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new StartBackupCommand(_isFullBackup, _taskId);
         }
 
-        private class StartBackupCommand : RavenCommand
+        private class StartBackupCommand : RavenCommand<StartBackupOperationResult>
         {
             public override bool IsReadRequest => true;
 
@@ -44,6 +45,21 @@ namespace Raven.Client.Documents.Operations.Backups
 
                 return request;
             }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    ThrowInvalidResponse();
+
+                Result = JsonDeserializationClient.BackupDatabaseNowResult(response);
+            }
         }
-    }    
+    }
+
+    public class StartBackupOperationResult
+    {
+        public string ResponsibleNode { get; set; }
+
+        public int OperationId { get; set; }
+    }
 }

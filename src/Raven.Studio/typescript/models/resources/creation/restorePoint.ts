@@ -8,6 +8,7 @@ class restorePoint {
     fileName: string;
     isSnapshotRestore: boolean;
     isIncremental: boolean;
+    isEncrypted: boolean;
     filesToRestore: number;
     databaseName = ko.observable<string>();
     nodeTag: string;
@@ -21,6 +22,7 @@ class restorePoint {
         this.fileName = dto.FileName;
         this.isSnapshotRestore = dto.IsSnapshotRestore;
         this.isIncremental = dto.IsIncremental;
+        this.isEncrypted = dto.IsEncrypted;
         this.filesToRestore = dto.FilesToRestore;
         this.databaseName(dto.DatabaseName);
         this.nodeTag = dto.NodeTag || "-";
@@ -32,8 +34,7 @@ class restorePoint {
                     backupType = "Incremental ";
                 }
                 backupType += "Snapshot";
-            }
-            else if (this.isIncremental) {
+            } else if (this.isIncremental) {
                 backupType = "Incremental";
             } else {
                 backupType = "Full";

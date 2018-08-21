@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <RuntimeFrameworkVersion>2.1.1</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>2.1.2</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>SlowTests</AssemblyName>
     <PackageId>SlowTests</PackageId>
@@ -38,6 +38,7 @@
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values.txt" />
     <EmbeddedResource Include="Data\places.txt" />
     <EmbeddedResource Include="Data\RavenDB_10404\northwind.4.0.0.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_11664\1.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_9912\2.ravendbdump" />
     <EmbeddedResource Include="Data\testing.ravendbdump" />
@@ -49,7 +50,6 @@
     <EmbeddedResource Include="Smuggler\Revisions_3.5.35220.ravendbdump" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Raven.Embedded\Raven.Embedded.csproj" />
     <ProjectReference Include="..\..\src\Raven.TestDriver\Raven.TestDriver.csproj" />
     <ProjectReference Include="..\..\src\Sparrow\Sparrow.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
@@ -57,9 +57,9 @@
     <ProjectReference Include="..\Tests.Infrastructure\Tests.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.8.0-preview-20180610-02" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0-beta.2.build4010" />
-    <PackageReference Include="xunit" Version="2.4.0-beta.2.build4010" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.8.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />
+    <PackageReference Include="xunit" Version="2.4.0" />
     <DotNetCliToolReference Include="dotnet-xunit" Version="2.4.0-beta.1.build9999" />
   </ItemGroup>
   <ItemGroup>

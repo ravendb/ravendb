@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
@@ -57,7 +56,7 @@ namespace RachisTests
             var leader = await CreateNetworkAndGetLeader(3);
             Assert.True(await leader.AddToClusterAsync(node4.Url).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)), "non existing node should be able to join the cluster");
             Assert.True(await leader.AddToClusterAsync(node5.Url).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)), "non existing node should be able to join the cluster");
-            var t = IssueCommandsAndWaitForCommit(leader, 3, "test", 1);
+            var t = IssueCommandsAndWaitForCommit(3, "test", 1);
             Assert.True(await t.WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 2)), "Commands were not committed in time although there is a majority of active nodes in the cluster");
 
             ReconnectToNode(node4);
@@ -85,7 +84,7 @@ namespace RachisTests
         {
             var leader = await CreateNetworkAndGetLeader(3);
             await Assert.ThrowsAsync<InvalidOperationException>(
-                () => leader.RemoveFromClusterAsync("http://not-a-real-url.com"));
+                () => leader.RemoveFromClusterAsync("ABCD"));
         }
 
         [Theory]
@@ -111,16 +110,17 @@ namespace RachisTests
             var clusterSize = 3;
             var leader = await CreateNetworkAndGetLeader(clusterSize);
             var follower = GetRandomFollower();
+            var url = follower.Url;
             var oldTag = follower.Tag;
             Assert.True(await leader.RemoveFromClusterAsync(oldTag).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 10)), "Was unable to remove node from cluster in time");
             foreach (var node in RachisConsensuses)
             {
-                if (node.Url == follower.Url)
+                if (node.Url == url)
                     continue;
                 Assert.True(await node.WaitForTopology(Leader.TopologyModification.Remove, follower.Tag).WaitAsync(TimeSpan.FromMilliseconds(node.ElectionTimeout.TotalMilliseconds * 10)), "Node was not removed from topology in time");
             }
-            Assert.True(await leader.AddToClusterAsync(follower.Url, follower.Tag).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5)));
-            Assert.True(await follower.WaitForTopology(Leader.TopologyModification.Voter).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5))); ;
+            Assert.True(await leader.AddToClusterAsync(url, follower.Tag).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5)));
+            Assert.True(await follower.WaitForTopology(Leader.TopologyModification.Voter).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5)));
 
             using (leader.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())

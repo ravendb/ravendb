@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Operations.Counters;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Explanation;
 using Sparrow.Json;
 
@@ -29,9 +31,20 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException();
         }
 
+        public override void AddCounterIncludes(IncludeCountersCommand includeCountersCommand)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override Dictionary<string, List<CounterDetail>> GetCounterIncludes()
+        {
+            throw new NotSupportedException();
+        }
+
         public override bool SupportsExceptionHandling => false;
         public override bool SupportsInclude => false;
         public override bool SupportsHighlighting => false;
         public override bool SupportsExplanations => false;
+
     }
 }

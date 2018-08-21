@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
@@ -56,6 +57,8 @@ namespace Raven.Client.ServerWide.Operations
         public int ReplicationFactor { get; set; }
         public bool DynamicNodesDistribution { get; set; }
         public Dictionary<string, DeletionInProgressStatus> DeletionInProgress { get; set; }
+        
+        public StudioConfiguration.StudioEnvironment Environment { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -91,7 +94,8 @@ namespace Raven.Client.ServerWide.Operations
                 [nameof(NodesTopology)] = NodesTopology?.ToJson(),
                 [nameof(ReplicationFactor)] = ReplicationFactor,
                 [nameof(DynamicNodesDistribution)] = DynamicNodesDistribution,
-                [nameof(DeletionInProgress)] = DynamicJsonValue.Convert(DeletionInProgress)
+                [nameof(DeletionInProgress)] = DynamicJsonValue.Convert(DeletionInProgress),
+                [nameof(Environment)] = Environment
             };
         }
     }

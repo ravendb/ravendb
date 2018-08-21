@@ -40,6 +40,15 @@ function getManageServerMenuItem() {
             enabled: access.enableClientConfigurationMenuItem
         }),
         new leafMenuItem({
+            route: 'admin/settings/studioConfiguration',
+            moduleId: 'viewmodels/manage/studioConfiguration',
+            title: 'Studio Configuration',
+            nav: true,
+            css: 'icon-studio-configuration',
+            dynamicHash: appUrl.forGlobalStudioConfiguration,
+            enabled: access.enableStudioConfigurationMenuItem
+        }),
+        new leafMenuItem({
             route: 'admin/settings/adminJsConsole',
             moduleId: "viewmodels/manage/adminJsConsole",
             title: "Admin JS Console",

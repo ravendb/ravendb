@@ -27,9 +27,10 @@ namespace Raven.Server.Utils
         /// <returns>An instance of the Process class.</returns>
         public static Process GetParentProcess()
         {
-            using (var currentProcess = Process.GetCurrentProcess())
+            using (var process = Process.GetCurrentProcess())
+            using (var processHandle = process.SafeHandle)
             {
-                return GetParentProcess(currentProcess.Id);
+                return GetParentProcess(processHandle.DangerousGetHandle());
             }
         }
 
@@ -40,7 +41,7 @@ namespace Raven.Server.Utils
         /// <returns>An instance of the Process class.</returns>
         public static Process GetParentProcess(int processId)
         {
-            Process process = Process.GetProcessById(processId);
+            using (var process = Process.GetProcessById(processId))
             using (var processHandle = process.SafeHandle)
             {
                 return GetParentProcess(processHandle.DangerousGetHandle());
@@ -52,10 +53,10 @@ namespace Raven.Server.Utils
         /// </summary>
         /// <param name="handle">The process handle.</param>
         /// <returns>An instance of the Process class or null if an error occurred.</returns>
-        public static Process GetParentProcess(IntPtr handle)
+        private static Process GetParentProcess(IntPtr handle)
         {
-            ParentProcessUtilities pbi = new ParentProcessUtilities();
-            int status = NtQueryInformationProcess(handle, 0, ref pbi, Marshal.SizeOf(pbi), out int _);
+            var pbi = new ParentProcessUtilities();
+            var status = NtQueryInformationProcess(handle, 0, ref pbi, Marshal.SizeOf(pbi), out int _);
             if (status != 0)
                 return null;
 

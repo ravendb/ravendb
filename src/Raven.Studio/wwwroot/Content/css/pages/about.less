@@ -13,6 +13,15 @@
         padding: 6px 9px;
     }
 
+    .big-button {
+        white-space: normal;
+        align-items: center;
+
+        small {
+            max-width: 185px;
+        }
+    }
+
     .big-label, .big-button {
         display: flex;
         text-align: left;
@@ -71,10 +80,10 @@
         align-items: stretch;
         flex-grow: 1;
         flex-wrap: wrap;
-        
+
         &.no-license {
             align-items: start;
-            
+
             .support-properties {
                 display: none;
             }
@@ -106,7 +115,9 @@
         grid-gap: @grid-gutter-width;
 
         @media (min-width: @screen-sm) {
-            grid-template-columns: 1fr 1fr;
+            grid-auto-flow: column;
+            grid-template-columns: auto auto;
+            grid-template-rows: auto auto;
         }
     }
 

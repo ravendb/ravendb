@@ -99,12 +99,18 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
-        public void AddAlias(string alias)
+        public WhereToken AddAlias(string alias)
         {
             if (FieldName == "id()")
-                return;
+                return this;
 
-            FieldName = alias + "." + FieldName;
+            return new WhereToken
+            {
+                FieldName = alias + "." + FieldName,
+                ParameterName = ParameterName,
+                WhereOperator = WhereOperator,
+                Options = Options
+            };
         }
 
         private bool WriteMethod(StringBuilder writer)

@@ -3,7 +3,6 @@
 import database = require("models/resources/database");
 import activeDatabase = require("common/shell/activeDatabaseTracker");
 import router = require("plugins/router");
-import collection = require("models/database/documents/collection");
 import messagePublisher = require("common/messagePublisher");
 import databaseInfo = require("models/resources/info/databaseInfo");
 
@@ -30,6 +29,7 @@ class appUrl {
         databases: ko.pureComputed(() => appUrl.forDatabases()),
         manageDatabaseGroup: ko.pureComputed(() => appUrl.forManageDatabaseGroup(appUrl.currentDatabase())),
         clientConfiguration: ko.pureComputed(() => appUrl.forClientConfiguration(appUrl.currentDatabase())),
+        studioConfiguration: ko.pureComputed(() => appUrl.forStudioConfiguration(appUrl.currentDatabase())),
         documents: ko.pureComputed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
         revisionsBin: ko.pureComputed(() => appUrl.forRevisionsBin(appUrl.currentDatabase())),
         conflicts: ko.pureComputed(() => appUrl.forConflicts(appUrl.currentDatabase())),
@@ -49,6 +49,7 @@ class appUrl {
         importCollectionFromCsv: ko.pureComputed(() => appUrl.forImportCollectionFromCsv(appUrl.currentDatabase())),
         importDatabaseFromSql: ko.pureComputed(() => appUrl.forImportFromSql(appUrl.currentDatabase())),
         exportDatabaseUrl: ko.pureComputed(() => appUrl.forExportDatabase(appUrl.currentDatabase())),
+        migrateRavenDbDatabaseUrl: ko.pureComputed(() => appUrl.forMigrateRavenDbDatabase(appUrl.currentDatabase())),
         migrateDatabaseUrl: ko.pureComputed(() => appUrl.forMigrateDatabase(appUrl.currentDatabase())),
         sampleDataUrl: ko.pureComputed(() => appUrl.forSampleData(appUrl.currentDatabase())),
         ongoingTasksUrl: ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase())),
@@ -79,8 +80,6 @@ class appUrl {
         isAreaActive: (routeRoot: string) => ko.pureComputed(() => appUrl.checkIsAreaActive(routeRoot)),
         isActive: (routeTitle: string) => ko.pureComputed(() => router.navigationModel().find(m => m.isActive() && m.title === routeTitle) != null),
         databasesManagement: ko.pureComputed(() => appUrl.forDatabases()),
-        
-
     };
 
     static checkIsAreaActive(routeRoot: string): boolean {
@@ -129,7 +128,11 @@ class appUrl {
     static forGlobalClientConfiguration(): string {
         return "#admin/settings/clientConfiguration";
     }
-    
+
+    static forGlobalStudioConfiguration(): string {
+        return "#admin/settings/studioConfiguration";
+    }
+
     static forCertificates(): string {
         return "#admin/settings/certificates";
     }
@@ -260,6 +263,10 @@ class appUrl {
         return "#databases/settings/clientConfiguration?" + appUrl.getEncodedDbPart(db);
     }
 
+    static forStudioConfiguration(db: database | databaseInfo): string {
+        return "#databases/settings/studioConfiguration?" + appUrl.getEncodedDbPart(db);
+    }
+
     static forDocuments(collectionName: string, db: database | databaseInfo | string): string {
         if (collectionName === "All Documents")
             collectionName = null;
@@ -276,7 +283,7 @@ class appUrl {
 
     static forDocumentsByDatabaseName(collection: string, dbName: string): string {
         const collectionPart = collection ? "collection=" + encodeURIComponent(collection) : "";
-        return "#/databases/documents?" + collectionPart + "&database=" + encodeURIComponent(dbName);;
+        return "#/databases/documents?" + collectionPart + "&database=" + encodeURIComponent(dbName);
     }
 
     static forCmpXchg(db: database | databaseInfo): string {
@@ -360,9 +367,14 @@ class appUrl {
         return "#databases/tasks/exportDatabase?" + databasePart;
     }
 
+    static forMigrateRavenDbDatabase(db: database | databaseInfo): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/tasks/import/migrateRavenDB?" + databasePart;
+    }
+
     static forMigrateDatabase(db: database | databaseInfo): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/import/migrate?" + databasePart;//TODO: update? 
+        return "#databases/tasks/import/migrate?" + databasePart;
     }
 
     static forOngoingTasks(db: database | databaseInfo): string {

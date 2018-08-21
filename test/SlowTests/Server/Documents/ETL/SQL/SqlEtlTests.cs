@@ -23,6 +23,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
+using Raven.Server.Documents.ETL.Providers.SQL.Test;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -585,8 +586,10 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
             }
         }
 
-        [Fact]
-        public async Task SimulationTest()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanTestScript(bool performRolledBackTransaction)
         {
             using (var store = GetDocumentStore())
             {
@@ -617,45 +620,46 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    for (int i = 0; i < 2; i++)
+                    var result = (SqlEtlTestScriptResult) SqlEtl.TestScript(new TestSqlEtlScript
                     {
-                        var result = SqlEtl.SimulateSqlEtl(new SimulateSqlEtl
+                        PerformRolledBackTransaction = performRolledBackTransaction,
+                        DocumentId = "orders/1-A",
+                        Configuration = new SqlEtlConfiguration()
                         {
-                            PerformRolledBackTransaction = i % 2 != 0,
-                            DocumentId = "orders/1-A",
-                            Configuration = new SqlEtlConfiguration()
+                            Name = "simulate",
+                            ConnectionStringName = "simulate",
+                            SqlTables =
                             {
-                                Name = "simulate",
-                                ConnectionStringName = "simulate",
-                                SqlTables =
+                                new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
+                                new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId"},
+                            },
+                            Transforms =
+                            {
+                                new Transformation()
                                 {
-                                    new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
-                                    new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId"},
-                                },
-                                Transforms =
-                                {
-                                    new Transformation()
-                                    {
-                                        Collections = {"Orders"},
-                                        Name = "OrdersAndLines",
-                                        Script = defaultScript
-                                    }
+                                    Collections = {"Orders"},
+                                    Name = "OrdersAndLines",
+                                    Script = defaultScript + "output('test output')"
                                 }
                             }
-                        }, database, database.ServerStore, context);
+                        }
+                    }, database, database.ServerStore, context);
 
-                        Assert.Null(result.LastAlert);
-                        Assert.Equal(2, result.Summary.Count);
+                    Assert.Equal(0, result.TransformationErrors.Count);
+                    Assert.Equal(0, result.LoadErrors.Count);
+                    Assert.Equal(0, result.SlowSqlWarnings.Count);
 
-                        var orderLines = result.Summary.First(x => x.TableName == "OrderLines");
+                    Assert.Equal(2, result.Summary.Count);
 
-                        Assert.Equal(3, orderLines.Commands.Length); // delete and two inserts
+                    var orderLines = result.Summary.First(x => x.TableName == "OrderLines");
 
-                        var orders = result.Summary.First(x => x.TableName == "Orders");
+                    Assert.Equal(3, orderLines.Commands.Length); // delete and two inserts
 
-                        Assert.Equal(2, orders.Commands.Length); // delete and insert
-                    }
+                    var orders = result.Summary.First(x => x.TableName == "Orders");
 
+                    Assert.Equal(2, orders.Commands.Length); // delete and insert
+
+                    Assert.Equal("test output", result.DebugOutput[0]);
                 }
             }
         }

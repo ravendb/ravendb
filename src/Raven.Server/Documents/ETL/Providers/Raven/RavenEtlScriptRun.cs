@@ -12,17 +12,19 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
     {
         private readonly List<ICommandData> _deletes = new List<ICommandData>();
 
-        private Dictionary<JsValue, (string Id, BlittableJsonReaderObject Document)> _puts;
+        private Dictionary<JsValue, (string Id, BlittableJsonReaderObject Document)> _putsByJsReference;
         
         private Dictionary<JsValue, List<(string Name, Attachment Attachment)>> _addAttachments;
 
-        private Dictionary<JsValue, List<(string Name, long Value)>> _addCounters;
-
         private Dictionary<JsValue, Attachment> _loadedAttachments;
 
-        private Dictionary<JsValue, (string Name, long Value)> _loadedCounters;
+        private Dictionary<JsValue, List<CounterOperation>> _countersByJsReference;
 
-        private List<ICommandData> _fullDocuments; // including attachments and counters
+        private Dictionary<LazyStringValue, List<CounterOperation>> _countersByDocumentId;
+
+        private Dictionary<JsValue, (string Name, long Value)> _loadedCountersByJsReference;
+
+        private List<ICommandData> _fullDocuments;
 
         public void Delete(ICommandData command)
         {
@@ -31,8 +33,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             _deletes.Add(command);
         }
 
-        public void PutDocumentAttachmentsAndCounters(string id, BlittableJsonReaderObject doc, List<Attachment> attachments,
-            List<(string CounterName, long Value)> counters)
+        public void PutFullDocument(string id, BlittableJsonReaderObject doc, List<Attachment> attachments, List<(string CounterName, long CounterValue)> counters)
         {
             if (_fullDocuments == null)
                 _fullDocuments = new List<ICommandData>();
@@ -55,13 +56,16 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 {
                     counterOperations.Add(new CounterOperation()
                     {
-                        Type = CounterOperationType.Increment,
+                        Type = CounterOperationType.Put,
                         CounterName = counter.CounterName,
-                        Delta = counter.Value
+                        Delta = counter.CounterValue
                     });
                 }
 
-                _fullDocuments.Add(new CountersBatchCommandData(id, counterOperations));
+                _fullDocuments.Add(new CountersBatchCommandData(id, counterOperations)
+                {
+                    FromEtl = true
+                });
             }
         }
 
@@ -69,10 +73,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             Debug.Assert(instance != null);
 
-            if (_puts == null)
-                _puts = new Dictionary<JsValue, (string Id, BlittableJsonReaderObject)>(ReferenceEqualityComparer<JsValue>.Default);
+            if (_putsByJsReference == null)
+                _putsByJsReference = new Dictionary<JsValue, (string Id, BlittableJsonReaderObject)>(ReferenceEqualityComparer<JsValue>.Default);
 
-            _puts.Add(instance, (id, doc));
+            _putsByJsReference.Add(instance, (id, doc));
         }
 
         public void LoadAttachment(JsValue attachmentReference, Attachment attachment)
@@ -85,10 +89,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         public void LoadCounter(JsValue counterReference, string name, long value)
         {
-            if (_loadedCounters == null)
-                _loadedCounters = new Dictionary<JsValue, (string, long)>(ReferenceEqualityComparer<JsValue>.Default);
+            if (_loadedCountersByJsReference == null)
+                _loadedCountersByJsReference = new Dictionary<JsValue, (string, long)>(ReferenceEqualityComparer<JsValue>.Default);
 
-            _loadedCounters.Add(counterReference, (name, value));
+            _loadedCountersByJsReference.Add(counterReference, (name, value));
         }
 
         public void AddAttachment(JsValue instance, string name, JsValue attachmentReference)
@@ -107,20 +111,67 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             attachments.Add((name ?? attachment.Name, attachment));
         }
 
-        public void AddCounter(JsValue instance, string name, JsValue counterReference)
+        public void DeleteAttachment(string documentId, string name)
         {
-            var counter = _loadedCounters[counterReference];
+            _deletes.Add(new DeleteAttachmentCommandData(documentId, name, null));
+        }
 
-            if (_addCounters == null)
-                _addCounters = new Dictionary<JsValue, List<(string, long)>>(ReferenceEqualityComparer<JsValue>.Default);
+        public void AddCounter(JsValue instance, JsValue counterReference)
+        {
+            var counter = _loadedCountersByJsReference[counterReference];
 
-            if (_addCounters.TryGetValue(instance, out var counters) == false)
+            if (_countersByJsReference == null)
+                _countersByJsReference = new Dictionary<JsValue, List<CounterOperation>>(ReferenceEqualityComparer<JsValue>.Default);
+
+            if (_countersByJsReference.TryGetValue(instance, out var operations) == false)
             {
-                counters = new List<(string, long)>();
-                _addCounters.Add(instance, counters);
+                operations = new List<CounterOperation>();
+                _countersByJsReference.Add(instance, operations);
             }
 
-            counters.Add((name ?? counter.Name, counter.Value));
+            operations.Add(new CounterOperation
+            {
+                CounterName = counter.Name,
+                Delta = counter.Value,
+                Type = CounterOperationType.Put
+            });
+        }
+
+        public void AddCounter(LazyStringValue documentId, string counterName, long value)
+        {
+            if (_countersByDocumentId == null)
+                _countersByDocumentId = new Dictionary<LazyStringValue, List<CounterOperation>>(LazyStringValueComparer.Instance);
+
+            if (_countersByDocumentId.TryGetValue(documentId, out var counters) == false)
+            {
+                counters = new List<CounterOperation>();
+                _countersByDocumentId.Add(documentId, counters);
+            }
+
+            counters.Add(new CounterOperation
+            {
+                CounterName = counterName,
+                Delta = value,
+                Type = CounterOperationType.Put
+            });
+        }
+
+        public void DeleteCounter(LazyStringValue documentId, string counterName)
+        {
+            if (_countersByDocumentId == null)
+                _countersByDocumentId = new Dictionary<LazyStringValue, List<CounterOperation>>(LazyStringValueComparer.Instance);
+
+            if (_countersByDocumentId.TryGetValue(documentId, out var counters) == false)
+            {
+                counters = new List<CounterOperation>();
+                _countersByDocumentId.Add(documentId, counters);
+            }
+
+            counters.Add(new CounterOperation
+            {
+                CounterName = counterName,
+                Type = CounterOperationType.Delete
+            });
         }
 
         public List<ICommandData> GetCommands()
@@ -136,9 +187,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 }
             }
 
-            if (_puts != null)
+            if (_putsByJsReference != null)
             {
-                foreach (var put in _puts)
+                foreach (var put in _putsByJsReference)
                 {
                     commands.Add(new PutCommandDataWithBlittableJson(put.Value.Id, null, put.Value.Document));
 
@@ -151,22 +202,24 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         }
                     }
 
-                    if (_addCounters != null && _addCounters.TryGetValue(put.Key, out var counters))
+                    if (_countersByJsReference != null && _countersByJsReference.TryGetValue(put.Key, out var counterOperations))
                     {
-                        var counterOperations = new List<CounterOperation>();
-
-                        foreach (var counter in counters)
+                        commands.Add(new CountersBatchCommandData(put.Value.Id, counterOperations)
                         {
-                            counterOperations.Add(new CounterOperation()
-                            {
-                                Type = CounterOperationType.Increment,
-                                CounterName = counter.Name,
-                                Delta = counter.Value
-                            });
-                        }
-
-                        commands.Add(new CountersBatchCommandData(put.Value.Id, counterOperations));
+                            FromEtl = true
+                        });
                     }
+                }
+            }
+
+            if (_countersByDocumentId != null)
+            {
+                foreach (var counter in _countersByDocumentId)
+                {
+                    commands.Add(new CountersBatchCommandData(counter.Key, counter.Value)
+                    {
+                        FromEtl = true
+                    });
                 }
             }
             

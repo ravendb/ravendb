@@ -677,7 +677,6 @@ class ioStats extends viewModelBase {
             env.Files.forEach(file => {
                 file.Recent.forEach((recentItem: IOMetricsRecentStatsWithCache) => {
 
-                    // TODO: Maybe create algorithm to calculate the exact color to be painted in the brush section for the Accumulated Data,
                     //       Similar to what I did in indexing performance....  For now a default high color is used                       
                     context.fillStyle = this.calcItemColor(recentItem, false);
 
@@ -1095,8 +1094,7 @@ class ioStats extends viewModelBase {
                 if (currentEnd > joinedDurations[joinedIndex][1]) {
                     joinedDurations[joinedIndex][1] = currentEnd;
                 }
-            }
-            else {
+            } else {
                 joinedIndex++;
                 joinedDurations.push(durationsInfo[i]);
             }
@@ -1264,8 +1262,7 @@ class ioStats extends viewModelBase {
             // Check if data is an IOStats json data..
             if (!importedData.hasOwnProperty('Environments')) {
                 messagePublisher.reportError("Invalid IO Stats file format", undefined, undefined);
-            }
-            else {
+            } else {
                 if (this.hasAnyData()) {
                     this.resetGraphData();
                 }
@@ -1326,8 +1323,7 @@ class ioStats extends viewModelBase {
 
         if (this.isImport()) {
             exportFileName = this.importFileName().substring(0, this.importFileName().lastIndexOf('.'));
-        }
-        else {
+        } else {
             exportFileName = `IOStats-of-${this.activeDatabase().name}-${moment().format("YYYY-MM-DD-HH-mm")}`;
         }
 

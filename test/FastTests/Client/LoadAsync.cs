@@ -40,34 +40,5 @@ namespace FastTests.Client
                 }
             }
         }
-
-        [Fact]
-        public async Task Should_not_allow_to_execute_more_than_one_async_loads_at_the_same_time()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User { Name = "RavenDB" }, "users/1");
-                    await session.StoreAsync(new User { Name = "RavenDB" }, "users/2");
-                    await session.StoreAsync(new User { Name = "RavenDB" }, "users/3");
-
-                    await session.SaveChangesAsync();
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var load1 = session.LoadAsync<User>("users/1");
-                    var load2 = session.LoadAsync<User>("users/2");
-                    var load3 = session.LoadAsync<User>("users/3");
-
-                    await Assert.ThrowsAsync<InvalidOperationException>(
-                        async () =>
-                        {
-                            await Task.WhenAll(load1, load2, load3);
-                        });                   
-                }
-            }
-        }
     }
 }

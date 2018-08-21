@@ -32,10 +32,6 @@ class databasesManager {
         (q, n) => savedPatchesStorage.onDatabaseDeleted(q, n)
     ] as Array<(qualifier: string, name: string) => void>;
 
-    constructor() { 
-        ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (db: database) => this.reloadDataAfterReconnection(db));
-    }
-
     getDatabaseByName(name: string): database {
         if (!name) {
             return null;
@@ -112,42 +108,10 @@ class databasesManager {
         return task;
     }
 
-    private fetchStudioConfigForDatabase(db: database) {
-        //TODO: fetch hot spare and studio config 
-    }
-
     activate(db: database): JQueryPromise<void> {
         this.changesContext.changeDatabase(db);
 
         return this.activeDatabaseTracker.onActivation(db);
-    }
-
-    private reloadDataAfterReconnection(db: database) {
-        /* TODO:
-        shell.fetchStudioConfig();
-        this.fetchServerBuildVersion();
-        this.fetchClientBuildVersion();
-        shell.fetchLicenseStatus();
-        this.fetchSupportCoverage();
-        this.fetchClusterTopology();
-        */
-
-                 /* TODO: redirect to resources page if current database if no longer available on list
-
-                var activeDatabase = this.activeDatabase();
-                var actualDatabaseObservableArray = databaseObservableArray();
-
-                if (!!activeDatabase && !_.includes(actualDatabaseObservableArray(), activeDatabase)) {
-                    if (actualDatabaseObservableArray.length > 0) {
-                        databaseObservableArray().first().activate();
-                    } else { //if (actualDatabaseObservableArray.length == 0)
-                        shell.disconnectFromDatabaseChangesApi();
-                        this.activeDatabase(null);
-                    }
-
-                    this.navigate(appUrl.forDatabases());
-                }
-            }*/
     }
 
     private updateDatabases(incomingData: Raven.Client.ServerWide.Operations.DatabasesInfo) {
@@ -200,7 +164,6 @@ class databasesManager {
 
         serverWideClient.watchAllDatabaseChanges(e => this.onDatabaseUpdateReceivedViaChangesApi(e));
         serverWideClient.watchReconnect(() => this.refreshDatabases());
-            //TODO: DO: this.globalChangesApi.watchDocsStartingWith(shell.studioConfigDocumentId, () => shell.fetchStudioConfig()),*/
     }
 
     private onDatabaseUpdateReceivedViaChangesApi(event: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) {

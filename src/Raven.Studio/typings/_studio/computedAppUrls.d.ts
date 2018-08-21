@@ -6,6 +6,7 @@ interface computedAppUrls {
     serverDashboard: KnockoutComputed<string>;
     manageDatabaseGroup: KnockoutComputed<string>;
     clientConfiguration: KnockoutComputed<string>;
+    studioConfiguration: KnockoutComputed<string>;
     documents: KnockoutComputed<string>;
     revisionsBin: KnockoutComputed<string>;
     conflicts: KnockoutComputed<string>;
@@ -25,6 +26,7 @@ interface computedAppUrls {
     importCollectionFromCsv: KnockoutComputed<string>;
     importDatabaseFromSql: KnockoutComputed<string>;
     exportDatabaseUrl: KnockoutComputed<string>;
+    migrateRavenDbDatabaseUrl: KnockoutComputed<string>;
     migrateDatabaseUrl: KnockoutComputed<string>;
     sampleDataUrl: KnockoutComputed<string>;
     ongoingTasksUrl: KnockoutComputed<string>;

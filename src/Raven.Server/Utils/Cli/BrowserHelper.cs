@@ -6,7 +6,7 @@ namespace Raven.Server.Utils.Cli
 {
     public static class BrowserHelper
     {
-        public static void OpenStudioInBrowser(string url)
+        public static bool OpenStudioInBrowser(string url, Action<object> onError = null)
         {
             try
             {
@@ -14,14 +14,30 @@ namespace Raven.Server.Utils.Cli
                 {
                     Process.Start(new ProcessStartInfo("cmd", $"/c start {url}"));
                 }
+                else if (PlatformDetails.RunningOnMacOsx)
+                {
+                    Process.Start("open", url);
+                }
                 else
                 {
                     Process.Start("xdg-open", url);
                 }
+
+                return true;
             }
             catch (Exception e)
             {
-                Console.WriteLine("Could not start browser: " + e.Message);
+                var error = $"Could not start browser: {e}";
+                if (onError != null)
+                {
+                    onError.Invoke(error);
+                }
+                else
+                {
+                    Console.WriteLine(error);
+                }
+                    
+                return false;
             }
         }
     }

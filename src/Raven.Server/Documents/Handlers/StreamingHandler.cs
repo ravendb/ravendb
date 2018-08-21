@@ -126,8 +126,9 @@ namespace Raven.Server.Documents.Handlers
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
                 
                 // set the exported file name
-                string fileName = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName : "query_result";
-                
+                string fileName = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
+                fileName = $"{Database.Name}_{fileName}"; 
+
                 using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileName))
                 {
                     try

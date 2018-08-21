@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using Jint.Native;
 using Jint.Runtime;
 using Jint.Runtime.Interop;
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         private Dictionary<string, Queue<Attachment>> _loadedAttachments;
 
         public SqlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
-            : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SqlEtl))
+            : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SqlEtl), null)
         {
             _transformation = transformation;
             _config = config;
@@ -37,19 +38,19 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
             LoadToDestinations = tables;
 
-            if (_transformation.IsHandlingAttachments)
+            if (_transformation.IsLoadingAttachments)
                _loadedAttachments = new Dictionary<string, Queue<Attachment>>(StringComparer.OrdinalIgnoreCase);
         }
 
-        public override void Initalize()
+        public override void Initalize(bool debugMode)
         {
-            base.Initalize();
+            base.Initalize(debugMode);
             
-            SingleRun.ScriptEngine.SetValue("varchar",
-                new ClrFunctionInstance(SingleRun.ScriptEngine, (value, values) => ToVarcharTranslator(VarcharFunctionCall.AnsiStringType, values)));
+            DocumentScript.ScriptEngine.SetValue("varchar",
+                new ClrFunctionInstance(DocumentScript.ScriptEngine, (value, values) => ToVarcharTranslator(VarcharFunctionCall.AnsiStringType, values)));
 
-            SingleRun.ScriptEngine.SetValue("nvarchar",
-                new ClrFunctionInstance(SingleRun.ScriptEngine, (value, values) => ToVarcharTranslator(VarcharFunctionCall.StringType, values)));
+            DocumentScript.ScriptEngine.SetValue("nvarchar",
+                new ClrFunctionInstance(DocumentScript.ScriptEngine, (value, values) => ToVarcharTranslator(VarcharFunctionCall.StringType, values)));
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -74,7 +75,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     Type = prop.Token
                 };
 
-                if (_transformation.IsHandlingAttachments && 
+                if (_transformation.IsLoadingAttachments && 
                     prop.Token == BlittableJsonToken.String && IsLoadAttachment(prop.Value as LazyStringValue, out var attachmentName))
                 {
                     var attachment = _loadedAttachments[attachmentName].Dequeue();
@@ -92,6 +93,28 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             });
         }
 
+        private static unsafe bool IsLoadAttachment(LazyStringValue value, out string attachmentName)
+        {
+            if (value.Length <= Transformation.AttachmentMarker.Length)
+            {
+                attachmentName = null;
+                return false;
+            }
+
+            var buffer = value.Buffer;
+
+            if (*(long*)buffer != 7883660417928814884 || // $attachm
+                *(int*)(buffer + 8) != 796159589) // ent/
+            {
+                attachmentName = null;
+                return false;
+            }
+
+            attachmentName = value.Substring(Transformation.AttachmentMarker.Length);
+
+            return true;
+        }
+
         protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
         {
             if (_loadedAttachments.TryGetValue(name, out var loadedAttachments) == false)
@@ -105,7 +128,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         protected override void AddLoadedCounter(JsValue reference, string name, long value)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException("Counters aren't supported by SQL ETL");
         }
 
         private SqlTableWithRecords GetOrAdd(string tableName)
@@ -119,9 +142,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return table;
         }
 
-        public override IEnumerable<SqlTableWithRecords> GetTransformedResults()
+        public override List<SqlTableWithRecords> GetTransformedResults()
         {
-            return _tables.Values;
+            return _tables.Values.ToList();
         }
 
         public override void Transform(ToSqlItem item)
@@ -130,7 +153,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             {
                 Current = item;
 
-                SingleRun.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
+                DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
             }
 
             // ReSharper disable once ForCanBeConvertedToForeach
@@ -157,7 +180,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             if (sizeSpecified && args[1].IsNumber() == false)
                 throw new InvalidOperationException("varchar() / nvarchar(): second argument must be a number");
 
-            var item = SingleRun.ScriptEngine.Object.Construct(Arguments.Empty);
+            var item = DocumentScript.ScriptEngine.Object.Construct(Arguments.Empty);
 
             item.Put(nameof(VarcharFunctionCall.Type), type, true);
             item.Put(nameof(VarcharFunctionCall.Value), args[0], true);

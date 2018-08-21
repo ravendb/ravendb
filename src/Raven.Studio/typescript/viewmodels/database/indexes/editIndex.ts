@@ -20,12 +20,14 @@ import getIndexFieldsFromMapCommand = require("commands/database/index/getIndexF
 import configurationItem = require("models/database/index/configurationItem");
 import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 import eventsCollector = require("common/eventsCollector");
-import popoverUtils = require("common/popoverUtils");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import formatIndexCommand = require("commands/database/index/formatIndexCommand");
 import additionalSource = require("models/database/index/additionalSource");
 import index = require("models/database/index/index");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import mapIndexSyntax = require("viewmodels/database/indexes/mapIndexSyntax");
+import mapReduceIndexSyntax = require("viewmodels/database/indexes/mapReduceIndexSyntax");
+import additionalSourceSyntax = require("viewmodels/database/indexes/additionalSourceSyntax");
 
 class editIndex extends viewModelBase {
 
@@ -54,11 +56,6 @@ class editIndex extends viewModelBase {
     selectedSourcePreview = ko.observable<additionalSource>();
     additionalSourcePreviewHtml: KnockoutComputed<string>;
 
-    /* TODO
-    canSaveSideBySideIndex: KnockoutComputed<boolean>;
-     mergeSuggestion = ko.observable<indexMergeSuggestion>(null);
-    */
-
     constructor() {
         super();
 
@@ -68,22 +65,14 @@ class editIndex extends viewModelBase {
             "removeConfigurationOption", 
             "formatIndex", 
             "deleteAdditionalSource", 
-            "previewAdditionalSource");
+            "previewAdditionalSource",
+            "createAnalyzerNameAutocompleter", 
+            "shouldDropupMenu");
 
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
 
         this.initializeObservables();
-
-        /* TODO: side by side
-        this.canSaveSideBySideIndex = ko.computed(() => {
-            if (!this.isEditingExistingIndex()) {
-                return false;
-            }
-            var loadedIndex = this.loadedIndexName(); // use loaded index name
-            var editedName = this.editedIndex().name();
-            return loadedIndex === editedName;
-        });*/
     }
 
     private initializeObservables() {
@@ -157,9 +146,6 @@ class editIndex extends viewModelBase {
     }
 
     private initValidation() {
-
-        //TODO: aceValidation: true for map and reduce
-
         this.editedIndex().name.extend({
             validation: [
                 {
@@ -178,13 +164,6 @@ class editIndex extends viewModelBase {
             .done((indexesNames) => {
                 this.indexesNames(indexesNames);
             });
-    }
-
-    attached() {
-        super.attached();
-        this.addMapHelpPopover();
-        this.addReduceHelpPopover();
-        this.addAdditionalSourcesPopover();
     }
 
     private updateIndexFields() {
@@ -269,36 +248,19 @@ class editIndex extends viewModelBase {
         this.queryUrl(appUrl.forQuery(this.activeDatabase(), indexName));
     }
 
-    addMapHelpPopover() {
-        popoverUtils.longWithHover($("#map-title small"),
-            {
-                content: 'Maps project the fields to search on or to group by. It uses LINQ query syntax.<br/>' +
-                'Example:</br><pre><span class="token keyword">from</span> order <span class="token keyword">in</span>' +
-                ' docs.Orders<br/><span class="token keyword">where</span> order.IsShipped<br/>' +
-                '<span class="token keyword">select new</span><br/>{</br>   order.Date, <br/>   order.Amount,<br/>' +
-                '   RegionId = order.Region.Id <br />}</pre>Each map function should project the same set of fields.'
-            });
+    mapIndexSyntaxHelp() {
+        const viewmodel = new mapIndexSyntax();
+        app.showBootstrapDialog(viewmodel);
     }
 
-    addReduceHelpPopover() {
-        popoverUtils.longWithHover($("#reduce-title small"),
-            {
-                content: 'The Reduce function consolidates documents from the Maps stage into a smaller set of documents.<br />' +
-                'It uses LINQ query syntax.<br/>Example:</br><pre><span class="token keyword">from</span> result ' +
-                '<span class="token keyword">in</span> results<br/><span class="token keyword">group</span> result ' +
-                '<span class="token keyword">by new</span> { result.RegionId, result.Date } into g<br/>' +
-                '<span class="token keyword">select new</span><br/>{<br/>  Date = g.Key.Date,<br/>  ' +
-                'RegionId = g.Key.RegionId,<br/>  Amount = g.Sum(x => x.Amount)<br/>}</pre>' +
-                'The objects produced by the Reduce function should have the same fields as the inputs.'
-            });
+    mapReduceIndexSyntaxHelp() {
+        const viewmodel = new mapReduceIndexSyntax();
+        app.showBootstrapDialog(viewmodel);
     }
-    
-    addAdditionalSourcesPopover() {
-        const html = $("#additional-source-template").html();
-        popoverUtils.longWithHover($("#additionalSources small.info"), {
-            content: html,
-            placement: "top"
-        });
+
+    additionalSourceSyntaxHelp() {
+        const viewmodel = new additionalSourceSyntax();
+        app.showBootstrapDialog(viewmodel);
     }
 
     addMap() {
@@ -388,6 +350,16 @@ class editIndex extends viewModelBase {
         });
     }
 
+    createAnalyzerNameAutocompleter(analyzerName: string): KnockoutComputed<string[]> {
+        return ko.pureComputed(() => {
+            if (analyzerName) {
+                return indexFieldOptions.analyzersNames.filter(x => x.toLowerCase().includes(analyzerName.toLowerCase()));
+            } else {
+                return indexFieldOptions.analyzersNames;
+            }
+        });
+    }
+
     private fetchIndexToEdit(indexName: string): JQueryPromise<Raven.Client.Documents.Indexes.IndexDefinition> {
         return new getIndexDefinitionCommand(indexName, this.activeDatabase())
             .execute()
@@ -436,6 +408,20 @@ class editIndex extends viewModelBase {
                 }
             }
         });
+        
+        if (editedIndex.defaultFieldOptions()) {
+            if (!this.isValid(editedIndex.defaultFieldOptions().validationGroup)) {
+                valid = false;
+                fieldsTabInvalid = true;
+            }
+
+            if (editedIndex.defaultFieldOptions().hasSpatialOptions()) {
+                if (!this.isValid(editedIndex.defaultFieldOptions().spatial().validationGroup)) {
+                    valid = false;
+                    fieldsTabInvalid = true;
+                }
+            }
+        }
 
         let configurationTabInvalid = false;
         editedIndex.configuration().forEach(config => {
@@ -568,21 +554,6 @@ class editIndex extends viewModelBase {
             .done((data: string) => app.showBootstrapDialog(new showDataDialog("C# Index Definition", data, "csharp")));
     }
 
-    /* TODO
-    refreshIndex() {
-        eventsCollector.default.reportEvent("index", "refresh");
-        var canContinue = this.canContinueIfNotDirty('Unsaved Data', 'You have unsaved data. Are you sure you want to refresh the index from the server?');
-        canContinue.done(() => {
-            this.fetchIndexData(this.originalIndexName)
-                .done(() => {
-                    this.initializeDirtyFlag();
-                    this.editedIndex().name.valueHasMutated();
-            });
-        });
-    }
-
-    //TODO: copy index
-    */
     formatIndex(mapIndex: number) {
         eventsCollector.default.reportEvent("index", "format-index");
         const index: indexDefinition = this.editedIndex();
@@ -669,82 +640,20 @@ class editIndex extends viewModelBase {
         this.selectedSourcePreview(source);
     }
 
-    /* TODO
+    shouldDropupMenu(field: indexFieldOptions, placeInList: number) {
+        return ko.pureComputed(() => {
 
-    replaceIndex() {
-        eventsCollector.default.reportEvent("index", "replace");
-        var indexToReplaceName = this.editedIndex().name();
-        var replaceDialog = new replaceIndexDialog(indexToReplaceName, this.activeDatabase());
+            // todo: calculate dropup menu according to location in view port..        
 
-        replaceDialog.replaceSettingsTask.done((replaceDocument: any) => {
-            if (!this.editedIndex().isSideBySideIndex()) {
-                this.editedIndex().name(index.SideBySideIndexPrefix + this.editedIndex().name());
-            }
+            if (field.isDefaultFieldOptions() && this.editedIndex().fields().length)
+                return false; // both default + a field is showing
 
-            var indexDef = this.editedIndex().toDto();
-            var replaceDocumentKey = indexReplaceDocument.replaceDocumentPrefix + this.editedIndex().name();
+            if (!field.isDefaultFieldOptions() && placeInList < this.editedIndex().fields().length - 1)
+                return false; // field is not the last one
 
-            this.saveIndex(indexDef)
-                .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save replace index.", response.responseText, response.statusText))
-                .done(() => {
-                    new saveDocumentCommand(replaceDocumentKey, replaceDocument, this.activeDatabase(), false)
-                        .execute()
-                        .fail((response: JQueryXHR) => messagePublisher.reportError("Failed to save replace index document.", response.responseText, response.statusText))
-                        .done(() => messagePublisher.reportSuccess("Successfully saved side-by-side index"));
-                })
-                .always(() => dialog.close(replaceDialog));
+            return true;
         });
-
-        app.showBootstrapDialog(replaceDialog);
-    }*/
-
-    //TODO: below we have functions for remaining features: 
-
-    /* TODO test index
-    makePermanent() {
-        eventsCollector.default.reportEvent("index", "make-permanent");
-        if (this.editedIndex().name() && this.editedIndex().isTestIndex()) {
-            this.editedIndex().isTestIndex(false);
-            // trim Test prefix
-            var indexToDelete = this.editedIndex().name();
-            this.editedIndex().name(this.editedIndex().name().substr(index.TestIndexPrefix.length));
-            var indexDef = this.editedIndex().toDto();
-
-            this.saveIndex(indexDef)
-                .done(() => {
-                    new deleteIndexCommand(indexToDelete, this.activeDatabase()).execute();
-                });
-        }
     }
-*/
-
-    /* TODO side by side
-
-    cancelSideBySideIndex() {
-        eventsCollector.default.reportEvent("index", "cancel-side-by-side");
-        var indexName = this.originalIndexName;
-        if (indexName) {
-            var db = this.activeDatabase();
-            var cancelSideBySideIndexViewModel = new cancelSideBySizeConfirm([indexName], db);
-            cancelSideBySideIndexViewModel.cancelTask.done(() => {
-                //prevent asking for unsaved changes
-                this.dirtyFlag().reset(); // Resync Changes
-                router.navigate(appUrl.forIndexes(db));
-            });
-
-            dialog.show(cancelSideBySideIndexViewModel);
-        }
-    }
-
-    */
-
-    /*TODO merged indexes
-   private deleteMergedIndexes(indexesToDelete: string[]) {
-       var db = this.activeDatabase();
-       var deleteViewModel = new deleteIndexesConfirm(indexesToDelete, db, "Delete Merged Indexes?");
-       dialog.show(deleteViewModel);
-   }*/
-
 }
 
 export = editIndex;

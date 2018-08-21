@@ -7,6 +7,8 @@ abstract class amazonSettings extends backupSettings {
     awsRegionName = ko.observable<string>();
 
     selectedAwsRegion = ko.observable<string>();
+    
+    allowedRegions: Array<string>;
 
     availableAwsRegionEndpoints = [
         { label: "Asia Pacific (Tokyo)", value: "ap-northeast-1", hasS3: true, hasGlacier: true },
@@ -29,9 +31,13 @@ abstract class amazonSettings extends backupSettings {
         { label: "US West (Oregon)", value: "us-west-2", hasS3: true, hasGlacier: true }
     ];
 
-    constructor(dto: Raven.Client.Documents.Operations.Backups.AmazonSettings, connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupTestConnectionType) {
+    constructor(dto: Raven.Client.Documents.Operations.Backups.AmazonSettings, 
+                connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupTestConnectionType,
+                allowedRegions: Array<string>) {
         super(dto, connectionType);
 
+        this.allowedRegions = allowedRegions;
+        
         this.awsAccessKey(dto.AwsAccessKey);
         this.awsSecretKey(dto.AwsSecretKey);
         this.awsRegionName(dto.AwsRegionName);
@@ -43,16 +49,21 @@ abstract class amazonSettings extends backupSettings {
         this.initAmazonValidation();
 
         this.selectedAwsRegion.subscribe(newSelectedAwsRegion => {
-            if (!newSelectedAwsRegion)
+            if (!newSelectedAwsRegion) {
+                this.awsRegionName(null);
                 return;
+            }
 
             const newSelectedAwsRegionLowerCase = newSelectedAwsRegion.toLowerCase();
             const foundRegion = this.availableAwsRegionEndpoints.find(x =>
                 this.getDisplayRegionName(x).toLowerCase() === newSelectedAwsRegionLowerCase);
-            if (foundRegion)
-                return;
-
-            this.awsRegionName(newSelectedAwsRegion.trim());
+            
+            if (foundRegion) {
+                // if we managed to find long name - set short name under the hood
+                this.awsRegionName(foundRegion.value);
+            } else {
+                this.awsRegionName(newSelectedAwsRegion.trim());
+            }
         });
         
         this.dirtyFlag = new ko.DirtyFlag([
@@ -64,29 +75,41 @@ abstract class amazonSettings extends backupSettings {
     }
 
     initAmazonValidation() {
+        const self = this;
         this.awsRegionName.extend({
             required: {
                 onlyIf: () => this.enabled()
             },
             validation: [
                 {
-                    validator: (awsRegionName: string) => this.validate(() => {
-                        if (!awsRegionName)
-                            return false;
+                    validator: function (awsRegionName: string) {
+                        return self.validate(() => {
+                            if (!awsRegionName) {
+                                return false;
+                            }
 
-                        const foundRegion = this.availableAwsRegionEndpoints.find(x =>
-                            this.getDisplayRegionName(x).toLowerCase() === awsRegionName.toLowerCase());
-                        if (foundRegion)
-                            return true;
+                            const foundRegion = self.availableAwsRegionEndpoints.find(x =>
+                                x.value.toLowerCase() === awsRegionName.toLowerCase());
+                            if (foundRegion)
+                                return true;
 
-                        if (!awsRegionName.includes("-") ||
-                            awsRegionName.startsWith("-") ||
-                            awsRegionName.endsWith("-"))
-                            return false;
+                            if (!awsRegionName.includes("-") ||
+                                awsRegionName.startsWith("-") ||
+                                awsRegionName.endsWith("-")) {
+                                this.message = "AWS Region must include a '-' and cannot start or end with it";
+                                return false;
+                            }
 
-                        return true;
-                    }),
-                    message: "AWS Region must include a '-' and cannot start or end with it"
+                            // region wasn't found on the list
+                            // we allow custom regions only if administrator didn't resticted regions.
+                            if (self.allowedRegions) {
+                                this.message = "Invalid region";
+                                return false;
+                            } else {
+                                return true;
+                            }
+                        });
+                    }
                 }
             ]
         });
@@ -110,6 +133,7 @@ abstract class amazonSettings extends backupSettings {
 
             const options = this.availableAwsRegionEndpoints
                 .filter(x => hasS3 ? x.hasS3 : x.hasGlacier)
+                .filter(x => this.allowedRegions ? _.includes(this.allowedRegions, x.value) : true)
                 .map(x => {
                     return {
                         label: x.label,
@@ -128,7 +152,6 @@ abstract class amazonSettings extends backupSettings {
 
     useAwsRegion(awsRegionEndpoint: { label: string, value: string }) {
         this.selectedAwsRegion(this.getDisplayRegionName(awsRegionEndpoint));
-        this.awsRegionName(awsRegionEndpoint.value);
     }
 
     private getDisplayRegionName(awsRegionEndpoint: { label: string, value: string }): string {

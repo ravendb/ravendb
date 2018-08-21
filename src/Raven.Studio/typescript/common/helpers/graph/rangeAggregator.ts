@@ -60,13 +60,11 @@ class rangeAggregator {
             let newValue = previousValue + 1;
             this.indexesWork.push({ pointInTime: startTime, numberOfIndexesWorking: newValue });
             if (newValue > this.maxConcurrentIndexes) { this.maxConcurrentIndexes++; };
-        }
-        else if (this.indexesWork[this.ptrStart].pointInTime === startTime) {
+        } else if (this.indexesWork[this.ptrStart].pointInTime === startTime) {
             // 1.2 Only increase counter
             let newValue = ++(this.indexesWork[this.ptrStart].numberOfIndexesWorking);
             if (newValue > this.maxConcurrentIndexes) { this.maxConcurrentIndexes++; };
-        }
-        else if (this.indexesWork[this.ptrStart].pointInTime !== startTime) {
+        } else if (this.indexesWork[this.ptrStart].pointInTime !== startTime) {
             // 1.3 Create new element in the start/middle 
             let newValue = previousValue + 1;
             this.indexesWork.splice(this.ptrStart, 0, { pointInTime: startTime, numberOfIndexesWorking: newValue });
@@ -89,8 +87,7 @@ class rangeAggregator {
         if (this.ptrEnd === this.indexesWork.length) {
             // 2.1 Push new item in the end
             this.indexesWork.push({ pointInTime: endTime + 1, numberOfIndexesWorking: 0 });
-        }
-        else if (this.indexesWork[this.ptrEnd].pointInTime !== endTime + 1) {
+        } else if (this.indexesWork[this.ptrEnd].pointInTime !== endTime + 1) {
             // 2.2 Create new element in the middle
             this.indexesWork.splice(this.ptrEnd, 0, { pointInTime: endTime + 1, numberOfIndexesWorking: previousValue });
         }

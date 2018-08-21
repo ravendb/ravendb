@@ -5,7 +5,7 @@ using Raven.Client.Documents.Operations;
 
 namespace Raven.Client.Documents.Changes
 {
-    internal class DatabaseConnectionState : IChangesConnectionState<DocumentChange>, IChangesConnectionState<IndexChange>, IChangesConnectionState<OperationStatusChange>
+    internal class DatabaseConnectionState : IChangesConnectionState<DocumentChange>, IChangesConnectionState<IndexChange>, IChangesConnectionState<OperationStatusChange>, IChangesConnectionState<CounterChange>
     {
         public event Action<Exception> OnError;
         private readonly Func<Task> _onDisconnect;
@@ -58,6 +58,12 @@ namespace Raven.Client.Documents.Changes
             return _connected ?? _firstSet.Task;
         }
 
+        event Action<CounterChange> IChangesConnectionState<CounterChange>.OnChangeNotification
+        {
+            add => OnCounterChangeNotification += value;
+            remove => OnCounterChangeNotification -= value;
+        }
+
         event Action<OperationStatusChange> IChangesConnectionState<OperationStatusChange>.OnChangeNotification
         {
             add => OnOperationStatusChangeNotification += value;
@@ -78,7 +84,7 @@ namespace Raven.Client.Documents.Changes
 
         public void Dispose()
         {
-            Set(Task.FromCanceled(CancellationToken.None));
+            Set(Task.FromException(new ObjectDisposedException(nameof(DatabaseConnectionState))));
             OnDocumentChangeNotification = null;
             OnIndexChangeNotification = null;
             OnOperationStatusChangeNotification = null;
@@ -94,6 +100,8 @@ namespace Raven.Client.Documents.Changes
 
         private event Action<DocumentChange> OnDocumentChangeNotification;
 
+        private event Action<CounterChange> OnCounterChangeNotification;
+
         private event Action<IndexChange> OnIndexChangeNotification;
 
         private event Action<OperationStatusChange> OnOperationStatusChangeNotification;
@@ -101,6 +109,11 @@ namespace Raven.Client.Documents.Changes
         public void Send(DocumentChange documentChange)
         {
             OnDocumentChangeNotification?.Invoke(documentChange);
+        }
+
+        public void Send(CounterChange counterChange)
+        {
+            OnCounterChangeNotification?.Invoke(counterChange);
         }
 
         public void Send(IndexChange indexChange)

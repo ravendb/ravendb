@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Client.Json.Converters;
 using Raven.Server.Config.Categories;
 using Raven.Server.Exceptions;
@@ -30,6 +31,7 @@ namespace Raven.Server.Documents.Handlers
 
             private readonly DocumentDatabase _database;
             private readonly bool _replyWithAllNodesValues;
+            private readonly bool _fromEtl;
             private readonly Dictionary<string, List<CounterOperation>> _dictionary;
 
             public ExecuteCounterBatchCommand(DocumentDatabase database, CounterBatch counterBatch)
@@ -37,6 +39,7 @@ namespace Raven.Server.Documents.Handlers
                 _database = database;
                 _dictionary = new Dictionary<string, List<CounterOperation>>();
                 _replyWithAllNodesValues = counterBatch?.ReplyWithAllNodesValues?? false;
+                _fromEtl = counterBatch?.FromEtl ?? false;
                 CountersDetail = new CountersDetail
                 {
                     Counters = new List<CounterDetail>()
@@ -44,6 +47,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (counterBatch == null)
                     return;
+
                 foreach (var docOps in counterBatch.Documents)
                 {
                     foreach (var operation in docOps.Operations)
@@ -89,34 +93,60 @@ namespace Raven.Server.Documents.Handlers
                 {
                     Document doc = null;
                     BlittableJsonReaderObject metadata = null;
+                    var docId = kvp.Key;
+                    string docCollection = null;
                     
                     foreach (var operation in kvp.Value)
                     {
                         switch (operation.Type)
                         {
                             case CounterOperationType.Increment:
-                                LoadDocument();
-                                LastChangeVector = _database.DocumentsStorage.CountersStorage.IncrementCounter(context, kvp.Key,
-                                    operation.CounterName, operation.Delta);
-                                GetCounterValue(context, _database, kvp.Key, operation.CounterName, _replyWithAllNodesValues, CountersDetail);                               
-                                break;
                             case CounterOperationType.Delete:
-                                LoadDocument();
-                                LastChangeVector = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, kvp.Key,
-                                    operation.CounterName);
-                                break;
                             case CounterOperationType.Put:
                                 LoadDocument();
+
+                                if (doc != null)
+                                    docCollection = CollectionName.GetCollectionName(doc.Data);
+
+                                break;
+                        }
+
+                        switch (operation.Type)
+                        {
+                            case CounterOperationType.Increment:
+                                LastChangeVector =
+                                    _database.DocumentsStorage.CountersStorage.IncrementCounter(context, docId, docCollection, operation.CounterName, operation.Delta);
+                                GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);                               
+                                break;
+                            case CounterOperationType.Delete:
+                                if (_fromEtl && doc == null)
+                                    break;
+
+                                LastChangeVector = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, docId, docCollection, operation.CounterName);
+                                break;
+                            case CounterOperationType.Put:
+                                if (_fromEtl && doc == null)
+                                    break;
+
                                 // intentionally not setting LastChangeVector, we never use it for
-                                // replication and it isn't meaningful in that scenario. Put can only ever be called
-                                // for replication.
-                                _database.DocumentsStorage.CountersStorage.PutCounterFromReplication(context, kvp.Key,
-                                    operation.CounterName, operation.ChangeVector, operation.Delta);
+                                // etl / import and it isn't meaningful in those scenarios
+
+                                if (_fromEtl)
+                                {
+                                    _database.DocumentsStorage.CountersStorage.PutCounter(context, docId, docCollection,
+                                        operation.CounterName,  operation.Delta);
+                                }
+                                else
+                                {
+                                    _database.DocumentsStorage.CountersStorage.PutCounter(context, docId, docCollection,
+                                        operation.CounterName, operation.ChangeVector, operation.Delta);
+                                }
+
                                 break;
                             case CounterOperationType.None:
                                 break;
                             case CounterOperationType.Get:
-                                GetCounterValue(context, _database, kvp.Key, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
+                                GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
                                 break;
                             default:
                                 ThrowInvalidBatchOperationType(operation);
@@ -126,7 +156,7 @@ namespace Raven.Server.Documents.Handlers
 
                     if (metadata != null)
                     {
-                        _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc.Data, kvp.Key, metadata, kvp.Value);
+                        _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc.Data, docId, metadata, kvp.Value);
                     }
 
                     void LoadDocument()
@@ -135,11 +165,14 @@ namespace Raven.Server.Documents.Handlers
                             return;
                         try
                         {
-                            doc = _database.DocumentsStorage.Get(context, kvp.Key,
+                            doc = _database.DocumentsStorage.Get(context, docId,
                                 throwOnConflict: true);
                             if (doc == null)
                             {
-                                ThrowMissingDocument(kvp.Key);
+                                if (_fromEtl)
+                                    return;
+
+                                ThrowMissingDocument(docId);
                                 return; // never hit
                             }
 
@@ -150,6 +183,9 @@ namespace Raven.Server.Documents.Handlers
                         }
                         catch (DocumentConflictException)
                         {
+                            if (_fromEtl)
+                                return;
+
                             // this is fine, we explicitly support
                             // setting the flag if we are in conflicted state is 
                             // done by the conflict resolver
@@ -161,11 +197,6 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 return CountersDetail.Counters.Count;
-            }
-
-            private static void ThrowMissingDocument(string docId)
-            {
-                throw new DocumentDoesNotExistException(docId, "Cannot operate on counters of a missing document.");
             }
 
             private static void ThrowArtificialDocument(Document doc)
@@ -262,7 +293,8 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static void GetCounterValue(DocumentsOperationContext context, DocumentDatabase database, string docId, string counterName, bool addFullValues, CountersDetail result)
+        private static void GetCounterValue(DocumentsOperationContext context, DocumentDatabase database, string docId,
+            string counterName, bool addFullValues, CountersDetail result)
         {
             var fullValues = addFullValues ? new Dictionary<string, long>() : null;
             long? value = null;
@@ -270,7 +302,14 @@ namespace Raven.Server.Documents.Handlers
                 docId, counterName))
             {
                 value = value ?? 0;
-                value += val;
+                try
+                {
+                    value = checked(value + val);
+                }
+                catch (OverflowException e)
+                {
+                    CounterOverflowException.ThrowFor(docId, counterName, e);
+                }
 
                 if (addFullValues)
                 {
@@ -298,5 +337,9 @@ namespace Raven.Server.Documents.Handlers
             throw new InvalidOperationException("Cannot increment counters for " + doc + " because the document has no metadata. Should not happen ever");
         }
 
+        private static void ThrowMissingDocument(string docId)
+        {
+            throw new DocumentDoesNotExistException(docId, "Cannot operate on counters of a missing document.");
+        }
     }
 }

@@ -17,8 +17,9 @@ using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -600,14 +601,15 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/terms", "GET", AuthorizationStatus.ValidUser)]
         public Task Terms()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var field = GetQueryStringValueAndAssertIfSingleAndNotEmpty("field");
-            var fromValue = GetStringQueryString("fromValue", required: false);
 
             using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
+                var name = GetIndexNameFromCollectionAndField(field, context) ?? GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+                var fromValue = GetStringQueryString("fromValue", required: false);
                 var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
                 var result = Database.QueryRunner.ExecuteGetTermsQuery(name, field, fromValue, existingResultEtag, GetPageSize(), context, token, out var index);
@@ -628,7 +630,7 @@ namespace Raven.Server.Documents.Handlers
                         field.EndsWith("__maxY"))
                     {
                         if (index.Definition.IndexFields != null &&
-                        index.Definition.IndexFields.TryGetValue(field.Substring(0, field.Length - 6), out var indexField) == true)
+                            index.Definition.IndexFields.TryGetValue(field.Substring(0, field.Length - 6), out var indexField) == true)
                         {
                             if (indexField.Spatial?.Strategy == Client.Documents.Indexes.Spatial.SpatialSearchStrategy.BoundingBox)
                             {
@@ -640,6 +642,7 @@ namespace Raven.Server.Documents.Handlers
                                     var num = Lucene.Net.Util.NumericUtils.PrefixCodedToDouble(item);
                                     readableTerms.Add(NumberUtil.NumberToString(num));
                                 }
+
                                 result.Terms = readableTerms;
                             }
                         }
@@ -650,6 +653,20 @@ namespace Raven.Server.Documents.Handlers
 
                 return Task.CompletedTask;
             }
+        }
+
+        private string GetIndexNameFromCollectionAndField(string field, DocumentsOperationContext context)
+        {
+            var collection = GetStringQueryString("collection", false);
+            if (string.IsNullOrEmpty(collection))
+                return null;
+            var query = new IndexQueryServerSide(new QueryMetadata($"from {collection} select {field}", null, 0));
+            var dynamicQueryToIndex = new DynamicQueryToIndexMatcher(Database.IndexStore);
+            var match = dynamicQueryToIndex.Match(DynamicQueryMapping.Create(query), context);
+            if (match.MatchType == DynamicQueryMatchType.Complete ||
+                match.MatchType == DynamicQueryMatchType.CompleteButIdle)
+                return match.IndexName;
+            throw new IndexDoesNotExistException($"There is no index to answer the following query: from {collection} select {field}");
         }
 
         [RavenAction("/databases/*/indexes/total-time", "GET", AuthorizationStatus.ValidUser)]

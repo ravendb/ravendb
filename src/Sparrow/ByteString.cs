@@ -291,7 +291,7 @@ namespace Sparrow
 
             EnsureIsNotBadPointer();
 
-            return new string((char*)_pointer->Ptr, 0, _pointer->Length);
+            return UTF8Encoding.UTF8.GetString(_pointer->Ptr, _pointer->Length);
         }
 
         public string ToString(UTF8Encoding encoding)
@@ -351,7 +351,10 @@ namespace Sparrow
             return encoding.GetString(_pointer->Ptr, _pointer->Length);
         }
 
+        [Obsolete("This is a reference comparison. Use SliceComparer or ByteString.Match instead.", error: true)]
+#pragma warning disable CS0809
         public override bool Equals(object obj)
+#pragma warning restore CS0809
         {
             return obj is ByteString && this == (ByteString)obj;
         }
@@ -379,15 +382,19 @@ namespace Sparrow
             return (int)GetContentHash();
         }
 
+        [Obsolete("This is a reference comparison. Use SliceComparer or ByteString.Match instead.", error: true)]
         public static bool operator ==(ByteString x, ByteString y)
         {
             return x._pointer == y._pointer;
         }
+
+        [Obsolete("This is a reference comparison. Use SliceComparer or ByteString.Match instead.", error: true)]
         public static bool operator !=(ByteString x, ByteString y)
         {
             return !(x == y);
         }
 
+        [Obsolete("This is a reference comparison. Use SliceComparer or ByteString.Match instead.", error: true)]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(ByteString other)
         {

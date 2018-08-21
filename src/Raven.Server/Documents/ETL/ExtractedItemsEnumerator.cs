@@ -7,12 +7,14 @@ namespace Raven.Server.Documents.ETL
 {
     public class ExtractedItemsEnumerator<T> : IEnumerator<T> where T : ExtractedItem
     {
+        private readonly EtlItemType _itemType;
         private readonly List<IEnumerator<T>> _workEnumerators = new List<IEnumerator<T>>();
         private T _currentItem;
         private readonly EtlStatsScope _extractionStats;
 
-        public ExtractedItemsEnumerator(EtlStatsScope stats)
+        public ExtractedItemsEnumerator(EtlStatsScope stats, EtlItemType itemType)
         {
+            _itemType = itemType;
             _extractionStats = stats.For(EtlOperations.Extract, start: false);
         }
 
@@ -53,7 +55,7 @@ namespace Raven.Server.Documents.ETL
                     _workEnumerators.Remove(current);
                 }
 
-                _extractionStats.RecordExtractedItem();
+                _extractionStats.RecordExtractedItem(_itemType);
 
                 return true;
             }

@@ -64,7 +64,7 @@ class importDatabaseModel {
     private initValidation() {
         this.importDefinitionHasIncludes = ko.pureComputed(() => {
             return this.includeDatabaseRecord() || this.includeDocuments() || this.includeRevisionDocuments() || this.includeConflicts() ||
-                this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange() || this.includeLegacyAttachments();
+                this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange() || this.includeLegacyAttachments() || this.includeCounters();
         });
 
         this.transformScript.extend({

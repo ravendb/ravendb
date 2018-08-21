@@ -39,7 +39,8 @@ class clientConfiguration extends viewModelBase {
         this.model.maxNumberOfRequestsPerSession.extend({
             required: {
                 onlyIf: () => _.includes(this.model.isDefined(), "maxNumberOfRequestsPerSession")
-            }
+            },
+            digit: true
         })
     }
     

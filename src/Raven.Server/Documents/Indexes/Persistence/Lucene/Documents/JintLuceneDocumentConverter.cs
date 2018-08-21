@@ -1,15 +1,14 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
+using Jint;
 using Jint.Native;
-using Jint.Native.Array;
 using Jint.Native.Object;
-using Jint.Runtime.Interop;
 using Lucene.Net.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
@@ -20,9 +19,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
         }
 
-        private readonly string CreatedFieldValuePropertyName = "$value";
-        private readonly string CreatedFieldOptionsPropertyName = "$options";
-        private readonly string CreatedFieldNamePropertyName = "$name";
+        private const string CreatedFieldValuePropertyName = "$value";
+        private const string CreatedFieldOptionsPropertyName = "$options";
+        private const string CreatedFieldNamePropertyName = "$name";
 
         protected override int GetFields<T>(T instance, LazyStringValue key, object document, JsonOperationContext indexContext)
         {
@@ -46,7 +45,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 newFields++;
             }
 
-            foreach ((var property, var propertyDescriptor) in documentToProcess.GetOwnProperties())
+            foreach (var (property, propertyDescriptor) in documentToProcess.GetOwnProperties())
             {
                 if (_fields.TryGetValue(property, out var field) == false)
                 {
@@ -63,10 +62,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
 
                 var obj = propertyDescriptor.Value;
-                object value;
                 foreach (var v in EnumerateValues(obj))
                 {
                     var actualValue = v;
+                    object value;
                     if (actualValue.IsObject() && actualValue.IsArray() == false)
                     {
                         //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' witht the actual property name 
@@ -80,13 +79,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                             }
                             else
                             {
-                                value = GetValue(val);
+                                value = TypeConverter.ToBlittableSupportedType(val, flattenArrays: false, engine: documentToProcess.Engine, context: indexContext);
                                 newFields += GetRegularFields(instance, field, value, indexContext);
                                 continue;
                             }
                         }
 
-                        if (actualValue.AsObject().TryGetValue("$spatial", out var inner))
+                        var objectValue = actualValue.AsObject();
+                        if (objectValue.HasOwnProperty("$spatial") && objectValue.TryGetValue("$spatial", out var inner))
                         {
 
                             SpatialField spatialField;
@@ -97,11 +97,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                                 spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
                                 spatial = StaticIndexBase.CreateSpatialField(spatialField, inner.AsString());
                             }
-                            else if (inner.IsObject() && inner.AsObject().TryGetValue("Lat", out var lat)
-                                                      && lat.IsNumber() && inner.AsObject().TryGetValue("Lng", out var lng) && lng.IsNumber())
+                            else if (inner.IsObject())
                             {
-                                spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
-                                spatial = StaticIndexBase.CreateSpatialField(spatialField, lat.AsNumber(), lng.AsNumber());
+                                var innerObject = inner.AsObject();
+                                if (innerObject.HasOwnProperty("Lat") && innerObject.HasOwnProperty("Lng") && innerObject.TryGetValue("Lat", out var lat)
+                                    && lat.IsNumber() && innerObject.TryGetValue("Lng", out var lng) && lng.IsNumber())
+                                {
+                                    spatialField = StaticIndexBase.GetOrCreateSpatialField(field.Name);
+                                    spatial = StaticIndexBase.CreateSpatialField(spatialField, lat.AsNumber(), lng.AsNumber());
+                                }
+                                else
+                                {
+                                    continue; //Ignoring bad spatial field 
+                                }
                             }
                             else
                             {
@@ -113,9 +121,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                         }
                     }
 
-                    value = GetValue(propertyDescriptor.Value);
+                    value = TypeConverter.ToBlittableSupportedType(propertyDescriptor.Value, flattenArrays: false, engine: documentToProcess.Engine, context: indexContext);
                     newFields += GetRegularFields(instance, field, value, indexContext, nestedArray: true);
-                }                                
+                }
             }
 
             return newFields;
@@ -125,7 +133,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private static readonly string[] StoreFieldValues = { "store", "Store" };
 
-        private JsValue TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject, IndexField field)
+        private static JsValue TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject, IndexField field)
         {
             //We have a field creation here _ = {"$value":val, "$name","$options":{...}}
             if (!valueAsObject.HasOwnProperty(CreatedFieldValuePropertyName) ||
@@ -171,53 +179,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return value;
         }
 
-        private object GetValue(JsValue jsValue)
-        {
-            if (jsValue.IsNull() || jsValue.IsUndefined())
-                return null;
-            if (jsValue.IsString())
-                return jsValue.AsString();
-            if (jsValue.IsBoolean())
-                return jsValue.AsBoolean().ToString(); // avoid boxing the boolean
-            if (jsValue.IsNumber())
-                return jsValue.AsNumber();
-            if (jsValue.IsDate())
-                return jsValue.AsDate().ToDateTime();
-            //object wrapper is an object so it must come before the object
-            if (jsValue is ObjectWrapper ow)
-            {
-                var target = ow.Target;
-                switch (target)
-                {
-                    case LazyStringValue lsv:                    
-                        return lsv;
-                    case LazyCompressedStringValue lcsv:
-                        return lcsv;
-                    case LazyNumberValue lnv:
-                        return lnv; //should be already blittable supported type.
-                }
-                ThrowInvalidObject(jsValue);
-            }
-            //Array is an object in Jint
-            else if (jsValue.IsArray())
-            {
-                var arr = jsValue.AsArray();
-                return EnumerateArray(arr);
-            }
-            else if (jsValue.IsObject())
-            {
-                return JavaScriptIndexUtils.StringifyObject(jsValue);
-            }
-            ThrowInvalidObject(jsValue);
-            return null;
-        }
-
-        private static void ThrowInvalidObject(JsValue jsValue)
-        {
-            throw new InvalidOperationException("Invalid type " + jsValue);
-        }
-
-        private IEnumerable<JsValue> EnumerateValues(JsValue jv)
+        private static IEnumerable<JsValue> EnumerateValues(JsValue jv)
         {
             if (jv.IsArray())
             {
@@ -234,19 +196,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 yield return jv;
             }
-            
         }
-
-        private IEnumerable EnumerateArray(ArrayInstance arr)
-        {
-            foreach ((var key, var val) in arr.GetOwnProperties())
-            {
-                if (key == "length")
-                    continue;
-
-                yield return GetValue(val.Value);
-            }
-        }
-
     }
 }

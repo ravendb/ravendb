@@ -14,7 +14,7 @@ class exportDatabaseModel {
 
     exportFileName = ko.observable<string>();
 
-    includeExpiredDocuments = ko.observable(false);
+    includeExpiredDocuments = ko.observable(true);
     removeAnalyzers = ko.observable(false);
 
     includeAllCollections = ko.observable(true);
@@ -70,7 +70,7 @@ class exportDatabaseModel {
     private initValidation() {
         this.exportDefinitionHasIncludes = ko.pureComputed(() => {
             return this.includeDatabaseRecord() || this.includeDocuments() || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) || this.includeConflicts() ||
-                this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange();
+                this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange() || this.includeCounters();
         });
 
         this.transformScript.extend({

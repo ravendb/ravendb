@@ -9,6 +9,8 @@
 //
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -16,11 +18,12 @@ using System.Threading;
 namespace Sparrow.Collections.LockFree
 {
     internal abstract partial class DictionaryImpl<TKey, TKeyStore, TValue>
+        : DictionaryImpl<TKey, TValue>
     {
         private readonly Entry[] _entries;
         internal DictionaryImpl<TKey, TKeyStore, TValue> _newTable;
 
-        protected readonly ConcurrentDictionary<TKey, TValue> _topDict;
+        protected readonly LockFreeConcurrentDictionary<TKey, TValue> _topDict;
         protected readonly Counter32 allocatedSlotCount = new Counter32();
         private Counter32 _size;
 
@@ -64,84 +67,11 @@ namespace Sparrow.Collections.LockFree
         // create an empty dictionary
         protected abstract DictionaryImpl<TKey, TKeyStore, TValue> CreateNew(int capacity);
 
-        protected TKey keyFromEntry(TKeyStore entryKey)
-        {
-            if (typeof(TKey) == typeof(TKeyStore))
-                return (TKey)(object)entryKey;
+        // convert key from its storage form (noop or unboxing) used in Key enumarators
+        protected abstract TKey keyFromEntry(TKeyStore entryKey);
 
-            if (typeof(TKeyStore) == typeof(Boxed<TKey>))
-            {
-                var boxed = (Boxed<TKey>)(object)entryKey;
-                return boxed.Value;
-            }
-
-            ThrowNotSupported();
-            return default(TKey); // Will never execute
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected bool keyEqual(TKey key, TKeyStore entryKey)
-        {
-            TKey other;
-            if (typeof(TKey) == typeof(TKeyStore))
-                other = (TKey)(object)entryKey;
-            else if (typeof(TKeyStore) == typeof(Boxed<TKey>))
-            {
-                var boxed = (Boxed<TKey>)(object)entryKey;
-                other = boxed.Value;
-            }
-            else
-            {
-                ThrowNotSupported();
-                return false; // Will never execute                
-            }
-
-            if (_keyComparer == null)
-            {
-                if (typeof(TKey) == typeof(int))
-                    return (int)(object)key == (int)(object)other;
-                if (typeof(TKey) == typeof(uint))
-                    return (uint)(object)key == (uint)(object)other;
-                if (typeof(TKey) == typeof(short))
-                    return (short)(object)key == (short)(object)other;
-                if (typeof(TKey) == typeof(ushort))
-                    return (ushort)(object)key == (ushort)(object)other;
-                if (typeof(TKey) == typeof(byte))
-                    return (byte)(object)key == (byte)(object)other;
-                if (typeof(TKey) == typeof(long))
-                    return (long)(object)key == (long)(object)other;
-                if (typeof(TKey) == typeof(ulong))
-                    return (ulong)(object)key == (ulong)(object)other;
-
-                ThrowNotSupported();
-                return false; // Will never execute
-            }
-            else
-            {
-                bool result = true;
-                if (typeof(TKey) == typeof(int))
-                    result = (int)(object)key == (int)(object)other;
-                if (typeof(TKey) == typeof(uint))
-                    result = (uint)(object)key == (uint)(object)other;
-                if (typeof(TKey) == typeof(short))
-                    result = (short)(object)key == (short)(object)other;
-                if (typeof(TKey) == typeof(ushort))
-                    result = (ushort)(object)key == (ushort)(object)other;
-                if (typeof(TKey) == typeof(byte))
-                    result = (byte)(object)key == (byte)(object)other;
-                if (typeof(TKey) == typeof(long))
-                    result = (long)(object)key == (long)(object)other;
-                if (typeof(TKey) == typeof(ulong))
-                    result = (ulong) (object) key == (ulong) (object) other;
-
-                return result || _keyComparer.Equals(key, other);
-            }            
-        }
-
-        private void ThrowNotSupported()
-        {
-            throw new NotSupportedException("TKeyStore not supported. This shouldn't happen.");
-        }
+        // compares key with another in its storage form
+        protected abstract bool keyEqual(TKey key, TKeyStore entryKey);
 
         // claiming (by writing atomically to the entryKey location) 
         // or getting existing slot suitable for storing a given key.
@@ -151,23 +81,23 @@ namespace Sparrow.Collections.LockFree
         // or getting existing slot suitable for storing a given key in its store form (could be boxed).
         protected abstract bool TryClaimSlotForCopy(ref TKeyStore entryKey, TKeyStore key);
 
-        internal DictionaryImpl(int capacity, ConcurrentDictionary<TKey, TValue> topDict)
+        internal DictionaryImpl(int capacity, LockFreeConcurrentDictionary<TKey, TValue> topDict)
         {
             capacity = Math.Max(capacity, MIN_SIZE);
 
             capacity = AlignToPowerOfTwo(capacity);
-            _entries = new Entry[capacity];
-            _size = new Counter32();
-            _topDict = topDict;
+            this._entries = new Entry[capacity];
+            this._size = new Counter32();
+            this._topDict = topDict;
         }
 
         protected DictionaryImpl(int capacity, DictionaryImpl<TKey, TKeyStore, TValue> other)
         {
             capacity = AlignToPowerOfTwo(capacity);
-            _entries = new Entry[capacity];
-            _size = other._size;
-            _topDict = other._topDict;
-            _keyComparer = other._keyComparer;
+            this._entries = new Entry[capacity];
+            this._size = other._size;
+            this._topDict = other._topDict;
+            this._keyComparer = other._keyComparer;
         }
 
 
@@ -189,54 +119,26 @@ namespace Sparrow.Collections.LockFree
             return size + 1;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected int hash(TKey key)
+        protected virtual int hash(TKey key)
         {
-            int h;
-
-            if (typeof(TKey) == typeof(int) || typeof(TKey) == typeof(uint) || typeof(TKey) == typeof(short) || typeof(TKey) == typeof(ushort) || typeof(TKey) == typeof(byte))
+            if (key == null)
             {
-                uint k;
-
-                if (typeof(TKey) == typeof(int))
-                    k = (uint)(int)(object)key;
-                else if (typeof(TKey) == typeof(uint))
-                    k = (uint)(object)key;
-                else if (typeof(TKey) == typeof(short))
-                    k = (uint)(short)(object)key;
-                else if (typeof(TKey) == typeof(ushort))
-                    k = (ushort)(object)key;
-                else 
-                    k = (byte)(object)key;
-
-                if (k == 0) return ZEROHASH;
-
-                h = (int)Hashing.Mix(k);
+                throw new ArgumentNullException("key");
             }
-            else if (typeof(TKey) == typeof(long) || typeof(TKey) == typeof(ulong))
-            {
-                // This is a fast hash 32 bits combiner using the low and high part of the key. 
-                ulong k;
-                if (typeof(TKey) == typeof(long))
-                    k = (ulong)(long)(object)key;
-                else 
-                    k = (ulong)(object)key;
 
-                if (k == 0) return ZEROHASH;
-
-                h = (int)Hashing.Mix(k);
-            }
-            else
-            {
-                // We cannot do anything else, resorting to the slow hashing.
-                h = _keyComparer.GetHashCode(key);
-            }
+            int h = _keyComparer.GetHashCode(key);
 
             // ensure that hash never matches 0, TOMBPRIMEHASH or ZEROHASH
             return h | REGULAR_HASH_BITS;
         }
 
-        internal sealed override int Count => Size;
+        internal sealed override int Count
+        {
+            get
+            {
+                return this.Size;
+            }
+        }
 
         internal sealed override void Clear()
         {
@@ -251,13 +153,8 @@ namespace Sparrow.Collections.LockFree
         /// </summary>
         internal sealed override object TryGetValue(TKey key)
         {
-            if (key == null)
-            {
-                throw new ArgumentNullException(nameof(key));
-            }
-
+            int fullHash = this.hash(key);
             var curTable = this;
-            int fullHash = curTable.hash(key);
 
             TRY_WITH_NEW_TABLE:
 
@@ -269,9 +166,11 @@ namespace Sparrow.Collections.LockFree
             int reprobeCnt = 0;
             while (true)
             {
+                ref var entry = ref curEntries[idx];
+
                 // hash, key and value are all CAS-ed down and follow a specific sequence of states.
                 // hence the order of these reads is irrelevant and they do not need to be volatile
-                var entryHash = curEntries[idx].hash;
+                var entryHash = entry.hash;
                 if (entryHash == 0)
                 {
                     // the slot has not been claimed - a clear miss
@@ -279,10 +178,10 @@ namespace Sparrow.Collections.LockFree
                 }
 
                 // is this our slot?
-                if (fullHash == entryHash && curTable.keyEqual(key, curEntries[idx].key))
+                if (fullHash == entryHash &&
+                    curTable.keyEqual(key, entry.key))
                 {
-                    var entryValue = curEntries[idx].value;
-
+                    var entryValue = entry.value;
                     if (EntryValueNullOrDead(entryValue))
                     {
                         break;
@@ -306,8 +205,8 @@ namespace Sparrow.Collections.LockFree
                 // But only 'put' needs to force a table-resize for a too-long key-reprobe sequence
                 // hitting reprobe limit or finding TOMBPRIMEHASH here means that the key is not in this table, 
                 // but there could be more in the new table
-                if (++reprobeCnt >= ReprobeLimit(lenMask) |
-                    entryHash == TOMBPRIMEHASH)
+                if (entryHash == TOMBPRIMEHASH | 
+                    reprobeCnt >= ReprobeLimit(lenMask))
                 {
                     var newTable = curTable._newTable;
                     if (newTable != null)
@@ -324,6 +223,7 @@ namespace Sparrow.Collections.LockFree
                 curTable.ReprobeResizeCheck(reprobeCnt, lenMask);
 
                 // quadratic reprobe
+                reprobeCnt++;
                 idx = (idx + reprobeCnt) & lenMask;
             }
 
@@ -333,6 +233,7 @@ namespace Sparrow.Collections.LockFree
         // check once in a while if a table might benefit from resizing.
         // one reason for this is that crowdedness check uses estimated counts 
         // so we do not always catch this on key inserts.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ReprobeResizeCheck(int reprobeCnt, int lenMask)
         {
             // must be ^2 - 1
@@ -341,10 +242,10 @@ namespace Sparrow.Collections.LockFree
             // every reprobeCheckPeriod reprobes, check if table is crowded
             // and initiale a resize
             if ((reprobeCnt & reprobeCheckPeriod) == reprobeCheckPeriod && 
-                TableIsCrowded(lenMask))
+                this.TableIsCrowded(lenMask))
             {
-                Resize();
-                HelpCopy();
+                this.Resize();
+                this.HelpCopy();
             }
         }
 
@@ -355,11 +256,6 @@ namespace Sparrow.Collections.LockFree
         // since slot without a value is as good as no slot at all
         internal sealed override bool PutIfMatch(TKey key, object newVal, ref object oldVal, ValueMatch match)
         {
-            if (key == null)
-            {
-                throw new ArgumentNullException(nameof(key));
-            }
-
             var curTable = this;
             int fullHash = curTable.hash(key);
 
@@ -421,8 +317,8 @@ namespace Sparrow.Collections.LockFree
                 // and must reprobe or resize
                 // hitting reprobe limit or finding TOMBPRIMEHASH here means that the key is not in this table, 
                 // but there could be more in the new table
-                if (++reprobeCnt >= ReprobeLimit(lenMask) |
-                    entryHash == TOMBPRIMEHASH)
+                if (entryHash == TOMBPRIMEHASH |
+                    reprobeCnt >= ReprobeLimit(lenMask))
                 {
                     // start resize or get new table if resize is already in progress
                     var newTable1 = curTable.Resize();
@@ -435,6 +331,7 @@ namespace Sparrow.Collections.LockFree
                 curTable.ReprobeResizeCheck(reprobeCnt, lenMask);
 
                 // quadratic reprobing
+                reprobeCnt++;
                 idx = (idx + reprobeCnt) & lenMask;
             }
 
@@ -556,14 +453,9 @@ namespace Sparrow.Collections.LockFree
 
         internal sealed override TValue GetOrAdd(TKey key, Func<TKey, TValue> valueFactory)
         {
-            if (key == null)
-            {
-                throw new ArgumentNullException(nameof(key));
-            }
-
             if (valueFactory == null)
             {
-                throw new ArgumentNullException(nameof(valueFactory));
+                throw new ArgumentNullException("valueFactory");
             }
 
             object newValObj = null;
@@ -618,8 +510,8 @@ namespace Sparrow.Collections.LockFree
                 // and must reprobe or resize
                 // hitting reprobe limit or finding TOMBPRIMEHASH here means that the key is not in this table, 
                 // but there could be more in the new table
-                if (++reprobeCnt >= ReprobeLimit(lenMask) |
-                    entryHash == TOMBPRIMEHASH)
+                if (entryHash == TOMBPRIMEHASH |
+                    reprobeCnt >= ReprobeLimit(lenMask))
                 {
                     // start resize or get new table if resize is already in progress
                     var newTable1 = curTable.Resize();
@@ -632,6 +524,7 @@ namespace Sparrow.Collections.LockFree
                 curTable.ReprobeResizeCheck(reprobeCnt, lenMask);
 
                 // quadratic reprobing
+                reprobeCnt++;
                 idx = (idx + reprobeCnt) & lenMask;
             }
 
@@ -706,13 +599,28 @@ namespace Sparrow.Collections.LockFree
             }
 
             GOT_PREV_VALUE:
+
             // PERF: this would be nice to have as a helper, 
             // but it does not get inlined
-            if (default(TValue) == null && entryValue == NULLVALUE)
+
+            // regular value type
+            if (default(TValue) != null)
             {
-                entryValue = null;
+                result = (TValue)entryValue;
             }
-            result = (TValue)entryValue;
+            else
+            {
+                // null
+                if (entryValue == NULLVALUE)
+                {
+                    result = default(TValue);
+                }
+                else
+                {
+                    // not null, dispatch ref types and nullables
+                    result = _topDict.objToValue(entryValue);
+                }
+            }
 
             DONE:
             return result;
@@ -771,8 +679,8 @@ namespace Sparrow.Collections.LockFree
                 // hitting reprobe limit or finding TOMBPRIMEHASH here means that 
                 // we will not find an appropriate slot in this table
                 // but there could be more in the new one
-                if (++reprobeCnt >= ReprobeLimit(lenMask) |
-                    entryHash == TOMBPRIMEHASH)
+                if (entryHash == TOMBPRIMEHASH |
+                    reprobeCnt >= ReprobeLimit(lenMask))
                 {
                     var resized = curTable.Resize();
                     curTable = resized;
@@ -780,6 +688,7 @@ namespace Sparrow.Collections.LockFree
                 }
 
                 // quadratic reprobing
+                reprobeCnt++;
                 idx = (idx + reprobeCnt) & lenMask; // Reprobe!    
 
             } // End of spinning till we get a Key slot
@@ -836,8 +745,15 @@ namespace Sparrow.Collections.LockFree
             }
         }
 
-        internal int EstimatedSlotsUsed => allocatedSlotCount.EstimatedValue;
+        internal int EstimatedSlotsUsed
+        {
+            get
+            {
+                return (int)allocatedSlotCount.EstimatedValue;
+            }
+        }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal bool TableIsCrowded(int len)
         {
             // 80% utilization, switch to a bigger table
@@ -849,18 +765,17 @@ namespace Sparrow.Collections.LockFree
         // wrapper, to encourage inlining for the fast no-copy-in-progress case.
         private void HelpCopy()
         {
-            if (_newTable != null)
+            if (this._newTable != null)
             {
-                HelpCopyImpl(copy_all: false);
+                this.HelpCopyImpl(copy_all: false);
             }
         }
 
         // Help along an existing resize operation.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void HelpCopyImpl(bool copy_all)
         {
-            var newTable = _newTable;
-            var oldEntries = _entries;
+            var newTable = this._newTable;
+            var oldEntries = this._entries;
             int toCopy = oldEntries.Length;
 
 #if DEBUG
@@ -873,13 +788,13 @@ namespace Sparrow.Collections.LockFree
             bool panic = false;
             int claimedChunk = -1;
 
-            while (_copyDone < toCopy)
+            while (this._copyDone < toCopy)
             {
                 // Still needing to copy?
                 // Carve out a chunk of work.
                 if (!panic)
                 {
-                    claimedChunk = _claimedChunk;
+                    claimedChunk = this._claimedChunk;
 
                     for (;;)
                     {
@@ -898,7 +813,7 @@ namespace Sparrow.Collections.LockFree
                             break;
                         }
 
-                        var alreadyClaimed = Interlocked.CompareExchange(ref _claimedChunk, claimedChunk + 1, claimedChunk);
+                        var alreadyClaimed = Interlocked.CompareExchange(ref this._claimedChunk, claimedChunk + 1, claimedChunk);
                         if (alreadyClaimed == claimedChunk)
                         {
                             break;
@@ -926,7 +841,7 @@ namespace Sparrow.Collections.LockFree
                 int copyStart = claimedChunk * CHUNK_SIZE;
                 for (int i = 0; i < MIN_COPY_WORK; i++)
                 {
-                    if (_copyDone >= toCopy)
+                    if (this._copyDone >= toCopy)
                     {
                         PromoteNewTable();
                         return;
@@ -941,7 +856,7 @@ namespace Sparrow.Collections.LockFree
                 if (workdone > 0)
                 {
                     // See if we can promote
-                    var copyDone = Interlocked.Add(ref _copyDone, workdone);
+                    var copyDone = Interlocked.Add(ref this._copyDone, workdone);
 
                     // Check for copy being ALL done, and promote.  
                     if (copyDone >= toCopy)
@@ -970,7 +885,7 @@ namespace Sparrow.Collections.LockFree
             if (_topDict._table == this)
             {
                 // Attempt to promote
-                if (Interlocked.CompareExchange(ref _topDict._table, _newTable, this) == this)
+                if (Interlocked.CompareExchange(ref _topDict._table, this._newTable, this) == this)
                 {
                     // System.Console.WriteLine("size: " + _newTable.Length);
                     _topDict._lastResizeTickMillis = CurrentTickMillis();
@@ -990,19 +905,19 @@ namespace Sparrow.Collections.LockFree
         // read it yet.
         internal DictionaryImpl<TKey, TKeyStore, TValue> CopySlotAndGetNewTable(int idx, bool shouldHelp)
         {
-            var newTable = _newTable;
+            var newTable = this._newTable;
 
             // We're only here because the caller saw a Prime, which implies a
             // table-copy is in progress.
             Debug.Assert(newTable != null);
 
-            if (CopySlot(ref _entries[idx], newTable))
+            if (CopySlot(ref this._entries[idx], newTable))
             {
                 // Record the slot copied
-                var copyDone = Interlocked.Increment(ref _copyDone);
+                var copyDone = Interlocked.Increment(ref this._copyDone);
 
                 // Check for copy being ALL done, and promote.  
-                if (copyDone >= _entries.Length)
+                if (copyDone >= this._entries.Length)
                 {
                     PromoteNewTable();
                 }
@@ -1011,7 +926,7 @@ namespace Sparrow.Collections.LockFree
             // Generically help along any copy (except if called recursively from a helper)
             if (shouldHelp)
             {
-                HelpCopy();
+                this.HelpCopy();
             }
 
             return newTable;
@@ -1021,7 +936,6 @@ namespace Sparrow.Collections.LockFree
         // Returns true if we actually did the copy.
         // Regardless, once this returns, the copy is available in the new table and 
         // slot in the old table is no longer usable.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool CopySlot(ref Entry oldEntry, DictionaryImpl<TKey, TKeyStore, TValue> newTable)
         {
             Debug.Assert(newTable != null);
@@ -1140,7 +1054,7 @@ namespace Sparrow.Collections.LockFree
             // Check for resize already in progress, probably triggered by another thread
             // reads of this._newTable in Resize are not volatile
             // we are just opportunistically checking if a new table has arrived.
-            return _newTable ?? ResizeImpl();
+            return this._newTable ?? ResizeImpl();
         }
 
         // Resizing after too many probes.  "How Big???" heuristics are here.
@@ -1152,7 +1066,7 @@ namespace Sparrow.Collections.LockFree
         {
             // No copy in-progress, so start one.  
             //First up: compute new table size.
-            int oldlen = _entries.Length;
+            int oldlen = this._entries.Length;
 
             const int MAX_SIZE = 1 << 30;
             const int MAX_CHURN_SIZE = 1 << 15;
@@ -1196,7 +1110,7 @@ namespace Sparrow.Collections.LockFree
             // TODO: VS some tuning may be needed
             int kBs4 = (((newsz << 1) + 4) << 3/*word to bytes*/) >> 12/*kBs4*/;
 
-            var newTable = _newTable;
+            var newTable = this._newTable;
 
             // Now, if allocation is big enough,
             // limit the number of threads actually allocating memory to a
@@ -1212,24 +1126,24 @@ namespace Sparrow.Collections.LockFree
                     return newTable;         // Use the new table already
                 }
 
-                SpinWait.SpinUntil(() => _newTable != null, 8 * kBs4);
-                newTable = _newTable;
+                SpinWait.SpinUntil(() => this._newTable != null, 8 * kBs4);
+                newTable = this._newTable;
             }
 
             // Last check, since the 'new' below is expensive and there is a chance
             // that another thread slipped in a new table while we ran the heuristic.
-            newTable = _newTable;
+            newTable = this._newTable;
             // See if resize is already in progress
             if (newTable != null)
             {
                 return newTable;          // Use the new table already
             }
 
-            newTable = CreateNew(newsz);
+            newTable = this.CreateNew(newsz);
 
             // The new table must be CAS'd in to ensure only 1 winner
-            var prev = _newTable ??
-                        Interlocked.CompareExchange(ref _newTable, newTable, null);
+            var prev = this._newTable ??
+                        Interlocked.CompareExchange(ref this._newTable, newTable, null);
 
             if (prev != null)
             {

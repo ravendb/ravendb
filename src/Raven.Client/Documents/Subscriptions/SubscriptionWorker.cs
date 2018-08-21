@@ -23,6 +23,7 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
@@ -185,44 +186,26 @@ namespace Raven.Client.Documents.Subscriptions
                 _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, command.Result, _store.Certificate, requestExecutor.DefaultTimeout).ConfigureAwait(false);
 
                 var databaseName = _dbName ?? _store.Database;
-                var serializeObject = JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
+
+                var parameters = new TcpNegotiateParameters
                 {
+                    Database = databaseName,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
-                    DatabaseName = databaseName,
-                    OperationVersion = TcpConnectionHeaderMessage.SubscriptionTcpVersion
-                });
-                var header = Encodings.Utf8.GetBytes(serializeObject);
+                    Version = TcpConnectionHeaderMessage.SubscriptionTcpVersion,
+                    ReadResponseAndGetVersionCallback = ReadServerResponseAndGetVersion,
+                    DestinationNodeTag = CurrentNodeTag,
+                    DestinationUrl = command.Result.Url
+                };
+                _supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(context, _stream, parameters);
+
+                if (_supportedFeatures.ProtocolVersion <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"{_options.SubscriptionName}: TCP negotiation resulted with an invalid protocol version:{_supportedFeatures.ProtocolVersion}");
+                }
 
                 var options = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(_options));
 
-                await _stream.WriteAsync(header, 0, header.Length, token).ConfigureAwait(false);
-                await _stream.FlushAsync(token).ConfigureAwait(false);
-                //Reading reply from server
-                using (var response = context.ReadForMemory(_stream, "Subscription/tcp-header-response"))
-                {
-                    var reply = JsonDeserializationClient.TcpConnectionHeaderResponse(response);
-                    switch (reply.Status)
-                    {
-                        case TcpConnectionStatus.Ok:
-                            break;
-                        case TcpConnectionStatus.AuthorizationFailed:
-                            throw new AuthorizationException($"Cannot access database {databaseName} because " + reply.Message);
-                        case TcpConnectionStatus.TcpVersionMismatch:
-                            //Kindly request the server to drop the connection
-                            serializeObject = JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
-                            {
-                                Operation = TcpConnectionHeaderMessage.OperationTypes.Drop,
-                                DatabaseName = databaseName,
-                                OperationVersion = TcpConnectionHeaderMessage.SubscriptionTcpVersion,
-                                Info = $"Couldn't agree on subscription tcp version ours:{TcpConnectionHeaderMessage.SubscriptionTcpVersion} theirs:{reply.Version}"
-                            });
-                            header = Encodings.Utf8.GetBytes(serializeObject);
-                            await _stream.WriteAsync(header, 0, header.Length, token).ConfigureAwait(false);
-                            await _stream.FlushAsync(token).ConfigureAwait(false);
-                            throw new InvalidOperationException($"Can't connect to database {databaseName} because: {reply.Message}");
-                    }
-
-                }
                 await _stream.WriteAsync(options, 0, options.Length, token).ConfigureAwait(false);
 
                 await _stream.FlushAsync(token).ConfigureAwait(false);
@@ -232,6 +215,44 @@ namespace Raven.Client.Documents.Subscriptions
 
                 return _stream;
             }
+        }
+
+        private int ReadServerResponseAndGetVersion(JsonOperationContext context, BlittableJsonTextWriter writer, Stream stream, string url)
+        {
+            //Reading reply from server
+            using (var response = context.ReadForMemory(_stream, "Subscription/tcp-header-response"))
+            {
+                var reply = JsonDeserializationClient.TcpConnectionHeaderResponse(response);
+                switch (reply.Status)
+                {
+                    case TcpConnectionStatus.Ok:
+                        return reply.Version;
+                    case TcpConnectionStatus.AuthorizationFailed:
+                        throw new AuthorizationException($"Cannot access database {_dbName} because " + reply.Message);
+                    case TcpConnectionStatus.TcpVersionMismatch:
+                        if (reply.Version != TcpNegotiation.OutOfRangeStatus)
+                        {
+                            return reply.Version;
+                        }
+                        //Kindly request the server to drop the connection
+                        SendDropMessage(context, writer, reply);
+                        throw new InvalidOperationException($"Can't connect to database {_dbName} because: {reply.Message}");
+                }
+                return reply.Version;
+            }
+        }
+
+        private void SendDropMessage(JsonOperationContext context, BlittableJsonTextWriter writer, TcpConnectionHeaderResponse reply)
+        {
+            context.Write(writer, new DynamicJsonValue
+            {
+                [nameof(TcpConnectionHeaderMessage.DatabaseName)] = _dbName,
+                [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop.ToString(),
+                [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.GetOperationTcpVersion(TcpConnectionHeaderMessage.OperationTypes.Drop),
+                [nameof(TcpConnectionHeaderMessage.Info)] =
+                    $"Couldn't agree on subscription TCP version ours:{TcpConnectionHeaderMessage.SubscriptionTcpVersion} theirs:{reply.Version}"
+            });
+            writer.Flush();
         }
 
         private void AssertConnectionState(SubscriptionConnectionServerMessage connectionStatus)
@@ -550,6 +571,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         private DateTime? LastConnectionFailure;
+        private TcpConnectionHeaderMessage.SupportedFeatures _supportedFeatures;
 
         private void AssertLastConnectionFailure()
         {

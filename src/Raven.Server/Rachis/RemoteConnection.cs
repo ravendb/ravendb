@@ -206,7 +206,8 @@ namespace Raven.Server.Rachis
                 [nameof(AppendEntries.Term)] = ae.Term,
                 [nameof(AppendEntries.TruncateLogBefore)] = ae.TruncateLogBefore,
                 [nameof(AppendEntries.TimeAsLeader)] = ae.TimeAsLeader,
-                [nameof(AppendEntries.SendingThread)] = Thread.CurrentThread.ManagedThreadId
+                [nameof(AppendEntries.SendingThread)] = Thread.CurrentThread.ManagedThreadId,
+                [nameof(AppendEntries.MinCommandVersion)] = ae.MinCommandVersion
             };
 
             if (ae.ForceElections)
@@ -347,8 +348,10 @@ namespace Raven.Server.Rachis
             }
             catch (IOException e)
             {
-                if(_log.IsInfoEnabled)
-                    _log.Info($"Failed to read from connection. If this error happens during state change of a node, it is expected. (source : [{_src}] -> destination : [{_destTag}])",e);
+                if (_log.IsInfoEnabled)
+                    _log.Info(
+                        $"Failed to read from connection. If this error happens during state change of a node, it is expected. (source : [{_src}] -> destination : [{_destTag}])",
+                        e);
                 throw new IOException("Failed to read " + typeof(T).Name, e);
             }
         }

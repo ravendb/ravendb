@@ -368,11 +368,6 @@ namespace Raven.Server.Web.System
                     databaseRecord.Topology = new DatabaseTopology();
 
                 databaseRecord.Topology.ReplicationFactor = Math.Min(replicationFactor, clusterTopology.AllNodes.Count);
-
-                if (ServerStore.IsLeader())
-                {
-                    ServerStore.AssignNodesToDatabase(clusterTopology, databaseRecord);
-                }
             }
 
             var (newIndex, result) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
@@ -537,13 +532,13 @@ namespace Raven.Server.Web.System
                 {
                     // no folders in directory
                     // will scan the directory for backup files
-                    RestoreUtils.FetchRestorePoints(restorePathJson.Path, sortedList, assertLegacyBackups: true);
+                    RestoreUtils.FetchRestorePoints(restorePathJson.Path, sortedList, context, assertLegacyBackups: true);
                 }
                 else
                 {
                     foreach (var directory in directories)
                     {
-                        RestoreUtils.FetchRestorePoints(directory, sortedList);
+                        RestoreUtils.FetchRestorePoints(directory, sortedList, context);
                     }
                 }
 
@@ -661,6 +656,13 @@ namespace Raven.Server.Web.System
                         }
                     }
                 }
+                else
+                {
+                    foreach (var databaseName in parameters.DatabaseNames)
+                    {
+                        waitOnRecordDeletion.Add(databaseName);
+                    }
+                }
 
                 long index = -1;
                 foreach (var name in parameters.DatabaseNames)
@@ -669,6 +671,8 @@ namespace Raven.Server.Web.System
                     index = newIndex;
                 }
                 await ServerStore.Cluster.WaitForIndexNotification(index);
+
+                long actualDeletionIndex = index;
 
                 var timeToWaitForConfirmation = parameters.TimeToWaitForConfirmation ?? TimeSpan.FromSeconds(15);
 
@@ -701,6 +705,7 @@ namespace Raven.Server.Web.System
                         }
 
                         await ServerStore.Cluster.WaitForIndexNotification(index, remaining);
+                        actualDeletionIndex = index;
                     }
                     catch (TimeoutException)
                     {
@@ -712,7 +717,10 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(DeleteDatabaseResult.RaftCommandIndex)] = index,
+                        // we only send the successful index here, we might fail to delete the index
+                        // because a node is down, and we don't want to cause the client to wait on an
+                        // index that doesn't exists in the Raft log
+                        [nameof(DeleteDatabaseResult.RaftCommandIndex)] = actualDeletionIndex,
                         [nameof(DeleteDatabaseResult.PendingDeletes)] = new DynamicJsonArray(deletedDatabases)
                     });
                 }
@@ -1149,7 +1157,7 @@ namespace Raven.Server.Web.System
                         {
                             using (database.PreventFromUnloading())
                             {
-                                // send some initial progess so studio can open details 
+                                // send some initial progress so studio can open details 
                                 result.AddInfo("Starting migration");
                                 result.AddInfo($"Path of temporary export file: {tmpFile}");
                                 onProgress(overallProgress);

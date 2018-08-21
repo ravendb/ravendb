@@ -66,7 +66,6 @@ class queryUtil {
                 new getIndexEntriesFieldsCommand(indexName, db)
                     .execute()
                     .done((fields) => {
-                        //TODO: self.isTestIndex(result.IsTestIndex);
                         outputFields(fields.Results);
                     });
             }
@@ -101,8 +100,7 @@ class queryUtil {
             // 'select' not found. Check for 'include' which can come after 'select'. 
             const includeIdx = tokenIndexes.include.index;
             return query.substring(0, includeIdx) + getStoredFieldsText;
-        }
-        else {
+        } else {
             // Both 'select' & 'include' not found. Append at end of query.
             return query + getStoredFieldsText;
         }

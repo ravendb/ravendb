@@ -2,12 +2,15 @@
 //
 // This file is distributed under the MIT License. See LICENSE.md for details.
 
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace Sparrow.Collections.LockFree
 {
     internal abstract class DictionaryImpl
     {
+        internal DictionaryImpl() { }
+
         internal enum ValueMatch
         {
             Any,            // sets new value unconditionally, used by index set
@@ -49,8 +52,6 @@ namespace Sparrow.Collections.LockFree
         // the reprobe limit on a 'get' call acts as a 'miss'; on a 'put' call it
         // can trigger a table resize.  Several places must have exact agreement on
         // what the reprobe_limit is, so we share it here.
-        // NOTE: Not static for perf reasons    
-        //       (some JITs insert useless code related to generics if this is a static)
         protected static int ReprobeLimit(int lenMask)
         {
             // 1/2 of table with some extra
@@ -59,27 +60,20 @@ namespace Sparrow.Collections.LockFree
 
         protected static bool EntryValueNullOrDead(object entryValue)
         {
-            return entryValue == null || entryValue == TOMBSTONE;
-        }
-
-        protected static int ReduceHashToIndex(int fullHash, int lenMask)
-        {
-            fullHash = fullHash & ~REGULAR_HASH_BITS;
-            var h2 = fullHash << 1;
-            if ((uint)h2 <= (uint)lenMask)
-                return h2;
-
-            return MixAndMask((uint)fullHash, lenMask);
+            return entryValue == null | entryValue == TOMBSTONE;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int MixAndMask(uint h, int lenMask)
+        protected static int ReduceHashToIndex(int fullHash, int lenMask)
         {
-            h = Hashing.Mix(h);
+            // spread hashcodes a little in case they differ by 1
+            var h = (uint)fullHash << 1;
 
-            h &= (uint)lenMask;
+            // smudge bits down in case they differ only in higher bits
+            h ^= (uint)fullHash >> 15;
+            h ^= (uint)h >> 7;
 
-            return (int)h;
+            return (int)h & lenMask;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -93,7 +87,7 @@ namespace Sparrow.Collections.LockFree
             return (object)value;
         }
 
-        internal static DictionaryImpl<TKey, TValue> CreateRef<TKey, TValue>(ConcurrentDictionary<TKey, TValue> topDict, int capacity)
+        internal static DictionaryImpl<TKey, TValue> CreateRef<TKey, TValue>(LockFreeConcurrentDictionary<TKey, TValue> topDict, int capacity)
             where TKey : class
         {
             var result = new DictionaryImplRef<TKey, TKey, TValue>(capacity, topDict);

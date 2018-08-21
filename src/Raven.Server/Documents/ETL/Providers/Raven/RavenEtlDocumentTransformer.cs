@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Text;
+using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime.Descriptors;
@@ -26,29 +29,29 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private readonly List<ICommandData> _commands = new List<ICommandData>();
         private PropertyDescriptor _addAttachmentMethod;
         private PropertyDescriptor _addCounterMethod;
-        private RavenEtlScriptRun _currentDocumentRun;
+        private RavenEtlScriptRun _currentRun;
 
         public RavenEtlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ScriptInput script)
-            : base(database, context, script.Transformation)
+            : base(database, context, script.Transformation, script.BehaviorFunctions)
         {
             _transformation = transformation;
             _script = script;
 
-            LoadToDestinations = _script.Transformation == null ? new string[0] : _script.LoadToCollections;
+            LoadToDestinations = _script.HasTransformation ? _script.LoadToCollections : new string[0];
         }
 
-        public override void Initalize()
+        public override void Initalize(bool debugMode)
         {
-            base.Initalize();
+            base.Initalize(debugMode);
 
-            if (SingleRun == null)
+            if (DocumentScript == null)
                 return;
 
-            if (_transformation.IsHandlingAttachments)
-                _addAttachmentMethod = new PropertyDescriptor(new ClrFunctionInstance(SingleRun.ScriptEngine, AddAttachment), null, null, null);
+            if (_transformation.IsAddingAttachments)
+                _addAttachmentMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, AddAttachment), null, null, null);
 
-            if (_transformation.IsHandlingCounters)
-                _addCounterMethod = new PropertyDescriptor(new ClrFunctionInstance(SingleRun.ScriptEngine, AddCounter), null, null, null);
+            if (_transformation.IsAddingCounters)
+                _addCounterMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, AddCounter), null, null, null);
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -89,16 +92,16 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             var transformResult = Context.ReadObject(transformed, id);
 
-            _currentDocumentRun.Put(id, document.Instance, transformResult);
+            _currentRun.Put(id, document.Instance, transformResult);
 
-            if (_transformation.IsHandlingAttachments)
+            if (_transformation.IsAddingAttachments)
             {
                 var docInstance = (ObjectInstance)document.Instance;
 
                 docInstance.DefineOwnProperty(Transformation.AddAttachment, _addAttachmentMethod, throwOnError: true);
             }
 
-            if (_transformation.IsHandlingCounters)
+            if (_transformation.IsAddingCounters)
             {
                 var docInstance = (ObjectInstance)document.Instance;
 
@@ -128,6 +131,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     break;
             }
 
+            if (attachmentReference.IsNull())
+                return self;
+
             if (attachmentReference.IsString() == false || attachmentReference.AsString().StartsWith(Transformation.AttachmentMarker) == false)
             {
                 var message =
@@ -139,32 +145,20 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 ThrowInvalidSriptMethodCall(message);
             }
 
-            _currentDocumentRun.AddAttachment(self, name, attachmentReference);
+            _currentRun.AddAttachment(self, name, attachmentReference);
 
             return self;
         }
 
         private JsValue AddCounter(JsValue self, JsValue[] args)
         {
-            JsValue counterReference = null;
-            string name = null; // will preserve original name
+            if (args.Length != 1)
+                ThrowInvalidSriptMethodCall($"{Transformation.AddCounter} must have one arguments");
 
-            switch (args.Length)
-            {
-                case 2:
-                    if (args[0].IsString() == false)
-                        ThrowInvalidSriptMethodCall($"First argument of {Transformation.AddCounter}(name, counter) must be string");
+            var counterReference = args[0];
 
-                    name = args[0].AsString();
-                    counterReference = args[1];
-                    break;
-                case 1:
-                    counterReference = args[0];
-                    break;
-                default:
-                    ThrowInvalidSriptMethodCall($"{Transformation.AddCounter} must have one or two arguments");
-                    break;
-            }
+            if (counterReference.IsNull())
+                return self;
 
             if (counterReference.IsString() == false || counterReference.AsString().StartsWith(Transformation.CounterMarker) == false)
             {
@@ -177,7 +171,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 ThrowInvalidSriptMethodCall(message);
             }
 
-            _currentDocumentRun.AddCounter(self, name, counterReference);
+            _currentRun.AddCounter(self, counterReference);
 
             return self;
         }
@@ -187,7 +181,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return $"{documentId}/{_script.IdPrefixForCollection[loadCollectionName]}/";
         }
 
-        public override IEnumerable<ICommandData> GetTransformedResults()
+        public override List<ICommandData> GetTransformedResults()
         {
             return _commands;
         }
@@ -195,48 +189,139 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         public override void Transform(RavenEtlItem item)
         {
             Current = item;
-            _currentDocumentRun = new RavenEtlScriptRun();
+            _currentRun = new RavenEtlScriptRun();
 
             if (item.IsDelete == false)
             {
-                if (_script.Transformation != null)
+                switch (item.Type)
                 {
-                    if (_script.LoadToCollections.Length > 1 || _script.IsLoadedToDefaultCollection(item, _script.LoadToCollections[0]) == false)
-                    {
-                        // first, we need to delete docs prefixed by modified document ID to properly handle updates of 
-                        // documents loaded to non default collections
+                    case EtlItemType.Document:
+                        if (_script.HasTransformation)
+                        {
+                            // first, we need to delete docs prefixed by modified document ID to properly handle updates of 
+                            // documents loaded to non default collections
 
-                        ApplyDeleteCommands(item, OperationType.Put);
-                    }
+                            ApplyDeleteCommands(item, OperationType.Put);
 
-                    SingleRun.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
-                }
-                else
-                {
-                    _currentDocumentRun.PutDocumentAttachmentsAndCounters(item.DocumentId, item.Document.Data,
-                        GetAttachmentsFor(item),
-                        GetCountersFor(item));
+                            DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
+
+                            if (_script.HasLoadCounterBehaviors && _script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out var function))
+                            {
+                                foreach (var counter in GetCountersFor(Current))
+                                {
+                                    using (var result = BehaviorsScript.Run(Context, Context, function, new object[] { item.DocumentId, counter.Name }))
+                                    {
+                                        if (result.BooleanValue == true)
+                                            _currentRun.AddCounter(item.DocumentId, counter.Name, counter.Value);
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            _currentRun.PutFullDocument(item.DocumentId, item.Document.Data, GetAttachmentsFor(item), GetCountersFor(item));
+                        }
+
+                        break;
+                    case EtlItemType.Counter:
+                        if (_script.HasTransformation)
+                        {
+                            if (_script.HasLoadCounterBehaviors == false)
+                                break;
+
+                            if (_script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out var function) == false)
+                                break;
+
+                            using (var result = BehaviorsScript.Run(Context, Context, function, new object[] {item.DocumentId, item.CounterName}))
+                            {
+                                if (result.BooleanValue == true)
+                                    _currentRun.AddCounter(item.DocumentId, item.CounterName, item.CounterValue);
+                            }
+                        }
+                        else
+                        {
+                            _currentRun.AddCounter(item.DocumentId, item.CounterName, item.CounterValue);
+                        }
+                        
+                        break;
                 }
             }
             else
             {
-                if (_script.Transformation != null)
-                    ApplyDeleteCommands(item, OperationType.Delete);
-                else
-                    _currentDocumentRun.Delete(new DeleteCommandData(item.DocumentId, null));
+                switch (item.Type)
+                {
+                    case EtlItemType.Document:
+                        if (_script.HasTransformation)
+                        {
+                            Debug.Assert(item.IsAttachmentTombstone == false, "attachment tombstones are tracked only if script is empty");
+
+                            bool shouldDelete = true;
+
+                            if (_script.HasDeleteDocumentsBehaviors && _script.TryGetDeleteDocumentBehaviorFunctionFor(item.Collection, out var function))
+                            {
+                                using (var result = BehaviorsScript.Run(Context, Context, function, new object[] { item.DocumentId }))
+                                {
+                                    shouldDelete = result.BooleanValue == true;
+                                }
+                            }
+                               
+                            if (shouldDelete)
+                                ApplyDeleteCommands(item, OperationType.Delete);
+
+                        }
+                        else
+                        {
+                            if (item.IsAttachmentTombstone == false)
+                            {
+                                _currentRun.Delete(new DeleteCommandData(item.DocumentId, null));
+                            }
+                            else
+                            {
+                                var (doc, attachmentName) = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(Context, item.AttachmentTombstoneId);
+
+                                _currentRun.DeleteAttachment(doc, attachmentName);
+                            }
+                        }
+                        break;
+                    case EtlItemType.Counter:
+
+                        var (docId, counterName) = CountersStorage.ExtractDocIdAndCounterNameFromTombstone(Context, item.CounterTombstoneId);
+
+                        if (_script.HasTransformation)
+                        {
+                            if (_script.HasLoadCounterBehaviors == false)
+                                break;
+
+                            if (_script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out var function) == false)
+                                break;
+
+                            using (var result = BehaviorsScript.Run(Context, Context, function, new object[] { docId, counterName }))
+                            {
+                                if (result.BooleanValue == true)
+                                    _currentRun.DeleteCounter(docId, counterName);
+                            }
+                        }
+                        else
+                        {
+                            
+                            _currentRun.DeleteCounter(docId, counterName);
+                        }
+
+                        break;
+                }
             }
 
-            _commands.AddRange(_currentDocumentRun.GetCommands());
+            _commands.AddRange(_currentRun.GetCommands());
         }
 
         protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
         {
-            _currentDocumentRun.LoadAttachment(reference, attachment);
+            _currentRun.LoadAttachment(reference, attachment);
         }
 
         protected override void AddLoadedCounter(JsValue reference, string name, long value)
         {
-            _currentDocumentRun.LoadCounter(reference, name, value);
+            _currentRun.LoadCounter(reference, name, value);
         }
 
         private List<Attachment> GetAttachmentsFor(RavenEtlItem item)
@@ -292,6 +377,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                 var value = Database.DocumentsStorage.CountersStorage.GetCounterValue(Context, item.DocumentId, counterName);
 
+                Debug.Assert(value != null);
+
                 results.Add((counterName, value.Value));
             }
 
@@ -306,11 +393,11 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                 if (_script.IsLoadedToDefaultCollection(item, collection))
                 {
-                    if (operation == OperationType.Delete || _transformation.IsHandlingAttachments || _transformation.IsHandlingCounters)
-                        _currentDocumentRun.Delete(new DeleteCommandData(item.DocumentId, null));
+                    if (operation == OperationType.Delete || _transformation.IsAddingAttachments || _transformation.IsAddingCounters)
+                        _currentRun.Delete(new DeleteCommandData(item.DocumentId, null));
                 }
                 else
-                    _currentDocumentRun.Delete(new DeletePrefixedCommandData(GetPrefixedId(item.DocumentId, collection)));
+                    _currentRun.Delete(new DeletePrefixedCommandData(GetPrefixedId(item.DocumentId, collection)));
             }
         }
 
@@ -322,9 +409,21 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             public readonly PatchRequest Transformation;
 
+            public readonly PatchRequest BehaviorFunctions;
+
             public readonly HashSet<string> DefaultCollections;
 
             public readonly Dictionary<string, string> IdPrefixForCollection = new Dictionary<string, string>();
+
+            private readonly Dictionary<string, string> _collectionToLoadCounterBehaviorFunction;
+
+            private readonly Dictionary<string, string> _collectionToDeleteDocumentBehaviorFunction;
+
+            public bool HasTransformation => Transformation != null;
+
+            public bool HasLoadCounterBehaviors => _collectionToLoadCounterBehaviorFunction != null;
+
+            public bool HasDeleteDocumentsBehaviors => _collectionToDeleteDocumentBehaviorFunction != null;
 
             public ScriptInput(Transformation transformation)
             {
@@ -334,6 +433,15 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     return;
 
                 Transformation = new PatchRequest(transformation.Script, PatchRequestType.RavenEtl);
+
+                if (transformation.CollectionToLoadCounterBehaviorFunction != null)
+                    _collectionToLoadCounterBehaviorFunction = transformation.CollectionToLoadCounterBehaviorFunction;
+
+                if (transformation.CollectionToDeleteDocumentsBehaviorFunction != null)
+                    _collectionToDeleteDocumentBehaviorFunction = transformation.CollectionToDeleteDocumentsBehaviorFunction;
+
+                if (HasLoadCounterBehaviors || HasDeleteDocumentsBehaviors)
+                    BehaviorFunctions = new PatchRequest(transformation.Script, PatchRequestType.EtlBehaviorFunctions);
 
                 LoadToCollections = transformation.GetCollectionsFromScript();
 
@@ -356,6 +464,16 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         _collectionNameComparisons[sourceCollection][loadToCollection] = string.Compare(sourceCollection, loadToCollection, StringComparison.OrdinalIgnoreCase) == 0;
                     }
                 }
+            }
+
+            public bool TryGetLoadCounterBehaviorFunctionFor(string collection, out string functionName)
+            {
+                return _collectionToLoadCounterBehaviorFunction.TryGetValue(collection, out functionName);
+            }
+
+            public bool TryGetDeleteDocumentBehaviorFunctionFor(string collection, out string functionName)
+            {
+                return _collectionToDeleteDocumentBehaviorFunction.TryGetValue(collection, out functionName);
             }
 
             public bool IsLoadedToDefaultCollection(RavenEtlItem item, string loadToCollection)

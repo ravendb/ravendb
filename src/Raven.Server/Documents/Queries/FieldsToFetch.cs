@@ -147,11 +147,30 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            var extract = indexDefinition.MapFields.TryGetValue(selectFieldName, out var value) && value.Storage == FieldStorage.Yes;
+            var bySourceAlias = ShouldTryToExtractBySourceAliasName(selectFieldName.Value, selectField);
+            var key = bySourceAlias
+                    ? selectField.SourceAlias
+                    : selectFieldName;
+
+            var extract = indexDefinition.MapFields.TryGetValue(key, out var value) && 
+                          value.Storage == FieldStorage.Yes;
+
             if (extract)
                 anyExtractableFromIndex = true;
 
-            return new FieldToFetch(selectFieldName, selectField, selectField.Alias, extract | indexDefinition.HasDynamicFields, isDocumentId: false);
+            if (bySourceAlias == false)
+            {
+                extract |= indexDefinition.HasDynamicFields;
+            }
+
+            return new FieldToFetch(selectFieldName, selectField, selectField.Alias, extract, isDocumentId: false);
+        }
+
+        private static bool ShouldTryToExtractBySourceAliasName(string selectFieldName, SelectField selectField)
+        {
+            return selectFieldName.Length == 0 &&
+                   selectField.HasSourceAlias &&
+                   selectField.SourceAlias != null;
         }
 
         private static void ThrowInvalidFetchAllStoredDocuments()

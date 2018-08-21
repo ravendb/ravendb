@@ -23,14 +23,11 @@ class protractedCommandsDetector {
     private sync() {
         this.showSpinner(_.some(this.requestsInProgress, x => x.spinnerVisible));
 
-        //TODO: handle block UI ?
-
         _.remove(this.requestsInProgress, x => x.completed);
     }
 
     private showServerNotRespondingAlert() {
         this.showServerNotResponding(true);
-        //TODO: update with new style
         $.blockUI({ message: '<div id="longTimeoutMessage"><span> This is taking longer than usual</span><br/><span>(Waiting for server to respond)</span></div>' });
     }
 

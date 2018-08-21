@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
 using Microsoft.CSharp.RuntimeBinder;
-using Raven.Server.Documents.Patch;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
@@ -29,10 +29,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
-        public static IPropertyAccessor Create(Type type)
+        public static IPropertyAccessor Create(Type type, object instance)
         {
             if (type == typeof(ObjectInstance))
                 return new JintPropertyAccessor(null);
+
+            if (instance is Dictionary<string, object> dict)
+                return DictionaryAccessor.Create(dict);
+
             return new PropertyAccessor(type);
         }
 
@@ -44,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             throw new InvalidOperationException(string.Format("The {0} property was not found", name));
         }
 
-        private PropertyAccessor(Type type, HashSet<string> groupByFields = null)
+        protected PropertyAccessor(Type type, HashSet<string> groupByFields = null)
         {
             var isValueType = type.GetTypeInfo().IsValueType;
             foreach (var prop in type.GetProperties())
@@ -132,10 +136,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             public bool IsGroupByField;
         }
 
-        internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, HashSet<string> _groupByFields, bool isObjectInstance = false)
+        internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, HashSet<string> _groupByFields, bool isObjectInstance = false)
         {
             if (isObjectInstance || type == typeof(ObjectInstance))
                 return new JintPropertyAccessor(_groupByFields);
+
+            if (instance is Dictionary<string, object> dict)
+                return DictionaryAccessor.Create(dict, _groupByFields);
 
             return new PropertyAccessor(type, _groupByFields);
         }
@@ -153,19 +160,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         public IEnumerable<(string Key, object Value, bool IsGroupByField)> GetPropertiesInOrder(object target)
         {
-            if(!(target is ObjectInstance oi))
+            if (!(target is ObjectInstance oi))
                 throw new ArgumentException($"JintPropertyAccessor.GetPropertiesInOrder is expecting a target of type ObjectInstance but got one of type {target.GetType().Name}.");
             foreach (var property in oi.GetOwnProperties())
             {
-                yield return (property.Key, GetValue(property.Value.Value), _groupByFields?.Contains(property.Key)??false);
-            }            
+                yield return (property.Key, GetValue(property.Value.Value), _groupByFields?.Contains(property.Key) ?? false);
+            }
         }
 
         public object GetValue(string name, object target)
         {
             if (!(target is ObjectInstance oi))
                 throw new ArgumentException($"JintPropertyAccessor.GetValue is expecting a target of type ObjectInstance but got one of type {target.GetType().Name}.");
-            if(oi.HasOwnProperty(name) == false)
+            if (oi.HasOwnProperty(name) == false)
                 throw new MissingFieldException($"The target for 'JintPropertyAccessor.GetValue' doesn't contain the property {name}.");
             return GetValue(oi.GetProperty(name).Value);
         }
@@ -177,7 +184,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (jsValue.IsString())
                 return jsValue.AsString();
             if (jsValue.IsBoolean())
-                return jsValue.AsBoolean(); 
+                return jsValue.AsBoolean();
             if (jsValue.IsNumber())
                 return jsValue.AsNumber();
             if (jsValue.IsDate())

@@ -4,8 +4,10 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -82,7 +84,9 @@ namespace Raven.Server.Rachis
 
                         return;
                     }
-                    
+
+                    ClusterCommandsVersionManager.SetClusterVersion(appendEntries.MinCommandVersion);
+
                     _debugRecorder.Record("Got entries");
                     _engine.Timeout.Defer(_connection.Source);
                     if (appendEntries.EntriesCount != 0)
@@ -138,6 +142,11 @@ namespace Raven.Server.Rachis
                             catch (RachisInvalidOperationException)
                             {
                                 // on raft protocol violation propagate the error and close this follower. 
+                                throw;
+                            }
+                            catch (ConcurrencyException)
+                            {
+                                // the term was changed
                                 throw;
                             }
                             catch (Exception e)
@@ -244,6 +253,8 @@ namespace Raven.Server.Rachis
 
             using (var tx = context.OpenWriteTransaction())
             {
+                _engine.ValidateTerm(_term);
+
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info($"{ToString()}: Tx running in {sp.Elapsed}");
@@ -278,7 +289,7 @@ namespace Raven.Server.Rachis
                 }
 
                 lastLogIndex = _engine.GetLastEntryIndex(context);
-               
+
                 var lastEntryIndexToCommit = Math.Min(
                     lastLogIndex,
                     appendEntries.LeaderCommit);
@@ -407,14 +418,16 @@ namespace Raven.Server.Rachis
             _debugRecorder.Record("Snapshot received");
             using (context.OpenWriteTransaction())
             {
-                var lastCommitIndex = _engine.GetLastCommitIndex(context);
-                if (snapshot.LastIncludedIndex < lastCommitIndex)
+                var lastTerm = _engine.GetTermFor(context, snapshot.LastIncludedIndex);
+                var lastCommitIndex = _engine.GetLastEntryIndex(context);
+                if (snapshot.LastIncludedTerm == lastTerm && snapshot.LastIncludedIndex < lastCommitIndex)
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
                         _engine.Log.Info(
                             $"{ToString()}: Got installed snapshot with last index={snapshot.LastIncludedIndex} while our lastCommitIndex={lastCommitIndex}, will just ignore it");
                     }
+
                     //This is okay to ignore because we will just get the committed entries again and skip them
                     ReadInstallSnapshotAndIgnoreContent(context);
                 }
@@ -425,6 +438,7 @@ namespace Raven.Server.Rachis
                         _engine.Log.Info(
                             $"{ToString()}: Installed snapshot with last index={snapshot.LastIncludedIndex} with LastIncludedTerm={snapshot.LastIncludedTerm} ");
                     }
+
                     _engine.SetLastCommitIndex(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
                     _engine.ClearLogEntriesAndSetLastTruncate(context, snapshot.LastIncludedIndex, snapshot.LastIncludedTerm);
                 }
@@ -467,6 +481,33 @@ namespace Raven.Server.Rachis
 
                 context.Transaction.Commit();
             }
+
+            _engine.Timeout.Defer(_connection.Source);
+            _debugRecorder.Record("Invoking StateMachine.SnapshotInstalled");
+
+            // notify the state machine, we do this in an async manner, and start
+            // the operator in a separate thread to avoid timeouts while this is
+            // going on
+
+            var task = Task.Run(() => _engine.SnapshotInstalledAsync(snapshot.LastIncludedIndex));
+
+            var sp = Stopwatch.StartNew();
+
+            var timeToWait = (int)(_engine.ElectionTimeout.TotalMilliseconds / 4);
+
+            while (task.Wait(timeToWait) == false)
+            {
+                // this may take a while, so we let the other side know that
+                // we are still processing, and we reset our own timer while
+                // this is happening
+                MaybeNotifyLeaderThatWeAreStillAlive(context, sp);
+            }
+
+            _debugRecorder.Record("Done with StateMachine.SnapshotInstalled");
+
+            // we might have moved from passive node, so we need to start the timeout clock
+            _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
+
             _debugRecorder.Record("Snapshot installed");
             //Here we send the LastIncludedIndex as our matched index even for the case where our lastCommitIndex is greater
             //So we could validate that the entries sent by the leader are indeed the same as the ones we have.
@@ -476,11 +517,6 @@ namespace Raven.Server.Rachis
                 CurrentTerm = _term,
                 LastLogIndex = snapshot.LastIncludedIndex
             });
-
-            _engine.Timeout.Defer(_connection.Source);
-
-            // notify the state machine
-            _engine.SnapshotInstalled(context, snapshot.LastIncludedIndex);
 
             _engine.Timeout.Defer(_connection.Source);
         }
@@ -671,7 +707,7 @@ namespace Raven.Server.Rachis
                         Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
                         Message = "No entries at all here, give me everything from the start",
                         CurrentTerm = _term,
-                        LastLogIndex = 0
+                        LastLogIndex = 0,
                     });
 
                     return; // leader will know where to start from here
@@ -687,13 +723,31 @@ namespace Raven.Server.Rachis
                 midpointTerm = _engine.GetTermForKnownExisting(context, midpointIndex);
             }
 
-
-            while (minIndex < maxIndex)
+            while ((midpointTerm == negotiation.PrevLogTerm && midpointIndex == negotiation.PrevLogIndex) == false)
             {
                 _engine.Timeout.Defer(_connection.Source);
 
                 _engine.ValidateTerm(_term);
-                
+
+                if (midpointIndex == negotiation.PrevLogIndex && midpointTerm != negotiation.PrevLogTerm)
+                {
+                    // our appended entries has been diverged, same index with different terms.
+                    var msg = $"Our appended entries has been diverged, same index with different terms. " +
+                              $"My index/term {midpointIndex}/{midpointTerm}, while yours is {negotiation.PrevLogIndex}/{negotiation.PrevLogTerm}.";
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"{ToString()}: {msg}");
+                    }
+                    connection.Send(context, new LogLengthNegotiationResponse
+                    {
+                        Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
+                        Message = msg,
+                        CurrentTerm = _term,
+                        LastLogIndex = 0
+                    });
+                    return;
+                }
+
                 connection.Send(context, new LogLengthNegotiationResponse
                 {
                     Status = LogLengthNegotiationResponse.ResponseStatus.Negotiation,
@@ -706,10 +760,10 @@ namespace Raven.Server.Rachis
                     MidpointTerm = midpointTerm
                 });
 
-                var response = connection.Read<LogLengthNegotiation>(context);
+                negotiation = connection.Read<LogLengthNegotiation>(context);
 
                 _engine.Timeout.Defer(_connection.Source);
-                if (response.Truncated)
+                if (negotiation.Truncated)
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
@@ -726,7 +780,7 @@ namespace Raven.Server.Rachis
                 }
                 using (context.OpenReadTransaction())
                 {
-                    if (_engine.GetTermFor(context, response.PrevLogIndex) == response.PrevLogTerm)
+                    if (_engine.GetTermFor(context, negotiation.PrevLogIndex) == negotiation.PrevLogTerm)
                     {
                         minIndex = Math.Min(midpointIndex + 1, maxIndex);
                     }
@@ -739,24 +793,25 @@ namespace Raven.Server.Rachis
                 using (context.OpenReadTransaction())
                     midpointTerm = _engine.GetTermForKnownExisting(context, midpointIndex);
             }
+
             if (_engine.Log.IsInfoEnabled)
             {
-                _engine.Log.Info($"{ToString()}: agreed upon last matched index = {midpointIndex} on term = {_term}");
+                _engine.Log.Info($"{ToString()}: agreed upon last matched index = {midpointIndex} on term = {midpointTerm}");
             }
+
             connection.Send(context, new LogLengthNegotiationResponse
             {
                 Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
                 Message = $"Found a log index / term match at {midpointIndex} with term {midpointTerm}",
                 CurrentTerm = _term,
-                LastLogIndex = midpointIndex
+                LastLogIndex = midpointIndex,
             });
         }
-
-        
         
         public void AcceptConnection(LogLengthNegotiation negotiation)
         {
-            _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
+            if(_engine.CurrentState != RachisState.Passive)
+                _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
             
             // if leader / candidate, this remove them from play and revert to follower mode
             _engine.SetNewState(RachisState.Follower, this, _term,

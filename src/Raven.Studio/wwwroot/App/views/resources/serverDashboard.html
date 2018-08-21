@@ -126,7 +126,7 @@
                         </div>
                     </div>
                     <div class="list-container">
-                        <div class="create-database" data-bind="visible: $root.noDatabases">
+                        <div class="create-database" data-bind="visible: $root.noDatabases() && !$root.spinners.loading()">
                             <div><i class="icon-empty-set"></i><span>No data</span></div>
                             <button  data-bind="click: $root.newDatabase" class="btn btn-primary btn-xs text-uppercase" >Create Database</button>
                         </div>
@@ -144,13 +144,41 @@
                     <h3 class="panel-title"><i class="icon-database"></i> <span>DATABASES</span></h3>
                 </div>
                 <div class="panel-body flex-vertical">
-                    <div class="flex-horizontal">
-                        <div>Total: <strong data-bind="text: totalDatabases"></strong></div>
-                        <div>Online: <strong data-bind="text: totalOnlineDatabases"></strong></div>
-                        <div>Offline: <strong data-bind="text: totalOfflineDatabases"></strong></div>
+
+                    <div class="flex-horizontal margin-bottom">
+                        <div> 
+                            <small class="text-uppercase margin-right margin-sm">Total:</small>
+                            <strong>
+                                <span data-bind="text: totalDatabases"></span>
+                                <i class="icon-database"></i>
+                            </strong>
+                        </div>
+                        <div class="flex-grow"></div>
+                        <div class="margin-right">
+                            <small class="text-uppercase margin-right margin-sm">Online:</small>
+                            <strong class="text-success">
+                                <span data-bind="text: totalOnlineDatabases"></span>
+                                <i class="icon-database-cutout icon-addon-check"></i>
+                            </strong>
+                        </div>
+                        <div class="margin-right">
+                            <small class="text-uppercase margin-right margin-sm">Offline:</small>
+                            <strong class="text-muted">
+                                <span data-bind="text: totalOfflineDatabases"></span>
+                                <i class="icon-database-cutout icon-addon-clock"></i>
+                            </strong>
+                        </div>
+                        <div>
+                            <small class="text-uppercase margin-right margin-sm">Disabled:</small>
+                            <strong class="text-warning">
+                                <span data-bind="text: totalDisabledDatabases"></span>
+                                <i class="icon-database-cutout icon-addon-cancel"></i>
+                            </strong>
+                        </div>
                     </div>
+
                     <div class="list-container">
-                        <div class="create-database" data-bind="visible: $root.noDatabases">
+                        <div class="create-database" data-bind="visible: $root.noDatabases() && !$root.spinners.loading()">
                             <div><i class="icon-empty-set"></i><span>No data</span></div>
                             <button  data-bind="click: $root.newDatabase" class="btn btn-primary btn-xs text-uppercase" >Create Database</button>
                         </div>

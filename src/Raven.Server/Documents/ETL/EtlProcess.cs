@@ -8,12 +8,20 @@ using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Json.Converters;
+using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
+using Raven.Server.Documents.ETL.Providers.Raven;
+using Raven.Server.Documents.ETL.Providers.Raven.Test;
+using Raven.Server.Documents.ETL.Providers.SQL;
+using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Documents.ETL.Test;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -53,7 +61,7 @@ namespace Raven.Server.Documents.ETL
 
         public abstract void Reset();
 
-        public abstract void Reset(DocumentChange change);
+        public abstract void NotifyAboutWork(DocumentChange documentChange, CounterChange counterChange);
 
         public abstract EtlPerformanceStats[] GetPerformanceStats();
 
@@ -93,6 +101,8 @@ namespace Raven.Server.Documents.ETL
         private EtlStatsAggregator _lastStats;
         private int _statsId;
 
+        private TestMode _testMode;
+
         protected readonly Transformation Transformation;
         protected readonly Logger Logger;
         protected readonly DocumentDatabase Database;
@@ -122,79 +132,151 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract IEnumerator<TExtracted> ConvertDocsEnumerator(IEnumerator<Document> docs, string collection);
 
-        protected abstract IEnumerator<TExtracted> ConvertTombstonesEnumerator(IEnumerator<Tombstone> tombstones, string collection);
+        protected abstract IEnumerator<TExtracted> ConvertTombstonesEnumerator(IEnumerator<Tombstone> tombstones, string collection, EtlItemType type);
 
-        public virtual IEnumerable<TExtracted> Extract(DocumentsOperationContext context, long fromEtag, EtlStatsScope stats)
+        protected abstract IEnumerator<TExtracted> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters, string collection);
+
+        protected abstract bool ShouldTrackAttachmentTombstones();
+
+        protected abstract bool ShouldTrackCounters();
+
+        public virtual IEnumerable<TExtracted> Extract(DocumentsOperationContext context, long fromEtag, EtlItemType type, EtlStatsScope stats)
         {
             using (var scope = new DisposableScope())
+            using (var merged = new ExtractedItemsEnumerator<TExtracted>(stats, type))
             {
-                var enumerators = new List<(IEnumerator<Document> Docs, IEnumerator<Tombstone> Tombstones, string Collection)>(Transformation.Collections.Count);
-
-                if (Transformation.ApplyToAllDocuments)
+                switch (type)
                 {
-                    var docs = Database.DocumentsStorage.GetDocumentsFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
-                    scope.EnsureDispose(docs);
+                    case EtlItemType.Document:
+                        var enumerators = new List<(IEnumerator<Document> Docs, IEnumerator<Tombstone> Tombstones, string Collection)>(Transformation.Collections.Count);
 
-                    var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
-                    scope.EnsureDispose(tombstones);
-                    tombstones = new FilterTombstonesEnumerator(tombstones, stats);
+                        if (Transformation.ApplyToAllDocuments)
+                        {
+                            var docs = Database.DocumentsStorage.GetDocumentsFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
+                            scope.EnsureDispose(docs);
 
-                    enumerators.Add((docs, tombstones, null));
+                            var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
+                            scope.EnsureDispose(tombstones);
+
+                            tombstones = new FilterTombstonesEnumerator(tombstones, stats, Tombstone.TombstoneType.Document, context);
+
+                            enumerators.Add((docs, tombstones, null));
+                        }
+                        else
+                        {
+                            foreach (var collection in Transformation.Collections)
+                            {
+                                var docs = Database.DocumentsStorage.GetDocumentsFrom(context, collection, fromEtag, 0, int.MaxValue).GetEnumerator();
+                                scope.EnsureDispose(docs);
+
+                                var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, collection, fromEtag, 0, int.MaxValue).GetEnumerator();
+                                scope.EnsureDispose(tombstones);
+
+                                enumerators.Add((docs, tombstones, collection));
+                            }
+                        }
+
+                        foreach (var en in enumerators)
+                        {
+                            merged.AddEnumerator(ConvertDocsEnumerator(en.Docs, en.Collection));
+                            merged.AddEnumerator(ConvertTombstonesEnumerator(en.Tombstones, en.Collection, EtlItemType.Document));
+                        }
+
+                        if (ShouldTrackAttachmentTombstones())
+                        {
+                            var attachmentTombstones = Database.DocumentsStorage
+                                .GetTombstonesFrom(context, AttachmentsStorage.AttachmentsTombstones, fromEtag, 0, int.MaxValue).GetEnumerator();
+                            scope.EnsureDispose(attachmentTombstones);
+
+                            attachmentTombstones = new FilterTombstonesEnumerator(attachmentTombstones, stats, Tombstone.TombstoneType.Attachment, context,
+                                fromCollections: Transformation.ApplyToAllDocuments ? null : Transformation.Collections);
+
+                            merged.AddEnumerator(ConvertTombstonesEnumerator(attachmentTombstones, null, EtlItemType.Document));
+                        }
+
+                        break;
+                    case EtlItemType.Counter:
+
+                        var lastDocEtag = stats.GetLastTransformedOrFilteredEtag(EtlItemType.Document);
+
+                        if (Transformation.ApplyToAllDocuments)
+                        {
+                            var counters = Database.DocumentsStorage.CountersStorage.GetCountersFrom(context, fromEtag, 0, int.MaxValue).GetEnumerator();
+                            scope.EnsureDispose(counters);
+
+                            counters = new FilterCountersEnumerator(counters, stats, Database.DocumentsStorage, context);
+
+                            var counterTombstones = Database.DocumentsStorage.GetTombstonesFrom(context, CountersStorage.CountersTombstones, fromEtag, 0, int.MaxValue)
+                                .GetEnumerator();
+                            scope.EnsureDispose(counterTombstones);
+
+                            counterTombstones = new FilterTombstonesEnumerator(counterTombstones, stats, Tombstone.TombstoneType.Counter, context, maxEtag: lastDocEtag);
+
+                            merged.AddEnumerator(
+                                new PreventCountersIteratingTooFarEnumerator<TExtracted>(ConvertCountersEnumerator(counters, null), lastDocEtag));
+
+                            merged.AddEnumerator(ConvertTombstonesEnumerator(counterTombstones, null, EtlItemType.Counter));
+                        }
+                        else
+                        {
+                            foreach (var collection in Transformation.Collections)
+                            {
+                                var counters = Database.DocumentsStorage.CountersStorage.GetCountersFrom(context, collection, fromEtag, 0, int.MaxValue).GetEnumerator();
+                                scope.EnsureDispose(counters);
+
+                                counters = new FilterCountersEnumerator(counters, stats, Database.DocumentsStorage, context);
+
+                                merged.AddEnumerator(new PreventCountersIteratingTooFarEnumerator<TExtracted>(ConvertCountersEnumerator(counters, collection),
+                                    lastDocEtag));
+                            }
+
+                            var counterTombstones = Database.DocumentsStorage.GetTombstonesFrom(context, CountersStorage.CountersTombstones, fromEtag, 0, int.MaxValue)
+                                .GetEnumerator();
+                            scope.EnsureDispose(counterTombstones);
+
+                            counterTombstones = new FilterTombstonesEnumerator(counterTombstones, stats, Tombstone.TombstoneType.Counter, context,
+                                fromCollections: Transformation.Collections, maxEtag: lastDocEtag);
+
+                            merged.AddEnumerator(ConvertTombstonesEnumerator(counterTombstones, null, EtlItemType.Counter));
+                        }
+
+                        break;
+                    default:
+                        throw new NotSupportedException($"Invalid ETL item type: {type}");
                 }
-                else
+
+                while (merged.MoveNext())
                 {
-                    foreach (var collection in Transformation.Collections)
-                    {
-                        var docs = Database.DocumentsStorage.GetDocumentsFrom(context, collection, fromEtag, 0, int.MaxValue).GetEnumerator();
-                        scope.EnsureDispose(docs);
-
-                        var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, collection, fromEtag, 0, int.MaxValue).GetEnumerator();
-                        scope.EnsureDispose(tombstones);
-
-                        enumerators.Add((docs, tombstones, collection));
-                    }
-                }
-
-                using (var merged = new ExtractedItemsEnumerator<TExtracted>(stats))
-                {
-                    foreach (var en in enumerators)
-                    {
-                        merged.AddEnumerator(ConvertDocsEnumerator(en.Docs, en.Collection));
-                        merged.AddEnumerator(ConvertTombstonesEnumerator(en.Tombstones, en.Collection));
-                    }
-
-                    while (merged.MoveNext())
-                    {
-                        yield return merged.Current;
-                    }
+                    yield return merged.Current;
                 }
             }
         }
 
         protected abstract EtlTransformer<TExtracted, TTransformed> GetTransformer(DocumentsOperationContext context);
 
-        public IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context, EtlStatsScope stats, EtlProcessState state)
+        public List<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context, EtlStatsScope stats, EtlProcessState state)
         {
             using (var transformer = GetTransformer(context))
             {
-                transformer.Initalize();
+                transformer.Initalize(debugMode: _testMode != null);
 
                 foreach (var item in items)
                 {
                     if (AlreadyLoadedByDifferentNode(item, state))
                     {
                         stats.RecordChangeVector(item.ChangeVector);
-                        stats.RecordLastFilteredOutEtag(stats.LastTransformedEtag);
+                        stats.RecordLastFilteredOutEtag(item.Etag, item.Type);
 
                         continue;
                     }
 
                     if (Transformation.ApplyToAllDocuments &&
+                        item.Type == EtlItemType.Document &&
                         CollectionName.IsHiLoCollection(item.CollectionFromMetadata) &&
                         ShouldFilterOutHiLoDocument())
                     {
                         stats.RecordChangeVector(item.ChangeVector);
-                        stats.RecordLastFilteredOutEtag(stats.LastTransformedEtag);
+                        stats.RecordLastFilteredOutEtag(item.Etag, item.Type);
 
                         continue;
                     }
@@ -205,16 +287,16 @@ namespace Raven.Server.Documents.ETL
 
                         try
                         {
+                            if (CanContinueBatch(stats, item) == false)
+                                break;
+
                             transformer.Transform(item);
 
                             Statistics.TransformationSuccess();
 
-                            stats.RecordTransformedItem();
-                            stats.RecordLastTransformedEtag(item.Etag);
+                            stats.RecordTransformedItem(item.Type);
+                            stats.RecordLastTransformedEtag(item.Etag, item.Type);
                             stats.RecordChangeVector(item.ChangeVector);
-
-                            if (CanContinueBatch(stats) == false)
-                                break;
                         }
                         catch (JavaScriptParseException e)
                         {
@@ -248,6 +330,8 @@ namespace Raven.Server.Documents.ETL
                     }
                 }
 
+                _testMode?.DebugOutput.AddRange(transformer.GetDebugOutput());
+
                 return transformer.GetTransformedResults();
             }
         }
@@ -260,9 +344,9 @@ namespace Raven.Server.Documents.ETL
                 {
                     LoadInternal(items, context);
 
-                    stats.RecordLastLoadedEtag(stats.LastTransformedEtag);
+                    stats.RecordLastLoadedEtag(stats.LastTransformedEtags.Values.Max());
 
-                    Statistics.LoadSuccess(stats.NumberOfTransformedItems);
+                    Statistics.LoadSuccess(stats.NumberOfTransformedItems.Sum(x => x.Value));
                 }
                 catch (Exception e)
                 {
@@ -271,7 +355,7 @@ namespace Raven.Server.Documents.ETL
 
                     EnterFallbackMode();
 
-                    Statistics.RecordLoadError(e.ToString(), documentId: null, count: stats.NumberOfExtractedItems);
+                    Statistics.RecordLoadError(e.ToString(), documentId: null, count: stats.NumberOfExtractedItems.Sum(x => x.Value));
                 }
             }
         }
@@ -291,11 +375,30 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract void LoadInternal(IEnumerable<TTransformed> items, JsonOperationContext context);
 
-        public bool CanContinueBatch(EtlStatsScope stats)
+        public bool CanContinueBatch(EtlStatsScope stats, TExtracted currentItem)
         {
-            if (stats.NumberOfExtractedItems >= Database.Configuration.Etl.MaxNumberOfExtractedDocuments)
+            if (currentItem.Type == EtlItemType.Counter)
             {
-                var reason = $"Stopping the batch because it has already processed {stats.NumberOfExtractedItems} items";
+                // we have special counters enumerator which ensures that we iterate counters up to last processed doc etag
+
+                if (stats.GetLastTransformedOrFilteredEtag(EtlItemType.Document) > 0)
+                {
+                    // we had some documents processed in current batch
+                    // as long as the counters enumerator returns items we'll ETL all of them as we track
+                    // the ETL processing state by a single last processed etag
+
+                    return true;
+                }
+
+                // we had no documents in current batch we can send all counters that we have
+                // although need to respect below criteria
+            }
+
+            if (currentItem.Type == EtlItemType.Document &&
+                stats.NumberOfExtractedItems[EtlItemType.Document] > Database.Configuration.Etl.MaxNumberOfExtractedDocuments ||
+                stats.NumberOfExtractedItems.Sum(x => x.Value) > Database.Configuration.Etl.MaxNumberOfExtractedItems)
+            {
+                var reason = $"Stopping the batch because it has already processed max number of items ({string.Join(',', stats.NumberOfExtractedItems.Select(x => $"{x.Key} - {x.Value}"))})";
 
                 if (Logger.IsInfoEnabled)
                     Logger.Info(reason);
@@ -342,7 +445,7 @@ namespace Raven.Server.Documents.ETL
 
         protected void UpdateMetrics(DateTime startTime, EtlStatsScope stats)
         {
-            Metrics.BatchSizeMeter.Mark(stats.NumberOfExtractedItems);
+            Metrics.BatchSizeMeter.Mark(stats.NumberOfExtractedItems.Sum(x => x.Value));
         }
 
         public override void Reset()
@@ -355,9 +458,9 @@ namespace Raven.Server.Documents.ETL
             _waitForChanges.Set();
         }
 
-        public override void Reset(DocumentChange change)
+        public override void NotifyAboutWork(DocumentChange documentChange, CounterChange counterChange)
         {
-            if (Transformation.ApplyToAllDocuments || _collections.Contains(change.CollectionName))
+            if (Transformation.ApplyToAllDocuments || (documentChange != null && _collections.Contains(documentChange.CollectionName)) || counterChange != null)
                 _waitForChanges.Set();
         }
 
@@ -449,13 +552,32 @@ namespace Raven.Server.Documents.ETL
 
                                 using (context.OpenReadTransaction())
                                 {
-                                    var extracted = Extract(context, loadLastProcessedEtag + 1, stats);
+                                    List<TTransformed> transformations = null;
 
-                                    var transformed = Transform(extracted, context, stats, state);
+                                    var typesToWorkOn = new List<EtlItemType>()
+                                    {
+                                        EtlItemType.Document
+                                    };
 
-                                    Load(transformed, context, stats);
+                                    if (ShouldTrackCounters())
+                                    {
+                                        typesToWorkOn.Add(EtlItemType.Counter);
+                                    }
 
-                                    var lastProcessed = Math.Max(stats.LastLoadedEtag, stats.LastFilteredOutEtag);
+                                    foreach (var type in typesToWorkOn)
+                                    {
+                                        var extracted = Extract(context, loadLastProcessedEtag + 1, type, stats);
+
+                                        var transformed = Transform(extracted, context, stats, state);
+
+                                        if (transformations == null)
+                                            transformations = transformed;
+                                        else
+                                            transformations.AddRange(transformed);
+                                    }
+
+                                    Load(transformations, context, stats);
+                                    var lastProcessed = Math.Max(stats.LastLoadedEtag, stats.LastFilteredOutEtags.Values.Max());
 
                                     if (lastProcessed > Statistics.LastProcessedEtag)
                                     {
@@ -594,6 +716,12 @@ namespace Raven.Server.Documents.ETL
                 lastProcessedTombstones[collection] = lastProcessedEtag;
             }
 
+            if (ShouldTrackCounters())
+                lastProcessedTombstones[CountersStorage.CountersTombstones] = lastProcessedEtag;
+
+            if (ShouldTrackAttachmentTombstones())
+                lastProcessedTombstones[AttachmentsStorage.AttachmentsTombstones] = lastProcessedEtag;
+
             return lastProcessedTombstones;
         }
 
@@ -620,13 +748,20 @@ namespace Raven.Server.Documents.ETL
             var message = new StringBuilder();
 
             message.Append(
-                $"{Tag} process '{Name}' extracted {stats.NumberOfExtractedItems} docs, transformed and loaded {stats.NumberOfTransformedItems} docs in {stats.Duration}. ");
+                $"{Tag} process '{Name}' processed the following number of items: ");
 
-            message.Append($"{nameof(stats.LastTransformedEtag)}: {stats.LastTransformedEtag}. ");
-            message.Append($"{nameof(stats.LastLoadedEtag)}: {stats.LastLoadedEtag}. ");
+            foreach (var extracted in stats.NumberOfExtractedItems)
+            {
+                if (extracted.Value > 0)
+                    message.Append($"{extracted.Key} - {extracted.Value} (last transformed etag: {stats.LastTransformedEtags[extracted.Key]}");
 
-            if (stats.LastFilteredOutEtag > 0)
-                message.Append($"{nameof(stats.LastFilteredOutEtag)}: {stats.LastFilteredOutEtag}. ");
+                if (stats.LastFilteredOutEtags[extracted.Key] > 0)
+                    message.Append($", last filtered etag: {stats.LastFilteredOutEtags[extracted.Key]}");
+
+                message.Append("), ");
+            }
+
+            message.Append($" in {stats.Duration} (last loaded etag: {stats.LastLoadedEtag})");
 
             if (stats.BatchCompleteReason != null)
                 message.Append($"Batch completion reason: {stats.BatchCompleteReason}");
@@ -648,6 +783,136 @@ namespace Raven.Server.Documents.ETL
             return OngoingTaskConnectionStatus.NotActive;
         }
 
+        public static TestEtlScriptResult TestScript(TestEtlScript<TConfiguration, TConnectionString> testScript, DocumentDatabase database, ServerStore serverStore,
+            DocumentsOperationContext context)
+        {
+            var document = database.DocumentsStorage.Get(context, testScript.DocumentId);
+
+            if (document == null)
+                throw new InvalidOperationException($"Document {testScript.DocumentId} does not exist");
+
+            TConnectionString connection = null;
+
+            var sqlTestScript = testScript as TestSqlEtlScript;
+
+            if (sqlTestScript != null)
+            {
+                // we need to have connection string when testing SQL ETL because we need to have the factory name
+                // and if PerformRolledBackTransaction = true is specified then we need make a connection to SQL
+
+                var csErrors = new List<string>();
+
+                if (sqlTestScript.Connection != null)
+                {
+                    if (sqlTestScript.Connection.Validate(ref csErrors) == false)
+                        throw new InvalidOperationException($"Invalid connection string due to {string.Join(";", csErrors)}");
+
+                    connection = sqlTestScript.Connection as TConnectionString;
+                }
+                else
+                {
+                    if (serverStore.LoadDatabaseRecord(database.Name, out _).SqlConnectionStrings
+                            .TryGetValue(testScript.Configuration.ConnectionStringName, out var sqlConnection) == false)
+                    {
+                        throw new InvalidOperationException($"Connection string named '{testScript.Configuration.ConnectionStringName}' was not found in the database record");
+                    }
+
+                    if (sqlConnection.Validate(ref csErrors) == false)
+                        throw new InvalidOperationException($"Invalid '{testScript.Configuration.ConnectionStringName}' connection string due to {string.Join(";", csErrors)}");
+
+                    connection = sqlConnection as TConnectionString;
+                }
+            }
+
+            testScript.Configuration.Initialize(connection);
+
+            testScript.Configuration.TestMode = true;
+
+            if (testScript.Configuration.Validate(out List<string> errors) == false)
+            {
+                throw new InvalidOperationException($"Invalid ETL configuration for '{testScript.Configuration.Name}'. " +
+                                                    $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.");
+            }
+
+            if (testScript.Configuration.Transforms.Count != 1)
+            {
+                throw new InvalidOperationException($"Invalid number of transformations. You have provided {testScript.Configuration.Transforms.Count} " +
+                                                    "while ETL test expects to get exactly 1 transformation script");
+            }
+
+            var docCollection = database.DocumentsStorage.ExtractCollectionName(context, document.Data).Name;
+
+            if (testScript.Configuration.Transforms[0].ApplyToAllDocuments == false && testScript.Configuration.Transforms[0].Collections.Contains(docCollection, StringComparer.OrdinalIgnoreCase) == false)
+            {
+                throw new InvalidOperationException($"Document '{document.Id}' belongs to {docCollection} collection " +
+                                                    $"while tested ETL script works on the following collections: {string.Join(", ", testScript.Configuration.Transforms[0].Collections)}");
+            }
+
+            if (testScript.Configuration.Transforms[0].ApplyToAllDocuments)
+            {
+                // when ETL script has ApplyToAllDocuments then it extracts docs without
+                // providing collection name to ExtractedItem
+                // it is retrieved from metadata then
+                // let's do the same to ensure we have the same behavior in test mode
+
+                docCollection = null;
+            }
+
+            List<string> debugOutput;
+
+            switch (testScript.Configuration.EtlType)
+            {
+                case EtlType.Sql:
+                    using (var sqlEtl = new SqlEtl(testScript.Configuration.Transforms[0], testScript.Configuration as SqlEtlConfiguration, database, null))
+                    using (sqlEtl.EnterTestMode(out debugOutput))
+                    {
+                        sqlEtl.EnsureThreadAllocationStats();
+
+                        var transformed = sqlEtl.Transform(new[] {new ToSqlItem(document, docCollection)}, context, new EtlStatsScope(new EtlRunStats()),
+                            new EtlProcessState());
+
+                        Debug.Assert(sqlTestScript != null);
+
+                        var result = sqlEtl.RunTest(context, transformed, sqlTestScript.PerformRolledBackTransaction);
+                        result.DebugOutput = debugOutput;
+
+                        return result;
+                    }
+                case EtlType.Raven:
+                    using (var ravenEtl = new RavenEtl(testScript.Configuration.Transforms[0], testScript.Configuration as RavenEtlConfiguration, database, null))
+                    using (ravenEtl.EnterTestMode(out debugOutput))
+                    {
+                        ravenEtl.EnsureThreadAllocationStats();
+
+                        var results = ravenEtl.Transform(new[] { new RavenEtlItem(document, docCollection) }, context, new EtlStatsScope(new EtlRunStats()),
+                            new EtlProcessState());
+
+                        return new RavenEtlTestScriptResult
+                        {
+                            TransformationErrors = ravenEtl.Statistics.TransformationErrorsInCurrentBatch.Errors.ToList(),
+                            Commands = results.ToList(),
+                            DebugOutput = debugOutput
+                        };
+                    }
+                default:
+                    throw new NotSupportedException($"Unknown ETL type in script test: {testScript.Configuration.EtlType}");
+            }
+        }
+
+        private IDisposable EnterTestMode(out List<string> debugOutput)
+        {
+            _testMode = new TestMode();
+            var disableAlerts = Statistics.PreventFromAddingAlertsToNotificationCenter();
+
+            debugOutput = _testMode.DebugOutput;
+
+            return new DisposableAction(() =>
+            {
+                _testMode = null;
+                disableAlerts.Dispose();
+            });
+        }
+
         public override void Dispose()
         {
             if (CancellationToken.IsCancellationRequested)
@@ -661,6 +926,11 @@ namespace Raven.Server.Documents.ETL
             exceptionAggregator.Execute(() => _waitForChanges.Dispose());
 
             exceptionAggregator.ThrowIfNeeded();
+        }
+
+        private class TestMode
+        {
+            public readonly List<string> DebugOutput = new List<string>();
         }
     }
 }

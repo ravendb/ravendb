@@ -6,9 +6,11 @@ using FastTests.Voron.Compaction;
 using SlowTests.Authentication;
 using SlowTests.Bugs.MapRedue;
 using SlowTests.Client;
+using SlowTests.Client.Attachments;
 using SlowTests.Issues;
 using SlowTests.MailingList;
 using Sparrow.Logging;
+using StressTests.Client.Attachments;
 
 namespace Tryouts
 {
@@ -18,9 +20,9 @@ namespace Tryouts
         {
             try
             {
-                using (var test = new RavenDB_11166())
+                using (var test = new RavenDB_11734())
                 {
-                    await test.CanUseSubscriptionWithIncludes();
+                    await test.Index_Queries_Should_Not_Return_Deleted_Documents();
                 }
             }
             catch (Exception e)

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <RuntimeFrameworkVersion>2.1.1</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>2.1.2</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Tryouts</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -19,7 +19,9 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
+    <ProjectReference Include="..\..\src\Raven.Embedded\Raven.Embedded.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
+    <ProjectReference Include="..\InterversionTests\InterversionTests.csproj" />
     <ProjectReference Include="..\RachisTests\RachisTests.csproj" />
     <ProjectReference Include="..\SlowTests\SlowTests.csproj" />
     <ProjectReference Include="..\FastTests\FastTests.csproj" />

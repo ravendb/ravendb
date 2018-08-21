@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Patch
                     if (_logger.IsInfoEnabled)
                     {
                         _logger.Info(
-                            $"Conflict resolution script for {_fstDocumentConflict.Collection} collection declined to resolve the conflict for {_fstDocumentConflict.LowerId}");
+                            $"Conflict resolution script for {_fstDocumentConflict.Collection} collection declined to resolve the conflict for {_fstDocumentConflict.Id ?? _fstDocumentConflict.LowerId}");
                     }
                     return false;
                 }

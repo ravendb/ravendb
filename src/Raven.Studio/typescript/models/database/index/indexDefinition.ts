@@ -195,7 +195,6 @@ class indexDefinition {
             Priority: this.priority(),
             Configuration: this.configurationToDto(),
             Fields: this.fieldToDto(),
-            //IsTestIndex: false, //TODO: test indexes
             OutputReduceToCollection: this.outputReduceToCollection() ? this.reduceToCollectionName() : null,
             AdditionalSources: this.additionalSourceToDto()
         }

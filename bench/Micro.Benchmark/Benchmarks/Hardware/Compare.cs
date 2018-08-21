@@ -30,7 +30,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             {
                 Add(new Job(RunMode.Default)
                 {
-                    Env =
+                    Environment =
                     {
                         Runtime = Runtime.Core,
                         Platform = Platform.X64,

@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (query.Metadata.IsOptimizedSortOnly && _index.Definition.HasDynamicFields == false)
             {
-                foreach (var result in QuerySortOnly(query, retriever, position, pageSize))
+                foreach (var result in QuerySortOnly(query, retriever, position, pageSize, totalResults, token))
                     yield return result;
 
                 yield break;
@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var returnedResults = 0;
 
             var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
-            var sort = GetSort(query, getSpatialField, documentsContext);
+            var sort = GetSort(query, _index, getSpatialField, documentsContext);
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
@@ -212,7 +212,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> QuerySortOnly(IndexQueryServerSide query, IQueryResultRetriever retriever, int start, int pageSize)
+        private IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> QuerySortOnly(
+            IndexQueryServerSide query, IQueryResultRetriever retriever, int start, int pageSize, Reference<int> totalResults, CancellationToken token)
         {
             int FindDocument(bool isAsc, int i, (int Index, StringIndex Item, IndexReader IndexReader)[] items)
             {
@@ -238,6 +239,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 return innerDoc;
             }
 
+            totalResults.Value = _searcher.IndexReader.NumDocs();
+
             var returnedResults = 0;
 
             var order = query.Metadata.OrderBy[0];
@@ -255,6 +258,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             while (true)
             {
+                token.ThrowIfCancellationRequested();
+
                 var idx = -1;
                 var doc = -1;
                 string docTerm = null;
@@ -418,7 +423,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int previousBaseQueryMatches = 0;
 
             var firstSubDocumentQuery = subQueries[0];
-            var sort = GetSort(query, getSpatialField, documentsContext);
+            var sort = GetSort(query, _index, getSpatialField, documentsContext);
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
@@ -551,7 +556,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return false;
         }
 
-        private static Sort GetSort(IndexQueryServerSide query, Func<string, SpatialField> getSpatialField, DocumentsOperationContext documentsContext)
+        private static Sort GetSort(IndexQueryServerSide query, Index index, Func<string, SpatialField> getSpatialField, DocumentsOperationContext documentsContext)
         {
             if (query.PageSize == 0) // no need to sort when counting only
                 return null;
@@ -560,7 +565,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (orderByFields == null)
             {
-                if (query.Metadata.HasBoost == false)
+                if (query.Metadata.HasBoost == false && index.HasBoostedFields == false)
                     return null;
 
                 return new Sort(SortField.FIELD_SCORE);
@@ -810,7 +815,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var position = query.Start;
 
             var luceneQuery = GetLuceneQuery(context, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
-            var sort = GetSort(query, getSpatialField, documentsContext);
+            var sort = GetSort(query, _index, getSpatialField, documentsContext);
 
             var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
             var termsDocs = IndexedTerms.ReadAllEntriesFromIndex(_searcher.IndexReader, documentsContext, _state);

@@ -32,7 +32,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: "viewmodels/database/settings/conflictResolution",
             title: "Conflict Resolution",
             nav: true,
-            css: 'icon-conflicts',
+            css: 'icon-conflicts-resolution',
             dynamicHash: appUrls.conflictResolution,
             enabled: access.enableConflictResolutionMenuItem
         }),
@@ -41,8 +41,16 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/settings/clientConfiguration',
             title: 'Client Configuration',
             nav: true,
-            css: 'icon-client-configuration',
+            css: 'icon-database-client-configuration',
             dynamicHash: appUrls.clientConfiguration
+        }),
+        new leafMenuItem({
+            route: 'databases/settings/studioConfiguration',
+            moduleId: 'viewmodels/database/settings/studioConfiguration',
+            title: 'Studio Configuration',
+            nav: true,
+            css: 'icon-database-studio-configuration',
+            dynamicHash: appUrls.studioConfiguration
         }),
         new leafMenuItem({
             route: 'databases/settings/revisions',

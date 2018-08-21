@@ -105,7 +105,7 @@ namespace FastTests.Server.Documents.Operations
 
                 OperationStatusChange change;
 
-                Assert.True(notifications.TryTake(out change, TimeSpan.FromSeconds(1)));
+                Assert.True(notifications.TryTake(out change, TimeSpan.FromSeconds(30)));
                 Assert.NotNull(change.OperationId);
                 Assert.Equal(OperationStatus.Faulted, change.State.Status);
                 Assert.NotNull(change.State.Result);

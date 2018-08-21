@@ -1,5 +1,5 @@
 <div class="modal-dialog modal-lg" role="document" id="newDatabase">
-    <form data-bind="submit: createDatabase" autocomplete="off">
+    <form data-bind="submit: createDatabase" autocomplete="off" novalidate>
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" data-bind="click: close" class="close" data-dismiss="modal" aria-label="Close"><i aria-hidden="true" class="icon-cancel"></i></button>
@@ -28,11 +28,11 @@
                                 </button>
                             </div>
                             <div class="toggle settings-item" data-bind="css: { 'active': $root.currentAdvancedSection() === id }, visible: !alwaysEnabled">
-                                <input class="styled" type="checkbox" data-bind="checked: enabled, attr: { id: 'section_' + $index() }">
+                                <input class="styled" type="checkbox" data-bind="checked: enabled, attr: { id: 'section_' + $index() }, disable: disableToggle">
                                 <label data-bind="text: name, attr: { 'for': 'section_' + $index() }">
                                 </label>
                                 <button type="button" class="btn pull-right btn-toggle"
-                                        data-bind="click: _.partial($root.showAdvancedConfigurationFor, id), css: { 'btn-danger': enabled() && validationGroup && !validationGroup.isValid() }">
+                                        data-bind="click: _.partial($root.showAdvancedConfigurationFor, id), css: { 'btn-danger': enabled() && validationGroup && !validationGroup.isValid() }, disable: disableToggle() && !enabled()">
                                     <i data-bind="attr: { 'class' : enabled() && validationGroup && !validationGroup.isValid() ? 'icon-danger' : 'icon-settings' }"></i>
                                 </button>
                             </div>
@@ -295,6 +295,19 @@
                 </div>
             </div>
         </div>
+        
+        <div data-bind="with: selectedRestorePoint">
+            <div class="panel panel-info padding flex-horizontal" data-bind="visible: isSnapshotRestore && isEncrypted">
+                <i class="icon-info"></i>
+                <div class="margin-left">Selected restore point is encrypted. Please provide encryption key in 'Encryption' tab.</div>
+            </div>
+
+            <div class="panel panel-info padding flex-horizontal" data-bind="visible: isSnapshotRestore && !isEncrypted">
+                <i class="icon-info"></i>
+                <div class="margin-left">Selected restore point is not encrypted. 'Encyption' tab was disabled.</div>
+            </div>
+        </div>
+        
     </div>
 </script>
 
@@ -329,7 +342,7 @@
             <div class="input-group" title="Set the number of nodes that will contain the database" 
                  data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showReplicationFactorWarning()) }, validationElement: replicationFactor">
                 <span class="input-group-addon">Replication factor</span>
-                <input class="form-control" type="number" min="0" title="Set the number of nodes that will contain the database" 
+                <input class="form-control" type="number" min="1" title="Set the number of nodes that will contain the database" 
                        data-bind="numericInput: replicationFactor, disable: $root.databaseModel.isFromBackupOrFromOfflineMigration || $root.disableReplicationFactorInput">
                 <div class="help-block" data-bind="visible: !$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showReplicationFactorWarning">
                     With the replication factor set to 1, the data won't be replicated!

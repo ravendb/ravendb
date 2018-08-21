@@ -54,7 +54,7 @@
                         <i class="icon-trash"></i>
                         <span>Delete</span>
                     </button>
-                    <a  data-bind="attr: { href: latestRevisionUrl }, visible: inReadOnlyMode()" class="btn btn-default">
+                    <a  data-bind="attr: { href: latestRevisionUrl }, visible: inReadOnlyMode() && !isDeleteRevision()" class="btn btn-default">
                         <i class="icon-latest"></i>
                         <span>See the current document</span>
                     </a>
@@ -100,6 +100,10 @@
         <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: documentText">
             <div class="help-block" data-bind="validationMessage: documentText"></div>
         </div>
+        <small data-bind="visible: inReadOnlyMode() && !isDeleteRevision()" class="text-warning bg-warning padding padding-sm">
+            <i class="icon-warning"></i>
+            <span data-bind="text: 'Note: File editing is not available in revisions'"></span>
+        </small>
     </div>
     <div id="right-options-panel" class="flex-window">
         <div class="panel flex-window-head">
@@ -139,14 +143,14 @@
             <div class="flex-window-head">
                 <div class="btn-group btn-group-justified btn-tabs" role="group">
                     <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-xs btn-default doc-attachments" data-bind="css: { active: isAttachmentsActive() }, click: activateAttachments">
+                        <button type="button" class="btn btn-xs btn-default doc-attachments" data-bind="css: { active: isAttachmentsActive() }, click: activateAttachments, disable: !$root.canViewAttachments()">
                             <div class="icon-attachment"></div>
                             Attachments
                             <div class="badge" data-bind="text: $root.attachmentsCount() || ''"></div>
                         </button>
                     </div>
                     <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-xs btn-default doc-counters" data-bind="css: { active: isCountersActive() }, click: activateCounters">
+                        <button type="button" class="btn btn-xs btn-default doc-counters" data-bind="css: { active: isCountersActive() }, click: activateCounters, disable: !$root.canViewCounters()">
                             <div class="icon-new-counter"></div>
                             Counters
                             <div class="badge" data-bind="text: $root.countersCount() || ''"></div>
@@ -160,7 +164,7 @@
                         </button>
                     </div>
                     <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-xs btn-default doc-related" data-bind="css: { active: isRelatedActive() }, click: activateRelated">
+                        <button type="button" class="btn btn-xs btn-default doc-related" data-bind="css: { active: isRelatedActive() }, click: activateRelated, disable: !$root.canViewRelated()">
                             <div class="icon-link"></div>
                             Related
                         </button>
@@ -175,11 +179,11 @@
                 <div class="search-documents" data-bind="visible: searchInputVisible">
                     <input type="search" class="form-control" data-bind="textInput: searchInput" placeholder="search" /><span class="icon-search"></span>
                 </div>
-                <div class="flex-window-head" data-bind="visible: isUploaderActive, template: { name: 'uploader-template' }">
+                <div class="flex-window-head" data-bind="visible: isUploaderActive() && $root.canViewAttachments() && !$root.inReadOnlyMode(), template: { name: 'uploader-template' }">
                 </div>
-                <div class="flex-window-head" data-bind="visible: isCountersActive">
+                <div class="flex-window-head" data-bind="visible: isCountersActive() && $root.canViewCounters() && !$root.inReadOnlyMode()">
                     <div class="padding padding-xs margin-top margin-top-sm">
-                        <button type="button" class="btn btn-sm btn-primary btn-block" data-bind="click: $root.connectedDocuments.setCounter, visible: isCountersActive() && !$root.isClone()">
+                        <button type="button" class="btn btn-sm btn-primary btn-block" data-bind="click: _.partial($root.connectedDocuments.setCounter, null)">
                             <i class="icon-new-counter"></i>
                             <span>Add Counter</span>
                         </button>
@@ -190,9 +194,6 @@
                 <div class="objects-list-container">
                     <virtual-grid params="controller: gridController"></virtual-grid>
                 </div>
-            </div>
-            <div class="bg-warning padding padding-xs text-center" data-bind="visible: showUploadNotAvailable">
-                <small><i class="icon-info"></i> <span>File editing is not available in revisions.</span></small>
             </div>
         </div>
     </div>
@@ -210,7 +211,7 @@
         <div class="input-group file-input">
             <input type="file" id="uploadAttachmentFilePicker" data-bind="event: { change: _.partial(fileSelected, $element.value) }" tabindex="-1">
             <label for="uploadAttachmentFilePicker" class="btn btn-sm btn-primary btn-block" data-bind="css: { 'btn-spinner': spinners.upload }, disable: spinners.upload">
-                <i class="icon-attachment"></i> <span>Add Attachment</span>
+                <i class="icon-attachment"></i> <span data-bind="text: uploadButtonText"></span>
             </label>
         </div>
     </div>

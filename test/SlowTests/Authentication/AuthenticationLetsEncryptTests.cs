@@ -82,6 +82,7 @@ namespace SlowTests.Authentication
                 RegisterClientCert = false, // N/A here
                 Password = null,
                 Certificate = null,
+                LocalNodeTag = "A",
                 License = license,
                 Email = email,
                 NodeSetupInfos = new Dictionary<string, SetupInfo.NodeInfo>()
@@ -116,7 +117,7 @@ namespace SlowTests.Authentication
 
                 try
                 {
-                    settingsJsonObject = SetupManager.ExtractCertificatesAndSettingsJsonFromZip(zipBytes, "A", context, out serverCertBytes, out serverCert, out _, out _, out _);
+                    settingsJsonObject = SetupManager.ExtractCertificatesAndSettingsJsonFromZip(zipBytes, "A", context, out serverCertBytes, out serverCert, out _, out _, out _, out _);
                     firstServerCertThumbprint = serverCert.Thumbprint;
                 }
                 catch (Exception e)

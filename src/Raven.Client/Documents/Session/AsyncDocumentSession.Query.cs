@@ -72,6 +72,8 @@ namespace Raven.Client.Documents.Session
             return new RavenQueryInspector<S>();
         }
 
+        InMemoryDocumentSessionOperations IDocumentQueryGenerator.Session { get => this; }
+  
         /// <summary>
         /// Create a new query for <typeparam name="T"/>
         /// </summary>

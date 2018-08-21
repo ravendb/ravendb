@@ -225,7 +225,7 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
 
                     const task = new backupNowCommand(this.activeDatabase(), this.taskId, confirmResult.isFullBackup, this.taskName());
                     task.execute()
-                        .done((backupNowResult: Raven.Server.Documents.PeriodicBackup.BackupDatabaseNowResult) => {
+                        .done((backupNowResult: Raven.Client.Documents.Operations.Backups.StartBackupOperationResult) => {
                             this.refreshBackupInfo();
                             this.watchProvider(this);
 

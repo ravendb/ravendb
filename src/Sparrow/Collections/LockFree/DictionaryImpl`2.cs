@@ -12,23 +12,24 @@ namespace Sparrow.Collections.LockFree
     internal abstract class DictionaryImpl<TKey, TValue>
         : DictionaryImpl
     {
+        // TODO: move to leafs
         internal IEqualityComparer<TKey> _keyComparer;
 
-        internal static Func<ConcurrentDictionary<TKey, TValue>, int, DictionaryImpl<TKey, TValue>> CreateRefUnsafe =
-            (topDict, capacity) =>
+        internal static Func<LockFreeConcurrentDictionary<TKey, TValue>, int, DictionaryImpl<TKey, TValue>> CreateRefUnsafe =
+            (LockFreeConcurrentDictionary <TKey, TValue> topDict, int capacity) =>
             {
-                var method = typeof(DictionaryImpl).
-                    GetMethod("CreateRef", BindingFlags.NonPublic | BindingFlags.Static).
-                    MakeGenericMethod(new Type[] { typeof(TKey), typeof(TValue) });
-
-                var del = (Func<ConcurrentDictionary<TKey, TValue>, int, DictionaryImpl<TKey, TValue>>)method
-                    .CreateDelegate(typeof(Func<ConcurrentDictionary<TKey, TValue>, int, DictionaryImpl<TKey, TValue>>));
+                var mObj = new Func<LockFreeConcurrentDictionary<object, object>, int, DictionaryImpl<object, object>> (DictionaryImpl.CreateRef);
+                var method = mObj.GetMethodInfo().GetGenericMethodDefinition().MakeGenericMethod(new Type[] { typeof(TKey), typeof(TValue) });
+                var del = (Func<LockFreeConcurrentDictionary<TKey, TValue>, int, DictionaryImpl<TKey, TValue>>)method
+                    .CreateDelegate(typeof(Func<LockFreeConcurrentDictionary<TKey, TValue>, int, DictionaryImpl<TKey, TValue>>));
 
                 var result = del(topDict, capacity);
                 CreateRefUnsafe = del;
 
                 return result;
-            };     
+            };
+
+        internal DictionaryImpl() { }         
 
         internal abstract void Clear();
         internal abstract int Count { get; }
@@ -38,6 +39,6 @@ namespace Sparrow.Collections.LockFree
         internal abstract TValue GetOrAdd(TKey key, Func<TKey, TValue> valueFactory);
 
         internal abstract IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator();
-        internal abstract IDictionaryEnumerator GetDictionaryEnumerator();
+        internal abstract IDictionaryEnumerator GetdIDictEnumerator();
     }
 }

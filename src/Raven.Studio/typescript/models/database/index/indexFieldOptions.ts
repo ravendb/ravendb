@@ -10,10 +10,26 @@ function yesNoLabelProvider(arg: boolean) {
     return arg ? 'Yes' : 'No';
 }
 
+interface analyzerName {
+    shortName: string;
+    fullName: string;
+}
+
 class indexFieldOptions {
 
-    static readonly DefaultFieldOptions = "__all_fields";
+    static readonly analyzersNamesDictionary: analyzerName[] = [
+        { shortName: "KeywordAnalyzer", fullName: "KeywordAnalyzer" },
+        { shortName: "LowerCaseKeywordAnalyzer", fullName: "Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.LowerCaseKeywordAnalyzer" },
+        { shortName: "SimpleAnalyzer", fullName: "SimpleAnalyzer" },
+        { shortName: "StandardAnalyzer", fullName: null }, // default option
+        { shortName: "StopAnalyzer", fullName: "StopAnalyzer" },
+        { shortName: "WhitespaceAnalyzer", fullName:"WhitespaceAnalyzer" }
+    ];
 
+    static readonly analyzersNames =  indexFieldOptions.analyzersNamesDictionary.map(a => a.shortName);
+
+    static readonly DefaultFieldOptions = "__all_fields";   
+    
     static readonly TermVectors: Array<valueAndLabelItem<Raven.Client.Documents.Indexes.FieldTermVector, string>> = [{
             label: "No",
             value: "No"
@@ -54,6 +70,9 @@ class indexFieldOptions {
     static readonly CircleRadiusType: Array<Raven.Client.Documents.Indexes.Spatial.SpatialUnits> = [ "Kilometers", "Miles"];
 
     name = ko.observable<string>();
+    
+    isDefaultFieldOptions = ko.pureComputed(() => this.name() === indexFieldOptions.DefaultFieldOptions);    
+    isStandardAnalyzer = ko.pureComputed(() => !this.analyzer() || this.analyzer() === 'StandardAnalyzer' || this.analyzer() === 'Lucene.Net.Analysis.Standard.StandardAnalyzer');
 
     parent = ko.observable<indexFieldOptions>();
 
@@ -106,7 +125,8 @@ class indexFieldOptions {
         } else {
             this.spatial(spatialOptions.empty());
         }
-        if (this.indexing() === "Search" && !this.analyzer()) {
+        
+        if (this.indexing() === "Search" && this.isStandardAnalyzer()) {
             this.fullTextSearch(true);
             
             if (this.storage() === "Yes" && this.termVector() === "WithPositionsAndOffsets") {
@@ -131,6 +151,8 @@ class indexFieldOptions {
                     this.analyzer(null);
                     this.indexing("Search");
                     
+                    // make sure advanced options are visible
+                    this.showAdvancedOptions(true);
                 } else {
                     this.analyzer(null);
                     this.indexing("Default");
@@ -154,8 +176,7 @@ class indexFieldOptions {
                     this.storage("Yes");
                     this.indexing("Search");
                     this.termVector("WithPositionsAndOffsets");
-                }
-                else if (newValue === null) {
+                } else if (newValue === null) {
                     this.analyzer(null); 
                     this.storage(null);
                     this.indexing(null);
@@ -179,6 +200,7 @@ class indexFieldOptions {
                 changeInProgess = true;
                 this.computeFullTextSearch();
                 this.computeHighlighting();
+                this.computeAnalyzer();
                 changeInProgess = false;
             }
         });
@@ -223,8 +245,8 @@ class indexFieldOptions {
     }
 
     private computeFullTextSearch() {
-        this.fullTextSearch(!this.analyzer() && 
-                             this.indexing() === "Search");
+        this.fullTextSearch(this.isStandardAnalyzer() &&
+            this.indexing() === "Search");
         
         if (this.indexing() === null) {
             this.fullTextSearch(null);
@@ -240,6 +262,13 @@ class indexFieldOptions {
         if (this.storage() === null &&
             this.termVector() === null) {
             this.highlighting(null);
+        }
+    }
+    
+    private computeAnalyzer() {      
+        if (this.indexing() === null) {
+            // take analyzer from default if indexing is set to 'inherit'
+            this.analyzer(this.parent().analyzer());
         }
     }
     
@@ -271,7 +300,7 @@ class indexFieldOptions {
 
     private initValidation() {
         if (!this.isDefaultOptions()) {
-            this.name.extend({ required: true });
+            this.name.extend({required: true});
         }
 
         this.validationGroup = ko.validatedObservable({
@@ -323,8 +352,11 @@ class indexFieldOptions {
     }
 
     toDto(): Raven.Client.Documents.Indexes.IndexFieldOptions {
+        const analyzer = indexFieldOptions.analyzersNamesDictionary.find(x => x.shortName === this.analyzer()); 
+        const analyzerFullName = analyzer ? analyzer.fullName : (this.analyzer() || null);
+        
         return {
-            Analyzer: this.analyzer(),
+            Analyzer: analyzerFullName, 
             Indexing: this.indexing(),
             Storage: this.storage(),
             Suggestions: this.suggestions(),
@@ -332,7 +364,6 @@ class indexFieldOptions {
             Spatial: this.hasSpatialOptions() ? this.spatial().toDto() : undefined
         }
     }
-
 }
 
 export = indexFieldOptions; 

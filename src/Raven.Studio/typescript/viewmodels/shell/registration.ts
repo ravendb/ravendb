@@ -199,8 +199,6 @@ class registration extends dialogViewModelBase {
             return;
         }
 
-        //TODO: parse pasted key into json and validate
-
         this.spinners.activateLicense(true);
 
         const parsedLicense = JSON.parse(this.licenseKeyModel().key()) as Raven.Server.Commercial.License;

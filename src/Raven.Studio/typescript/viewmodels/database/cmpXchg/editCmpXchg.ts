@@ -62,7 +62,6 @@ class editCmpXchg extends viewModelBase {
 
     activate(navigationArgs: { database: string, key: string }) {
         super.activate(navigationArgs);
-        //TODO: this.updateHelpLink('');
 
         if (!navigationArgs || !navigationArgs.key) {
             return this.editNewValue();
@@ -305,6 +304,7 @@ class editCmpXchg extends viewModelBase {
     
     private onDeleteCompleted(success: boolean) {
         if (success) {
+            this.dirtyFlag().reset();
             router.navigate(appUrl.forCmpXchg(this.activeDatabase()));
         } else {
             this.displayExternalChange(true);

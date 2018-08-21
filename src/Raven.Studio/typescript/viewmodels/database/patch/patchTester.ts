@@ -1,4 +1,4 @@
-import app = require("durandal/app");
+
 import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/resources/database");
 import document = require("models/database/documents/document");
@@ -8,10 +8,10 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import messagePublisher = require("common/messagePublisher");
 import eventsCollector = require("common/eventsCollector");
 import docsIdsBasedOnQueryFetcher = require("viewmodels/database/patch/docsIdsBasedOnQueryFetcher");
-import showDataDialog = require("viewmodels/common/showDataDialog");
+
 import patchCommand = require("commands/database/patch/patchCommand");
 import validationHelpers = require("viewmodels/common/validationHelpers");
-import queryUtil = require("common/queryUtil");
+import documentPreviewer = require("models/database/documents/documentPreviewer");
 
 class patchTester extends viewModelBase {
 
@@ -218,33 +218,5 @@ class patchTester extends viewModelBase {
         documentPreviewer.preview(documentId, db, documentIdValidationGroup, spinner);
     }
 }
-
-class documentPreviewer {
-    static preview(documentId: KnockoutObservable<string>, db: KnockoutObservable<database>, validationGroup: KnockoutValidationGroup, spinner?: KnockoutObservable<boolean>){
-        if (spinner) {
-            spinner(true);
-        }
-        viewHelpers.asyncValidationCompleted(validationGroup)
-        .then(() => {
-            if (viewHelpers.isValid(validationGroup)) {
-                new getDocumentWithMetadataCommand(documentId(), db())
-                    .execute()
-                    .done((doc: document) => {
-                        const docDto = doc.toDto(true);
-                        const metaDto = docDto["@metadata"];
-                        documentMetadata.filterMetadata(metaDto);
-                        const text = JSON.stringify(docDto, null, 4);
-                        app.showBootstrapDialog(new showDataDialog("Document: " + doc.getId(), text, "javascript"));
-                    })
-                    .always(() => spinner(false));
-            } else {
-                if (spinner) {
-                    spinner(false);
-                }
-            }
-        });
-    }
-}
-
 
 export = patchTester;

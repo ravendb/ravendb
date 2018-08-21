@@ -14,12 +14,13 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
+using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Indexes;
@@ -36,7 +37,6 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Migration;
-using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Model;
 using Raven.Server.Web.System;
 
@@ -67,7 +67,9 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, EtlProcessState> EtlProcessStatus = GenerateJsonDeserializationRoutine<EtlProcessState>();
 
-        public static readonly Func<BlittableJsonReaderObject, SimulateSqlEtl> SimulateSqlReplication = GenerateJsonDeserializationRoutine<SimulateSqlEtl>();
+        public static readonly Func<BlittableJsonReaderObject, TestSqlEtlScript> TestSqlEtlScript = GenerateJsonDeserializationRoutine<TestSqlEtlScript>();
+
+        public static readonly Func<BlittableJsonReaderObject, TestRavenEtlScript> TestRavenEtlScript = GenerateJsonDeserializationRoutine<TestRavenEtlScript>();
 
         public static readonly Func<BlittableJsonReaderObject, SubscriptionCreationOptions> SubscriptionCreationParams = GenerateJsonDeserializationRoutine<SubscriptionCreationOptions>();
 
@@ -92,6 +94,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, LatestVersionCheck.VersionInfo> LatestVersionCheckVersionInfo = GenerateJsonDeserializationRoutine<LatestVersionCheck.VersionInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, License> License = GenerateJsonDeserializationRoutine<License>();
+        
+        public static readonly Func<BlittableJsonReaderObject, SetupSettings> SetupSettings = GenerateJsonDeserializationRoutine<SetupSettings>();
 
         public static readonly Func<BlittableJsonReaderObject, LicenseInfo> LicenseInfo = GenerateJsonDeserializationRoutine<LicenseInfo>();
 
@@ -120,7 +124,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, UnsecuredSetupInfo> UnsecuredSetupInfo = GenerateJsonDeserializationRoutine<UnsecuredSetupInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, ClaimDomainInfo> ClaimDomainInfo = GenerateJsonDeserializationRoutine<ClaimDomainInfo>();
-        
+
         public static readonly Func<BlittableJsonReaderObject, SourceSqlDatabase> SourceSqlDatabase = GenerateJsonDeserializationRoutine<SourceSqlDatabase>();
 
         public static readonly Func<BlittableJsonReaderObject, ListDomainsInfo> ListDomainsInfo = GenerateJsonDeserializationRoutine<ListDomainsInfo>();
@@ -131,6 +135,10 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, ClientConfiguration> ClientConfiguration = GenerateJsonDeserializationRoutine<ClientConfiguration>();
 
+        public static readonly Func<BlittableJsonReaderObject, StudioConfiguration> StudioConfiguration = GenerateJsonDeserializationRoutine<StudioConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, ServerWideStudioConfiguration> ServerWideStudioConfiguration = GenerateJsonDeserializationRoutine<ServerWideStudioConfiguration>();
+
         public static readonly Func<BlittableJsonReaderObject, IndexQueryServerSide> IndexQuery = GenerateJsonDeserializationRoutine<IndexQueryServerSide>();
 
         public static readonly Func<BlittableJsonReaderObject, SingleDatabaseMigrationConfiguration> SingleDatabaseMigrationConfiguration = GenerateJsonDeserializationRoutine<SingleDatabaseMigrationConfiguration>();
@@ -138,6 +146,8 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, DatabasesMigrationConfiguration> DatabasesMigrationConfiguration = GenerateJsonDeserializationRoutine<DatabasesMigrationConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, OfflineMigrationConfiguration> OfflineMigrationConfiguration = GenerateJsonDeserializationRoutine<OfflineMigrationConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, MigrationConfiguration> MigrationConfiguration = GenerateJsonDeserializationRoutine<MigrationConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, LastEtagsInfo> OperationState = GenerateJsonDeserializationRoutine<LastEtagsInfo>();
 

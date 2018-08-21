@@ -101,6 +101,8 @@ namespace Raven.Client
             }
 
             public const string ClientId = "Configuration/Client";
+
+            public const string StudioId = "Configuration/Studio";
         }
 
         public static class Counters

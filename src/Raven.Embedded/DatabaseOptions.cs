@@ -1,4 +1,5 @@
-﻿using Raven.Client.ServerWide;
+﻿using Raven.Client.Documents.Conventions;
+using Raven.Client.ServerWide;
 
 namespace Raven.Embedded
 {
@@ -6,7 +7,9 @@ namespace Raven.Embedded
     {
         public bool SkipCreatingDatabase { get; set; }
 
-        public DatabaseRecord DatabaseRecord { get; private set; }
+        public DocumentConventions Conventions { get; set; }
+
+        public DatabaseRecord DatabaseRecord { get; }
 
         public DatabaseOptions(string databaseName) : this(new DatabaseRecord(databaseName))
         {

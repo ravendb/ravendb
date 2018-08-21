@@ -2,21 +2,21 @@
 @external-replication-color-dark: @brand-primary-dark;
 @external-replication-color-light: @brand-primary-light;
 
-@sql-etl-color: @brand-info;
-@sql-etl-color-dark: @brand-info-dark;
-@sql-etl-color-light: @brand-info-light;
+@sql-etl-color: @color-4;
+@sql-etl-color-dark: darken(@color-4, 10%);
+@sql-etl-color-light: lighten(@color-4, 5%);
 
-@ravendb-etl-color: @brand-warning;
-@ravendb-etl-color-dark: @brand-warning-dark;
-@ravendb-etl-color-light: @brand-warning-light;
+@ravendb-etl-color: @color-2;
+@ravendb-etl-color-dark: darken(@color-2, 10%);
+@ravendb-etl-color-light: lighten(@color-2, 5%);
 
-@backup-color: #a010b8;
-@backup-color-dark: darken(@backup-color,10%);
-@backup-color-light: @backup-color;
+@backup-color: @color-5;
+@backup-color-dark: darken(@color-5, 10%);
+@backup-color-light: lighten(@color-5, 5%);
 
-@subscription-color: @brand-success;
-@subscription-color-dark: @brand-success-dark;
-@subscription-color-light: @brand-success-light;
+@subscription-color: @color-3;
+@subscription-color-dark: darken(@color-3, 10%);
+@subscription-color-light: lighten(@color-3, 10%);
 
 .bigbtn-variant(@color, @color-dark) {
     background-color: fadeout(@color-dark,80%);
@@ -304,11 +304,13 @@
     min-height: 80px;
     max-height: 500px;
     overflow: auto;
+    flex-shrink: 0;
 }
 
 .transformation-scripts-list {
     max-height: 500px;
     overflow: auto;
+    flex-shrink: 0;
 }
 
 .collection-list {
@@ -390,3 +392,130 @@
     margin-top: 5px;
 }
 
+.edit-raven-sql-task {
+
+    overflow-x: hidden;
+
+    .flex-row {
+        transition: transform 0.5s;
+    }
+
+    .test-container {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 50%;
+        transform: translateX(100%);
+        transition: transform 0.5s;
+
+        .tab-content {
+            overflow: auto;
+        }
+    }
+    &.test-mode {
+        .flex-row {
+            transform: translateX(-50%);
+        }
+        .test-container {
+            transform: translateX(0%);
+        }
+    }
+}
+
+.edit-raven-etl-task {
+
+    overflow-x: hidden;
+    
+    .result-item {
+        .header {
+            padding: @grid-gutter-width / 2;
+            background-color: @gray-dark;
+        }
+        pre {
+            background-color: @gray-darker;
+        }
+    }
+    
+    .flex-row {
+        transition: transform 0.5s;
+    }
+    
+    .test-container {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 50%;
+        transform: translateX(100%);
+        transition: transform 0.5s;
+     
+        .tab-content {
+            overflow: auto;
+        }
+    }
+    &.test-mode {
+        .flex-row {
+            transform: translateX(-50%);
+        }
+        .test-container {
+            transform: translateX(0%);
+        }
+    }
+}
+.js-test-sql-tooltip {
+    z-index: @zindex-modal + 1;
+}
+.show-test {
+    .backdrop {
+        .backdrop.show;
+    }
+    
+    .sql-statement {
+        pre {
+            white-space: normal;
+        }
+    }
+
+    .edit-raven-sql-task, .edit-raven-etl-task {
+        & > .flex-row {
+            z-index: @zindex-modal;
+        }
+        .test-container {
+            z-index: @zindex-modal;
+        }
+    }
+    
+    #debugOutput pre {
+        white-space: pre-wrap;       
+        word-wrap: break-word; 
+    }
+
+    .transformation-errors, .load-errors {
+        pre {
+            white-space: pre-wrap;
+        }
+    } 
+    
+    .slow-sqls {
+        .sql-warning {
+            position: relative;
+            margin-left: @grid-gutter-width / 2;
+            
+            pre {
+                padding-bottom: @grid-gutter-width;
+                white-space: normal;
+            }
+            margin-bottom: @grid-gutter-width / 2;
+        }
+
+        .duration {
+            bottom: @grid-gutter-width / 4;
+            left: @grid-gutter-width / 2;
+            position: absolute;
+            font-size: 12px;
+        }
+    }
+    
+    
+}

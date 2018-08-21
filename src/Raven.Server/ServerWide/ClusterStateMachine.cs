@@ -22,6 +22,7 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
@@ -61,7 +62,6 @@ namespace Raven.Server.ServerWide
         private static readonly TableSchema ItemsSchema;
         private static readonly TableSchema CompareExchangeSchema;
         public static readonly TableSchema TransactionCommandsSchema;
-        public static readonly Slice CommandByDatabaseAndIndex;
 
         public enum UniqueItems
         {
@@ -74,7 +74,7 @@ namespace Raven.Server.ServerWide
         private static readonly Slice CompareExchange;
         public static readonly Slice Identities;
         public static readonly Slice TransactionCommands;
-        public static readonly Slice TransactionCommandsIndex;
+        public static readonly Slice TransactionCommandsCountPerDatabase;
 
         static ClusterStateMachine()
         {
@@ -84,8 +84,7 @@ namespace Raven.Server.ServerWide
                 Slice.From(ctx, "CmpXchg", out CompareExchange);
                 Slice.From(ctx, "Identities", out Identities);
                 Slice.From(ctx, "TransactionCommands", out TransactionCommands);
-                Slice.From(ctx, "CommandByDatabaseAndIndex", out CommandByDatabaseAndIndex);
-                Slice.From(ctx, "TransactionCommandsIndex", out TransactionCommandsIndex);
+                Slice.From(ctx, "TransactionCommandsIndex", out TransactionCommandsCountPerDatabase);
             }
             ItemsSchema = new TableSchema();
 
@@ -105,11 +104,10 @@ namespace Raven.Server.ServerWide
             });
 
             TransactionCommandsSchema = new TableSchema();
-            TransactionCommandsSchema.DefineIndex(new TableSchema.SchemaIndexDef()
+            TransactionCommandsSchema.DefineKey(new TableSchema.SchemaIndexDef()
             {
-                Name = CommandByDatabaseAndIndex,
                 StartIndex = 0,
-                Count = 3, // Database, Separator, Index
+                Count = 1, // Database, Separator, Commands count
             });
         }
 
@@ -254,6 +252,14 @@ namespace Raven.Server.ServerWide
                     case nameof(ConfirmReceiptServerCertificateCommand):
                         ConfirmReceiptServerCertificate(context, cmd, index, serverStore);
                         break;
+                    case nameof(RecheckStatusOfServerCertificateReplacementCommand):
+                        if (_parent.Log.IsOperationsEnabled)
+                            _parent.Log.Operations($"Received {nameof(RecheckStatusOfServerCertificateReplacementCommand)}.");
+                        NotifyValueChanged(context, type, index); // just need to notify listeners
+                        break;
+                    case nameof(ConfirmServerCertificateReplacedCommand):
+                        ConfirmServerCertificateReplaced(context, cmd, index, serverStore);
+                        break;
                     case nameof(UpdateSnmpDatabasesMappingCommand):
                         UpdateValue<List<string>>(context, type, cmd, index, leader);
                         break;
@@ -271,6 +277,9 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(PutClientConfigurationCommand):
                         PutValue<ClientConfiguration>(context, type, cmd, index, leader);
+                        break;
+                    case nameof(PutServerWideStudioConfigurationCommand):
+                        PutValue<ServerWideStudioConfiguration>(context, type, cmd, index, leader);
                         break;
                     case nameof(AddDatabaseCommand):
                         var addedNodes = AddDatabase(context, cmd, index, leader);
@@ -315,12 +324,12 @@ namespace Raven.Server.ServerWide
             foreach (var tuple in affectedDatabases)
             {
                 var database = tuple.Key;
-                var cleanIndex = tuple.Value;
+                var commandsCount = tuple.Value;
                 var record = ReadDatabase(context, database);
                 if (record == null)
                     continue;
 
-                record.TruncatedClusterTransactionIndex = cleanIndex;
+                record.TruncatedClusterTransactionCommandsCount = commandsCount;
 
                 var dbKey = "db/" + tuple.Key;
                 using (Slice.From(context.Allocator, dbKey, out Slice valueName))
@@ -338,7 +347,6 @@ namespace Raven.Server.ServerWide
         {
             var clusterTansaction = (ClusterTransactionCommand)JsonDeserializationCluster.Commands[nameof(ClusterTransactionCommand)](cmd);
             var compareExchangeItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
-
             var error = clusterTansaction.ExecuteCompareExchangeCommands(context, index, compareExchangeItems);
             if (error == null)
             {
@@ -358,27 +366,27 @@ namespace Raven.Server.ServerWide
             try
             {
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-                using (Slice.From(context.Allocator, "server/cert", out var key))
+                using (Slice.From(context.Allocator, CertificateReplacement.CertificateReplacementDoc, out var key))
                 {
                     if (cmd.TryGet(nameof(ConfirmReceiptServerCertificateCommand.Thumbprint), out string thumbprint) == false)
                     {
-                        throw new ArgumentException($"Thumbprint property didn't exist in {nameof(ConfirmReceiptServerCertificateCommand)}");
+                        throw new ArgumentException($"{nameof(ConfirmReceiptServerCertificateCommand.Thumbprint)} property didn't exist in {nameof(ConfirmReceiptServerCertificateCommand)}");
                     }
-                    var certInstallation = GetItem(context, "server/cert");
+                    var certInstallation = GetItem(context, CertificateReplacement.CertificateReplacementDoc);
                     if (certInstallation == null)
                         return; // already applied? 
 
-                    if (certInstallation.TryGet("Thumbprint", out string storedThumbprint) == false)
-                        throw new ArgumentException("Thumbprint property didn't exist in 'server/cert' value");
+                    if (certInstallation.TryGet(nameof(CertificateReplacement.Thumbprint), out string storedThumbprint) == false)
+                        throw new ArgumentException($"{nameof(CertificateReplacement.Thumbprint)} property didn't exist in 'server/cert' value");
 
                     if (storedThumbprint != thumbprint)
                         return; // confirmation for a different cert, ignoring
 
-                    certInstallation.TryGet("Confirmations", out int confirmations);
+                    certInstallation.TryGet(nameof(CertificateReplacement.Confirmations), out int confirmations);
 
                     certInstallation.Modifications = new DynamicJsonValue(certInstallation)
                     {
-                        ["Confirmations"] = confirmations + 1
+                        [nameof(CertificateReplacement.Confirmations)] = confirmations + 1
                     };
 
                     certInstallation = context.ReadObject(certInstallation, "server.cert.update");
@@ -399,12 +407,11 @@ namespace Raven.Server.ServerWide
 
                 serverStore.NotificationCenter.Add(AlertRaised.Create(
                     null,
-                    "Server certificate",
+                    CertificateReplacement.CertReplaceAlertTitle,
                     "Failed to confirm receipt of the new certificate.",
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
-                    "Cluster.Certificate.Replace.Error",
-                    new ExceptionDetails(e)));
+                    details: new ExceptionDetails(e)));
             }
         }
 
@@ -416,21 +423,23 @@ namespace Raven.Server.ServerWide
             {
                 if (cmd.TryGet(nameof(InstallUpdatedServerCertificateCommand.Certificate), out string cert) == false || string.IsNullOrEmpty(cert))
                 {
-                    throw new ArgumentException($"Certificate property didn't exist in {nameof(InstallUpdatedServerCertificateCommand)}");
+                    throw new ArgumentException($"{nameof(InstallUpdatedServerCertificateCommand.Certificate)} property didn't exist in {nameof(InstallUpdatedServerCertificateCommand)}");
                 }
 
                 cmd.TryGet(nameof(InstallUpdatedServerCertificateCommand.ReplaceImmediately), out bool replaceImmediately);
 
                 var x509Certificate = new X509Certificate2(Convert.FromBase64String(cert), (string)null, X509KeyStorageFlags.MachineKeySet);
                 // we assume that this is valid, and we don't check dates, since that would introduce external factor to the state machine, which is not alllowed
-                using (Slice.From(context.Allocator, "server/cert", out var key))
+                using (Slice.From(context.Allocator, CertificateReplacement.CertificateReplacementDoc, out var key))
                 {
                     var djv = new DynamicJsonValue
                     {
-                        ["Certificate"] = cert,
-                        ["Thumbprint"] = x509Certificate.Thumbprint,
-                        ["Confirmations"] = 0,
-                        ["ReplaceImmediately"] = replaceImmediately
+                        [nameof(CertificateReplacement.Certificate)] = cert,
+                        [nameof(CertificateReplacement.Thumbprint)] = x509Certificate.Thumbprint,
+                        [nameof(CertificateReplacement.OldThumbprint)] = serverStore.Server.Certificate.Certificate.Thumbprint,
+                        [nameof(CertificateReplacement.Confirmations)] = 0,
+                        [nameof(CertificateReplacement.Replaced)] = 0,
+                        [nameof(CertificateReplacement.ReplaceImmediately)] = replaceImmediately
                     };
 
                     var json = context.ReadObject(djv, "server.cert.update.info");
@@ -444,16 +453,89 @@ namespace Raven.Server.ServerWide
             catch (Exception e)
             {
                 if (_parent.Log.IsOperationsEnabled)
-                    _parent.Log.Operations($"{nameof(InstallUpdatedServerCertificate)} failed.", e);
+                    _parent.Log.Operations($"{nameof(InstallUpdatedServerCertificateCommand)} failed.", e);
 
                 serverStore.NotificationCenter.Add(AlertRaised.Create(
                     null,
-                    "Server certificate",
-                    $"{nameof(InstallUpdatedServerCertificate)} failed.",
+                    CertificateReplacement.CertReplaceAlertTitle,
+                    $"{nameof(InstallUpdatedServerCertificateCommand)} failed.",
                     AlertType.Certificates_ReplaceError,
                     NotificationSeverity.Error,
-                    "Cluster.Certificate.Replace.Error",
-                    new ExceptionDetails(e)));
+                    details: new ExceptionDetails(e)));
+            }
+        }
+
+        private void ConfirmServerCertificateReplaced(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
+        {
+            if (_parent.Log.IsOperationsEnabled)
+                _parent.Log.Operations($"Received {nameof(ConfirmServerCertificateReplacedCommand)}.");
+            try
+            {
+                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+                using (Slice.From(context.Allocator, CertificateReplacement.CertificateReplacementDoc, out var key))
+                {
+                    if (cmd.TryGet(nameof(ConfirmServerCertificateReplacedCommand.Thumbprint), out string thumbprint) == false)
+                    {
+                        throw new ArgumentException($"{nameof(ConfirmServerCertificateReplacedCommand.Thumbprint)} property didn't exist in {nameof(ConfirmServerCertificateReplacedCommand)}");
+                    }
+                    if (cmd.TryGet(nameof(ConfirmServerCertificateReplacedCommand.OldThumbprint), out string oldThumbprintFromCommand) == false)
+                    {
+                        throw new ArgumentException($"{nameof(ConfirmServerCertificateReplacedCommand.OldThumbprint)} property didn't exist in {nameof(ConfirmServerCertificateReplacedCommand)}");
+                    }
+
+                    var certInstallation = GetItem(context, CertificateReplacement.CertificateReplacementDoc);
+                    if (certInstallation == null)
+                        return; // already applied? 
+
+                    if (certInstallation.TryGet(nameof(CertificateReplacement.Thumbprint), out string storedThumbprint) == false)
+                        throw new ArgumentException($"'{nameof(CertificateReplacement.Thumbprint)}' property didn't exist in 'server/cert' value");
+
+                    if (storedThumbprint != thumbprint)
+                        return; // confirmation for a different cert, ignoring
+
+                    // If "Replaced" or "OldThumbprint" are not there, it means this node started the replacement process with a lower version and was then upgraded.
+                    // No worries, it got the command now and it can join the confirmation process which is still happening. Let's synchronize the 'server/cert' doc
+                    // to have the new properties:
+                    if (certInstallation.TryGet(nameof(CertificateReplacement.Replaced), out int replaced) == false)
+                        replaced = 0;
+
+                    if (certInstallation.TryGet(nameof(CertificateReplacement.OldThumbprint), out string oldThumbprint) == false)
+                    {
+                        oldThumbprint = oldThumbprintFromCommand;
+                        certInstallation.Modifications = new DynamicJsonValue(certInstallation)
+                        {
+                            [nameof(CertificateReplacement.OldThumbprint)] = oldThumbprint
+                        };
+                    }
+
+                    certInstallation.Modifications = new DynamicJsonValue(certInstallation)
+                    {
+                        [nameof(CertificateReplacement.Replaced)] = replaced + 1
+                    };
+
+                    certInstallation = context.ReadObject(certInstallation, "server.cert.update");
+
+                    UpdateValue(index, items, key, key, certInstallation);
+
+                    if (_parent.Log.IsOperationsEnabled)
+                        _parent.Log.Operations($"Confirming that certificate replacement has happened. Old certificate thumbprint: '{oldThumbprint}'. New certificate thumbprint: '{thumbprint}'.");
+
+                    // this will trigger the deletion of the new and old server certs from the cluster
+                    NotifyValueChanged(context, nameof(ConfirmServerCertificateReplacedCommand), index);
+                }
+            }
+            catch (Exception e)
+            {
+                if (_parent.Log.IsOperationsEnabled)
+                    _parent.Log.Operations($"{nameof(ConfirmServerCertificateReplaced)} failed.", e);
+
+                serverStore.NotificationCenter.Add(AlertRaised.Create(
+                    null,
+                    CertificateReplacement.CertReplaceAlertTitle,
+                    "Failed to confirm replacement of the new certificate.",
+                    AlertType.Certificates_ReplaceError,
+                    NotificationSeverity.Error,
+                    details: new ExceptionDetails(e)));
             }
         }
 
@@ -487,6 +569,7 @@ namespace Raven.Server.ServerWide
                         if (record.Topology.Count == 0)
                         {
                             DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
+                            OnTransactionDispose(context, index);
                             continue;
                         }
                     }
@@ -620,9 +703,12 @@ namespace Raven.Server.ServerWide
             CleanupDatabaseRelatedValues(context, items, databaseName);
 
             var transactionsCommands = context.Transaction.InnerTransaction.OpenTable(TransactionCommandsSchema, TransactionCommands);
+            var commandsCountPerDatabase = context.Transaction.InnerTransaction.ReadTree(TransactionCommandsCountPerDatabase);
+
             using (ClusterTransactionCommand.GetPrefix(context, databaseName, out var prefixSlice))
             {
-                transactionsCommands.DeleteForwardFrom(TransactionCommandsSchema.Indexes[CommandByDatabaseAndIndex], prefixSlice, true, long.MaxValue);
+                commandsCountPerDatabase.Delete(prefixSlice);
+                transactionsCommands.DeleteByPrimaryKeyPrefix(prefixSlice);
             }
         }
 
@@ -968,9 +1054,16 @@ namespace Raven.Server.ServerWide
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
-            return slice.Content.Match(Items.Content)
-                   || slice.Content.Match(CompareExchange.Content)
-                   || slice.Content.Match(Identities.Content);
+            var baseVersion = slice.Content.Match(Items.Content)
+                            || slice.Content.Match(CompareExchange.Content)
+                            || slice.Content.Match(Identities.Content);
+
+            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion >= ClusterCommandsVersionManager.Base41CommandsVersion)
+                return baseVersion
+                       || slice.Content.Match(TransactionCommands.Content)
+                       || slice.Content.Match(TransactionCommandsCountPerDatabase.Content);
+
+            return baseVersion;
         }
 
         public override void Initialize(RachisConsensus parent, TransactionOperationContext context)
@@ -979,7 +1072,7 @@ namespace Raven.Server.ServerWide
             ItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
             CompareExchangeSchema.Create(context.Transaction.InnerTransaction, CompareExchange, 32);
             TransactionCommandsSchema.Create(context.Transaction.InnerTransaction, TransactionCommands, 32);
-            context.Transaction.InnerTransaction.CreateTree(TransactionCommandsIndex);
+            context.Transaction.InnerTransaction.CreateTree(TransactionCommandsCountPerDatabase);
             context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
             context.Transaction.InnerTransaction.CreateTree(Identities);
             parent.StateChanged += OnStateChange;
@@ -1481,7 +1574,38 @@ namespace Raven.Server.ServerWide
             return size;
         }
 
-        public override async Task<(Stream Stream, Action Disconnect)> ConnectToPeer(string url, X509Certificate2 certificate)
+        private int ClusterReadResponseAndGetVersion(JsonOperationContext ctx, BlittableJsonTextWriter writer, Stream stream, string url)
+        {
+            using (var response = ctx.ReadForMemory(stream, "cluster-ConnectToPeer-header-response"))
+            {
+                var reply = JsonDeserializationServer.TcpConnectionHeaderResponse(response);
+                switch (reply.Status)
+                {
+                    case TcpConnectionStatus.Ok:
+                        return reply.Version;
+                    case TcpConnectionStatus.AuthorizationFailed:
+                        throw new AuthorizationException($"Unable to access  {url} because {reply.Message}");
+                    case TcpConnectionStatus.TcpVersionMismatch:
+                        if (reply.Version != TcpNegotiation.OutOfRangeStatus)
+                        {
+                            return reply.Version;
+                        }
+                        //Kindly request the server to drop the connection
+                        ctx.Write(writer, new DynamicJsonValue
+                        {
+                            [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
+                            [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop,
+                            [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.ClusterTcpVersion,
+                            [nameof(TcpConnectionHeaderMessage.Info)] = $"Couldn't agree on cluster tcp version ours:{TcpConnectionHeaderMessage.ClusterTcpVersion} theirs:{reply.Version}"
+                        });
+                        throw new InvalidOperationException($"Unable to access  {url} because {reply.Message}");
+                }
+            }
+
+            return TcpConnectionHeaderMessage.ClusterTcpVersion;
+        }
+
+        public override async Task<RachisConnection> ConnectToPeer(string url, string tag ,X509Certificate2 certificate)
         {
             if (url == null)
                 throw new ArgumentNullException(nameof(url));
@@ -1503,60 +1627,46 @@ namespace Raven.Server.ServerWide
                 tcpClient = await TcpUtils.ConnectAsync(info.Url, _parent.TcpConnectionTimeout).ConfigureAwait(false);
                 stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate, _parent.TcpConnectionTimeout);
 
+                var paramaters = new TcpNegotiateParameters
+                {
+                    Database = null,
+                    Operation = TcpConnectionHeaderMessage.OperationTypes.Cluster,
+                    Version = TcpConnectionHeaderMessage.ClusterTcpVersion,
+                    ReadResponseAndGetVersionCallback = ClusterReadResponseAndGetVersion,
+                    DestinationUrl = info.Url,
+                    DestinationNodeTag = tag
+                };
+
+                TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures;
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var msg = new DynamicJsonValue
+                    supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(context, stream, paramaters);
+
+                    if (supportedFeatures.ProtocolVersion <= 0)
                     {
-                        [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
-                        [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Cluster,
-                        [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.ClusterTcpVersion
-                    };
-                    using (var writer = new BlittableJsonTextWriter(context, stream))
-                    using (var msgJson = context.ReadObject(msg, "message"))
-                    {
-                        context.Write(writer, msgJson);
-                    }
-                    using (var response = context.ReadForMemory(stream, "cluster-ConnectToPeer-header-response"))
-                    {
-                        var reply = JsonDeserializationServer.TcpConnectionHeaderResponse(response);
-                        switch (reply.Status)
-                        {
-                            case TcpConnectionStatus.Ok:
-                                break;
-                            case TcpConnectionStatus.AuthorizationFailed:
-                                throw new AuthorizationException($"Unable to access  {url} because {reply.Message}");
-                            case TcpConnectionStatus.TcpVersionMismatch:
-                                //Kindly request the server to drop the connection
-                                msg = new DynamicJsonValue
-                                {
-                                    [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
-                                    [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop,
-                                    [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.ClusterTcpVersion,
-                                    [nameof(TcpConnectionHeaderMessage.Info)] = $"Couldn't agree on cluster tcp version ours:{TcpConnectionHeaderMessage.ClusterTcpVersion} theirs:{reply.Version}"
-                                };
-                                using (var writer = new BlittableJsonTextWriter(context, stream))
-                                using (var msgJson = context.ReadObject(msg, "message"))
-                                {
-                                    context.Write(writer, msgJson);
-                                }
-                                throw new InvalidOperationException($"Unable to access  {url} because {reply.Message}");
-                        }
+                        throw new InvalidOperationException(
+                            $"state machine ConnectToPeer {url}: TCP negotiation resulted with an invalid protocol version:{supportedFeatures.ProtocolVersion}");
                     }
                 }
-                return (stream, () =>
+
+                return new RachisConnection
                 {
+                    Stream = stream,
+                    SupportedFeatures = supportedFeatures,
+                    Disconnect = () =>
                     {
-                        try
                         {
-                            tcpClient.Client.Disconnect(false);
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            //Happens, we don't really care at this point
+                            try
+                            {
+                                tcpClient.Client.Disconnect(false);
+                            }
+                            catch (ObjectDisposedException)
+                            {
+                                //Happens, we don't really care at this point
+                            }
                         }
                     }
-                }
-                );
+                };
             }
             catch (Exception)
             {
@@ -1566,8 +1676,11 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public override void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, ServerStore serverStore)
+        public const string SnapshotInstalled = "SnapshotInstalled";
+
+        public override async Task OnSnapshotInstalledAsync(long lastIncludedIndex, ServerStore serverStore)
         {
+            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction())
             {
                 // lets read all the certificate keys from the cluster, and delete the matching ones from the local state
@@ -1589,7 +1702,9 @@ namespace Raven.Server.ServerWide
                     TaskExecutor.Execute(_ =>
                     {
                         foreach (var db in listOfDatabaseName)
-                            onDatabaseChanged.Invoke(this, (db, lastIncludedIndex, "SnapshotInstalled", DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                        {
+                            onDatabaseChanged.Invoke(this, (db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                        }
                     }, null);
                 }
 
@@ -1598,7 +1713,7 @@ namespace Raven.Server.ServerWide
                 {
                     TaskExecutor.Execute(_ =>
                     {
-                        onValueChanged.Invoke(this, (lastIncludedIndex, "InstallUpdatedServerCertificateCommand"));
+                        onValueChanged.Invoke(this, (lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand)));
                     }, null);
                 }
                 context.Transaction.Commit();
@@ -1606,7 +1721,7 @@ namespace Raven.Server.ServerWide
 
             // reload license can send a notification which will open a write tx
             serverStore.LicenseManager.ReloadLicense();
-            AsyncHelpers.RunSync(() => serverStore.LicenseManager.CalculateLicenseLimits());
+            await serverStore.LicenseManager.CalculateLicenseLimits();
 
             _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
         }

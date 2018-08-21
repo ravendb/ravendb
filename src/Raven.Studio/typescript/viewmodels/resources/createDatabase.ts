@@ -83,10 +83,6 @@ class createDatabase extends dialogViewModelBase {
     }
 
     activate() {
-        //TODO: if !!this.licenseStatus() && this.licenseStatus().IsCommercial && this.licenseStatus().Attributes.periodicBackup !== "true" preselect periodic export
-        //TODO: fetchClusterWideConfig
-        //TODO: fetchCustomBundles
-
         const getTopologyTask = new getClusterTopologyCommand()
             .execute()
             .done(topology => {
@@ -121,7 +117,7 @@ class createDatabase extends dialogViewModelBase {
 
         popoverUtils.longWithHover($(".data-exporter-label small"),
             {
-                content: '<strong>Raven.StorageExporter.exe</strong> can be found in <strong>tools</strong><br /> package (for version v3.X) on <a target="_blank" href="http://ravendb.net/downloads">ravendb.net</a> website'
+                content: '<strong>Raven.StorageExporter.exe</strong> can be found in <strong>tools</strong><br /> package (for version v3.x) on <a target="_blank" href="http://ravendb.net/downloads">ravendb.net</a> website'
             });
         
         popoverUtils.longWithHover($(".data-directory-label small"), 
@@ -163,10 +159,12 @@ class createDatabase extends dialogViewModelBase {
         // hide advanced if respononding bundle was unchecked
         this.databaseModel.configurationSections.forEach(section => {
             section.enabled.subscribe(enabled => {
-                if (section.alwaysEnabled || enabled) {
-                    this.currentAdvancedSection(section.id);
-                } else if (!enabled && this.currentAdvancedSection() === section.id) {
-                    this.currentAdvancedSection(createDatabase.defaultSection);
+                if (!this.databaseModel.lockActiveTab()) {
+                    if (section.alwaysEnabled || enabled) {
+                        this.currentAdvancedSection(section.id);
+                    } else if (!enabled && this.currentAdvancedSection() === section.id) {
+                        this.currentAdvancedSection(createDatabase.defaultSection);
+                    }
                 }
             });
         });
@@ -179,7 +177,9 @@ class createDatabase extends dialogViewModelBase {
 
         const encryption = this.databaseModel.configurationSections.find(x => x.id === "encryption");
         encryption.enabled.subscribe(encryptionEnabled => {
-            if (encryptionEnabled) {
+            const creationMode = this.databaseModel.creationMode;
+            const canUseManualMode = creationMode === "newDatabase";
+            if (encryptionEnabled && canUseManualMode) {
                 this.databaseModel.replication.dynamicMode(false);
                 this.databaseModel.replication.manualMode(true);
             }
@@ -300,6 +300,8 @@ class createDatabase extends dialogViewModelBase {
     }
 
     showAdvancedConfigurationFor(sectionName: availableConfigurationSectionId) {
+        const targetSection = this.getAvailableSections().find(x => x.id === sectionName);
+        
         this.currentAdvancedSection(sectionName);
 
         const sectionConfiguration = this.databaseModel.configurationSections.find(x => x.id === sectionName);

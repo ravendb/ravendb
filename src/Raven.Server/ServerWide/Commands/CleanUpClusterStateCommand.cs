@@ -20,25 +20,21 @@ namespace Raven.Server.ServerWide.Commands
             foreach (var tuple in ClusterTransactionsCleanup)
             {
                 var database = tuple.Key;
-                var upToIndex = tuple.Value;
+                var upToCommandCount = tuple.Value - 1;
 
                 var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.TransactionCommandsSchema, ClusterStateMachine.TransactionCommands);
                 using (ClusterTransactionCommand.GetPrefix(context, database, out var prefixSlice))
                 {
-                    var schemaIndexDef = ClusterStateMachine.TransactionCommandsSchema.Indexes[ClusterStateMachine.CommandByDatabaseAndIndex];
-                    var deleted = items.DeleteForwardFrom(schemaIndexDef, prefixSlice, 
-                        startsWith: true, 
-                        numberOfEntriesToDelete: long.MaxValue,
-                        shouldAbort: (tvb) =>
-                        {
-                            var value = *(long*)tvb.Reader.Read((int)ClusterTransactionCommand.TransactionCommandsColumn.RaftIndex, out var _);
-                            var currentIndex = Bits.SwapBytes(value);
-                            return currentIndex > upToIndex;
-                        });
-
-                    if (deleted > 0)
+                    var deleted = items.DeleteByPrimaryKeyPrefix(prefixSlice, shouldAbort: (tvb) =>
                     {
-                        affectedDatabases.Add(database, upToIndex);
+                        var value = tvb.Reader.Read((int)ClusterTransactionCommand.TransactionCommandsColumn.Key, out var size);
+                        var prevCommandsCount = Bits.SwapBytes(*(long*)(value + size - sizeof(long)));
+                        return prevCommandsCount > upToCommandCount;
+                    });
+                   
+                    if (deleted)
+                    {
+                        affectedDatabases.Add(database, tuple.Value);
                     }
                 }
             }

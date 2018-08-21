@@ -29,7 +29,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             {
                 Add(new Job(RunMode.Default)
                 {
-                    Env =
+                    Environment =
                     {
                         Runtime = Runtime.Core,
                         Platform = Platform.X64,
@@ -61,7 +61,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
 
         private NumericsDiff _numerics;
 
-        
+
 
         [GlobalSetup]
         public void Setup()
@@ -84,7 +84,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 int end = start + 256 + r.Next(4096);
 
                 for (; start < end; start++)
-                    source[start+i] = 0;
+                    source[start + i] = 0;
             }
 
             original = new ScalarDiff
@@ -438,7 +438,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 byte* modifiedPtr = (byte*)modifiedBuffer;
 
                 for (long i = 0; i < len; i += 64, originalPtr += 64, modifiedPtr += 64)
-                {                    
+                {
                     var m0 = Unsafe.Read<Vector<long>>(modifiedPtr);
                     var m1 = Unsafe.Read<Vector<long>>(modifiedPtr + 32);
 
@@ -1007,11 +1007,11 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 bool started = false;
                 for (byte* end = originalPtr + size; originalPtr < end; originalPtr += 32, modifiedPtr += 32)
                 {
-                    Top:                    
+                Top:
 
                     Vector256<byte> m = Avx.LoadVector256(modifiedPtr);
                     Vector256<byte> o = Avx.LoadVector256(originalPtr);
-                    
+
                     // Fast-Path
                     o = Avx2.Xor(o, m);
                     if (!Avx.TestZ(o, o))
@@ -1025,7 +1025,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                     else if (started)
                         goto CloseBlock;
 
-                                        Sse.Prefetch0(originalPtr + 1024);
+                    Sse.Prefetch0(originalPtr + 1024);
                     Sse.Prefetch0(modifiedPtr + 1024);
 
                     originalPtr += 32;
@@ -1036,7 +1036,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
 
                     goto Top;
 
-                    CloseBlock:
+                CloseBlock:
                     // We write the actual size of the stored data.
                     *(long*)(writePtr + 8) = writePtrOffset - 16;
 
@@ -1050,7 +1050,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                     started = false;
                     continue;
 
-                    StartBlock:
+                StartBlock:
                     // Write the start index of the run based from the start of the page we are diffing.
                     *(long*)(writePtr + 0) = originalPtr - (byte*)originalBuffer;
                     started = true;
@@ -1177,13 +1177,13 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                     Sse.Prefetch0(ptr + 1024);
                     continue;
 
-                    StartBlock:
+                StartBlock:
                     // Write the start index of the run based from the start of the page we are diffing.
                     *(long*)(writePtr + 0) = ptr - (byte*)originalBuffer;
                     started = true;
                     continue;
 
-                    CloseBlock:
+                CloseBlock:
 
                     // We write the actual size of the stored data.
                     *(long*)(writePtr + 8) = writePtrOffset - 16;
@@ -1233,7 +1233,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 do
                 {
                     Vector256<byte> m = Avx.LoadVector256(ptr + offset);
-                    Vector256<byte> o = Avx.LoadVector256(ptr);                    
+                    Vector256<byte> o = Avx.LoadVector256(ptr);
 
                     Sse.Prefetch0(ptr + offset + 1024);
                     Sse.Prefetch0(ptr + 1024);
@@ -1256,7 +1256,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                     writePtrOffset += 32;
                     continue;
 
-                    CloseBlock:
+                CloseBlock:
                     // We write the actual size of the stored data.
                     *(long*)(writePtr + 8) = writePtrOffset - 16;
 
@@ -1270,7 +1270,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                     started = false;
                     continue;
 
-                    StartBlock:
+                StartBlock:
                     // Write the start index of the run based from the start of the page we are diffing.
                     *(long*)(writePtr + 0) = ptr - (byte*)originalBuffer - 32;
                     started = true;
@@ -1337,7 +1337,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
 
                     continue;
 
-                    CloseBlock:
+                CloseBlock:
                     // We write the actual size of the stored data.
                     *(long*)(writePtr + 8) = writePtrOffset - 16;
 
@@ -1351,7 +1351,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                     started = false;
                     continue;
 
-                    StartBlock:
+                StartBlock:
                     // Write the start index of the run based from the start of the page we are diffing.
                     *(long*)(writePtr + 0) = ptr - (byte*)originalBuffer - 32;
                     started = true;
@@ -1641,7 +1641,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                     WriteDiffNonZeroes(start * sizeof(long), length, (byte*)(ptr + offset), output, ref outputSize);
                 }
 
-Return:
+            Return:
                 OutputSize = outputSize;
 
             }
@@ -2384,11 +2384,13 @@ Return:
                         // PERF: We should prefetch here the X bytes when PREFETCH is available. 
                         for (byte* end = ptr + 512; ptr < end; ptr += 32)
                         {
+#pragma warning disable 675
                             blockBitmap = blockBitmap << 4 |
                                           (ulong)(ToByte(*(ulong*)(ptr + 0) != *(ulong*)(ptr + offset + 0)) << 3 |
                                                   ToByte(*(ulong*)(ptr + 8) != *(ulong*)(ptr + offset + 8)) << 2 |
                                                   ToByte(*(ulong*)(ptr + 16) != *(ulong*)(ptr + offset + 16)) << 1 |
                                                   ToByte(*(ulong*)(ptr + 24) != *(ulong*)(ptr + offset + 24)));
+#pragma warning restore 675
                         }
 
                         blockBitmaps[blockIdx] = blockBitmap;
@@ -2504,11 +2506,13 @@ Return:
                         // PERF: We should prefetch here the X bytes when PREFETCH is available. 
                         for (byte* end = ptr + 512; ptr < end; ptr += 32)
                         {
+#pragma warning disable 675
                             blockBitmap = blockBitmap << 4 |
                                           (ulong)(ToByte(*(ulong*)(ptr + 0) != *(ulong*)(ptr + offset + 0)) << 3 |
                                                   ToByte(*(ulong*)(ptr + 8) != *(ulong*)(ptr + offset + 8)) << 2 |
                                                   ToByte(*(ulong*)(ptr + 16) != *(ulong*)(ptr + offset + 16)) << 1 |
                                                   ToByte(*(ulong*)(ptr + 24) != *(ulong*)(ptr + offset + 24)));
+#pragma warning restore 675
                         }
 
                         blockBitmaps[blockIdx] = blockBitmap;
@@ -2871,7 +2875,7 @@ Return:
                     }
                     continue;
 
-                    CloseBlock:
+                CloseBlock:
 
                     // We write the actual size of the stored data.
                     rangePtr->Count = (ptr - (byte*)originalBuffer) - rangePtr->Start;
@@ -2954,7 +2958,7 @@ Return:
                     }
                     continue;
 
-                    CloseBlock:
+                CloseBlock:
                     // We write the actual size of the stored data.
                     rangePtr->Count = (ptr - (byte*)originalBuffer) - rangePtr->Start;
                     // We prepare for the next range. 
@@ -3036,7 +3040,7 @@ Return:
                     }
                     continue;
 
-                    CloseBlock:
+                CloseBlock:
                     // We write the actual size of the stored data.
                     rangePtr->Count = (ptr - (byte*)originalBuffer) - rangePtr->Start;
                     // We prepare for the next range. 
@@ -3108,7 +3112,7 @@ Return:
                     }
                     continue;
 
-                    CloseBlock:
+                CloseBlock:
                     // We write the actual size of the stored data.
                     rangePtr->Count = (ptr - (byte*)originalBuffer) - rangePtr->Start;
                     // We prepare for the next range. 
@@ -3183,7 +3187,7 @@ Return:
                     }
                     continue;
 
-                    CloseBlock:
+                CloseBlock:
                     // We write the actual size of the stored data.
                     rangePtr->Count = (ptr - (byte*)originalBuffer) - rangePtr->Start;
                     // We prepare for the next range. 
@@ -3253,7 +3257,7 @@ Return:
                     }
                     continue;
 
-                    CloseBlock:
+                CloseBlock:
                     // We write the actual size of the stored data.
                     rangePtr->Count = (ptr - (byte*)originalBuffer) - rangePtr->Start;
                     // We prepare for the next range. 
@@ -3326,7 +3330,7 @@ Return:
                     }
                     continue;
 
-                    CloseBlock:
+                CloseBlock:
                     // We write the actual size of the stored data.
                     rangePtr->Count = (ptr - (byte*)originalBuffer) - rangePtr->Start;
                     // We prepare for the next range. 
@@ -3642,7 +3646,7 @@ Return:
 
                 this.OutputSize = writePtr - Output;
                 this.IsDiff = true;
-            }            
+            }
 
             public void ComputeCacheAware_SingleBody_Avx_Temporal(void* originalBuffer, void* modifiedBuffer, int size)
             {

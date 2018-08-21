@@ -5,8 +5,8 @@ class s3Settings extends amazonSettings {
     bucketName = ko.observable<string>();
     remoteFolderName = ko.observable<string>();
 
-    constructor(dto: Raven.Client.Documents.Operations.Backups.S3Settings) {
-        super(dto, "S3");
+    constructor(dto: Raven.Client.Documents.Operations.Backups.S3Settings, allowedRegions: Array<string>) {
+        super(dto, "S3", allowedRegions);
 
         this.bucketName(dto.BucketName);
         this.remoteFolderName(dto.RemoteFolderName);
@@ -91,7 +91,7 @@ class s3Settings extends amazonSettings {
         return dto;
     }
 
-    static empty(): s3Settings {
+    static empty(allowedRegions: Array<string>): s3Settings {
         return new s3Settings({
             Disabled: true,
             AwsAccessKey: null,
@@ -99,7 +99,7 @@ class s3Settings extends amazonSettings {
             AwsSecretKey: null,
             BucketName: null,
             RemoteFolderName: null
-        });
+        }, allowedRegions);
     }
 }
 

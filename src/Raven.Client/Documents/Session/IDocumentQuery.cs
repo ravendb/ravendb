@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
@@ -80,6 +81,8 @@ namespace Raven.Client.Documents.Session
         ///     Whether we should apply distinct operation to the query on the server side
         /// </summary>
         bool IsDistinct { get; }
+
+        IRavenQueryable<T> ToQueryable();
 
         /// <summary>
         ///     Returns the query result. Accessing this property for the first time will execute the query.

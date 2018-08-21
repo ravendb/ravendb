@@ -6,7 +6,7 @@ abstract class studioSetting<T> {
     protected saveHandler: (item: this) => JQueryPromise<void>; 
     readonly saveLocation: studio.settings.saveLocation;
 
-    constructor(saveLocation: studio.settings.saveLocation, defaultValue: T, saveHandler: (item: studioSetting<T>) => JQueryPromise<void>) {
+    protected constructor(saveLocation: studio.settings.saveLocation, defaultValue: T, saveHandler: (item: studioSetting<T>) => JQueryPromise<void>) {
         this.saveLocation = saveLocation;
         this.defaultValue = defaultValue;
         this.saveHandler = saveHandler;
@@ -16,16 +16,33 @@ abstract class studioSetting<T> {
         return this.saveHandler(this);
     }
 
-    serialize() {
-        return JSON.stringify(this.value);
+    prepareValueForSave() {
+        if (this.saveLocation === "local") {
+            return JSON.stringify(this.value);
+        } else {
+            return this.value;
+        }
+    }
+    
+    propertyNameInStorage(propertyName: string) {
+        return this.saveLocation === "local" ? propertyName : _.upperFirst(propertyName);
     }
 
-    deserialize(json: any) {
-        if (_.isUndefined(json)) {
-            this.value = this.defaultValue;
-            return;
+    loadUsingValue(value: any) {
+        if (this.saveLocation === "local") {
+            if (_.isUndefined(value)) {
+                this.value = this.defaultValue;
+                return;
+            }
+            this.value = JSON.parse(value);
+        } else {
+            if (_.isUndefined(value)) {
+                this.value = this.defaultValue;
+            } else {
+                this.value = value;    
+            }
+            
         }
-        this.value = JSON.parse(json);
     }
 }
 

@@ -1,14 +1,22 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide;
+using Raven.Server.Config;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -50,6 +58,80 @@ namespace SlowTests.Cluster
                     Assert.Equal(user1.Name, user.Name);
                     user = await session.LoadAsync<User>("foo/bar");
                     Assert.Equal(user3.Name, user.Name);
+                }
+            }
+        }
+        private Random _random = new Random();
+        private string RandomString(int length)
+        {
+            const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 ";
+            var str = new char[length];
+            for (int i = 0; i < length; i++)
+            {
+                str[i] = chars[_random.Next(chars.Length)];
+            }
+            return new string(str);
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(3)]
+        [InlineData(5)]
+        public async Task CanPreformSeveralClusterTransactions(int numberOfNodes)
+        {
+            var numOfSessions = 10;
+            var docsPerSession = 2;
+            var leader = await CreateRaftClusterAndGetLeader(numberOfNodes);
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = numberOfNodes
+            }))
+            {
+                for (int j = 0; j < numOfSessions; j++)
+                {
+
+                    bool retry;
+                    do
+                    {
+                        retry = false;
+                        try
+                        {
+                            using (var session = store.OpenAsyncSession(new SessionOptions
+                            {
+                                TransactionMode = TransactionMode.ClusterWide
+                            }))
+                            {
+                                for (int i = 0; i < docsPerSession; i++)
+                                {
+                                    var user = new User
+                                    {
+                                        LastName = RandomString(2048),
+                                        Age = i
+                                    };
+                                    await session.StoreAsync(user, "users/" + (docsPerSession * j + i + 1));
+                                }
+
+                                if (numberOfNodes > 1)
+                                    await ActionWithLeader(l =>
+                                    {
+                                        l.ServerStore.Engine.CurrentLeader?.StepDown();
+                                        return Task.CompletedTask;
+                                    });
+                                await session.SaveChangesAsync();
+                            }
+                        }
+                        catch (Exception e) when (e is ConcurrencyException)
+                        {
+                            retry = true;
+                        }
+                    } while (retry);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var res = session.Query<User>().ToArray();
+                    Assert.Equal(numOfSessions * docsPerSession, res.Length);
                 }
             }
         }
@@ -109,7 +191,7 @@ namespace SlowTests.Cluster
                 await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
             }
 
-            using (var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 2}))
+            using (var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 2 }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -307,7 +389,7 @@ namespace SlowTests.Cluster
                     using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
-                        return ClusterTransactionCommand.ReadFirstIndex(ctx, store.Database);
+                        return ClusterTransactionCommand.ReadFirstClusterTransaction(ctx, store.Database)?.PreviousCount ?? 0;
                     }
                 }, 0);
 
@@ -504,6 +586,142 @@ namespace SlowTests.Cluster
                 var values = await session.Advanced.ClusterTransaction.GetCompareExchangeValuesAsync<User>(new[] { "usernames/ayende", "usernames/karmel", "usernames/grisha" });
                 Assert.Equal(3, values.Count);
                 Assert.Equal(user.Index, values["usernames/ayende"].Index);
+            }
+        }
+
+        /// <summary>
+        /// This is a comprehensive test. The general flow of the test is as following:
+        /// - Create cluster with 5 nodes with a database on _all_ of them and enable revisions.
+        /// - Bring one node down, he will later be used to verify the correct behavior (our SUT).
+        /// - Perform a cluster transaction which involves a document.
+        /// - Bring all nodes down except of the original leader.
+        /// - Bring the SUT node back up and wait for the document to replicate.
+        /// - Bring another node up in order to have a majority.
+        /// - Wait for the raft index on the SUT to catch-up and verify that we still have one document with one revision. 
+        /// </summary>
+        /// <returns></returns>
+        [Fact]
+        public async Task ClusterTransactionRequestWithRevisions()
+        {
+            var leader = await CreateRaftClusterAndGetLeader(5, shouldRunInMemory: false, leaderIndex: 0);
+            using (var leaderStore = GetDocumentStore(new Options
+            {
+                DeleteDatabaseOnDispose = false,
+                Server = leader,
+                ReplicationFactor = 5,
+                ModifyDocumentStore = (store) => store.Conventions.DisableTopologyUpdates = true
+            }))
+            {
+                var user1 = new User()
+                {
+                    Name = "Karmel"
+                };
+                var user3 = new User()
+                {
+                    Name = "Indych"
+                };
+                var index = await RevisionsHelper.SetupRevisions(leader.ServerStore, leaderStore.Database, configuration => configuration.Collections["Users"].PurgeOnDelete = false);
+                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(15));
+
+                // bring our SUT node down, but we still have a cluster and can execute cluster transaction.
+                var server = Servers[1];
+                var url = server.WebUrl;
+                var dataDir = Servers[1].Configuration.Core.DataDirectory.FullPath.Split('/').Last();
+
+                await DisposeServerAndWaitForFinishOfDisposalAsync(server);
+
+                using (var session = leaderStore.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    Assert.Equal(1, session.Advanced.RequestExecutor.TopologyNodes.Count);
+                    Assert.Equal(leader.WebUrl, session.Advanced.RequestExecutor.Url);
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
+                    await session.StoreAsync(user3, "foo/bar");
+                    await session.SaveChangesAsync();
+
+                    var user = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende")).Value;
+                    Assert.Equal(user1.Name, user.Name);
+                    user = await session.LoadAsync<User>("foo/bar");
+                    Assert.Equal(user3.Name, user.Name);
+
+                    var list = await session.Advanced.Revisions.GetForAsync<User>(user.Id);
+                    Assert.Equal(1, list.Count);
+                    var changeVector = session.Advanced.GetChangeVectorFor(user);
+                    Assert.NotNull(await session.Advanced.Revisions.GetAsync<User>(changeVector));
+
+                }
+                // bring more nodes down, so only one node is left 
+                var dataDir2 = Servers[2].Configuration.Core.DataDirectory.FullPath.Split('/').Last();
+                var url2 = Servers[2].WebUrl;
+                var task1 = DisposeServerAndWaitForFinishOfDisposalAsync(Servers[2]);
+                var task2 = DisposeServerAndWaitForFinishOfDisposalAsync(Servers[3]);
+                var task3 = DisposeServerAndWaitForFinishOfDisposalAsync(Servers[4]);
+                await Task.WhenAll(task1, task2, task3);
+
+                using (var session = leaderStore.OpenAsyncSession())
+                {
+                    Assert.Equal(leader.WebUrl, session.Advanced.RequestExecutor.Url);
+                    await session.StoreAsync(user1, "foo/bar");
+                    await session.SaveChangesAsync();
+
+                    var list = await session.Advanced.Revisions.GetForAsync<User>(user1.Id);
+                    Assert.Equal(2, list.Count);
+                }
+
+                long lastRaftIndex;
+                using (leader.ServerStore.Engine.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    lastRaftIndex = leader.ServerStore.Engine.GetLastCommitIndex(ctx);
+                }
+
+                // revive the SUT node
+                var revived = Servers[1] = GetNewServer(new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = url,
+                    [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "400"
+                }, runInMemory: false, deletePrevious: false, partialPath: dataDir);
+                using (var revivedStore = new DocumentStore()
+                {
+                    Urls = new[] { revived.WebUrl },
+                    Database = leaderStore.Database,
+                    Conventions = new DocumentConventions
+                    {
+                        DisableTopologyUpdates = true
+                    }
+                }.Initialize())
+                {
+                    // let the document with the revision to replicate
+                    Assert.True(WaitForDocument(revivedStore, "foo/bar"));
+                    using (var session = revivedStore.OpenAsyncSession())
+                    {
+                        var user = await session.LoadAsync<User>("foo/bar");
+                        var changeVector = session.Advanced.GetChangeVectorFor(user);
+                        Assert.NotNull(await session.Advanced.Revisions.GetAsync<User>(changeVector));
+                        var list = await session.Advanced.Revisions.GetForAsync<User>("foo/bar");
+                        Assert.Equal(2, list.Count);
+
+                        // revive another node so we should have a functional cluster now
+                        Servers[2] = GetNewServer(new Dictionary<string, string>
+                        {
+                            [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = url2,
+                            [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "400"
+                        }, runInMemory: false, deletePrevious: false, partialPath: dataDir2);
+
+                        // wait for the log to apply on the SUT node
+                        using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
+                        {
+                            await leader.ServerStore.Engine.WaitForLeaveState(RachisState.Candidate, cts.Token);
+                        }
+                        var database = await Servers[1].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(leaderStore.Database);
+                        await database.RachisLogIndexNotifications.WaitForIndexNotification(lastRaftIndex, TimeSpan.FromSeconds(15));
+
+                        list = await session.Advanced.Revisions.GetForAsync<User>("foo/bar");
+                        Assert.Equal(2, list.Count);
+                    }
+                }
             }
         }
 

@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
@@ -31,12 +32,15 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Server.Commercial;
 using Raven.Server.Dashboard;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
+using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
+using Raven.Server.Documents.ETL.Providers.SQL.Test;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Debugging;
@@ -54,6 +58,7 @@ using Raven.Server.Web.System;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
+using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
@@ -230,6 +235,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OfflineMigrationProgress));
             scripter.AddType(typeof(BuildInfoWithResourceNames));
             scripter.AddType(typeof(MigratedServerUrls));
+            scripter.AddType(typeof(MigrationConfiguration));
 
             // revisions
             scripter.AddType(typeof(RevisionsConfiguration));
@@ -305,7 +311,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(NextBackupOccurrence));
             scripter.AddType(typeof(OfflineMigrationConfiguration));
             scripter.AddType(typeof(BackupProgress));
-            scripter.AddType(typeof(BackupDatabaseNowResult));
+            scripter.AddType(typeof(StartBackupOperationResult));
 
             // ongoing tasks - subscription
             scripter.AddType(typeof(OngoingTaskSubscription));
@@ -323,14 +329,17 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OngoingTaskRavenEtlListView));
             scripter.AddType(typeof(RavenEtlConfiguration));
             scripter.AddType(typeof(EtlProcessStatistics));
+            scripter.AddType(typeof(TestRavenEtlScript));
+            scripter.AddType(typeof(RavenEtlTestScriptResult));
             scripter.AddType(typeof(EtlType));
 
             // ongoing tasks - SQL ETL
             scripter.AddType(typeof(OngoingTaskSqlEtlDetails));
             scripter.AddType(typeof(OngoingTaskSqlEtlListView));
             scripter.AddType(typeof(SqlEtlConfiguration));
-            scripter.AddType(typeof(SimulateSqlEtl));
+            scripter.AddType(typeof(TestSqlEtlScript));
             scripter.AddType(typeof(SqlEtlTable));
+            scripter.AddType(typeof(SqlEtlTestScriptResult));
 
             // connection strings
             scripter.AddType(typeof(ConnectionString));
@@ -383,7 +392,7 @@ namespace TypingsGenerator
             
             // debug
             scripter.AddType(typeof(ThreadsHandler.ThreadInfo));
-            scripter.AddType(typeof(MemoryStatsHandler.MemoryInfo));
+            scripter.AddType(typeof(MemoryDebugHandler.MemoryInfo));
             
             // counters
             scripter.AddType(typeof(CounterBatch));
@@ -402,6 +411,14 @@ namespace TypingsGenerator
             // document size details
             scripter.AddType(typeof(DocumentSizeDetails));
             
+            // version info
+            scripter.AddType(typeof(LatestVersionCheck.VersionInfo));
+            
+            
+            // studio configuration
+            scripter.AddType(typeof(ServerWideStudioConfiguration));
+            scripter.AddType(typeof(StudioConfiguration));
+
             return scripter;
         }
     }

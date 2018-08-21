@@ -1,17 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using FastTests;
-
-using Xunit;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
+using Xunit;
 
 namespace SlowTests.Issues
 {
@@ -91,20 +88,20 @@ namespace SlowTests.Issues
                 using (db.NotificationCenter.TrackActions(notificationsQueue, null))
                 {
                     definition.Name = index.IndexName;
-                    store.Maintenance.Send(new PutIndexesOperation(new[] { definition}));
+                    store.Maintenance.Send(new PutIndexesOperation(new[] { definition }));
 
                     WaitForIndexing(store);
 
                     // we might have other notifications like StatsChanged
                     Assert.True(notificationsQueue.Count > 0);
-                    
+
                     Tuple<bool, DynamicJsonValue> performanceHint;
-                    
+
                     do
                     {
                         performanceHint = await notificationsQueue.TryDequeueAsync(TimeSpan.Zero);
                     } while (performanceHint.Item2["Type"].ToString() != NotificationType.PerformanceHint.ToString());
-                    
+
                     Assert.NotNull(performanceHint.Item2);
                     Assert.Equal("Index 'UsersAndFriends' has produced more than 2 map results from a single document", performanceHint.Item2[nameof(PerformanceHint.Message)]);
                     Assert.Equal("UsersAndFriends", performanceHint.Item2[nameof(PerformanceHint.Source)]);
@@ -115,7 +112,7 @@ namespace SlowTests.Issues
                     Assert.NotNull(details);
                     Assert.Equal(1L, details[nameof(WarnIndexOutputsPerDocument.NumberOfExceedingDocuments)]);
                     Assert.Equal(3, details[nameof(WarnIndexOutputsPerDocument.MaxNumberOutputsPerDocument)]);
-                    Assert.Equal("users/2-a", details[nameof(WarnIndexOutputsPerDocument.SampleDocumentId)]);
+                    Assert.Equal("users/2-A", details[nameof(WarnIndexOutputsPerDocument.SampleDocumentId)]);
                 }
 
                 var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));

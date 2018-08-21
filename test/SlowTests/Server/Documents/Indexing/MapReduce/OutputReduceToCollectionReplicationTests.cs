@@ -82,7 +82,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                     var dailyInvoicesTombstones = database.DocumentsStorage.GetTombstonesFrom(context, "DailyInvoices", 0, 0, 128).Count();
                     Assert.Equal(0, dailyInvoicesTombstones);
                     var collections = database.DocumentsStorage.GetTombstoneCollections(tx.InnerTransaction).ToList();
-                    Assert.Equal(5, collections.Count);
+                    Assert.Equal(6, collections.Count);
                     Assert.DoesNotContain("DailyInvoices", collections, StringComparer.OrdinalIgnoreCase);
                 }
             }

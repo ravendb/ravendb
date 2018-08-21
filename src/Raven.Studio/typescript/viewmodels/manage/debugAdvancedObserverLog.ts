@@ -10,10 +10,14 @@ import getClusterObserverDecisionsCommand = require("commands/database/cluster/g
 import toggleClusterObserverCommand = require("commands/database/cluster/toggleClusterObserverCommand");
 import eventsCollector = require("common/eventsCollector");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import fileDownloader = require("common/fileDownloader");
 
 class clusterObserverLog extends viewModelBase {
 
+    filter = ko.observable<string>();
+    
     decisions = ko.observable<Raven.Server.ServerWide.Maintenance.ClusterObserverDecisions>();
+    filteredLogs = ko.observableArray<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>([]);
     topology = clusterTopologyManager.default.topology;
     observerSuspended = ko.observable<boolean>();
     noLeader = ko.observable<boolean>(false);
@@ -38,7 +42,9 @@ class clusterObserverLog extends viewModelBase {
             const hasLeader = !this.noLeader();
 
             return hasLeader && topologyTerm !== dataTerm;
-        })
+        });
+
+        this.filter.throttle(500).subscribe(() => this.filterEntries());
     }
 
     activate(args: any) {
@@ -59,8 +65,8 @@ class clusterObserverLog extends viewModelBase {
                 } as pagedResult<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>);
             }
             return $.when({
-                totalResultCount: log.ObserverLog.length,
-                items: log.ObserverLog
+                totalResultCount: this.filteredLogs().length,
+                items: this.filteredLogs()
             } as pagedResult<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>);
         };
 
@@ -86,6 +92,20 @@ class clusterObserverLog extends viewModelBase {
             }
         });
     }
+    
+    private filterEntries() {
+        const filter = this.filter();
+        
+        if (filter) {
+            this.filteredLogs(this.decisions().ObserverLog.filter(x => x.Message.toLocaleLowerCase().includes(filter.toLocaleLowerCase())));
+        } else {
+            this.filteredLogs(this.decisions().ObserverLog);
+        }
+        
+        if (this.gridController()) {
+            this.gridController().reset();    
+        }
+    }
 
     private loadDecisions() {
         const loadTask = $.Deferred<void>();
@@ -95,6 +115,7 @@ class clusterObserverLog extends viewModelBase {
             .done(response => {
                 response.ObserverLog.reverse();
                 this.decisions(response);
+                this.filterEntries();
                 this.observerSuspended(response.Suspended);
                 this.noLeader(false);
                 
@@ -105,6 +126,7 @@ class clusterObserverLog extends viewModelBase {
                     const type = response.responseJSON['Type'];
                     if (type && type.includes("NoLeaderException")) {
                         this.noLeader(true);
+                        this.filter("");
                         this.decisions({
                             Term: -1,
                             ObserverLog: [],
@@ -112,6 +134,7 @@ class clusterObserverLog extends viewModelBase {
                             Suspended: false,
                             Iteration: -1
                         });
+                        this.filterEntries();
                         loadTask.resolve();
                         return;
                     }
@@ -161,6 +184,18 @@ class clusterObserverLog extends viewModelBase {
                         });
                 }
             });
+    }
+    
+    exportToFile() {
+        const items = this.decisions().ObserverLog;
+        const lines = [] as string[];
+        items.forEach(v => {
+            lines.push(v.Date + "," + (v.Database || "") + "," + v.Iteration + "," + v.Message);
+        });
+
+        const joinedFile = "Date,Database,Iteration,Message\r\n" + lines.join("\r\n");
+        const now = moment().format("YYYY-MM-DD HH-mm");
+        fileDownloader.downloadAsTxt(joinedFile, "cluster-observer-log-" + now + ".txt");
     }
 }
 

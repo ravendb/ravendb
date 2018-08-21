@@ -72,6 +72,7 @@ interface documentMetadataDto {
     '@attachments'?: Array<documentAttachmentDto>;
     '@change-vector'?: string;
     '@counters'?: Array<string>;
+    '@counters-snapshot'?: dictionary<number>;
 }
 
 interface updateDatabaseConfigurationsResult {
@@ -169,6 +170,7 @@ interface availableConfigurationSection {
     name: string;
     id: availableConfigurationSectionId;
     alwaysEnabled: boolean;
+    disableToggle: KnockoutObservable<boolean>;
     enabled: KnockoutObservable<boolean>;
     validationGroup?: KnockoutValidationGroup;
 }
@@ -249,7 +251,6 @@ declare module studio.settings {
     type numberFormatting = "raw" | "formatted";
     type dontShowAgain = "UnsupportedBrowser";
     type saveLocation = "local" | "remote";
-    type usageEnvironment = "Default" | "Dev" | "Test" | "Prod";
 }
 
 interface IndexingPerformanceStatsWithCache extends Raven.Client.Documents.Indexes.IndexingPerformanceStats {
@@ -361,7 +362,7 @@ interface rqlQueryInfo {
 }
 
 interface queryCompleterProviders {
-    terms: (indexName: string, field: string, pageSize: number, callback: (terms: string[]) => void) => void;
+    terms: (indexName: string, collection: string, field: string, pageSize: number, callback: (terms: string[]) => void) => void;
     indexFields: (indexName: string, callback: (fields: string[]) => void) => void;
     collectionFields: (collectionName: string, prefix: string, callback: (fields: dictionary<string>) => void) => void;
     collections: (callback: (collectionNames: string[]) => void) => void;
@@ -422,7 +423,6 @@ interface resourceStyleMap {
     styleMap: any;
 }
 
-
 type checkbox = "unchecked" | "some_checked" | "checked";
 
 type sqlMigrationAction = "skip" | "embed" | "link";
@@ -435,7 +435,7 @@ interface sqlMigrationAdvancedSettingsDto {
     DetectManyToMany: boolean 
 }
 
-type virtualNotificationType = "CumulativeBulkInsert";
+type virtualNotificationType = "CumulativeBulkInsert" | "AttachmentUpload";
 
 declare module Raven.Server.NotificationCenter.Notifications {
     interface Notification  {
@@ -456,5 +456,26 @@ interface virtualBulkInsertItem {
     items: number;
 }
 
-
 type adminLogsHeaderType = "Source" | "Logger";
+
+declare module Raven.Server.Documents.ETL.Providers.SQL.Test {
+    interface SqlEtlTestScriptResult {
+        DebugOutput: Array<string>;
+        TransformationErrors: Array<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>;
+    }
+}
+
+declare module Raven.Server.Documents.ETL.Providers.Raven.Test {
+    interface RavenEtlTestScriptResult extends Raven.Server.Documents.ETL.Test.TestEtlScriptResult {
+        DebugOutput: Array<string>;
+        TransformationErrors: Array<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>;
+    }
+}
+
+type backupOptions = "None" | "Local" | "Azure" | "AmazonGlacier" | "AmazonS3" | "FTP";
+
+interface periodicBackupServerLimitsResponse {
+    LocalRootPath: string;
+    AllowedAwsRegions: Array<string>;
+    AllowedDestinations: Array<backupOptions>;
+}

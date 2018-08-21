@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Raven.Client;
 using Raven.Client.Http;
 using Raven.Server;
 using Raven.Server.Config;
@@ -21,6 +22,7 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Cli;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -85,7 +87,7 @@ namespace FastTests
 
             var maxNumberOfConcurrentTests = Math.Max(ProcessorInfo.ProcessorCount / 2, 2);
 
-            RequestExecutor.ServerCertificateCustomValidationCallback += (message, certificate2, arg3, arg4) => true;
+            RequestExecutor.RemoteCertificateValidationCallback += (sender, cert, chain, errors) => true;
 
             var fileInfo = new FileInfo(XunitConfigurationFile);
             if (fileInfo.Exists)
@@ -214,9 +216,6 @@ namespace FastTests
                     Servers.Add(_localServer);
                     _doNotReuseServer = false;
 
-                    if (_globalServer == null)
-                        _globalServer = _localServer;
-
                     return _localServer;
                 }
 
@@ -250,7 +249,7 @@ namespace FastTests
             }
         }
 
-        private void UnloadServer(AssemblyLoadContext obj)
+        private static void UnloadServer(AssemblyLoadContext obj)
         {
             try
             {
@@ -260,6 +259,39 @@ namespace FastTests
                     _globalServer = null;
                     if (copyGlobalServer == null)
                         return;
+
+                    try
+                    {
+                        using (copyGlobalServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            var databases = copyGlobalServer
+                                .ServerStore
+                                .Cluster
+                                .ItemsStartingWith(context, Constants.Documents.Prefix, 0, int.MaxValue)
+                                .ToList();
+
+                            if (databases.Count > 0)
+                            {
+                                var sb = new StringBuilder();
+                                sb.AppendLine("List of non-deleted databases:");
+
+                                foreach (var t in databases)
+                                {
+                                    sb
+                                        .Append("- ")
+                                        .AppendLine(t.ItemName.Substring(Constants.Documents.Prefix.Length));
+                                }
+
+                                Console.WriteLine(sb.ToString());
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Could not retrieve list of non-deleted databases. Exception: {e}");
+                    }
+
                     copyGlobalServer.Dispose();
 
                     GC.Collect(2);
@@ -288,7 +320,7 @@ namespace FastTests
 
         private readonly object _getNewServerSync = new object();
 
-        protected RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null, string customConfigPath = null)
+        protected virtual RavenServer GetNewServer(IDictionary<string, string> customSettings = null, bool deletePrevious = true, bool runInMemory = true, string partialPath = null, string customConfigPath = null)
         {
             lock (_getNewServerSync)
             {
@@ -349,18 +381,19 @@ namespace FastTests
         {
             Console.WriteLine(url);
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (PlatformDetails.RunningOnPosix == false)
             {
-                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at studio\" \"{url}\"")); // Works ok on windows
+                Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at studio\" \"{url}\""));
+                return;
             }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+
+            if (PlatformDetails.RunningOnMacOsx)
             {
-                Process.Start("xdg-open", url); // Works ok on linux
+                Process.Start("open", url);
+                return;
             }
-            else
-            {
-                Console.WriteLine("Do it yourself!");
-            }
+
+            Process.Start("xdg-open", url);
         }
 
         protected string NewDataPath([CallerMemberName] string prefix = null, string suffix = null, bool forceCreateDir = false)

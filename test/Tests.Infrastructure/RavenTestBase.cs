@@ -176,7 +176,6 @@ namespace FastTests
                         }
 
                         Assert.True(result.RaftCommandIndex > 0); //sanity check             
-                        store.Urls = result.NodesAddedTo.SelectMany(UseFiddler).ToArray();
                         var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
                         AsyncHelpers.RunSync(async () =>
                         {
@@ -206,7 +205,7 @@ namespace FastTests
                             }
                             catch (DatabaseDisabledException)
                             {
-                                continue;
+                                // ignoring
                             }
                             catch (DatabaseNotRelevantException)
                             {
@@ -243,9 +242,7 @@ namespace FastTests
                                 {
                                     continue;
                                 }
-
-                                AsyncHelpers.RunSync(async () => await server.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex));
-                            }
+                             }
                         }
                     };
                     CreatedStores.Add(store);

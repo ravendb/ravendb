@@ -92,9 +92,10 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 const migrationCounts = (status as Raven.Client.Documents.Smuggler.OfflineMigrationProgress).DataExporter;
                 result.push(this.mapToExportListItem(smugglerDatabaseDetails.extractingDataStageName, migrationCounts));
             }
-            
-            if (this.op.taskType() === "CollectionImportFromCsv") {
-                result.push(this.mapToExportListItem("Documents", status.Documents, false));
+
+            const isDatabaseMigration = this.op.taskType() === "DatabaseMigration";
+            if (this.op.taskType() === "CollectionImportFromCsv" || isDatabaseMigration) {
+                result.push(this.mapToExportListItem("Documents", status.Documents, isDatabaseMigration));
             } else {
                 result.push(this.mapToExportListItem("Documents", status.Documents, true));
                 result.push(this.mapToExportListItem("Conflicts", status.Conflicts));
@@ -104,7 +105,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 result.push(this.mapToExportListItem("Compare Exchange", status.CompareExchange));
                 result.push(this.mapToExportListItem("Counters", status.Counters));
             }
-            
+
             let shouldUpdateToPending = false;
             result.forEach(item => {
                 if (item.stage === "processing") {
@@ -305,11 +306,12 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         return (notification instanceof operation) &&
         (notification.taskType() === "DatabaseExport" ||
             notification.taskType() === "DatabaseImport" ||
-            notification.taskType() === "DatabaseMigration" ||
+            notification.taskType() === "DatabaseMigrationRavenDb" ||
             notification.taskType() === "DatabaseRestore" ||
             notification.taskType() === "MigrationFromLegacyData" ||
             notification.taskType() === "CollectionImportFromCsv" ||
-            notification.taskType() === "DatabaseBackup"
+            notification.taskType() === "DatabaseBackup" ||
+            notification.taskType() === "DatabaseMigration"
         );
     }
 

@@ -5,11 +5,15 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using Jint;
+using Jint.Native;
+using Jint.Native.Array;
 using Jint.Native.Object;
+using Jint.Runtime.Interop;
 using Lucene.Net.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.Documents.Indexes.Static.Extensions;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Exceptions;
 using Sparrow;
 using Sparrow.Json;
@@ -117,8 +121,7 @@ namespace Raven.Server.Utils
                     return false;
 
                 var propertyValue = property.Value;
-                var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
-                if (propertyValueAsEnumerable != null && ShouldTreatAsEnumerable(propertyValue))
+                if (propertyValue is IEnumerable<object> propertyValueAsEnumerable && ShouldTreatAsEnumerable(propertyValue))
                 {
                     isSupported &= propertyValueAsEnumerable.Select(IsSupportedType).All(v => v);
                     continue;
@@ -130,22 +133,61 @@ namespace Raven.Server.Utils
             return hasProperties & isSupported;
         }
 
-        public static object ToBlittableSupportedType(object value, bool flattenArrays = false)
+        public static object ToBlittableSupportedType(object value, bool flattenArrays = false, Engine engine = null, JsonOperationContext context = null)
         {
-            return ToBlittableSupportedType(value, value, flattenArrays, 0);
+            return ToBlittableSupportedType(value, value, flattenArrays, 0, engine, context);
         }
 
-        private static object ToBlittableSupportedType(object root, object value, bool flattenArrays, int recursiveLevel)
+        private static object ToBlittableSupportedType(object root, object value, bool flattenArrays, int recursiveLevel, Engine engine, JsonOperationContext context)
         {
             if (recursiveLevel > MaxAllowedRecursiveLevelForType)
-            {
                 NestingLevelTooDeep(root);
+
+            if (value is JsValue js)
+            {
+                if (js.IsNull() || js.IsUndefined())
+                    return null;
+                if (js.IsString())
+                    return js.AsString();
+                if (js.IsBoolean())
+                    return js.AsBoolean();
+                if (js.IsNumber())
+                    return js.AsNumber();
+                if (js.IsDate())
+                    return js.AsDate().ToDateTime();
+                //object wrapper is an object so it must come before the object
+                if (js is ObjectWrapper ow)
+                {
+                    var target = ow.Target;
+                    switch (target)
+                    {
+                        case LazyStringValue lsv:
+                            return lsv;
+                        case LazyCompressedStringValue lcsv:
+                            return lcsv;
+                        case LazyNumberValue lnv:
+                            return lnv; //should be already blittable supported type.
+                    }
+                    ThrowInvalidObject(js);
+                }
+                //Array is an object in Jint
+                else if (js.IsArray())
+                {
+                    var arr = js.AsArray();
+                    return new DynamicJsonArray(flattenArrays ? Flatten(EnumerateArray(arr)) : EnumerateArray(arr));
+                }
+                else if (js.IsObject())
+                {
+                    return JsBlittableBridge.Translate(context, engine, js.AsObject());
+                }
+                ThrowInvalidObject(js);
+                return null;
             }
+
             if (value == null || value is DynamicNullObject)
                 return null;
 
-            var dynamicDocument = value as DynamicBlittableJson;
-            if (dynamicDocument != null)
+            if (value is DynamicBlittableJson dynamicDocument)
                 return dynamicDocument.BlittableJson;
 
             if (value is string)
@@ -166,8 +208,8 @@ namespace Raven.Server.Utils
             if (value is DateTime || value is DateTimeOffset || value is TimeSpan)
                 return value;
 
-            if (value is Guid)
-                return ((Guid)value).ToString("D");
+            if (value is Guid guid)
+                return guid.ToString("D");
 
             if (value is Enum)
                 return value.ToString();
@@ -175,36 +217,31 @@ namespace Raven.Server.Utils
             if (value is IEnumerable<IFieldable> || value is IFieldable)
                 return "__ignored";
 
-            var dictionary = value as IDictionary;
-            if (dictionary != null)
+            if (value is IDictionary dictionary)
             {
                 var @object = new DynamicJsonValue();
                 foreach (var key in dictionary.Keys)
-                    @object[key.ToString()] = ToBlittableSupportedType(root, dictionary[key], flattenArrays, recursiveLevel: recursiveLevel + 1);
+                    @object[key.ToString()] = ToBlittableSupportedType(root, dictionary[key], flattenArrays, recursiveLevel: recursiveLevel + 1, engine: engine, context: context);
 
                 return @object;
             }
 
-            var charEnumerable = value as IEnumerable<char>;
-            if (charEnumerable != null)
+            if (value is IEnumerable<char> charEnumerable)
                 return new string(charEnumerable.ToArray());
 
-            var bytes = value as byte[];
-            if (bytes != null)
+            if (value is byte[] bytes)
                 return System.Convert.ToBase64String(bytes);
 
-            var enumerable = value as IEnumerable;
-            if (enumerable != null)
+            if (value is IEnumerable enumerable)
             {
                 if (ShouldTreatAsEnumerable(enumerable))
                 {
                     IEnumerable<object> items;
 
-                    var objectEnumerable = value as IEnumerable<object>;
-                    if (objectEnumerable != null)
-                        items = objectEnumerable.Select(x => ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel: recursiveLevel + 1));
+                    if (value is IEnumerable<object> objectEnumerable)
+                        items = Enumerable.Select(objectEnumerable, x => ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel + 1, engine, context));
                     else
-                        items = enumerable.Cast<object>().Select(x => ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel: recursiveLevel + 1));
+                        items = Enumerable.Select(enumerable.Cast<object>(), x => ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel + 1, engine, context));
 
                     return new DynamicJsonArray(flattenArrays ? Flatten(items) : items);
                 }
@@ -216,17 +253,32 @@ namespace Raven.Server.Utils
             foreach (var property in accessor.GetPropertiesInOrder(value))
             {
                 var propertyValue = property.Value;
-                var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
-                if (propertyValueAsEnumerable != null && ShouldTreatAsEnumerable(propertyValue))
+                if (propertyValue is IEnumerable<object> propertyValueAsEnumerable && ShouldTreatAsEnumerable(propertyValue))
                 {
-                    inner[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(x => ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel: recursiveLevel + 1)));
+                    inner[property.Key] = new DynamicJsonArray(Enumerable.Select(propertyValueAsEnumerable, x => ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel + 1, engine, context)));
                     continue;
                 }
 
-                inner[property.Key] = ToBlittableSupportedType(root, propertyValue, flattenArrays, recursiveLevel: recursiveLevel + 1);
+                inner[property.Key] = ToBlittableSupportedType(root, propertyValue, flattenArrays, recursiveLevel + 1, engine, context);
             }
 
             return inner;
+        }
+
+        private static void ThrowInvalidObject(JsValue jsValue)
+        {
+            throw new InvalidOperationException("Invalid type " + jsValue);
+        }
+
+        private static IEnumerable<object> EnumerateArray(ArrayInstance arr)
+        {
+            foreach (var (key, val) in arr.GetOwnProperties())
+            {
+                if (key == "length")
+                    continue;
+
+                yield return ToBlittableSupportedType(val.Value);
+            }
         }
 
         private static void NestingLevelTooDeep(object value)
@@ -235,15 +287,13 @@ namespace Raven.Server.Utils
                                 $"Reached nesting level of {MaxAllowedRecursiveLevelForType} for type {value.GetType().Name}, reccursive types that exceed the allowed nesting level are not supported.");
         }
 
-        public static int MaxAllowedRecursiveLevelForType { get; private set; } = 100;
+        public static int MaxAllowedRecursiveLevelForType { get; } = 100;
 
         private static IEnumerable<object> Flatten(IEnumerable items)
         {
             foreach (var item in items)
             {
-                var enumerable = item as IEnumerable;
-
-                if (enumerable != null && ShouldTreatAsEnumerable(enumerable))
+                if (item is IEnumerable enumerable && ShouldTreatAsEnumerable(enumerable))
                 {
                     foreach (var nestedItem in Flatten(enumerable))
                     {
@@ -266,8 +316,7 @@ namespace Raven.Server.Utils
                 return DynamicNullObject.ExplicitNull;
 
             BlittableJsonReaderArray jsonArray;
-            var jsonObject = value as BlittableJsonReaderObject;
-            if (jsonObject != null)
+            if (value is BlittableJsonReaderObject jsonObject)
             {
                 if (jsonObject.TryGetWithoutThrowingOnError("$values", out jsonArray))
                     return new DynamicArray(jsonArray);
@@ -287,8 +336,7 @@ namespace Raven.Server.Utils
             if (value == null)
                 return null;
 
-            var blittableJsonObject = value as BlittableJsonReaderObject;
-            if (blittableJsonObject != null)
+            if (value is BlittableJsonReaderObject blittableJsonObject)
             {
                 if (blittableJsonObject.TryGet(TypePropertyName, out string type) == false)
                     return blittableJsonObject;
@@ -308,8 +356,7 @@ namespace Raven.Server.Utils
             var lazyString = value as LazyStringValue;
             if (lazyString == null)
             {
-                var lazyCompressedStringValue = value as LazyCompressedStringValue;
-                if (lazyCompressedStringValue != null)
+                if (value is LazyCompressedStringValue lazyCompressedStringValue)
                     lazyString = lazyCompressedStringValue.ToLazyStringValue();
             }
 
@@ -337,7 +384,7 @@ namespace Raven.Server.Utils
                     if (result == LazyStringParser.Result.DateTimeOffset)
                         return dto;
 
-                    if (LazyStringParser.TryParseTimeSpan(str, s.Length, out TimeSpan ts))
+                    if (LazyStringParser.TryParseTimeSpan(str, s.Length, out var ts))
                         return ts;
                 }
             }
@@ -348,8 +395,7 @@ namespace Raven.Server.Utils
         public static T Convert<T>(object value, bool cast)
         {
             if (value == null || value is DynamicNullObject)
-                return default(T);
-
+                return default;
 
             if (cast)
             {
@@ -357,10 +403,10 @@ namespace Raven.Server.Utils
                 return (T)value;
             }
 
-            if (value is T)
-                return (T)value;
+            if (value is T t)
+                return t;
 
-            Type targetType = typeof(T);
+            var targetType = typeof(T);
 
             if (targetType.GetTypeInfo().IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
             {
@@ -379,8 +425,8 @@ namespace Raven.Server.Utils
 
             if (targetType == typeof(DateTime))
             {
-                if (value is DateTimeOffset)
-                    return (T)(object)((DateTimeOffset)value).DateTime;
+                if (value is DateTimeOffset dto)
+                    return (T)(object)dto.DateTime;
 
                 var s = value as string;
                 if (s == null)
@@ -393,7 +439,7 @@ namespace Raven.Server.Utils
                 if (s != null)
                 {
                     if (DateTime.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
-                        DateTimeStyles.RoundtripKind, out DateTime dateTime))
+                        DateTimeStyles.RoundtripKind, out var dateTime))
                         return (T)(object)dateTime;
 
                     dateTime = RavenDateTimeExtensions.ParseDateMicrosoft(s);
@@ -408,10 +454,10 @@ namespace Raven.Server.Utils
                 if (s != null)
                 {
                     if (DateTimeOffset.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
-                        DateTimeStyles.RoundtripKind, out DateTimeOffset dateTimeOffset))
+                        DateTimeStyles.RoundtripKind, out var dateTimeOffset))
                         return (T)(object)dateTimeOffset;
 
-                    return default(T);
+                    return default;
                 }
             }
 
@@ -432,16 +478,24 @@ namespace Raven.Server.Utils
         public static IPropertyAccessor GetPropertyAccessor(object value)
         {
             var type = value.GetType();
-            return PropertyAccessorCache.GetOrAdd(type, PropertyAccessor.Create);
+
+            if (value is Dictionary<string, object>) // don't use cache when using dictionaries
+                return PropertyAccessor.Create(type, value);
+
+            return PropertyAccessorCache.GetOrAdd(type, x => PropertyAccessor.Create(type, value));
         }
 
         public static IPropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, HashSet<string> groupByFields)
         {
             var type = value.GetType();
-            //We don't cache JS types
-            if (type == typeof(ObjectInstance))
-                return PropertyAccessor.CreateMapReduceOutputAccessor(type, groupByFields, true);
-            return PropertyAccessorCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(x, groupByFields));
+            
+            if (type == typeof(ObjectInstance)) // We don't cache JS types
+                return PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields, true);
+
+            if (value is Dictionary<string, object>) // don't use cache when using dictionaries
+                return PropertyAccessor.Create(type, value);
+
+            return PropertyAccessorCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields));
         }
 
         public static bool ShouldTreatAsEnumerable(object item)

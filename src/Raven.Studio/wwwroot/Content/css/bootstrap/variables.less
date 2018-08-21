@@ -10,35 +10,66 @@
 //## Gray and brand colors for use across Bootstrap.
 //#2c343a
 @gray-base:              #22252b; //#272b32;
-@gray-base-light:        #293038;  //#292e33;
-@gray-darker:            #2c343c;
-@gray-dark:              #39434f;
-@gray:                   lighten(#546175, 7%);
+@gray-base-light:        #262a30;  //#292e33;
+@gray-darker:            #2b333b;
+@gray-dark:              #3b4654;
+@gray:                   #637085;
 @gray-light:             #98a7b7;
 @gray-lighter:           #f0f4f6;
 
 // PRIMARY #ca1c59  - linki tesktowe: #e33572
 
 @brand-primary-dark:    #b21557;
-@brand-primary:         #d7325a; //#ee3442; // #ff7f66; //#ee3442;
+@brand-primary:         #d7325a; 
 @brand-primary-light:   #ff6482;
 
-@brand-success-dark:    #60942c;//#5d933b;
-@brand-success:         #69cc29;
-@brand-success-light:   #a7ed76;
+@brand-success-dark:    desaturate(darken(@color-3,13%),20%);//#60942c;
+@brand-success:         @color-3; //#69cc29;
+@brand-success-light:   saturate(lighten(@color-3,13%),20%);//#a7ed76;
 
-@brand-info-dark:       #1773b5;
-@brand-info:            #20adf3;// #45a0ff;
-@brand-info-light:      #61caff;
+@brand-info-dark:       desaturate(darken(@color-4,13%),20%);//#1773b5;
+@brand-info:            @color-4; //#20adf3;
+@brand-info-light:      saturate(lighten(@color-4,13%),20%);//#61caff;
 
-@brand-warning-dark:    #e3a72d;
-@brand-warning:         #ffda47;
-@brand-warning-light:   #ffee7d;
+@brand-warning-dark:    desaturate(darken(@color-2,13%),20%);//#e3a72d;
+@brand-warning:         @color-2; //#ffda47;
+@brand-warning-light:   saturate(lighten(@color-2,13%),20%);//#ffee7d;
 
-@brand-danger-dark:     #b32424; //#793233;
-@brand-danger:          #ff4943;
-@brand-danger-light:    #ff624d;
+@brand-danger-dark:     desaturate(darken(@color-1,13%),20%);//#b32424;
+@brand-danger:          @color-1; //#ff4943;
+@brand-danger-light:    saturate(lighten(@color-1,13%),20%);//#ff624d;
 
+@color-1: #f06582;
+    @color-1-1: #f3766e;
+    @color-1-2: #f38a66;
+    @color-1-3: #eea361;
+@color-2: #f0b362;
+    @color-2-1: #f0c254;
+    @color-2-2: #edcd51;
+    @color-2-3: #c4d451;
+@color-3: #7bd85d;
+    @color-3-1: #51d27a;
+    @color-3-2: #37c4ac;
+    @color-3-3: #2fb7d2;
+@color-4: #2f9ef3;
+    @color-4-1: #5186ee;
+    @color-4-2: #7069ee;
+    @color-4-3: #8361d4;
+@color-5: #945ab5;
+    @color-5-1: #bf569f;
+    @color-5-2: #d85b9a;
+    @color-5-3: #ed558c;
+
+@brand-database-color: #ad1457;
+
+@color-counters: @color-3-3;
+@color-revisions: @color-1-3;
+@color-recent: @color-4-1;
+@color-attachments: @color-3-1;
+@color-related: @color-4-3;
+
+@link-color: #e33572;
+@link-hover-color: #ff6565;
 
 //== Scaffolding
 //
@@ -50,9 +81,9 @@
 @text-color:            @gray-light;
 
 //** Global textual link color.
-@link-color:            @link-color;
+//@link-color:            @link-color;
 //** Link hover color set via `darken()` function.
-@link-hover-color:      @link-hover-color;
+//@link-hover-color:      @link-hover-color;
 //** Link hover decoration.
 @link-hover-decoration: underline;
 

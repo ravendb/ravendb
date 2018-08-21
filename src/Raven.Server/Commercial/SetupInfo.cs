@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -12,12 +13,15 @@ namespace Raven.Server.Commercial
 {
     public class SetupInfo
     {
+        public bool EnableExperimentalFeatures { get; set; }
+        public StudioConfiguration.StudioEnvironment Environment { get; set; }
         public bool RegisterClientCert { get; set; }
         public License License { get; set; }
         public string Email { get; set; }
         public string Domain { get; set; }
         public string RootDomain { get; set; }
         public bool ModifyLocalServer { get; set; }
+        public string LocalNodeTag { get; set; }
         public string Certificate { get; set; }
         public string Password { get; set; }
 
@@ -27,6 +31,8 @@ namespace Raven.Server.Commercial
         {
             return new DynamicJsonValue
             {
+                [nameof(EnableExperimentalFeatures)] = EnableExperimentalFeatures,
+                [nameof(Environment)] = Environment,
                 [nameof(License)] = License.ToJson(),
                 [nameof(Email)] = Email,
                 [nameof(Domain)] = Domain,
@@ -84,9 +90,12 @@ namespace Raven.Server.Commercial
 
     public class UnsecuredSetupInfo
     {
+        public bool EnableExperimentalFeatures { get; set; }
+        public StudioConfiguration.StudioEnvironment Environment { get; set; }
         public List<string> Addresses { get; set; }
         public int Port { get; set; }
         public int TcpPort { get; set; }
+        public string LocalNodeTag { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -94,7 +103,10 @@ namespace Raven.Server.Commercial
             {
                 [nameof(Addresses)] = new DynamicJsonArray(Addresses),
                 [nameof(Port)] = Port,
-                [nameof(TcpPort)] = TcpPort
+                [nameof(TcpPort)] = TcpPort,
+                [nameof(EnableExperimentalFeatures)] = EnableExperimentalFeatures,
+                [nameof(Environment)] = Environment,
+                [nameof(LocalNodeTag)] = LocalNodeTag
             };
         }
     }
@@ -342,5 +354,31 @@ namespace Raven.Server.Commercial
         }
 
         public bool ShouldPersist => false;
+    }
+
+    public class SetupSettings
+    {
+        public Node[] Nodes;
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Nodes)] = Nodes != null ? new DynamicJsonArray(Nodes.Select(x => x.ToJson())) : null
+            };
+        }
+
+        public class Node
+        {
+            public string Tag { get; set; }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(Tag)] = Tag
+                }; 
+            }
+        }
     }
 }

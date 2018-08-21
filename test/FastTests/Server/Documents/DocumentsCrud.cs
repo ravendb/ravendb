@@ -17,7 +17,7 @@ namespace FastTests.Server.Documents
 
         public DocumentsCrud()
         {
-            _disposeDatabase = CreatePersistentDocumentDatabase(NewDataPath(), out _documentDatabase);
+            _disposeDatabase = CreatePersistentDocumentDatabase(NewDataPath(prefix: "DocumentsCrud"), out _documentDatabase);
         }
 
         [Theory]
@@ -568,8 +568,8 @@ namespace FastTests.Server.Documents
 
         public override void Dispose()
         {
-            base.Dispose();
             _disposeDatabase.Dispose();
+            base.Dispose();
         }
     }
 }

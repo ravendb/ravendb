@@ -2,14 +2,18 @@
 //
 // This file is distributed under the MIT License. See LICENSE.md for details.
 
-using System.Runtime.CompilerServices;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace Sparrow.Collections.LockFree
 {
-    internal sealed class DictionaryImplInt<TValue> : DictionaryImpl<int, int, TValue>
+    internal sealed class DictionaryImplInt<TValue>
+                : DictionaryImpl<int, int, TValue>
     {
-        internal DictionaryImplInt(int capacity, ConcurrentDictionary<int, TValue> topDict)
+        internal DictionaryImplInt(int capacity, LockFreeConcurrentDictionary<int, TValue> topDict)
             : base(capacity, topDict)
         {
         }
@@ -39,7 +43,7 @@ namespace Sparrow.Collections.LockFree
                 if (entryKeyValue == 0)
                 {
                     // claimed a new slot
-                    allocatedSlotCount.Increment();
+                    this.allocatedSlotCount.Increment();
                     return true;
                 }
             }
@@ -47,16 +51,36 @@ namespace Sparrow.Collections.LockFree
             return key == entryKeyValue || _keyComparer.Equals(key, entryKey);
         }
 
+        protected override int hash(int key)
+        {
+            if (key == 0)
+            {
+                return ZEROHASH;
+            }
+
+            return base.hash(key);
+        }
+
+        protected override bool keyEqual(int key, int entryKey)
+        {
+            return key == entryKey || _keyComparer.Equals(key, entryKey);
+        }
+
         protected override DictionaryImpl<int, int, TValue> CreateNew(int capacity)
         {
             return new DictionaryImplInt<TValue>(capacity, this);
+        }
+
+        protected override int keyFromEntry(int entryKey)
+        {
+            return entryKey;
         }
     }
 
     internal sealed class DictionaryImplIntNoComparer<TValue>
             : DictionaryImpl<int, int, TValue>
     {
-        internal DictionaryImplIntNoComparer(int capacity, ConcurrentDictionary<int, TValue> topDict)
+        internal DictionaryImplIntNoComparer(int capacity, LockFreeConcurrentDictionary<int, TValue> topDict)
             : base(capacity, topDict)
         {
         }
@@ -76,7 +100,6 @@ namespace Sparrow.Collections.LockFree
             return TryClaimSlot(ref entryKey, key);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool TryClaimSlot(ref int entryKey, int key)
         {
             var entryKeyValue = entryKey;
@@ -87,7 +110,7 @@ namespace Sparrow.Collections.LockFree
                 if (entryKeyValue == 0)
                 {
                     // claimed a new slot
-                    allocatedSlotCount.Increment();
+                    this.allocatedSlotCount.Increment();
                     return true;
                 }
             }
@@ -95,9 +118,26 @@ namespace Sparrow.Collections.LockFree
             return key == entryKeyValue;
         }
 
+        protected override int hash(int key)
+        {
+            return (key == 0) ?
+                ZEROHASH :
+                key | REGULAR_HASH_BITS;
+        }
+
+        protected override bool keyEqual(int key, int entryKey)
+        {
+            return key == entryKey;
+        }
+
         protected override DictionaryImpl<int, int, TValue> CreateNew(int capacity)
         {
             return new DictionaryImplIntNoComparer<TValue>(capacity, this);
+        }
+
+        protected override int keyFromEntry(int entryKey)
+        {
+            return entryKey;
         }
     }
 }

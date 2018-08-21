@@ -1,0 +1,30 @@
+<div class="content-container">
+    <div class="content-margin">
+        <div class="row flex-row absolute-fill">
+            <div class="col-xs-12 col-lg-6 flex-vertical">
+                <div class="flex-form">
+                    <div class="panel">
+                        <div class="panel-body">
+                            <h3>Studio Configuration</h3>
+                            <div class="form-group">
+                                <div>
+                                    <label class="control-label">Environment</label>
+                                </div>
+                                <div style="position: relative">
+                                    <button class="btn btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                        <span data-bind="text: model.environment"></span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" data-bind="foreach: $root.constructor.environments">
+                                        <li><a href="#" data-bind="text: $data, click: $parent.model.environment.bind($parent.model.environment, $data)"></a></li>
+                                    </ul>
+                                    <span class="help-block" data-bind="validationMessage: model.environment"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

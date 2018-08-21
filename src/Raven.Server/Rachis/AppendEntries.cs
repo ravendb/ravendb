@@ -13,6 +13,7 @@ namespace Raven.Server.Rachis
         public bool ForceElections { get; set; }
         public long TimeAsLeader { get; set; }
         public int SendingThread { get; set; }
+        public int MinCommandVersion { get; set; }
     }
 
     public class RachisEntry

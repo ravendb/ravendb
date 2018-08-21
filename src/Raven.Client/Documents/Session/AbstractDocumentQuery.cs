@@ -18,6 +18,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
@@ -108,7 +109,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// The paths to include when loading the query
         /// </summary>
-        protected HashSet<string> Includes = new HashSet<string>();
+        protected HashSet<string> DocumentIncludes = new HashSet<string>();
 
         /// <summary>
         /// Holds the query stats
@@ -141,6 +142,8 @@ namespace Raven.Client.Documents.Session
         public bool IsDynamicMapReduce => GroupByTokens.Count > 0;
 
         private bool _isInMoreLikeThis;
+
+        private string _includesAlias;
 
         private static TimeSpan DefaultTimeout
         {
@@ -393,7 +396,7 @@ namespace Raven.Client.Documents.Session
         /// <param name = "path">The path.</param>
         public void Include(string path)
         {
-            Includes.Add(path);
+            DocumentIncludes.Add(path);
         }
 
         /// <summary>
@@ -490,6 +493,22 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         public void Include(Expression<Func<T, object>> path)
         {
             Include(path.ToPropertyPath());
+        }
+
+        public void Include(IncludeBuilder includes)
+        {
+            if (includes == null)
+                return;
+
+            if (includes.DocumentsToInclude != null)
+            {
+                foreach (var doc in includes.DocumentsToInclude)
+                {
+                    DocumentIncludes.Add(doc);
+                }
+            }
+
+            IncludeCounters(includes.Alias, includes.CountersToIncludeBySourcePath);
         }
 
         /// <summary>
@@ -1113,12 +1132,16 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         private void BuildInclude(StringBuilder queryText)
         {
-            if (Includes.Count == 0 && HighlightingTokens.Count == 0 && ExplanationToken == null && QueryTimings == null)
+            if (DocumentIncludes.Count == 0 &&
+                HighlightingTokens.Count == 0 &&
+                ExplanationToken == null &&
+                QueryTimings == null &&
+                CounterIncludesTokens == null)
                 return;
 
             queryText.Append(" include ");
             var first = true;
-            foreach (var include in Includes)
+            foreach (var include in DocumentIncludes)
             {
                 if (first == false)
                     queryText.Append(",");
@@ -1140,6 +1163,18 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 else
                 {
                     queryText.Append(include);
+                }
+            }
+
+            if (CounterIncludesTokens != null)
+            {
+                foreach (var counterIncludesToken in CounterIncludesTokens)
+                {
+                    if (first == false)
+                        queryText.Append(",");
+                    first = false;
+
+                    counterIncludesToken.WriteTo(queryText);
                 }
             }
 
@@ -1658,11 +1693,32 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 throw new InvalidOperationException("Alias cannot be null or empty");
 
             var tokens = GetCurrentWhereTokens();
-            foreach (var token in tokens)
+            var current = tokens.First;
+            while(current != null)
             {
-                var whereToken = token as WhereToken;
-                whereToken?.AddAlias(fromAlias);
+                if (current.Value is WhereToken w)
+                    current.Value = w.AddAlias(fromAlias);
+                current = current.Next;
             }
+        }
+
+        public string AddAliasToCounterIncludesTokens(string fromAlias)
+        {
+            if (_includesAlias == null)
+                return fromAlias;
+
+            if (fromAlias == null)
+            {
+                fromAlias = _includesAlias;
+                AddFromAliasToWhereTokens(fromAlias);
+            }
+
+            foreach (var counterIncludesToken in CounterIncludesTokens)
+            {
+                counterIncludesToken.AddAliasToPath(fromAlias);
+            }
+
+            return fromAlias;
         }
 
         protected static void GetSourceAliasIfExists(QueryData queryData, string[] fields, out string sourceAlias)
@@ -1670,12 +1726,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             sourceAlias = null;
 
             if (fields.Length != 1)
-                return;
-
-            var typeInfo = typeof(T).GetTypeInfo();
-            if (typeof(T) != typeof(string) &&
-                typeInfo.IsValueType == false &&
-                typeInfo.IsEnum == false)
                 return;
 
             var indexOf = fields[0].IndexOf(".", StringComparison.Ordinal);

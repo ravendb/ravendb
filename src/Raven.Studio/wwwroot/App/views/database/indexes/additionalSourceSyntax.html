@@ -1,0 +1,41 @@
+<div class="modal-dialog modal-lg" role="document" id="additionalSourceSyntaxDialog">
+    <div class="modal-content">
+        <div class="margin-top margin-right margin-bottom margin-bottom-lg">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
+        </div>
+        <div class="modal-header margin-top">
+           <div class="well well-sm">
+               Upload additional source files which can be referenced inside the index definition functions.
+           </div>
+        </div>
+        <div class="modal-body">           
+            <div class="row">
+                <div class="col-lg-6">
+                    <h3 class="margin-top">
+                        <strong>C# </strong>Example:
+                    </h3>
+                    <pre data-bind="html: additionalSourceCsharpHtml"> 
+                    </pre>
+                    <pre data-bind="html: usageInMapCsharpHtml">
+                    </pre>
+                </div>
+                <div class="col-lg-6">
+                    <h3 class="margin-top">
+                        <strong>JavaScript </strong>Example:
+                    </h3>
+                    <pre data-bind="html: additionalSourceJavascriptHtml">
+                    </pre>
+                    <pre data-bind="html: usageInMapJavascriptHtml">
+                    </pre>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer text-left bg-experimental flex-horizontal">
+            <div class="flex-start"><i class="icon-experimental"></i></div>
+            <div>
+                Note: The JavaScript index is an experimental feature.<br/>
+                Set <code>Features.Availability</code> configuration to <code>Experimental</code> in order to use.
+            </div>
+        </div>
+    </div>
+</div>

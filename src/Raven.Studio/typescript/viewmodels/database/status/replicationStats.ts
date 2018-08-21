@@ -958,8 +958,7 @@ class replicationStats extends viewModelBase {
                 if (dx >= 0.8) { // Don't show tooltip for very small items
                     if (op.Name !== "Replication") {
                         this.hitTest.registerTrackItem(currentX, yStart, dx, replicationStats.trackHeight, op);
-                    }
-                    else if (perfItemWithCache) {
+                    } else if (perfItemWithCache) {
                         // Better to show full details for the first stripe.. 
                         this.hitTest.registerClosedTrackItem(currentX, yStart, dx, replicationStats.trackHeight, perfItemWithCache);
                     }
@@ -1209,8 +1208,7 @@ class replicationStats extends viewModelBase {
             // Data validation (currently only checking if this is an array, may do deeper validation later..
             if (!_.isArray(importedData)) { 
                 messagePublisher.reportError("Invalid replication stats file format", undefined, undefined);
-            }
-            else {
+            } else {
                 this.data = importedData;
 
                 this.fillCache();

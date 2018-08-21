@@ -541,6 +541,11 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         using (var stream = _source.GetAttachmentStream(hash, out string tag))
                         {
+                            if (stream == null)
+                            {
+                                progress.Attachments.ErroredCount++;
+                                throw new ArgumentException($"Document {document.Id} seems to have a attachment hash: {hash}, but no correlating hash was found in the storage.");
+                            }
                             WriteAttachmentStream(hash, stream, tag);
                         }
                     }

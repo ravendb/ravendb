@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.WebSockets;
@@ -11,7 +12,6 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Sparrow;
-using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Changes
         private TaskCompletionSource<IDatabaseChanges> _tcs;
 
         private readonly ConcurrentDictionary<int, TaskCompletionSource<object>> _confirmations = new ConcurrentDictionary<int, TaskCompletionSource<object>>();
-        
+
         private readonly AtomicDictionary<DatabaseConnectionState> _counters = new AtomicDictionary<DatabaseConnectionState>(StringComparer.OrdinalIgnoreCase);
         private int _immediateConnection;
 
@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.Changes
             _requestExecutor = requestExecutor;
             _conventions = requestExecutor.Conventions;
             _database = databaseName;
-           
+
             _tcs = new TaskCompletionSource<IDatabaseChanges>(TaskCreationOptions.RunContinuationsAsynchronously);
             _cts = new CancellationTokenSource();
             _client = CreateClientWebSocket(_requestExecutor);
@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Changes
             _onDispose = onDispose;
             ConnectionStatusChanged += OnConnectionStatusChanged;
 
-            _task = DoWork();   
+            _task = DoWork();
         }
 
         public static ClientWebSocket CreateClientWebSocket(RequestExecutor requestExecutor)
@@ -61,6 +61,13 @@ namespace Raven.Client.Documents.Changes
             var clientWebSocket = new ClientWebSocket();
             if (requestExecutor.Certificate != null)
                 clientWebSocket.Options.ClientCertificates.Add(requestExecutor.Certificate);
+
+#if NETCOREAPP
+            if (RequestExecutor.HasServerCertificateCustomValidationCallback)
+            {
+                clientWebSocket.Options.RemoteCertificateValidationCallback += RequestExecutor.OnServerCertificateCustomValidationCallback;
+            }
+#endif
             return clientWebSocket;
         }
 
@@ -104,6 +111,9 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<IndexChange> ForIndex(string indexName)
         {
+            if (string.IsNullOrWhiteSpace(indexName))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(indexName));
+
             var counter = GetOrAddConnectionState("indexes/" + indexName, "watch-index", "unwatch-index", indexName);
 
             var taskedObservable = new ChangesObservable<IndexChange, DatabaseConnectionState>(
@@ -127,6 +137,9 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<DocumentChange> ForDocument(string docId)
         {
+            if (string.IsNullOrWhiteSpace(docId))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(docId));
+
             var counter = GetOrAddConnectionState("docs/" + docId, "watch-doc", "unwatch-doc", docId);
 
             var taskedObservable = new ChangesObservable<DocumentChange, DatabaseConnectionState>(
@@ -182,6 +195,9 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<DocumentChange> ForDocumentsStartingWith(string docIdPrefix)
         {
+            if (string.IsNullOrWhiteSpace(docIdPrefix))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(docIdPrefix));
+
             var counter = GetOrAddConnectionState("prefixes/" + docIdPrefix, "watch-prefix", "unwatch-prefix", docIdPrefix);
 
             var taskedObservable = new ChangesObservable<DocumentChange, DatabaseConnectionState>(
@@ -193,8 +209,8 @@ namespace Raven.Client.Documents.Changes
 
         public IChangesObservable<DocumentChange> ForDocumentsInCollection(string collectionName)
         {
-            if (collectionName == null)
-                throw new ArgumentNullException(nameof(collectionName));
+            if (string.IsNullOrWhiteSpace(collectionName))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(collectionName));
 
             var counter = GetOrAddConnectionState("collections/" + collectionName, "watch-collection", "unwatch-collection", collectionName);
 
@@ -209,6 +225,61 @@ namespace Raven.Client.Documents.Changes
         {
             var collectionName = _conventions.GetCollectionName(typeof(TEntity));
             return ForDocumentsInCollection(collectionName);
+        }
+
+        public IChangesObservable<CounterChange> ForAllCounters()
+        {
+            var counter = GetOrAddConnectionState("all-counters", "watch-counters", "unwatch-counters", null);
+
+            var taskedObservable = new ChangesObservable<CounterChange, DatabaseConnectionState>(
+                counter,
+                notification => true);
+
+            return taskedObservable;
+        }
+
+        public IChangesObservable<CounterChange> ForCounter(string counterName)
+        {
+            if (string.IsNullOrWhiteSpace(counterName))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(counterName));
+
+            var counter = GetOrAddConnectionState($"counter/{counterName}", "watch-counter", "unwatch-counter", counterName);
+
+            var taskedObservable = new ChangesObservable<CounterChange, DatabaseConnectionState>(
+                counter,
+                notification => string.Equals(counterName, notification.Name, StringComparison.OrdinalIgnoreCase));
+
+            return taskedObservable;
+        }
+
+        public IChangesObservable<CounterChange> ForCounterOfDocument(string documentId, string counterName)
+        {
+            if (string.IsNullOrWhiteSpace(documentId))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(documentId));
+            if (string.IsNullOrWhiteSpace(counterName))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(counterName));
+
+            var counter = GetOrAddConnectionState($"document/{documentId}/counter/{counterName}", "watch-document-counter", "unwatch-document-counter", value: null, values: new[] { documentId, counterName });
+
+            var taskedObservable = new ChangesObservable<CounterChange, DatabaseConnectionState>(
+                counter,
+                notification => string.Equals(counterName, notification.Name, StringComparison.OrdinalIgnoreCase) && string.Equals(documentId, notification.DocumentId, StringComparison.OrdinalIgnoreCase));
+
+            return taskedObservable;
+        }
+
+        public IChangesObservable<CounterChange> ForCountersOfDocument(string documentId)
+        {
+            if (string.IsNullOrWhiteSpace(documentId))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(documentId));
+
+            var counter = GetOrAddConnectionState($"document/{documentId}/counter", "watch-document-counters", "unwatch-document-counters", documentId);
+
+            var taskedObservable = new ChangesObservable<CounterChange, DatabaseConnectionState>(
+                counter,
+                notification => string.Equals(documentId, notification.DocumentId, StringComparison.OrdinalIgnoreCase));
+
+            return taskedObservable;
         }
 
         [Obsolete("This method is not supported anymore. Will be removed in next major version of the product.")]
@@ -252,7 +323,7 @@ namespace Raven.Client.Documents.Changes
             _onDispose?.Invoke();
         }
 
-        private DatabaseConnectionState GetOrAddConnectionState(string name, string watchCommand, string unwatchCommand, string value)
+        private DatabaseConnectionState GetOrAddConnectionState(string name, string watchCommand, string unwatchCommand, string value, string[] values = null)
         {
             bool newValue = false;
             var counter = _counters.GetOrAdd(name, s =>
@@ -262,7 +333,7 @@ namespace Raven.Client.Documents.Changes
                     try
                     {
                         if (Connected)
-                            await Send(unwatchCommand, value).ConfigureAwait(false);
+                            await Send(unwatchCommand, value, values).ConfigureAwait(false);
                     }
                     catch (WebSocketException)
                     {
@@ -276,7 +347,7 @@ namespace Raven.Client.Documents.Changes
 
                 async Task OnConnect()
                 {
-                    await Send(watchCommand, value).ConfigureAwait(false);
+                    await Send(watchCommand, value, values).ConfigureAwait(false);
                 }
 
                 newValue = true;
@@ -286,11 +357,11 @@ namespace Raven.Client.Documents.Changes
             // try to reconnect
             if (newValue && Volatile.Read(ref _immediateConnection) != 0)
                 counter.Set(counter.OnConnect());
-            
+
             return counter;
         }
 
-        private async Task Send(string command, string value)
+        private async Task Send(string command, string value, string[] values)
         {
             var taskCompletionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             int currentCommandId;
@@ -304,7 +375,7 @@ namespace Raven.Client.Documents.Changes
                     writer.WriteStartObject();
                     writer.WritePropertyName("CommandId");
                     writer.WriteInteger(currentCommandId);
-                    
+
                     writer.WriteComma();
                     writer.WritePropertyName("Command");
                     writer.WriteString(command);
@@ -312,14 +383,20 @@ namespace Raven.Client.Documents.Changes
 
                     writer.WritePropertyName("Param");
                     writer.WriteString(value);
-                  
+
+                    if (values != null && values.Length > 0)
+                    {
+                        writer.WriteComma();
+                        writer.WriteArray("Params", values);
+                    }
+
                     writer.WriteEndObject();
                 }
 
                 _ms.TryGetBuffer(out var buffer);
 
-                _confirmations.Add(currentCommandId, taskCompletionSource);
-                
+                _confirmations.TryAdd(currentCommandId, taskCompletionSource);
+
                 await _client.SendAsync(buffer, WebSocketMessageType.Text, endOfMessage: true, cancellationToken: _cts.Token).ConfigureAwait(false);
             }
             finally
@@ -401,7 +478,7 @@ namespace Raven.Client.Documents.Changes
                     catch
                     {
                         // we couldn't reconnect
-                        NotifyAboutError(e); 
+                        NotifyAboutError(e);
                         throw;
                     }
                 }
@@ -485,13 +562,13 @@ namespace Raven.Client.Documents.Changes
                                         json.TryGet("Exception", out string exceptionAsString);
                                         NotifyAboutError(new Exception(exceptionAsString));
                                         break;
-                                     case "Confirm":
-                                         if (json.TryGet("CommandId", out int commandId) &&
-                                             _confirmations.TryRemove(commandId, out var tcs))
-                                         {
-                                             tcs.TrySetResult(null);
-                                         }
-                                         break;
+                                    case "Confirm":
+                                        if (json.TryGet("CommandId", out int commandId) &&
+                                            _confirmations.TryRemove(commandId, out var tcs))
+                                        {
+                                            tcs.TrySetResult(null);
+                                        }
+                                        break;
                                     default:
                                         json.TryGet("Value", out BlittableJsonReaderObject value);
                                         NotifySubscribers(type, value, _counters.ValuesSnapshot);
@@ -518,6 +595,13 @@ namespace Raven.Client.Documents.Changes
                     foreach (var state in states)
                     {
                         state.Send(documentChange);
+                    }
+                    break;
+                case nameof(CounterChange):
+                    var counterChange = CounterChange.FromJson(value);
+                    foreach (var state in states)
+                    {
+                        state.Send(counterChange);
                     }
                     break;
                 case nameof(IndexChange):

@@ -60,6 +60,7 @@ class connectedDocuments {
     attachmentsColumns: virtualColumn[];
     attachmentsInReadOnlyModeColumns: virtualColumn[];
     countersColumns: virtualColumn[];
+    revisionCountersColumns: virtualColumn[];
 
     private downloader = new downloader();
     currentDocumentIsStarred = ko.observable<boolean>(false);
@@ -73,7 +74,9 @@ class connectedDocuments {
     isCountersActive = ko.pureComputed(() => connectedDocuments.currentTab() === "counters");        
     
     isUploaderActive: KnockoutComputed<boolean>;
-    showUploadNotAvailable: KnockoutComputed<boolean>;
+    
+    isArtificialDocument: KnockoutComputed<boolean>;
+    isHiloDocument: KnockoutComputed<boolean>;  
 
     gridController = ko.observable<virtualGridController<connectedDocumentItem | attachmentItem | counterItem>>();
     uploader: editDocumentUploader;
@@ -108,11 +111,6 @@ class connectedDocuments {
             const readOnly = inReadOnlyMode();
             return onAttachmentsPane && !newDoc && !readOnly;
         });
-        this.showUploadNotAvailable = ko.pureComputed(() => {
-            const onAttachmentsPane = this.isAttachmentsActive();
-            const readOnly = inReadOnlyMode();
-            return onAttachmentsPane && readOnly;
-        });
 
         this.searchInputVisible = ko.pureComputed(() => !this.isRevisionsActive() && !this.isRecentActive());
         this.searchInput.throttle(250).subscribe(() => {
@@ -120,6 +118,14 @@ class connectedDocuments {
         });
 
         this.clearSearchInputSubscription = connectedDocuments.currentTab.subscribe(() => this.searchInput(""));
+
+        this.isArtificialDocument = ko.pureComputed(() => {
+            return this.document().__metadata.hasFlag("Artificial");
+        });
+
+        this.isHiloDocument = ko.pureComputed(() => {
+            return this.document().__metadata.collection == "@hilo";
+        });        
     }
 
     private initColumns() {
@@ -171,6 +177,13 @@ class connectedDocuments {
                 "35px",
                 { title: () => 'Delete counter' }),
         ];
+
+        this.revisionCountersColumns = [
+            new textColumn<counterItem>(this.gridController() as virtualGridController<any>, x => x.counterName, "Counter name", "60%",
+                { title: () => "Counter name" }),
+            new textColumn<counterItem>(this.gridController() as virtualGridController<any>, x => x.totalCounterValue, "Counter total value", "40%",
+                { title: (x) => "Total value is: " + x.totalCounterValue.toLocaleString() })
+        ];
     }
 
     compositionComplete() {
@@ -182,6 +195,10 @@ class connectedDocuments {
                 return this.inReadOnlyMode() ? this.attachmentsInReadOnlyModeColumns : this.attachmentsColumns;
             }
             if (connectedDocuments.currentTab() === "counters") {
+                const doc = this.document();
+                if (doc && doc.__metadata && doc.__metadata.hasFlag("Revision")) {
+                    return this.revisionCountersColumns;
+                }
                 return this.countersColumns;
             }
             return this.docsColumns;
@@ -242,6 +259,21 @@ class connectedDocuments {
     fetchCounters(skip: number, take: number): JQueryPromise<pagedResult<counterItem>> {
         const doc = this.document();
 
+        if (doc.__metadata.hasFlag("Revision")) {
+            const counters = doc.__metadata.revisionCounters();
+            return $.when({
+                items: counters.map(x => {
+                    return {
+                            documentId: doc.getId(),
+                            counterName: x.name,
+                            totalCounterValue: x.value,
+                            counterValuesPerNode: []
+                    } as counterItem;
+                }),
+                totalResultCount: counters.length
+            });
+        }
+        
         if (!doc.__metadata.hasFlag("HasCounters")) {
             return connectedDocuments.emptyDocResult<counterItem>();
         }
@@ -421,9 +453,6 @@ class connectedDocuments {
     }
 
     private setCounter(counter: counterItem) {
-        
-        // todo -  get counter info again from edit ep again upon edit ? or show what there is already ? 
-        
         const setCounterView = new setCounterDialog(counter, this.document().getId(), this.db());        
                 
         app.showBootstrapDialog(setCounterView);

@@ -2,9 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json;
@@ -47,7 +45,31 @@ namespace Raven.Client.Documents.Session
             _missingDictionary.TryGetValue(o, out var props);
             return props;
         }
-        
+
+
+        internal static object ConvertToBlittableIfNeeded(
+            object value,
+            DocumentConventions conventions,
+            JsonOperationContext context,
+            JsonSerializer serializer,
+            DocumentInfo documentInfo)
+        {
+            if (value is ValueType || 
+                value is string || 
+                value is BlittableJsonReaderArray || 
+                value is BlittableJsonReaderArray)
+                return value;
+
+            if (value is IEnumerable && !(value is IDictionary))
+            {
+                return ((IEnumerable)value).Cast<object>()
+                    .Select(v=> ConvertToBlittableIfNeeded(v, conventions, context, serializer, documentInfo));
+            }
+            
+            using (var writer = new BlittableJsonWriter(context, documentInfo))
+                return ConvertEntityToBlittableInternal(value, conventions, context, serializer, writer);
+        }
+
         internal static BlittableJsonReaderObject ConvertEntityToBlittable(
             object entity,
             DocumentConventions conventions,
@@ -203,6 +225,34 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        internal void PopulateEntity(object entity, LazyStringValue id, BlittableJsonReaderObject document, JsonSerializer serializer)
+        {
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+            if (id == null)
+                throw new ArgumentNullException(nameof(id));
+            if (document == null)
+                throw new ArgumentNullException(nameof(document));
+            if (serializer == null)
+                throw new ArgumentNullException(nameof(serializer));
+
+            try
+            {
+                using (var reader = new BlittableJsonReader())
+                {
+                    reader.Init(document);
+
+                    serializer.Populate(reader, entity);
+
+                    _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Could not populate entity {id}", ex);
+            }
+        }
+
         private static bool TryRemoveIdentityProperty(BlittableJsonReaderObject document, Type entityType, DocumentConventions conventions)
         {
             var identityProperty = conventions.GetIdentityProperty(entityType);
@@ -223,8 +273,7 @@ namespace Raven.Client.Documents.Session
             {
                 var propertyValue = document[propertyName];
 
-                var propertyArray = propertyValue as BlittableJsonReaderArray;
-                if (propertyArray != null)
+                if (propertyValue is BlittableJsonReaderArray propertyArray)
                 {
                     simplified |= TrySimplifyJson(propertyArray);
                     continue;
@@ -294,6 +343,22 @@ namespace Raven.Client.Documents.Session
                 return type == typeof(Enumerable);
 
             return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
+        }
+
+        public object ConvertToBlittableIfNeeded(object value)
+        {
+            if (value is ValueType ||
+                  value is string ||
+                  value is BlittableJsonReaderArray ||
+                  value is BlittableJsonReaderArray)
+                return value;
+
+            if (value is IEnumerable && !(value is IDictionary))
+            {
+                return ((IEnumerable)value).Cast<object>().Select(ConvertToBlittableIfNeeded);
+
+            }
+            return ConvertEntityToBlittable(value, documentInfo: null);
         }
     }
 }

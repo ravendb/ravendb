@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.Enumerators;
 using Raven.Server.Documents.ETL.Providers.SQL.Metrics;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
-using Raven.Server.Documents.ETL.Providers.SQL.Simulation;
-using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Documents.ETL.Providers.SQL.Test;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -32,9 +32,24 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return new DocumentsToSqlItems(docs, collection);
         }
 
-        protected override IEnumerator<ToSqlItem> ConvertTombstonesEnumerator(IEnumerator<Tombstone> tombstones, string collection)
+        protected override IEnumerator<ToSqlItem> ConvertTombstonesEnumerator(IEnumerator<Tombstone> tombstones, string collection, EtlItemType type)
         {
             return new TombstonesToSqlItems(tombstones, collection);
+        }
+
+        protected override IEnumerator<ToSqlItem> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters, string collection)
+        {
+            throw new NotSupportedException("Counters aren't supported by SQL ETL");
+        }
+
+        protected override bool ShouldTrackAttachmentTombstones()
+        {
+            return false;
+        }
+
+        protected override bool ShouldTrackCounters()
+        {
+            return false;
         }
 
         protected override EtlTransformer<ToSqlItem, SqlTableWithRecords> GetTransformer(DocumentsOperationContext context)
@@ -83,24 +98,31 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return true;
         }
 
-        public SqlEtlSimulationResult Simulate(SimulateSqlEtl simulateSqlEtl, DocumentsOperationContext context, IEnumerable<SqlTableWithRecords> toWrite)
+        public SqlEtlTestScriptResult RunTest(DocumentsOperationContext context, IEnumerable<SqlTableWithRecords> toWrite, bool performRolledBackTransaction)
         {
             var summaries = new List<TableQuerySummary>();
-
-            if (simulateSqlEtl.PerformRolledBackTransaction)
+            
+            if (performRolledBackTransaction)
             {
-                using (var writer = new RelationalDatabaseWriter(this, Database))
+                try
                 {
-                    foreach (var records in toWrite)
+                    using (var writer = new RelationalDatabaseWriter(this, Database))
                     {
-                        var commands = new List<DbCommand>();
+                        foreach (var records in toWrite)
+                        {
+                            var commands = new List<DbCommand>();
 
-                        writer.Write(records, commands, CancellationToken);
+                            writer.Write(records, commands, CancellationToken);
 
-                        summaries.Add(TableQuerySummary.GenerateSummaryFromCommands(records.TableName, commands));
+                            summaries.Add(TableQuerySummary.GenerateSummaryFromCommands(records.TableName, commands));
+                        }
+
+                        writer.Rollback();
                     }
-
-                    writer.Rollback();
+                }
+                catch (Exception e)
+                {
+                    Statistics.RecordLoadError(e.ToString(), documentId: null, count: 1);
                 }
             }
             else
@@ -122,52 +144,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 }
             }
 
-            return new SqlEtlSimulationResult
+            return new SqlEtlTestScriptResult
             {
-                LastAlert = Statistics.LastAlert,
+                TransformationErrors = Statistics.TransformationErrorsInCurrentBatch.Errors.ToList(),
+                LoadErrors = Statistics.LastLoadErrorsInCurrentBatch.Errors.ToList(),
+                SlowSqlWarnings = Statistics.LastSlowSqlWarningsInCurrentBatch.Statements.ToList(),
                 Summary = summaries
             };
-        }
-
-        public static SqlEtlSimulationResult SimulateSqlEtl(SimulateSqlEtl simulateSqlEtl, DocumentDatabase database, ServerStore serverStore, DocumentsOperationContext context)
-        {
-            var document = database.DocumentsStorage.Get(context, simulateSqlEtl.DocumentId);
-            
-            if (document == null)
-                throw new InvalidOperationException($"Document {simulateSqlEtl.DocumentId} does not exist");
-
-            if (serverStore.LoadDatabaseRecord(database.Name, out _).SqlConnectionStrings.TryGetValue(simulateSqlEtl.Configuration.ConnectionStringName, out var connectionString) == false)
-                throw new InvalidOperationException($"Connection string named {simulateSqlEtl.Configuration.ConnectionStringName} was not found in the database record");
-
-            simulateSqlEtl.Configuration.Initialize(connectionString);
-
-            if (simulateSqlEtl.Configuration.Validate(out List<string> errors) == false)
-            {
-                throw new InvalidOperationException($"Invalid ETL configuration for '{simulateSqlEtl.Configuration.Name}'. " +
-                                                    $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.");
-            }
-
-            if (simulateSqlEtl.Configuration.Transforms.Count != 1)
-            {
-                throw new InvalidOperationException($"Invalid number of transformations. You have provided {simulateSqlEtl.Configuration.Transforms.Count} " +
-                                                    "while SQL ETL simulation expects to get exactly 1 transformation script");
-            }
-
-            if (simulateSqlEtl.Configuration.Transforms[0].Collections.Count != 1)
-            {
-                throw new InvalidOperationException($"Invalid number of collections specified in the transformation script. You have provided {simulateSqlEtl.Configuration.Transforms[0].Collections.Count} " +
-                                                    "while SQL ETL simulation is supposed to work with exactly 1 collection");
-            }
-
-            using (var etl = new SqlEtl(simulateSqlEtl.Configuration.Transforms[0], simulateSqlEtl.Configuration, database, null))
-            {
-                etl.EnsureThreadAllocationStats();
-
-                var collection = simulateSqlEtl.Configuration.Transforms[0].Collections[0];
-                var transformed = etl.Transform(new[] {new ToSqlItem(document, collection)}, context, new EtlStatsScope(new EtlRunStats()), new EtlProcessState());
-
-                return etl.Simulate(simulateSqlEtl, context, transformed);
-            }
         }
     }
 }

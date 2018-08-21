@@ -10,7 +10,6 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
@@ -20,7 +19,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
@@ -32,6 +30,7 @@ namespace Raven.Server.Documents
         private readonly ReaderWriterLockSlim _disposing = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
             new ConcurrentDictionary<StringSegment, DateTime>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
+        private readonly ConcurrentDictionary<string, Timer> _wakeupTimers = new ConcurrentDictionary<string, Timer>();
 
         public readonly ResourceCache<DocumentDatabase> DatabasesCache = new ResourceCache<DocumentDatabase>();
         private readonly TimeSpan _concurrentDatabaseLoadTimeout;
@@ -74,7 +73,7 @@ namespace Raven.Server.Documents
                     return;
                 }
 
-                if (ShouldDeleteDatabase(databaseName, record)) 
+                if (ShouldDeleteDatabase(databaseName, record))
                     return;
 
                 if (record.Topology.RelevantFor(_serverStore.NodeTag) == false)
@@ -104,11 +103,19 @@ namespace Raven.Server.Documents
                         if (task.IsCompleted)
                         {
                             NotifyDatabaseAboutStateChange(databaseName, task, index);
+                            if (type == ClusterStateMachine.SnapshotInstalled)
+                            {
+                                NotifyPendingClusterTransaction(databaseName, task);
+                            }
                             return;
                         }
                         task.ContinueWith(done =>
                         {
                             NotifyDatabaseAboutStateChange(databaseName, done, index);
+                            if (type == ClusterStateMachine.SnapshotInstalled)
+                            {
+                                NotifyPendingClusterTransaction(databaseName, done);
+                            }
                         });
                         break;
                     case ClusterDatabaseChangeType.ValueChanged:
@@ -126,14 +133,14 @@ namespace Raven.Server.Documents
                     case ClusterDatabaseChangeType.PendingClusterTransactions:
                         if (task.IsCompleted)
                         {
-                            NotifyPendingClusterTransaction(databaseName, task, index);
+                            NotifyPendingClusterTransaction(databaseName, task);
                             return;
                         }
-
                         task.ContinueWith(done =>
                         {
-                            NotifyPendingClusterTransaction(databaseName, done, index);
+                            NotifyPendingClusterTransaction(databaseName, done);
                         });
+
                         break;
                     default:
                         ThrowUnknownClusterDatabaseChangeType(changeType);
@@ -156,108 +163,19 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void NotifyPendingClusterTransaction(string databaseName, Task<DocumentDatabase> task, long index)
+        public void NotifyPendingClusterTransaction(string name, Task<DocumentDatabase> task)
         {
-            DocumentDatabase database;
             try
             {
-                database = task.Result;
+                task.Result.NotifyOnPendingClusterTransaction();
             }
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
                 {
-                    _logger.Info($"Failed to load database '{databaseName}'", e);
-                }
-                return;
-            }
-
-            RavenTransaction rtnCtx = null;
-            try
-            {
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
-                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docContext))
-                using (docContext.OpenReadTransaction())
-                {
-                    rtnCtx = serverContext.OpenReadTransaction();
-                    var tasks = ExecutePendingClusterTransactions(database, index, docContext, serverContext);
-                    // ReSharper disable once AccessToDisposedClosure
-                    // we don't care about any exceptions in the continuation..
-                    Task.WhenAll(tasks).ContinueWith(t => { rtnCtx.Dispose(); });
+                    _logger.Info($"Failed to notify the database '{name}' about new cluster transactions.", e);
                 }
             }
-            catch (Exception e)
-            {
-                // nothing we can do
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info($"Failed enqueue cluster transaction command for database: '{databaseName}'", e);
-                }
-                rtnCtx?.Dispose();
-            }
-        }
-
-        public List<Task> ExecutePendingClusterTransactions(
-            DocumentDatabase database, 
-            long index, 
-            DocumentsOperationContext docContext,
-            TransactionOperationContext serverContext)
-        {
-            var transactionsTasks = new List<Task>();
-            var global = DocumentsStorage.GetDatabaseChangeVector(docContext);
-            var dbGrpId = database.DatabaseGroupId;
-            var currentRaftIndex = ChangeVectorUtils.GetEtagById(global, dbGrpId);
-            var firstCommandIndex = ClusterTransactionCommand.ReadFirstIndex(serverContext, database.Name);
-            var first = Math.Max(firstCommandIndex, currentRaftIndex + 1);
-
-            foreach (var command in ClusterTransactionCommand.ReadCommandsBatch(serverContext, database.Name, first))
-            {
-                var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(database, command);
-                var task = database.TxMerger.Enqueue(mergedCommands);
-                transactionsTasks.Add(task);
-                task.ContinueWith(t =>
-                {
-                    try
-                    {
-                        if (t.IsCompletedSuccessfully)
-                        {
-                            var options = mergedCommands.Options;
-                            Task indexTask = null;
-                            if (options?.WaitForIndexesTimeout != null)
-                            {
-                                indexTask = BatchHandler.WaitForIndexesAsync(database.DocumentsStorage.ContextPool, database, options.WaitForIndexesTimeout.Value,
-                                    options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
-                                    mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
-                            }
-
-                            var result = new BatchHandler.ClusterTransactionCompletionResult
-                            {
-                                Array = mergedCommands.Reply,
-                                IndexTask = indexTask,
-                            };
-                            database.ClusterTransactionWaiter.SetResult(mergedCommands.Options.TaskId, index, result);
-                            return;
-                        }
-
-                        database.ClusterTransactionWaiter.SetException(mergedCommands.Options.TaskId, index, t.Exception);
-                    }
-                    catch (Exception e)
-                    {
-                        // nothing we can do
-                        if (_logger.IsInfoEnabled)
-                        {
-                            _logger.Info($"Failed to notify about transaction completion for database '{database.Name}'.", e);
-                        }
-                    }
-                });
-            }
-
-            if (transactionsTasks.Count == 0)
-            {
-                database.RachisLogIndexNotifications.NotifyListenersAbout(index, null);
-            }
-
-            return transactionsTasks;
         }
 
         public bool ShouldDeleteDatabase(string dbName, DatabaseRecord record)
@@ -267,10 +185,10 @@ namespace Raven.Server.Documents
                                record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
                                deletionInProgress != DeletionInProgressStatus.No;
 
-            if (directDelete && 
-                record.Topology.Count == record.Topology.ReplicationFactor) 
-                // If the deletion was issued form the cluster observer to maintain the replication factor we need to make sure
-                // the all the documents were replicated from this node, therefor the deletion will be called from the replication code.
+            if (directDelete &&
+                record.Topology.Count == record.Topology.ReplicationFactor)
+            // If the deletion was issued form the cluster observer to maintain the replication factor we need to make sure
+            // the all the documents were replicated from this node, therefor the deletion will be called from the replication code.
             {
                 DeleteDatabase(dbName, deletionInProgress, record);
                 return true;
@@ -287,7 +205,7 @@ namespace Raven.Server.Documents
                 {
                     removeLockAndReturn = DatabasesCache.RemoveLockAndReturn(dbName, CompleteDatabaseUnloading, out _);
                 }
-                catch (AggregateException ae ) when (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
+                catch (AggregateException ae) when (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
                 {
                     // this is already in the process of being deleted, we can just exit and let another thread handle it
                     return;
@@ -401,6 +319,36 @@ namespace Raven.Server.Documents
             {
                 var exceptionAggregator = new ExceptionAggregator(_logger, "Failure to dispose landlord");
 
+                // we don't want to wake up database during dispose.
+                var handles = new List<WaitHandle>();
+                foreach (var timer in _wakeupTimers.Values)
+                {
+                    var handle = new ManualResetEvent(false);
+                    timer.Dispose(handle);
+                    handles.Add(handle);
+                }
+
+                if (handles.Count > 0)
+                {
+                    var count = handles.Count;
+                    var batchSize = Math.Min(64, count);
+
+                    var numberOfBatches = count / batchSize;
+                    if (count % batchSize != 0)
+                    {
+                        // if we have a reminder, we need another batch 
+                        numberOfBatches++;
+                    }
+
+                    var batch = new WaitHandle[batchSize];
+                    for (var i = 0; i < numberOfBatches; i++)
+                    {
+                        var toCopy = Math.Min(64, count - i * batchSize);
+                        handles.CopyTo(i * batchSize, batch, 0, toCopy);
+                        WaitHandle.WaitAll(batch);
+                    }
+                }
+
                 // shut down all databases in parallel, avoid having to wait for each one
                 Parallel.ForEach(DatabasesCache.Values, new ParallelOptions
                 {
@@ -464,6 +412,11 @@ namespace Raven.Server.Documents
         {
             try
             {
+                if (_wakeupTimers.TryRemove(databaseName.Value, out var timer))
+                {
+                    timer.Dispose();
+                }
+
                 if (_disposing.TryEnterReadLock(0) == false)
                     ThrowServerIsBeingDisposed(databaseName);
 
@@ -533,7 +486,10 @@ namespace Raven.Server.Documents
                 var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config), TaskCreationOptions.RunContinuationsAsynchronously);
                 var database = DatabasesCache.GetOrAdd(databaseName, task);
                 if (database == task)
+                {
+                    DeleteIfNeeded(databaseName, task);
                     task.Start(); // the semaphore will be released here at the end of the task
+                }
                 else
                     _databaseSemaphore.Release();
 
@@ -597,6 +553,26 @@ namespace Raven.Server.Documents
             }
         }
 
+        private void DeleteIfNeeded(StringSegment databaseName, Task<DocumentDatabase> database)
+        {
+            database.ContinueWith(t =>
+            {
+                // This is in case when an deletion request was issued prior to the actual loading of the database.
+                try
+                {
+                    var record = _serverStore.LoadDatabaseRecord(databaseName, out _);
+                    if (record == null)
+                        return;
+
+                    ShouldDeleteDatabase(databaseName, record);
+                }
+                catch
+                {
+                    // nothing we can do here
+                }
+            });
+        }
+
         public ConcurrentDictionary<string, ConcurrentQueue<string>> InitLog =
             new ConcurrentDictionary<string, ConcurrentQueue<string>>(StringComparer.OrdinalIgnoreCase);
 
@@ -606,7 +582,7 @@ namespace Raven.Server.Documents
             {
                 string msg = txt;
                 msg = $"[Load Database] {DateTime.UtcNow} :: Database '{(string)databaseName}' : {msg}";
-                if(InitLog.TryGetValue(databaseName, out var q))
+                if (InitLog.TryGetValue(databaseName, out var q))
                     q.Enqueue(msg);
                 if (_logger.IsInfoEnabled)
                     _logger.Info(msg);
@@ -625,6 +601,7 @@ namespace Raven.Server.Documents
                 var sp = Stopwatch.StartNew();
                 var documentDatabase = new DocumentDatabase(config.ResourceName, config, _serverStore, AddToInitLog);
                 documentDatabase.Initialize();
+
                 AddToInitLog("Finish database initialization");
                 DeleteDatabaseCachedInfo(documentDatabase.Name, _serverStore);
                 if (_logger.IsInfoEnabled)
@@ -743,7 +720,7 @@ namespace Raven.Server.Documents
 
         public async Task<IDisposable> UnloadAndLockDatabase(string dbName, string reason)
         {
-            var tcs = Task.FromException<DocumentDatabase>(new DatabaseDisabledException($"The database {dbName} is currently locked because {reason}" )
+            var tcs = Task.FromException<DocumentDatabase>(new DatabaseDisabledException($"The database {dbName} is currently locked because {reason}")
             {
                 Data =
                 {
@@ -754,7 +731,7 @@ namespace Raven.Server.Documents
             try
             {
                 var existing = DatabasesCache.Replace(dbName, tcs);
-                if(existing != null)
+                if (existing != null)
                     (await existing)?.Dispose();
 
                 return new DisposableAction(() =>
@@ -776,10 +753,68 @@ namespace Raven.Server.Documents
             PendingClusterTransactions
         }
 
-        public void UnloadDirectly(StringSegment databaseName, [CallerMemberName] string caller = null)
+        public void UnloadDirectly(StringSegment databaseName, DateTime? wakeup = null, [CallerMemberName] string caller = null)
         {
+            if (ShouldContinueDispose(databaseName.Value, wakeup, out var dueTime) == false)
+                return;
+
             LastRecentlyUsed.TryRemove(databaseName, out _);
-            DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out var _, caller).Dispose();
+            DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out _, caller).Dispose();
+            ScheduleDatabaseWakeup(databaseName.Value, dueTime);
+        }
+
+        private void ScheduleDatabaseWakeup(string name, long milliSeconds)
+        {
+            if (milliSeconds == 0)
+                return;
+
+            _wakeupTimers.TryAdd(name, new Timer(_ =>
+            {
+                try
+                {
+                    _disposing.EnterReadLock();
+                    try
+                    {
+                        if (_serverStore.ServerShutdown.IsCancellationRequested)
+                            return;
+
+                        TryGetOrCreateResourceStore(name);
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // expected 
+                    }
+                    finally
+                    {
+                        _disposing.ExitReadLock();
+                    }
+                }
+                catch
+                {
+                    // we have to swallow any exception here.
+                }
+
+            }, null, milliSeconds, Timeout.Infinite));
+        }
+
+        private bool ShouldContinueDispose(string name, DateTime? wakeup, out int dueTime)
+        {
+            dueTime = 0;
+
+            if (name == null)
+                return true;
+
+            if (_wakeupTimers.TryRemove(name, out var timer))
+            {
+                timer.Dispose();
+            }
+
+            if (wakeup.HasValue == false || wakeup.Value == DateTime.MaxValue)
+                return true;
+
+            // if we have a small value or even a negative one, simply don't dispose the database.
+            dueTime = (int)(wakeup - DateTime.Now).Value.TotalMilliseconds;
+            return dueTime > TimeSpan.FromMinutes(5).TotalMilliseconds;
         }
 
         private void CompleteDatabaseUnloading(DocumentDatabase database)

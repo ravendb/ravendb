@@ -2,7 +2,12 @@
 
 import generalUtils = require("common/generalUtils");
 
-type knownDocumentFlags = "HasRevisions" | "Revision" | "HasAttachments" | "DeleteRevision" | "HasCounters";
+type knownDocumentFlags = "HasRevisions" | "Revision" | "HasAttachments" | "DeleteRevision" | "HasCounters" | "Artificial";
+
+interface revisionCounter {
+    name: string;
+    value: number;
+}
 
 class documentMetadata {
     collection: string;
@@ -19,6 +24,7 @@ class documentMetadata {
 
     attachments = ko.observableArray<documentAttachmentDto>();
     counters = ko.observableArray<string>();
+    revisionCounters = ko.observableArray<revisionCounter>();
     
     changeVector = ko.observable<string>();
 
@@ -54,9 +60,12 @@ class documentMetadata {
             this.attachments(dto['@attachments']);
             
             this.counters(dto['@counters']);
+            
+            const revisionCounter = dto['@counters-snapshot'];
+            this.revisionCounters(revisionCounter ? _.map(revisionCounter, (v, k) => ({ name: k, value: v })): []);
 
             this.changeVector(dto['@change-vector']);
-            
+
             for (let property in dto) {
                 if (property.toUpperCase() !== '@collection'.toUpperCase() &&
                     property.toUpperCase() !== '@flags'.toUpperCase() &&
@@ -67,8 +76,9 @@ class documentMetadata {
                     property.toUpperCase() !== '@last-modified'.toUpperCase() &&
                     property.toUpperCase() !== '@attachments'.toUpperCase() &&
                     property.toUpperCase() !== '@counters'.toUpperCase() &&
+                    property.toUpperCase() !== '@counters-snapshot'.toUpperCase() &&
                     property.toUpperCase() !== 'toDto'.toUpperCase() &&
-                    property.toUpperCase() !=='@change-vector'.toUpperCase()) {
+                    property.toUpperCase() !== '@change-vector'.toUpperCase()) {
                     this.nonStandardProps = this.nonStandardProps || [];
                     (<any>this)[property] = (<any>dto)[property];
                     this.nonStandardProps.push(property as any);
@@ -78,7 +88,7 @@ class documentMetadata {
     }
 
     hasFlag(flag: knownDocumentFlags) {
-        return _.includes(this.flags, flag);
+        return this.flags ? _.includes(this.flags.split(", "), flag) : false;
     }
 
     toDto(): documentMetadataDto {
@@ -93,7 +103,7 @@ class documentMetadata {
             '@attachments': this.attachments(),
             '@counters': this.counters(),
             '@change-vector': this.changeVector()
-    };
+        };
 
         if (this.nonStandardProps) {
             this.nonStandardProps.forEach(p => dto[p] = (<any>this)[p]);

@@ -15,6 +15,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Linq
 {
@@ -30,8 +31,6 @@ namespace Raven.Client.Documents.Linq
         }
 
         private readonly DocumentConventions _conventions;
-
-        public const string TransparentIdentifier = "<>h__TransparentIdentifier";
 
         public LinqPathProvider(DocumentConventions conventions)
         {
@@ -131,7 +130,7 @@ namespace Raven.Client.Documents.Linq
             return result;
         }
 
-        public static Result CreateCounterResult(MethodCallExpression callExpression)
+        internal static Result CreateCounterResult(MethodCallExpression callExpression)
         {
             var counterName = (callExpression.Arguments[callExpression.Arguments.Count - 1] as ConstantExpression)?.Value.ToString();
 
@@ -451,9 +450,9 @@ namespace Raven.Client.Documents.Linq
             }
         }
 
-        public static string RemoveTransparentIdentifiersIfNeeded(string path)
+        internal static string RemoveTransparentIdentifiersIfNeeded(string path)
         {
-            while (path.StartsWith(TransparentIdentifier))
+            while (path.StartsWith(JavascriptConversionExtensions.TransparentIdentifier))
             {
                 var indexOf = path.IndexOf(".", StringComparison.Ordinal);
                 path = path.Substring(indexOf + 1);

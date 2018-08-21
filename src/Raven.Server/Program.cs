@@ -2,9 +2,11 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.CommandLineUtils;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
@@ -13,6 +15,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
 using Sparrow.Logging;
+using Sparrow.Platform;
 
 namespace Raven.Server
 {
@@ -187,8 +190,33 @@ namespace Raven.Server
                         }
                         catch (Exception e)
                         {
+                            string message = null;
+                            if (e.InnerException is AddressInUseException)
+                            {
+                                message =
+                                    $"{Environment.NewLine}Port might be already in use.{Environment.NewLine}Try running with an unused port.{Environment.NewLine}" +
+                                    $"You can change the port using one of the following options:{Environment.NewLine}" +
+                                    $"1) Change the ServerUrl property in setting.json file.{Environment.NewLine}" +
+                                    $"2) Run the server from the command line with --ServerUrl option.{Environment.NewLine}" +
+                                    $"3) Add RAVEN_ServerUrl to the Environment Variables.{Environment.NewLine}" +
+                                    "For more information go to https://ravendb.net/l/EJS81M/4.1";
+                            }else if (e is SocketException && PlatformDetails.RunningOnPosix)
+                            {
+                                message =
+                                    $"{Environment.NewLine}In Linux low-level port (below 1024) will need a special permission, if this is your case please run{Environment.NewLine}" +
+                                    $"sudo setcap CAP_NET_BIND_SERVICE=+eip {typeof(RavenServer).Assembly.Location}";
+                            }
+
                             if (Logger.IsOperationsEnabled)
+                            {
                                 Logger.Operations("Failed to initialize the server", e);
+                                Logger.Operations(message);
+                            }
+
+                            Console.WriteLine(message);
+
+                            Console.WriteLine();
+
                             Console.WriteLine(e);
 
                             return -1;
@@ -277,7 +305,13 @@ namespace Raven.Server
             //stop dumping logs
             LoggingSource.Instance.DisableConsoleLogging();
 
-            return new RavenCli().Start(server, Console.Out, Console.In, true);
+            bool consoleColoring = true;
+            if (server.Configuration.Embedded.ParentProcessId.HasValue)
+                //When opening an embedded server we must disable console coloring to avoid exceptions,
+                //due to the fact, we redirect standard input from the console.
+                consoleColoring = false;
+
+            return new RavenCli().Start(server, Console.Out, Console.In, consoleColoring);
         }
 
         public static void WriteServerStatsAndWaitForEsc(RavenServer server)

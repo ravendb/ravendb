@@ -25,16 +25,8 @@ namespace Raven.Server.ServerWide.Memory
             // we run out our memory quota, so we need to see if we can increase it or break
             var memoryInfoResult = MemoryInformation.GetMemoryInfo();
 
-            using (var currentProcess = Process.GetCurrentProcess())
+            using (GetProcessMemoryUsage(out currentUsage, out var mappedSharedMem))
             {
-                // a lot of the memory that we use is actually from memory mapped files, as such, we can
-                // rely on the OS to page it out (without needing to write, since it is read only in this case)
-                // so we try to calculate how much such memory we can use with this assumption 
-                var mappedSharedMem = LowMemoryNotification.GetCurrentProcessMemoryMappedShared();
-
-                currentUsage = new ProcessMemoryUsage(currentProcess.WorkingSet64,
-                    Math.Max(0, currentProcess.WorkingSet64 - mappedSharedMem.GetValue(SizeUnit.Bytes)));
-
                 var memoryAssumedFreeOrCheapToFree = memoryInfoResult.AvailableMemory + mappedSharedMem;
 
                 // there isn't enough available memory to try, we want to leave some out for other things
@@ -83,6 +75,21 @@ namespace Raven.Server.ServerWide.Memory
 
                 return true;
             }
+        }
+
+        public static IDisposable GetProcessMemoryUsage(out ProcessMemoryUsage currentUsage, out Size mappedSharedMem)
+        {
+            var currentProcess = Process.GetCurrentProcess();
+
+            // a lot of the memory that we use is actually from memory mapped files, as such, we can
+            // rely on the OS to page it out (without needing to write, since it is read only in this case)
+            // so we try to calculate how much such memory we can use with this assumption 
+            mappedSharedMem = LowMemoryNotification.GetCurrentProcessMemoryMappedShared();
+
+            currentUsage = new ProcessMemoryUsage(currentProcess.WorkingSet64,
+                Math.Max(0, currentProcess.WorkingSet64 - mappedSharedMem.GetValue(SizeUnit.Bytes)));
+
+            return currentProcess;
         }
     }
 }

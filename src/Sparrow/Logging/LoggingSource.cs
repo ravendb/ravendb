@@ -68,8 +68,8 @@ namespace Sparrow.Logging
             public LoggingFilter Filter { get; } = new LoggingFilter();
         }
 
-        private readonly Collections.LockFree.ConcurrentDictionary<WebSocket, WebSocketContext> _listeners =
-            new Collections.LockFree.ConcurrentDictionary<WebSocket, WebSocketContext>();
+        private readonly ConcurrentDictionary<WebSocket, WebSocketContext> _listeners =
+            new ConcurrentDictionary<WebSocket, WebSocketContext>();
 
         public LogMode LogMode { get; private set; }
         private LogMode _oldLogMode;
@@ -424,8 +424,17 @@ namespace Sparrow.Logging
                                     // want to send it to the OS
                                     currentFile.Flush(flushToDisk: false);
                                     if (_hasEntries.IsSet == false)
-                                        // about to go to sleep, so can check if need to update offset
-                                        UpdateLocalDateTimeOffset(); 
+                                    {
+                                        // about to go to sleep, so can check if need to update offset or create new file for today logs
+                                        UpdateLocalDateTimeOffset();
+
+                                        if (DateTime.Today != _today)
+                                        {
+                                            // let's create new file so its name will have today date
+                                            break;
+                                        }
+                                    }
+
                                     _hasEntries.Wait();
                                     if (_keepLogging == false)
                                         return;

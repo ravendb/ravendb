@@ -82,7 +82,7 @@
                 </div>
             </div>
             <div class="flex-separator"></div>
-            <!-- TODO 
+            <!-- TODO
             <div class="toggle toggle-primary databasesToolbar-toggleCompactView pull-right">
                 <input id="compactViewInput" name="compactView" class="styled" type="checkbox" data-bind="checked: $root.compactView" />
                 <label for="compactViewInput">
@@ -124,12 +124,12 @@
                                               css: { 'link-disabled': isBeingDeleted }, visible: canNavigateToDatabase()" href="#">
                                     <i data-bind="attr: { class: $root.createIsLocalDatabaseObservable(name)() ? 'icon-database-home': 'icon-database' }"></i><span data-bind="text: name"></span>
                                 </a>
-                                
+
                             </h3>
                             <small class="margin-right margin-right-sm" title="This database is encrypted" data-bind="visible: isEncrypted"><i class="icon-encryption"></i></small>
                         </div>
-                        <div class="dbgroup-node-type flex-horizontal">
-                            <!-- ko foreach: nodes -->
+                        <div class="dbgroup-node-type">
+                            <!-- ko foreach: _.slice(nodes(), 0, 5) --> 
                             <div>
                                 <a data-bind="attr: { href: $root.createAllDocumentsUrlObservableForNode($parent, $data), target: tag() === $root.clusterManager.localNodeTag() ? undefined : '_blank', title: type() },
                                               css: { 'link-disabled': $parent.isBeingDeleted }">
@@ -146,6 +146,12 @@
                                 </div>
                             </div>
                             <!-- /ko -->
+                            <div data-bind="visible: nodes().length > 5">
+                                <a href="#" data-bind="attr: { href:  $root.createManageDbGroupUrlObsevable($data) }" data-toggle="more-nodes-tooltip">
+                                    <i class="icon-dbgroup"></i>
+                                    <span>+<span data-bind="text: nodes().length - 5"></span> more</span>
+                                </a>
+                            </div>
                         </div>
                     </div>
                     <div class="vertical-divider properties-container"
@@ -169,13 +175,13 @@
                                                        css: { 'btn-spinner': inProgressAction },
                                                        disable: isBeingDeleted() || inProgressAction()">
                                         <span data-bind="visible: inProgressAction(), text: inProgressAction()"></span>
-                                        <i class="icon-unlock" data-bind="visible: !inProgressAction() && disabled()"></i>
+                                        <i class="icon-database-cutout icon-addon-play2" data-bind="visible: !inProgressAction() && disabled()"></i>
                                         <span data-bind="visible: !inProgressAction() && disabled()">Enable</span>
-                                        <i class="icon-lock" data-bind="visible: !inProgressAction() && !disabled()"></i>
+                                        <i class="icon-database-cutout icon-addon-cancel" data-bind="visible: !inProgressAction() && !disabled()"></i>
                                         <span data-bind="visible: !inProgressAction() && !disabled()">Disable</span>
                                     </button>
                                     <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
-                                            data-bind="disable: isBeingDeleted() || inProgressAction(), visible: online() || $root.isAboveUserAccess()"> 
+                                            data-bind="disable: isBeingDeleted() || inProgressAction(), visible: online() || $root.isAboveUserAccess()">
                                         <span class="caret"></span>
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
@@ -192,7 +198,7 @@
                                         </li>
                                         <li data-bind="visible: $root.accessManager.canDisableIndexing() && !indexingDisabled()">
                                             <a href="#" data-bind="click: $root.toggleDisableDatabaseIndexing">
-                                                <i class="icon-lock"></i> Disable indexing
+                                                <i class="icon-cancel"></i> Disable indexing
                                             </a>
                                         </li>
                                         <li data-bind="visible: indexingDisabled()">

@@ -342,10 +342,16 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private long? CleanUpDatabaseValues(string database, DatabaseRecord record, Dictionary<string, ClusterNodeStatusReport> stats)
         {
+            if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion <
+                ClusterCommandsVersionManager.ClusterCommandsVersions[nameof(CleanUpClusterStateCommand)])
+            {
+                return null;
+            }
+
             if (record.Topology.Count != stats.Count)
                 return null;
 
-            long currentIndex = long.MaxValue;
+            long commandCount = long.MaxValue;
             foreach (var node in record.Topology.AllNodes)
             {
                 if (stats.TryGetValue(node, out var nodeReport) == false)
@@ -354,14 +360,13 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (nodeReport.Report.TryGetValue(database, out var report) == false)
                     return null;
 
-                var last = ChangeVectorUtils.GetEtagById(report.DatabaseChangeVector, record.Topology.DatabaseTopologyIdBase64);
-                currentIndex = Math.Min(currentIndex, last);
+                commandCount = Math.Min(commandCount, report.LastCompletedClusterTransaction);
             }
 
-            if (currentIndex <= record.TruncatedClusterTransactionIndex)
+            if (commandCount <= record.TruncatedClusterTransactionCommandsCount)
                 return null;
 
-            return currentIndex;
+            return commandCount;
         }
 
         private void AddToDecisionLog(string database, string updateReason)

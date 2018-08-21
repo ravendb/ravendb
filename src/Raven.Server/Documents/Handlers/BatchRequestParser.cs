@@ -7,12 +7,12 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Session;using Raven.Client.Documents.Operations.Counters;using Raven.Client.Extensions;
+using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Sparrow;
-using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -33,12 +33,16 @@ namespace Raven.Server.Documents.Handlers
             public LazyStringValue ChangeVector;
             public bool IdPrefixed;
             public long Index;
+            public bool FromEtl;
+            public bool ReturnDocument;
 
             public PatchDocumentCommand PatchCommand;
 
             #region Attachment
 
             public string Name;
+            public string DestinationId;
+            public string DestinationName;
             public string ContentType;
 
             #endregion
@@ -82,7 +86,7 @@ namespace Raven.Server.Documents.Handlers
                 return;
             _cache.Push(cmds);
         }
-        
+
 
         public static async Task BuildCommandsAsync(JsonOperationContext ctx, BatchHandler.MergedBatchCommand command, Stream stream,
             DocumentDatabase database, ServerStore serverStore)
@@ -131,7 +135,7 @@ namespace Raven.Server.Documents.Handlers
                         cmds = IncreaseSizeOfCommandsBuffer(index, cmds);
                     }
 
-                    var commandData = await ReadSingleCommand(ctx, stream, state, parser, buffer, default(CancellationToken));
+                    var commandData = await ReadSingleCommand(ctx, stream, state, parser, buffer, default);
 
                     if (commandData.Type == CommandType.PATCH)
                     {
@@ -146,7 +150,7 @@ namespace Raven.Server.Documents.Handlers
                                 true
                             );
                     }
-                    
+
                     if (commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[commandData.Id.Length - 1] == '|')
                     {
                         if (identities == null)
@@ -164,11 +168,11 @@ namespace Raven.Server.Documents.Handlers
 
                 if (identities != null)
                 {
-                    await GetIdentitiesValues(ctx, 
-                        database, 
-                        serverStore, 
-                        identities, 
-                        positionInListToCommandIndex, 
+                    await GetIdentitiesValues(ctx,
+                        database,
+                        serverStore,
+                        identities,
+                        positionInListToCommandIndex,
                         cmds);
                 }
 
@@ -204,7 +208,7 @@ namespace Raven.Server.Documents.Handlers
                    *(state.StringBuffer + sizeof(long) + sizeof(int) + sizeof(short)) == (byte)'e';
         }
 
-        private static async Task GetIdentitiesValues(JsonOperationContext ctx, DocumentDatabase database, ServerStore serverStore, 
+        private static async Task GetIdentitiesValues(JsonOperationContext ctx, DocumentDatabase database, ServerStore serverStore,
             List<string> identities, List<int> positionInListToCommandIndex, CommandData[] cmds)
         {
             var newIds = await serverStore.GenerateClusterIdentitiesBatchAsync(database.Name, identities);
@@ -216,7 +220,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var value = positionInListToCommandIndex[index];
                 cmds[value].Id = cmds[value].Id.Substring(0, cmds[value].Id.Length - 1) + "/" + newIds[index];
-                
+
                 if (string.IsNullOrEmpty(cmds[value].ChangeVector) == false)
                     ThrowInvalidUsageOfChangeVectorWithIdentities(cmds[value]);
                 cmds[value].ChangeVector = emptyChangeVector;
@@ -359,6 +363,38 @@ namespace Raven.Server.Documents.Handlers
                                 break;
                         }
                         break;
+                    case CommandPropertyName.DestinationId:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        switch (state.CurrentTokenType)
+                        {
+                            case JsonParserToken.Null:
+                                commandData.DestinationId = null;
+                                break;
+                            case JsonParserToken.String:
+                                commandData.DestinationId = GetStringPropertyValue(state);
+                                break;
+                            default:
+                                ThrowUnexpectedToken(JsonParserToken.String, state);
+                                break;
+                        }
+                        break;
+                    case CommandPropertyName.DestinationName:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        switch (state.CurrentTokenType)
+                        {
+                            case JsonParserToken.Null:
+                                commandData.DestinationName = null;
+                                break;
+                            case JsonParserToken.String:
+                                commandData.DestinationName = GetStringPropertyValue(state);
+                                break;
+                            default:
+                                ThrowUnexpectedToken(JsonParserToken.String, state);
+                                break;
+                        }
+                        break;
                     case CommandPropertyName.ContentType:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
@@ -430,6 +466,34 @@ namespace Raven.Server.Documents.Handlers
 
                         commandData.IdPrefixed = state.CurrentTokenType == JsonParserToken.True;
                         break;
+                    case CommandPropertyName.ReturnDocument:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+
+                        if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
+                        {
+                            ThrowUnexpectedToken(JsonParserToken.True, state);
+                        }
+
+                        commandData.ReturnDocument = state.CurrentTokenType == JsonParserToken.True;
+                        break;
+                    case CommandPropertyName.Counters:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        var counterOps = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, token);
+                        commandData.Counters = DocumentCountersOperation.Parse(counterOps);
+                        break;
+                    case CommandPropertyName.FromEtl:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+
+                        if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
+                        {
+                            ThrowUnexpectedToken(JsonParserToken.True, state);
+                        }
+
+                        commandData.FromEtl = state.CurrentTokenType == JsonParserToken.True;
+                        break;
                     case CommandPropertyName.NoSuchProperty:
                         // unknown command - ignore it
                         while (parser.Read() == false)
@@ -439,12 +503,6 @@ namespace Raven.Server.Documents.Handlers
                         {
                             await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, token);
                         }
-                        break;
-                    case CommandPropertyName.Counters:
-                        while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token);
-                        var counterOps = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, token);
-                        commandData.Counters = DocumentCountersOperation.Parse(counterOps);
                         break;
                 }
             }
@@ -557,6 +615,7 @@ namespace Raven.Server.Documents.Handlers
         {
             return ctx.GetLazyString(Encodings.Utf8.GetString(state.StringBuffer, state.StringSize));
         }
+
         private enum CommandPropertyName
         {
             NoSuchProperty,
@@ -568,19 +627,24 @@ namespace Raven.Server.Documents.Handlers
             PatchIfMissing,
             IdPrefixed,
             Index,
+            ReturnDocument,
 
             #region Attachment
 
             Name,
+            DestinationId,
+            DestinationName,
             ContentType,
 
             #endregion
 
             #region Counter
 
-            Counters
+            Counters,
 
             #endregion
+
+            FromEtl
 
             // other properties are ignore (for legacy support)
         }
@@ -619,12 +683,17 @@ namespace Raven.Server.Documents.Handlers
                         return CommandPropertyName.Index;
                     return CommandPropertyName.NoSuchProperty;
                 case 14:
-                    if (*(int*)state.StringBuffer != 1668571472 ||
-                        *(long*)(state.StringBuffer + 4) != 7598543892411468136 ||
-                        *(short*)(state.StringBuffer + 12) != 26478)
-                        return CommandPropertyName.NoSuchProperty;
-                    return CommandPropertyName.PatchIfMissing;
+                    if (*(int*)state.StringBuffer == 1668571472 ||
+                        *(long*)(state.StringBuffer + sizeof(int)) == 7598543892411468136 ||
+                        *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 26478)
+                        return CommandPropertyName.PatchIfMissing;
 
+                    if (*(int*)state.StringBuffer == 1970562386 ||
+                        *(long*)(state.StringBuffer + sizeof(int)) == 7308626840221150834 ||
+                        *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 29806)
+                        return CommandPropertyName.ReturnDocument;
+
+                    return CommandPropertyName.NoSuchProperty;
                 case 10:
                     if (*(long*)state.StringBuffer == 8676578743001572425 &&
                         *(short*)(state.StringBuffer + sizeof(long)) == 25701)
@@ -642,6 +711,28 @@ namespace Raven.Server.Documents.Handlers
                     if (*(long*)state.StringBuffer == 7302135340735752259 &&
                         *(int*)(state.StringBuffer + sizeof(long)) == 1919906915)
                         return CommandPropertyName.ChangeVector;
+                    return CommandPropertyName.NoSuchProperty;
+                case 7:
+                    if (*(int*)state.StringBuffer == 1836020294 &&
+                        *(short*)(state.StringBuffer + sizeof(int)) == 29765 &&
+                        state.StringBuffer[6] == (byte)'l')
+                        return CommandPropertyName.FromEtl;
+
+                    return CommandPropertyName.NoSuchProperty;
+                case 13:
+                    if (*(long*)state.StringBuffer == 8386105380344915268 &&
+                        *(int*)(state.StringBuffer + sizeof(long)) == 1231974249 &&
+                        state.StringBuffer[12] == (byte)'d')
+                        return CommandPropertyName.DestinationId;
+
+                    return CommandPropertyName.NoSuchProperty;
+                case 15:
+                    if (*(long*)state.StringBuffer == 8386105380344915268 &&
+                        *(int*)(state.StringBuffer + sizeof(long)) == 1315860329 &&
+                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 28001 &&
+                        state.StringBuffer[14] == (byte)'e')
+                        return CommandPropertyName.DestinationName;
+
                     return CommandPropertyName.NoSuchProperty;
                 default:
                     return CommandPropertyName.NoSuchProperty;
@@ -682,13 +773,26 @@ namespace Raven.Server.Documents.Handlers
                         ThrowInvalidProperty(state, ctx);
 
                     return CommandType.AttachmentPUT;
+                case 14:
+                    if (*(long*)state.StringBuffer == 7308612546338255937 &&
+                        *(int*)(state.StringBuffer + sizeof(long)) == 1329820782 &&
+                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 22864)
+                        return CommandType.AttachmentCOPY;
+                        
+                    if (*(long*)state.StringBuffer == 7308612546338255937 &&
+                        *(int*)(state.StringBuffer + sizeof(long)) == 1330476142 &&
+                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 17750)
+                        return CommandType.AttachmentMOVE;
 
+                    ThrowInvalidProperty(state, ctx);
+                    return CommandType.None;
                 case 16:
-                    if (*(long*)state.StringBuffer != 7308612546338255937 ||
-                        *(long*)(state.StringBuffer + sizeof(long)) != 4995694080542667886)
-                        ThrowInvalidProperty(state, ctx);
+                    if (*(long*)state.StringBuffer == 7308612546338255937 &&
+                        *(long*)(state.StringBuffer + sizeof(long)) == 4995694080542667886)
+                        return CommandType.AttachmentDELETE;
 
-                    return CommandType.AttachmentDELETE;
+                    ThrowInvalidProperty(state, ctx);
+                    return CommandType.None;
                 case 8:
                     if (*(long*)state.StringBuffer != 8318823012450529091)
                         ThrowInvalidProperty(state, ctx);

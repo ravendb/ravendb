@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Replication
             _log = LoggingSource.Instance.GetLogger<ConflictManager>(_database.Name);
         }
 
-        public void HandleConflictForDocument(
+        public unsafe void HandleConflictForDocument(
             DocumentsOperationContext documentsContext,
             string id,
             string collection,
@@ -44,6 +44,7 @@ namespace Raven.Server.Documents.Replication
                 HandleHiloConflict(documentsContext, id, doc, changeVector);
                 return;
             }
+
             if (TryResolveIdenticalDocument(
                 documentsContext,
                 id,
@@ -52,52 +53,56 @@ namespace Raven.Server.Documents.Replication
                 changeVector))
                 return;
 
-            var conflictedDoc = new DocumentConflict
+            var lazyId = documentsContext.GetLazyString(id);
+            using (DocumentIdWorker.GetLower(documentsContext.Allocator, lazyId, out var loweredKey))
             {
-                Doc = doc,
-                Collection = documentsContext.GetLazyStringForFieldWithCaching(
-                    collection ??
-                    CollectionName.GetCollectionName(doc)
-                ),
-                LastModified = new DateTime(lastModifiedTicks),
-                LowerId = documentsContext.GetLazyString(id),
-                Id = documentsContext.GetLazyString(id),
-                ChangeVector = changeVector
-            };
-
-            if (TryResolveConflictByScript(
-                documentsContext,
-                conflictedDoc))
-                return;
-
-            if (_conflictResolver.ConflictSolver?.ResolveToLatest ?? true)
-            {
-                if (conflictedChangeVector == null) //precaution
-                    throw new InvalidOperationException(
-                        "Detected conflict on replication, but could not figure out conflicted vector. This is not supposed to happen and is likely a bug.");
-
-                var conflicts = new List<DocumentConflict>
+                var conflictedDoc = new DocumentConflict
                 {
-                    conflictedDoc.Clone()
+                    Doc = doc,
+                    Collection = documentsContext.GetLazyStringForFieldWithCaching(
+                        collection ??
+                        CollectionName.GetCollectionName(doc)
+                    ),
+                    LastModified = new DateTime(lastModifiedTicks),
+                    LowerId = documentsContext.AllocateStringValue(null, loweredKey.Content.Ptr, loweredKey.Content.Length),
+                    Id = lazyId,
+                    ChangeVector = changeVector,
+                    Flags = flags
                 };
-                conflicts.AddRange(documentsContext.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(
-                    documentsContext, id));
-                var localDocumentTuple =
-                    documentsContext.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(documentsContext,
-                        id, false);
-                var local = DocumentConflict.From(documentsContext, localDocumentTuple.Document) ?? DocumentConflict.From(localDocumentTuple.Tombstone);
-                if (local != null)
-                    conflicts.Add(local);
 
-                var resolved = _conflictResolver.ResolveToLatest(documentsContext, conflicts);
-                _conflictResolver.PutResolvedDocument(documentsContext, resolved, conflictedDoc);
+                if (TryResolveConflictByScript(
+                    documentsContext,
+                    conflictedDoc))
+                    return;
 
-                return;
+                if (_conflictResolver.ConflictSolver?.ResolveToLatest ?? true)
+                {
+                    if (conflictedChangeVector == null) //precaution
+                        throw new InvalidOperationException(
+                            "Detected conflict on replication, but could not figure out conflicted vector. This is not supposed to happen and is likely a bug.");
+
+                    var conflicts = new List<DocumentConflict>
+                    {
+                        conflictedDoc.Clone()
+                    };
+                    conflicts.AddRange(documentsContext.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(
+                        documentsContext, id));
+                    var localDocumentTuple =
+                        documentsContext.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(documentsContext,
+                            id, false);
+                    var local = DocumentConflict.From(documentsContext, localDocumentTuple.Document) ?? DocumentConflict.From(localDocumentTuple.Tombstone);
+                    if (local != null)
+                        conflicts.Add(local);
+
+                    var resolved = _conflictResolver.ResolveToLatest(documentsContext, conflicts);
+                    _conflictResolver.PutResolvedDocument(documentsContext, resolved, conflictedDoc);
+
+                    return;
+                }
+
+                _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection, flags);
             }
-            _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection, flags);
         }
-
-       
 
         private bool TryResolveConflictByScript(
             DocumentsOperationContext documentsContext,

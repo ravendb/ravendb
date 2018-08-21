@@ -15,30 +15,35 @@ class databaseCreationModel {
             name: "Data source",
             id: "legacyMigration",
             alwaysEnabled: true,
+            disableToggle: ko.observable<boolean>(false),
             enabled: ko.observable<boolean>(true)
         },
         {
             name: "Backup source",
             id: "restore",
             alwaysEnabled: true,
+            disableToggle: ko.observable<boolean>(false),
             enabled: ko.observable<boolean>(true)
         },
         {
             name: "Encryption",
             id: "encryption",
             alwaysEnabled: false,
+            disableToggle: ko.observable<boolean>(false),
             enabled: ko.observable<boolean>(false)
         },
         {
             name: "Replication",
             id: "replication",
             alwaysEnabled: true,
+            disableToggle: ko.observable<boolean>(false),
             enabled: ko.observable<boolean>(true)
         },
         {
             name: "Path",
             id: "path",
             alwaysEnabled: true,
+            disableToggle: ko.observable<boolean>(false),
             enabled: ko.observable<boolean>(true)
         }
     ];
@@ -46,6 +51,8 @@ class databaseCreationModel {
     spinners = {
         fetchingRestorePoints: ko.observable<boolean>(false)
     };
+    
+    lockActiveTab = ko.observable<boolean>(false);
 
     name = ko.observable<string>("");
 
@@ -69,7 +76,8 @@ class databaseCreationModel {
         restorePoints: ko.observable<Array<{ databaseName: string, databaseNameTitle: string, restorePoints: restorePoint[] }>>([]),
         isFocusOnBackupDirectory: ko.observable<boolean>(),
         restorePointsCount: ko.observable<number>(0),
-        disableOngoingTasks: ko.observable<boolean>(false)
+        disableOngoingTasks: ko.observable<boolean>(false),
+        requiresEncryption: undefined as KnockoutComputed<boolean>
     };
     
     restoreValidationGroup = ko.validatedObservable({ 
@@ -197,6 +205,30 @@ class databaseCreationModel {
                 return;
 
             this.fetchRestorePoints(backupDirectory, false);
+        });
+        
+        this.restore.selectedRestorePoint.subscribe(restorePoint => {
+            const encryptionSection = this.getEncryptionConfigSection();
+            this.lockActiveTab(true);
+            try {
+                if (restorePoint) {
+                    if (restorePoint.isEncrypted) {
+                        // turn on encryption
+                        encryptionSection.disableToggle(true);
+                        encryptionSection.enabled(true);
+                    } else if (restorePoint.isSnapshotRestore && !restorePoint.isEncrypted) {
+                        encryptionSection.disableToggle(true);
+                        encryptionSection.enabled(false);
+                    } else {
+                        encryptionSection.disableToggle(false);
+                        encryptionSection.enabled(false);
+                    }
+                } else {
+                    encryptionSection.disableToggle(false);
+                }
+            } finally {
+                this.lockActiveTab(false);    
+            }
         });
         
         _.bindAll(this, "useRestorePoint");
@@ -340,7 +372,8 @@ class databaseCreationModel {
                     message: `Max available nodes: {0}`,
                     params: maxReplicationFactor
                 }
-            ]
+            ],
+            digit: true
         });
     }
     

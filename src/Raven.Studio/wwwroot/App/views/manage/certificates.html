@@ -28,7 +28,7 @@
                 </div>
             </div>
             <div class="text-center margin-top margin-lg">
-                For more information please see <a href="https://ravendb.net/docs" target="_blank">RavenDB 4.0 Documentation</a>.
+                For more information please see <a href="https://ravendb.net/docs/article-page/4.1/csharp" target="_blank">RavenDB 4.1 Documentation</a>.
             </div>
         </div>
     </div>
@@ -108,58 +108,89 @@
                 </div>
             </div>
             
-            <div class="scroll flex-grow" data-bind="foreach: certificates">
-                <div class="panel certificate-item" data-bind="visible: Visible">
+            <div class="scroll flex-grow">
+                <div class="panel panel-info certificate-item" data-bind="visible: wellKnownAdminCertsVisible">
                     <div class="padding padding-sm flex-horizontal">
                         <div class="certificate-name">
-                            <a href="#" title="Certificate name" class="flex-horizontal" data-bind="click: _.partial($root.enterEditCertificateMode, $data)">
+                            <div class="flex-horizontal">
                                 <div>
                                     <i class="icon-certificate"></i>
                                 </div>
                                 <div>
-                                    <h3 class="no-margin" data-bind="text: Name || '<empty name>'"></h3>
+                                    <h3 class="no-margin">Well known admin certificates defined by system administrator</h3>
                                 </div>
-                                <div title="This certificate is currently used by the server for incoming HTTPS connections" class="label label-info"
-                                     data-bind="visible: _.includes(Thumbprints, $root.serverCertificateThumbprint())">
-                                    server certificate
-                                </div>
-                            </a>
-                            <div class="thumbprint" title="Certificate thumbprint" data-bind="text: Thumbprints.join(', ')">
+                            </div>
+                            <div class="thumbprint" title="Certificates thumbprints" data-bind="foreach: wellKnownAdminCerts">
+                                <span data-bind="text: $data"></span> <br />
                             </div>
                         </div>
                         <div class="flex-grow"></div>
-                        <div data-bind="visible: $root.showRenewCertificateButton(Thumbprints)">
-                            <button class="btn btn-default btn-sm" data-bind="click: _.partial($root.renewServerCertificate)" title="Renew this server certificate">Renew</button>
-                        </div>
-                        <div class="flex-horizontal">
-                            <div class="expiration flex-noshrink">
-                                <small data-bind="attr: { class: expirationClass }">
-                                    <i data-bind="attr: { class: expirationIcon }"></i> <span data-bind="text: expirationText"></span>
-                                </small>
-                            </div>
-                            <div class="actions">
-                                <button class="btn btn-default" data-bind="click: _.partial($root.enterEditCertificateMode, $data)"><i class="icon-edit"></i></button>
-                                <button class="btn btn-danger" data-bind="click: _.partial($root.deleteCertificate, $data), visible: $root.canDelete(SecurityClearance)">
-                                    <i class="icon-trash"></i>
-                                </button>
-                            </div>
-                        </div>
                     </div>
                     <div class="panel-addon">
                         <div class="padding padding-sm flex-horizontal">
-                            <div class="margin-right clearance"><i class="icon-clearance"></i><span data-bind="text: $root.clearanceLabelFor(SecurityClearance)"></span></div>
+                            <div class="margin-right clearance"><i class="icon-clearance"></i><span data-bind="text: $root.clearanceLabelFor('ClusterAdmin')"></span></div>
                             <div class="flex-horizontal">
                                 <div><i class="icon-database"></i></div>
-                                <div class="flex-horizontal flex-wrap" data-bind="foreach: $root.resolveDatabasesAccess($data)">
-                                    <div data-bind="text: $data"></div>
-                                </div>
-                                <div class="flex-horizontal flex-wrap text-danger" data-bind="visible: $root.resolveDatabasesAccess($data) === null">
-                                    None
+                                <div class="flex-horizontal flex-wrap">
+                                    <div>All</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                <!-- ko foreach: certificates -->
+                    <div class="panel certificate-item" data-bind="visible: Visible">
+                        <div class="padding padding-sm flex-horizontal">
+                            <div class="certificate-name">
+                                <a href="#" title="Certificate name" class="flex-horizontal" data-bind="click: _.partial($root.enterEditCertificateMode, $data)">
+                                    <div>
+                                        <i class="icon-certificate"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="no-margin" data-bind="text: Name || '<empty name>'"></h3>
+                                    </div>
+                                    <div title="This certificate is currently used by the server for incoming HTTPS connections" class="label label-info"
+                                         data-bind="visible: _.includes(Thumbprints, $root.serverCertificateThumbprint())">
+                                        server certificate
+                                    </div>
+                                </a>
+                                <div class="thumbprint" title="Certificate thumbprint" data-bind="text: Thumbprints.join(', ')">
+                                </div>
+                            </div>
+                            <div class="flex-grow"></div>
+                            <div data-bind="visible: $root.showRenewCertificateButton(Thumbprints)">
+                                <button class="btn btn-default btn-sm" data-bind="click: _.partial($root.renewServerCertificate)" title="Renew this server certificate">Renew</button>
+                            </div>
+                            <div class="flex-horizontal">
+                                <div class="expiration flex-noshrink">
+                                    <small data-bind="attr: { class: expirationClass }">
+                                        <i data-bind="attr: { class: expirationIcon }"></i> <span data-bind="text: expirationText"></span>
+                                    </small>
+                                </div>
+                                <div class="actions">
+                                    <button class="btn btn-default" data-bind="click: _.partial($root.enterEditCertificateMode, $data)"><i class="icon-edit"></i></button>
+                                    <button class="btn btn-danger" data-bind="click: _.partial($root.deleteCertificate, $data), visible: $root.canDelete(SecurityClearance)">
+                                        <i class="icon-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel-addon">
+                            <div class="padding padding-sm flex-horizontal">
+                                <div class="margin-right clearance"><i class="icon-clearance"></i><span data-bind="text: $root.clearanceLabelFor(SecurityClearance)"></span></div>
+                                <div class="flex-horizontal">
+                                    <div><i class="icon-database"></i></div>
+                                    <div class="flex-horizontal flex-wrap" data-bind="foreach: $root.resolveDatabasesAccess($data)">
+                                        <div data-bind="text: $data"></div>
+                                    </div>
+                                    <div class="flex-horizontal flex-wrap text-danger" data-bind="visible: $root.resolveDatabasesAccess($data) === null">
+                                        None
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <!-- /ko -->
             </div>
         </div>
         <div class="col-sm-12 col-lg-5 flex-vertical" data-bind="with: model">

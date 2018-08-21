@@ -30,9 +30,11 @@ namespace Raven.Client.Json
             if (type == typeof(bool))
                 return value;
 
-            if (type == typeof(int) || type == typeof(long) || type == typeof(double) || 
-                type == typeof(decimal) || type == typeof(float) || type == typeof(uint) || 
-                type == typeof(ulong) || type == typeof(short) || type == typeof(byte))
+            if (type == typeof(int) || type == typeof(uint) ||
+                type == typeof(decimal) || type == typeof(double) || type == typeof(float) ||
+                type == typeof(long) || type == typeof(ulong) ||
+                type == typeof(short) || type == typeof(ushort) ||
+                type == typeof(byte) || type == typeof(sbyte))
                 return value;
 
             if (type == typeof(LazyNumberValue))
@@ -74,10 +76,17 @@ namespace Raven.Client.Json
             {
                 var serializer = conventions.CreateSerializer();
 
+                writer.WriteStartObject();
+                writer.WritePropertyName("Value");
+
                 serializer.Serialize(writer, value);
+
+                writer.WriteEndObject();
+
                 writer.FinalizeDocument();
 
-                return writer.CreateReader();
+                var reader = writer.CreateReader();
+                return reader["Value"];
             }
         }
     }

@@ -21,6 +21,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Exceptions.Documents.Session;
 using Raven.Client.Extensions;
@@ -78,7 +79,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Entities whose id we already know do not exists, because they are a missing include, or a missing load, etc.
         /// </summary>
-        private readonly HashSet<string> _knownMissingIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        protected readonly HashSet<string> _knownMissingIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private Dictionary<string, object> _externalState;
 
@@ -124,8 +125,10 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// hold the data required to manage Counters tracking for RavenDB's Unit of Work
         /// </summary>
-        protected internal Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)> CountersByDocId;
+        protected internal Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)> CountersByDocId =>
+            _countersByDocId ?? (_countersByDocId = new Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)>(StringComparer.OrdinalIgnoreCase));
 
+        private Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)> _countersByDocId;
         protected readonly DocumentStoreBase _documentStore;
 
         public string DatabaseName { get; }
@@ -137,7 +140,7 @@ namespace Raven.Client.Documents.Session
 
         public RequestExecutor RequestExecutor => _requestExecutor;
 
-        internal OperationExecutor Operations => _operationExecutor ?? (_operationExecutor = DocumentStore.Operations.ForDatabase(DatabaseName));
+        internal OperationExecutor Operations => _operationExecutor ?? (_operationExecutor = new SessionOperationExecutor(this));
 
         public JsonOperationContext Context => _context;
 
@@ -208,6 +211,9 @@ namespace Raven.Client.Documents.Session
         {
             Id = id;
             DatabaseName = options.Database ?? documentStore.Database;
+            if (string.IsNullOrWhiteSpace(DatabaseName))
+                ThrowNoDatabase();
+
             _documentStore = documentStore;
             _requestExecutor = options.RequestExecutor ?? documentStore.GetRequestExecutor(DatabaseName);
             _releaseOperationContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
@@ -539,7 +545,7 @@ more responsive application.
 
             DeletedEntities.Add(entity);
             IncludedDocumentsById.Remove(value.Id);
-            CountersByDocId?.Remove(value.Id);
+            _countersByDocId?.Remove(value.Id);
             _knownMissingIds.Add(value.Id);
         }
 
@@ -579,7 +585,7 @@ more responsive application.
 
             _knownMissingIds.Add(id);
             changeVector = UseOptimisticConcurrency ? changeVector : null;
-            CountersByDocId?.Remove(id);
+            _countersByDocId?.Remove(id);
             Defer(new DeleteCommandData(id, expectedChangeVector ?? changeVector));
         }
 
@@ -793,13 +799,14 @@ more responsive application.
                 // additional values during the same SaveChanges call
                 result.DeferredCommands.AddRange(DeferredCommands);
                 foreach (var item in DeferredCommandsDictionary)
-                {
                     result.DeferredCommandsDictionary[item.Key] = item.Value;
-                }
 
                 DeferredCommands.Clear();
                 DeferredCommandsDictionary.Clear();
             }
+
+            foreach (var deferredCommand in result.DeferredCommands)
+                deferredCommand.OnBeforeSaveChanges(this);
 
             return result;
         }
@@ -839,11 +846,11 @@ more responsive application.
             {
                 foreach (var item in clusterTransactionOperations.StoreCompareExchange)
                 {
-                    var tuple = new Dictionary<string, object>
+                    var djv = new DynamicJsonValue()
                     {
-                        ["Object"] = item.Value.Entity
+                        ["Object"] = EntityToBlittable.ConvertToBlittableIfNeeded(item.Value.Entity)
                     };
-                    var blittable = EntityToBlittable.ConvertCommandToBlittable(tuple, Context);
+                    var blittable = Context.ReadObject(djv, item.Key);
                     result.SessionCommands.Add(new PutCompareExchangeCommandData(item.Key, blittable, item.Value.Index));
                 }
             }
@@ -1013,6 +1020,12 @@ more responsive application.
                 $"Cannot perform save because document {resultCommand.Id} has been modified by the session and is also taking part in deferred {resultCommand.Type} command");
         }
 
+        private static void ThrowNoDatabase()
+        {
+            throw new InvalidOperationException(
+                $"Cannot open a Session without specifying a name of a database to operate on. Database name can be passed as an argument when Session is being opened or default database can be defined using '{nameof(DocumentStore)}.{nameof(IDocumentStore.Database)}' property.");
+        }
+
         protected bool EntityChanged(BlittableJsonReaderObject newObj, DocumentInfo documentInfo, IDictionary<string, DocumentsChanges[]> changes)
         {
             return BlittableOperation.EntityChanged(newObj, documentInfo, changes);
@@ -1132,7 +1145,7 @@ more responsive application.
             {
                 DocumentsByEntity.Remove(entity);
                 DocumentsById.Remove(documentInfo.Id);
-                CountersByDocId?.Remove(documentInfo.Id);
+                _countersByDocId?.Remove(documentInfo.Id);
             }
 
             DeletedEntities.Remove(entity);
@@ -1148,8 +1161,7 @@ more responsive application.
             DeletedEntities.Clear();
             DocumentsById.Clear();
             _knownMissingIds.Clear();
-            IncludedDocumentsById.Clear();
-            CountersByDocId?.Clear();
+            _countersByDocId?.Clear();
         }
 
         /// <summary>
@@ -1188,6 +1200,8 @@ more responsive application.
             DeferredCommandsDictionary[(command.Id, CommandType.ClientAnyCommand, null)] = command;
             if (command.Type != CommandType.AttachmentPUT &&
                 command.Type != CommandType.AttachmentDELETE &&
+                command.Type != CommandType.AttachmentCOPY &&
+                command.Type != CommandType.AttachmentMOVE &&
                 command.Type != CommandType.Counters)
                 DeferredCommandsDictionary[(command.Id, CommandType.ClientModifyDocumentCommand, null)] = command;
         }
@@ -1313,7 +1327,7 @@ more responsive application.
             }
         }
 
-        internal void RegisterCounters(BlittableJsonReaderObject resultCounters, string[] countersToInclude, bool gotAll, string[] documentIds)
+        internal void RegisterCounters(BlittableJsonReaderObject resultCounters, string[] ids, string[] countersToInclude, bool gotAll)
         {
             if (NoTracking)
                 return;
@@ -1322,62 +1336,71 @@ more responsive application.
             {
                 if (gotAll)
                 {
-                    // Set 'GotAll' to true in counters-cache for all documents
-
-                    if (CountersByDocId == null)
+                    foreach (var id in ids)
                     {
-                        CountersByDocId = new Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)>(StringComparer.OrdinalIgnoreCase);
-                    }
-
-                    foreach (var id in documentIds)
-                    {
-                        if (CountersByDocId.TryGetValue(id, out var cache) == false)
-                        {
-                            cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
-                            CountersByDocId.Add(id, cache);
-                        }
-                        cache.GotAll = true;
+                        SetGotAllCountersForDocument(id);
                     }
 
                     return;
                 }
 
-                RegisterMissingCounters(documentIds, countersToInclude);
-                return;
             }
-
-            if (CountersByDocId == null)
+            else
             {
-                CountersByDocId = new Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)>(StringComparer.OrdinalIgnoreCase);
+                RegisterCountersInternal(resultCounters, countersToInclude: null, fromQueryResult: false, gotAll: gotAll);
             }
 
+            RegisterMissingCounters(ids, countersToInclude);
+
+        }
+
+        internal void RegisterCounters(BlittableJsonReaderObject resultCounters, Dictionary<string, string[]> countersToInclude)
+        {
+            if (NoTracking)
+                return;
+
+            if (resultCounters == null || resultCounters.Count == 0)
+            {
+                SetGotAllInCacheIfNeeded(countersToInclude);
+            }
+            else
+            {
+                RegisterCountersInternal(resultCounters, countersToInclude);
+            }
+
+            RegisterMissingCounters(countersToInclude);
+
+        }
+
+        private void RegisterCountersInternal(BlittableJsonReaderObject resultCounters, Dictionary<string, string[]> countersToInclude, bool fromQueryResult = true, bool gotAll = false)
+        {
             var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
             foreach (var propertyIndex in resultCounters.GetPropertiesByInsertionOrder())
             {
                 resultCounters.GetPropertyByIndex(propertyIndex, ref propertyDetails);
-
                 if (propertyDetails.Value == null)
                     continue;
+                if (fromQueryResult)
+                {
+                    gotAll = countersToInclude.TryGetValue(propertyDetails.Name, out var counters) &&
+                             counters.Length == 0;
+                }
                 var bjra = (BlittableJsonReaderArray)propertyDetails.Value;
-                if (bjra.Length == 0)
+                if (bjra.Length == 0 && gotAll == false)
                     continue;
 
                 RegisterCountersForDocument(propertyDetails.Name, gotAll, bjra);
             }
-
-
-            RegisterMissingCounters(documentIds, countersToInclude);
         }
 
-        private void RegisterCountersForDocument(LazyStringValue id, bool gotAll, BlittableJsonReaderArray bjra)
+        private void RegisterCountersForDocument(string id, bool gotAll, BlittableJsonReaderArray counters)
         {
             if (CountersByDocId.TryGetValue(id, out var cache) == false)
             {
                 cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
-                CountersByDocId.Add(id, cache);
             }
 
-            foreach (BlittableJsonReaderObject counterBlittable in bjra)
+            foreach (BlittableJsonReaderObject counterBlittable in counters)
             {
                 if (counterBlittable.TryGet(nameof(CounterDetail.CounterName), out string name) == false ||
                     counterBlittable.TryGet(nameof(CounterDetail.TotalValue), out long value) == false)
@@ -1385,28 +1408,63 @@ more responsive application.
                 cache.Values[name] = value;
             }
 
-            if (gotAll)
+            cache.GotAll = gotAll;
+            CountersByDocId[id] = cache;
+        }
+
+        private void SetGotAllInCacheIfNeeded(Dictionary<string, string[]> countersToInclude)
+        {
+            foreach (var kvp in countersToInclude)
             {
-                cache.GotAll = true;
+                if (kvp.Value.Length != 0)
+                    continue;
+
+                SetGotAllCountersForDocument(kvp.Key);
             }
         }
 
-        private void RegisterMissingCounters(string[] ids, string[] counters)
+        private void SetGotAllCountersForDocument(string id)
         {
-            if (NoTracking)
-                return;
-
-            if (counters == null)
-                return;
-
-            if (CountersByDocId == null)
+            if (CountersByDocId.TryGetValue(id, out var cache) == false)
             {
-                CountersByDocId = new Dictionary<string, (bool GotAll, Dictionary<string, long?> Values)>(StringComparer.OrdinalIgnoreCase);
+                cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
             }
 
-            foreach (var id in ids)
+            cache.GotAll = true;
+            CountersByDocId[id] = cache;
+        }
+
+        private void RegisterMissingCounters(Dictionary<string, string[]> countersToInclude)
+        {
+            if (countersToInclude == null)
+                return;
+
+            foreach (var kvp in countersToInclude)
             {
-                foreach (var counter in counters)
+                if (CountersByDocId.TryGetValue(kvp.Key, out var cache) == false)
+                {
+                    cache.Values = new Dictionary<string, long?>(StringComparer.OrdinalIgnoreCase);
+                    CountersByDocId.Add(kvp.Key, cache);
+                }
+
+                foreach (var counter in kvp.Value)
+                {
+                    if (cache.Values.ContainsKey(counter))
+                        continue;
+
+                    cache.Values[counter] = null;
+                }
+            }
+        }
+
+        private void RegisterMissingCounters(string[] ids, string[] countersToInclude)
+        {
+            if (countersToInclude == null)
+                return;
+
+            foreach (var counter in countersToInclude)
+            {
+                foreach (var id in ids)
                 {
                     if (CountersByDocId.TryGetValue(id, out var cache) == false)
                     {
@@ -1420,6 +1478,7 @@ more responsive application.
                     cache.Values[counter] = null;
                 }
             }
+
         }
 
         public override int GetHashCode()

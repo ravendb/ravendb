@@ -1,7 +1,6 @@
 import app = require("durandal/app");
 import fileDownloader = require("common/fileDownloader");
 import viewModelBase = require("viewmodels/viewModelBase");
-import database = require("models/resources/database");
 import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
 import sqlMigration = require("models/database/tasks/sql/sqlMigration");
 import fetchSqlDatabaseSchemaCommand = require("commands/database/tasks/fetchSqlDatabaseSchemaCommand");
@@ -400,7 +399,7 @@ class importDatabaseFromSql extends viewModelBase {
     }
     
     goToReverseReference(reference: sqlReference, animate = true) {
-        const originalTopPosition = $("[data-ref-id=" + reference.id + "]").offset().top;
+        const originalTopPosition = $("[data-ref-id=" + reference.id + "] .key:visible").offset().top;
         const reverseReference = this.model.findReverseReference(reference);
         
         this.searchText(""); // make sure table is visible
@@ -414,7 +413,7 @@ class importDatabaseFromSql extends viewModelBase {
             this.setCurrentPage(page);
             
             // navigate exactly to reference position
-            const $revReference = $("[data-ref-id=" + reverseReference.id + "] td:eq(0)");
+            const $revReference = $("[data-ref-id=" + reverseReference.id + "] .key:visible");
             
             $(".js-scroll-tables").scrollTop($revReference.offset().top - originalTopPosition);
             
@@ -447,7 +446,7 @@ class importDatabaseFromSql extends viewModelBase {
     onToggleAllClick(_: any, $event: JQueryMouseEventObject) {
         if (this.model.getSelectedTablesCount()) {
             
-            this.confirmationMessage("Deselect all tables", "To maintain connections integrity, all references with action 'link' will be set to 'skip'. Do you want to proceed? ", ["Cancel", "Set references to 'skip' and deselect all"])
+            this.confirmationMessage("Deselect all tables", "To maintain connections integrity, all references with action <strong>'link'</strong> will be set to <strong>'skip'</strong>.<br/> Do you want to proceed? ", ["Cancel", "Set references to 'skip' and deselect all"])
                 .done(result => {
                     if (result.can) {
                         this.model.setAllLinksToSkip();
@@ -564,8 +563,8 @@ class importDatabaseFromSql extends viewModelBase {
         const $secondStep = $("#js-second-step");
         
         $secondStep.on("mouseenter", ".js-btn-link", event => {
-            const target = $(event.target);
-
+            const target = $(event.currentTarget);
+            
             const reference = ko.dataFor(target[0]) as sqlReference;
 
             if (!target.data('bs.popover')) {
@@ -597,9 +596,9 @@ class importDatabaseFromSql extends viewModelBase {
     }
 
     private provideSelectTablePopoverText(reference: sqlReference) {
-        return 'Target table is currently not selected. <br />'
-            + '<button class="btn btn-sm btn-primary popover-link-ref" data-popover-ref-id="' + reference.id + '">Click to select target table</button><br />'
-            + ' before creating link to <strong>' + reference.targetTable.tableName + '</strong>';
+        return '<div class="text-center"><strong class="text-capitalize"><i class="icon-table"></i> ' + reference.targetTable.tableName + '</strong> table is currently not included. <br />'
+            + '<button class="btn btn-sm btn-primary popover-link-ref" data-popover-ref-id="' + reference.id + '">Click here to include <strong>'+ reference.targetTable.tableName +'</strong> to migration</button><br />'
+            + ' before creating link</div>';
     }
     
     private initTableCheckboxHints() {
@@ -626,7 +625,7 @@ class importDatabaseFromSql extends viewModelBase {
     }
     
     private provideTableCheckboxHint(incomingLinksCount: number) {
-        return "This table has <strong>" + incomingLinksCount + "</strong> incoming " + this.pluralize(incomingLinksCount, "link", "links", true) + ". <em>Skip</em> or <em>embed</em> all of them before continue.<br/> "
+        return "This table has <strong>" + incomingLinksCount + "</strong> incoming " + this.pluralize(incomingLinksCount, "link", "links", true) + ". <em><strong>Skip</strong></em> or <em><strong>embed</strong></em> all of them before proceeding.<br/> "
             + "<small class='text-info'><i class='icon-info'></i>  You can view incoming links by clicking on <i class='icon-sql-many-to-one'></i> button</small>";
     }
     

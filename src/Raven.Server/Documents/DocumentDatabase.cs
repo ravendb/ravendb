@@ -18,6 +18,7 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Expiration;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
@@ -26,10 +27,12 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -57,15 +60,17 @@ namespace Raven.Server.Documents
         private readonly ServerStore _serverStore;
         private readonly Action<string> _addToInitLog;
         private readonly Logger _logger;
-        private DisposeOnce<SingleAttempt> _disposeOnce;
+        private readonly DisposeOnce<SingleAttempt> _disposeOnce;
 
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
 
         private readonly object _idleLocker = new object();
+
         /// <summary>
         /// The current lock, used to make sure indexes have a unique names
         /// </summary>
         private Task _indexStoreTask;
+
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
@@ -112,6 +117,7 @@ namespace Raven.Server.Documents
                             throw new InvalidOperationException($"Attempt to create a non-encrypted db {Name}, but a secret key exists for this db.");
                     }
                 }
+
                 ClusterTransactionWaiter = new ClusterTransactionWaiter(this);
                 QueryMetadataCache = new QueryMetadataCache();
                 IoChanges = new IoChangesNotifications();
@@ -128,7 +134,7 @@ namespace Raven.Server.Documents
                 HugeDocuments = new HugeDocuments(configuration.PerformanceHints.HugeDocumentsCollectionSize,
                     configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
                 ConfigurationStorage = new ConfigurationStorage(this);
-                NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
+                NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, DatabaseShutdown);
                 Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes);
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
                 RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
@@ -215,6 +221,8 @@ namespace Raven.Server.Documents
 
         public ClientConfiguration ClientConfiguration { get; private set; }
 
+        public StudioConfiguration StudioConfiguration { get; private set; }
+
         public long LastDatabaseRecordIndex { get; private set; }
 
         public bool CanUnload => Interlocked.Read(ref _preventUnloadCounter) == 0;
@@ -285,6 +293,25 @@ namespace Raven.Server.Documents
                         // We ignore the exception since it was caught in the function itself
                     }
                 }, null);
+
+                Task.Factory.StartNew(async _ =>
+                {
+                    try
+                    {
+                        await ExecuteClusterTransactionTask();
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // database shutdown
+                    }
+                    catch (Exception e)
+                    {
+                        if (_logger.IsInfoEnabled)
+                        {
+                            _logger.Info("An unhandled exception closed the cluster transaction task", e);
+                        }
+                    }
+                }, DatabaseShutdown, TaskCreationOptions.LongRunning);
             }
             catch (Exception)
             {
@@ -312,9 +339,14 @@ namespace Raven.Server.Documents
                 _writeLockFile.SetLength(1);
                 _writeLockFile.Lock(0, 1);
             }
+            catch (PlatformNotSupportedException)
+            {
+                // locking part of the file isn't supported on macOS
+                // new FileStream will lock the file on this platform
+            }
             catch (Exception e)
             {
-                 throw new InvalidOperationException("Cannot open database because RavenDB was unable create file lock on: " + _lockFile, e); 
+                throw new InvalidOperationException("Cannot open database because RavenDB was unable create file lock on: " + _lockFile, e);
             }
         }
 
@@ -332,7 +364,155 @@ namespace Raven.Server.Documents
 
         internal void ThrowDatabaseShutdown(Exception e = null)
         {
-            throw new DatabaseDisabledException("The database " + Name + " is shutting down", e);
+            throw CreateDatabaseShutdownException(e);
+        }
+
+        internal DatabaseDisabledException CreateDatabaseShutdownException(Exception e = null)
+        {
+            return new DatabaseDisabledException("The database " + Name + " is shutting down", e);
+        }
+
+        private readonly AsyncManualResetEvent _hasClusterTransaction = new AsyncManualResetEvent();
+
+        public void NotifyOnPendingClusterTransaction()
+        {
+            _hasClusterTransaction.Set();
+        }
+
+        private long? _nextClusterCommand;
+        private long _lastCompletedClusterTransaction;
+        public long LastCompletedClusterTransaction => _lastCompletedClusterTransaction;
+        private int _clusterTransactionDelayOnFailure = 1000;
+
+        private async Task ExecuteClusterTransactionTask()
+        {
+            while (DatabaseShutdown.IsCancellationRequested == false)
+            {
+                await _hasClusterTransaction.WaitAsync(DatabaseShutdown);
+                if (DatabaseShutdown.IsCancellationRequested)
+                    return;
+
+                _hasClusterTransaction.Reset();
+
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    try
+                    {
+                        var batch = new List<ClusterTransactionCommand.SingleClusterDatabaseCommand>(
+                            ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take:  256));
+
+                        if (batch.Count == 0)
+                        {
+                            continue;
+                        }
+
+                        var mergedCommands = new BatchHandler.ClusterTransactionMergedCommand(this, batch);
+                        try
+                        {
+                            await TxMerger.Enqueue(mergedCommands).WithCancellation(DatabaseShutdown);
+                        }
+                        catch (Exception e)
+                        {
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info($"Failed to execute cluster transaction batch (count: {batch.Count}), will retry them one-by-one.", e);
+                            }
+                            await ExecuteClusterTransactionOneByOne(batch);
+                            continue;
+                        }
+                        foreach (var command in batch)
+                        {
+                            OnClusterTransactionCompletion(command, mergedCommands);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        if (_logger.IsInfoEnabled)
+                        {
+                            _logger.Info($"Can't perform cluster transaction on database '{Name}'.", e);
+                        }
+                    }
+                }
+            }
+        }
+
+        private async Task ExecuteClusterTransactionOneByOne(List<ClusterTransactionCommand.SingleClusterDatabaseCommand> batch)
+        {
+            foreach (var command in batch)
+            {
+                var singleCommand = new List<ClusterTransactionCommand.SingleClusterDatabaseCommand>
+                {
+                    command
+                };
+                var mergedCommand = new BatchHandler.ClusterTransactionMergedCommand(this, singleCommand);
+                try
+                {
+                    await TxMerger.Enqueue(mergedCommand).WithCancellation(DatabaseShutdown);
+                    OnClusterTransactionCompletion(command, mergedCommand);
+                    
+                    _clusterTransactionDelayOnFailure = 1000;
+                }
+                catch (Exception e)
+                {
+                    OnClusterTransactionCompletion(command, mergedCommand, exception: e);
+                    NotificationCenter.Add(AlertRaised.Create(
+                        Name,
+                        "Cluster transaction failed to execute",
+                        $"Failed to execute cluster transactions with raft index: {command.Index}. {Environment.NewLine}" +
+                        $"With the following document ids involved: {string.Join(", ",command.Commands.Select(item => JsonDeserializationServer.ClusterTransactionDataCommand((BlittableJsonReaderObject)item).Id))} {Environment.NewLine}" +
+                        "Performing cluster transactions on this database will be stopped until the issue is resolved.",
+                        AlertType.ClusterTransactionFailure,
+                        NotificationSeverity.Error,
+                        $"{Name}/ClusterTransaction",
+                        new ExceptionDetails(e)));
+
+                    await Task.Delay(_clusterTransactionDelayOnFailure, DatabaseShutdown);
+                    _clusterTransactionDelayOnFailure = Math.Min(_clusterTransactionDelayOnFailure * 2, 15000);
+
+                    return;
+                }
+            }
+        }
+
+        private void OnClusterTransactionCompletion(ClusterTransactionCommand.SingleClusterDatabaseCommand command,
+            BatchHandler.ClusterTransactionMergedCommand mergedCommands, Exception exception = null)
+        {
+            try
+            {
+                var index = command.Index;
+                var options = mergedCommands.Options[index];
+                if (exception == null)
+                {
+                    Task indexTask = null;
+                    if (options.WaitForIndexesTimeout != null)
+                    {
+                        indexTask = BatchHandler.WaitForIndexesAsync(DocumentsStorage.ContextPool, this, options.WaitForIndexesTimeout.Value,
+                            options.SpecifiedIndexesQueryString, options.WaitForIndexThrow,
+                            mergedCommands.LastChangeVector, mergedCommands.LastTombstoneEtag, mergedCommands.ModifiedCollections);
+                    }
+
+                    var result = new BatchHandler.ClusterTransactionCompletionResult
+                    {
+                        Array = mergedCommands.Replies[index],
+                        IndexTask = indexTask,
+                    };
+                    ClusterTransactionWaiter.SetResult(options.TaskId, index, result);
+                    _nextClusterCommand = command.PreviousCount + command.Commands.Length;
+                    _lastCompletedClusterTransaction = _nextClusterCommand.Value - 1;
+                    return;
+                }
+
+                ClusterTransactionWaiter.SetException(options.TaskId, index, exception);
+            }
+            catch (Exception e)
+            {
+                // nothing we can do
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"Failed to notify about transaction completion for database '{Name}'.", e);
+                }
+            }
         }
 
         public struct DatabaseUsage : IDisposable
@@ -374,6 +554,7 @@ namespace Raven.Server.Documents
 
         private unsafe void DisposeInternal()
         {
+            _databaseShutdown.Cancel();
 
             //before we dispose of the database we take its latest info to be displayed in the studio
             try
@@ -389,8 +570,6 @@ namespace Raven.Server.Documents
                 if (_logger.IsInfoEnabled)
                     _logger.Info("Failed to generate and store database info", e);
             }
-
-            _databaseShutdown.Cancel();
 
             // we'll wait for 1 minute to drain all the requests
             // from the database
@@ -502,8 +681,17 @@ namespace Raven.Server.Documents
             {
                 if (_writeLockFile != null)
                 {
-                    _writeLockFile.Unlock(0, 1);
+                    try
+                    {
+                        _writeLockFile.Unlock(0, 1);
+                    }
+                    catch (PlatformNotSupportedException)
+                    {
+                        // Unlock isn't supported on macOS
+                    }
+                    
                     _writeLockFile.Dispose();
+                    
                     try
                     {
                         if (File.Exists(_lockFile))
@@ -565,7 +753,8 @@ namespace Raven.Server.Documents
                 DocumentsCount = DocumentsStorage.GetNumberOfDocuments(),
                 AttachmentsCount = DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(documentsContext).AttachmentCount,
                 RevisionsCount = DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(documentsContext),
-                ConflictsCount = DocumentsStorage.ConflictsStorage.GetNumberOfConflicts(documentsContext)
+                ConflictsCount = DocumentsStorage.ConflictsStorage.GetNumberOfConflicts(documentsContext),
+                CountersCount = DocumentsStorage.CountersStorage.GetNumberOfCounterEntries(documentsContext)
             };
         }
 
@@ -588,7 +777,6 @@ namespace Raven.Server.Documents
                 _lastIdleTicks = DateTime.UtcNow.Ticks;
                 IndexStore?.RunIdleOperations();
                 Operations?.CleanupOperations();
-                PeriodicBackupRunner?.RemoveInactiveCompletedTasks();
                 DocumentsStorage.Environment.ScratchBufferPool.Cleanup();
             }
             finally
@@ -806,18 +994,25 @@ namespace Raven.Server.Documents
                 ClientConfiguration = record.Client;
                 _lastClientConfigurationIndex = record.Client?.Etag ?? -1;
 
+                StudioConfiguration = record.Studio;
+
                 NotifyFeaturesAboutStateChange(record, index);
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
             {
+                DatabaseDisabledException throwShutDown = null;
+
+                if (_databaseShutdown.IsCancellationRequested && e is DatabaseDisabledException == false)
+                    e = throwShutDown = CreateDatabaseShutdownException(e);
+
                 RachisLogIndexNotifications.NotifyListenersAbout(index, e);
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Got exception during StateChanged({index}).", e);
 
-                if (_databaseShutdown.IsCancellationRequested)
-                    ThrowDatabaseShutdown(e);
+                if (throwShutDown != null)
+                    throw throwShutDown;
 
                 throw;
             }
@@ -894,6 +1089,7 @@ namespace Raven.Server.Documents
                 return;
 
             ClientConfiguration = record.Client;
+            StudioConfiguration = record.Studio;
             DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(record);
             ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, record, ExpiredDocumentsCleaner);
             PeriodicBackupRunner.UpdateConfigurations(record);

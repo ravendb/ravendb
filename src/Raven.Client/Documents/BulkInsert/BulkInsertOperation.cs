@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.BulkInsert
             {
                 if (_done.TrySetResult(null) == false)
                 {
-                    throw new BulkInsertProtocolViolationException("Unable to close the stream");
+                    throw new BulkInsertProtocolViolationException("Unable to close the stream", _done.Task.Exception);
                 }
             }
 

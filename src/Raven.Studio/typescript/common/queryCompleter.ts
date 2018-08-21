@@ -2,11 +2,8 @@
 
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
-import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import database = require("models/resources/database");
 import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
-import collection = require("models/database/documents/collection");
-import document = require("models/database/documents/document");
 
 class queryCompleter {
     private rules: AceAjax.RqlHighlightRules;
@@ -105,21 +102,17 @@ class queryCompleter {
                 if (asSpecified) {
                     if (keyword === "load") {
                         result.aliases[identifier] = nestedFieldName;
-                    }
-                    else {
+                    } else {
                         result.alias = identifier;
                         result.aliases = {};
                         result.aliases[identifier] = result.collection;
                     }
-                }
-                else if (keyword === "load") {
+                } else if (keyword === "load") {
                     nestedFieldName = identifier;
-                }
-                else if (keyword === "from") {
+                } else if (keyword === "from") {
                     result.collection = identifier;
                     asSpecified = true;
-                }
-                else if (keyword === "index") {
+                } else if (keyword === "index") {
                     result.index = identifier;
                     asSpecified = true;
                 }
@@ -137,8 +130,13 @@ class queryCompleter {
                     asSpecified = false;
                     break;
                 }
+                case "field":
+                    identifier = token.value.split('.').pop();
+                    handleAfterNextToken = true;
+                    break;
                 case "string":
-                case "identifier": {
+                case "identifier":
+                case "text": {
                     identifier = token.value;
 
                     if (token.type === "string") {
@@ -172,7 +170,8 @@ class queryCompleter {
         let prefixSpecified = false;
         let prefixToSend: string;
         if (lastKeyword.fieldPrefix) {
-            key += lastKeyword.fieldPrefix.join(".");
+            prefixToSend = lastKeyword.fieldPrefix.join(".");
+            key += prefixToSend;
             prefixSpecified = true;
 
             if (lastKeyword.info.aliases) {
@@ -181,10 +180,6 @@ class queryCompleter {
                 if (lastKeyword.info.aliases[alias]) {
                     lastKeyword.fieldPrefix.splice(last, 1);
                 }
-            }
-
-            if (lastKeyword.fieldPrefix.length > 0) {
-                prefixToSend = lastKeyword.fieldPrefix.reverse().join(".");
             }
         }
         
@@ -265,15 +260,16 @@ class queryCompleter {
         };
     
         let liveAutoCompleteSkippedTriggerToken = false;
-        let isFieldPrefixMode = 0;
-        let isBeforeCommaOrBinaryOperation = false;
+        let isBeforeComma = false;
+        let isBeforeBinaryOperation = false;
+        let afterCommaDividersCount = 0;
 
         let lastRow: number;
         let lastToken: AceAjax.TokenInfo;
         const iterator: AceAjax.TokenIterator = new this.tokenIterator(this.session, pos.row, pos.column);
         do {
             const row = iterator.getCurrentTokenRow();
-            if (!isBeforeCommaOrBinaryOperation && lastRow && lastToken && lastToken.type !== "space" && row - lastRow < 0) {
+            if (!isBeforeComma && !isBeforeBinaryOperation && lastRow && lastToken && lastToken.type !== "space" && row - lastRow < 0) {
                 result.dividersCount++;
                 lastToken.type = "space";
             }
@@ -293,15 +289,8 @@ class queryCompleter {
                     lastToken = token;
                     continue;
                 }
-                else if (token.type === "text") {
-                    const firstToken = token.value.trim();
-                    if (firstToken !== "" && firstToken !== "," && firstToken !== "." && firstToken !== "[].") {
-                        lastToken = token;
-                        continue;
-                    }
-                }
             }
-
+            
             switch (token.type) {
                 case "keyword.clause":
                     const keyword = token.value.toLowerCase();
@@ -312,42 +301,57 @@ class queryCompleter {
                     }
                     return result;
                 case "keyword.clause.clauseAppend":
+                    if (result.keyword) {
+                        result.dividersCount++;
+                    }
                     result.keyword = token.value.toLowerCase();
                     break;
                 case "keyword.asKeyword":
-                    if (!isBeforeCommaOrBinaryOperation) {
+                    if (!isBeforeComma && !isBeforeBinaryOperation) {
                         result.asSpecified = true;
                     }
                     break;
                 case "keyword.notKeyword":
-                    if (!isBeforeCommaOrBinaryOperation) {
+                    if (!isBeforeComma && !isBeforeBinaryOperation) {
                         result.notSpecified = true;
                         result.dividersCount--;
                     }
                     break;
                 case "operations.type.binary":
-                    if (!isBeforeCommaOrBinaryOperation && !result.binaryOperation) {
+                    if (!isBeforeComma && !isBeforeBinaryOperation && !result.binaryOperation) {
                         result.binaryOperation = token.value.toLowerCase();
-                        isBeforeCommaOrBinaryOperation = true;
+                        isBeforeBinaryOperation = true;
                     }
                     break;
                 case "function.where":
-                    if (!isBeforeCommaOrBinaryOperation) {
+                case "keyword.whereOperators":
+                    if (!isBeforeComma && !isBeforeBinaryOperation) {
                         result.whereFunction = token.value.toLowerCase();
                     }
                     break;
                 case "identifier":
                 case "identifier.whereFunction":
-                    if (!isBeforeCommaOrBinaryOperation) {
-                        if (isFieldPrefixMode === 1) {
-                            result.fieldPrefix.push(token.value);
-                        } else if(!result.fieldName) {
+                    if (!isBeforeComma && !isBeforeBinaryOperation) {
+                        if (!result.fieldName) {
                             result.fieldName = token.value;
                         }
                     }
                     break;
+                case "field":
+                    if (!isBeforeComma && !isBeforeBinaryOperation) {
+                        const text = token.value;
+                        let fieldPrefix = text
+                            .split(".")
+                            .map(field => field.endsWith("[]") ? field.substring(0, field.length - 2) : field);
+
+                        result.fieldName = fieldPrefix.pop();
+                        if (fieldPrefix.length > 0){
+                            result.fieldPrefix = fieldPrefix;
+                        }
+                    }
+                    break;
                 case "string":
-                    if (!isBeforeCommaOrBinaryOperation && !result.fieldName) {
+                    if (!isBeforeComma && !isBeforeBinaryOperation && !result.fieldName) {
                         const lastChar = token.value[token.value.length - 1];
                         if (lastChar === "'" ||
                             lastChar === '"') {
@@ -361,17 +365,22 @@ class queryCompleter {
                     break;
                 case "paren.lparen":
                 case "paren.lparen.whereFunction":
-                    if (!isBeforeCommaOrBinaryOperation) {
+                    if (!isBeforeBinaryOperation) {
                         result.parentheses++;
                         
                         if (token.type === "paren.lparen.whereFunction") {
                             result.whereFunctionParameters++;
                         }
+                        
+                        if (isBeforeComma){
+                            isBeforeComma = false;
+                            result.dividersCount = 0;
+                        } 
                     }
                     break;
                 case "paren.rparen":
                 case "paren.rparen.whereFunction":
-                    if (!isBeforeCommaOrBinaryOperation) {
+                    if (!isBeforeComma && !isBeforeBinaryOperation) {
                         result.parentheses--;
 
                         if (!lastToken || lastToken.type !== "space") {
@@ -382,28 +391,18 @@ class queryCompleter {
                     }
                     break;
                 case "space":
-                    if (!isBeforeCommaOrBinaryOperation && !result.keyword) {
+                    if (isBeforeComma) {
+                        afterCommaDividersCount++;
+                    }
+                    else if (!isBeforeBinaryOperation && !result.keyword) {
                         if (!lastToken || lastToken.type !== "space") {
                             result.dividersCount++;
-                        }
-
-                        if (isFieldPrefixMode === 1) {
-                            isFieldPrefixMode = 2;
-                        }
-                    }
-                    break;
-                case "text":
-                    if (!isBeforeCommaOrBinaryOperation && !result.whereFunction) {
-                        const text = token.value;
-                        if (isFieldPrefixMode === 0 && (text === "." || text === "[].")) { // TODO: Intorudce regex rule for fieldPrefix /(?:.|[].)/
-                            isFieldPrefixMode = 1;
-                            result.fieldPrefix = [];
                         }
                     }
                     break;
                 case "comma":
-                    if (!isBeforeCommaOrBinaryOperation) {
-                        isBeforeCommaOrBinaryOperation = true;
+                    if (!isBeforeComma && !isBeforeBinaryOperation) {
+                        isBeforeComma = true;
 
                         if (!lastToken || lastToken.type !== "space") {
                             result.dividersCount++;
@@ -413,6 +412,11 @@ class queryCompleter {
                 case "comma.whereFunction":
                     if (!result.whereFunction) {
                         result.whereFunctionParameters++;
+                    }
+                    break;
+                case "operator.where":
+                    if (!isBeforeComma && !isBeforeBinaryOperation && result.fieldName) {
+                        result.fieldName = null;
                     }
                     break;
             }
@@ -468,6 +472,10 @@ class queryCompleter {
         }
 
         return this.completeError("empty completion");
+    }
+
+    private trimValue(value: string) {
+        return _.trim(value, "'\"")
     }
 
     complete(editor: AceAjax.Editor,
@@ -599,71 +607,28 @@ class queryCompleter {
                 if (lastKeyword.dividersCount === 2) {
                     return callback(null, queryCompleter.whereOperators);
                 }
-                
-                if (true) { // TODO: refactor this
+
+                if (lastKeyword.dividersCount === 3) {
                     if (!lastKeyword.fieldName) {
                         return this.completeError("No field was specified");
                     }
 
-                    const collection = this.lastKeyword.info.collection;
-                    const index = this.lastKeyword.info.index;
-                    if (!collection && !index) {
+                    if (!lastKeyword.info.collection && !lastKeyword.info.index) {
                         return this.completeError("no collection or index specified");
                     }
+                    
+                    if (lastKeyword.whereFunction) {
+                        if (this.lastKeyword.parentheses == 0){
+                            return this.completeError("in | should not complete anything");
+                        }
 
-                    this.getIndexFields()
-                        .done((wordList) => {
-                            if (!wordList.find(x => x.value === lastKeyword.fieldName)) {
-                                return this.completeError("Field not in the words list");
-                            }
+                        return this.completeTerms();
+                    } 
 
-                            let currentValue: string = "";
-
-                            /* TODO: currentValue = currentToken.value.trim();
-                             const rowTokens: any[] = session.getTokens(pos.row);
-                             if (!!rowTokens && rowTokens.length > 1) {
-                             currentColumnName = rowTokens[rowTokens.length - 2].value.trim();
-                             currentColumnName = currentColumnName.substring(0, currentColumnName.length - 1);
-                             }*/
-
-
-                            // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
-                            if (index) {
-                                this.providers.terms(index, lastKeyword.fieldName, 20, terms => {
-                                    if (terms && terms.length) {
-                                        return this.completeWords(terms.map(term => ({
-                                                caption: term,
-                                                value: queryCompleter.escapeCollectionOrFieldName(term) + " ",
-                                                score: 1,
-                                                meta: "value"
-                                            })));
-                                    }
-                                })
-                            } else {
-                                /* TODO finish me!
-                                if (currentValue.length > 0) {
-                                    // TODO: Not sure what we want to show here?
-                                    new getDocumentsMetadataByIDPrefixCommand(currentValue, 1, this.activeDatabase())
-                                        .execute()
-                                        .done((results: metadataAwareDto[]) => {
-                                            if (results && results.length > 0) {
-                                                this.completeWords(callback, results.map(curVal => {
-                                                    return {
-                                                        value: "'" + curVal["@metadata"]["@id"] + "'",
-                                                        score: 1,
-                                                        meta: "value"
-                                                    };
-                                                }));
-                                            }
-                                        });
-                                } else {
-                                    return this.completeError("empty completion");
-                                }*/
-                            }
-                        });
+                    return this.completeTerms();
                 }
 
-                return;
+                return this.completeError("Failed to complete");
             }
             case "load": {
                 if (lastKeyword.dividersCount === 0) {
@@ -819,11 +784,35 @@ class queryCompleter {
 
         this.callback(null, keywords);
     }
+
+    private completeTerms() {
+        const lastKeyword = this.lastKeyword;
+        this.getIndexFields()
+            .done((wordList) => {
+                let fieldName = this.trimValue(lastKeyword.fieldName);
+                if (!wordList.find(x => x.caption === fieldName)) {
+                    return this.completeError("Field not in the words list");
+                }
+
+                this.providers.terms(lastKeyword.info.index, lastKeyword.info.collection, fieldName, 20, terms => {
+                    if (terms && terms.length) {
+                        return this.completeWords(terms.map(term => ({
+                            caption: term,
+                            value: queryCompleter.escapeCollectionOrFieldName(term) + " ",
+                            score: 1,
+                            meta: "term"
+                        })));
+                    }
+
+                    return this.completeError("No terms");
+                });
+            });
+    }
     
     static remoteCompleter(activeDatabase: KnockoutObservable<database>, indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>, queryType: rqlQueryType) {
         const providers: queryCompleterProviders = {
-            terms: (indexName, field, pageSize, callback) => {
-                new getIndexTermsCommand(indexName, field, activeDatabase(), pageSize)
+            terms: (indexName, collection, field, pageSize, callback) => {
+                new getIndexTermsCommand(indexName, collection, field, activeDatabase(), pageSize)
                     .execute()
                     .done(terms => {
                         callback(terms.Terms);

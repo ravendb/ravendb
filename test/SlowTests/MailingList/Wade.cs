@@ -6,25 +6,14 @@ using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Server.NotificationCenter;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
     public class Wade : RavenTestBase
     {
-        private readonly ITestOutputHelper _outputHelper;
-
-        public Wade(ITestOutputHelper outputHelper)
-        {
-            _outputHelper = outputHelper;
-        }
-
-
         private class PersonDOBIndex : AbstractIndexCreationTask<Person>
         {
-
             public PersonDOBIndex()
             {
                 Map = people => from person in people
@@ -35,8 +24,6 @@ namespace SlowTests.MailingList
                                     Children_BirthDate = person.Children.Select(z => z.BirthDate)
                                 };
             }
-
-
         }
 
         private class Person

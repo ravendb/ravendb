@@ -27,7 +27,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             {
                 Add(new Job(RunMode.Default)
                 {
-                    Env =
+                    Environment =
                     {
                         Runtime = Runtime.Core,
                         Platform = Platform.X64,
@@ -53,7 +53,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
 
         private ByteStringContext _context;
         private int size = 1024 * 1024 * 64;
-        
+
         private ByteString source;
         private TreePage[] _pages;
         private Slice[] _keys;
@@ -103,7 +103,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 _keys[index] = slice;
                 sortedRandStr.Add(slice, slice);
             }
-            
+
             // We need to insert in order, because we need them to be in order and the pages do not care about it. 
             int position = 0;
             foreach (var key in sortedRandStr)
@@ -209,14 +209,14 @@ namespace Micro.Benchmark.Benchmarks.Hardware
 
             return null;
 
-            NoEntries:
+        NoEntries:
             {
                 page.LastSearchPosition = 0;
                 page.LastMatch = 1;
                 return null;
             }
 
-            SingleEntryKey:
+        SingleEntryKey:
             {
                 var node = page.GetNode(0);
 
@@ -230,7 +230,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 return page.LastSearchPosition == 0 ? node : null;
             }
 
-            MultipleEntryKey:
+        MultipleEntryKey:
             {
                 page.LastMatch = lastMatch;
                 page.LastSearchPosition = lastSearchPosition;
@@ -307,14 +307,14 @@ namespace Micro.Benchmark.Benchmarks.Hardware
 
             return null;
 
-            NoEntries:
+        NoEntries:
             {
                 page.LastSearchPosition = 0;
                 page.LastMatch = 1;
                 return null;
             }
 
-            SingleEntryKey:
+        SingleEntryKey:
             {
                 var node = page.GetNode(0);
 
@@ -328,7 +328,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 return page.LastSearchPosition == 0 ? node : null;
             }
 
-            MultipleEntryKey:
+        MultipleEntryKey:
             {
                 page.LastMatch = lastMatch;
                 page.LastSearchPosition = lastSearchPosition;

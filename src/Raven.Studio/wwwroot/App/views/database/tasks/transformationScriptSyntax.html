@@ -1,18 +1,25 @@
 <div class="modal-dialog modal-lg" role="document" id="transformationScriptSyntaxDialog">
-<div data-bind="visible: etlType() === 'Raven'">    
-<div>Simple RavenDB ETL transformation script:</div>    
-<pre class="margin-bottom"><span class="token keyword">loadTo<span class="token string">NewEmployees</span></span><span class="token punctuation"> ({</span>
-            Name: this.LastName + " some new data..",
-            Title: this.Title + " some new data.."
+    <div class="modal-content">
+       <div class="modal-body">
+           <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
+           <div data-bind="visible: etlType() === 'Raven'">
+                <div class="margin-bottom margin-top">Simple RavenDB ETL Transformation Script:</div>
+<pre class="margin-bottom">
+<span class="token keyword">loadTo<span class="token string">NewEmployees</span></span><span class="token punctuation"> ({</span>
+        Name: this.LastName <span class="token operator">+</span> " some new data..",
+        Title: this.Title <span class="token operator">+</span> " some new data.."
 <span class="token punctuation">})</span>;
-
-<span class="text-warning">Note: The destination collection name must be concatenated to the 'loadTo' keyword</span>
 </pre>
-</div>
-<div data-bind="visible: etlType() === 'Sql'">
-<div>Simple Sql ETL transformation script:</div>
-    
-<pre data-bind="html: scriptHtml"></pre>
-
-</div>    
+            </div>
+            <div data-bind="visible: etlType() === 'Sql'">
+                <div class="margin-bottom margin-top">Simple SQL ETL Transformation Script:</div>
+                <pre data-bind="html: scriptHtml"></pre> 
+            </div>
+       </div>
+       <div class="modal-footer margin-bottom">
+           <div class="text-left bg-info text-info">
+               <span class="padding"><strong>Note</strong>: The destination <span data-bind="text: etlType() === 'Raven' ? 'collection' : 'table'"></span> name must be concatenated to the 'loadTo' keyword</span>
+           </div>
+       </div>
+    </div>
 </div>

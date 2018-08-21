@@ -6,16 +6,22 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide.Tcp;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Voron;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -60,6 +66,51 @@ namespace Raven.Server.Documents.Handlers
         public Task GetPost()
         {
             return GetAttachment(false);
+        }
+
+        [RavenAction("/databases/*/debug/attachments/hash", "GET", AuthorizationStatus.ValidUser)]
+        public Task Exists()
+        {
+            var hash = GetStringQueryString("hash");
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            using (Slice.From(context.Allocator, hash, out var hashSlice))
+            {
+                var count = AttachmentsStorage.GetCountOfAttachmentsForHash(context, hashSlice);
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Hash");
+                    writer.WriteString(hash);
+                    writer.WriteComma();
+                    writer.WritePropertyName("Count");
+                    writer.WriteInteger(count);
+                    writer.WriteEndObject();
+                }
+            }
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/debug/attachments/metadata", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetDocumentsAttachmentMetadataWithCounts()
+        {
+            var id = GetStringQueryString("id", false);
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var array = Database.DocumentsStorage.AttachmentsStorage.GetAttachmentsMetadataForDocumenWithCounts(context, id.ToLowerInvariant());
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Id");
+                    writer.WriteString(id);
+                    writer.WriteComma();
+                    writer.WriteArray("Attachments", array, context);
+                    writer.WriteEndObject();
+                }
+            }
+            return Task.CompletedTask;
         }
 
         private async Task GetAttachment(bool isDocument)
@@ -152,7 +203,7 @@ namespace Raven.Server.Documents.Handlers
                 AttachmentDetails result;
                 using (var streamsTempFile = Database.DocumentsStorage.AttachmentsStorage.GetTempFile("put"))
                 using (var stream = streamsTempFile.StartNewStream())
-                {                    
+                {
                     Stream requestBodyStream = RequestBodyStream();
                     string hash;
                     try

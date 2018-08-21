@@ -1,4 +1,5 @@
 ﻿using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -30,6 +31,10 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(Index)] = Index,
                 [nameof(Type)] = nameof(CommandType.CompareExchangePUT)
             };
+        }
+
+        public void OnBeforeSaveChanges(InMemoryDocumentSessionOperations session)
+        {
         }
     }
 }

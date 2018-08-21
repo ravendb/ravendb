@@ -11,6 +11,7 @@ namespace Raven.Client.Documents.Operations.Counters
     {
         public bool ReplyWithAllNodesValues;
         public List<DocumentCountersOperation> Documents = new List<DocumentCountersOperation>();
+        public bool FromEtl;
     }
 
     public class DocumentCountersOperation
@@ -86,21 +87,27 @@ namespace Raven.Client.Documents.Operations.Counters
         public string CounterName;
         public long Delta;
 
-        public string ChangeVector;
+        internal string ChangeVector;
 
         public static CounterOperation Parse(BlittableJsonReaderObject input)
         {
-            if (input.TryGet("CounterName", out string name) == false || name == null)
+            if (input.TryGet(nameof(CounterName), out string name) == false || name == null)
                 ThrowMissingCounterName();
 
-            if (input.TryGet("Type", out string type) == false || type == null)
+            if (input.TryGet(nameof(Type), out string type) == false || type == null)
                 ThrowMissingCounterOperationType(name);
 
             var counterOperationType = (CounterOperationType)Enum.Parse(typeof(CounterOperationType), type);
 
             long? delta = null;
-            if (counterOperationType == CounterOperationType.Increment && input.TryGet("Delta", out delta) == false)
-                ThrowMissingDeltaProperty(name);
+            switch (counterOperationType)
+            {
+                case CounterOperationType.Increment:
+                case CounterOperationType.Put:
+                    if (input.TryGet(nameof(Delta), out delta) == false)
+                        ThrowMissingDeltaProperty(name, counterOperationType);
+                    break;
+            }
 
             var counterOperation = new CounterOperation
             {
@@ -114,19 +121,19 @@ namespace Raven.Client.Documents.Operations.Counters
             return counterOperation;
         }
 
-        private static void ThrowMissingDeltaProperty(string name)
+        private static void ThrowMissingDeltaProperty(string name, CounterOperationType type)
         {
-            throw new InvalidDataException($"Missing 'Delta' property in Counter '{name}' of Type {CounterOperationType.Increment} ");
+            throw new InvalidDataException($"Missing '{nameof(Delta)}' property in Counter '{name}' of Type {type} ");
         }
 
         private static void ThrowMissingCounterOperationType(string name)
         {
-            throw new InvalidDataException($"Missing 'Type' property in Counter '{name}'");
+            throw new InvalidDataException($"Missing '{nameof(Type)}' property in Counter '{name}'");
         }
 
         private static void ThrowMissingCounterName()
         {
-            throw new InvalidDataException("Missing 'CounterName' property");
+            throw new InvalidDataException($"Missing '{nameof(CounterName)}' property");
         }
 
         public DynamicJsonValue ToJson()

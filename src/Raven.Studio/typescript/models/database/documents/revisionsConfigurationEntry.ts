@@ -65,14 +65,13 @@ class revisionsConfigurationEntry {
     private initValidation() {
         this.collection.extend({
             required: true
-            // TODO: add validation if collection doesn't exist, because user can input any text..  
         });
 
         this.minimumRevisionsToKeep.extend({
             required: {
                 onlyIf: () => this.limitRevisions()
             },
-            min: 0
+            digit: true
         });
 
         this.minimumRevisionAgeToKeep.extend({

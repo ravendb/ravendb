@@ -65,7 +65,7 @@ class databaseSwitcher {
         });
 
         const self = this;
-        $('.box-container a', this.$selectDatabaseContainer).on('click', function (e: Event) {
+        $('.box-container', this.$selectDatabaseContainer).on('click', "a", function (e: Event) {
             e.stopPropagation();
             self.hide();
             let a: HTMLAnchorElement = this as HTMLAnchorElement;
@@ -96,6 +96,11 @@ class databaseSwitcher {
     }
 
     private shouldConsumeHideEvent(e: Event) {
+        if ($(e.target).parents(".resources-link").length) {
+            e.stopPropagation();
+            return true;
+        }
+        
         return $(e.target).parents(".database-switcher-container").length === 0
             && !$(e.target).hasClass(".database-switcher");
     }

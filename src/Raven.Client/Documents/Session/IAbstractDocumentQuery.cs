@@ -8,6 +8,7 @@ using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Queries.Suggestions;
+using Raven.Client.Documents.Session.Loaders;
 
 namespace Raven.Client.Documents.Session
 {
@@ -72,6 +73,12 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "path">The path.</param>
         void Include(Expression<Func<T, object>> path);
+
+        /// <summary>
+        ///   Includes the specified documents and/or counters in the query, specified by IncludeBuilder
+        /// </summary>
+        /// <param name="includes"></param>
+        void Include(IncludeBuilder includes);
 
         /// <summary>
         ///   Takes the specified count.
@@ -308,6 +315,8 @@ namespace Raven.Client.Documents.Session
         void AggregateUsing(string facetSetupDocumentId);
 
         void AddFromAliasToWhereTokens(string fromAlias);
+
+        string AddAliasToCounterIncludesTokens(string fromAlias);
 
         string ProjectionParameter(object id);
 

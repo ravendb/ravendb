@@ -1,8 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
-using Sparrow.Collections.LockFree;
 
 namespace Raven.Server.Documents
 {

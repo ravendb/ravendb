@@ -150,6 +150,9 @@ namespace Raven.Server.ServerWide.Commands
 
         public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index)
         {
+            // We have to clone the Value because we might have gotten this command from another node
+            // and it was serialized. In that case, it is an _internal_ object, not a full document,
+            // so we have to clone it to get it into a standalone mode.
             Value = Value.Clone(context);
             using (Slice.From(context.Allocator, ActualKey, out Slice keySlice))
             using (items.Allocate(out TableValueBuilder tvb))

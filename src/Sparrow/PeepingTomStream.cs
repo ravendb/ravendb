@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Json;
 
@@ -111,9 +112,9 @@ namespace Sparrow
             }
         }
 
-        public async Task<int> ReadAsync(byte[] buffer, int offset, int count)
+        public async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken token = default)
         {
-            var read = await _stream.ReadAsync(buffer, offset, count).ConfigureAwait(false);
+            var read = await _stream.ReadAsync(buffer, offset, count, token).ConfigureAwait(false);
             var rc = ReadInternal(buffer, offset, read);
 
             return rc;

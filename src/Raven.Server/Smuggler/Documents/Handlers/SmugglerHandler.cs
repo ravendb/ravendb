@@ -7,12 +7,15 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
@@ -21,6 +24,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
@@ -33,6 +37,7 @@ using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Raven.Server.Smuggler.Documents.Handlers
@@ -93,7 +98,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     var firstRead = await stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count);
                     buffer.Used = 0;
                     buffer.Valid = firstRead;
-                    if(firstRead != 0)
+                    if (firstRead != 0)
                     {
                         var blittableJson = await context.ParseToMemoryAsync(stream, "DownloadOptions", BlittableJsonDocumentBuilder.UsageMode.None, buffer);
                         options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
@@ -134,8 +139,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         private IOperationResult ExportDatabaseInternal(
             DatabaseSmugglerOptionsServerSide options,
             long startDocumentEtag,
-            Action<IOperationProgress> onProgress, 
-            DocumentsOperationContext context, 
+            Action<IOperationProgress> onProgress,
+            DocumentsOperationContext context,
             OperationCancelToken token)
         {
             using (token)
@@ -146,8 +151,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 return smuggler.Execute();
             }
         }
-        
-        
+
+
 
         [RavenAction("/databases/*/admin/smuggler/import", "GET", AuthorizationStatus.Operator)]
         public async Task GetImport()
@@ -157,7 +162,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             {
                 throw new ArgumentException("'file' or 'url' are mandatory when using GET /smuggler/import");
             }
-       
+
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext);
@@ -186,15 +191,15 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             var filesListing = XElement.Parse(dirTextXml);
             var ns = XNamespace.Get("http://s3.amazonaws.com/doc/2006-03-01/");
             var urls = from content in filesListing.Elements(ns + "Contents")
-                let requestUri = url.TrimEnd('/') + "/" + content.Element(ns + "Key").Value
-                select (Func<Task<Stream>>) (async () =>
-                {
-                    var respone = await HttpClient.GetAsync(requestUri);
-                    if (respone.IsSuccessStatusCode == false)
-                        throw new InvalidOperationException("Request failed on " + requestUri + " with " +
-                                                            await respone.Content.ReadAsStreamAsync());
-                    return await respone.Content.ReadAsStreamAsync();
-                });
+                       let requestUri = url.TrimEnd('/') + "/" + content.Element(ns + "Key").Value
+                       select (Func<Task<Stream>>)(async () =>
+                      {
+                          var respone = await HttpClient.GetAsync(requestUri);
+                          if (respone.IsSuccessStatusCode == false)
+                              throw new InvalidOperationException("Request failed on " + requestUri + " with " +
+                                                                  await respone.Content.ReadAsStreamAsync());
+                          return await respone.Content.ReadAsStreamAsync();
+                      });
 
             var files = new BlockingCollection<Func<Task<Stream>>>(new ConcurrentQueue<Func<Task<Stream>>>(urls));
             files.CompleteAdding();
@@ -298,8 +303,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/smuggler/migrate", "POST", AuthorizationStatus.Operator)]
-        public async Task Migrate()
+        [RavenAction("/databases/*/admin/smuggler/migrate/ravendb", "POST", AuthorizationStatus.Operator)]
+        public async Task MigrateFromRavenDB()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
@@ -379,6 +384,215 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
 
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/admin/smuggler/migrate", "POST", AuthorizationStatus.Operator)]
+        public async Task MigrateFromAnotherDatabase()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var blittable = await context.ReadForMemoryAsync(RequestBodyStream(), "migration-configuration");
+                var migrationConfiguration = JsonDeserializationServer.MigrationConfiguration(blittable);
+
+                if (string.IsNullOrWhiteSpace(migrationConfiguration.MigratorFullPath))
+                    throw new ArgumentException("MigratorFullPath cannot be null or empty");
+
+                if (migrationConfiguration.InputConfiguration == null)
+                    throw new ArgumentException("InputConfiguration cannot be null");
+
+                if (migrationConfiguration.InputConfiguration.TryGet("Command", out string command) == false)
+                    throw new ArgumentException("Cannot find the Command property in the InputConfiguration");
+
+                var migratorFile = ResolveMigratorPath(migrationConfiguration);
+                if (command == "validateMigratorPath")
+                {
+                    NoContentStatus();
+                    return;
+                }
+                
+                if (string.IsNullOrWhiteSpace(migrationConfiguration.DatabaseTypeName))
+                    throw new ArgumentException("DatabaseTypeName cannot be null or empty");
+                
+                var processStartInfo = new ProcessStartInfo
+                {
+                    FileName = migratorFile.FullName,
+                    Arguments = $"{migrationConfiguration.DatabaseTypeName}",
+                    WorkingDirectory = migratorFile.Directory.FullName,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    RedirectStandardInput = true,
+                    UseShellExecute = false
+                };
+
+                Process process = null;
+                try
+                {
+                    process = Process.Start(processStartInfo);
+                }
+                catch (Exception e)
+                {
+                    var killed = KillProcess(process);
+                    throw new InvalidOperationException($"Unable to execute Migrator. Process killed: {killed}" + Environment.NewLine +
+                                                        "Command was: " + Environment.NewLine +
+                                                        (processStartInfo.WorkingDirectory ?? Directory.GetCurrentDirectory()) + "> "
+                                                        + processStartInfo.FileName + " " + processStartInfo.Arguments, e);
+                }
+
+                await process.StandardInput.WriteLineAsync(migrationConfiguration.InputConfiguration.ToString());
+
+                var isExportCommand = command == "export";
+                if (isExportCommand == false)
+                {
+                    var errorReadTask = ReadOutput(process.StandardError);
+                    var outputReadTask = ReadOutput(process.StandardOutput);
+
+                    await Task.WhenAll(new Task[] {errorReadTask, outputReadTask}).ConfigureAwait(false);
+
+                    Debug.Assert(process.HasExited, "Migrator is still running!");
+
+                    if (process.ExitCode == -1)
+                    {
+                        await ExitWithException(errorReadTask, null).ConfigureAwait(false);
+                    }
+
+                    try
+                    {
+                        var line = await outputReadTask.ConfigureAwait(false);
+                        using (var sw = new StreamWriter(ResponseBodyStream()))
+                        {
+                            await sw.WriteAsync(line);
+                        }
+
+                        return;
+                    }
+                    catch (Exception e)
+                    {
+                        await ExitWithException(errorReadTask, e).ConfigureAwait(false);
+                    }
+                }
+
+                var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
+                var token = CreateOperationToken();
+                var transformScript = migrationConfiguration.TransformScript;
+
+                var t = Database.Operations.AddOperation(Database, $"Migration from: {migrationConfiguration.DatabaseTypeName}",
+                    Operations.OperationType.DatabaseMigration,
+                    onProgress =>
+                    {
+                        return Task.Run(async () =>
+                        {
+                            var result = new SmugglerResult();
+
+                            try
+                            {
+                                using (ContextPool.AllocateOperationContext(out DocumentsOperationContext migrateContext))
+                                {
+                                    var options = new DatabaseSmugglerOptionsServerSide
+                                    {
+                                        TransformScript = transformScript
+                                    };
+                                    DoImportInternal(migrateContext, process.StandardOutput.BaseStream, options, result, onProgress, token);
+                                }
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                KillProcess(process);
+                                throw;
+                            }
+                            catch (ObjectDisposedException)
+                            {
+                                KillProcess(process);
+                                throw;
+                            }
+                            catch (Exception e)
+                            {
+                                var errorString = await ReadOutput(process.StandardError).ConfigureAwait(false);
+                                result.AddError($"Error occurred during migration. Process error: {errorString}, exception: {e}");
+                                onProgress.Invoke(result.Progress);
+                                var killed = KillProcess(process);
+                                throw new InvalidOperationException($"{errorString}, process killed: {killed}");
+                            }
+
+                            return (IOperationResult)result;
+                        });
+                    }, operationId, token: token).ConfigureAwait(false);
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteOperationId(context, operationId);
+                }
+            }
+        }
+
+        private static async Task ExitWithException(Task<string> errorReadTask, Exception exception)
+        {
+            var errorString = await errorReadTask.ConfigureAwait(false);
+            if (exception == null)
+            {
+                throw new InvalidOperationException(errorString);
+            }
+
+            throw new InvalidOperationException($"Process error: {errorString}, exception: {exception}");
+        }
+
+        private FileInfo ResolveMigratorPath(MigrationConfiguration migrationConfiguration)
+        {
+            var migratorDirectory = new DirectoryInfo(migrationConfiguration.MigratorFullPath);
+            if (migratorDirectory.Exists == false)
+                throw new InvalidOperationException($"Directory {migrationConfiguration.MigratorFullPath} doesn't exist");
+
+            var migratorFileName = PlatformDetails.RunningOnPosix
+                ? "Raven.Migrator"
+                : "Raven.Migrator.exe";
+
+            var path = Path.Combine(migratorDirectory.FullName, migratorFileName);
+            var migratorFile = new FileInfo(path);
+            if (migratorFile.Exists == false)
+                throw new InvalidOperationException($"The file '{migratorFileName}' doesn't exist in path: {migrationConfiguration.MigratorFullPath}");
+
+            return migratorFile;
+        }
+
+        private static bool KillProcess(Process process)
+        {
+            try
+            {
+                process?.Kill();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static async Task<string> ReadOutput(StreamReader output)
+        {
+            var sb = new StringBuilder();
+
+            Task<string> readLineTask = null;
+            while (true)
+            {
+                if (readLineTask == null)
+                    readLineTask = output.ReadLineAsync();
+
+                var hasResult = await readLineTask.WaitWithTimeout(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                if (hasResult == false)
+                    continue;
+
+                var line = readLineTask.Result;
+
+                readLineTask = null;
+
+                if (line != null)
+                    sb.AppendLine(line);
+
+                if (line == null)
+                    break;
+            }
+
+            return sb.ToString();
         }
 
         [RavenAction("/databases/*/smuggler/import", "POST", AuthorizationStatus.ValidUser)]
@@ -523,7 +737,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                             var fileName = contentDisposition.FileName.ToString().Trim('\"');
                                             collection = Inflector.Pluralize(CSharpClassName.ConvertToValidClassName(Path.GetFileNameWithoutExtension(fileName)));
                                         }
-                                        
+
                                         var options = new DatabaseSmugglerOptionsServerSide();
                                         if (section.Headers.ContainsKey("Content-Encoding") && section.Headers["Content-Encoding"] == "gzip")
                                         {
@@ -547,7 +761,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             return (IOperationResult)result;
                         });
                     }, operationId, token: token);
-                
+
                 WriteImportResult(context, result, ResponseBodyStream());
             }
         }
@@ -584,7 +798,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             var file = GetStringQueryString("file", required: false);
             if (string.IsNullOrEmpty(file) == false)
             {
-                if(IsOperator() == false)
+                if (IsOperator() == false)
                     throw new AuthorizationException("The use of the 'file' query string parameters is limited operators and above");
                 return File.OpenRead(file);
             }
@@ -592,9 +806,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             var url = GetStringQueryString("url", required: false);
             if (string.IsNullOrEmpty(url) == false)
             {
-                if(IsOperator() == false)
+                if (IsOperator() == false)
                     throw new AuthorizationException("The use of the 'url' query string parameters is limited operators and above");
-                
+
                 if (HttpContext.Request.Method == "POST")
                 {
                     var msg = await HttpClient.PostAsync(url, new StreamContent(HttpContext.Request.Body)
@@ -606,7 +820,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     });
                     return await msg.Content.ReadAsStreamAsync();
                 }
-                
+
                 return await HttpClient.GetStreamAsync(url);
             }
 

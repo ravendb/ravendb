@@ -86,14 +86,14 @@ namespace Raven.Server.Rachis
             return StateMachine.ShouldSnapshot(slice, type);
         }
 
-        public override void SnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex)
+        public override Task SnapshotInstalledAsync(long lastIncludedIndex)
         {
-            StateMachine.OnSnapshotInstalled(context, lastIncludedIndex, _serverStore);
+            return StateMachine.OnSnapshotInstalledAsync(lastIncludedIndex, _serverStore);
         }
 
-        public override Task<(Stream Stream, Action Disconnect)> ConnectToPeer(string url, X509Certificate2 certificate, TransactionOperationContext context = null)
+        public override Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate)
         {
-            return StateMachine.ConnectToPeer(url, certificate);
+            return StateMachine.ConnectToPeer(url, tag, certificate);
         }
 
         private class NullDisposable : IDisposable
@@ -226,7 +226,7 @@ namespace Raven.Server.Rachis
     }
     
     public abstract class RachisConsensus : IDisposable
-    {        
+    {
         internal abstract RachisStateMachine GetStateMachine();
 
         internal abstract RachisVersionValidation Validator { get; }
@@ -252,6 +252,8 @@ namespace Raven.Server.Rachis
         public event EventHandler<ClusterTopology> TopologyChanged;
 
         public event EventHandler<StateTransition> StateChanged;
+
+        public event Action<TransactionOperationContext, CommandBase> BeforeAppendToRaftLog;
 
         public event EventHandler LeaderElected;
 
@@ -477,7 +479,7 @@ namespace Raven.Server.Rachis
             while (cts.IsCancellationRequested == false)
             {
                 // we setup the wait _before_ checking the state
-                var task = _stateChanged.Task;
+                var task = _stateChanged.Task.WithCancellation(cts);
 
                 if (CurrentState == rachisState)
                     return;
@@ -492,7 +494,7 @@ namespace Raven.Server.Rachis
             while (cts.IsCancellationRequested == false)
             {
                 // we setup the wait _before_ checking the state
-                var task = _stateChanged.Task;
+                var task = _stateChanged.Task.WithCancellation(cts);
 
                 if (currentLeader != GetLeaderTag(safe: true))
                     return;
@@ -506,7 +508,7 @@ namespace Raven.Server.Rachis
             while (cts.IsCancellationRequested == false)
             {
                 // we setup the wait _before_ checking the state
-                var task = _stateChanged.Task;
+                var task = _stateChanged.Task.WithCancellation(cts);
 
                 if (CurrentState != rachisState)
                     return;
@@ -598,8 +600,7 @@ namespace Raven.Server.Rachis
             Action beforeStateChangedEvent = null)
         {
             if (expectedTerm != CurrentTerm && expectedTerm != -1)
-                throw new ConcurrencyException(
-                    $"Attempted to switch state to {rachisState} on expected term {expectedTerm} but the real term is {CurrentTerm}");
+                RachisConcurrencyException.Throw($"Attempted to switch state to {rachisState} on expected term {expectedTerm} but the real term is {CurrentTerm}");
 
             var sp = Stopwatch.StartNew();
             
@@ -761,7 +762,7 @@ namespace Raven.Server.Rachis
             var leader = new Leader(this, electionTerm);
             SetNewState(RachisState.LeaderElect, leader, electionTerm, reason, () =>
             {
-                ClusterCommandsVersionManager.CurrentClusterMinimalVersion = version;
+                ClusterCommandsVersionManager.SetClusterVersion(version);
                 _currentLeader = leader;
             });
             leader.Start(connections);
@@ -793,15 +794,24 @@ namespace Raven.Server.Rachis
                 {
                     var clusterTopology = GetTopology(context);
                     if (clusterTopology.TopologyId == null ||
-                        clusterTopology.Members.ContainsKey(_tag) == false)
+                        clusterTopology.AllNodes.ContainsKey(_tag) == false)
                     {
                         if (Log.IsInfoEnabled)
                         {
-                            Log.Info("We are not a part of the cluster so moving to passive");
+                            Log.Info($"We are not a part of the cluster so moving to passive (candidate because: {reason})");
                         }
 
                         SetNewStateInTx(context, RachisState.Passive, null, currentTerm, "We are not a part of the cluster so moving to passive" );
                         ctx.Commit();
+                        return;
+                    }
+                    if (clusterTopology.Members.ContainsKey(_tag) == false)
+                    {
+                        if (Log.IsInfoEnabled)
+                        {
+                            Log.Info($"Candidate because: {reason}, but while we are part of the cluster, we aren't a member, so we can't be a candidate.");
+                        }
+                        // we aren't a member, nothing that we can do here
                         return;
                     }
                     if (clusterTopology.Members.Count == 1)
@@ -901,11 +911,10 @@ namespace Raven.Server.Rachis
                 topologyJson.CopyTo(ptr);
             }
 
-            if (engine == null)
-                return null;
-
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
             {
+                clusterTopology.AllNodes.TryGetValue(engine.Tag, out var key);
+                engine.Url = key;
                 TaskExecutor.CompleteAndReplace(ref engine._topologyChanged);
                 engine.TopologyChanged?.Invoke(engine, clusterTopology);
             };
@@ -1050,11 +1059,15 @@ namespace Raven.Server.Rachis
                 {
                     // ignored
                 }
+
+                throw;
             }
         }
 
         private void ValidateElectionTimeout(RachisHello initialMessage)
         {
+            if (Debugger.IsAttached)
+                return; // don't check here
             var max = ElectionTimeout.TotalMilliseconds * 1.1;
             var min = ElectionTimeout.TotalMilliseconds * 0.9;
             var rcvdTimeout = initialMessage.ElectionTimeout;
@@ -1177,9 +1190,7 @@ namespace Raven.Server.Rachis
             long lastTopologyIndex = -1;
             BlittableJsonReaderObject lastTopology = null;
 
-            using (
-    Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*)&reversedEntryIndex, sizeof(long),
-        out Slice key))
+            using (Slice.External(context.Transaction.InnerTransaction.Allocator, (byte*)&reversedEntryIndex, sizeof(long), out Slice key))
             {
                 var lastEntryIndex = GetLastEntryIndex(context);
                 GetLastCommitIndex(context, out var lastCommitIndex, out var lastCommitTerm);
@@ -1613,7 +1624,7 @@ namespace Raven.Server.Rachis
             ContextPool?.Dispose();
         }
 
-        public abstract Task<(Stream Stream, Action Disconnect)> ConnectToPeer(string url, X509Certificate2 certificate, TransactionOperationContext context = null);
+        public abstract Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate);
 
         public class BootstrapOptions
         {
@@ -1621,7 +1632,7 @@ namespace Raven.Server.Rachis
             public Guid? TopologyId;
         }
 
-        public void Bootstrap(string selfUrl)
+        public void Bootstrap(string selfUrl, string nodeTag)
         {
             if (selfUrl == null)
                 throw new ArgumentNullException(nameof(selfUrl));
@@ -1634,7 +1645,7 @@ namespace Raven.Server.Rachis
 
                 if(_tag == InitialTag)
                 {
-                    UpdateNodeTag(ctx, "A");
+                    UpdateNodeTag(ctx, nodeTag);
                 }
 
                 var topologyId = Guid.NewGuid().ToString();
@@ -1647,10 +1658,10 @@ namespace Raven.Server.Rachis
                     },
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
-                    "A"
+                    nodeTag
                 );
 
-                SetTopology(null, ctx, topology);
+                SetTopology(this, ctx, topology);
                 _clusterId = topologyId;
                 SetClusterBase(topologyId);
 
@@ -1660,13 +1671,13 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public string HardResetToNewCluster()
+        public string HardResetToNewCluster(string nodeTag = "A")
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var tx = ctx.OpenWriteTransaction())
             {
                 var lastNode =  GetTopology(ctx).LastNodeId;
-                UpdateNodeTag(ctx, "A");
+                UpdateNodeTag(ctx, nodeTag);
 
                 var topologyId = Guid.NewGuid().ToString();
                 var topology = new ClusterTopology(
@@ -1680,7 +1691,7 @@ namespace Raven.Server.Rachis
                     lastNode
                 );
 
-                SetTopology(null, ctx, topology);
+                SetTopology(this, ctx, topology);
 
                 SwitchToSingleLeader(ctx);
 
@@ -1708,7 +1719,7 @@ namespace Raven.Server.Rachis
                     string.Empty
                 );
 
-                SetTopology(null, ctx, topology);
+                SetTopology(this, ctx, topology);
 
                 SetNewStateInTx(ctx, RachisState.Passive, null, CurrentTerm,
                     "Hard reset to passive by admin");
@@ -1773,10 +1784,15 @@ namespace Raven.Server.Rachis
 
         public abstract long Apply(TransactionOperationContext context, long uptoInclusive, Leader leader, Stopwatch duration);
 
-        public abstract void SnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex);
+        public abstract Task SnapshotInstalledAsync(long lastIncludedIndex);
 
         private readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();
         private int _heartbeatWaitersCounter;
+
+        public void InvokeBeforeAppendToRaftLog(TransactionOperationContext context,CommandBase cmd)
+        {
+            BeforeAppendToRaftLog?.Invoke(context, cmd);
+        }
 
         public async Task WaitForHeartbeat()
         {

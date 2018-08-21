@@ -84,7 +84,7 @@ class indexTerms extends viewModelBase {
     }
 
     private loadTerms(indexName: string, termsForField: termsForField): JQueryPromise<Raven.Client.Documents.Queries.TermsQueryResult> {  // fetch one more to find out if we have more
-        return new getIndexTermsCommand(indexName, termsForField.name, this.activeDatabase(), indexTerms.termsPageLimit + 1, termsForField.fromValue)  
+        return new getIndexTermsCommand(indexName, null, termsForField.name, this.activeDatabase(), indexTerms.termsPageLimit + 1, termsForField.fromValue)  
             .execute()
             .done((loadedTermsResponse: Raven.Client.Documents.Queries.TermsQueryResult) => {
                 let loadedTerms = loadedTermsResponse.Terms;

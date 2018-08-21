@@ -4,10 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-#if NETSTANDARD2_0
-#define CURRENT
-#endif
-
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -23,6 +19,7 @@ using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 
@@ -70,9 +67,7 @@ namespace Raven.Client.Documents
         /// <returns></returns>
         public static IRavenQueryable<TResult> Include<TResult>(this IQueryable<TResult> source, string path)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(TResult));
             var expression = ConvertExpressionIfNecessary(source);
@@ -81,11 +76,39 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<TResult>)queryable;
         }
 
+        /// <summary>
+        /// Includes the specified documents and/or counters in the query
+        /// </summary>
+        /// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
+        /// <param name="source">The source for querying</param>
+        /// <param name="includes">Specifies the documents and/or counters to include </param>
+        /// <returns></returns>
+        public static IRavenQueryable<TResult> Include<TResult>(this IQueryable<TResult> source, Action<IQueryIncludeBuilder<TResult>> includes)
+        {
+            var queryInspector = (IRavenQueryInspector)source;
+            var conventions = queryInspector.Session.Conventions;
+
+            var includeBuilder = new IncludeBuilder<TResult>(conventions);
+            includes.Invoke(includeBuilder);
+
+            return Include(source, includeBuilder);
+        }
+
+        private static IRavenQueryable<TResult> Include<TResult>(this IQueryable<TResult> source, IncludeBuilder includes)
+        {
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(TResult));
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(includes)));
+
+            return (IRavenQueryable<TResult>)queryable;
+        }
+
         public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, FacetBase facet)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             var query = new AggregationQuery<T>(source, ConvertExpressionIfNecessary, ConvertMethodIfNecessary, currentMethod);
             return query.AndAggregateBy(facet);
@@ -121,9 +144,7 @@ namespace Raven.Client.Documents
             if (facetSetupDocumentId == null)
                 throw new ArgumentNullException(nameof(facetSetupDocumentId));
 
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -162,11 +183,11 @@ namespace Raven.Client.Documents
         /// Project query results according to the specified type
         /// </summary>
         public static IRavenQueryable<TResult> ProjectInto<TResult>(this IQueryable queryable)
-        {            
+        {
             var ofType = queryable.OfType<TResult>();
             var results = queryable.Provider.CreateQuery<TResult>(ofType.Expression);
             var ravenQueryInspector = (RavenQueryInspector<TResult>)results;
-            
+
             var membersList = ReflectionUtil.GetPropertiesAndFieldsFor<TResult>(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).ToList();
             ravenQueryInspector.FieldsToFetch(membersList.Select(x => x.Name));
             return (IRavenQueryable<TResult>)results;
@@ -177,9 +198,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public static ISuggestionQuery<T> SuggestUsing<T>(this IQueryable<T> source, SuggestionBase suggestion)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -929,9 +948,7 @@ namespace Raven.Client.Documents
         public static IRavenQueryable<IGrouping<TKey, TSource>> GroupByArrayValues<TSource, TKey>(this IQueryable<TSource> source,
             Expression<Func<TSource, IEnumerable<TKey>>> fieldSelector)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, new[] { typeof(TSource), typeof(TKey) });
             var expression = ConvertExpressionIfNecessary(source);
@@ -944,9 +961,7 @@ namespace Raven.Client.Documents
         public static IRavenQueryable<IGrouping<IEnumerable<TKey>, TSource>> GroupByArrayContent<TSource, TKey>(this IQueryable<TSource> source,
             Expression<Func<TSource, IEnumerable<TKey>>> fieldSelector)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, new[] { typeof(TSource), typeof(TKey) });
             var expression = ConvertExpressionIfNecessary(source);
@@ -958,9 +973,7 @@ namespace Raven.Client.Documents
 
         public static IRavenQueryable<T> Where<T>(this IQueryable<T> source, Expression<Func<T, int, bool>> predicate, bool exact)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -971,9 +984,7 @@ namespace Raven.Client.Documents
 
         public static IRavenQueryable<T> Where<T>(this IQueryable<T> source, Expression<Func<T, bool>> predicate, bool exact)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -989,9 +1000,7 @@ namespace Raven.Client.Documents
 
         public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1007,9 +1016,7 @@ namespace Raven.Client.Documents
 
         public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, DynamicSpatialField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1025,9 +1032,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, DynamicSpatialField field, double latitude, double longitude)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1043,9 +1048,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, string fieldName, double latitude, double longitude)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1061,9 +1064,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, DynamicSpatialField field, string shapeWkt)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1079,9 +1080,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, string fieldName, string shapeWkt)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1097,9 +1096,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, DynamicSpatialField field, double latitude, double longitude)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1115,9 +1112,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, double latitude, double longitude)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1133,9 +1128,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, DynamicSpatialField field, string shapeWkt)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1151,9 +1144,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, string shapeWkt)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1169,9 +1160,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1188,9 +1177,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1206,9 +1193,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1224,9 +1209,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> ThenByDescending<T>(this IOrderedQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
@@ -1237,9 +1220,7 @@ namespace Raven.Client.Documents
 
         public static IRavenQueryable<T> MoreLikeThis<T>(this IQueryable<T> source, MoreLikeThisBase moreLikeThis)
         {
-#if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session.Tokens;
@@ -112,7 +113,15 @@ namespace Raven.Client.Documents.Session.Operations
             }
 
             if (NoTracking == false)
+            {
                 _session.RegisterMissingIncludes(queryResult.Results, queryResult.Includes, queryResult.IncludedPaths);
+                if (queryResult.CounterIncludes != null)
+                {
+                    _session.RegisterCounters(
+                        queryResult.CounterIncludes,
+                        queryResult.IncludedCounterNames);
+                }
+            }
 
             return list;
         }
@@ -126,22 +135,30 @@ namespace Raven.Client.Documents.Session.Operations
             {
                 var type = typeof(T);
                 var typeInfo = type.GetTypeInfo();
-                if (type == typeof(string) || typeInfo.IsValueType || typeInfo.IsEnum)
-                {
-                    var projectionField = fieldsToFetch.Projections[0];
+                var projectionField = fieldsToFetch.Projections[0];
 
-                    if (fieldsToFetch.SourceAlias != null)
+                if (fieldsToFetch.SourceAlias != null )
+                {
+                    if (projectionField.StartsWith(fieldsToFetch.SourceAlias))
                     {
                         // remove source-alias from projection name
                         projectionField = projectionField.Substring(fieldsToFetch.SourceAlias.Length + 1);
                     }
+                    if (Regex.IsMatch(projectionField, "'([^']*)")) 
+                    {
+                        // projection field is quoted, remove quotes
+                        projectionField = projectionField.Substring(1, projectionField.Length -2);
+                    }
+                }
 
+                if (type == typeof(string) || typeInfo.IsValueType || typeInfo.IsEnum)
+                {
                     return document.TryGet(projectionField, out T value) == false
                         ? default
                         : value;
                 }
 
-                if (document.TryGetMember(fieldsToFetch.Projections[0], out object inner) == false)
+                if (document.TryGetMember(projectionField, out object inner) == false)
                     return default;
 
                 if (fieldsToFetch.FieldsToFetch != null && fieldsToFetch.FieldsToFetch[0] == fieldsToFetch.Projections[0])

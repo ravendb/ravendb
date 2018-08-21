@@ -7,8 +7,8 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net.WebSockets;
-using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Server.Routing;
@@ -146,7 +146,9 @@ namespace Raven.Server.Documents.Handlers
                                         throw new ArgumentNullException(nameof(command), "Command argument is mandatory");
 
                                     reader.TryGet("Param", out string commandParameter);
-                                    connection.HandleCommand(command, commandParameter);
+                                    reader.TryGet("Params", out BlittableJsonReaderArray commandParameters);
+
+                                    connection.HandleCommand(command, commandParameter, commandParameters);
 
                                     if (reader.TryGet("CommandId", out int commandId))
                                     {

@@ -66,8 +66,7 @@ class indexAceAutoCompleteProvider {
                 this.getIndexMapCollectionFieldsForAutocomplete(session, completedToken)
                     .done(x => returnedDeferred.resolve(x))
                     .fail(() => returnedDeferred.reject());
-            }
-            else if (currentToken.type === "data.prefix" || currentToken.type === "data.suffix") {
+            } else if (currentToken.type === "data.prefix" || currentToken.type === "data.suffix") {
                 completedToken = currentToken.type === "data.prefix" ? currentToken : prevToken;
 
                 const firstToken = session.getTokenAt(0, 0);
@@ -76,8 +75,7 @@ class indexAceAutoCompleteProvider {
                     this.getIndexMapCollectionFieldsForAutocomplete(session, completedToken)
                         .done(x => returnedDeferred.resolve(x))
                         .fail(() => returnedDeferred.reject());
-                }
-                else {
+                } else {
                     returnedDeferred.resolve(["Methodical Syntax Not Supported"]);
                 }
             } else {

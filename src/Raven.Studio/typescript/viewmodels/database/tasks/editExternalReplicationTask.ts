@@ -61,8 +61,7 @@ class editExternalReplicationTask extends viewModelBase {
                     
                     router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
                 });
-        }
-        else {
+        } else {
             // 2. Creating a new task
             this.isAddingNewReplicationTask(true);
             this.editedExternalReplication(ongoingTaskReplicationEditModel.empty());

@@ -23,6 +23,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Tcp;
 using Sparrow.Json;
@@ -135,6 +136,8 @@ namespace Raven.Client.Json.Converters
 
         internal static readonly Func<BlittableJsonReaderObject, UpdatePeriodicBackupOperationResult> ConfigurePeriodicBackupOperationResult = GenerateJsonDeserializationRoutine<UpdatePeriodicBackupOperationResult>();
 
+        internal static readonly Func<BlittableJsonReaderObject, StartBackupOperationResult> BackupDatabaseNowResult = GenerateJsonDeserializationRoutine<StartBackupOperationResult>();
+
         internal static readonly Func<BlittableJsonReaderObject, GetPeriodicBackupStatusOperationResult> GetPeriodicBackupStatusOperationResult = GenerateJsonDeserializationRoutine<GetPeriodicBackupStatusOperationResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, PeriodicBackupStatus> PeriodicBackupStatus = GenerateJsonDeserializationRoutine<PeriodicBackupStatus>();
@@ -158,6 +161,10 @@ namespace Raven.Client.Json.Converters
         internal static readonly Func<BlittableJsonReaderObject, SmugglerResult> SmugglerResult = GenerateJsonDeserializationRoutine<SmugglerResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, ClientConfiguration> ClientConfiguration = GenerateJsonDeserializationRoutine<ClientConfiguration>();
+
+        internal static readonly Func<BlittableJsonReaderObject, StudioConfiguration> StudioConfiguration = GenerateJsonDeserializationRoutine<StudioConfiguration>();
+
+        internal static readonly Func<BlittableJsonReaderObject, ServerWideStudioConfiguration> ServerWideStudioConfiguration = GenerateJsonDeserializationRoutine<ServerWideStudioConfiguration>();
 
         internal static readonly Func<BlittableJsonReaderObject, GetClientConfigurationOperation.Result> ClientConfigurationResult = GenerateJsonDeserializationRoutine<GetClientConfigurationOperation.Result>();
 

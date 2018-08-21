@@ -2,6 +2,10 @@
 //
 // This file is distributed under the MIT License. See LICENSE.md for details.
 
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace Sparrow.Collections.LockFree
@@ -9,7 +13,7 @@ namespace Sparrow.Collections.LockFree
     internal sealed class DictionaryImplBoxed<TKey, TValue>
             : DictionaryImpl<TKey, Boxed<TKey>, TValue>
     {
-        internal DictionaryImplBoxed(int capacity, ConcurrentDictionary<TKey, TValue> topDict)
+        internal DictionaryImplBoxed(int capacity, LockFreeConcurrentDictionary<TKey, TValue> topDict)
             : base(capacity, topDict)
         {
         }
@@ -28,7 +32,7 @@ namespace Sparrow.Collections.LockFree
                 if (entryKeyValue == null)
                 {
                     // claimed a new slot
-                    allocatedSlotCount.Increment();
+                    this.allocatedSlotCount.Increment();
                     return true;
                 }
             }
@@ -45,7 +49,7 @@ namespace Sparrow.Collections.LockFree
                 if (entryKeyValue == null)
                 {
                     // claimed a new slot
-                    allocatedSlotCount.Increment();
+                    this.allocatedSlotCount.Increment();
                     return true;
                 }
             }
@@ -53,9 +57,22 @@ namespace Sparrow.Collections.LockFree
             return _keyComparer.Equals(key.Value, entryKey.Value);
         }
 
+        protected override bool keyEqual(TKey key, Boxed<TKey> entryKey)
+        {
+            //NOTE: slots are claimed in two stages - claim a hash, then set a key
+            //      it is possible to observe a slot with a null key, but with hash already set
+            //      that is not a match since the key is not yet in the table
+            return entryKey != null && _keyComparer.Equals(key, entryKey.Value);
+        }
+
         protected override DictionaryImpl<TKey, Boxed<TKey>, TValue> CreateNew(int capacity)
         {
             return new DictionaryImplBoxed<TKey, TValue>(capacity, this);
+        }
+
+        protected override TKey keyFromEntry(Boxed<TKey> entryKey)
+        {
+            return entryKey.Value;
         }
     }
 
@@ -65,7 +82,7 @@ namespace Sparrow.Collections.LockFree
 
         public Boxed(T key)
         {
-            Value = key;
+            this.Value = key;
         }
     }
 }

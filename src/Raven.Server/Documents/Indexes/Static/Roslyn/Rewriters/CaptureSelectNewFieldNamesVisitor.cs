@@ -34,20 +34,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (KnonwMethodsToInsepct.Contains(mae.Name.Identifier.Text) == false)
                 return Visit(node.Expression);
 
-            var last = node.DescendantNodes(descendIntoChildren: syntaxNode =>
-                {
-                    if (syntaxNode is AnonymousObjectCreationExpressionSyntax)
-                    {
-                        return false;
-                    }
-                    return true;
-                })
-                .LastOrDefault(x => x.IsKind(SyntaxKind.AnonymousObjectCreationExpression)) as AnonymousObjectCreationExpressionSyntax;
-
-            if (last != null)
-                VisitAnonymousObjectCreationExpression(last);
-            else
-                ThrowIndexingFunctionMustReturnAnonymousObject();
+            CaptureFieldNames(node, x => x.VisitInvocationExpression(node));
 
             return node;
         }
@@ -57,22 +44,44 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (Fields != null)
                 return node;
 
-            var last = node.DescendantNodes(descendIntoChildren: syntaxNode =>
-                {
-                    if (syntaxNode is AnonymousObjectCreationExpressionSyntax)
-                    {
-                        return false;
-                    }
-                    return true;
-                })
-                .LastOrDefault(x => x.IsKind(SyntaxKind.AnonymousObjectCreationExpression)) as AnonymousObjectCreationExpressionSyntax;
-
-            if (last != null)
-                VisitAnonymousObjectCreationExpression(last);
-            else
-                ThrowIndexingFunctionMustReturnAnonymousObject();
+            CaptureFieldNames(node, x => x.VisitQueryBody(node));
 
             return node;
+        }
+
+        private void CaptureFieldNames(SyntaxNode node, Action<CaptureDictionaryFieldsNamesVisitor> visitDictionaryNodeExpression)
+        {
+            var nodes = node.DescendantNodes(descendIntoChildren: syntaxNode =>
+            {
+                if (syntaxNode is AnonymousObjectCreationExpressionSyntax ||
+                    syntaxNode is ObjectCreationExpressionSyntax oce && CaptureDictionaryFieldsNamesVisitor.IsDictionaryObjectCreationExpression(oce))
+                {
+                    return false;
+                }
+                return true;
+            }).ToList();
+
+            var lastObjectCreation = nodes.LastOrDefault(x => x.IsKind(SyntaxKind.AnonymousObjectCreationExpression) ||
+                                                              x.IsKind(SyntaxKind.ObjectCreationExpression) &&
+                                                              x is ObjectCreationExpressionSyntax oce &&
+                                                              CaptureDictionaryFieldsNamesVisitor.IsDictionaryObjectCreationExpression(oce));
+
+            if (lastObjectCreation is AnonymousObjectCreationExpressionSyntax lastAnonymousObjectCreation)
+            {
+                VisitAnonymousObjectCreationExpression(lastAnonymousObjectCreation);
+            }
+            else if (lastObjectCreation is ObjectCreationExpressionSyntax oce && CaptureDictionaryFieldsNamesVisitor.IsDictionaryObjectCreationExpression(oce))
+            {
+                var dictVisitor = new CaptureDictionaryFieldsNamesVisitor();
+
+                visitDictionaryNodeExpression(dictVisitor);
+
+                Fields = dictVisitor.Fields;
+            }
+            else
+            {
+                ThrowIndexingFunctionMustReturnAnonymousObjectOrDictionary();
+            }
         }
 
         public override SyntaxNode VisitAnonymousObjectCreationExpression(AnonymousObjectCreationExpressionSyntax node)
@@ -85,9 +94,24 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return node;
         }
 
-        private static void ThrowIndexingFunctionMustReturnAnonymousObject()
+        public override SyntaxNode VisitObjectCreationExpression(ObjectCreationExpressionSyntax node)
         {
-            throw new InvalidOperationException("Indexing function must return an anonymous object");
+            if (Fields != null)
+                return node;
+
+            if (CaptureDictionaryFieldsNamesVisitor.IsDictionaryObjectCreationExpression(node))
+            {
+                var dictVisitor = new CaptureDictionaryFieldsNamesVisitor();
+                dictVisitor.VisitObjectCreationExpression(node);
+                Fields = dictVisitor.Fields;
+            }
+
+            return node;
+        }
+
+        private static void ThrowIndexingFunctionMustReturnAnonymousObjectOrDictionary()
+        {
+            throw new InvalidOperationException($"Indexing function must return an anonymous object or {CaptureDictionaryFieldsNamesVisitor.SupportedGenericDictionaryType}");
         }
     }
 }

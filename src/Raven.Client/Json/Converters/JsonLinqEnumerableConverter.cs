@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 using Newtonsoft.Json;
-using Sparrow.Collections.LockFree;
 
 namespace Raven.Client.Json.Converters
 {

@@ -1,5 +1,5 @@
 ﻿class eventsCollector {
-    static UACode = "UA-82335022-3"; //TODO @gregolsky liveTestDetector.isLiveTest() ? "UA-82335022-2" : "UA-82335022-1";
+    static UACode = "UA-82335022-3";
 
     static default = new eventsCollector();
 

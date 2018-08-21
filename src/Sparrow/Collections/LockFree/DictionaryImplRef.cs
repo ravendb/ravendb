@@ -2,6 +2,10 @@
 //
 // This file is distributed under the MIT License. See LICENSE.md for details.
 
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace Sparrow.Collections.LockFree
@@ -10,7 +14,7 @@ namespace Sparrow.Collections.LockFree
             : DictionaryImpl<TKey, TKey, TValue>
                     where TKey : class
     {
-        internal DictionaryImplRef(int capacity, ConcurrentDictionary<TKey, TValue> topDict)
+        internal DictionaryImplRef(int capacity, LockFreeConcurrentDictionary<TKey, TValue> topDict)
             : base(capacity, topDict)
         {
         }
@@ -39,7 +43,7 @@ namespace Sparrow.Collections.LockFree
                 if (entryKeyValue == null)
                 {
                     // claimed a new slot
-                    allocatedSlotCount.Increment();
+                    this.allocatedSlotCount.Increment();
                     return true;
                 }
             }
@@ -47,9 +51,27 @@ namespace Sparrow.Collections.LockFree
             return key == entryKeyValue || _keyComparer.Equals(key, entryKeyValue);
         }
 
+        protected override bool keyEqual(TKey key, TKey entryKey)
+        {
+            //NOTE: slots are claimed in two stages - claim a hash, then set a key
+            //      it is possible to observe a slot with a null key, but with hash already set
+            //      that is not a match since the key is not yet in the table
+            if (key == entryKey)
+            {
+                return true;
+            }
+           
+            return entryKey != null && _keyComparer.Equals(entryKey, key);
+        }
+
         protected override DictionaryImpl<TKey, TKey, TValue> CreateNew(int capacity)
         {
             return new DictionaryImplRef<TKey, TKeyStore, TValue>(capacity, this);
+        }
+
+        protected override TKey keyFromEntry(TKey entryKey)
+        {
+            return entryKey;
         }
     }
 }

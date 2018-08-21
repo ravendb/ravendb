@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -8,14 +9,15 @@ using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
-using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Threading;
 using Voron.Exceptions;
@@ -30,15 +32,14 @@ namespace Raven.Server.Rachis
     /// </summary>
     public class Leader : IDisposable
     {
-        private Task _topologyModification;
+        private TaskCompletionSource<object> _topologyModification;
         private readonly RachisConsensus _engine;
 
         public delegate object ConvertResultFromLeader(JsonOperationContext ctx, object result);
 
         private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        private readonly ConcurrentDictionary<long, CommandState> _entries =
-            new ConcurrentDictionary<long, CommandState>();
+        private readonly ConcurrentDictionary<long, CommandState> _entries = new ConcurrentDictionary<long, CommandState>();
 
         private MultipleUseFlag _hasNewTopology = new MultipleUseFlag();
         private readonly ManualResetEvent _newEntry = new ManualResetEvent(false);
@@ -48,12 +49,14 @@ namespace Raven.Server.Rachis
         private readonly ManualResetEvent _noop = new ManualResetEvent(false);
         private long _lowestIndexInEntireCluster;
 
-        private readonly Dictionary<string, FollowerAmbassador> _voters =
-            new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, FollowerAmbassador> _promotables =
-            new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, FollowerAmbassador> _nonVoters =
-            new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, FollowerAmbassador> _voters =
+            new ConcurrentDictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, FollowerAmbassador> _promotables =
+            new ConcurrentDictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, FollowerAmbassador> _nonVoters =
+            new ConcurrentDictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
+
+        public ConcurrentDictionary<string, int> PeersVersion = new ConcurrentDictionary<string, int>();
 
         private PoolOfThreads.LongRunningWork _leaderLongRunningWork;
 
@@ -92,10 +95,16 @@ namespace Raven.Server.Rachis
                 PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, $"Consensus Leader - {_engine.Tag} in term {Term}");                
         }
 
+        private int _steppedDown;
+
         public void StepDown()
         {
             if (_voters.Count == 0)
                 throw new InvalidOperationException("Cannot step down when I'm the only voter in the cluster");
+
+            if (Interlocked.CompareExchange(ref _steppedDown, 1, 0) == 1)
+                return;
+
             var nextLeader = _voters.Values.OrderByDescending(x => x.FollowerMatchIndex).ThenByDescending(x => x.LastReplyFromFollower).First();
             if (_engine.Log.IsInfoEnabled)
             {
@@ -111,7 +120,6 @@ namespace Raven.Server.Rachis
         public Dictionary<string, NodeStatus> GetStatus()
         {
             var dict = new Dictionary<string, NodeStatus>();
-
             foreach (var peers in new[] { _nonVoters, _voters, _promotables })
             {
                 foreach (var kvp in peers)
@@ -184,15 +192,14 @@ namespace Raven.Server.Rachis
                     if (old.TryGetValue(voter.Key, out FollowerAmbassador existingInstance))
                     {
                         existingInstance.UpdateLeaderWake(_voterResponded);
-                        _voters.Add(voter.Key, existingInstance);
+                        _voters[voter.Key] = existingInstance;
                         old.Remove(voter.Key);
                         continue; // already here
                     }
                     RemoteConnection connection = null;
                     connections?.TryGetValue(voter.Key, out connection);
-                    var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value,
-                        _engine.ClusterCertificate, connection);
-                    _voters.Add(voter.Key, ambasaddor);
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value, connection);
+                    _voters[voter.Key] = ambasaddor;
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
                     {
@@ -206,15 +213,14 @@ namespace Raven.Server.Rachis
                     if (old.TryGetValue(promotable.Key, out FollowerAmbassador existingInstance))
                     {
                         existingInstance.UpdateLeaderWake(_promotableUpdated);
-                        _promotables.Add(promotable.Key, existingInstance);
+                        _promotables[promotable.Key] = existingInstance;
                         old.Remove(promotable.Key);
                         continue; // already here
                     }
                     RemoteConnection connection = null;
                     connections?.TryGetValue(promotable.Key, out connection);
-                    var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value,
-                        _engine.ClusterCertificate, connection);
-                    _promotables.Add(promotable.Key, ambasaddor);
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value, connection);
+                    _promotables[promotable.Key] = ambasaddor;
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
                     {
@@ -229,15 +235,14 @@ namespace Raven.Server.Rachis
                     {
                         existingInstance.UpdateLeaderWake(_noop);
 
-                        _nonVoters.Add(nonVoter.Key, existingInstance);
+                        _nonVoters[nonVoter.Key] = existingInstance;
                         old.Remove(nonVoter.Key);
                         continue; // already here
                     }
                     RemoteConnection connection = null;
                     connections?.TryGetValue(nonVoter.Key, out connection);
-                    var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter.Key, nonVoter.Value,
-                        _engine.ClusterCertificate, connection);
-                    _nonVoters.Add(nonVoter.Key, ambasaddor);
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter.Key, nonVoter.Value, connection);
+                    _nonVoters[nonVoter.Key] = ambasaddor;
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
                     {
@@ -248,6 +253,12 @@ namespace Raven.Server.Rachis
                 
                 if (old.Count > 0)
                 {
+                    foreach (var ambasaddor in old)
+                    {
+                        _voters.TryRemove(ambasaddor.Key, out _);
+                        _nonVoters.TryRemove(ambasaddor.Key, out _);
+                        _promotables.TryRemove(ambasaddor.Key, out _);
+                    }
                     Interlocked.Increment(ref _previousPeersWereDisposed);
                     System.Threading.ThreadPool.QueueUserWorkItem(_ =>
                     {
@@ -485,13 +496,10 @@ namespace Raven.Server.Rachis
                 }
             }
 
-            if (_entries.Count != 0)
-            {
-                // we have still items to process, run them in 1 node cluster
-                // and speed up the followers ambassadors if they can
-                _newEntry.Set();
-            }
-
+            // we have still items to process, run them in 1 node cluster
+            // and speed up the followers ambassadors if they can
+            _newEntry.Set();
+            
             if (changedFromLeaderElectToLeader)
                 _engine.LeaderElectToLeaderChanged();
         }
@@ -606,34 +614,129 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public async Task<(long Index, object Result)> PutAsync(CommandBase cmd, TimeSpan timeout)
+        private class RachisMergedCommand
         {
-            Task<(long Index, object Result)> task;
-            long index;
-            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenWriteTransaction()) // this line prevents concurrency issues on the PutAsync
-            {
-                var djv = cmd.ToJson(context);
-                var cmdJson = context.ReadObject(djv, "raft/command");
+            public CommandBase Command;
+            public TaskCompletionSource<Task<(long Index, object Result)>> Tcs;
+            public readonly MultipleUseFlag Consumed = new MultipleUseFlag();
+        }
 
-                index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
-                context.Transaction.Commit();
-                task = AddToEntries(index, GetConvertResult(cmd));
+        private readonly ConcurrentQueue<RachisMergedCommand> _commandsQueue = new ConcurrentQueue<RachisMergedCommand>();
+
+        private readonly AsyncManualResetEvent _waitForCommit = new AsyncManualResetEvent();
+
+        public async Task<(long Index, object Result)> PutAsync(CommandBase command, TimeSpan timeout)
+        {
+            var rachisMergedCommand = new RachisMergedCommand
+            {
+                Command = command,
+                Tcs = new TaskCompletionSource<Task<(long, object)>>(TaskCreationOptions.RunContinuationsAsynchronously)
+            };
+            _commandsQueue.Enqueue(rachisMergedCommand);
+
+            while (rachisMergedCommand.Tcs.Task.IsCompleted == false)
+            {
+                var lockTaken = false;
+                try
+                {
+                    Monitor.TryEnter(_commandsQueue, ref lockTaken);
+                    if (lockTaken)
+                    {
+                        EmptyQueue();
+                    }
+                    else
+                    {
+                        if (await _waitForCommit.WaitAsync(timeout) == false)
+                        {
+                            if (rachisMergedCommand.Consumed.Raise())
+                            {
+                                GetConvertResult(command)?.AboutToTimeout();
+                                throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
+                            }
+
+                            // if the command is already dequeued we must let it continue to keep its context valid. 
+                            await rachisMergedCommand.Tcs.Task;
+                        }
+                    }
+                }
+                finally
+                {
+                    if (lockTaken)
+                    {
+                        Monitor.Exit(_commandsQueue);
+                        _waitForCommit.SetAndResetAtomically();
+                    }
+                }
             }
 
-            _newEntry.Set();
-
-            if (await task.WaitWithTimeout(timeout) == false)
+            var inner = await rachisMergedCommand.Tcs.Task;
+            if (await inner.WaitWithTimeout(timeout) == false)
             {
-                if (_entries.TryGetValue(index, out CommandState state))
-                {
-                    state.ConvertResult?.AboutToTimeout();
-                }
-
+                GetConvertResult(command)?.AboutToTimeout();
                 throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
             }
 
-            return await task;
+            return await inner;
+        }
+
+        private void EmptyQueue()
+        {
+            var list = new List<TaskCompletionSource<Task<(long, object)>>>();
+            var tasks = new List<Task<(long, object)>>();
+            try
+            {
+                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenWriteTransaction())
+                {
+                    var cmdsCount = 0;
+                    while (cmdsCount++ < 128 && _commandsQueue.TryDequeue(out var cmd))
+                    {
+                        if (cmd.Consumed.Raise() == false)
+                        {
+                            // if the command was aborted due to timeout, we should skip it.
+                            // The command is not appended, so We can and must do so, because the context of the command is no longer valid.
+                            continue;
+                        }
+
+                        list.Add(cmd.Tcs);
+                        _engine.InvokeBeforeAppendToRaftLog(context, cmd.Command);
+
+                        var djv = cmd.Command.ToJson(context);
+                        var cmdJson = context.ReadObject(djv, "raft/command");
+
+                        var index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
+
+                        var tcs = new TaskCompletionSource<(long, object)>(TaskCreationOptions.RunContinuationsAsynchronously);
+                        tasks.Add(tcs.Task);
+                        var state = new
+                            CommandState // we need to add entry inside write tx lock to avoid
+                                         // a situation when command will be applied (and state set)
+                                         // before it is added to the entries list
+                            {
+                                CommandIndex = index,
+                                TaskCompletionSource = tcs,
+                                ConvertResult = GetConvertResult(cmd.Command)
+                        };
+                        _entries[index] = state;
+                    }
+                    context.Transaction.Commit();
+                }
+
+                if (tasks.Count > 0)
+                    _newEntry.Set();
+
+                for (int i = 0; i < tasks.Count; i++)
+                {
+                    list[i].TrySetResult(tasks[i]);
+                }
+            }
+            catch (Exception e)
+            {
+                foreach (var tcs in list)
+                {
+                    tcs.TrySetException(e);
+                }
+            }
         }
 
         private static ConvertResultAction GetConvertResult(CommandBase cmd)
@@ -648,24 +751,8 @@ namespace Raven.Server.Rachis
                     return null;
             }
         }
-
-        public Task<(long Index, object Result)> AddToEntries(long index, ConvertResultAction convertResult)
-        {
-            var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            _entries[index] =
-                new
-                    CommandState // we need to add entry inside write tx lock to omit a situation when command will be applied (and state set) before it is added to the entries list
-                    {
-                        CommandIndex = index,
-                        TaskCompletionSource = tcs,
-                        ConvertResult = convertResult
-                    };
-
-            return tcs.Task;
-        }
-
-        public System.Collections.Concurrent.ConcurrentQueue<(string node, AlertRaised error)> ErrorsList = new System.Collections.Concurrent.ConcurrentQueue<(string, AlertRaised)>();
+        
+        public ConcurrentQueue<(string node, AlertRaised error)> ErrorsList = new System.Collections.Concurrent.ConcurrentQueue<(string, AlertRaised)>();
 
         public void NotifyAboutException(string nodeTag, Exception e)
         {
@@ -788,23 +875,25 @@ namespace Raven.Server.Rachis
 
         public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task, bool validateNotInTopology = false, Action<TransactionOperationContext> beforeCommit = null)
         {
-            if (nodeTag != null && nodeTag.Equals("RAFT"))
+            if (nodeTag != null)
             {
-                throw new ArgumentException("Can't set the node tag to 'RAFT'. It is a reserved tag.");
+                ValidateNodeTag(nodeTag);
             }
 
             using (_disposerLock.EnsureNotDisposed())
             {
+                var topologyModification = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var existing = Interlocked.CompareExchange(ref _topologyModification, topologyModification, null);
+                if (existing != null)
+                {
+                    task = existing.Task;
+                    return false;
+                }
+                task = topologyModification.Task;
+
                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenWriteTransaction())
                 {
-                    var existing = Interlocked.CompareExchange(ref _topologyModification, null, null);
-                    if (existing != null)
-                    {
-                        task = existing;
-                        return false;
-                    }
-
                     var clusterTopology = _engine.GetTopology(context);
 
                     //We need to validate that the node doesn't exists before we generate the nodeTag
@@ -846,6 +935,7 @@ namespace Raven.Server.Rachis
                             newNonVotes[nodeTag] = nodeUrl;
                             break;
                         case TopologyModification.Remove:
+                            PeersVersion.TryRemove(nodeTag, out _);
                             if (clusterTopology.Contains(nodeTag) == false)
                             {
                                 throw new InvalidOperationException($"Was requested to remove node={nodeTag} from the topology " +
@@ -881,9 +971,9 @@ namespace Raven.Server.Rachis
                         CommandIndex = index
                     };
 
-                    _topologyModification = task = tcs.Task.ContinueWith(_ =>
+                    tcs.Task.ContinueWith(_ =>
                     {
-                        Interlocked.Exchange(ref _topologyModification, null);
+                        Interlocked.Exchange(ref _topologyModification, null).TrySetResult(null);
                     });
                 }
                 _hasNewTopology.Raise();
@@ -892,6 +982,23 @@ namespace Raven.Server.Rachis
 
                 return true;
             }
+        }
+
+        public static void ValidateNodeTag(string nodeTag)
+        {
+            if (nodeTag.Equals("RAFT"))
+                ThrowInvalidNodeTag(nodeTag, "It is a reserved tag.");
+            if (nodeTag.Length > 4)
+                ThrowInvalidNodeTag(nodeTag, "Max node tag length is 4.");
+            // Node tag must not contain ':' or '-' chars as they are in use in change vector.
+            // The following check covers that as well.
+            if (nodeTag.IsUpperLettersOnly() == false)
+                ThrowInvalidNodeTag(nodeTag, "Node tag must contain only upper case letters.");
+        }
+
+        public static void ThrowInvalidNodeTag(string nodeTag, string reason)
+        {
+            throw new ArgumentException($"Can't set the node tag to '{nodeTag}'. {reason}");
         }
 
         public override string ToString()
@@ -954,7 +1061,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private class CommandState
+        public class CommandState
         {
             public long CommandIndex;
             public object Result;

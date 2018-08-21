@@ -14,7 +14,6 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto[]> {
         super(db);
     }
 
-    //TODO: private allReplicationConflicts = ko.observableArray<changesCallback<replicationConflictNotificationDto>>();
     private allDocsHandlers = ko.observableArray<changesCallback<Raven.Client.Documents.Changes.DocumentChange>>();
     private allIndexesHandlers = ko.observableArray<changesCallback<Raven.Client.Documents.Changes.IndexChange>>();
 
@@ -66,11 +65,6 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto[]> {
             default:
                 console.log("Unhandled Changes API notification type: " + eventType);
         }
-
-        /* TODO:
-        } else if (eventType === "ReplicationConflictNotification") {
-            this.fireEvents<typeHere>(this.allReplicationConflicts(), value, () => true);
-           */
     }
 
     watchAllIndexes(onChange: (e: Raven.Client.Documents.Changes.IndexChange) => void) {
@@ -106,21 +100,6 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto[]> {
             }
         });
     }
-
-    /*TODO: 
-    watchAllReplicationConflicts(onChange: (e: replicationConflictNotificationDto) => void) {
-        var callback = new changesCallback<replicationConflictNotificationDto>(onChange);
-        if (this.allReplicationConflicts().length === 0) {
-            this.send("watch-replication-conflicts");
-        }
-        this.allReplicationConflicts.push(callback);
-        return new changeSubscription(() => {
-            this.allReplicationConflicts.remove(callback);
-            if (this.allReplicationConflicts().length === 0) {
-                this.send("unwatch-replication-conflicts");
-            }
-        });
-    }*/
 
     watchAllDocs(onChange: (e: Raven.Client.Documents.Changes.DocumentChange) => void) {
         var callback = new changesCallback<Raven.Client.Documents.Changes.DocumentChange>(onChange);

@@ -78,31 +78,34 @@ namespace Raven.Server.NotificationCenter
             Cleanup();
         }
 
-        public bool Store(Notification notification)
+        public bool Store(Notification notification, DateTime? postponeUntil = null)
         {
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Saving notification '{notification.Id}'.");
-
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
             {
-                // if previous notification had postponed until value pass this value to newly saved notification
-                var existing = Get(notification.Id, context, tx);
-
-                DateTime? postponeUntil = null;
-
-                if (existing?.PostponedUntil == DateTime.MaxValue) // postponed until forever
-                    return false;
-
-                if (existing?.PostponedUntil != null && existing.PostponedUntil.Value > SystemTime.UtcNow)
-                    postponeUntil = existing.PostponedUntil;
-
-                using (var json = context.ReadObject(notification.ToJson(), "notification", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                using (var tx = context.OpenReadTransaction())
                 {
-                    Store(context.GetLazyString(notification.Id), notification.CreatedAt, postponeUntil, json, tx);
+                    // if previous notification had postponed until value pass this value to newly saved notification
+                    var existing = Get(notification.Id, context, tx);
+
+                    if (postponeUntil == null)
+                    {
+                        if (existing?.PostponedUntil == DateTime.MaxValue) // postponed until forever
+                            return false;
+
+                        if (existing?.PostponedUntil != null && existing.PostponedUntil.Value > SystemTime.UtcNow)
+                            postponeUntil = existing.PostponedUntil;
+                    }
                 }
 
-                tx.Commit();
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Saving notification '{notification.Id}'.");
+
+                using (var json = context.ReadObject(notification.ToJson(), "notification", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    Store(context.GetLazyString(notification.Id), notification.CreatedAt, postponeUntil, json, tx);
+                    tx.Commit();
+                }
             }
 
             return true;

@@ -9,6 +9,7 @@ import rangeAggregator = require("common/helpers/graph/rangeAggregator");
 import liveIndexPerformanceWebSocketClient = require("common/liveIndexPerformanceWebSocketClient");
 import inProgressAnimator = require("common/helpers/graph/inProgressAnimator");
 import messagePublisher = require("common/messagePublisher");
+import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 
 type rTreeLeaf = {
     minX: number;
@@ -156,6 +157,7 @@ class indexPerformance extends viewModelBase {
         brushChartStrokeColor: "#008cc9",
         trackBackground: "#2c343a",
         trackNameBg: "rgba(57, 67, 79, 0.8)",
+        faulty:  "#e02424",
         trackNameFg: "#98a7b7",
         openedTrackArrow: "#ca1c59",
         closedTrackArrow: "#98a7b7",
@@ -232,6 +234,7 @@ class indexPerformance extends viewModelBase {
     private autoScroll = ko.observable<boolean>(false);
     private clearSelectionVisible = ko.observable<boolean>(false);
 
+    private faultyIndexes = ko.observableArray<string>();
     private indexNames = ko.observableArray<string>();
     private filteredIndexNames = ko.observableArray<string>();
     private expandedTracks = ko.observableArray<string>();
@@ -303,12 +306,18 @@ class indexPerformance extends viewModelBase {
         });
     }
 
-    activate(args: { indexName: string, database: string}): void {
+    activate(args: { indexName: string, database: string}) {
         super.activate(args);
 
         if (args.indexName) {
             this.expandedTracks.push(args.indexName);
         }
+        
+        return new getIndexesStatsCommand(this.activeDatabase())
+            .execute()
+            .done((stats) => {
+                this.faultyIndexes(stats.filter(x => x.Type === "Faulty").map(x => x.Name));
+            });
     }
 
     deactivate() {
@@ -995,11 +1004,17 @@ class indexPerformance extends viewModelBase {
     private drawIndexNames(context: CanvasRenderingContext2D) {
         const yScale = this.yScale;
         const textShift = 14.5;
+        const faultyWidth = 42;
         const textStart = 3 + 8 + 4;
 
         this.filteredIndexNames().forEach((indexName) => {
             context.font = "12px Lato";
-            const rectWidth = context.measureText(indexName).width + 2 * 3 /* left right padding */ + 8 /* arrow space */ + 4; /* padding between arrow and text */ 
+            
+            const isFaulty = !!this.faultyIndexes().find(x => x === indexName);
+            
+            const faultyExtraWidth = isFaulty ? faultyWidth : 0;
+            
+            const rectWidth = context.measureText(indexName).width + 2 * 3 /* left right padding */ + 8 /* arrow space */ + 4 /* padding between arrow and text */ + faultyExtraWidth; 
 
             context.fillStyle = indexPerformance.colors.trackNameBg;
             context.fillRect(2, yScale(indexName) + indexPerformance.closedTrackPadding, rectWidth, indexPerformance.trackHeight);
@@ -1010,6 +1025,12 @@ class indexPerformance extends viewModelBase {
             const isOpened = _.includes(this.expandedTracks(), indexName);
             context.fillStyle = isOpened ? indexPerformance.colors.openedTrackArrow : indexPerformance.colors.closedTrackArrow;
             graphHelper.drawArrow(context, 5, yScale(indexName) + 6, !isOpened);
+            
+            if (isFaulty) {
+                context.font = "12px Lato";
+                context.fillStyle = indexPerformance.colors.faulty;
+                context.fillText("(Faulty)", rectWidth - faultyWidth, yScale(indexName) + textShift);
+            }
         });
     }
 
@@ -1131,10 +1152,22 @@ class indexPerformance extends viewModelBase {
             }
             if (element.ReduceDetails) {
                 let reduceDetails: string;
-                reduceDetails = `<br/>*** Reduce details ***<br/>`;
-                reduceDetails += `Compressed leafs: ${element.ReduceDetails.NumberOfCompressedLeafs.toLocaleString()}<br/>`;
-                reduceDetails += `Modified branches: ${element.ReduceDetails.NumberOfModifiedBranches.toLocaleString()}<br/>`;
-                reduceDetails += `Modified leafs: ${element.ReduceDetails.NumberOfModifiedLeafs.toLocaleString()}`;
+
+                if (element.ReduceDetails.TreesReduceDetails) {
+                    reduceDetails = `<br/>*** Trees details ***<br/>`;
+                    reduceDetails += `Modified leafs: ${element.ReduceDetails.TreesReduceDetails.NumberOfModifiedLeafs.toLocaleString()} (compressed: ${element.ReduceDetails.TreesReduceDetails.NumberOfCompressedLeafs.toLocaleString()})<br/>`;
+                    reduceDetails += `Modified branches: ${element.ReduceDetails.TreesReduceDetails.NumberOfModifiedBranches.toLocaleString()}`;
+                }
+                else {
+                    reduceDetails = `<br/>*** Reduce details ***<br/>`;
+                    reduceDetails += `Reduce attempts: ${element.ReduceDetails.ReduceAttempts.toLocaleString()} <br/>`;
+                    reduceDetails += `Reduce successes: ${element.ReduceDetails.ReduceSuccesses.toLocaleString()} <br/>`;
+                    reduceDetails += `Reduce errors: ${element.ReduceDetails.ReduceErrors.toLocaleString()} <br/>`;
+                    reduceDetails += `Currently allocated: ${generalUtils.formatBytesToSize(element.ReduceDetails.CurrentlyAllocated)} <br/>`;
+                    reduceDetails += `Process private memory: ${generalUtils.formatBytesToSize(element.ReduceDetails.ProcessPrivateMemory)}<br/>`;
+                    reduceDetails += `Process working set: ${generalUtils.formatBytesToSize(element.ReduceDetails.ProcessWorkingSet)}`;
+                }
+                
                 tooltipHtml += reduceDetails;
             }           
 
@@ -1222,8 +1255,7 @@ class indexPerformance extends viewModelBase {
             // Data validation
             if (!_.isArray(importedData)) {
                 messagePublisher.reportError("Invalid indexing performance file format", undefined, undefined);
-            }
-            else {                                
+            } else {                                
                 this.data = importedData;
                 this.fillCache();
                 this.resetGraphData();

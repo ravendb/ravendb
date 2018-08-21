@@ -161,10 +161,11 @@ describe("RQL Autocomplete", () => {
     ]), (x: autoCompleteWordList) => x.score).reverse();
 
     const fieldsShipToList = [
-        {caption: "City", value: "City ", score: 106, meta: "string field"},
-        {caption: "Country", value: "Country ", score: 105, meta: "string field"},
-        {caption: "Line1", value: "Line1 ", score: 104, meta: "string field"},
-        {caption: "Line2", value: "Line2 ", score: 103, meta: "null field"},
+        {caption: "City", value: "City ", score: 107, meta: "string field"},
+        {caption: "Country", value: "Country ", score: 106, meta: "string field"},
+        {caption: "Line1", value: "Line1 ", score: 105, meta: "string field"},
+        {caption: "Line2", value: "Line2 ", score: 104, meta: "null field"},
+        {caption: "Location", value: "Location ", score: 103, meta: "object field"},
         {caption: "PostalCode", value: "PostalCode ", score: 102, meta: "string field"},
         {caption: "Region", value: "Region ", score: 101, meta: "string field"}
     ];
@@ -317,6 +318,29 @@ describe("RQL Autocomplete", () => {
         {caption: "and", value: "and ", score: 21, meta: "all terms"}
     ];
 
+    const termsOrderOrderedAt = [
+        "1996-07-04T00:00:00.0000000",
+        "1996-07-05T00:00:00.0000000",
+        "1996-07-08T00:00:00.0000000",
+        "1996-07-09T00:00:00.0000000",
+        "1996-07-10T00:00:00.0000000",
+        "1996-07-11T00:00:00.0000000",
+        "1996-07-12T00:00:00.0000000",
+        "1996-07-15T00:00:00.0000000",
+        "1996-07-16T00:00:00.0000000",
+        "1996-07-17T00:00:00.0000000",
+        "1996-07-18T00:00:00.0000000",
+        "1996-07-19T00:00:00.0000000",
+        "1996-07-22T00:00:00.0000000",
+        "1996-07-23T00:00:00.0000000",
+        "1996-07-24T00:00:00.0000000",
+        "1996-07-25T00:00:00.0000000",
+        "1996-07-26T00:00:00.0000000",
+        "1996-07-29T00:00:00.0000000",
+        "1996-07-30T00:00:00.0000000",
+        "1996-07-31T00:00:00.0000000"
+    ].map(term => ({caption: term, value: `'${term}' `, score: 1, meta: "term"}));
+        
     it('empty query should start with from or declare', done => {
         rqlTestUtils.autoComplete("|", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
@@ -736,9 +760,9 @@ select ShipTo.City|`, northwindProvider(), (errors, wordlist, prefix, lastKeywor
         });
     });
 
-    it('from Collection select multi nested field | without sapce should list fields with the ShipTo.Nested.NestedObject. field prefix', done => {
+    it('from Collection select multi nested field | without sapce should list fields with the ShipTo.Location.NestedObject. field prefix', done => {
         rqlTestUtils.autoComplete(`from Orders 
-select ShipTo.Nested.NestedObject.|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+select ShipTo.Location.NestedObject.|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
             assert.deepEqual(wordlist, [
                 {caption: "C2", value: "C2 ", score: 103, meta: "string field"},
@@ -748,7 +772,27 @@ select ShipTo.Nested.NestedObject.|`, northwindProvider(), (errors, wordlist, pr
 
             assert.equal(lastKeyword.keyword, "select");
             assert.equal(lastKeyword.dividersCount, 1);
-            assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo", "Nested", "NestedObject"]);
+            assert.deepEqual(lastKeyword.fieldPrefix, ["ShipTo", "Location", "NestedObject"]);
+
+            done();
+        });
+    });
+
+    it('from Collection select nested fields of array | without sapce should list fields with the Lines[]. field prefix', done => {
+        rqlTestUtils.autoComplete(`from Orders 
+select Lines[].|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, [
+                {caption: "Discount", value: "Discount ", score: 105, meta: "number field"},
+                {caption: "PricePerUnit", value: "PricePerUnit ", score: 104, meta: "number field"},
+                {caption: "Product", value: "Product ", score: 103, meta: "string field"},
+                {caption: "ProductName", value: "ProductName ", score: 102, meta: "string field"},
+                {caption: "Quantity", value: "Quantity ", score: 101, meta: "number field"}
+            ]);
+
+            assert.equal(lastKeyword.keyword, "select");
+            assert.equal(lastKeyword.dividersCount, 1);
+            assert.deepEqual(lastKeyword.fieldPrefix, ["Lines"]);
 
             done();
         });
@@ -959,40 +1003,88 @@ where OrderedAt =|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword
         });
     });
 
-    it.skip('After where field and equal operator | ?????????????????????????????', done => {
+    it('After where field and equal operator | list nothing because of empty prefix', done => {
         rqlTestUtils.autoComplete(`from Orders
 where OrderedAt = |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
-            assert.deepEqual(wordlist, fieldsList);
+            assert.deepEqual(wordlist, termsOrderOrderedAt);
 
             assert.equal(lastKeyword.keyword, "where");
-            assert.equal(lastKeyword.dividersCount, 2);
+            assert.equal(lastKeyword.dividersCount, 3);
 
             done();
         });
     });
 
-    it.skip('After where field and in operator | ?????????????????????????????', done => {
+    it('After where field and equal operator with prefix | list document ID', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where OrderedAt = com|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "com");
+            assert.deepEqual(wordlist, termsOrderOrderedAt);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.dividersCount, 3);
+
+            done();
+        });
+    });
+
+    it('After where field and equal operator after prefix | list document ID', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where OrderedAt = 'companies/1-A'|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "'companies/1-A'");
+            assert.deepEqual(wordlist, termsOrderOrderedAt);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.dividersCount, 3);
+
+            done();
+        });
+    });
+
+    it('After where field and in operator | before ( should not list anything', done => {
         rqlTestUtils.autoComplete(`from Orders
 where OrderedAt in |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
-            assert.deepEqual(wordlist, fieldsList);
+            assert.isNull(wordlist);
 
             assert.equal(lastKeyword.keyword, "where");
-            assert.equal(lastKeyword.dividersCount, 2);
+            assert.equal(lastKeyword.dividersCount, 3);
+            assert.equal(lastKeyword.whereFunction, "in");
+            assert.equal(lastKeyword.whereFunctionParameters, 0);
+            assert.equal(lastKeyword.parentheses, 0);
 
             done();
         });
     });
 
-    it.skip('After where field and in operator | ?????????????????????????????', done => {
+    it('After where field and in operator | after ( should list terms', done => {
         rqlTestUtils.autoComplete(`from Orders
 where OrderedAt in (|`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "");
-            assert.deepEqual(wordlist, fieldsList);
+            assert.deepEqual(wordlist, termsOrderOrderedAt);
 
             assert.equal(lastKeyword.keyword, "where");
-            assert.equal(lastKeyword.dividersCount, 2);
+            assert.equal(lastKeyword.dividersCount, 3);
+            assert.equal(lastKeyword.whereFunction, "in");
+            assert.equal(lastKeyword.whereFunctionParameters, 0);
+            assert.equal(lastKeyword.parentheses, 1);
+
+            done();
+        });
+    });
+
+    it('After where field and in operator | after (, should list terms', done => {
+        rqlTestUtils.autoComplete(`from Orders
+where OrderedAt in ('1996-07-18T00:00:00.0000000', |`, northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "");
+            assert.deepEqual(wordlist, termsOrderOrderedAt);
+
+            assert.equal(lastKeyword.keyword, "where");
+            assert.equal(lastKeyword.dividersCount, 3);
+            assert.equal(lastKeyword.whereFunction, "in");
+            assert.equal(lastKeyword.whereFunctionParameters, 0);
+            assert.equal(lastKeyword.parentheses, 1);
 
             done();
         });
@@ -1665,6 +1757,18 @@ group by ShippedAt, |`, northwindProvider(), (errors, wordlist, prefix, lastKeyw
     it('from index after index name without space should complete with prefix', done => {
         rqlTestUtils.autoComplete("from index 'Orders/Totals'|", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
             assert.equal(prefix, "'Orders/Totals'");
+            assert.deepEqual(wordlist, indexesList);
+
+            assert.equal(lastKeyword.keyword, "from index");
+            assert.equal(lastKeyword.dividersCount, 1);
+
+            done();
+        });
+    });
+
+    it('from index after index name (Index) without space should complete with prefix', done => {
+        rqlTestUtils.autoComplete("from index Index| as alias", northwindProvider(), (errors, wordlist, prefix, lastKeyword) => {
+            assert.equal(prefix, "Index");
             assert.deepEqual(wordlist, indexesList);
 
             assert.equal(lastKeyword.keyword, "from index");

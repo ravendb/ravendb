@@ -6,6 +6,7 @@ import forceLicenseUpdateCommand = require("commands/licensing/forceLicenseUpdat
 import buildInfo = require("models/resources/buildInfo");
 import generalUtils = require("common/generalUtils");
 import accessManager = require("common/shell/accessManager");
+import getLatestVersionInfoCommand = require("commands/version/getLatestVersionInfoCommand");
 
 class about extends viewModelBase {
 
@@ -20,7 +21,39 @@ class about extends viewModelBase {
     serverVersion = buildInfo.serverBuildVersion;
 
     developerLicense = license.developerLicense;
+
+    static latestVersion = ko.observable<Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo>();
     
+    currentServerVersion = ko.pureComputed(() => this.serverVersion() ? this.serverVersion().FullVersion : "");
+
+    isNewVersionAvailable = ko.pureComputed(() => {
+        const latestVersionInfo = about.latestVersion();
+        if (!latestVersionInfo) {
+            return false;
+        }
+
+        const serverVersion = this.serverVersion();
+        if (!serverVersion) {
+            return false;
+        }
+
+        const isDevBuildNumber = (num: number) => num >= 40 && num < 50;
+
+        return !isDevBuildNumber(latestVersionInfo.BuildNumber) &&
+            latestVersionInfo.BuildNumber > serverVersion.BuildVersion;
+    });
+
+    newVersionAvailableHtml = ko.pureComputed(() => {
+        if (this.isNewVersionAvailable()) {
+            return `New version available<br/> <span class="nobr">${ about.latestVersion().Version }</span>`;
+        } else {
+            return `You are using the latest version`;
+        }
+    });
+    
+    latestVersionWhatsNewUrl = ko.pureComputed(() => 
+        `https://ravendb.net/whats-new?buildNumber=${ about.latestVersion().BuildNumber }`);
+
     maxClusterSize  = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
         return licenseStatus ? licenseStatus.MaxClusterSize : 1;
@@ -44,10 +77,10 @@ class about extends viewModelBase {
         
         return support.Status !== "ProductionSupport";
     });
-    
 
     spinners = {
-        forceLicenseUpdate: ko.observable<boolean>(false)
+        forceLicenseUpdate: ko.observable<boolean>(false),
+        latestVersionUpdates: ko.observable<boolean>(false)
     };
 
     formattedExpiration = ko.pureComputed(() => {
@@ -133,6 +166,34 @@ class about extends viewModelBase {
         registration.showRegistrationDialog(license.licenseStatus(), false, true);
     }
 
+    private pullLatestVersionInfo() {
+        this.spinners.latestVersionUpdates(true);
+        return new getLatestVersionInfoCommand()
+            .execute()
+            .done(versionInfo => {
+                if (versionInfo && versionInfo.Version) {
+                    about.latestVersion(versionInfo);
+                }
+            })
+            .always(() => this.spinners.latestVersionUpdates(false));
+    }
+
+    refreshLatestVersionInfo() {
+        this.spinners.latestVersionUpdates(true);
+        const cmd = new getLatestVersionInfoCommand(true);
+        cmd.execute()
+            .done(versionInfo => {
+                if (versionInfo && versionInfo.Version) {
+                    about.latestVersion(versionInfo);
+                }
+            })
+            .always(() => this.spinners.latestVersionUpdates(false));
+    }
+
+    openLatestVersionDownload() {
+        window.open("https://ravendb.net/downloads", "_blank");
+    }
+
     forceLicenseUpdate() {
         this.confirmationMessage(
                 "Force License Update",
@@ -155,6 +216,12 @@ class about extends viewModelBase {
     openFeedbackForm() {
         shell.openFeedbackForm();
     }
+
+    activate(args: any) {
+        super.activate(args, true);
+        return this.pullLatestVersionInfo();
+    }
+    
 }
 
 export = about;

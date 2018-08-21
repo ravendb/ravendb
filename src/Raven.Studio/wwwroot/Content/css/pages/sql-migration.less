@@ -1,5 +1,7 @@
 @raven-field-color: #a4f012;
 
+
+
 .fullscreen {
 
     #editTransform {
@@ -28,7 +30,38 @@
     }
 }
 
+
+.reference-in-use-modal, .sql-migration {
+    .link-actions {
+
+        .btn.btn-sm.active {
+            background-color: @brand-primary !important;
+            border-color: @brand-primary !important;
+            color: @gray-lighter;
+        }
+    }
+
+    .key-type {
+
+        &.primary {
+            color: #ffd800;
+        }
+
+        &.foreign {
+            color: @gray;
+        }
+    }
+}
+
 .sql-migration {
+
+    .table-header {
+        i {
+            font-size: 13px;
+            padding-top: 7px;
+            color: @gray;
+        }
+    }
 
     .suffix-input {
         width: 100px;
@@ -40,8 +73,10 @@
     }
 
     .customizations {
-        font-size: 10px;
-
+        font-size: 11px;
+        color: @gray;
+        text-transform: uppercase;
+        font-weight: bold;
 
         i + i {
             padding-left: 5px;
@@ -95,44 +130,154 @@
 
     .relation {
         padding: 4px 0;
+
         span {
             margin-right: 3px;
             margin-left: 0;
         }
     }
 
-    .link-actions {
-
-        .btn.btn-sm.active {
-            background-color: @brand-primary !important;
-            border-color: @brand-primary !important;
-        }
-    }
-
-
     .document-id {
         padding: 4px;
         padding-bottom: 0;
     }
 
+
     .object-container {
         padding: 20px 7.5px 20px 20px;
         position: relative;
+        display: grid;
+        align-items: start;
+        grid-template-columns: repeat(7,auto) 1fr;
+
+        .prop-table {
+            display: grid;
+            grid-template-columns: auto auto auto 1fr;
+        }
+
+        .inner-table {
+            display: grid;
+        }
+
+        .prop-table, .inner-table {
+            grid-column: ~"1/-1";
+
+            .prop-table-row {
+                display: contents;
+
+                .sqlName {
+                    grid-column-start: 1;
+                    line-height: 30px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+            }
+        }
+
+        .arrow {
+            padding: 0 @grid-gutter-width/2;
+            line-height: 30px;
+
+            i {
+                font-size: 14px;
+                color: @gray;
+                opacity: .8;
+            }
+        }
+
+        .inline-edit {
+            .static {
+                display: flex;
+                align-items: center;
+                height: 29px;
+            }
+
+            .raven-property-name {
+                flex-grow: 1;
+                margin-right: @grid-gutter-width/2;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .raven-property-type {
+                width: 85px;
+            }
+        }
+
+        .references-container {
+            display: contents;
+
+            .reference-item {
+                display: contents;
+
+                & > .relation {
+                    display: contents;
+
+                    .key, .relation-type, .from, .in {
+                        height: 30px;
+                        line-height: 30px;
+                    }
+
+                    .key {
+                        margin-left: -20px;
+                        grid-column-start: 1;
+                        padding-right: @grid-gutter-width/2;
+                    }
+
+                    .relation-type {
+                        grid-column-start: 2;
+                        padding: 0 @grid-gutter-width/2;
+                    }
+
+                    .form {
+                        grid-column-start: 3;
+                        padding: 0 @grid-gutter-width/2;
+                    }
+
+                    .in {
+                        grid-column-start: 4;
+                        padding: 0 @grid-gutter-width/2;
+                    }
+
+                    .key-type {
+                    }
+                }
+
+                .actions-container {
+                    display: flex;
+                    align-items: center;
+                    min-height: 30px;
+                    justify-content: flex-start;
+                    flex-wrap: wrap;
+
+                    .btn {
+                        &.active {
+                            color: @gray-lighter;
+                        }
+                    }
+                }
+
+                .link-actions {
+                }
+            }
+        }
+
+        &:before, &:after {
+            position: absolute;
+            font-weight: 900;
+            color: @gray;
+        }
 
         &:before {
-            position: absolute;
             content: '{';
             top: 6px;
             left: 7px;
-            opacity: 0.5;
         }
 
         &:after {
-            position: absolute;
             content: '}';
             bottom: 3px;
             left: 7px;
-            opacity: 0.5;
         }
     }
 
@@ -140,20 +285,22 @@
         padding: 20px 7.5px 20px 20px;
         position: relative;
 
-        &:before {
+        &:before, &:after {
             position: absolute;
+            font-weight: 900;
+            color: @gray;
+        }
+
+        &:before {
             content: '[';
             top: 6px;
             left: 7px;
-            opacity: 0.5;
         }
 
         &:after {
-            position: absolute;
             content: ']';
             bottom: 3px;
             left: 7px;
-            opacity: 0.5;
         }
     }
 
@@ -180,10 +327,9 @@
     .inline-edit {
         border: solid 1px transparent;
         padding-left: @grid-gutter-width/4;
-        padding-right: @grid-gutter-width/4;
         position: relative;
         height: 30px;
-        padding-right: 22px;
+        padding-right: 30px;
 
         input {
             display: none;
@@ -209,18 +355,18 @@
         }
 
         &:hover:not(.edit-mode):not(.edit-disabled) {
-            padding-right: @grid-gutter-width/4;
             border: solid 1px @gray;
-            border-right: solid 22px @gray;
             position: relative;
 
             &:after {
                 position: absolute;
-                right: -17px;
+                right: 0px;
                 top: 0;
                 bottom: 0;
                 content: "\e92a";
                 font-family: 'icomoon' !important;
+                background-color: @gray;
+                padding: 2px 4px;
             }
 
             cursor: pointer;

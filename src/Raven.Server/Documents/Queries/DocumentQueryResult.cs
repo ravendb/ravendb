@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Operations.Counters;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Explanation;
 
 namespace Raven.Server.Documents.Queries
@@ -15,6 +17,16 @@ namespace Raven.Server.Documents.Queries
         public override bool SupportsExplanations => true;
 
         public override bool SupportsExceptionHandling => false;
+
+        private Dictionary<string, List<CounterDetail>> _counterIncludes;
+
+        public override void AddCounterIncludes(IncludeCountersCommand includeCountersCommand)
+        {
+            _counterIncludes = includeCountersCommand.Results;
+            IncludedCounterNames = includeCountersCommand.CountersToGetByDocId;
+        }
+
+        public override Dictionary<string, List<CounterDetail>> GetCounterIncludes() => _counterIncludes;
 
         public override void AddResult(Document result)
         {

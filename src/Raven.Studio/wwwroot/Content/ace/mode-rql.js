@@ -793,8 +793,8 @@ var JavaScriptHighlightRules = require("./javascript_highlight_rules").JavaScrip
 
 var RqlHighlightRules = function() {
 
-    var keywordRegex = /[a-zA-Z_$@][a-zA-Z0-9_$@]*\b/;
-    
+    var keywordRegex = /[a-zA-Z_$@\u00a1-\uffff][a-zA-Z0-9_$@\u00a1-\uffff]*\b/;
+
     var clausesKeywords = (
         "declare|from|group|where|order|load|select|include|update"
     );
@@ -906,6 +906,9 @@ var RqlHighlightRules = function() {
     } ];
     
     var startRule = [ {
+        token :  "field",
+        regex : /[a-zA-Z_$@\u00a1-\uffff][a-zA-Z0-9_$@\u00a1-\uffff]*(?:\[\])?\.[a-zA-Z0-9_$@\u00a1-\uffff.]*/
+    }, {
         token :  "function.where",
         regex : whereFunctions,
         next: "whereFunction"

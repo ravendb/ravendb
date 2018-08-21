@@ -5,8 +5,10 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Explanation;
+using Raven.Client.Documents.Queries.Highlighting;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.Tokens;
@@ -19,7 +21,7 @@ namespace Raven.Client.Documents.Session
     /// A query against a Raven index
     /// </summary>
     public partial class AsyncDocumentQuery<T> : AbstractDocumentQuery<T, AsyncDocumentQuery<T>>, IAsyncDocumentQuery<T>,
-        IAsyncRawDocumentQuery<T>
+        IAsyncRawDocumentQuery<T>, IDocumentQueryGenerator
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
@@ -886,18 +888,19 @@ namespace Raven.Client.Documents.Session
                 queryData?.FromAlias)
             {
                 PageSize = PageSize,
-                SelectTokens = SelectTokens,
+                SelectTokens = new LinkedList<QueryToken>(SelectTokens),
                 FieldsToFetchToken = FieldsToFetchToken,
-                WhereTokens = WhereTokens,
-                OrderByTokens = OrderByTokens,
-                GroupByTokens = GroupByTokens,
-                QueryParameters = QueryParameters,
+                WhereTokens = new LinkedList<QueryToken>(WhereTokens),
+                OrderByTokens = new LinkedList<QueryToken>(OrderByTokens),
+                GroupByTokens = new LinkedList<QueryToken>(GroupByTokens),
+                QueryParameters = new Parameters(QueryParameters),
                 Start = Start,
                 Timeout = Timeout,
                 QueryStats = QueryStats,
                 TheWaitForNonStaleResults = TheWaitForNonStaleResults,
                 Negate = Negate,
-                Includes = new HashSet<string>(Includes),
+                DocumentIncludes = new HashSet<string>(DocumentIncludes),
+                CounterIncludesTokens = CounterIncludesTokens,
                 RootTypes = { typeof(T) },
                 BeforeQueryExecutedCallback = BeforeQueryExecutedCallback,
                 AfterQueryExecutedCallback = AfterQueryExecutedCallback,
@@ -914,6 +917,57 @@ namespace Raven.Client.Documents.Session
             };
 
             return query;
+        }
+
+        public IRavenQueryable<T> ToQueryable()
+        {
+            var type = typeof(T);
+
+            var queryStatistics = new QueryStatistics();
+            var highlightings = new LinqQueryHighlightings();
+
+            var ravenQueryInspector = new RavenQueryInspector<T>();
+            var ravenQueryProvider = new RavenQueryProvider<T>(
+                this,
+                IndexName,
+                CollectionName,
+                type,
+                queryStatistics,
+                highlightings,
+                IsGroupBy,
+                Conventions);
+
+            ravenQueryInspector.Init(ravenQueryProvider,
+                queryStatistics,
+                highlightings,
+                IndexName,
+                CollectionName,
+                null,
+                TheSession,
+                IsGroupBy);
+
+            return ravenQueryInspector;
+        }
+
+        InMemoryDocumentSessionOperations IDocumentQueryGenerator.Session => TheSession;
+
+        RavenQueryInspector<TS> IDocumentQueryGenerator.CreateRavenQueryInspector<TS>()
+        {
+            return ((IDocumentQueryGenerator)AsyncSession).CreateRavenQueryInspector<TS>();
+        }
+
+        public IDocumentQuery<TResult> Query<TResult>(string indexName, string collectionName, bool isMapReduce)
+        {
+            throw new NotSupportedException("Cannot create an sync LINQ query from AsyncDocumentQuery, you need to use DocumentQuery for that");
+        }
+
+        public IAsyncDocumentQuery<TResult> AsyncQuery<TResult>(string indexName, string collectionName, bool isMapReduce)
+        {
+            if (indexName != IndexName || collectionName != CollectionName)
+                throw new InvalidOperationException(
+                    $"AsyncDocumentQuery source has (index name: {IndexName}, collection: {CollectionName}), but got request for (index name: {indexName}, collection: {collectionName}), you cannot change the index name / collection when using AsyncDocumentQuery as the source");
+
+            return SelectFields<TResult>();
         }
     }
 }

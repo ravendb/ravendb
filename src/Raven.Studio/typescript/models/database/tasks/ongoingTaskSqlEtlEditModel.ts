@@ -11,11 +11,13 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
     parameterizedDeletes = ko.observable<boolean>(false);
     forceRecompileQuery = ko.observable<boolean>(false);
     tableQuotation = ko.observable<boolean>(false);
+    commandTimeout = ko.observable<number>();
     
     transformationScripts = ko.observableArray<ongoingTaskSqlEtlTransformationModel>([]);
     sqlTables = ko.observableArray<ongoingTaskSqlEtlTableModel>([]);
     
     validationGroup: KnockoutValidationGroup;
+    enterTestModeValidationGroup: KnockoutValidationGroup;
     dirtyFlag: () => DirtyFlag;
    
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails) {
@@ -37,6 +39,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             this.parameterizedDeletes,
             this.forceRecompileQuery,
             this.tableQuotation,
+            this.commandTimeout,
             this.allowEtlOnNonEncryptedChannel
         ])
     }
@@ -48,6 +51,10 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             required: true
         });
 
+        this.commandTimeout.extend({
+            number: true
+        });
+        
         this.sqlTables.extend({
             validation: [
                 {
@@ -70,7 +77,13 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             connectionStringName: this.connectionStringName,
             sqlTables: this.sqlTables,
             transformationScripts: this.transformationScripts,
-            preferredMentor: this.preferredMentor
+            preferredMentor: this.preferredMentor,
+            commandTimeout: this.commandTimeout
+        });
+        
+        this.enterTestModeValidationGroup = ko.validatedObservable({
+            connectionStringName: this.connectionStringName,
+            sqlTables: this.sqlTables
         });
     }
 
@@ -82,6 +95,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             this.parameterizedDeletes(dto.Configuration.ParameterizeDeletes);
             this.forceRecompileQuery(dto.Configuration.ForceQueryRecompile);
             this.tableQuotation(dto.Configuration.QuoteTables);
+            this.commandTimeout(dto.Configuration.CommandTimeout);
             
             this.manualChooseMentor(!!dto.Configuration.MentorNode);
             this.preferredMentor(dto.Configuration.MentorNode);
@@ -103,6 +117,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             FactoryName: "System.Data.SqlClient",
             ForceQueryRecompile: this.forceRecompileQuery(),
             ParameterizeDeletes: this.parameterizedDeletes(),
+            CommandTimeout: this.commandTimeout() || null,
             QuoteTables: this.tableQuotation(),
             Transforms: this.transformationScripts().map(x => x.toDto()),
             SqlTables: this.sqlTables().map(x => x.toDto())     
@@ -112,7 +127,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
     
     static empty(): ongoingTaskSqlEtlEditModel {
         return new ongoingTaskSqlEtlEditModel(
-            {                
+            {
                 TaskName: "", 
                 TaskType: "SqlEtl",
                 TaskState: "Enabled",               

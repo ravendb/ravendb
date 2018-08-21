@@ -32,28 +32,54 @@ class queryCommand extends commandBase {
     }
 
     private getQueryText() {
-        if (!this.criteria.queryText()) {
-            return undefined;
+        const queryText = this.criteria.queryText();
+        if (!queryText) {
+            return [undefined, undefined];
         }
-        
+
+        let [parameters, rql] = this.extractQueryParameters(queryText);
+
         if (this.criteria.showFields()) {
-            return queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(this.criteria.queryText());
-        } else {
-            return this.criteria.queryText();
+            rql = queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(rql);
+        } 
+        
+        return [parameters, rql];
+    }
+
+    private extractQueryParameters(queryText: string) {
+        const parametersEndRegex = /^(from|declare)/mi;
+        const match = parametersEndRegex.exec(queryText);
+        if (!match) {
+            return [undefined, queryText];
         }
+        const parametersText = queryText.substring(0, match.index);
+        const params = parametersText.replace(/(?:^|;\s*)[$]/gm, "result.");
+        const parametersJs = `
+var f = function() {
+    var result = {};
+    ${params}
+    return JSON.stringify(result);
+}
+f();
+`;
+        let parameters = eval(parametersJs);
+        const rql = queryText.substring(match.index);
+        return [parameters, rql];
     }
     
     getUrl() {
         const criteria = this.criteria;
         const url = endpoints.databases.queries.queries;
-
+        const [parameters, rql] = this.getQueryText();
+        
         const urlArgs = this.urlEncodeArgs({
-            query: this.getQueryText(),
+            query: rql,
+            parameters: parameters,
             start: this.skip,
             pageSize: this.take,
             debug: criteria.indexEntries() ? "entries" : undefined,
             disableCache: this.disableCache ? Date.now() : undefined,
-            metadataOnly: typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined
+            metadataOnly: typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined,
         });
         return url + urlArgs;
     }

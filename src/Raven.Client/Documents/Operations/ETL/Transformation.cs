@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Sparrow.Json.Parsing;
 
@@ -20,7 +21,7 @@ namespace Raven.Client.Documents.Operations.ETL
         internal const string AddCounter = "addCounter";
 
         internal const string CounterMarker = "$counter/";
-        
+
         private static readonly Regex LoadToMethodRegex = new Regex($@"{LoadTo}(\w+)", RegexOptions.Compiled);
 
         private static readonly Regex LoadAttachmentMethodRegex = new Regex(LoadAttachment, RegexOptions.Compiled);
@@ -28,6 +29,12 @@ namespace Raven.Client.Documents.Operations.ETL
 
         private static readonly Regex LoadCounterMethodRegex = new Regex(LoadCounter, RegexOptions.Compiled);
         private static readonly Regex AddCounterMethodRegex = new Regex(AddCounter, RegexOptions.Compiled);
+
+        internal static readonly Regex LoadCountersBehaviorMethodRegex = new Regex(@"function\s+loadCountersOf(\w+)Behavior\s*\(.+\}", RegexOptions.Singleline);
+        internal static readonly Regex LoadCountersBehaviorMethodNameRegex = new Regex(@"loadCountersOf(\w+)Behavior", RegexOptions.Singleline);
+
+        internal static readonly Regex DeleteDocumentsBehaviorMethodRegex = new Regex(@"function\s+deleteDocumentsOf(\w+)Behavior\s*\(.+\}", RegexOptions.Singleline);
+        internal static readonly Regex DeleteDocumentsBehaviorMethodNameRegex = new Regex(@"deleteDocumentsOf(\w+)Behavior", RegexOptions.Singleline);
 
         private static readonly Regex Legacy_ReplicateToMethodRegex = new Regex(@"replicateTo(\w+)", RegexOptions.Compiled);
 
@@ -43,9 +50,15 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public string Script { get; set; }
 
-        internal bool IsHandlingAttachments { get; private set; }
+        internal Dictionary<string, string> CollectionToLoadCounterBehaviorFunction { get; private set; }
 
-        internal bool IsHandlingCounters { get; private set; }
+        internal Dictionary<string, string> CollectionToDeleteDocumentsBehaviorFunction { get; private set; }
+
+        internal bool IsAddingAttachments { get; private set; }
+
+        internal bool IsLoadingAttachments { get; private set; }
+
+        internal bool IsAddingCounters { get; private set; }
 
         public virtual bool Validate(ref List<string> errors, EtlType type)
         {
@@ -95,9 +108,101 @@ namespace Raven.Client.Documents.Operations.ETL
                                "If you are using the SQL replication script from RavenDB 3.x version then please use `loadTo<TableName>()` instead.");
                 }
 
-                IsHandlingAttachments = LoadAttachmentMethodRegex.Matches(Script).Count > 0 || AddAttachmentMethodRegex.Matches(Script).Count > 0;
+                IsAddingAttachments = AddAttachmentMethodRegex.Matches(Script).Count > 0;
+                IsLoadingAttachments = LoadAttachmentMethodRegex.Matches(Script).Count > 0;
 
-                IsHandlingCounters = LoadCounterMethodRegex.Matches(Script).Count > 0 || AddCounterMethodRegex.Matches(Script).Count > 0;
+                IsAddingCounters = AddCounterMethodRegex.Matches(Script).Count > 0;
+
+                if (IsAddingCounters && type == EtlType.Sql)
+                    errors.Add("Adding counters isn't supported by SQL ETL");
+
+                var counterBehaviors = LoadCountersBehaviorMethodRegex.Matches(Script);
+
+                if (counterBehaviors.Count > 0)
+                {
+                    if (type == EtlType.Sql)
+                    {
+                        errors.Add("Load counter behavior functions aren't supported by SQL ETL");
+                    }
+                    else
+                    {
+                        CollectionToLoadCounterBehaviorFunction = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                        for (int i = 0; i < counterBehaviors.Count; i++)
+                        {
+                            var counterBehaviorFunction = counterBehaviors[i];
+
+                            if (counterBehaviorFunction.Groups.Count != 2)
+                            {
+                                errors.Add(
+                                    "Invalid load counters behavior function. It is expected to have the following signature: " +
+                                    "loadCountersOf<CollectionName>Behavior(docId, counterName) and return 'true' if counter should be loaded to a destination");
+                            }
+
+                            var function = counterBehaviorFunction.Groups[0].Value;
+                            var collection = counterBehaviorFunction.Groups[1].Value;
+
+                            var functionName = LoadCountersBehaviorMethodNameRegex.Match(function);
+
+                            if (Collections.Contains(collection) == false)
+                            {
+                                var scriptCollections = string.Join(", ", Collections.Select(x => ($"'{x}'")));
+
+                                errors.Add(
+                                    $"There is '{functionName}' function defined in '{Name}' script while the processed collections " +
+                                    $"({scriptCollections}) doesn't include '{collection}'. " +
+                                    "loadCountersOf<CollectionName>Behavior() function is meant to be defined only for counters of docs from collections that " +
+                                    "are loaded to the same collection on a destination side");
+                            }
+
+                            CollectionToLoadCounterBehaviorFunction[collection] = functionName.Value;
+                        }
+                    }
+                }
+
+                var deleteBehaviors = DeleteDocumentsBehaviorMethodRegex.Matches(Script);
+
+                if (deleteBehaviors.Count > 0)
+                {
+                    if (type == EtlType.Sql)
+                    {
+                        errors.Add("Delete documents behavior functions aren't supported by SQL ETL");
+                    }
+                    else
+                    {
+                        CollectionToDeleteDocumentsBehaviorFunction = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                        for (int i = 0; i < deleteBehaviors.Count; i++)
+                        {
+                            var deleteBehaviorFunction = deleteBehaviors[i];
+
+                            if (deleteBehaviorFunction.Groups.Count != 2)
+                            {
+                                errors.Add(
+                                    "Invalid delete documents behavior function. It is expected to have the following signature: " +
+                                    "deleteDocumentsOf<CollectionName>Behavior(docId) and return 'true' if document deletion should be sent to a destination");
+                            }
+
+                            var function = deleteBehaviorFunction.Groups[0].Value;
+                            var collection = deleteBehaviorFunction.Groups[1].Value;
+
+                            var functionName = DeleteDocumentsBehaviorMethodNameRegex.Match(function);
+
+                            if (Collections.Contains(collection) == false)
+                            {
+                                var scriptCollections = string.Join(", ", Collections.Select(x => ($"'{x}'")));
+
+                                errors.Add(
+                                    $"There is '{functionName}' function defined in '{Name}' script while the processed collections " +
+                                    $"({scriptCollections}) doesn't include '{collection}'. " +
+                                    "deleteDocumentsOf<CollectionName>Behavior() function is meant to be defined only for documents from collections that " +
+                                    "are loaded to the same collection on a destination side");
+                            }
+
+                            CollectionToDeleteDocumentsBehaviorFunction[collection] = functionName.Value;
+                        }
+                    }
+                }
             }
 
             return errors.Count == 0;

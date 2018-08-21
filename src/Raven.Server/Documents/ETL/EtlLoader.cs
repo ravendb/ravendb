@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -39,7 +40,8 @@ namespace Raven.Server.Documents.ETL
 
             _database = database;
             _serverStore = serverStore;
-            _database.Changes.OnDocumentChange += NotifyAboutWork;
+            _database.Changes.OnDocumentChange += OnDocumentChange;
+            _database.Changes.OnCounterChange += OnCounterChange;
         }
 
         public EtlProcess[] Processes => _processes;
@@ -53,8 +55,8 @@ namespace Raven.Server.Documents.ETL
             LoadProcesses(record, record.RavenEtls, record.SqlEtls, toRemove: null);
         }
 
-        private void LoadProcesses(DatabaseRecord record, 
-            List<RavenEtlConfiguration> newRavenDestinations, 
+        private void LoadProcesses(DatabaseRecord record,
+            List<RavenEtlConfiguration> newRavenDestinations,
             List<SqlEtlConfiguration> newSqlDestinations,
             List<EtlProcess> toRemove)
         {
@@ -238,7 +240,7 @@ namespace Raven.Server.Documents.ETL
             if (Logger.IsInfoEnabled)
                 Logger.Info(errorMessage);
 
-            var alert = AlertRaised.Create(_database.Name,AlertTitle, errorMessage, AlertType.Etl_Error, NotificationSeverity.Error);
+            var alert = AlertRaised.Create(_database.Name, AlertTitle, errorMessage, AlertType.Etl_Error, NotificationSeverity.Error);
 
             _database.NotificationCenter.Add(alert);
         }
@@ -256,18 +258,30 @@ namespace Raven.Server.Documents.ETL
             _database.NotificationCenter.Add(alert);
         }
 
-        private void NotifyAboutWork(DocumentChange documentChange)
+        private void OnCounterChange(CounterChange change)
+        {
+            NotifyAboutWork(documentChange: null, counterChange: change);
+        }
+
+        private void OnDocumentChange(DocumentChange change)
+        {
+            NotifyAboutWork(documentChange: change, counterChange: null);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void NotifyAboutWork(DocumentChange documentChange, CounterChange counterChange)
         {
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < _processes.Length; i++)
             {
-                _processes[i].Reset(documentChange);
+                _processes[i].NotifyAboutWork(documentChange, counterChange);
             }
         }
 
         public virtual void Dispose()
         {
-            _database.Changes.OnDocumentChange -= NotifyAboutWork;
+            _database.Changes.OnDocumentChange -= OnDocumentChange;
+            _database.Changes.OnCounterChange -= OnCounterChange;
 
             var ea = new ExceptionAggregator(Logger, "Could not dispose ETL loader");
 

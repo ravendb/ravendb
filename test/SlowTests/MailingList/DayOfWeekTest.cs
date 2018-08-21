@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -19,7 +20,7 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                var knownDay = DateTime.Parse("2014-03-31").Date; // This is a Monday
+                var knownDay = DateTime.Parse("2014-03-31", CultureInfo.InvariantCulture).Date; // This is a Monday
                 using (var session = store.OpenSession())
                 {
                     var monday = new SampleData { Date = knownDay };

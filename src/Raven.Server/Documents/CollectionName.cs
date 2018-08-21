@@ -44,6 +44,8 @@ namespace Raven.Server.Documents
 
         public readonly string Name;
         private readonly string _revisions;
+        private readonly string _counters;
+
         private bool? _isHiLo;
 
         static CollectionName()
@@ -60,6 +62,7 @@ namespace Raven.Server.Documents
             _documents = GetName(CollectionTableType.Documents);
             _tombstones = GetName(CollectionTableType.Tombstones);
             _revisions = GetName(CollectionTableType.Revisions);
+            _counters = GetName(CollectionTableType.Counters);
         }
 
         public bool IsHiLo => (bool)(_isHiLo ?? (_isHiLo = IsHiLoCollection(Name)));
@@ -74,6 +77,8 @@ namespace Raven.Server.Documents
                     return _tombstones;
                 case CollectionTableType.Revisions:
                     return _revisions;
+                case CollectionTableType.Counters:
+                    return _counters;
                 default:
                     throw new NotSupportedException($"Collection table type '{type}' is not supported.");
             }
@@ -193,6 +198,7 @@ namespace Raven.Server.Documents
     {
         Documents,
         Tombstones,
-        Revisions
+        Revisions,
+        Counters
     }
 }

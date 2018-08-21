@@ -15,7 +15,7 @@ namespace SlowTests.Issues
     public class RavenDBBookJavaScriptIndexes : RavenTestBase
     {
 
-        [Fact]
+        [Fact(Skip="This is just a playground test for javascript indexes")]
         public void PlaygroundTest()
         {
             ExecuteIndexAndWaitForUserToContinueTheTest<SalesByCityAndSupplier>();

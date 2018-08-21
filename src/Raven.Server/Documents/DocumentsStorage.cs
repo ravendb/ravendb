@@ -871,12 +871,24 @@ namespace Raven.Server.Documents
             int start,
             int take)
         {
-            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
-            if (collectionName == null)
-                yield break;
+            string tableName;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
-                collectionName.GetTableName(CollectionTableType.Tombstones));
+            if (collection == AttachmentsStorage.AttachmentsTombstones ||
+                collection == RevisionsStorage.RevisionsTombstones ||
+                collection == CountersStorage.CountersTombstones)
+            {
+                tableName = collection;
+            }
+            else
+            {
+                var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+                if (collectionName == null)
+                    yield break;
+
+                tableName = collectionName.GetTableName(CollectionTableType.Tombstones);
+            }
+            
+            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, tableName);
 
             if (table == null)
                 yield break;
@@ -950,7 +962,7 @@ namespace Raven.Server.Documents
             return TableValueToEtag(1, ref result.Reader);
         }
 
-        public bool HasTombstonesWithDocumentEtagBetween(DocumentsOperationContext context, string collection,
+        public bool HasTombstonesWithEtagBetween(DocumentsOperationContext context, string collection,
             long start,
             long end)
         {
@@ -967,7 +979,7 @@ namespace Raven.Server.Documents
             if (table == null)
                 return false;
 
-            return table.HasEntriesBetween(TombstonesSchema.FixedSizeIndexes[DeletedEtagsSlice], start, end);
+            return table.HasEntriesBetween(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], start, end, inclusive: true);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1051,6 +1063,7 @@ namespace Raven.Server.Documents
             else if (result.Type == Tombstone.TombstoneType.Counter)
             {
                 result.LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr);
+                result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
             }
 
             return result;
@@ -1188,7 +1201,7 @@ namespace Raven.Server.Documents
                     AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId, changeVector, modifiedTicks);
 
 
-                CountersStorage.DeleteCountersForDocument(context, id);
+                CountersStorage.DeleteCountersForDocument(context, id, collectionName);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {
@@ -1345,22 +1358,49 @@ namespace Raven.Server.Documents
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones));
-            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
-            using (Slice.From(context.Allocator, changeVector, out var cv))
-            using (table.Allocate(out TableValueBuilder tvb))
+
+            try
             {
-                tvb.Add(lowerId);
-                tvb.Add(Bits.SwapBytes(newEtag));
-                tvb.Add(Bits.SwapBytes(documentEtag));
-                tvb.Add(context.GetTransactionMarker());
-                tvb.Add((byte)Tombstone.TombstoneType.Document);
-                tvb.Add(collectionSlice);
-                tvb.Add((int)flags);
-                tvb.Add(cv.Content.Ptr, cv.Size);
-                tvb.Add(lastModifiedTicks);
-                table.Insert(tvb);
+                using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
+                using (Slice.From(context.Allocator, changeVector, out var cv))
+                using (table.Allocate(out TableValueBuilder tvb))
+                {
+                    tvb.Add(lowerId);
+                    tvb.Add(Bits.SwapBytes(newEtag));
+                    tvb.Add(Bits.SwapBytes(documentEtag));
+                    tvb.Add(context.GetTransactionMarker());
+                    tvb.Add((byte)Tombstone.TombstoneType.Document);
+                    tvb.Add(collectionSlice);
+                    tvb.Add((int)flags);
+                    tvb.Add(cv.Content.Ptr, cv.Size);
+                    tvb.Add(lastModifiedTicks);
+                    table.Insert(tvb);
+                }
             }
+            catch (VoronConcurrencyErrorException e)
+            {
+                var tombstoneTable = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+                if (tombstoneTable.ReadByKey(lowerId, out var tvr))
+                {
+                    var tombstoneCollection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
+                    var tombstoneCollectionName = ExtractCollectionName(context, tombstoneCollection);
+
+                    if (tombstoneCollectionName != collectionName)
+                        ThrowNotSupportedExceptionForCreatingTombstoneWhenItExistsForDifferentCollection(lowerId, collectionName, tombstoneCollectionName, e);
+                }
+
+                throw;
+            }
+
             return (newEtag, changeVector);
+        }
+
+        private static void ThrowNotSupportedExceptionForCreatingTombstoneWhenItExistsForDifferentCollection(Slice lowerId, CollectionName collectionName,
+            CollectionName tombstoneCollectionName, VoronConcurrencyErrorException e)
+        {
+            throw new NotSupportedException(
+                $"Could not delete document '{lowerId}' from collection '{collectionName.Name}' because tombstone for that document but different collection ('{tombstoneCollectionName.Name}') already exists. Did you change the documents collection recently? If yes, please give some time for other system components (e.g. Indexing, Replication, Backup) to process that change.",
+                e);
         }
 
         public struct PutOperationResults
@@ -1514,7 +1554,8 @@ namespace Raven.Server.Documents
             string tableName;
 
             if (collection == AttachmentsStorage.AttachmentsTombstones ||
-                collection == RevisionsStorage.RevisionsTombstones)
+                collection == RevisionsStorage.RevisionsTombstones ||
+                collection == CountersStorage.CountersTombstones)
             {
                 tableName = collection;
             }
@@ -1542,6 +1583,7 @@ namespace Raven.Server.Documents
         {
             yield return AttachmentsStorage.AttachmentsTombstones;
             yield return RevisionsStorage.RevisionsTombstones;
+            yield return CountersStorage.CountersTombstones;
 
             using (var it = transaction.LowLevelTransaction.RootObjects.Iterate(false))
             {

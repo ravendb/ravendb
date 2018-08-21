@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
@@ -29,6 +30,7 @@ namespace Raven.Server.Documents.Replication
         private readonly OutgoingReplicationHandler _parent;
         private OutgoingReplicationStatsScope _statsInstance;
         private readonly ReplicationStats _stats = new ReplicationStats();
+        public bool MissingAttachmentsInLastBatch { get; private set; }
 
         public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log)
         {
@@ -173,7 +175,6 @@ namespace Raven.Server.Documents.Replication
         {
             EnsureValidStats(stats);
             var wasInterrupted = false;
-
             var delay = GetDelayReplication();
 
             using (_parent._database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
@@ -193,8 +194,10 @@ namespace Raven.Server.Documents.Replication
                     var numberOfItemsSent = 0;
                     var skippedReplicationItemsInfo = new SkippedReplicationItemsInfo();
                     short lastTransactionMarker = -1;
+                    long prevLastEtag = _lastEtag;
+
                     using (_stats.Storage.Start())
-                    {
+                    {                        
                         foreach (var item in GetReplicationItems(documentsContext, _lastEtag, _stats))
                         {
                             if (lastTransactionMarker != item.TransactionMarker)
@@ -211,9 +214,14 @@ namespace Raven.Server.Documents.Replication
                                 }
                                 lastTransactionMarker = item.TransactionMarker;
 
-                                if (_parent._legacyReplicationMode == LegacyReplicationMode.V40)
+                                if (_parent.SupportedFeatures.Replication.Counters == false)
+                                {                                    
+                                    AssertNotCounterForLegacyReplication(item);
+                                }
+
+                                if (_parent.SupportedFeatures.Replication.ClusterTransaction == false )
                                 {
-                                    AssertLegalReplicationItemInLegacyMode(item);
+                                    AssertNotClusterTransactionDocumentForLegacyReplication(item);
                                 }
 
                                 // Include the attachment's document which is right after its latest attachment.
@@ -240,6 +248,25 @@ namespace Raven.Server.Documents.Replication
 
                             _stats.Storage.RecordInputAttempt();
 
+                            //Here we add missing attachments in the same batch as the document that contains them without modifying the last etag or transaction boundry
+                            if (MissingAttachmentsInLastBatch && 
+                                item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
+                                (item.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                            {
+                                var type = (item.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision: AttachmentType.Document;
+                                foreach (var attachment in _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(documentsContext, type, item.Id))
+                                {
+                                    //We need to filter attachments that are been sent in the same batch as the document
+                                    if(attachment.Etag >= prevLastEtag)
+                                        continue;
+                                    var stream = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(documentsContext, attachment.Base64Hash);
+                                    attachment.Stream = stream;
+                                    AddReplicationItemToBatch(ReplicationBatchItem.From(attachment), _stats.Storage, skippedReplicationItemsInfo);
+                                    size += attachment.Stream.Length;
+                                }
+                                
+                            }
+
                             _lastEtag = item.Etag;
 
                             if (item.Data != null)
@@ -253,7 +280,7 @@ namespace Raven.Server.Documents.Replication
                             numberOfItemsSent++;
                         }
                     }
-
+                    
                     if (_log.IsInfoEnabled)
                     {
                         if (skippedReplicationItemsInfo.SkippedItems > 0)
@@ -286,6 +313,8 @@ namespace Raven.Server.Documents.Replication
                         using (_stats.Network.Start())
                         {
                             SendDocumentsBatch(documentsContext, _stats.Network);
+                            if (MissingAttachmentsInLastBatch)
+                                return false;
                         }
                     }
                     catch (OperationCanceledException)
@@ -300,10 +329,14 @@ namespace Raven.Server.Documents.Replication
                             _log.Info("Failed to send document replication batch", e);
                         throw;
                     }
+
+                    MissingAttachmentsInLastBatch = false;
+                    
+
                     return true;
                 }
                 finally
-                {
+                {                    
                     foreach (var item in _orderedReplicaItems)
                     {
                         var value = item.Value;
@@ -322,7 +355,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void AssertLegalReplicationItemInLegacyMode(ReplicationBatchItem item)
+        private void AssertNotCounterForLegacyReplication(ReplicationBatchItem item)
         {
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Counter)
             {
@@ -337,10 +370,13 @@ namespace Raven.Server.Documents.Replication
 
                 throw new LegacyReplicationViolationException(message);
             }
+        }
 
+        private void AssertNotClusterTransactionDocumentForLegacyReplication(ReplicationBatchItem item)
+        {
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
                 item.Flags.HasFlag(DocumentFlags.FromClusterTransaction))
-            {
+            {                
                 // the other side doesn't support cluster transactions, stopping replication
                 var message = $"{_parent.Node.FromString()} found a document {item.Id} with flag `FromClusterTransaction` to replicate to {_parent.Destination.FromString()}, " +
                               "while we are in legacy mode (downgraded our replication version to match the destination). " +
@@ -433,7 +469,7 @@ namespace Raven.Server.Documents.Replication
 
 
             if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterTombstone && 
-                _parent._legacyReplicationMode == LegacyReplicationMode.V40)
+                _parent.SupportedFeatures.Replication.Counters == false)
             {
                 // skip counter tombstones in legacy mode
                 skippedReplicationItemsInfo.Update(item);
@@ -441,7 +477,8 @@ namespace Raven.Server.Documents.Replication
             }
 
             // destination already has it
-            if (ChangeVectorUtils.GetConflictStatus(item.ChangeVector, _parent.LastAcceptedChangeVector) == ConflictStatus.AlreadyMerged)
+            if ( (MissingAttachmentsInLastBatch == false || item.Type != ReplicationBatchItem.ReplicationItemType.Attachment) && 
+                ChangeVectorUtils.GetConflictStatus(item.ChangeVector, _parent.LastAcceptedChangeVector) == ConflictStatus.AlreadyMerged)
             {
                 stats.RecordChangeVectorSkip();
                 skippedReplicationItemsInfo.Update(item);
@@ -506,8 +543,12 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled && _orderedReplicaItems.Count > 0)
                 _log.Info($"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count:#,#;;0} attachment streams in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag}");
 
-            _parent.HandleServerResponse();
-
+            var (type, _) = _parent.HandleServerResponse();
+            if (type == ReplicationMessageReply.ReplyType.MissingAttachments)
+            {
+                MissingAttachmentsInLastBatch = true;
+                return;
+            }
             _parent._lastSentDocumentEtag = _lastEtag;
 
             _parent._lastDocumentSentTime = DateTime.UtcNow;
@@ -839,6 +880,8 @@ namespace Raven.Server.Documents.Replication
                                        sizeof(short) + // transaction marker
                                        sizeof(int) + // size of doc id
                                        item.Id.Size +
+                                       sizeof(int) + // size of doc collection
+                                       item.Collection.Size + // doc collection
                                        sizeof(int) + // size of name
                                        item.Name.Size +
                                        sizeof(long); // value
@@ -863,6 +906,11 @@ namespace Raven.Server.Documents.Replication
                 Memory.Copy(pTemp + tempBufferPos, item.Id.Buffer, item.Id.Size);
                 tempBufferPos += item.Id.Size;
 
+                *(int*)(pTemp + tempBufferPos) = item.Collection.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, item.Collection.Buffer, item.Collection.Size);
+                tempBufferPos += item.Collection.Size;
+
                 *(int*)(pTemp + tempBufferPos) = item.Name.Size;
                 tempBufferPos += sizeof(int);
                 Memory.Copy(pTemp + tempBufferPos, item.Name.Buffer, item.Name.Size);
@@ -886,6 +934,8 @@ namespace Raven.Server.Documents.Replication
                                    sizeof(short) + // transaction marker
                                    sizeof(int) + // size of tombstone key
                                    item.Id.Size +
+                                   sizeof(int) + // size of tombstone collection
+                                   item.Collection.Size + // tombstone collection
                                    sizeof(long); // last modified ticks
 
                 if (requiredSize > _tempBuffer.Length)
@@ -907,6 +957,11 @@ namespace Raven.Server.Documents.Replication
                 tempBufferPos += sizeof(int);
                 Memory.Copy(pTemp + tempBufferPos, item.Id.Buffer, item.Id.Size);
                 tempBufferPos += item.Id.Size;
+
+                *(int*)(pTemp + tempBufferPos) = item.Collection.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, item.Collection.Buffer, item.Collection.Size);
+                tempBufferPos += item.Collection.Size;
 
                 *(long*)(pTemp + tempBufferPos) = item.LastModifiedTicks;
                 tempBufferPos += sizeof(long);

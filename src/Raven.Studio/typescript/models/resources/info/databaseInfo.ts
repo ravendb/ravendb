@@ -26,7 +26,6 @@ class databaseInfo {
     isAdmin = ko.observable<boolean>();
     disabled = ko.observable<boolean>();
 
-    licensed = ko.observable<boolean>(true); //TODO: bind this value  
     filteredOut = ko.observable<boolean>(false);
     isBeingDeleted = ko.observable<boolean>(false);
 
@@ -112,10 +111,6 @@ class databaseInfo {
                 return "state-danger";
             }
 
-            if (!this.licensed()) {
-                return "state-danger";
-            }
-
             if (this.disabled()) {
                 return "state-warning";
             }
@@ -132,9 +127,6 @@ class databaseInfo {
                 return "Error";
             }
 
-            if (!this.licensed()) {
-                return "Unlicensed";
-            }
             if (this.disabled()) {
                 return "Disabled";
             }
@@ -146,10 +138,9 @@ class databaseInfo {
         });
 
         this.canNavigateToDatabase = ko.pureComputed(() => {
-            const hasLicense = this.licensed();
             const enabled = !this.disabled();
             const hasLoadError = this.hasLoadError();
-            return hasLicense && enabled && !hasLoadError;
+            return enabled && !hasLoadError;
         });
 
         this.isCurrentlyActiveDatabase = ko.pureComputed(() => {
@@ -207,8 +198,6 @@ class databaseInfo {
 
             this.nodes(joinedNodes);
         }
-        
-        //TODO: consider in place update? of nodes?
     }
 
     private applyNodesStatuses(nodes: databaseGroupNode[], statuses: { [key: string]: Raven.Client.ServerWide.Operations.DatabaseGroupNodeStatus;}) {

@@ -9,6 +9,7 @@ using System.Threading;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -41,7 +42,6 @@ namespace Raven.Server.Rachis
         private ManualResetEvent _wakeLeader;
         private readonly string _tag;
         private readonly string _url;
-        private readonly X509Certificate2 _certificate;
         private string _statusMessage;
 
         public string StatusMessage
@@ -51,7 +51,7 @@ namespace Raven.Server.Rachis
             {
                 if (_statusMessage == value)
                     return;
-                
+
                 _statusMessage = value;
                 _engine.NotifyTopologyChange();
             }
@@ -113,8 +113,8 @@ namespace Raven.Server.Rachis
         {
             Interlocked.Exchange(ref _lastReplyFromFollower, DateTime.UtcNow.Ticks);
         }
-        
-        public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, X509Certificate2 certificate, RemoteConnection connection = null)
+
+        public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, RemoteConnection connection = null)
         {
             _engine = engine;
             _term = leader.Term;
@@ -122,7 +122,6 @@ namespace Raven.Server.Rachis
             _wakeLeader = wakeLeader;
             _tag = tag;
             _url = url;
-            _certificate = certificate;
             _connection = connection;
             Status = AmbassadorStatus.Started;
             StatusMessage = $"Started Follower Ambassador for {_engine.Tag} > {_tag} in term {_term}";
@@ -130,7 +129,7 @@ namespace Raven.Server.Rachis
             _debugName = $"Follower Ambassador for {_tag} in term {_term} (id:{id})";
             _debugRecorder = _engine.InMemoryDebug.GetNewRecorder(_debugName);
         }
-        
+
         public void UpdateLeaderWake(ManualResetEvent wakeLeader)
         {
             _wakeLeader = wakeLeader;
@@ -177,7 +176,9 @@ namespace Raven.Server.Rachis
                                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 {
                                     _engine.RemoveAndDispose(_leader, _connection);
-                                    var (stream, disconnect) = _engine.ConnectToPeer(_url, _certificate, context).Result;
+                                    var connection = _engine.ConnectToPeer(_url, _tag, _engine.ClusterCertificate).Result;
+                                    var stream = connection.Stream;
+                                    var disconnect = connection.Disconnect;
                                     var con = new RemoteConnection(_tag, _engine.Tag, _term, stream, disconnect);
                                     Interlocked.Exchange(ref _connection, con);
                                     ClusterTopology topology;
@@ -196,6 +197,7 @@ namespace Raven.Server.Rachis
                                 {
                                     _engine.Log.Info($"Follower ambassador reuses the connection for {_tag} and send a winning message to his elector.");
                                 }
+
                                 CandidateAmbassador.SendElectionResult(_engine, _connection, _term, ElectionResult.Won);
                             }
                         }
@@ -268,7 +270,8 @@ namespace Raven.Server.Rachis
                                             TruncateLogBefore = _leader.LowestIndexInEntireCluster,
                                             PrevLogTerm = _engine.GetTermFor(context, _followerMatchIndex) ?? 0,
                                             PrevLogIndex = _followerMatchIndex,
-                                            TimeAsLeader = _leader.LeaderShipDuration
+                                            TimeAsLeader = _leader.LeaderShipDuration,
+                                            MinCommandVersion = ClusterCommandsVersionManager.CurrentClusterMinimalVersion
                                         };
                                     }
                                 }
@@ -371,6 +374,11 @@ namespace Raven.Server.Rachis
                         }
                     }
 
+                    catch (RachisConcurrencyException)
+                    {
+                        // our term is no longer valid
+                        throw;
+                    }
                     catch (RachisException)
                     {
                         // this is a rachis protocol violation exception, we must close this ambassador. 
@@ -719,7 +727,11 @@ namespace Raven.Server.Rachis
                 _connection.Send(context, lln);
 
                 var llr = _connection.Read<LogLengthNegotiationResponse>(context);
-                FollowerCommandsVersion = llr.CommandsVersion ?? 400;
+
+                FollowerCommandsVersion = GetFollowerVersion(llr);
+                _engine.CurrentLeader.PeersVersion[_tag] = FollowerCommandsVersion;
+                var minimalVersion = ClusterCommandsVersionManager.GetClusterMinimalVersion(_engine.CurrentLeader.PeersVersion.Values.ToList(), _engine.MaximalVersion);
+                ClusterCommandsVersionManager.SetClusterVersion(minimalVersion);
 
                 if (_engine.Log.IsInfoEnabled)
                 {
@@ -802,7 +814,15 @@ namespace Raven.Server.Rachis
                 } while (true);
             }
         }
-        
+
+        private static int GetFollowerVersion(LogLengthNegotiationResponse llr)
+        {
+            var version = llr.CommandsVersion ?? ClusterCommandsVersionManager.Base40CommandsVersion;
+            if (version == 400)
+                return ClusterCommandsVersionManager.Base40CommandsVersion;
+            return version;
+        }
+
         private void SendHello(TransactionOperationContext context, ClusterTopology clusterTopology)
         {
             UpdateLastSend("Hello");
@@ -827,7 +847,7 @@ namespace Raven.Server.Rachis
         {
             UpdateLastMatchFromFollower(0);
             _followerAmbassadorLongRunningOperation =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, ToString()); 
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, ToString());
         }
 
         public override string ToString()
@@ -850,7 +870,7 @@ namespace Raven.Server.Rachis
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"{ToString()}: Waited for a full second for thread {_followerAmbassadorLongRunningOperation.ManagedThreadId} ({(_followerAmbassadorLongRunningOperation.Join(0)?"Running":"Finished")}) to close, disposing connection and trying");
+                        _engine.Log.Info($"{ToString()}: Waited for a full second for thread {_followerAmbassadorLongRunningOperation.ManagedThreadId} ({(_followerAmbassadorLongRunningOperation.Join(0) ? "Running" : "Finished")}) to close, disposing connection and trying");
                     }
                     // the thread may have create a new connection, so need
                     // to dispose that as well

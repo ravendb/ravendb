@@ -1,16 +1,34 @@
-﻿namespace Raven.Server.Documents.ETL.Stats
+﻿using System.Collections.Generic;
+
+namespace Raven.Server.Documents.ETL.Stats
 {
     public class EtlRunStats
     {
-        public int NumberOfExtractedItems;
+        public Dictionary<EtlItemType, int> NumberOfExtractedItems = new Dictionary<EtlItemType, int>()
+        {
+            {EtlItemType.Document, 0},
+            {EtlItemType.Counter, 0}
+        };
 
-        public int NumberOfTransformedItems;
+        public Dictionary<EtlItemType, int> NumberOfTransformedItems = new Dictionary<EtlItemType, int>()
+        {
+            {EtlItemType.Document, 0},
+            {EtlItemType.Counter, 0}
+        };
 
-        public long LastTransformedEtag;
+        public Dictionary<EtlItemType, long> LastTransformedEtags = new Dictionary<EtlItemType, long>
+        {
+            {EtlItemType.Document, 0},
+            {EtlItemType.Counter, 0}
+        };
 
         public long LastLoadedEtag;
 
-        public long LastFilteredOutEtag;
+        public Dictionary<EtlItemType, long> LastFilteredOutEtags = new Dictionary<EtlItemType, long>
+        {
+            {EtlItemType.Document, 0},
+            {EtlItemType.Counter, 0}
+        };
 
         public string BatchCompleteReason;
 

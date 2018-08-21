@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Jint;
 using Jint.Native;
 using Jint.Runtime.Interop;
 using Raven.Client;
@@ -16,46 +17,57 @@ namespace Raven.Server.Documents.ETL
     {
         public DocumentDatabase Database { get; }
         protected readonly DocumentsOperationContext Context;
-        private readonly ScriptRunnerCache.Key _key;
-        protected ScriptRunner.SingleRun SingleRun;
+        private readonly PatchRequest _mainScript;
+        private readonly PatchRequest _behaviorFunctions;
+        protected ScriptRunner.SingleRun DocumentScript;
+        protected ScriptRunner.SingleRun BehaviorsScript;
 
         protected TExtracted Current;
-        private ScriptRunner.ReturnRun _returnRun;
+
+        private ScriptRunner.ReturnRun _returnMainRun;
+        private ScriptRunner.ReturnRun _behaviorFunctionsRun;
 
         protected EtlTransformer(DocumentDatabase database, DocumentsOperationContext context,
-            ScriptRunnerCache.Key key)
+            PatchRequest mainScript, PatchRequest behaviorFunctions)
         {
             Database = database;
             Context = context;
-            _key = key;
+            _mainScript = mainScript;
+            _behaviorFunctions = behaviorFunctions;
         }
 
-        public virtual void Initalize()
+        public virtual void Initalize(bool debugMode)
         {
-            _returnRun = Database.Scripts.GetScriptRunner(_key, true, out SingleRun);
-            if (SingleRun == null)
+            _returnMainRun = Database.Scripts.GetScriptRunner(_mainScript, true, out DocumentScript);
+            if (DocumentScript == null)
                 return;
 
-            SingleRun.ScriptEngine.SetValue(Transformation.LoadTo, new ClrFunctionInstance(SingleRun.ScriptEngine, LoadToFunctionTranslator));
+            if (debugMode)
+                DocumentScript.DebugMode = true;
+
+            DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo, new ClrFunctionInstance(DocumentScript.ScriptEngine, LoadToFunctionTranslator));
 
             for (var i = 0; i < LoadToDestinations.Length; i++)
             {
                 var collection = LoadToDestinations[i];
-                var clrFunctionInstance = new ClrFunctionInstance(SingleRun.ScriptEngine, (value, values) => LoadToFunctionTranslator(collection, value, values));
-                SingleRun.ScriptEngine.SetValue(Transformation.LoadTo + collection, clrFunctionInstance);
+                var clrFunctionInstance = new ClrFunctionInstance(DocumentScript.ScriptEngine, (value, values) => LoadToFunctionTranslator(collection, value, values));
+                DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo + collection, clrFunctionInstance);
             }
 
-            SingleRun.ScriptEngine.SetValue(Transformation.LoadAttachment, new ClrFunctionInstance(SingleRun.ScriptEngine, LoadAttachment));
+            DocumentScript.ScriptEngine.SetValue(Transformation.LoadAttachment, new ClrFunctionInstance(DocumentScript.ScriptEngine, LoadAttachment));
 
-            SingleRun.ScriptEngine.SetValue(Transformation.LoadCounter, new ClrFunctionInstance(SingleRun.ScriptEngine, LoadCounter));
+            DocumentScript.ScriptEngine.SetValue(Transformation.LoadCounter, new ClrFunctionInstance(DocumentScript.ScriptEngine, LoadCounter));
 
-            SingleRun.ScriptEngine.SetValue("getAttachments", new ClrFunctionInstance(SingleRun.ScriptEngine, GetAttachments));
+            DocumentScript.ScriptEngine.SetValue("getAttachments", new ClrFunctionInstance(DocumentScript.ScriptEngine, GetAttachments));
 
-            SingleRun.ScriptEngine.SetValue("hasAttachment", new ClrFunctionInstance(SingleRun.ScriptEngine, HasAttachment));
+            DocumentScript.ScriptEngine.SetValue("hasAttachment", new ClrFunctionInstance(DocumentScript.ScriptEngine, HasAttachment));
 
-            SingleRun.ScriptEngine.SetValue("getCounters", new ClrFunctionInstance(SingleRun.ScriptEngine, GetCounters));
+            DocumentScript.ScriptEngine.SetValue("getCounters", new ClrFunctionInstance(DocumentScript.ScriptEngine, GetCounters));
 
-            SingleRun.ScriptEngine.SetValue("hasCounter", new ClrFunctionInstance(SingleRun.ScriptEngine, HasCounter));
+            DocumentScript.ScriptEngine.SetValue("hasCounter", new ClrFunctionInstance(DocumentScript.ScriptEngine, HasCounter));
+
+            if (_behaviorFunctions != null)
+                _behaviorFunctionsRun = Database.Scripts.GetScriptRunner(_behaviorFunctions, true, out BehaviorsScript);
         }
 
         private JsValue LoadToFunctionTranslator(JsValue self, JsValue[] args)
@@ -67,7 +79,7 @@ namespace Raven.Server.Documents.ETL
             if (args[1].IsObject() == false)
                 ThrowInvalidSriptMethodCall("loadTo(name, obj) second argument must be an object");
 
-            using (var result = new ScriptRunnerResult(SingleRun, args[1].AsObject()))
+            using (var result = new ScriptRunnerResult(DocumentScript, args[1].AsObject()))
             {
                 LoadToFunction(args[0].AsString(), result);
 
@@ -83,7 +95,7 @@ namespace Raven.Server.Documents.ETL
             if (args[0].IsObject() == false)
                 ThrowInvalidSriptMethodCall($"loadTo{name}(obj) argument must be an object");
 
-            using (var result = new ScriptRunnerResult(SingleRun, args[0].AsObject()))
+            using (var result = new ScriptRunnerResult(DocumentScript, args[0].AsObject()))
             {
                 LoadToFunction(name, result);
 
@@ -108,13 +120,13 @@ namespace Raven.Server.Documents.ETL
                 var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId, attachmentName, AttachmentType.Document, null);
 
                 if (attachment == null)
-                    ThrowNoSuchAttachment(Current.DocumentId, attachmentName);
+                    return JsValue.Null;
 
                 AddLoadedAttachment(loadAttachmentReference, attachmentName, attachment);
             }
             else
             {
-                ThrowNoAttachments(Current.DocumentId, attachmentName);
+                return JsValue.Null;
             }
 
             return loadAttachmentReference;
@@ -133,38 +145,16 @@ namespace Raven.Server.Documents.ETL
                 var value = Database.DocumentsStorage.CountersStorage.GetCounterValue(Context, Current.DocumentId, counterName);
 
                 if (value == null)
-                    ThrowNoSuchCounter(Current.DocumentId, counterName);
+                    return JsValue.Null;
 
                 AddLoadedCounter(loadCounterReference, counterName, value.Value);
             }
             else
             {
-                ThrowNoCounters(Current.DocumentId, counterName);
+                return JsValue.Null;
             }
 
             return loadCounterReference;
-        }
-
-        protected static unsafe bool IsLoadAttachment(LazyStringValue value, out string attachmentName)
-        {
-            if (value.Length <= Transformation.AttachmentMarker.Length)
-            {
-                attachmentName = null;
-                return false;
-            }
-
-            var buffer = value.Buffer;
-
-            if (*(long*)buffer != 7883660417928814884 || // $attachm
-                *(int*)(buffer + 8) != 796159589) // ent/
-            {
-                attachmentName = null;
-                return false;
-            }
-
-            attachmentName = value.Substring(Transformation.AttachmentMarker.Length);
-
-            return true;
         }
 
         private JsValue GetAttachments(JsValue self, JsValue[] args)
@@ -175,17 +165,17 @@ namespace Raven.Server.Documents.ETL
             if (Current.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachmentsBlittableArray) == false)
             {
-                return SingleRun.ScriptEngine.Array.Construct(Array.Empty<JsValue>());
+                return DocumentScript.ScriptEngine.Array.Construct(Array.Empty<JsValue>());
             }
 
             var attachments = new JsValue[attachmentsBlittableArray.Length];
 
             for (int i = 0; i < attachmentsBlittableArray.Length; i++)
             {
-                attachments[i] = (JsValue)SingleRun.Translate(Context, attachmentsBlittableArray[i]);
+                attachments[i] = (JsValue)DocumentScript.Translate(Context, attachmentsBlittableArray[i]);
             }
 
-            return SingleRun.ScriptEngine.Array.Construct(attachments);
+            return DocumentScript.ScriptEngine.Array.Construct(attachments);
         }
 
         private JsValue HasAttachment(JsValue self, JsValue[] args)
@@ -225,17 +215,17 @@ namespace Raven.Server.Documents.ETL
             if (Current.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray countersArray) == false)
             {
-                return SingleRun.ScriptEngine.Array.Construct(Array.Empty<JsValue>());
+                return DocumentScript.ScriptEngine.Array.Construct(Array.Empty<JsValue>());
             }
 
             var counters = new JsValue[countersArray.Length];
 
             for (int i = 0; i < countersArray.Length; i++)
             {
-                counters[i] = (JsValue)SingleRun.Translate(Context, countersArray[i]);
+                counters[i] = (JsValue)DocumentScript.Translate(Context, countersArray[i]);
             }
 
-            return SingleRun.ScriptEngine.Array.Construct(counters);
+            return DocumentScript.ScriptEngine.Array.Construct(counters);
         }
 
         private JsValue HasCounter(JsValue self, JsValue[] args)
@@ -269,35 +259,13 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract void LoadToFunction(string tableName, ScriptRunnerResult colsAsObject);
 
-        public abstract IEnumerable<TTransformed> GetTransformedResults();
+        public abstract List<TTransformed> GetTransformedResults();
 
         public abstract void Transform(TExtracted item);
 
         public static void ThrowLoadParameterIsMandatory(string parameterName)
         {
             throw new ArgumentException($"{parameterName} parameter is mandatory");
-        }
-
-        protected void ThrowNoSuchAttachment(string documentId, string attachmentName)
-        {
-            throw new InvalidOperationException($"Document '{documentId}' doesn't have attachment named '{attachmentName}'");
-        }
-
-        protected void ThrowNoSuchCounter(string documentId, string counterName)
-        {
-            throw new InvalidOperationException($"Document '{documentId}' doesn't have counter named '{counterName}'");
-        }
-
-        protected void ThrowNoAttachments(string documentId, string attachmentName)
-        {
-            throw new InvalidOperationException(
-                $"Document '{documentId}' doesn't have any attachment while the transformation tried to add '{attachmentName}'");
-        }
-
-        protected void ThrowNoCounters(string documentId, string counterName)
-        {
-            throw new InvalidOperationException(
-                $"Document '{documentId}' doesn't have any counter while the transformation tried to add '{counterName}'");
         }
 
         protected static void ThrowInvalidSriptMethodCall(string message)
@@ -307,7 +275,16 @@ namespace Raven.Server.Documents.ETL
 
         public void Dispose()
         {
-            _returnRun.Dispose();
+            using (_returnMainRun)
+            using (_behaviorFunctionsRun)
+            {
+
+            }
+        }
+
+        public List<string> GetDebugOutput()
+        {
+            return DocumentScript?.DebugOutput ?? new List<string>();
         }
     }
 }

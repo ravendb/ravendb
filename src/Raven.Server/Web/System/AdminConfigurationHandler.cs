@@ -11,6 +11,50 @@ namespace Raven.Server.Web.System
 {
     public class AdminConfigurationHandler : RequestHandler
     {
+        [RavenAction("/admin/configuration/studio", "PUT", AuthorizationStatus.Operator)]
+        public async Task PutStudioConfiguration()
+        {
+            ServerStore.EnsureNotPassive();
+            
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                var studioConfigurationJson = await ctx.ReadForDiskAsync(RequestBodyStream(), Constants.Configuration.StudioId);
+
+                var studioConfiguration = JsonDeserializationServer.ServerWideStudioConfiguration(studioConfigurationJson);
+
+                var res = await ServerStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(studioConfiguration));
+                await ServerStore.Cluster.WaitForIndexNotification(res.Index);
+
+                NoContentStatus();
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+            }
+        }
+
+        [RavenAction("/configuration/studio", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetStudioConfiguration()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                using (context.OpenReadTransaction())
+                {
+                    var studioConfigurationJson = ServerStore.Cluster.Read(context, Constants.Configuration.StudioId, out long _);
+                    if (studioConfigurationJson == null)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        return Task.CompletedTask;
+                    }
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteObject(studioConfigurationJson);
+                    }
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/admin/configuration/client", "PUT", AuthorizationStatus.Operator)]
         public async Task PutClientConfiguration()
         {
@@ -25,7 +69,7 @@ namespace Raven.Server.Web.System
                 await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
                 NoContentStatus();
-                
+
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
             }
         }

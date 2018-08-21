@@ -2,8 +2,11 @@
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
@@ -17,12 +20,16 @@ namespace SlowTests.Issues
         [Fact]
         public async Task NestedObjectShouldBeExportedAndImportedProperly()
         {
+            const string id = "companies/1";
+
             using (var store = GetDocumentStore())
             {
+                string cv;
                 using (var session = store.OpenSession())
                 {
-                    session.Store(_testCompany, "companies/1");
+                    session.Store(_testCompany, id);
                     session.SaveChanges();
+                    cv = session.Advanced.GetChangeVectorFor(_testCompany);
                 }
 
                 var client = new HttpClient();
@@ -47,9 +54,27 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var res = session.Query<Company>().ToList();
-                    Assert.Equal(2, res.Count);
-                    Assert.Equal(res[0], res[1]);
+                    var res = session.Load<Company>(id);
+                    Assert.NotEqual(session.Advanced.GetChangeVectorFor(res), cv);
+
+                    try
+                    {
+                        Assert.Equal(res, _testCompany);
+                    }
+                    catch (Exception)
+                    {
+                        var sb = new StringBuilder();
+                        sb.AppendLine("Expected:");
+                        sb.AppendLine(JObject.FromObject(res).ToString(Formatting.Indented));
+                        sb.AppendLine();
+                        sb.AppendLine("Actual:");
+                        sb.AppendLine(JObject.FromObject(_testCompany).ToString(Formatting.Indented));
+
+                        Console.WriteLine(sb);
+
+                        throw;
+                    }
+
                 }
             }
         }
@@ -62,7 +87,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     session.Store(_testCompany, "companies/1");
-                    session.Store(new{Query= "From%20companies" },"queries/1");
+                    session.Store(new { Query = "From%20companies" }, "queries/1");
                     session.SaveChanges();
                 }
 
@@ -74,23 +99,19 @@ namespace SlowTests.Issues
                     var getOperationIdCommand = new GetNextOperationIdCommand();
                     await commands.RequestExecutor.ExecuteAsync(getOperationIdCommand, commands.Context);
                     var operationId = getOperationIdCommand.Result;
+                    var csvImportCommand = new CsvImportCommand(stream, null, operationId);
 
-                    {
-                        var csvImportCommand = new CsvImportCommand(stream, null, operationId);
+                    await commands.ExecuteAsync(csvImportCommand);
 
-                        await commands.ExecuteAsync(csvImportCommand);
+                    var operation = new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId);
 
-                        var operation = new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId);
-
-                        await operation.WaitForCompletionAsync();
-                    }
+                    await operation.WaitForCompletionAsync();
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var res = session.Query<Company>().ToList();
-                    Assert.Equal(2, res.Count);
-                    Assert.Equal(res[0], res[1]);
+                    Assert.Equal(1, res.Count);
                 }
             }
         }

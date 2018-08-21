@@ -18,6 +18,10 @@ namespace Raven.Client.Util
 {
     internal class JavascriptConversionExtensions
     {
+        internal const string TransparentIdentifier = "<>h__TransparentIdentifier";
+        internal const string TransparentIdentifierPrefix = "<>";
+        internal const string TransparentIdentifierWithoutPrefix = "h__TransparentIdentifier";
+
         public class CustomMethods : JavascriptConversionExtension
         {
             public readonly Dictionary<string, object> Parameters = new Dictionary<string, object>();
@@ -52,17 +56,32 @@ namespace Raven.Client.Util
                         args.Add(expr);
                 }
 
-                for (var i = 0; i < args.Count; i++)
+                if (nameAttribute.Name == "filter")
                 {
-                    var name = $"arg_{Parameters.Count}_{Suffix}";
-                    if (i != 0)
-                        javascriptWriter.Write(", ");
-                    javascriptWriter.Write("args.");
-                    javascriptWriter.Write(name);
-                    object val;
-                    if (LinqPathProvider.GetValueFromExpressionWithoutConversion(args[i], out val))
-                        Parameters[name] = val;
+                    if (args[0] is LambdaExpression lambda)
+                    {
+                        javascriptWriter.Write(lambda.Parameters[0].Name);
+                        javascriptWriter.Write(" => ");
+                        javascriptWriter.Write(" !("); // negate body
+                        context.Visitor.Visit(lambda.Body);
+                        javascriptWriter.Write(")");
+                    }
                 }
+                else
+                {
+                    for (var i = 0; i < args.Count; i++)
+                    {
+                        var name = $"arg_{Parameters.Count}_{Suffix}";
+                        if (i != 0)
+                            javascriptWriter.Write(", ");
+                        javascriptWriter.Write("args.");
+                        javascriptWriter.Write(name);
+                        object val;
+                        if (LinqPathProvider.GetValueFromExpressionWithoutConversion(args[i], out val))
+                            Parameters[name] = val;
+                    }
+                }
+
                 if (nameAttribute.PositionalArguments != null)
                 {
                     for (int i = args.Count;
@@ -255,9 +274,11 @@ namespace Raven.Client.Util
                 }
 
                 var methodCallExpression = context.Node as MethodCallExpression;
-                var methodName = methodCallExpression?
-                    .Method.Name;
+                var method = methodCallExpression?.Method;
+                if (method == null || method.IsSpecialName)
+                    return;
 
+                var methodName = method.Name;
                 if (methodName == null || IsCollection(methodCallExpression.Method.DeclaringType) == false)
                     return;
 
@@ -585,7 +606,10 @@ namespace Raven.Client.Util
                         HandleCount(context, methodCallExpression.Arguments[0]);
                         return;
                     default:
-                        return;
+                        throw new NotSupportedException($"Unable to translate '{methodName}' to RQL operation because this method is not familiar to the RavenDB query provider.")
+                        {
+                            HelpLink = "DoNotWrap"
+                        };
                 }
 
                 var javascriptWriter = context.GetWriter();
@@ -1025,7 +1049,7 @@ namespace Raven.Client.Util
             {
                 if (context.Node is LambdaExpression lambdaExpression
                     && lambdaExpression.Parameters.Count > 0
-                    && lambdaExpression.Parameters[0].Name.StartsWith("<>h__TransparentIdentifier"))
+                    && lambdaExpression.Parameters[0].Name.StartsWith(TransparentIdentifier))
                 {
                     DoNotIgnore = true;
 
@@ -1035,7 +1059,7 @@ namespace Raven.Client.Util
                     using (writer.Operation(lambdaExpression))
                     {
                         writer.Write("function(");
-                        writer.Write(lambdaExpression.Parameters[0].Name.Substring(2));
+                        writer.Write(lambdaExpression.Parameters[0].Name.Substring(TransparentIdentifierPrefix.Length));
                         writer.Write("){return ");
                         context.Visitor.Visit(lambdaExpression.Body);
                         writer.Write(";}");
@@ -1046,14 +1070,14 @@ namespace Raven.Client.Util
                 }
 
                 if (context.Node is ParameterExpression p &&
-                    p.Name.StartsWith("<>h__TransparentIdentifier") &&
+                    p.Name.StartsWith(TransparentIdentifier) &&
                     DoNotIgnore)
                 {
                     context.PreventDefault();
                     var writer = context.GetWriter();
                     using (writer.Operation(p))
                     {
-                        writer.Write(p.Name.Substring(2));
+                        writer.Write(p.Name.Substring(TransparentIdentifierPrefix.Length));
                     }
                 }
 
@@ -1061,7 +1085,7 @@ namespace Raven.Client.Util
                     return;
 
                 if (member.Expression is MemberExpression innerMember
-                    && innerMember.Member.Name.StartsWith("<>h__TransparentIdentifier"))
+                    && innerMember.Member.Name.StartsWith(TransparentIdentifier))
                 {
                     context.PreventDefault();
 
@@ -1072,20 +1096,25 @@ namespace Raven.Client.Util
                         {
                             context.Visitor.Visit(member.Expression);
                             writer.Write(".");
-
                         }
 
                         var name = member.Member.Name;
-                        if (ReservedWordsSupport.JsReservedWords.Contains(name))
+
+                        if (DoNotIgnore && name.StartsWith(TransparentIdentifier))
+                        {
+                            name = name.Substring(TransparentIdentifierPrefix.Length);
+                        }
+                        else if (ReservedWordsSupport.JsReservedWords.Contains(name))
                         {
                             name = "_" + name;
                         }
+
                         writer.Write(name);
                     }
 
                 }
 
-                if (member.Expression is ParameterExpression parameter && parameter.Name.StartsWith("<>h__TransparentIdentifier"))
+                if (member.Expression is ParameterExpression parameter && parameter.Name.StartsWith(TransparentIdentifier))
                 {
                     context.PreventDefault();
 
@@ -1096,9 +1125,9 @@ namespace Raven.Client.Util
 
                         if (DoNotIgnore)
                         {
-                            writer.Write(parameter.Name.Substring(2));
+                            writer.Write(parameter.Name.Substring(TransparentIdentifierPrefix.Length));
                             writer.Write(".");
-                            name = name.Replace("<>h__TransparentIdentifier", "h__TransparentIdentifier");
+                            name = name.Replace(TransparentIdentifier, TransparentIdentifierWithoutPrefix);
                         }
 
                         if (ReservedWordsSupport.JsReservedWords.Contains(name))
@@ -1426,7 +1455,7 @@ namespace Raven.Client.Util
                     // if we have a number, write the value without quatation
                     if (_numericTypes.Contains(valueType) || _numericTypes.Contains(Nullable.GetUnderlyingType(valueType)))
                     {
-                        writer.Write(value);
+                        writer.Write(value.ToInvariantString());
                     }
                     else
                     {
@@ -1437,7 +1466,7 @@ namespace Raven.Client.Util
                 }
             }
 
-            private static HashSet<Type> _numericTypes = new HashSet<Type>
+            private static readonly HashSet<Type> _numericTypes = new HashSet<Type>
             {
                 typeof(Byte),
                 typeof(SByte),
@@ -1623,9 +1652,9 @@ namespace Raven.Client.Util
                                     resultWriter.Write(',');
 
                                 string name = member.Name;
-                                if (member.Name.StartsWith("<>h__TransparentIdentifier"))
+                                if (member.Name.StartsWith(TransparentIdentifier))
                                 {
-                                    name = name.Substring(2);
+                                    name = name.Substring(TransparentIdentifierPrefix.Length);
                                 }
 
                                 if (Regex.IsMatch(name, @"^\w[\d\w]*$"))
@@ -2099,7 +2128,7 @@ namespace Raven.Client.Util
 
                 var p = GetParameter(innerMember)?.Name;
 
-                if (p != null && p.StartsWith("<>h__TransparentIdentifier")
+                if (p != null && p.StartsWith(TransparentIdentifier)
                     && _conventions.GetIdentityProperty(member.Member.DeclaringType) == member.Member)
                 {
                     var writer = context.GetWriter();
@@ -2117,12 +2146,21 @@ namespace Raven.Client.Util
 
         public static ParameterExpression GetParameter(MemberExpression expression)
         {
+            return GetInnermostExpression(expression, out _) as ParameterExpression;
+        }
+
+        public static Expression GetInnermostExpression(MemberExpression expression, out string path)
+        {
+            path = string.Empty;
             while (expression.Expression is MemberExpression memberExpression)
             {
                 expression = memberExpression;
+                path = path == string.Empty 
+                    ? expression.Member.Name 
+                    : $"{expression.Member.Name}.{path}";
             }
 
-            return expression.Expression as ParameterExpression;
+            return expression.Expression;
         }
 
         private static void WriteArguments(JavascriptConversionContext context, IReadOnlyList<Expression> arguments, JavascriptWriter writer, int start = 0)

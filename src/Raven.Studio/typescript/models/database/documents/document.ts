@@ -91,8 +91,7 @@ class document implements documentBase {
             if (collectionName.toLocaleLowerCase() === collectionName) {
                 // All letters are lower case, Capitalize first 
                 collectionName = _.capitalize(collectionName);
-            }
-            else {
+            } else {
                 // Find an already existing matching collection name 
                 collectionName = collections.find(collection => collection.toLocaleLowerCase() === collectionName.toLocaleLowerCase());
             }
