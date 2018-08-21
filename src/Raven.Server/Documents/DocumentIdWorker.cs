@@ -196,7 +196,7 @@ namespace Raven.Server.Documents
                     ptr[i + idSize + maxStrSize] = (byte)ch;
                 }
 
-                _jsonParserState.FindEscapePositionsIn(ptr, strLength, escapePositionsSize);
+                _jsonParserState.FindEscapePositionsIn(ptr, ref strLength, escapePositionsSize);
             }
             
             var writePos = ptr + maxStrSize;
@@ -235,7 +235,7 @@ namespace Raven.Server.Documents
             fixed (char* pChars = str)
             {
                 var size = Encoding.GetBytes(pChars, strLength, buffer.Ptr, maxStrSize);
-                _jsonParserState.FindEscapePositionsIn(buffer.Ptr, size, escapePositionsSize);
+                _jsonParserState.FindEscapePositionsIn(buffer.Ptr, ref size, escapePositionsSize);
 
                 var destChars = (char*)buffer.Ptr;
                 for (var i = 0; i < strLength; i++)
