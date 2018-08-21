@@ -15,5 +15,7 @@ namespace Raven.Server.Commercial
         public double UsableMemoryInGb { get; set; }
 
         public BuildNumber BuildInfo { get; set; }
+
+        public OsInfo OsInfo { get; set; }
     }
 }

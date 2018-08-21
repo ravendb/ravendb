@@ -16,5 +16,7 @@ namespace Raven.Server.Commercial
         public string NodeTag { get; set; }
 
         public StudioConfiguration.StudioEnvironment StudioEnvironment { get; set; }
+
+        public OsInfo OsInfo { get; set; }
     }
 }

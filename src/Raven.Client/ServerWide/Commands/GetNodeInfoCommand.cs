@@ -17,6 +17,7 @@ namespace Raven.Client.ServerWide.Commands
         public double InstalledMemoryInGb;
         public double UsableMemoryInGb;
         public BuildNumber BuildInfo;
+        public OsInfo OsInfo;
         public Guid ServerId;
         public RachisState CurrentState;
     }
