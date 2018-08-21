@@ -14,7 +14,7 @@ namespace SlowTests.Issues
     public class RavenDB_11770 : RavenTestBase
     {
         [Fact]
-        public async Task CanGetRevisionsByBeforeDate()
+        public async Task CanGetRevisionsByDate()
         {
             using (var store = GetDocumentStore())
             {
@@ -60,13 +60,13 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var rev1 = await session.Advanced.Revisions.GetBeforeAsync<Company>(id, fst);
+                    var rev1 = await session.Advanced.Revisions.GetAsync<Company>(id, fst);
                     Assert.Equal("Fitzchak", rev1.Name);
 
-                    var rev2 = await session.Advanced.Revisions.GetBeforeAsync<Company>(id, snd);
+                    var rev2 = await session.Advanced.Revisions.GetAsync<Company>(id, snd);
                     Assert.Equal("Fitzchak 2", rev2.Name);
 
-                    var rev3 = await session.Advanced.Revisions.GetBeforeAsync<Company>(id, db.Time.GetUtcNow());
+                    var rev3 = await session.Advanced.Revisions.GetAsync<Company>(id, db.Time.GetUtcNow());
                     Assert.Equal("Oren 2", rev3.Name);
                 }
             }

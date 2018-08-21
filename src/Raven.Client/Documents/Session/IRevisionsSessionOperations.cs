@@ -16,12 +16,6 @@ namespace Raven.Client.Documents.Session
     public interface IRevisionsSessionOperations
     {
         /// <summary>
-        /// Returns the first revision for this document that happens before or at
-        /// the specified date
-        /// </summary>
-        T GetBefore<T>(string id, DateTime date);
-
-        /// <summary>
         /// Returns all previous document revisions for specified document (with paging) ordered by most recent reivions first.
         /// </summary>
         List<T> GetFor<T>(string id, int start = 0, int pageSize = 25);
@@ -40,5 +34,11 @@ namespace Raven.Client.Documents.Session
         /// Returns document revisions by change vectors.
         /// </summary>
         Dictionary<string, T> Get<T>(IEnumerable<string> changeVectors);
+
+        /// <summary>
+        /// Returns the first revision for this document that happens before or at
+        /// the specified date
+        /// </summary>
+        T Get<T>(string id, DateTime date);
     }
 }

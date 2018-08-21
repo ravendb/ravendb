@@ -21,15 +21,6 @@ namespace Raven.Client.Documents.Session
         {
         }
 
-        public T GetBefore<T>(string id, DateTime before)
-        {
-            var operation = new GetRevisionOperation(Session, id, before);
-            var command = operation.CreateRequest();
-            RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
-            operation.SetResult(command.Result);
-            return operation.GetRevisionsFor<T>().FirstOrDefault();
-        }
-
         public List<T> GetFor<T>(string id, int start = 0, int pageSize = 25)
         {
             var operation = new GetRevisionOperation(Session, id, start, pageSize);
@@ -67,6 +58,15 @@ namespace Raven.Client.Documents.Session
             RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
             operation.SetResult(command.Result);
             return operation.GetRevisions<T>();
+        }
+
+        public T Get<T>(string id, DateTime date)
+        {
+            var operation = new GetRevisionOperation(Session, id, date);
+            var command = operation.CreateRequest();
+            RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
+            operation.SetResult(command.Result);
+            return operation.GetRevisionsFor<T>().FirstOrDefault();
         }
     }
 }

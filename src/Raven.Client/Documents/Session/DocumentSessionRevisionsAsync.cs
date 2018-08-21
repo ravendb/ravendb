@@ -23,16 +23,6 @@ namespace Raven.Client.Documents.Session
         {
         }
 
-
-        public async Task<T> GetBeforeAsync<T>(string id, DateTime date, CancellationToken token = default)
-        {
-            var operation = new GetRevisionOperation(Session, id, date);
-            var command = operation.CreateRequest();
-            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
-            operation.SetResult(command.Result);
-            return operation.GetRevisionsFor<T>().FirstOrDefault();
-        }
-
         public async Task<List<T>> GetForAsync<T>(string id, int start = 0, int pageSize = 25, CancellationToken token = default)
         {
             var operation = new GetRevisionOperation(Session, id, start, pageSize);
@@ -67,6 +57,15 @@ namespace Raven.Client.Documents.Session
             await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token).ConfigureAwait(false);
             operation.SetResult(command.Result);
             return operation.GetRevisions<T>();
+        }
+
+        public async Task<T> GetAsync<T>(string id, DateTime date, CancellationToken token = default)
+        {
+            var operation = new GetRevisionOperation(Session, id, date);
+            var command = operation.CreateRequest();
+            await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
+            operation.SetResult(command.Result);
+            return operation.GetRevisionsFor<T>().FirstOrDefault();
         }
     }
 }

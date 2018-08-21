@@ -830,7 +830,7 @@ namespace Raven.Server.Documents.Revisions
                     var document = TableValueToRevision(context, ref tvr.Result.Reader);
                     if (document.LastModified > max)
                         continue;
-                    if(result == null || 
+                    if (result == null ||
                         result.LastModified < document.LastModified)
                     {
                         result = document;

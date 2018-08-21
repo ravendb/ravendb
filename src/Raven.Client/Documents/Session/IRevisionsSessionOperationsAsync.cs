@@ -18,12 +18,6 @@ namespace Raven.Client.Documents.Session
     public interface IRevisionsSessionOperationsAsync
     {
         /// <summary>
-        /// Returns the first revision for this document that happens before or at
-        /// the specified date
-        /// </summary>
-        Task<T> GetBeforeAsync<T>(string id, DateTime date, CancellationToken token = default);
-
-        /// <summary>
         /// Returns all previous document revisions for specified document (with paging).
         /// </summary>
         Task<List<T>> GetForAsync<T>(string id, int start = 0, int pageSize = 25, CancellationToken token = default);
@@ -42,5 +36,11 @@ namespace Raven.Client.Documents.Session
         /// Returns document revisions by change vectors.
         /// </summary>
         Task<Dictionary<string, T>> GetAsync<T>(IEnumerable<string> changeVectors, CancellationToken token = default);
+
+        /// <summary>
+        /// Returns the first revision for this document that happens before or at
+        /// the specified date
+        /// </summary>
+        Task<T> GetAsync<T>(string id, DateTime date, CancellationToken token = default);
     }
 }
