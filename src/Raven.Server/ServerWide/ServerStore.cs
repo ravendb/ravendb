@@ -1743,7 +1743,7 @@ namespace Raven.Server.ServerWide
         {
             var response = await SendToLeaderAsyncInternal(cmd);
 
-            #if DEBUG || VALIDATE
+            #if DEBUG
             
             if (response.Result.ContainsBlittableObject())
             {
