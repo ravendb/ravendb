@@ -43,7 +43,7 @@ namespace Sparrow
     /// </summary>
     /// <typeparam name="TOptions">The options to use for the allocator.</typeparam>
     /// <remarks>The Options object must be properly implemented to achieve performance improvements. (use constants as much as you can on configuration)</remarks>
-    public unsafe struct FixedSizePoolAllocator<TOptions> : IAllocator<FixedSizePoolAllocator<TOptions>, Pointer>, IRenewable<FixedSizePoolAllocator<TOptions>>
+    public unsafe struct FixedSizePoolAllocator<TOptions> : IAllocator<FixedSizePoolAllocator<TOptions>, Pointer>, ILowMemoryHandler<FixedSizePoolAllocator<TOptions>>, IRenewable<FixedSizePoolAllocator<TOptions>>
         where TOptions : struct, IPoolAllocatorOptions
     {
         private TOptions _options;
@@ -249,6 +249,20 @@ namespace Sparrow
                 Pointer currentPtr = new Pointer(current.Ptr, current.Size);
                 allocator._internalAllocator.Release(ref currentPtr);
             }
+        }
+
+        public void NotifyLowMemory(ref FixedSizePoolAllocator<TOptions> allocator)
+        {
+            // We are told that we are low in memory, therefore if we own the memory we will release it.
+            if (allocator._options.HasOwnership)
+                allocator.ReleaseMemoryPool(ref allocator);
+
+            allocator._internalAllocator.LowMemory();
+        }
+
+        public void NotifyLowMemoryOver(ref FixedSizePoolAllocator<TOptions> allocator)
+        {
+            allocator._internalAllocator.LowMemoryOver();
         }
     }
 }

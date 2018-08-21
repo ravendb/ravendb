@@ -56,6 +56,9 @@ namespace Sparrow
         void Renew();
         void Reset();
         void Dispose(bool disposing);
+
+        void LowMemory();
+        void LowMemoryOver();
     }
 
     public interface IAllocator<T, TPointerType> : IAllocator

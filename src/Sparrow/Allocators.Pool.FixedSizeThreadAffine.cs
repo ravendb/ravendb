@@ -347,9 +347,13 @@ namespace Sparrow
         {
             // We will try to release as much as we can. 
             CleanupPool(ref allocator);
+
+            _internalAllocator.LowMemory();
         }
 
-        public void NotifyLowMemoryOver(ref FixedSizeThreadAffinePoolAllocator<TOptions> allocator) {}
-
+        public void NotifyLowMemoryOver(ref FixedSizeThreadAffinePoolAllocator<TOptions> allocator)
+        {
+            _internalAllocator.LowMemoryOver();
+        }
     }
 }
