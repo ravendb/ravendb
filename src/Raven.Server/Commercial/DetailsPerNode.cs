@@ -15,6 +15,8 @@ namespace Raven.Server.Commercial
 
         public BuildNumber BuildInfo;
 
+        public OsInfo OsInfo;
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -23,7 +25,8 @@ namespace Raven.Server.Commercial
                 [nameof(NumberOfCores)] = NumberOfCores,
                 [nameof(InstalledMemoryInGb)] = InstalledMemoryInGb,
                 [nameof(UsableMemoryInGb)] = UsableMemoryInGb,
-                [nameof(BuildInfo)] = BuildInfo
+                [nameof(BuildInfo)] = BuildInfo,
+                [nameof(OsInfo)] = OsInfo
             };
         }
     }

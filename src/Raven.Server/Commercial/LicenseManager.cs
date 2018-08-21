@@ -61,6 +61,7 @@ namespace Raven.Server.Commercial
 
         public event Action LicenseChanged;
 
+        public static readonly OsInfo OsInfo = OsInfoExtensions.GetOsInfo(Logger);
         public static readonly BuildNumber BuildInfo = new BuildNumber
         {
             BuildVersion = ServerVersion.Build,
@@ -257,12 +258,14 @@ namespace Raven.Server.Commercial
                 double installedMemoryInGb = -1;
                 double usableMemoryInGb = -1;
                 BuildNumber buildInfo = null;
+                OsInfo osInfo = null;
                 if (licenseLimits.NodeLicenseDetails.TryGetValue(nodeTag, out var nodeDetails))
                 {
                     installedMemoryInGb = nodeDetails.InstalledMemoryInGb;
                     usableMemoryInGb = nodeDetails.UsableMemoryInGb;
                     oldAssignedCores = nodeDetails.UtilizedCores;
                     buildInfo = nodeDetails.BuildInfo;
+                    osInfo = nodeDetails.OsInfo;
                 }
 
                 var utilizedCores = licenseLimits.NodeLicenseDetails.Sum(x => x.Value.UtilizedCores) - oldAssignedCores + newAssignedCores;
@@ -291,6 +294,7 @@ namespace Raven.Server.Commercial
                         installedMemoryInGb = memoryInfo.InstalledMemory;
                         usableMemoryInGb = memoryInfo.UsableMemory;
                         buildInfo = BuildInfo;
+                        osInfo = OsInfo;
                     }
                     else
                     {
@@ -305,6 +309,7 @@ namespace Raven.Server.Commercial
                             installedMemoryInGb = nodeInfo.InstalledMemoryInGb;
                             usableMemoryInGb = nodeInfo.UsableMemoryInGb;
                             buildInfo = nodeInfo.BuildInfo;
+                            osInfo = nodeInfo.OsInfo;
                         }
                     }
 
@@ -320,7 +325,8 @@ namespace Raven.Server.Commercial
                         NumberOfCores = numberOfCores,
                         InstalledMemoryInGb = installedMemoryInGb,
                         UsableMemoryInGb = usableMemoryInGb,
-                        BuildInfo = buildInfo
+                        BuildInfo = buildInfo,
+                        OsInfo = osInfo
                     };
                 }
 
@@ -651,6 +657,7 @@ namespace Raven.Server.Commercial
             {
                 License = license,
                 BuildInfo = BuildInfo,
+                OsInfo = OsInfo,
                 ClusterId = _serverStore.GetClusterTopology().TopologyId,
                 UtilizedCores = GetUtilizedCores(),
                 NodeTag = _serverStore.NodeTag,
@@ -794,7 +801,8 @@ namespace Raven.Server.Commercial
                     NumberOfCores = newNodeDetails.NumberOfCores,
                     InstalledMemoryInGb = newNodeDetails.InstalledMemoryInGb,
                     UsableMemoryInGb = newNodeDetails.UsableMemoryInGb,
-                    BuildInfo = newNodeDetails.BuildInfo
+                    BuildInfo = newNodeDetails.BuildInfo,
+                    OsInfo = newNodeDetails.OsInfo
                 };
             }
 
@@ -810,6 +818,7 @@ namespace Raven.Server.Commercial
                     double installedMemoryInGb;
                     double usableMemoryInGb;
                     BuildNumber buildInfo;
+                    OsInfo osInfo;
                     var nodeTag = node.Key;
                     if (nodeTag == _serverStore.NodeTag)
                     {
@@ -818,6 +827,7 @@ namespace Raven.Server.Commercial
                         installedMemoryInGb = memoryInfo.InstalledMemory;
                         usableMemoryInGb = memoryInfo.UsableMemory;
                         buildInfo = BuildInfo;
+                        osInfo = OsInfo;
                     }
                     else
                     {
@@ -832,6 +842,7 @@ namespace Raven.Server.Commercial
                         installedMemoryInGb = nodeInfo.InstalledMemoryInGb;
                         usableMemoryInGb = nodeInfo.UsableMemoryInGb;
                         buildInfo = nodeInfo.BuildInfo;
+                        osInfo = nodeInfo.OsInfo;
                     }
 
                     var nodeDetailsExist = detailsPerNode.TryGetValue(nodeTag, out var nodeDetails);
@@ -840,7 +851,8 @@ namespace Raven.Server.Commercial
                         nodeDetails.UsableMemoryInGb.Equals(usableMemoryInGb) &&
                         nodeDetails.InstalledMemoryInGb.Equals(installedMemoryInGb) &&
                         // using static method here to avoid null checks 
-                        object.Equals(nodeDetails.BuildInfo,buildInfo))
+                        Equals(nodeDetails.BuildInfo, buildInfo) &&
+                        Equals(nodeDetails.OsInfo, osInfo))
                     {
                         // nodes hardware didn't change
                         continue;
@@ -852,7 +864,8 @@ namespace Raven.Server.Commercial
                         NumberOfCores = numberOfCores,
                         InstalledMemoryInGb = installedMemoryInGb,
                         UsableMemoryInGb = usableMemoryInGb,
-                        BuildInfo = buildInfo
+                        BuildInfo = buildInfo,
+                        OsInfo = osInfo
                     };
 
                     if (nodeDetailsExist == false)
@@ -1073,7 +1086,7 @@ namespace Raven.Server.Commercial
         {
             try
             {
-                Raven.Server.Extensions.MemoryExtensions.SetWorkingSet(process, ramInGb, Logger);
+                Extensions.MemoryExtensions.SetWorkingSet(process, ramInGb, Logger);
             }
             catch (Exception e)
             {
