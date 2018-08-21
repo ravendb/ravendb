@@ -587,10 +587,7 @@ namespace Tests.Infrastructure
             }.Initialize())            
             {
                 databaseResult = store.Maintenance.Server.Send(new CreateDatabaseOperation(record, replicationFactor));
-                var requestExecutor = store.GetRequestExecutor();
-                var preferred = await requestExecutor.GetPreferredNode();
-                await requestExecutor.UpdateTopologyAsync(preferred.Item2, 10000, true);
-                urls = requestExecutor.Topology.Nodes.Select(x => x.Url).ToArray();
+                urls = await GetClusterNodeUrlsAsync(leadersUrl, store);
             }
 
             var currentServers = Servers.Where(s => s.Disposed == false && 
@@ -611,6 +608,28 @@ namespace Tests.Infrastructure
                 throw new InvalidOperationException("Couldn't create the db on all nodes, just on " + numberOfInstances + " out of " + replicationFactor);
             return (databaseResult.RaftCommandIndex,
                 currentServers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)).ToList());
+        }
+
+        private static async Task<string[]> GetClusterNodeUrlsAsync(string leadersUrl, IDocumentStore store)
+        {
+            string[] urls;
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(leadersUrl, store.Certificate))
+            {
+                try
+                {
+                    await requestExecutor.UpdateTopologyAsync(new ServerNode
+                        {Url = leadersUrl}, 15000, true);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
+
+                urls = requestExecutor.Topology.Nodes.Select(x => x.Url).ToArray();
+            }
+
+            return urls;
         }
 
         public Task<(long Index, List<RavenServer> Servers)> CreateDatabaseInCluster(string databaseName, int replicationFactor, string leadersUrl)

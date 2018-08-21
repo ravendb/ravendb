@@ -1,27 +1,36 @@
 using System;
+using System.IO;
+using System.Threading.Tasks;
 using RachisTests;
+using RachisTests.DatabaseCluster;
+using Raven.Client.Exceptions.Database;
+using SlowTests.Server.Replication;
+using Sparrow.Logging;
 
 namespace Tryouts
 {
     public static class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
-            try
+            var fullPath = Path.Join(Path.GetTempPath(),$"{Guid.NewGuid()}");
+            LoggingSource.Instance.SetupLogMode(LogMode.Information, fullPath);            
+            Console.WriteLine(fullPath);
+            for (int i = 0; i < 1000; i++)
             {
-                for (int i = 0; i < 500; i++)
+                Console.WriteLine(i);
+                try
                 {
-                    Console.WriteLine(i);
-
-                    using (var test = new AddNodeToClusterTests())
+                    using (var test = new TopologyChangesTests())
                     {
-                        test.PutDatabaseOnHealthyNodes().Wait();
+                        await test.AddingRemovedNodeShouldWork();
                     }
                 }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    Console.ReadKey();
+                }           
             }
         }
     }
