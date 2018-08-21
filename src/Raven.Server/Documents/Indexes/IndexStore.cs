@@ -354,8 +354,14 @@ namespace Raven.Server.Documents.Indexes
 
             var instance = IndexCompilationCache.GetIndexInstance(definition); // pre-compile it and validate
 
+            if (NeedToUpdateIndex(definition, out Index currentIndex, out var validateMapReduceCollectionName) == false)
+            {
+                Debug.Assert(currentIndex != null);
+                return currentIndex;
+            }
+
             if (definition.Type == IndexType.MapReduce)
-                MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase);
+                MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase, validateMapReduceCollectionName);
 
             var command = new PutIndexCommand(definition, _documentDatabase.Name);
 
@@ -371,6 +377,39 @@ namespace Raven.Server.Documents.Indexes
                 throw new IndexCreationException($"Failed to create static index: {definition.Name}, the cluster is probably down. " +
                                                  $"Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
             }
+        }
+
+        private bool NeedToUpdateIndex(IndexDefinition definition, out Index currentIndex, out bool validateMapReduceCollectionName)
+        {
+            currentIndex = GetIndex(definition.Name);
+            if (currentIndex == null)
+            {
+                // new index
+                validateMapReduceCollectionName = true;
+                return true;
+            }
+
+            var creationOptions = GetIndexCreationOptions(definition, currentIndex, out var _);
+            if (creationOptions != IndexCreationOptions.Noop)
+            {
+                // update/create an index definition
+                validateMapReduceCollectionName = creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
+                return true;
+            }
+
+            var replacementIndexName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
+            if (GetIndex(replacementIndexName) != null)
+            {
+                // original index and side by side index exist
+                // we restored the original index definition
+                // need to delete the side by side index
+                // this is done on each server separately so we need to send the create index command
+                validateMapReduceCollectionName = false;
+                return true;
+            }
+
+            validateMapReduceCollectionName = false;
+            return false;
         }
 
         public async Task<Index> CreateIndex(IndexDefinitionBase definition)
