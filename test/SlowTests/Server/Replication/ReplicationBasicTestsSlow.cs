@@ -97,14 +97,8 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task DisableExternalReplication()
         {
-            using (var store1 = GetDocumentStore(new Options
-            {
-                ExternalReplicationEnabledForTests = true
-            }))
-            using (var store2 = GetDocumentStore(new Options
-            {
-                ExternalReplicationEnabledForTests = true
-            }))
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
             {    
                 var externalList = await SetupReplicationAsync(store1, store2);
                 using (var session = store1.OpenSession())

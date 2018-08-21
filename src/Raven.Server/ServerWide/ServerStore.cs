@@ -1743,7 +1743,7 @@ namespace Raven.Server.ServerWide
         {
             var response = await SendToLeaderAsyncInternal(cmd);
 
-            #if DEBUG || VALIDATE
+            #if DEBUG
             
             if (response.Result.ContainsBlittableObject())
             {
@@ -1987,8 +1987,7 @@ namespace Raven.Server.ServerWide
             if (clusterTopology.Members.TryGetValue(engineLeaderTag, out string leaderUrl) == false)
                 throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
 
-            cmdJson.TryGet("Type", out string commandType);
-            var command = new PutRaftCommand(cmdJson, _engine.Url, commandType);
+            var command = new PutRaftCommand(cmdJson);
 
             if (_clusterRequestExecutor == null
                 || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)

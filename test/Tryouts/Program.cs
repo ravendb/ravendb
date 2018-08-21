@@ -20,12 +20,6 @@ namespace Tryouts
         public static void Main(string[] args)
         {
 
-            var foobar = (3, "ABC", 5.77, new Jordan.User{ FirstName = "John" });
-
-            var tuple = foobar as ITuple;
-            for(int i = 0; i < tuple.Length; i++)
-                Console.WriteLine(tuple[i]);
-
             //try
             //{
             //    using (var test = new RavenDB_11734())
@@ -37,7 +31,6 @@ namespace Tryouts
             //{
             //    Console.WriteLine(e);
             //}
-
 
         }
     }
