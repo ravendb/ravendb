@@ -591,23 +591,26 @@ namespace Tests.Infrastructure
             }
 
             var currentServers = Servers.Where(s => s.Disposed == false && 
-                                                    urls.Contains(s.WebUrl)).ToArray();
+                                                    urls.Contains(s.WebUrl,StringComparer.CurrentCultureIgnoreCase)).ToArray();
             int numberOfInstances = 0;
             foreach (var server in currentServers)
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
             }
-            
-            foreach (var server in currentServers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)))
+
+            var relevantServers = currentServers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)).ToArray();
+            foreach (var server in relevantServers)
             {
                 await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(record.DatabaseName);
                 numberOfInstances++;
             }
 
             if (numberOfInstances != replicationFactor)
-                throw new InvalidOperationException("Couldn't create the db on all nodes, just on " + numberOfInstances + " out of " + replicationFactor);
+                throw new InvalidOperationException($@"Couldn't create the db on all nodes, just on {numberOfInstances} 
+                                                    out of {replicationFactor}{Environment.NewLine}
+                                                    Server urls are {string.Join(",",Servers.Select(x => $"[{x.WebUrl}|{x.Disposed}]"))}; Current cluster urls are : {string.Join(",",urls)}; The relevant servers are : {string.Join(",",relevantServers.Select(x => x.WebUrl))}; current servers are : {string.Join(",",currentServers.Select(x => x.WebUrl))}");
             return (databaseResult.RaftCommandIndex,
-                currentServers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)).ToList());
+                relevantServers.ToList());
         }
 
         private static async Task<string[]> GetClusterNodeUrlsAsync(string leadersUrl, IDocumentStore store)
