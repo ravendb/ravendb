@@ -1654,18 +1654,14 @@ namespace Raven.Server.ServerWide
             for (var i = 0; i < count; i++)
             {
                 factor--;
-                AddDatabaseNode(i);
+                var selectedNode = clusterNodes[(i + offset) % clusterNodes.Count];
+                topology.Members.Add(selectedNode);
             }
 
             // only if all the online nodes are occupied, try to place on the disconnected
             for (int i = 0; i < Math.Min(disconnectedNodes.Count, factor); i++)
             {
-                AddDatabaseNode(i);
-            }
-
-            void AddDatabaseNode(int i)
-            {
-                var selectedNode = clusterNodes[(i + offset) % clusterNodes.Count];
+                var selectedNode = disconnectedNodes[(i + offset) % disconnectedNodes.Count];
                 topology.Members.Add(selectedNode);
             }
         }
