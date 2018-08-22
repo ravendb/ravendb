@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Queries.Parser;
 using FastTests.Voron.Backups;
@@ -16,21 +17,28 @@ namespace Tryouts
 {
     public static class Program
     {
-        public static async Task Main(string[] args)
+        public static void Main(string[] args)
         {
-            try
-            {
-                using (var test = new RavenDB_11734())
-                {
-                    await test.Index_Queries_Should_Not_Return_Deleted_Documents();
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
 
-            
+            var foobar = (3, "ABC", 5.77, new Jordan.User{ FirstName = "John" });
+
+            var tuple = foobar as ITuple;
+            for(int i = 0; i < tuple.Length; i++)
+                Console.WriteLine(tuple[i]);
+
+            //try
+            //{
+            //    using (var test = new RavenDB_11734())
+            //    {
+            //        await test.Index_Queries_Should_Not_Return_Deleted_Documents();
+            //    }
+            //}
+            //catch (Exception e)
+            //{
+            //    Console.WriteLine(e);
+            //}
+
+
         }
     }
 }
