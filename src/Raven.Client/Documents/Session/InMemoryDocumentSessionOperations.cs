@@ -816,6 +816,10 @@ more responsive application.
             if (TransactionMode != TransactionMode.ClusterWide)
                 return;
 
+            if (UseOptimisticConcurrency)
+                throw new NotSupportedException(
+                    $"{nameof(UseOptimisticConcurrency)} is not supported with {nameof(TransactionMode)} set to {nameof(TransactionMode.ClusterWide)}");
+
             foreach (var command in result.SessionCommands)
             {
                 switch (command.Type)

@@ -32,12 +32,12 @@ namespace Raven.Client.Documents.Session.Operations
             _sessionCommandsCount = result.SessionCommands.Count;
 
             result.SessionCommands.AddRange(result.DeferredCommands);
+            _session.ValidateClusterTransaction(result);
+
             _allCommandsCount = result.SessionCommands.Count;
 
             if (_allCommandsCount == 0)
                 return null;
-
-            _session.ValidateClusterTransaction(result);
 
             _session.IncrementRequestCount();
 
