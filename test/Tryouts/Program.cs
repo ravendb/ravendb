@@ -1,16 +1,11 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Queries.Parser;
-using FastTests.Voron.Backups;
-using FastTests.Voron.Compaction;
-using SlowTests.Authentication;
-using SlowTests.Bugs.MapRedue;
-using SlowTests.Client;
-using SlowTests.Client.Attachments;
-using SlowTests.Issues;
-using SlowTests.MailingList;
+using RachisTests;
+using RachisTests.DatabaseCluster;
+using Raven.Client.Exceptions.Database;
+using SlowTests.Server.Replication;
 using Sparrow.Logging;
-using StressTests.Client.Attachments;
 
 namespace Tryouts
 {
@@ -18,19 +13,25 @@ namespace Tryouts
     {
         public static async Task Main(string[] args)
         {
-            try
+            var fullPath = Path.Join(Path.GetTempPath(),$"{Guid.NewGuid()}");
+            LoggingSource.Instance.SetupLogMode(LogMode.Information, fullPath);            
+            Console.WriteLine(fullPath);
+            for (int i = 0; i < 1000; i++)
             {
-                using (var test = new RavenDB_11734())
+                Console.WriteLine(i);
+                try
                 {
-                    await test.Index_Queries_Should_Not_Return_Deleted_Documents();
+                    using (var test = new TopologyChangesTests())
+                    {
+                        await test.AddingRemovedNodeShouldWork();
+                    }
                 }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    Console.ReadKey();
+                }           
             }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-
-            
         }
     }
 }
