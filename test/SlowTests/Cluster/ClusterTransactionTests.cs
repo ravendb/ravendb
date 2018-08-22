@@ -7,16 +7,14 @@ using System.Threading.Tasks;
 using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.CompareExchange;
-using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
-using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -132,6 +130,45 @@ namespace SlowTests.Cluster
                 {
                     var res = session.Query<User>().ToArray();
                     Assert.Equal(numOfSessions * docsPerSession, res.Length);
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(5)]
+        [InlineData(10)]
+        public async Task ClusterTransactionWaitForIndexes(int docs)
+        {
+            var leader = await CreateRaftClusterAndGetLeader(3);
+            using (var leaderStore = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = 3
+            }))
+            {
+                new UserByName().Execute(leaderStore);
+
+                var users = new List<User>();
+                using (var session = leaderStore.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    session.Advanced.WaitForIndexesAfterSaveChanges();
+                    for (int i = 0; i < docs; i++)
+                    {
+                        var user = new User
+                        {
+                            Name = "Karmel" + i
+                        };
+                        users.Add(user);
+                        await session.StoreAsync(user, "users/" + i);
+                    }
+                    await session.SaveChangesAsync();
+
+                    var stored = await session.LoadAsync<User>(users.Select(u => u.Id));
+                    Assert.Equal(stored.Select(u => u.Value.Name), users.Select(u => u.Name));
                 }
             }
         }
@@ -740,6 +777,22 @@ namespace SlowTests.Cluster
         }
 
         [Fact]
+        public async Task ThrowOnOptimisticConcurrency()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    session.Advanced.UseOptimisticConcurrency = true;
+                    await Assert.ThrowsAsync<NotSupportedException>(async () => await session.SaveChangesAsync());
+                }
+            }
+        }
+
+        [Fact]
         public async Task ThrowOnInvalidTransactionMode()
         {
             var user1 = new User()
@@ -771,6 +824,18 @@ namespace SlowTests.Cluster
                     var u = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende");
                     Assert.Equal(user1.Name, u.Value.Name);
                 }
+            }
+        }
+
+        private class UserByName : AbstractIndexCreationTask<User>
+        {
+            public UserByName()
+            {
+                Map = users => from user in users
+                    select new
+                    {
+                        user.Name
+                    };
             }
         }
     }
