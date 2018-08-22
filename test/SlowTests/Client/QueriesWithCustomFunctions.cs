@@ -1990,7 +1990,7 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
 
                     Assert.Equal("from Users as u select { Name : u.Name, " +
                                  "DetailNumbers : u.DetailIds.map(function(detailId){return {detailId:detailId,detail:load(detailId)};})" +
-                                                            ".map(function(h__TransparentIdentifier0){return {Number:h__TransparentIdentifier0.detail.Number};}) }"
+                                                            ".map(function(__rvn0){return {Number:__rvn0.detail.Number};}) }"
                                 ,query.ToString());
 
                     var queryResult = query.ToList();
