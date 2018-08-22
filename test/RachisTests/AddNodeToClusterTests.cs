@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -43,6 +44,31 @@ namespace RachisTests
                 var dbName = GetDatabaseName();
                 var db = await CreateDatabaseInCluster(dbName, 4, leader.WebUrl);
                 Assert.False(db.Servers.Contains(serverToDispose));
+            }
+        }
+
+        [Fact]
+        public async Task AddDatabaseOnDisconnectedNode()
+        {
+            var clusterSize = 3;
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize, leaderIndex: 0);
+            await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[1]);
+            var db = GetDatabaseName();
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { leader.WebUrl },
+                Database = db
+            }.Initialize())
+            {
+                var hasDisconnected = await WaitForValueAsync(() => leader.ServerStore.GetNodesStatuses().Count(n => n.Value.Connected == false), 1) == 1;
+                Assert.True(hasDisconnected);
+
+                var record = new DatabaseRecord(db);
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(record, clusterSize));
+                var nodes = databaseResult.Topology.AllNodes.ToList();
+                Assert.True(nodes.Contains("A"));
+                Assert.True(nodes.Contains("B"));
+                Assert.True(nodes.Contains("C"));
             }
         }
 
