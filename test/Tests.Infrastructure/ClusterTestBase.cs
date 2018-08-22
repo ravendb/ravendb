@@ -572,27 +572,41 @@ namespace Tests.Infrastructure
 
         public async Task<(long, List<RavenServer>)> CreateDatabaseInCluster(DatabaseRecord record, int replicationFactor, string leadersUrl)
         {
+            var serverCount = Servers.Count(s => s.Disposed == false);
+            if(serverCount < replicationFactor)
+            {
+                throw new InvalidOperationException($"Cannot create database with replication factor = {replicationFactor} when there is only {serverCount} servers in the cluster.");
+            }
+
             DatabasePutResult databaseResult;
+            string[] urls;
             using (var store = new DocumentStore()
             {
                 Urls = new[] { leadersUrl },
                 Database = record.DatabaseName
-            }.Initialize())
+            }.Initialize())            
             {
                 databaseResult = store.Maintenance.Server.Send(new CreateDatabaseOperation(record, replicationFactor));
+                var requestExecutor = store.GetRequestExecutor();
+                var preferred = await requestExecutor.GetPreferredNode();
+                await requestExecutor.UpdateTopologyAsync(preferred.Item2, 10000, true);
+                urls = requestExecutor.Topology.Nodes.Select(x => x.Url).ToArray();
             }
-            var currentServers = Servers.Where(s => s.Disposed == false && s.ServerStore.GetClusterTopology().TryGetNodeTagByUrl(leadersUrl).HasUrl).ToArray();
+
+            var currentServers = Servers.Where(s => s.Disposed == false && 
+                                                    urls.Contains(s.WebUrl)).ToArray();
             int numberOfInstances = 0;
             foreach (var server in currentServers)
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
             }
-
+            
             foreach (var server in currentServers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)))
             {
                 await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(record.DatabaseName);
                 numberOfInstances++;
             }
+
             if (numberOfInstances != replicationFactor)
                 throw new InvalidOperationException("Couldn't create the db on all nodes, just on " + numberOfInstances + " out of " + replicationFactor);
             return (databaseResult.RaftCommandIndex,

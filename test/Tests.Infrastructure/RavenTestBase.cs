@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -92,7 +93,7 @@ namespace FastTests
                 lock (_getDocumentStoreSync)
                 {
                     options = options ?? Options.Default;
-                    var serverToUse = options.Server ?? Server;
+                    var serverToUse = options.Server ?? Server;                 
 
                     var name = GetDatabaseName(caller);
 
