@@ -1264,7 +1264,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        public bool HasEntriesBetween(TableSchema.FixedSizeSchemaIndexDef index, long start, long end, bool inclusive)
+        public bool HasEntriesGreaterThanStartAndLowerThanOrEqualToEnd(TableSchema.FixedSizeSchemaIndexDef index, long start, long end)
         {
             var fst = GetFixedSizeTree(index);
 
@@ -1273,10 +1273,10 @@ namespace Voron.Data.Tables
                 if (it.Seek(start) == false)
                     return false;
 
-                if (inclusive)
-                    return it.CurrentKey <= end;
+                if (it.CurrentKey <= start && it.MoveNext() == false)
+                    return false;
 
-                return it.CurrentKey < end;
+                return it.CurrentKey <= end;
             }
         }
 

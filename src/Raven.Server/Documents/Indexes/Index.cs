@@ -827,7 +827,7 @@ namespace Raven.Server.Documents.Indexes
 
                     var hasTombstones = DocumentDatabase.DocumentsStorage.HasTombstonesWithEtagBetween(databaseContext,
                         collection,
-                        lastProcessedTombstoneEtag+1,
+                        lastProcessedTombstoneEtag,
                         cutoff.Value);
                     if (hasTombstones)
                     {
@@ -2265,7 +2265,7 @@ namespace Raven.Server.Documents.Indexes
                                 continue;
                             }
 
-                            FillFacetedQueryResult(result, isStale, 
+                            FillFacetedQueryResult(result, isStale,
                                 facetQuery.FacetsEtag, facetQuery.Query.Metadata,
                                 documentsContext, indexContext);
 
