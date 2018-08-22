@@ -354,14 +354,8 @@ namespace Raven.Server.Documents.Indexes
 
             var instance = IndexCompilationCache.GetIndexInstance(definition); // pre-compile it and validate
 
-            if (NeedToUpdateIndex(definition, out Index currentIndex, out var checkIfCollectionEmpty) == false)
-            {
-                Debug.Assert(currentIndex != null);
-                return currentIndex;
-            }
-
             if (definition.Type == IndexType.MapReduce)
-                MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase, checkIfCollectionEmpty);
+                MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase, NeedToCheckIfCollectionEmpty(definition));
 
             var command = new PutIndexCommand(definition, _documentDatabase.Name);
 
@@ -379,37 +373,43 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private bool NeedToUpdateIndex(IndexDefinition definition, out Index currentIndex, out bool checkIfCollectionEmpty)
+        private bool NeedToCheckIfCollectionEmpty(IndexDefinition definition)
         {
-            currentIndex = GetIndex(definition.Name);
-            if (currentIndex == null)
+            var currentIndex = GetIndex(definition.Name);
+            var replacementIndexName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
+            var replacementIndex = GetIndex(replacementIndexName);
+            if (currentIndex == null && replacementIndex == null)
             {
                 // new index
-                checkIfCollectionEmpty = true;
+                return true;
+            }
+
+            if (currentIndex == null)
+            {
+                // we deleted the in memory index but didn't delete the replacement yet
                 return true;
             }
 
             var creationOptions = GetIndexCreationOptions(definition, currentIndex, out var _);
-            if (creationOptions != IndexCreationOptions.Noop)
+            IndexCreationOptions replacementCreationOptions;
+            if (replacementIndex != null)
             {
-                // update/create an index definition
-                checkIfCollectionEmpty = creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex;
-                return true;
+                replacementCreationOptions = GetIndexCreationOptions(definition, replacementIndex, out var _);
+            }
+            else
+            {
+                // the replacement index doesn't exist
+                return IsCreateOrUpdate(creationOptions);
             }
 
-            var replacementIndexName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
-            if (GetIndex(replacementIndexName) != null)
-            {
-                // original index and side by side index exist
-                // we restored the original index definition
-                // need to delete the side by side index
-                // this is done on each server separately so we need to send the create index command
-                checkIfCollectionEmpty = false;
-                return true;
-            }
+            return IsCreateOrUpdate(creationOptions) ||
+                   IsCreateOrUpdate(replacementCreationOptions);
+        }
 
-            checkIfCollectionEmpty = false;
-            return false;
+        private static bool IsCreateOrUpdate(IndexCreationOptions creationOptions)
+        {
+            return creationOptions == IndexCreationOptions.Create ||
+                   creationOptions == IndexCreationOptions.Update;
         }
 
         public async Task<Index> CreateIndex(IndexDefinitionBase definition)
