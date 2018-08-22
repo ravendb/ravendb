@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -1738,9 +1739,27 @@ namespace Raven.Server.ServerWide
             return _engine.CurrentState == RachisState.Passive;
         }
 
-        public Task<(long Index, object Result)> SendToLeaderAsync(CommandBase cmd)
+        public async Task<(long Index, object Result)> SendToLeaderAsync(CommandBase cmd)
         {
-            return SendToLeaderAsyncInternal(cmd);
+            var response = await SendToLeaderAsyncInternal(cmd);
+
+            #if DEBUG
+            
+            if (response.Result.ContainsBlittableObject())
+            {
+                throw new InvalidOperationException($"{nameof(ServerStore)}::{nameof(SendToLeaderAsync)}(CommandBase) should not return command results with blittable json objects. This is not supposed to happen and should be reported.");
+            }
+
+            #endif
+
+            return response;
+        }
+
+        //this is needed for cases where Result or any of its fields are blittable json.
+        //(for example, this is needed for use with AddOrUpdateCompareExchangeCommand, since it returns BlittableJsonReaderObject as result)
+        public Task<(long Index, object Result)> SendToLeaderAsync(TransactionOperationContext context, CommandBase cmd)
+        {
+            return SendToLeaderAsyncInternal(context, cmd);
         }
 
         public DynamicJsonArray GetClusterErrors()
@@ -1874,6 +1893,12 @@ namespace Raven.Server.ServerWide
 
         private async Task<(long Index, object Result)> SendToLeaderAsyncInternal(CommandBase cmd)
         {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                return await SendToLeaderAsyncInternal(context, cmd);
+        }
+
+        private async Task<(long Index, object Result)> SendToLeaderAsyncInternal(TransactionOperationContext context, CommandBase cmd)
+        {
             //I think it is reasonable to expect timeout twice of error retry
             var timeoutTask = TimeoutManager.WaitFor(Engine.OperationTimeout, _shutdownNotification.Token);
 
@@ -1914,8 +1939,8 @@ namespace Raven.Server.ServerWide
                         continue;
                     }
 
-                    var result = await SendToNodeAsync(cachedLeaderTag, cmd, reachedLeader);
-                    return (result.Index, cmd.FromRemote(result.Result));
+                    var response = await SendToNodeAsync(context, cachedLeaderTag, cmd, reachedLeader);
+                    return (response.Index, cmd.FromRemote(response.Result));
                 }
                 catch (Exception ex)
                 {
@@ -1936,6 +1961,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
+
         private static void ThrowInvalidEngineState(CommandBase cmd)
         {
             throw new NotSupportedException("Cannot send command " + cmd.GetType().FullName + " to the cluster because this node is passive." + Environment.NewLine +
@@ -1949,42 +1975,39 @@ namespace Raven.Server.ServerWide
                                        $"and we timed out waiting for one after {Engine.OperationTimeout}", requestException);
         }
 
-        private async Task<(long Index, object Result)> SendToNodeAsync(string engineLeaderTag, CommandBase cmd, Reference<bool> reachedLeader)
+        private async Task<(long Index, object Result)> SendToNodeAsync(TransactionOperationContext context, string engineLeaderTag, CommandBase cmd, Reference<bool> reachedLeader)
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            var djv = cmd.ToJson(context);
+            var cmdJson = context.ReadObject(djv, "raft/command");
+
+            ClusterTopology clusterTopology;
+            using (context.OpenReadTransaction())
+                clusterTopology = _engine.GetTopology(context);
+
+            if (clusterTopology.Members.TryGetValue(engineLeaderTag, out string leaderUrl) == false)
+                throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
+
+            var command = new PutRaftCommand(cmdJson);
+
+            if (_clusterRequestExecutor == null
+                || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
             {
-                var djv = cmd.ToJson(context);
-                var cmdJson = context.ReadObject(djv, "raft/command");
-
-                ClusterTopology clusterTopology;
-                using (context.OpenReadTransaction())
-                    clusterTopology = _engine.GetTopology(context);
-
-                if (clusterTopology.Members.TryGetValue(engineLeaderTag, out string leaderUrl) == false)
-                    throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
-
-                var command = new PutRaftCommand(cmdJson);
-
-                if (_clusterRequestExecutor == null
-                    || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
-                {
-                    _clusterRequestExecutor?.Dispose();
-                    _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, Server.Certificate.Certificate);
-                    _clusterRequestExecutor.DefaultTimeout = Engine.OperationTimeout;
-                }
-
-                try
-                {
-                    await _clusterRequestExecutor.ExecuteAsync(command, context, token: ServerShutdown);
-                }
-                catch
-                {
-                    reachedLeader.Value = command.HasReachLeader();
-                    throw;
-                }
-
-                return (command.Result.RaftCommandIndex, command.Result.Data);
+                _clusterRequestExecutor?.Dispose();
+                _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, Server.Certificate.Certificate);
+                _clusterRequestExecutor.DefaultTimeout = Engine.OperationTimeout;
             }
+
+            try
+            {
+                await _clusterRequestExecutor.ExecuteAsync(command, context, token: ServerShutdown);
+            }
+            catch
+            {
+                reachedLeader.Value = command.HasReachLeader();
+                throw;
+            }
+
+            return (command.Result.RaftCommandIndex, command.Result.Data);
         }
 
         private class PutRaftCommand : RavenCommand<PutRaftCommandResult>
