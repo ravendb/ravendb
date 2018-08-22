@@ -822,7 +822,7 @@ namespace Raven.Server.Documents.Indexes
 
                     var hasTombstones = DocumentDatabase.DocumentsStorage.HasTombstonesWithEtagBetween(databaseContext,
                         collection,
-                        lastProcessedTombstoneEtag,
+                        lastProcessedTombstoneEtag+1,
                         cutoff.Value);
                     if (hasTombstones)
                     {
