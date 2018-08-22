@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Indexes
                                                  $"but last processed document etag for that collection is '{lastProcessedReferenceEtag:#,#;;0}'.");
                         }
 
-                        var hasTombstones = databaseContext.DocumentDatabase.DocumentsStorage.HasTombstonesWithEtagBetween(databaseContext, referencedCollection.Name,
+                        var hasTombstones = databaseContext.DocumentDatabase.DocumentsStorage.HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(databaseContext, referencedCollection.Name,
                             lastProcessedTombstoneEtag,
                             referenceCutoff.Value);
                         if (hasTombstones)

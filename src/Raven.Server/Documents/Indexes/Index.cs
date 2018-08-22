@@ -820,7 +820,7 @@ namespace Raven.Server.Documents.Indexes
                         stalenessReasons.Add(message);
                     }
 
-                    var hasTombstones = DocumentDatabase.DocumentsStorage.HasTombstonesWithEtagBetween(databaseContext,
+                    var hasTombstones = DocumentDatabase.DocumentsStorage.HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(databaseContext,
                         collection,
                         lastProcessedTombstoneEtag,
                         cutoff.Value);
@@ -2201,7 +2201,7 @@ namespace Raven.Server.Documents.Indexes
                                 continue;
                             }
 
-                            FillFacetedQueryResult(result, isStale, 
+                            FillFacetedQueryResult(result, isStale,
                                 facetQuery.FacetsEtag, facetQuery.Query.Metadata,
                                 documentsContext, indexContext);
 
