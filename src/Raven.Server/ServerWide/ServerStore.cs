@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -1734,9 +1735,20 @@ namespace Raven.Server.ServerWide
             return _engine.CurrentState == RachisState.Passive;
         }
 
-        public Task<(long Index, object Result)> SendToLeaderAsync(CommandBase cmd)
+        public async Task<(long Index, object Result)> SendToLeaderAsync(CommandBase cmd)
         {
-            return SendToLeaderAsyncInternal(cmd);
+            var response = await SendToLeaderAsyncInternal(cmd);
+
+            #if DEBUG
+            
+            if (response.Result.ContainsBlittableObject())
+            {
+                throw new InvalidOperationException($"{nameof(ServerStore)}::{nameof(SendToLeaderAsync)}(CommandBase) should not return command results with blittable json objects. This is not supposed to happen and should be reported.");
+            }
+
+            #endif
+
+            return response;
         }
 
         //this is needed for cases where Result or any of its fields are blittable json.
@@ -1971,7 +1983,8 @@ namespace Raven.Server.ServerWide
             if (clusterTopology.Members.TryGetValue(engineLeaderTag, out string leaderUrl) == false)
                 throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
 
-                var command = new PutRaftCommand(cmdJson);
+            cmdJson.TryGet("Type", out string commandType);
+            var command = new PutRaftCommand(cmdJson, _engine.Url, commandType);
 
             if (_clusterRequestExecutor == null
                 || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
