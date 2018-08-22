@@ -16,8 +16,15 @@ namespace RachisTests
         [Fact]
         public async Task BackToFirstNodeAfterRevive()
         {
-            var db = "BackToFirstNodeAfterRevive";
-            var leader = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false);
+            var db = GetDatabaseName();
+
+            // we don't want to move the node to rehab, since it should be restored to the top of the list.
+            var settings = new Dictionary<string, string>()
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.StabilizationTime)] = "1"
+            };
+
+            var leader = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false, customSettings: settings);
             await CreateDatabaseInCluster(db, 3, leader.WebUrl);
 
             using (var leaderStore = new DocumentStore
@@ -55,11 +62,8 @@ namespace RachisTests
                 }
 
                 Assert.NotEqual(re.Url, firstNodeUrl);
-                var customSettings = new Dictionary<string, string>
-                {
-                    {RavenConfiguration.GetKey(x => x.Core.ServerUrls), firstNodeUrl},
-                };
-                Servers.Add(GetNewServer(customSettings, runInMemory: false, deletePrevious: false, partialPath: nodePath));
+                settings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = firstNodeUrl;
+                Servers.Add(GetNewServer(settings, runInMemory: false, deletePrevious: false, partialPath: nodePath));
                 await re.CheckNodeStatusNow(tag);
                 Assert.True(WaitForValue(() => firstNodeUrl == re.Url, true));
             }
