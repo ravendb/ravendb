@@ -826,6 +826,9 @@ more responsive application.
                 {
                     case CommandType.PUT:
                     case CommandType.DELETE:
+                        if (command.ChangeVector != null)
+                            throw new NotSupportedException($"Optimistic concurrency for '{command.Id}' is not supported when using a cluster transaction.");
+                        break;
                     case CommandType.CompareExchangeDELETE:
                     case CommandType.CompareExchangePUT:
                         break;
