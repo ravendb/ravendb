@@ -9,7 +9,7 @@ using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_11791:RavenTestBase
+    public class RavenDB_11791 : RavenTestBase
     {
 
         public class PeopleIndex : AbstractIndexCreationTask<Person>
@@ -29,10 +29,10 @@ namespace FastTests.Issues
             using (var store = GetDocumentStore())
             {
                 new PeopleIndex().Execute(store);
-               
+
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Person(),"people/1");
+                    session.Store(new Person(), "people/1");
                     session.Advanced.WaitForIndexesAfterSaveChanges();
                     session.SaveChanges();
                 }
@@ -50,9 +50,9 @@ namespace FastTests.Issues
                     session.Advanced.WaitForIndexesAfterSaveChanges();
                     session.SaveChanges();
                 }
-             
+
             }
-            
+
         }
     }
 }

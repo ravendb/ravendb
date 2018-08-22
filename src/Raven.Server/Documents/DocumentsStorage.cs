@@ -979,7 +979,7 @@ namespace Raven.Server.Documents
             if (table == null)
                 return false;
 
-            return table.HasEntriesBetween(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], start, end, inclusive: true);
+            return table.HasEntriesGreaterThanStartAndLowerThanOrEqualToEnd(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], start, end);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
