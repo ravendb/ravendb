@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Xml;
@@ -214,7 +216,117 @@ namespace Raven.Server.Commercial
 
         private static OsInfo GetLinuxOsInfo()
         {
-            throw new System.NotImplementedException();
+            var osInfo = new OsInfo
+            {
+                FullName = RuntimeInformation.OSDescription,
+                BuildVersion = ReadBuildVersion()
+            };
+
+            try
+            {
+                var path = osInfo.FullName.Contains("SUSE", StringComparison.OrdinalIgnoreCase) 
+                    ? "/usr/lib/os-release" 
+                    : "/etc/os-release";
+
+                var osReleaseProperties =
+                    (from line in File.ReadAllLines(path)
+                        let splitted = line.Split("=")
+                        where splitted.Length == 2
+                        select (Key: splitted[0], Value: splitted[1]))
+                    .ToDictionary(x => x.Key, x => x.Value);
+
+                osReleaseProperties.TryGetValue("NAME", out var name);
+
+                var version = GetVersionByDistro(name);
+                if (string.IsNullOrWhiteSpace(version) &&
+                    osReleaseProperties.TryGetValue("VERSION_ID", out var versionId))
+                {
+                    version = versionId;
+                }
+
+                if (osReleaseProperties.TryGetValue("PRETTY_NAME", out var prettyName))
+                {
+                    osInfo.FullName = prettyName;
+                }
+                else if (string.IsNullOrWhiteSpace(version) == false && name != null)
+                {
+                    osInfo.FullName = $"{name} {version}";
+                }
+
+                osInfo.Version = version;
+
+                return osInfo;
+            }
+            catch (Exception)
+            {
+                return osInfo;
+            }
+        }
+
+        private static string GetVersionByDistro(string name)
+        {
+            if (name == null)
+                return null;
+
+            string version = null;
+            if (name.Contains("CentOS", StringComparison.OrdinalIgnoreCase))
+            {
+                version = ReadAllTextWithoutError("/etc/centos-release") ??
+                          ReadAllTextWithoutError("/etc/redhat-release") ??
+                          ReadAllTextWithoutError("/etc/system-release");
+            }
+            else if (name.Contains("Debian", StringComparison.OrdinalIgnoreCase) ||
+                     name.Contains("Raspbian", StringComparison.OrdinalIgnoreCase))
+            {
+                version = ReadAllTextWithoutError("/etc/debian_version");
+            }
+            else if (name.Contains("Redhat", StringComparison.OrdinalIgnoreCase))
+            {
+                version = ReadAllTextWithoutError("/etc/redhat-release") ??
+                          ReadAllTextWithoutError("/etc/system-release");
+            }
+            else if (name.Contains("Alpine", StringComparison.OrdinalIgnoreCase))
+            {
+                version = ReadAllTextWithoutError("/etc/alpine-release");
+            }
+
+            version = version ?? ReadAllTextWithoutError("/etc/lsb-release");
+
+            if (string.IsNullOrWhiteSpace(version) == false)
+            {
+                var pattern = new Regex(@"\d+(\.\d+)+");
+                var matches = pattern.Matches(version);
+                version = matches
+                    .Select(x => x.Value)
+                    .OrderByDescending(x => x.Length)
+                    .FirstOrDefault();
+            }
+
+            return version;
+        }
+
+        private static string ReadAllTextWithoutError(string path)
+        {
+            try
+            {
+                return File.ReadAllText(path);;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        private static string ReadBuildVersion()
+        {
+            try
+            {
+                return File.ReadLines("/proc/sys/kernel/osrelease").FirstOrDefault();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
     }
 }
