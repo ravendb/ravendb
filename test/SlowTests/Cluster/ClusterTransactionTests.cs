@@ -793,6 +793,22 @@ namespace SlowTests.Cluster
         }
 
         [Fact]
+        public async Task ThrowOnOptimisticConcurrencyForSignleDcoument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    await session.StoreAsync(new User { Name = "Some Other Name" }, changeVector: string.Empty, "user/1");
+                    await Assert.ThrowsAsync<NotSupportedException>(async () => await session.SaveChangesAsync());
+                }
+            }
+        }
+
+        [Fact]
         public async Task ThrowOnInvalidTransactionMode()
         {
             var user1 = new User()
