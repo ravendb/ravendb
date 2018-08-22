@@ -142,8 +142,10 @@ namespace Raven.Client.Documents.Subscriptions
                         JavascriptConversionExtensions.InvokeSupport.Instance,
                         JavascriptConversionExtensions.NullCoalescingSupport.Instance,
                         JavascriptConversionExtensions.StringSupport.Instance,
-                        JavascriptConversionExtensions.NestedConditionalSupport.Instance,
-                        new JavascriptConversionExtensions.ReplaceParameterWithNewName(project.Parameters[0], "doc")
+                        JavascriptConversionExtensions.NestedConditionalSupport.Instance,                        
+                        new JavascriptConversionExtensions.ReplaceParameterWithNewName(project.Parameters[0], "doc"),
+                        JavascriptConversionExtensions.CounterSupport.Instance,
+                        JavascriptConversionExtensions.CompareExchangeSupport.Instance
                     ));
                 criteria.Query += Environment.NewLine + "select " + script;
             }
