@@ -947,7 +947,7 @@ namespace Raven.Server.Documents
             return TableValueToEtag(1, ref result.Reader);
         }
 
-        public bool HasTombstonesWithEtagBetween(DocumentsOperationContext context, string collection,
+        public bool HasTombstonesWithEtagGreaterThanStartAndLowerThanOrEqualToEnd(DocumentsOperationContext context, string collection,
             long start,
             long end)
         {
