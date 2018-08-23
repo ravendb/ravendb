@@ -633,7 +633,7 @@ namespace Voron
 
                     _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                    _currentWriteTransactionHolder = NativeMemory.ThreadAllocations.Value;
+                    _currentWriteTransactionHolder = NativeMemory.CurrentThreadStats;
                     WriteTransactionStarted();
 
                     if (_endOfDiskSpace != null)
@@ -702,7 +702,7 @@ namespace Voron
         {
             var currentWriteTransactionHolder = _currentWriteTransactionHolder;
             if (currentWriteTransactionHolder != null && 
-                currentWriteTransactionHolder == NativeMemory.ThreadAllocations.Value)
+                currentWriteTransactionHolder == NativeMemory.CurrentThreadStats)
             {
                 throw new InvalidOperationException($"A write transaction is already opened by thread name: " +
                                                     $"{currentWriteTransactionHolder.Name}, Id: {currentWriteTransactionHolder.Id}");
@@ -737,7 +737,7 @@ namespace Voron
                 throw new TimeoutException("Tried and failed to get the tx lock with no timeout, someone else is holding the lock, will retry later...");
 
             var copy = _currentWriteTransactionHolder;
-            if (copy == NativeMemory.ThreadAllocations.Value)
+            if (copy == NativeMemory.CurrentThreadStats)
             {
                 throw new InvalidOperationException("A write transaction is already opened by this thread");
             }
@@ -753,7 +753,7 @@ namespace Voron
         private void ThrowOnTimeoutWaitingForReadFlushingInProgressLock(TimeSpan wait)
         {
             var copy = Journal.CurrentFlushingInProgressHolder;
-            if (copy == NativeMemory.ThreadAllocations.Value)
+            if (copy == NativeMemory.CurrentThreadStats)
             {
                 throw new InvalidOperationException("Flushing is already being performed by this thread");
             }
