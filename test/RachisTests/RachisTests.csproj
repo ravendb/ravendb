@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <RuntimeFrameworkVersion>2.1.2</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>2.1.3</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>RachisTests</AssemblyName>
     <PackageId>RachisTests</PackageId>
@@ -22,7 +22,6 @@
       <CopyToOutputDirectory>PreserverNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\src\Sparrow\Sparrow.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
