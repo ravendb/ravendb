@@ -309,7 +309,7 @@ namespace Sparrow.LowMemory
                 ClearInactiveHandlers();
             }
 
-            foreach (var stats in NativeMemory.ThreadAllocations.Values)
+            foreach (var stats in NativeMemory.AllThreadStats)
             {
                 if (stats.IsThreadAlive() == false)
                     continue;

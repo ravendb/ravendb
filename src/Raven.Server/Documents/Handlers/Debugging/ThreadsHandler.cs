@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var threadAllocations = NativeMemory.ThreadAllocations.Values
+                    var threadAllocations = NativeMemory.AllThreadStats
                         .GroupBy(x => x.UnmanagedThreadId)
                         .ToDictionary(g => g.Key, x => x.First());
 
