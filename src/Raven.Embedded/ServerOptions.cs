@@ -7,7 +7,7 @@ namespace Raven.Embedded
 {
     public class ServerOptions
     {
-        public string FrameworkVersion { get; set; } = "2.1.2";
+        public string FrameworkVersion { get; set; } = "2.1.3";
 
         public string DataDirectory { get; set; } = Path.Combine(AppContext.BaseDirectory, "RavenDB");
 
