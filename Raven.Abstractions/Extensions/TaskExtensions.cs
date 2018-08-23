@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
@@ -92,6 +93,18 @@ namespace Raven.Abstractions.Extensions
             if (task == await Task.WhenAny(task, Task.Delay(timeout.Value)).ConfigureAwait(false))
                 return true;
             return false;
+        }
+
+        public static async Task<T> WaitWithTimeout<T>(this Task<T> task, TimeSpan? timeout, [CallerMemberName]string caller = null)
+        {
+            if (timeout == null)
+            {
+                return await task.ConfigureAwait(false);
+            }
+
+            if (task == await Task.WhenAny(task, Task.Delay(timeout.Value)).ConfigureAwait(false))
+                return await task.ConfigureAwait(false);
+            throw new TimeoutException("Failed to wait for task: " + caller);
         }
     }
 }
