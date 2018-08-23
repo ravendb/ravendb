@@ -1186,6 +1186,24 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
+                if (context.Node is MethodCallExpression mce &&
+                    mce.Method.DeclaringType == typeof(DateTime) &&
+                    mce.Method.Name == "ToString" &&
+                    mce.Arguments.Count == 1)
+                {
+                    context.PreventDefault();
+                    var jsWriter = context.GetWriter();
+                    using (jsWriter.Operation(mce))
+                    {
+                        jsWriter.Write("toDateString(");
+                        context.Visitor.Visit(mce.Object);
+                        jsWriter.Write(", ");
+                        context.Visitor.Visit(mce.Arguments[0]);
+                        jsWriter.Write(")");
+                        return;
+                    }
+                }
+
                 if (context.Node is NewExpression newExp && newExp.Type == typeof(DateTime))
                 {
                     context.PreventDefault();
@@ -1830,8 +1848,9 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is MethodCallExpression mce) || mce.Method.DeclaringType != typeof(string))
-                    return;
+                if (!(context.Node is MethodCallExpression mce) || 
+                    mce.Method.DeclaringType != typeof(string))
+                    return; 
 
                 string newName;
                 switch (mce.Method.Name)
