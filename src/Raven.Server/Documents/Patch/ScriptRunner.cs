@@ -170,6 +170,9 @@ namespace Raven.Server.Documents.Patch
 
                 ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, ConvertJsTimeToTimeSpanString));
 
+                ScriptEngine.SetValue("toDateString", new ClrFunctionInstance(ScriptEngine, ToDateString));
+
+
                 ScriptEngine.SetValue("scalarToRawString", new ClrFunctionInstance(ScriptEngine, ScalarToRawString));
 
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
@@ -805,6 +808,29 @@ namespace Raven.Server.Documents.Patch
                 var asTimeSpan = new TimeSpan(ticks);
 
                 return asTimeSpan.ToString();
+            }
+
+            private static JsValue ToDateString(JsValue self, JsValue[] args)
+            {
+                if (args.Length != 2)
+                {
+                    throw new InvalidOperationException("toDateString(date, format) must be called with exactly 2 arguments");
+                }
+
+                if (args[0].IsDate() == false)
+                {
+                    throw new InvalidOperationException("toDateString(date, format) : 'date' argument must be of type 'Date'");
+                }
+
+                if (args[1].IsString() == false)
+                {
+                    throw new InvalidOperationException("toDateString(date, format) : 'format' must be a string argument");
+                }
+
+                var date = args[0].AsDate().ToDateTime();
+                var format = args[1].AsString();
+
+                return date.ToString(format);
             }
 
             private static JsValue StartsWith(JsValue self, JsValue[] args)
