@@ -57,7 +57,8 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
                     var srcColumns = Api.GetColumnDictionary(session, src);
                     var dstColumns = Api.GetColumnDictionary(session, dst);
 
-                    int rows = 0;
+                    int rowsOfPages = 0;
+                    int rowsOfUsage = 0;
 
                     while (Api.TryMoveNext(session, src))
                     {
@@ -119,6 +120,10 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
 
                             if (Api.TrySeek(session, usage, SeekGrbit.SeekEQ))
                             {
+                                int usageRowsForCurrentPage = 0;
+
+                                var highNumberOfPageUsages = false;
+
                                 do
                                 {
                                     var page_id = Api.RetrieveColumnAsInt64(session, usage, usageColumns["page_id"]).Value;
@@ -133,19 +138,38 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
                                         update.Save();
                                     }
 
+                                    rowsOfUsage++;
+                                    usageRowsForCurrentPage++;
+
+                                    if (usageRowsForCurrentPage % 5000 == 0)
+                                    {
+                                        output("Processed " + (rowsOfPages) + " rows in 'pages' table and " + rowsOfUsage + " rows in 'usage' table. " +
+                                               "Current number of 'usage' rows for page #" + oldPageId + " is " + usageRowsForCurrentPage);
+
+                                        Api.JetCommitTransaction(session, CommitTransactionGrbit.LazyFlush);
+                                        Api.JetBeginTransaction2(session, BeginTransactionGrbit.None);
+
+                                        highNumberOfPageUsages = true;
+                                    }
+
                                 } while (Api.TryMoveNext(session, usage));
+
+                                if (highNumberOfPageUsages)
+                                {
+                                    output("Total number of 'usage' rows for page #" + oldPageId + " was " + usageRowsForCurrentPage);
+                                }
                             }
                         }
 
-                        if (rows++ % 10000 == 0)
+                        if (rowsOfPages++ % 10000 == 0)
                         {
-                            output("Processed " + (rows) + " rows in 'pages' table");
+                            output("Processed " + (rowsOfPages) + " rows in 'pages' table and " + rowsOfUsage + " rows in 'usage' table");
                             Api.JetCommitTransaction(session, CommitTransactionGrbit.LazyFlush);
                             Api.JetBeginTransaction2(session, BeginTransactionGrbit.None);
                         }
                     }
 
-                    output("Processed " + (rows) + " rows in 'pages' table. DONE");
+                    output("Processed " + (rowsOfPages) + " rows in 'pages' table. DONE");
                 }
             }
 
