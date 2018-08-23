@@ -905,14 +905,11 @@ namespace Raven.Server
             else
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
                 {
                     var certKey = Constants.Certificates.Prefix + certificate.Thumbprint;
-                    BlittableJsonReaderObject cert;
-                    using (ctx.OpenReadTransaction())
-                    {
-                        cert = ServerStore.Cluster.Read(ctx, certKey) ??
+                    var cert = ServerStore.Cluster.Read(ctx, certKey) ??
                                ServerStore.Cluster.GetLocalState(ctx, certKey);
-                    }
 
                     if (cert == null)
                     {
