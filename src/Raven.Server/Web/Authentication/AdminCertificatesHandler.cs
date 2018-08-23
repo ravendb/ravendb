@@ -460,21 +460,21 @@ namespace Raven.Server.Web.Authentication
                             using (context.OpenReadTransaction())
                                 localCertKeys = ServerStore.Cluster.GetCertificateKeysFromLocalState(context).ToList();
 
-                            foreach (var localCertKey in localCertKeys)
+                            using (context.OpenReadTransaction())
                             {
-                                BlittableJsonReaderObject localCertificate;
-                                using (context.OpenReadTransaction())
-                                    localCertificate = ServerStore.Cluster.GetLocalState(context, localCertKey);
+                                foreach (var localCertKey in localCertKeys)
+                                {
+                                    var localCertificate = ServerStore.Cluster.GetLocalState(context, localCertKey);
+                                    if (localCertificate == null)
+                                        continue;
 
-                                if (localCertificate == null)
-                                    continue;
+                                    var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
 
-                                var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
-
-                                if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
-                                    certificateList.TryAdd(localCertKey, localCertificate);
-                                else
-                                    localCertificate.Dispose();
+                                    if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
+                                        certificateList.TryAdd(localCertKey, localCertificate);
+                                    else
+                                        localCertificate.Dispose();
+                                }
                             }
                         }
                         // If we are not passive, we take the certs from the cluster
@@ -563,11 +563,10 @@ namespace Raven.Server.Web.Authentication
             }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
             {
                 var certKey = Constants.Certificates.Prefix + clientCert.Thumbprint;
-                BlittableJsonReaderObject certificate;
-                using (ctx.OpenReadTransaction())
-                    certificate = ServerStore.Cluster.Read(ctx, certKey) ??
+                var certificate = ServerStore.Cluster.Read(ctx, certKey) ??
                                   ServerStore.Cluster.GetLocalState(ctx, certKey);
 
                 if (certificate == null)

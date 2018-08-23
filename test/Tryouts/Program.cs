@@ -4,6 +4,7 @@ using FastTests;
 using FastTests.Server.Documents.Queries.Parser;
 using FastTests.Voron.Backups;
 using FastTests.Voron.Compaction;
+using RachisTests.DatabaseCluster;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Authentication;
@@ -70,9 +71,9 @@ namespace Tryouts
         {
             try
             {
-                using (var test = new SubscriptionsIncludeTest())
+                using (var test = new ReplicationTests())
                 {
-                    test.DoStuff();
+                    await test.AddGlobalChangeVectorToNewDocument(true);
                 }
             }
             catch (Exception e)
