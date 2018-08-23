@@ -22,7 +22,7 @@ namespace FastTests.Voron
         protected StorageEnvironmentOptions Options;
         protected readonly string DataDir = RavenTestHelper.NewDataPath(nameof(StorageTest), 0);
 
-        protected ByteStringContext Allocator { get; } = new ByteStringContext(SharedMultipleUseFlag.None);
+        protected ByteStringContext Allocator { get; } = new ByteStringContext();
 
         protected StorageTest(StorageEnvironmentOptions options)
         {

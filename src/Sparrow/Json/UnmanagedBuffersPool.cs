@@ -118,7 +118,7 @@ namespace Sparrow.Json
             };
 #else
 
-            var actualSize = Bits.NextPowerOf2(size);
+            var actualSize = Bits.PowerOf2(size);
 
             var index = GetIndexFromSize(actualSize);
 

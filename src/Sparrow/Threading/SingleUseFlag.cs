@@ -34,6 +34,16 @@ namespace Sparrow.Threading
         /// Creates a flag.
         /// </summary>
         /// <param name="raised">if it should be raised or not</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public SingleUseFlag()
+        {
+            _state = 0;
+        }
+
+        /// <summary>
+        /// Creates a flag.
+        /// </summary>
+        /// <param name="raised">if it should be raised or not</param>
         public SingleUseFlag(bool raised = false)
         {
             _state = 0;

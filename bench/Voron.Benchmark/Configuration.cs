@@ -20,7 +20,7 @@ namespace Voron.Benchmark
         /// </summary>
         static Configuration()
         {
-            Allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+            Allocator = new ByteStringContext();
         }
     }
 }

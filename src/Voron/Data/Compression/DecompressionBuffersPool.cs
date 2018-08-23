@@ -75,7 +75,7 @@ namespace Voron.Data.Compression
             if (pageSize > Constants.Compression.MaxPageSize)
                 ThrowPageSizeTooBig(pageSize);
 
-            Debug.Assert(pageSize == Bits.NextPowerOf2(pageSize));
+            Debug.Assert(pageSize == Bits.PowerOf2(pageSize));
 
             EnsureInitialized();
 

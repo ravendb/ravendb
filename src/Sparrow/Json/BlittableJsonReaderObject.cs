@@ -651,7 +651,7 @@ NotFound:
             if (buffers.Properties == null ||
                 buffers.Properties.Length < _propCount)
             {
-                var size = Bits.NextPowerOf2(_propCount);
+                var size = Bits.PowerOf2(_propCount);
                 buffers.Properties = new int[size];
                 buffers.Offsets = new int[size];
             }

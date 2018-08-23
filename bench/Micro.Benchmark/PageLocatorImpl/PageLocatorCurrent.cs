@@ -19,7 +19,7 @@ namespace Micro.Benchmark.PageLocatorImpl
     {
         private const ushort Invalid = 0;
 
-        private readonly ByteStringContext _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+        private readonly ByteStringContext _allocator = new ByteStringContext();
         private readonly LowLevelTransactionStub _tx;
 
         [StructLayout(LayoutKind.Explicit, Size = 20)]
@@ -47,7 +47,7 @@ namespace Micro.Benchmark.PageLocatorImpl
             if (tx != null)
                 Debug.Fail("");
 
-            cacheSize = Bits.NextPowerOf2(cacheSize);
+            cacheSize = Bits.PowerOf2(cacheSize);
             if (cacheSize > 1024)
                 cacheSize = 1024;
 

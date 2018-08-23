@@ -643,7 +643,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private byte[] GetReduceResult(BlittableJsonReaderObject reduceResult)
         {
-            var necessarySize = Bits.NextPowerOf2(reduceResult.Size);
+            var necessarySize = Bits.PowerOf2(reduceResult.Size);
 
             if (_reduceValueBuffer.Length < necessarySize)
                 _reduceValueBuffer = new byte[necessarySize];

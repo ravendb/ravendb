@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Documents.Queries.Parser;
+using FastTests.Sparrow;
 using FastTests.Voron.Backups;
 using FastTests.Voron.Compaction;
 using RachisTests.DatabaseCluster;
@@ -16,6 +17,7 @@ using SlowTests.MailingList;
 using Sparrow.Logging;
 using StressTests.Client.Attachments;
 using Xunit;
+
 
 namespace Tryouts
 {

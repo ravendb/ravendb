@@ -77,7 +77,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
         [GlobalSetup]
         public void Setup()
         {
-            _context = new ByteStringContext(SharedMultipleUseFlag.None);
+            _context = new ByteStringContext();
 
             _context.Allocate(size, out source);
 
