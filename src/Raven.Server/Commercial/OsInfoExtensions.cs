@@ -14,14 +14,16 @@ namespace Raven.Server.Commercial
 {
     public static class OsInfoExtensions
     {
-        public static OsInfo GetOsInfo(Logger logger)
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("OsInfo");
+
+        public static OsInfo GetOsInfo()
         {
             try
             {
                 OsInfo osInfo;
                 if (PlatformDetails.RunningOnPosix == false)
                 {
-                    osInfo = GetWindowsOsInfo(logger);
+                    osInfo = GetWindowsOsInfo();
                 }
                 else if (PlatformDetails.RunningOnMacOsx)
                 {
@@ -37,14 +39,14 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                if (logger.IsOperationsEnabled)
-                    logger.Operations("Failed to get OS info", e);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Failed to get OS info", e);
 
                 return null;
             }
         }
 
-        private static OsInfo GetWindowsOsInfo(Logger logger)
+        private static OsInfo GetWindowsOsInfo()
         {
             var osInfo = GetDefaultWindowsOsInformation();
 
@@ -88,8 +90,8 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                if (logger.IsOperationsEnabled)
-                    logger.Operations("Failed to get Windows OS info from registry", e);
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Failed to get Windows OS info from registry", e);
 
                 return osInfo;
             }
@@ -99,6 +101,7 @@ namespace Raven.Server.Commercial
         {
             var osInfo = new OsInfo
             {
+                OSType = OSType.Windows,
                 FullName = RuntimeInformation.OSDescription
             };
 
@@ -140,13 +143,14 @@ namespace Raven.Server.Commercial
                         osInfo.FullName = isWindowsServer ? "Windows Server 2008" : "Windows 7";
                         break;
                 }
-
-                return osInfo;
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                return osInfo;
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Failed to get default Windows OS info", e);
             }
+
+            return osInfo;
         }
 
         const int OS_ANYSERVER = 29;
@@ -156,6 +160,12 @@ namespace Raven.Server.Commercial
 
         private static OsInfo GetMacOsInfo()
         {
+            var osInfo = new OsInfo
+            {
+                OSType = OSType.MacOS,
+                FullName = RuntimeInformation.OSDescription
+            };
+
             try
             {
                 var doc = new XmlDocument();
@@ -165,7 +175,6 @@ namespace Raven.Server.Commercial
 
                 Debug.Assert(dictionaryNode != null && dictionaryNode.ChildNodes.Count % 2 == 0);
 
-                var osInfo = new OsInfo();
                 for (var i = 0; i < dictionaryNode.ChildNodes.Count; i += 2)
                 {
                     var keyNode = dictionaryNode.ChildNodes[i];
@@ -183,16 +192,14 @@ namespace Raven.Server.Commercial
                 }
 
                 osInfo.FullName = GetMacOsName(osInfo.Version);
-
-                return osInfo;
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                return new OsInfo
-                {
-                    FullName = RuntimeInformation.OSDescription
-                };
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Failed to get macOS info", e);
             }
+
+            return osInfo;
         }
 
         private static string GetMacOsName(string osInfoVersion)
@@ -218,6 +225,7 @@ namespace Raven.Server.Commercial
         {
             var osInfo = new OsInfo
             {
+                OSType = OSType.Linux,
                 FullName = RuntimeInformation.OSDescription,
                 BuildVersion = ReadBuildVersion()
             };
@@ -254,13 +262,14 @@ namespace Raven.Server.Commercial
                 }
 
                 osInfo.Version = version;
-
-                return osInfo;
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                return osInfo;
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Failed to get Linux OS info", e);
             }
+
+            return osInfo;
         }
 
         private static string GetVersionByDistro(string name)

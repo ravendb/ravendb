@@ -4,6 +4,8 @@ namespace Raven.Client.ServerWide.Operations
 {
     public class OsInfo : IDynamicJson
     {
+        public OSType OSType { get; set; }
+
         public string FullName { get; set; }
 
         public string Version { get; set; }
@@ -22,7 +24,8 @@ namespace Raven.Client.ServerWide.Operations
             if (other == null)
                 return false;
 
-            return string.Equals(FullName, other.FullName) &&
+            return OSType == other.OSType &&
+                   string.Equals(FullName, other.FullName) &&
                    string.Equals(Version, other.Version) &&
                    string.Equals(BuildVersion, other.BuildVersion) &&
                    Is32Bits == other.Is32Bits;
@@ -32,7 +35,8 @@ namespace Raven.Client.ServerWide.Operations
         {
             unchecked
             {
-                var hashCode = (FullName != null ? FullName.GetHashCode() : 0);
+                var hashCode = OSType.GetHashCode();
+                hashCode = (hashCode * 397) ^ (FullName != null ? FullName.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (Version != null ? Version.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (BuildVersion != null ? BuildVersion.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ Is32Bits.GetHashCode();
@@ -44,11 +48,19 @@ namespace Raven.Client.ServerWide.Operations
         {
             return new DynamicJsonValue
             {
+                [nameof(OSType)] = OSType,
                 [nameof(FullName)] = FullName,
                 [nameof(Version)] = Version,
                 [nameof(BuildVersion)] = BuildVersion,
                 [nameof(Is32Bits)] = Is32Bits
             };
         }
+    }
+
+    public enum OSType
+    {
+        Windows,
+        Linux,
+        MacOS
     }
 }

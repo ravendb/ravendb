@@ -61,7 +61,7 @@ namespace Raven.Server.Commercial
 
         public event Action LicenseChanged;
 
-        public static readonly OsInfo OsInfo = OsInfoExtensions.GetOsInfo(Logger);
+        public static readonly OsInfo OsInfo = OsInfoExtensions.GetOsInfo();
         public static readonly BuildNumber BuildInfo = new BuildNumber
         {
             BuildVersion = ServerVersion.Build,
