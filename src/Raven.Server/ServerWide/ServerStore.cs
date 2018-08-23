@@ -536,7 +536,7 @@ namespace Raven.Server.ServerWide
 
             _engine = new RachisConsensus<ClusterStateMachine>(this);
             _engine.BeforeAppendToRaftLog += BeforeAppendToRaftLog;
-            var myUrl = Configuration.Core.PublicServerUrl.HasValue ? Configuration.Core.PublicServerUrl.Value.UriValue : Configuration.Core.ServerUrls[0];
+            var myUrl = Configuration.Core.PublicServerUrl.HasValue ? Configuration.Core.PublicServerUrl.Value.UriValue : GetNodeHttpServerUrl();
             _engine.Initialize(_env, Configuration, myUrl);
 
             LicenseManager.Initialize(_env, ContextPool);
