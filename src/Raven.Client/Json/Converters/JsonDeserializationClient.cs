@@ -93,7 +93,7 @@ namespace Raven.Client.Json.Converters
 
         public static readonly Func<BlittableJsonReaderObject, OperationIdResult> OperationIdResult = GenerateJsonDeserializationRoutine<OperationIdResult>();
 
-        public static readonly Func<BlittableJsonReaderObject, ReplayTrxOperationResult> GetReplayTrxOperationResult = GenerateJsonDeserializationRoutine<ReplayTrxOperationResult>();
+        public static readonly Func<BlittableJsonReaderObject, ReplayTxOperationResult> GetReplayTrxOperationResult = GenerateJsonDeserializationRoutine<ReplayTxOperationResult>();
 
         public static readonly Func<BlittableJsonReaderObject, HiLoResult> HiLoResult = GenerateJsonDeserializationRoutine<HiLoResult>();
 

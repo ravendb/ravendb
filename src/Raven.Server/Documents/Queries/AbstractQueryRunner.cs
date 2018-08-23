@@ -169,7 +169,6 @@ namespace Raven.Server.Documents.Queries
             };
         }
 
-        //Todo To check if it make sense to changed the accessibility of this type for adding it to the test list and if not to find alternative
         internal class BulkOperationCommand<T> : TransactionOperationsMerger.MergedTransactionCommand where T : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly T _command;

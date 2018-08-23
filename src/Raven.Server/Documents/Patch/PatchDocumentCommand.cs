@@ -30,8 +30,8 @@ namespace Raven.Server.Documents.Patch
         private ScriptRunner.ReturnRun _returnRun;
         private ScriptRunner.ReturnRun _returnRunIfMissing;
 
-        private readonly (PatchRequest run, BlittableJsonReaderObject args) _patchIfMissing;
-        private readonly (PatchRequest run, BlittableJsonReaderObject args) _patch;
+        private readonly (PatchRequest Run, BlittableJsonReaderObject Args) _patchIfMissing;
+        private readonly (PatchRequest Run, BlittableJsonReaderObject Args) _patch;
 
         public List<string> DebugOutput => _run.DebugOutput;
 
@@ -42,8 +42,8 @@ namespace Raven.Server.Documents.Patch
             string id,
             LazyStringValue expectedChangeVector,
             bool skipPatchIfChangeVectorMismatch,
-            (PatchRequest run, BlittableJsonReaderObject args) patch,
-            (PatchRequest run, BlittableJsonReaderObject args) patchIfMissing,
+            (PatchRequest Run, BlittableJsonReaderObject Args) patch,
+            (PatchRequest Run, BlittableJsonReaderObject Args) patchIfMissing,
             DocumentDatabase database,
             bool isTest,
             bool debugMode,
@@ -52,11 +52,11 @@ namespace Raven.Server.Documents.Patch
             _externalContext = collectResultsNeeded ? context : null;
             _patchIfMissing = patchIfMissing;
             _patch = patch;
-            _returnRun = database.Scripts.GetScriptRunner(patch.run, false, out _run);
+            _returnRun = database.Scripts.GetScriptRunner(patch.Run, false, out _run);
             _run.DebugMode = debugMode;
             if (_runIfMissing != null)
                 _runIfMissing.DebugMode = debugMode;
-            _returnRunIfMissing = database.Scripts.GetScriptRunner(patchIfMissing.run, false, out _runIfMissing);
+            _returnRunIfMissing = database.Scripts.GetScriptRunner(patchIfMissing.Run, false, out _runIfMissing);
             _id = id;
             _expectedChangeVector = expectedChangeVector;
             _skipPatchIfChangeVectorMismatch = skipPatchIfChangeVectorMismatch;
@@ -125,12 +125,12 @@ namespace Raven.Server.Documents.Patch
             }
 
             object documentInstance;
-            var args = _patch.args;
+            var args = _patch.Args;
             BlittableJsonReaderObject originalDoc;
             if (originalDocument == null)
             {
                 _run = _runIfMissing;
-                args = _patchIfMissing.args;
+                args = _patchIfMissing.Args;
                 documentInstance = _runIfMissing.CreateEmptyObject();
                 originalDoc = null;
             }

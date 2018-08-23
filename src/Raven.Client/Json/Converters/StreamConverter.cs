@@ -16,17 +16,23 @@ namespace Raven.Client.Json.Converters
         {
             if (!(writer is BlittableJsonWriter blittableJsonWriter))
             {
-                throw new SerializationException($"{nameof(BlittableJsonWriter)} must to be used for serialize {nameof(Stream)}");
+                throw new SerializationException(
+                    $"Try to write {nameof(LazyStringValue)} property/field by {writer.GetType()} witch is unsuitable reader. Should use {nameof(BlittableJsonWriter)}");
             }
 
             if (!(value is Stream stream))
             {
-                throw new SerializationException($"Try to write non {nameof(Stream)} value with {nameof(StreamConverter)}");
+                throw new SerializationException($"Try to write {value.GetType()} witch is not {nameof(Stream)} value with {nameof(StreamConverter)}");
             }
 
-            //Todo To consider if Seek need to be here or should it come ready
+            if (false == stream.CanSeek)
+            {
+                throw new SerializationException("Try to serialize stream that can't seek");
+            }
+
             stream.Seek(0, SeekOrigin.Begin);
             var buffer = stream.ReadData();
+            stream.Seek(0, SeekOrigin.Begin);
             var strBuffer = Convert.ToBase64String(buffer);
             blittableJsonWriter.WriteValue(strBuffer);
         }
@@ -35,7 +41,8 @@ namespace Raven.Client.Json.Converters
         {
             if (!(reader is BlittableJsonReader blittableReader))
             {
-                throw new SerializationException($"{nameof(BlittableJsonReader)} must to be used for deserialize {nameof(Stream)}");
+                throw new SerializationException(
+                    $"Try to read {nameof(Stream)} property/field by {reader.GetType()} witch is unsuitable reader. Should use {nameof(BlittableJsonReader)}");
             }
 
             if (blittableReader.Value == null)
@@ -48,7 +55,7 @@ namespace Raven.Client.Json.Converters
                 var buffer = Convert.FromBase64String(strValue);
                 return new MemoryStream(buffer);
             }
-            throw new SerializationException($"Try to read {nameof(LazyStringValue)} from non {nameof(LazyStringValue)} value");
+            throw new SerializationException($"Try to read {nameof(Stream)} from {blittableReader.Value.GetType()}. Should be string here");
         }
 
         public override bool CanConvert(Type objectType)

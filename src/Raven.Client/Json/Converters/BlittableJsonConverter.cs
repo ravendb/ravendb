@@ -19,7 +19,8 @@ namespace Raven.Client.Json.Converters
         {
             if (!(reader is BlittableJsonReader blittableReader))
             {
-                throw new SerializationException($"{nameof(BlittableJsonReader)} must to be used for convert to {nameof(BlittableJsonReaderObject)}");
+                throw new SerializationException(
+                    $"Try to read {nameof(BlittableJsonReaderObject)} property/field by {reader.GetType()} witch is unsuitable reader. Should use {nameof(BlittableJsonReader)}");
             }
 
             if (blittableReader.Value == null)
@@ -42,7 +43,8 @@ namespace Raven.Client.Json.Converters
                         ? blittableValue
                         : blittableValue.Clone(blittableReader.Context);
             }
-            throw new SerializationException($"Try to read {nameof(BlittableJsonReaderObject)} from non {nameof(BlittableJsonReaderObject)} value");
+            throw new SerializationException(
+                $"Can't convert {blittableReader.Value.GetType()} type to {nameof(BlittableJsonReaderObject)}. The value must to be a complex object");
         }
 
         public override bool CanConvert(Type objectType)

@@ -227,17 +227,10 @@ namespace Raven.Server.Documents.Handlers
 
         public BulkInsertHandler.MergedInsertBulkCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            if (Commands == null || Commands.Any() == false) 
-            {
-                //Todo To check if empty array can append & if it is make sense to check it here 
-                throw new InvalidDataException("There should be at least one command");
-            }
-
             return new BulkInsertHandler.MergedInsertBulkCommand
             {
                 NumberOfCommands = Commands.Length,
-                //Todo Maybe should not check, catch the exception in higher level and throw it with descriptive message
-                TotalSize = Commands.Sum(c => c.Document?.Size ?? 0),
+                TotalSize = Commands.Sum(c => c.Document.Size),
                 Commands = Commands,
                 Database = database,
                 Logger = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name)

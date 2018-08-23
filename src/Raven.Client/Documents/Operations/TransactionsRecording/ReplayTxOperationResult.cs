@@ -3,19 +3,21 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.TransactionsRecording
 {
-    public class ReplayTrxProgress : IOperationProgress
+    public class ReplayTxOperationResult : IOperationResult
     {
-        public long ProcessedCommand { get; set; }
-
+        public long ExecutedCommandsAmount { get; set; }
         public TimeSpan PassedTime { get; set; }
 
+        public string Message => $"Processed {ExecutedCommandsAmount} commands.";
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue(GetType())
             {
-                [nameof(ProcessedCommand)] = ProcessedCommand,
+                [nameof(ExecutedCommandsAmount)] = ExecutedCommandsAmount,
                 [nameof(PassedTime)] = PassedTime
             };
         }
+
+        public bool ShouldPersist => false;
     }
 }

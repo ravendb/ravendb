@@ -8,6 +8,7 @@ using FastTests.Voron.Util;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Json;
+using Raven.Client.Json.Converters;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Patch;
@@ -46,7 +47,7 @@ namespace SlowTests.Blittable
                 var expectedDto = expected.ToDto(context);
 
                 //Serialize
-                var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+                var jsonSerializer = GetJsonSerializer();
                 BlittableJsonReaderObject blitCommand;
                 using (var writer = new BlittableJsonWriter(context))
                 {
@@ -87,7 +88,7 @@ namespace SlowTests.Blittable
                 };
 
                 //Serialize
-                var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+                var jsonSerializer = GetJsonSerializer();
                 BlittableJsonReaderObject blitCommand;
                 using (var writer = new BlittableJsonWriter(context))
                 {
@@ -142,7 +143,7 @@ namespace SlowTests.Blittable
                 };
 
                 //Serialize
-                var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+                var jsonSerializer = GetJsonSerializer();
                 BlittableJsonReaderObject blitCommand;
                 using (var writer = new BlittableJsonWriter(context))
                 {
@@ -188,7 +189,7 @@ namespace SlowTests.Blittable
                 var expected = new MergedPutCommand(document, "user/", changeVector, null);
 
                 //Action
-                var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+                var jsonSerializer = GetJsonSerializer();
                 BlittableJsonReaderObject blitCommand;
                 using (var writer = new BlittableJsonWriter(context))
                 {
@@ -235,7 +236,7 @@ namespace SlowTests.Blittable
                     false, false, false);
 
                 //Action
-                var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+                var jsonSerializer = GetJsonSerializer();
                 BlittableJsonReaderObject blitCommand;
                 using (var writer = new BlittableJsonWriter(context))
                 {
@@ -269,7 +270,7 @@ namespace SlowTests.Blittable
                 var expected = new DeleteDocumentCommand("Some Id", "Some Change Vector", null);
 
                 //Action
-                var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+                var jsonSerializer = GetJsonSerializer();
                 BlittableJsonReaderObject blitCommand;
                 using (var writer = new BlittableJsonWriter(context))
                 {
@@ -317,7 +318,7 @@ namespace SlowTests.Blittable
                 };
 
                 //Action
-                var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+                var jsonSerializer = GetJsonSerializer();
                 BlittableJsonReaderObject blitCommand;
                 using (var writer = new BlittableJsonWriter(context))
                 {
@@ -363,7 +364,7 @@ namespace SlowTests.Blittable
                 expected.Add(document);
 
                 //Action
-                var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+                var jsonSerializer = GetJsonSerializer();
                 BlittableJsonReaderObject blitCommand;
                 using (var writer = new BlittableJsonWriter(context))
                 {
@@ -418,7 +419,7 @@ namespace SlowTests.Blittable
                 };
 
                 //Action
-                var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+                var jsonSerializer = GetJsonSerializer();
                 BlittableJsonReaderObject blitCommand;
                 using (var writer = new BlittableJsonWriter(context))
                 {
@@ -441,6 +442,15 @@ namespace SlowTests.Blittable
                 //Assert
                 Assert.Equal(expected, actual, new CustomComparer<BulkInsertHandler.MergedInsertBulkCommand>(context));
             }
+        }
+
+        private static Newtonsoft.Json.JsonSerializer GetJsonSerializer()
+        {
+            var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+            jsonSerializer.Converters.Add(BlittableJsonConverter.Instance);
+            jsonSerializer.Converters.Add(LazyStringValueJsonConverter.Instance);
+            jsonSerializer.Converters.Add(StreamConverter.Instance);
+            return jsonSerializer;
         }
 
         private class CustomComparer<T> : IEqualityComparer<T> where T : TransactionOperationsMerger.IRecordableCommand

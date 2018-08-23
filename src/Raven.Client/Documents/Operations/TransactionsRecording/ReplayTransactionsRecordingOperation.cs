@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.TransactionsRecording
 {
-    public class ReplayTransactionsRecordingOperation : IMaintenanceOperation<ReplayTrxOperationResult>
+    public class ReplayTransactionsRecordingOperation : IMaintenanceOperation<ReplayTxOperationResult>
     {
         private readonly Stream _replayStream;
         private readonly long _operationId;
@@ -21,12 +21,12 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
                 throw new ArgumentException("For replay transactions recording the stream position must to be set to zero");
         }
 
-        public RavenCommand<ReplayTrxOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<ReplayTxOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new ReplayTransactionsRecordingCommand(_replayStream, _operationId);
         }
 
-        private class ReplayTransactionsRecordingCommand : RavenCommand<ReplayTrxOperationResult>
+        private class ReplayTransactionsRecordingCommand : RavenCommand<ReplayTxOperationResult>
         {
             private readonly Stream _replayStream;
             private readonly long _operationId;

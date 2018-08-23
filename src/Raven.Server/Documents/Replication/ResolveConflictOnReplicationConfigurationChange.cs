@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Replication
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
-                // The LowerId created as in memory LazyStringValue
+                // The LowerId created as in memory LazyStringValue that doesn't have escape characters
                 // so EscapePositions set to empty to avoid reference to escape bytes (after string bytes) while serializing
                 foreach (var conflict in _resolvedConflicts)
                 {

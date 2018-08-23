@@ -16,6 +16,8 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json;
+using Raven.Client.Json.Converters;
+using Raven.Client.Properties;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
@@ -98,7 +100,7 @@ namespace Raven.Server.Documents
 
         public interface IReplayableCommandDto<out T> where T : MergedTransactionCommand
         {
-            T ToCommand(DocumentsOperationContext context, DocumentDatabase database); // receive some parameters here?
+            T ToCommand(DocumentsOperationContext context, DocumentDatabase database);
         }
 
         public abstract class MergedTransactionCommand : IRecordableCommand
@@ -1218,8 +1220,7 @@ namespace Raven.Server.Documents
                             try
                             {
                                 var cmd = DeserializeCommand(strType, readersItr.Current, context, peepingTomStream);
-                                cmd.ExecuteDirectly(txCtx);
-                                commandsProgress++;
+                                commandsProgress += cmd.ExecuteDirectly(txCtx);
                                 UpdateGlobalReplicationInfoBeforeCommit(txCtx);
                             }
                             catch (Exception)
@@ -1265,7 +1266,7 @@ namespace Raven.Server.Documents
                     throw new ReplayTransactionsException($"Can't read {nameof(StartRecordingDetails.Version)} of replay instructions", peepingTomStream);
                 }
 
-                if (startDetail.Version != ServerVersion.FullVersion)
+                if (startDetail.Version != RavenVersionAttribute.Instance.Build)
                 {
                     throw new ReplayTransactionsException($"Can't replay transaction instructions of different server version - Current version({ServerVersion.FullVersion}), Record version({startDetail.Version})", peepingTomStream);
                 }
@@ -1296,7 +1297,6 @@ namespace Raven.Server.Documents
 
         private IReplayableCommandDto<MergedTransactionCommand> DeserializeCommandDto(string type, JsonSerializer jsonSerializer, BlittableJsonReader reader, PeepingTomStream peepingTomStream)
         {
-            //Todo Maybe should be simplified by convention & reflection
             switch (type)
             {
                 case nameof(BatchHandler.MergedBatchCommand):
@@ -1348,6 +1348,9 @@ namespace Raven.Server.Documents
         {
             var jsonSerializer = DocumentConventions.Default.CreateSerializer();
             jsonSerializer.Converters.Add(SliceJsonConverter.Instance);
+            jsonSerializer.Converters.Add(BlittableJsonConverter.Instance);
+            jsonSerializer.Converters.Add(LazyStringValueJsonConverter.Instance);
+            jsonSerializer.Converters.Add(StreamConverter.Instance);
             return jsonSerializer;
         }
 
@@ -1368,7 +1371,7 @@ namespace Raven.Server.Documents
                 }
             }
 
-            public override string Message => base.Message + ";\rContext:\r" + Context;
+            public override string Message => base.Message + ";" + Environment.NewLine +  "Context" + Environment.NewLine + Context;
         }
 
         private class RecordingDetails
@@ -1391,7 +1394,7 @@ namespace Raven.Server.Documents
             public StartRecordingDetails()
             : base(DetailsType)
             {
-                Version = ServerVersion.FullVersion;
+                Version = RavenVersionAttribute.Instance.Build;
             }
         }
 

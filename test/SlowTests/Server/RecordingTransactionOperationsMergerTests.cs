@@ -22,6 +22,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Replication;
@@ -81,6 +82,80 @@ namespace SlowTests.Server
             {
                 Assert.True(genericTypes.Contains(dt), $"{dt.Name} should has equivalent dto - {dt.Name}Dto : {iRecordableType.Name}");
             });
+        }
+
+
+        [Fact]
+        public void RecordingExecuteCounterBatchCommand()
+        {
+            var recordFilePath = NewDataPath();
+
+            var user = new User { Name = "August" };
+
+            const string id = "users/A-1";
+            //Recording
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+
+                //                store.Commands().Put(id, null, user);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(user, id);
+                    session.SaveChanges();
+                }
+
+                store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = id,
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Increment,
+                                    CounterName = "likes",
+                                    Delta = 0
+                                }
+                            }
+                        }
+                    }
+                }));
+
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+            }
+
+            //Replay
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
+            {
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
+
+                var result = store.Operations.Send(new CounterBatchOperation(new CounterBatch
+                {
+                    Documents = new List<DocumentCountersOperation>
+                    {
+                        new DocumentCountersOperation
+                        {
+                            DocumentId = id,
+                            Operations = new List<CounterOperation>
+                            {
+                                new CounterOperation
+                                {
+                                    Type = CounterOperationType.Get,
+                                    CounterName = "likes"
+                                }
+                            }
+                        }
+                    }
+                }));
+            }
         }
 
         [Fact]
@@ -516,7 +591,7 @@ namespace SlowTests.Server
                 var operationProgresses = new List<IOperationProgress>();
                 operation.OnProgressChanged += (p) => operationProgresses.Add(p);
 
-                var result = await operation.WaitForCompletionAsync<ReplayTrxOperationResult>();
+                var result = await operation.WaitForCompletionAsync<ReplayTxOperationResult>();
                 await task;
 
                 //Assert

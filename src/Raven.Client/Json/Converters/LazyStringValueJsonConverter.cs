@@ -18,7 +18,8 @@ namespace Raven.Client.Json.Converters
         {
             if (!(reader is BlittableJsonReader blittableReader))
             {
-                throw new SerializationException($"{nameof(BlittableJsonReader)} must to be used for convert to {nameof(BlittableJsonReaderObject)}");
+                throw new SerializationException(
+                    $"Try to read {nameof(LazyStringValue)} property/field by {reader.GetType()} witch is unsuitable reader. Should use {nameof(BlittableJsonReader)}");
             }
 
             if (blittableReader.Value == null)
@@ -31,7 +32,7 @@ namespace Raven.Client.Json.Converters
             {
                 return blittableReader.Context.GetLazyString(strValue);
             }
-            throw new SerializationException($"Try to read {nameof(LazyStringValue)} from non {nameof(LazyStringValue)} value");
+            throw new SerializationException($"Try to read {nameof(LazyStringValue)} from {blittableReader.Value.GetType()}. Should be string here");
         }
 
         public override bool CanConvert(Type objectType)

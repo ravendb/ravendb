@@ -978,12 +978,6 @@ namespace Raven.Server.Documents.Handlers
 
         public BatchHandler.MergedBatchCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            if (ParsedCommands == null || ParsedCommands.Any() == false)
-            {
-                //Todo To check if empty array can append & if it is make sense to check it here 
-                throw new InvalidDataException("There should be at least one command");
-            }
-
             for (var i = 0; i < ParsedCommands.Length; i++)
             {
                 if (ParsedCommands[i].Type != CommandType.PATCH)

@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Handlers
                     database: Database,
                     description: "Replay transaction commands",
                     operationType: Operations.Operations.OperationType.ReplayTransactionCommands,
-                    taskFactory: async progress => await DoReplay(progress, replayStream, operationCancelToken.Token),
+                    taskFactory: progress => Task.Run(() => DoReplay(progress, replayStream, operationCancelToken.Token)),
                     id: operationId,
                     token: operationCancelToken
                 );
@@ -40,50 +40,49 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private async Task<IOperationResult> DoReplay(
+        private IOperationResult DoReplay(
             Action<IOperationProgress> onProgress,
             Stream replayStream,
             CancellationToken token)
         {
-            const int commandAmountBetweenRespond = 15;
+            const int commandAmountBetweenResponds = 1024;
+            long commandAmountForNextRespond = commandAmountBetweenResponds;
 
             try
             {
-                return await Task.Run(() =>
+                long commandsProgress = 0;
+                var stopwatch = Stopwatch.StartNew();
+                stopwatch.Start();
+                foreach (var replayProgress in Database.TxMerger.Replay(replayStream))
                 {
-                    long commandsProgress = 0;
-                    var stopwatch = Stopwatch.StartNew();
-                    stopwatch.Start();
-                    foreach (var replayProgress in Database.TxMerger.Replay(replayStream))
+                    commandsProgress = replayProgress.CommandsProgress;
+                    if (replayProgress.CommandsProgress > commandAmountForNextRespond)
                     {
-                        commandsProgress = replayProgress.CommandsProgress;
-                        //TODO Maybe should be relative to time or size
-                        if (replayProgress.CommandsProgress % commandAmountBetweenRespond == 0)
+                        commandAmountForNextRespond = replayProgress.CommandsProgress + commandAmountBetweenResponds;
+                        onProgress(new ReplayTxProgress
                         {
-                            onProgress(new ReplayTrxProgress
-                            {
-                                ProcessedCommand = replayProgress.CommandsProgress,
-                                PassedTime = stopwatch.Elapsed
-                            });
-                        }
-
-                        token.ThrowIfCancellationRequested();
+                            ProcessedCommand = replayProgress.CommandsProgress,
+                            PassedTime = stopwatch.Elapsed
+                        });
                     }
-                    stopwatch.Stop();
 
-                    return new ReplayTrxOperationResult
-                    {
-                        ExecutedCommandsAmount = commandsProgress,
-                        PassedTime = stopwatch.Elapsed
-                    };
-                }, token);
+                    token.ThrowIfCancellationRequested();
+                }
+                stopwatch.Stop();
+
+                return new ReplayTxOperationResult
+                {
+                    ExecutedCommandsAmount = commandsProgress,
+                    PassedTime = stopwatch.Elapsed
+                };
             }
             catch (Exception e)
             {
+                //Because the request is working while the file is uploading the server needs to ignore the rest of the stream
+                //and the client needs to stop sending it
                 HttpContext.Response.Headers["Connection"] = "close";
                 throw new InvalidOperationException("Failed to process replay transaction commands", e);
             }
-
         }
 
         [RavenAction("/databases/*/admin/transactions/start-recording", "POST", AuthorizationStatus.ClusterAdmin)]

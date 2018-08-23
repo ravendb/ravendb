@@ -131,10 +131,13 @@ namespace Raven.Server.Documents.Expiration
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
-                return new DeleteExpiredDocumentsCommandDto
+                var keyValuePairs = new List<KeyValuePair<Slice, List<(Slice LowerId, LazyStringValue Id)>>>();
+                foreach (var item in _expired)
                 {
-                    Expired = _expired.ToArray()
-                };
+                    keyValuePairs.Add(item);
+                }
+
+                return new DeleteExpiredDocumentsCommandDto { Expired = keyValuePairs };
             }
         }
     }
@@ -143,11 +146,15 @@ namespace Raven.Server.Documents.Expiration
     {
         public ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> expired = Expired.ToDictionary(kv => kv.Key, kv => kv.Value);
+            var expired = new Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>>();
+            foreach (var item in Expired)
+            {
+                expired[item.Key] = item.Value;
+            }
             var command = new ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand(expired, database);
             return command;
         }
 
-        public KeyValuePair<Slice, List<(Slice LowerId, LazyStringValue Id)>>[] Expired { get; set; }
+        public List<KeyValuePair<Slice, List<(Slice LowerId, LazyStringValue Id)>>> Expired { get; set; }
     }
 }
