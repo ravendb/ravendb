@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -16,13 +18,17 @@ namespace Sparrow.Utils
     {
         private static float _minimumFreeCommittedMemory = 0.05f;
 
-        public static readonly ThreadLocal<ThreadStats> ThreadAllocations = new ThreadLocal<ThreadStats>(
+        private static readonly ThreadLocal<ThreadStats> ThreadAllocations = new ThreadLocal<ThreadStats>(
             () => new ThreadStats(), trackAllValues: true);
 
         public static void NotifyCurrentThreadAboutToClose()
         {
             ThreadAllocations.Value = null;
         }
+
+        public static ThreadStats CurrentThreadStats => ThreadAllocations.Value;
+
+        public static IEnumerable<ThreadStats> AllThreadStats => ThreadAllocations.Values.Where(x => x != null);
 
         public static ConcurrentDictionary<string, ConcurrentDictionary<IntPtr, long>> FileMapping = new ConcurrentDictionary<string, ConcurrentDictionary<IntPtr, long>>();
 

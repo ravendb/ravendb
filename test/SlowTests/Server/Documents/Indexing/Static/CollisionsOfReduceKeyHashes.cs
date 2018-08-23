@@ -46,6 +46,9 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     },
                 }), database);
 
+             
+                index._threadAllocations = NativeMemory.CurrentThreadStats;
+
                 var mapReduceContext = new MapReduceIndexingContext();
                 using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))
                 {
@@ -79,6 +82,8 @@ namespace SlowTests.Server.Documents.Indexing.Static
                         {"Count", new IndexFieldOptions {Storage = FieldStorage.Yes}}
                     }
                 }, database);
+
+                index._threadAllocations = NativeMemory.CurrentThreadStats;
 
                 var mapReduceContext = new MapReduceIndexingContext();
                 using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))

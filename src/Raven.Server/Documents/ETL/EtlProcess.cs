@@ -586,7 +586,7 @@ namespace Raven.Server.Documents.ETL
 
         protected void EnsureThreadAllocationStats()
         {
-            _threadAllocations = NativeMemory.ThreadAllocations.Value;
+            _threadAllocations = NativeMemory.CurrentThreadStats;
         }
 
         public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection()

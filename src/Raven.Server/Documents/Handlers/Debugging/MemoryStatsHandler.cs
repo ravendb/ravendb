@@ -272,7 +272,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                 long totalUnmanagedAllocations = 0;
                 var threads = new DynamicJsonArray();
-                foreach (var stats in NativeMemory.ThreadAllocations.Values
+                foreach (var stats in NativeMemory.AllThreadStats
                     .Where(x => x.IsThreadAlive())
                     .GroupBy(x => x.Name)
                     .OrderByDescending(x => x.Sum(y => y.TotalAllocated)))

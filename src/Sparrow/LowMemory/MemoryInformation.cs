@@ -416,10 +416,8 @@ namespace Sparrow.LowMemory
                         : GetRssMemoryUsage(currentProcess.Id);
 
                 long totalUnmanagedAllocations = 0;
-                foreach (var stats in NativeMemory.ThreadAllocations.Values)
+                foreach (var stats in NativeMemory.AllThreadStats)
                 {
-                    if (stats == null)
-                        continue;
                     if (stats.IsThreadAlive())
                         totalUnmanagedAllocations += stats.TotalAllocated;
                 }
