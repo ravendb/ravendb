@@ -1090,7 +1090,7 @@ namespace Raven.Server.Documents.Indexes
                                 // the case where we freed memory at the end of the batch, but didn't adjust the budget accordingly
                                 // so it will think that it can allocate more than it actually should
                                 _currentMaximumAllowedMemory = Size.Min(_currentMaximumAllowedMemory,
-                                    new Size(NativeMemory.ThreadAllocations.Value.TotalAllocated, SizeUnit.Bytes));
+                                    new Size(NativeMemory.CurrentThreadStats.TotalAllocated, SizeUnit.Bytes));
                             }
 
                             if (_mre.Wait(timeToWaitForMemoryCleanup, _indexingProcessCancellationTokenSource.Token) == false)
@@ -1185,7 +1185,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void ReduceMemoryUsage()
         {
-            var beforeFree = NativeMemory.ThreadAllocations.Value.TotalAllocated;
+            var beforeFree = NativeMemory.CurrentThreadStats.TotalAllocated;
             if (_logger.IsInfoEnabled)
                 _logger.Info(
                     $"{beforeFree / 1024:#,#0} kb is used by '{Name}', reducing memory utilization.");
@@ -1197,7 +1197,7 @@ namespace Raven.Server.Documents.Indexes
             _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
 
-            var afterFree = NativeMemory.ThreadAllocations.Value.TotalAllocated;
+            var afterFree = NativeMemory.CurrentThreadStats.TotalAllocated;
             if (_logger.IsInfoEnabled)
                 _logger.Info($"After cleanup, using {afterFree / 1024:#,#0} kb by '{Name}'.");
         }
@@ -1411,7 +1411,7 @@ namespace Raven.Server.Documents.Indexes
 
         public bool DoIndexingWork(IndexingStatsScope stats, CancellationToken cancellationToken)
         {
-            _threadAllocations = NativeMemory.ThreadAllocations.Value;
+            _threadAllocations = NativeMemory.CurrentThreadStats;
 
             bool mightBeMore = false;
 
@@ -1952,7 +1952,7 @@ namespace Raven.Server.Documents.Indexes
             var indexingThread = _indexingThread;
             if (indexingThread != null)
             {
-                foreach (var threadAllocationsValue in NativeMemory.ThreadAllocations.Values)
+                foreach (var threadAllocationsValue in NativeMemory.AllThreadStats)
                 {
                     if (indexingThread.ManagedThreadId == threadAllocationsValue.Id)
                     {
