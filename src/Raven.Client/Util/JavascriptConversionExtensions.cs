@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -48,13 +49,32 @@ namespace Raven.Client.Util
                 javascriptWriter.Write("(");
 
                 var args = new List<Expression>();
-                foreach (var expr in methodCallExpression.Arguments)
+                foreach (var expression in methodCallExpression.Arguments)
                 {
-                    var expression = expr as NewArrayExpression;
-                    if (expression != null)
-                        args.AddRange(expression.Expressions);
-                    else
-                        args.Add(expr);
+                    if (expression.Type.IsArray == false)
+                    {
+                        args.Add(expression);
+                        continue;
+                    }
+
+                    if (expression is NewArrayExpression newArrayExpression)
+                    {
+                        args.AddRange(newArrayExpression.Expressions);
+                        continue;
+                    }
+
+                    if (LinqPathProvider.GetValueFromExpressionWithoutConversion(expression, out var arrayValue) == false)
+                    {
+                        throw new InvalidOperationException($"Couldn't get value from an array expression: {expression}");
+                    }
+
+                    var array = arrayValue as Array;
+                    Debug.Assert(array != null);
+
+                    foreach (var value in array)
+                    {
+                        args.Add(Expression.Constant(value));
+                    }
                 }
 
                 for (var i = 0; i < args.Count; i++)
