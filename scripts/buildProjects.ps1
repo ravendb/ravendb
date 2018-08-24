@@ -141,10 +141,11 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target, $debug ) {
     CheckLastExitCode
 }
 
-function BuildEmbedded ( $srcDir, $outDir) {
+function BuildEmbedded ( $srcDir, $outDir, $framework) {
     write-host "Building Embedded..."
     & dotnet build --no-incremental `
         --output $outDir `
+        --framework $framework `
         --configuration "Release" $srcDir;
     CheckLastExitCode
 }

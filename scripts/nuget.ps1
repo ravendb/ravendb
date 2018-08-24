@@ -37,20 +37,28 @@ function BuildEmbeddedNuget ($projectDir, $outDir, $serverSrcDir, $studioZipPath
     $EMBEDDED_NUSPEC = [io.path]::combine($outDir, "RavenDB.Embedded", "RavenDB.Embedded.nuspec")
     $EMBEDDED_OUT_DIR = [io.path]::combine($outDir, "RavenDB.Embedded")
     $EMBEDDED_SERVER_OUT_DIR = [io.path]::combine($EMBEDDED_OUT_DIR, "contentFiles", "any", "any")
-    $EMBEDDED_LIB_OUT_DIR = [io.path]::combine($EMBEDDED_OUT_DIR, "lib", "netstandard2.0")
-
+    
+    $NETSTANDARD_TARGET = "netstandard2.0"
+    $NET461_TARGET = "net461"
+    
+    $EMBEDDED_LIB_OUT_DIR_NETSTANDARD = [io.path]::combine($EMBEDDED_OUT_DIR, "lib", "$NETSTANDARD_TARGET")
+    $EMBEDDED_LIB_OUT_DIR_NET461 = [io.path]::combine($EMBEDDED_OUT_DIR, "lib", "$NET461_TARGET")
+    
     write-host "Preparing Raven.Embedded NuGet package.."
     $nuspec = [io.path]::combine($EMBEDDED_SRC_DIR, "Raven.Embedded.nuspec.template")
     & New-Item -ItemType Directory -Path $EMBEDDED_SERVER_OUT_DIR -Force
-    & New-Item -ItemType Directory -Path $EMBEDDED_LIB_OUT_DIR -Force
+    & New-Item -ItemType Directory -Path $EMBEDDED_LIB_OUT_DIR_NETSTANDARD -Force
+    & New-Item -ItemType Directory -Path $EMBEDDED_LIB_OUT_DIR_NET461 -Force
 
     Copy-Item $nuspec -Destination $EMBEDDED_NUSPEC
 
-
-
     $embeddedCsproj = Join-Path -Path $EMBEDDED_SRC_DIR -ChildPath "Raven.Embedded.csproj";
-    BuildEmbedded $embeddedCsproj $EMBEDDED_LIB_OUT_DIR
-    Remove-Item $(Join-Path $EMBEDDED_LIB_OUT_DIR -ChildPath "*") -Exclude "Raven.Embedded.dll"
+    
+    BuildEmbedded $embeddedCsproj $EMBEDDED_LIB_OUT_DIR_NETSTANDARD $NETSTANDARD_TARGET
+    Remove-Item $(Join-Path $EMBEDDED_LIB_OUT_DIR_NETSTANDARD -ChildPath "*") -Exclude "Raven.Embedded.dll"
+    
+    BuildEmbedded $embeddedCsproj $EMBEDDED_LIB_OUT_DIR_NET461 $NET461_TARGET
+    Remove-Item $(Join-Path $EMBEDDED_LIB_OUT_DIR_NET461 -ChildPath "*") -Exclude "Raven.Embedded.dll"
 
     BuildServer $SERVER_SRC_DIR $EMBEDDED_SERVER_OUT_DIR $null $Debug
     $tempServerDir = Join-Path $EMBEDDED_SERVER_OUT_DIR -ChildPath "Server"

@@ -43,7 +43,7 @@ namespace Raven.Embedded
                 CertificatePath = certificate,
                 CertificatePassword = certPassword,
                 ClientCertificate = cert,
-                ServerCertificiateThumbprint = cert.Thumbprint
+                ServerCertificateThumbprint = cert.Thumbprint
             };
 
             return this;
@@ -68,7 +68,7 @@ namespace Raven.Embedded
                 ClientCertificate = clientCert,
                 CertificateExec = certExec,
                 CertificateArguments = certExecArgs,
-                ServerCertificiateThumbprint = serverCertThumbprint
+                ServerCertificateThumbprint = serverCertThumbprint
             };
 
             return this;
@@ -84,7 +84,7 @@ namespace Raven.Embedded
             public X509Certificate2 ClientCertificate { get; internal set; }
             public string CertificateExec { get; internal set; }
             public string CertificateArguments { get; internal set; }
-            public string ServerCertificiateThumbprint { get; internal set; }
+            public string ServerCertificateThumbprint { get; internal set; }
         }
     }
 
