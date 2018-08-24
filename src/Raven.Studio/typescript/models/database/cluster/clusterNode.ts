@@ -3,6 +3,7 @@
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import generalUtils = require("common/generalUtils");
 import license = require("models/auth/licenseModel");
+import popoverUtils = require("common/popoverUtils");
 
 class clusterNode {
     tag = ko.observable<string>();
@@ -19,9 +20,45 @@ class clusterNode {
     isLeader = ko.observable<boolean>();
     isPassive: KnockoutComputed<boolean>;
     nodeServerVersion = ko.observable<string>();
-    
+    osInfo = ko.observable<Raven.Client.ServerWide.Operations.OsInfo>();
+    osFullName: KnockoutComputed<string>;
+    osTitle: KnockoutComputed<string>;
+
     constructor() {
         this.isPassive = ko.pureComputed(() => this.tag() === "?");
+
+        this.osFullName = ko.pureComputed(() => {
+            const osInfo = this.osInfo();
+            if (!osInfo) {
+                return null;
+            }
+
+            let fullName = osInfo.FullName;
+            if (osInfo.Is32Bits) {
+                fullName += ` 32-bit`;
+            }
+            return fullName;
+        });
+
+        this.osTitle = ko.pureComputed(() => {
+            const osInfo = this.osInfo();
+            if (!osInfo) {
+                return null;
+            }
+
+            let osTitle = `<div>OS Name: <strong>${this.osFullName()}</strong>`;
+
+            if (osInfo.Version) {
+                osTitle += `<br />Version: <strong>${osInfo.Version}</strong>`;
+            }
+            if (osInfo.BuildVersion) {
+                const type = osInfo.OSType === "Linux" ? "Kernel" : "Build";
+                osTitle += `<br />${type} Version: <strong>${osInfo.BuildVersion}</strong>`;
+            }
+
+            osTitle += "</div>";
+            return osTitle;
+        });
     }
     
     errorDetailsShort = ko.pureComputed(() => {
@@ -74,6 +111,7 @@ class clusterNode {
         this.errorDetails(incoming.errorDetails());
         this.isLeader(incoming.isLeader());
         this.nodeServerVersion(incoming.nodeServerVersion());
+        this.osInfo(incoming.osInfo());
     }
 
     static for(tag: string, serverUrl: string, type: clusterNodeType, connected: boolean, errorDetails?: string) {
