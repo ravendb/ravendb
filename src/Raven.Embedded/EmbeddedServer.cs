@@ -4,6 +4,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.IO;
+#if NETSTANDARD2_0
+using System.Runtime.Loader;
+#endif
 using System.Text;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
@@ -48,7 +51,7 @@ namespace Raven.Embedded
 
                 try
                 {
-                    var thumbprint = options.Security.ServerCertificiateThumbprint;
+                    var thumbprint = options.Security.ServerCertificateThumbprint;
                     RequestExecutor.RemoteCertificateValidationCallback += (sender, certificate, chain, errors) =>
                     {
                         var certificate2 = certificate as X509Certificate2 ?? new X509Certificate2(certificate);
@@ -147,39 +150,45 @@ namespace Raven.Embedded
             if (process == null || process.HasExited)
                 return;
 
-            try
+            lock (process)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Try shutdown server PID {process.Id} gracefully.");
-
-                using (var inputStream = process.StandardInput)
-                {
-                    inputStream.Write($"q{Environment.NewLine}y{Environment.NewLine}");
-                }
-
-                if (process.WaitForExit((int)_gracefulShutdownTimeout.TotalMilliseconds))
+                if (process.HasExited)
                     return;
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
+
+                try
                 {
-                    _logger.Info($"Failed to shutdown server PID {process.Id} gracefully in {_gracefulShutdownTimeout.ToString()}", e);
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Try shutdown server PID {process.Id} gracefully.");
+
+                    using (var inputStream = process.StandardInput)
+                    {
+                        inputStream.Write($"q{Environment.NewLine}y{Environment.NewLine}");
+                    }
+
+                    if (process.WaitForExit((int)_gracefulShutdownTimeout.TotalMilliseconds))
+                        return;
                 }
-            }
-
-            try
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Killing global server PID {process.Id}.");
-
-                process.Kill();
-            }
-            catch (Exception e)
-            {
-                if (_logger.IsInfoEnabled)
+                catch (Exception e)
                 {
-                    _logger.Info($"Failed to kill process {process.Id}", e);
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info($"Failed to shutdown server PID {process.Id} gracefully in {_gracefulShutdownTimeout.ToString()}", e);
+                    }
+                }
+
+                try
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Killing global server PID {process.Id}.");
+
+                    process.Kill();
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info($"Failed to kill process {process.Id}", e);
+                    }
                 }
             }
         }
@@ -189,6 +198,26 @@ namespace Raven.Embedded
             var process = RavenServerRunner.Run(options);
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Starting global server: { process.Id }");
+
+            var domainBind = false;
+
+#if NETSTANDARD2_0
+            AssemblyLoadContext.Default.Unloading += c =>
+            {
+                ShutdownServerProcess(process);
+            };
+            domainBind = true;
+#endif
+#if NET461
+            AppDomain.CurrentDomain.DomainUnload += (s, args) =>
+            {
+                ShutdownServerProcess(process);
+            };
+            domainBind = true;
+#endif
+
+            if (domainBind == false)
+                throw new InvalidOperationException("Should not happen!");
 
             string url = null;
             var startupDuration = Stopwatch.StartNew();
