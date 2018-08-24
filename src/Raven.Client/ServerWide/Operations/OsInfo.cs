@@ -4,7 +4,7 @@ namespace Raven.Client.ServerWide.Operations
 {
     public class OsInfo : IDynamicJson
     {
-        public OSType OSType { get; set; }
+        public OSType Type { get; set; }
 
         public string FullName { get; set; }
 
@@ -12,7 +12,7 @@ namespace Raven.Client.ServerWide.Operations
 
         public string BuildVersion { get; set; }
 
-        public bool Is32Bits { get; set; }
+        public bool Is64Bit { get; set; }
 
         public override bool Equals(object obj)
         {
@@ -24,22 +24,22 @@ namespace Raven.Client.ServerWide.Operations
             if (other == null)
                 return false;
 
-            return OSType == other.OSType &&
+            return Type == other.Type &&
                    string.Equals(FullName, other.FullName) &&
                    string.Equals(Version, other.Version) &&
                    string.Equals(BuildVersion, other.BuildVersion) &&
-                   Is32Bits == other.Is32Bits;
+                   Is64Bit == other.Is64Bit;
         }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                var hashCode = OSType.GetHashCode();
+                var hashCode = Type.GetHashCode();
                 hashCode = (hashCode * 397) ^ (FullName != null ? FullName.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (Version != null ? Version.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (BuildVersion != null ? BuildVersion.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ Is32Bits.GetHashCode();
+                hashCode = (hashCode * 397) ^ Is64Bit.GetHashCode();
                 return hashCode;
             }
         }
@@ -48,11 +48,11 @@ namespace Raven.Client.ServerWide.Operations
         {
             return new DynamicJsonValue
             {
-                [nameof(OSType)] = OSType,
+                [nameof(Type)] = Type,
                 [nameof(FullName)] = FullName,
                 [nameof(Version)] = Version,
                 [nameof(BuildVersion)] = BuildVersion,
-                [nameof(Is32Bits)] = Is32Bits
+                [nameof(Is64Bit)] = Is64Bit
             };
         }
     }

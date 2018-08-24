@@ -34,7 +34,7 @@ class clusterNode {
             }
 
             let fullName = osInfo.FullName;
-            if (osInfo.Is32Bits) {
+            if (!osInfo.Is64Bit) {
                 fullName += ` 32-bit`;
             }
             return fullName;
@@ -52,7 +52,7 @@ class clusterNode {
                 osTitle += `<br />Version: <strong>${osInfo.Version}</strong>`;
             }
             if (osInfo.BuildVersion) {
-                const type = osInfo.OSType === "Linux" ? "Kernel" : "Build";
+                const type = osInfo.Type === "Linux" ? "Kernel" : "Build";
                 osTitle += `<br />${type} Version: <strong>${osInfo.BuildVersion}</strong>`;
             }
 
