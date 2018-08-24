@@ -233,6 +233,63 @@ namespace FastTests.Client
         }
 
         [Fact]
+        public void CanAddToArrayUsingParamsOverload()
+        {
+            var stuff = new Stuff[1];
+            stuff[0] = new Stuff { Key = 6 };
+            var user = new User { Stuff = stuff, Numbers = new[] { 1, 2 } };
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(user);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var loaded = session.Load<User>(_docId);
+
+                    var items = new[]
+                    {
+                        new Stuff
+                        {
+                            Key = 102
+                        },
+                        new Stuff
+                        {
+                            Phone = "123456"
+                        }
+                    };
+
+                    session.Advanced.Patch(loaded, u => u.Stuff, roles => roles.Add(items));
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var loaded = session.Load<User>(_docId);
+
+                    var numbers = new List<int> {3, 4};
+
+                    session.Advanced.Patch(loaded, u => u.Numbers, roles => roles.Add(numbers.ToArray()));
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var loaded = session.Load<User>(_docId);
+
+                    Assert.Equal(loaded.Stuff[1].Key, 102);
+                    Assert.Equal(loaded.Stuff[2].Phone, "123456");
+                    Assert.Equal(loaded.Numbers[2], 3);
+                    Assert.Equal(loaded.Numbers[3], 4);
+                }
+            }
+        }
+
+        [Fact]
         public void CanRemoveFromArray()
         {
             var stuff = new Stuff[2];
