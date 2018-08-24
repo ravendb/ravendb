@@ -94,9 +94,16 @@ namespace Sparrow.Json
                 return; // the context pool was already disposed
             }
 
-            while(current != null)
+            while (current != null)
             {
-                current.Value?.Dispose();
+                var value = current.Value;
+
+                if (value != null)
+                {
+                    if (value.InUse.Raise()) // it could be stolen by another thread - RavenDB-11409
+                        value.Dispose();
+                }
+
                 current = current.Next;
             }
         }
