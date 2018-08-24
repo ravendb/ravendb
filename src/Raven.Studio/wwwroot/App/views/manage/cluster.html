@@ -109,13 +109,13 @@
                             <div class="flex-horizontal info-container">
                                 <div class="address">
                                     <h5>ADDRESS</h5>
-                                    <a target="_blank" data-bind="attr: { href: serverUrl }"><span data-bind="text: serverUrl"></span></a>                                   
+                                    <a target="_blank" data-bind="attr: { href: serverUrl }"><span data-bind="text: serverUrl"></span></a>
                                 </div>
                                 <div class="cores" data-bind="if: utilizedCores">
                                     <h5><i class="icon-processor"></i> &nbsp; CORES</h5>
                                     <strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Assigned CPU cores limit" data-animation="true"></strong>
                                     <span data-bind="if: numberOfCores() && utilizedCores() != -1">
-                                         <span data-bind="numberOfCores() > 0">/ <strong data-bind="text: numberOfCores" data-toggle="tooltip" title="Total CPU cores count" data-animation="true"></strong></span>
+                                        <span data-bind="numberOfCores() > 0">/ <strong data-bind="text: numberOfCores" data-toggle="tooltip" title="Total CPU cores count" data-animation="true"></strong></span>
                                     </span>
                                 </div>
                                 <div class="memory" data-bind="if: installedMemoryInGb">
@@ -130,6 +130,10 @@
                                 <div class="serverVersion" data-bind="if: nodeServerVersion">
                                     <h5><i class="icon-server"></i> &nbsp; VERSION</h5>
                                     <strong class="text-lighter" data-toggle="tooltip" title="Server version installed on this node" data-bind="text: nodeServerVersion" data-animation="true"></strong>
+                                </div>
+                                <div class="serverVersion" data-bind="if: osFullName">
+                                    <h5><i class="icon-about"></i> &nbsp; OS</h5>
+                                    <strong class="text-lighter" data-toggle="tooltip" data-html="true" data-bind="text: osFullName, attr: { 'title': osTitle }" data-animation="true"></strong>
                                 </div>
                             </div> 
                         </div>

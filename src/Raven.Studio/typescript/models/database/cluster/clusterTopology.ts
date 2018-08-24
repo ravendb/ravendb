@@ -116,6 +116,7 @@ class clusterTopology {
             
             const fullVersion = detailsPerNode.BuildInfo ? detailsPerNode.BuildInfo.FullVersion : null;
             node.nodeServerVersion(fullVersion);
+            node.osInfo(detailsPerNode.OsInfo);
         });
     }
 }
