@@ -34,7 +34,7 @@ namespace Raven.Server.Commercial
                     osInfo = GetLinuxOsInfo();
                 }
 
-                osInfo.Is32Bits = PlatformDetails.Is32Bits;
+                osInfo.Is64Bit = PlatformDetails.Is32Bits == false;
                 return osInfo;
             }
             catch (Exception e)
@@ -101,7 +101,7 @@ namespace Raven.Server.Commercial
         {
             var osInfo = new OsInfo
             {
-                OSType = OSType.Windows,
+                Type = OSType.Windows,
                 FullName = RuntimeInformation.OSDescription
             };
 
@@ -123,7 +123,7 @@ namespace Raven.Server.Commercial
 
                 osInfo.Version = result[0].Value;
                 osInfo.BuildVersion = result[1].Value;
-                
+
                 if (decimal.TryParse(osInfo.Version, out var version) == false)
                     return osInfo;
 
@@ -162,7 +162,7 @@ namespace Raven.Server.Commercial
         {
             var osInfo = new OsInfo
             {
-                OSType = OSType.MacOS,
+                Type = OSType.MacOS,
                 FullName = RuntimeInformation.OSDescription
             };
 
@@ -225,22 +225,22 @@ namespace Raven.Server.Commercial
         {
             var osInfo = new OsInfo
             {
-                OSType = OSType.Linux,
+                Type = OSType.Linux,
                 FullName = RuntimeInformation.OSDescription,
                 BuildVersion = ReadBuildVersion()
             };
 
             try
             {
-                var path = osInfo.FullName.Contains("SUSE", StringComparison.OrdinalIgnoreCase) 
-                    ? "/usr/lib/os-release" 
+                var path = osInfo.FullName.Contains("SUSE", StringComparison.OrdinalIgnoreCase)
+                    ? "/usr/lib/os-release"
                     : "/etc/os-release";
 
                 var osReleaseProperties =
                     (from line in File.ReadAllLines(path)
-                        let splitted = line.Split("=")
-                        where splitted.Length == 2
-                        select (Key: splitted[0], Value: splitted[1]))
+                     let splitted = line.Split("=")
+                     where splitted.Length == 2
+                     select (Key: splitted[0], Value: splitted[1]))
                     .ToDictionary(x => x.Key, x => x.Value);
 
                 osReleaseProperties.TryGetValue("NAME", out var name);
@@ -318,7 +318,8 @@ namespace Raven.Server.Commercial
         {
             try
             {
-                return File.ReadAllText(path);;
+                return File.ReadAllText(path);
+                ;
             }
             catch (Exception)
             {
