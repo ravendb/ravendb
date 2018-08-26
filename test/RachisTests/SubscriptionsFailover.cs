@@ -266,7 +266,7 @@ namespace RachisTests
 
             var leader = await CreateRaftClusterAndGetLeader(nodesAmount).ConfigureAwait(false);
 
-            var defaultDatabase = "DistributedRevisionsSubscription";
+            var defaultDatabase = GetDatabaseName();
 
             await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
 
@@ -326,11 +326,11 @@ namespace RachisTests
                     {
                         started.Set();
                         HandleSubscriptionBatch(nodesAmount, b, uniqueDocs, ref docsCount, uniqueRevisions, reachedMaxDocCountMre, ref revisionsCount);
-                    }).ContinueWith(t =>
+                    });
+                    var cont = task.ContinueWith(t =>
                     {
                         reachedMaxDocCountMre.SetException(t.Exception);
                         ackSent.SetException(t.Exception);
-
                     }, TaskContinuationOptions.OnlyOnFaulted);
 
                     await Task.WhenAny(task, started.WaitAsync());
