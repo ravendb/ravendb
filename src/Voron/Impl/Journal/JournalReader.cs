@@ -217,6 +217,7 @@ namespace Voron.Impl.Journal
             if (options.EncryptionEnabled == false)
                 return;
             var recoveryBufferSize = _recoveryPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
+            _recoveryPager.EnsureMapped(tx, 0, checked((int)_recoveryPager.NumberOfAllocatedPages));
             var pagePointer = _recoveryPager.AcquirePagePointer(tx, 0);
             Sodium.sodium_memzero(pagePointer, (UIntPtr)recoveryBufferSize);
         }
