@@ -1065,16 +1065,15 @@ namespace Raven.Server.Documents.Replication
 
                     var maxReceivedChangeVectorByDatabase = currentDatabaseChangeVector;
 
-                    var groupId = _incoming._parent.Database.DatabaseGroupId;
                     foreach (var item in _incoming._replicatedItems)
                     {
                         context.TransactionMarkerOffset = item.TransactionMarker;
                         ++operationsCount;
-                        using (var rcvdChangeVector = context.GetLazyString(item.ChangeVector))
                         using (item)
                         {
                             Debug.Assert(item.Flags.Contain(DocumentFlags.Artificial) == false);
 
+                            var rcvdChangeVector = item.ChangeVector;
                             maxReceivedChangeVectorByDatabase =
                                 ChangeVectorUtils.MergeVectors(item.ChangeVector, maxReceivedChangeVectorByDatabase);
 
@@ -1218,10 +1217,12 @@ namespace Raven.Server.Documents.Replication
                                                 flags = item.Flags.Strip(DocumentFlags.FromClusterTransaction);
                                                 if (local.Document != null)
                                                 {
+                                                    rcvdChangeVector = ChangeVectorUtils.MergeVectors(rcvdChangeVector, local.Document.ChangeVector);
                                                     resolvedDocument = local.Document.Data.Clone(context);
                                                 }
                                                 else if (local.Tombstone != null)
                                                 {
+                                                    rcvdChangeVector = ChangeVectorUtils.MergeVectors(rcvdChangeVector, local.Tombstone.ChangeVector);
                                                     resolvedDocument = null;
                                                 }
                                                 else
