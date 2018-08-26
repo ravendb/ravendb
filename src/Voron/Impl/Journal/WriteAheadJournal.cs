@@ -1626,6 +1626,7 @@ namespace Voron.Impl.Journal
                 return;
 
             var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
+            _compressionPager.EnsureMapped(tx, 0, checked((int)_compressionPager.NumberOfAllocatedPages));
             var pagePointer = _compressionPager.AcquirePagePointer(tx, 0);
             Sodium.sodium_memzero(pagePointer, (UIntPtr)compressionBufferSize);
         }
