@@ -11,31 +11,34 @@ namespace Raven.Client.ServerWide.Operations.Certificates
     public class ReplaceClusterCertificateOperation : IServerOperation
     {
         private readonly byte[] _certBytes;
-        private readonly string _name;
         private readonly bool _replaceImmediately;
 
+        [Obsolete("Use second constructor instead.")]
         public ReplaceClusterCertificateOperation(string name, byte[] certBytes, bool replaceImmediately)
         {
             _certBytes = certBytes ?? throw new ArgumentNullException(nameof(certBytes));
-            _name = name ?? throw new ArgumentNullException(nameof(name));
+            _replaceImmediately = replaceImmediately;
+        }
+
+        public ReplaceClusterCertificateOperation(byte[] certBytes, bool replaceImmediately)
+        {
+            _certBytes = certBytes ?? throw new ArgumentNullException(nameof(certBytes));
             _replaceImmediately = replaceImmediately;
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new ReplaceClusterCertificateCommand(_name, _certBytes, _replaceImmediately);
+            return new ReplaceClusterCertificateCommand(_certBytes, _replaceImmediately);
         }
 
         private class ReplaceClusterCertificateCommand : RavenCommand
         {
             private readonly byte[] _certBytes;
-            private readonly string _name;
             private readonly bool _replaceImmediately;
 
-            public ReplaceClusterCertificateCommand(string name, byte[] certBytes, bool replaceImmediately)
+            public ReplaceClusterCertificateCommand(byte[] certBytes, bool replaceImmediately)
             {
                 _certBytes = certBytes ?? throw new ArgumentNullException(nameof(certBytes));
-                _name = name ?? throw new ArgumentNullException(nameof(name));
                 _replaceImmediately = replaceImmediately;
             }
 
@@ -53,13 +56,8 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                         using (var writer = new BlittableJsonTextWriter(ctx, stream))
                         {
                             writer.WriteStartObject();
-
-                            writer.WritePropertyName(nameof(CertificateDefinition.Name));
-                            writer.WriteString(_name.ToString());
-                            writer.WriteComma();
                             writer.WritePropertyName(nameof(CertificateDefinition.Certificate));
                             writer.WriteString(Convert.ToBase64String(_certBytes)); // keep the private key -> this is a server cert
-
                             writer.WriteEndObject();
                         }
                     })
