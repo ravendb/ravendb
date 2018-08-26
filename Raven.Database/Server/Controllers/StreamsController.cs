@@ -365,8 +365,11 @@ namespace Raven.Database.Server.Controllers
 
             private void ActuallyStreamResults(InitParameters parameters)
             {
-                using (var accessor = parameters.Database.TransactionalStorage.CreateAccessor())
+                IStorageActionsAccessor accessor = null;
+                try
                 {
+
+                    accessor = parameters.Database.TransactionalStorage.CreateAccessor();
                     QueryOp = new QueryActions.DatabaseQueryOperation(parameters.Database, parameters.IndexName, parameters.Query, accessor, parameters.Cts);
                     QueryOp.Init();
                     _headerReady.TrySetResult(QueryOp.Header);
@@ -376,6 +379,14 @@ namespace Raven.Database.Server.Controllers
                     }
 
                     SerializeToStream(_streamReady.Task.Result, QueryOp.Header.TotalResults);
+                } 
+                catch( Exception e)
+                {
+                    _headerReady.TrySetException(e);
+                }
+                finally
+                {
+                    accessor?.Dispose();
                 }
             }
 
