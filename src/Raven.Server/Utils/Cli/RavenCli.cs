@@ -740,13 +740,12 @@ namespace Raven.Server.Utils.Cli
 
         private static bool CommandReplaceClusterCert(List<string> args, RavenCli cli)
         {
-            if (args.Count < 2 || args.Count > 4)
+            if (args.Count < 1 || args.Count > 3)
             {
-                WriteError("Usage: replaceClusterCert [-replaceImmediately] <name> <path-to-pfx> [password]", cli);
+                WriteError("Usage: replaceClusterCert [-replaceImmediately] <path-to-pfx> [password]", cli);
                 return false;
             }
 
-            string name;
             string path;
             string password = null;
             var replaceImmediately = false;
@@ -754,17 +753,15 @@ namespace Raven.Server.Utils.Cli
             if (args[0].Equals("-replaceImmediately"))
             {
                 replaceImmediately = true;
-                name = args[1];
-                path = args[2];
-                if (args.Count == 4)
-                    password = args[3];
-            }
-            else
-            {
-                name = args[0];
                 path = args[1];
                 if (args.Count == 3)
                     password = args[2];
+            }
+            else
+            {
+                path = args[0];
+                if (args.Count == 2)
+                    password = args[1];
             }
 
             cli._server.ServerStore.EnsureNotPassive();
@@ -794,7 +791,7 @@ namespace Raven.Server.Utils.Cli
             {
                 var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), cli._server.ServerStore.ServerShutdown);
 
-                var replicationTask = cli._server.ServerStore.Server.StartCertificateReplicationAsync(Convert.ToBase64String(certBytes), name, replaceImmediately);
+                var replicationTask = cli._server.ServerStore.Server.StartCertificateReplicationAsync(Convert.ToBase64String(certBytes), replaceImmediately);
 
                 Task.WhenAny(replicationTask, timeoutTask).Wait();
                 if (replicationTask.IsCompleted == false)

@@ -925,9 +925,6 @@ namespace Raven.Server.Web.Authentication
                 {
                     var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
-                    if (string.IsNullOrWhiteSpace(certificate.Name))
-                        certificate.Name = "Cluster-Wide Certificate";
-
                     // This restriction should be removed when updating to .net core 2.1 when export of collection is fixed in Linux.
                     // With export, we'll be able to load the certificate and export it without a password, and propogate it through the cluster.
                     if (string.IsNullOrWhiteSpace(certificate.Password) == false)
@@ -953,7 +950,7 @@ namespace Raven.Server.Web.Authentication
 
                     var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), ServerStore.ServerShutdown);
 
-                    var replicationTask = Server.StartCertificateReplicationAsync(certificate.Certificate, certificate.Name, replaceImmediately);
+                    var replicationTask = Server.StartCertificateReplicationAsync(certificate.Certificate, replaceImmediately);
 
                     await Task.WhenAny(replicationTask, timeoutTask);
                     if (replicationTask.IsCompleted == false)

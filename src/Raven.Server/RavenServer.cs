@@ -568,7 +568,7 @@ namespace Raven.Server
                     throw new InvalidOperationException("Failed to update certificate from Lets Encrypt", e);
                 }
 
-                await StartCertificateReplicationAsync(Convert.ToBase64String(newCertBytes), "Updated Let's Encrypt Certificate", false);
+                await StartCertificateReplicationAsync(Convert.ToBase64String(newCertBytes), false);
             }
             catch (Exception e)
             {
@@ -586,7 +586,7 @@ namespace Raven.Server
             }
         }
 
-        public async Task StartCertificateReplicationAsync(string base64Cert, string name, bool replaceImmediately)
+        public async Task StartCertificateReplicationAsync(string base64Cert, bool replaceImmediately)
         {
             // the process of updating a new certificate is the same as deleting a database
             // we first send the certificate to all the nodes, then we get acknowledgments

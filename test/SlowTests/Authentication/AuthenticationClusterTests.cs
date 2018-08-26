@@ -87,7 +87,7 @@ namespace SlowTests.Authentication
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new ReplaceClusterCertificateOperation("Replacement Server Cert", certBytes, false)
+                    var command = new ReplaceClusterCertificateOperation(certBytes, false)
                         .GetCommand(store.Conventions, context);
 
                     requestExecutor.Execute(command, context);
