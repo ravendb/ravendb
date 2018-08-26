@@ -145,7 +145,7 @@ namespace Voron.Impl.Paging
             if (state.LoadedBuffers.TryGetValue(pageNumber, out var buffer))
                 return buffer.Pointer;
 
-            var pagePointer = Inner.AcquirePagePointer(tx, pageNumber, pagerState);
+            var pagePointer = Inner.AcquirePagePointerWithOverflowHandling(tx, pageNumber, pagerState);
 
             var pageHeader = (PageHeader*)pagePointer;
 
@@ -272,8 +272,12 @@ namespace Voron.Impl.Paging
                 // Encrypt the local buffer, then copy the encrypted value to the pager
                 var pageHeader = (PageHeader*)buffer.Value.Pointer;
                 var dataSize = EncryptPage(pageHeader);
+                var numPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(dataSize);
 
-                var pagePointer = Inner.AcquirePagePointer(null, buffer.Key);
+                Inner.EnsureContinuous(buffer.Key, numPages);
+                Inner.EnsureMapped(tx, buffer.Key, numPages);
+
+                var pagePointer = Inner.AcquirePagePointer(tx, buffer.Key);
 
                 Memory.Copy(pagePointer, buffer.Value.Pointer, dataSize);
             }
