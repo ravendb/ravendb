@@ -286,8 +286,10 @@ namespace Raven.Server.Smuggler.Documents
 
             private void SendCommands(JsonOperationContext context)
             {
-                AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeCommands, context)));
-
+                using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                {
+                    AsyncHelpers.RunSync(async () => await _database.ServerStore.SendToLeaderAsync(ctx, new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeCommands, context)));
+                }
                 _compareExchangeCommands.Clear();
             }
         }
