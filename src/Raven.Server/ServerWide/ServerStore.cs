@@ -753,10 +753,10 @@ namespace Raven.Server.ServerWide
             {
                 case nameof(RecheckStatusOfServerCertificateCommand):
                 case nameof(ConfirmReceiptServerCertificateCommand):
-                    ConfirmCertificateReceiptValueChanged(t);
+                    ConfirmCertificateReceiptValueChanged(t).Wait(ServerShutdown);
                     break;
                 case nameof(InstallUpdatedServerCertificateCommand):
-                    InstallUpdatedCertificateValueChanged(t);
+                    InstallUpdatedCertificateValueChanged(t).Wait(ServerShutdown);
                     break;
                 case nameof(RecheckStatusOfServerCertificateReplacementCommand):
                 case nameof(ConfirmServerCertificateReplacedCommand):
@@ -863,7 +863,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void InstallUpdatedCertificateValueChanged((long Index, string Type) t)
+        private async Task InstallUpdatedCertificateValueChanged((long Index, string Type) t)
         {
             try
             {
@@ -900,7 +900,7 @@ namespace Raven.Server.ServerWide
                     }
 
                     // we got it, now let us let the leader know about it
-                    SendToLeaderAsync(new ConfirmReceiptServerCertificateCommand(certThumbprint));
+                    await SendToLeaderAsync(new ConfirmReceiptServerCertificateCommand(certThumbprint));
                 }
             }
             catch (Exception e)
@@ -918,7 +918,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void ConfirmCertificateReceiptValueChanged((long Index, string Type) t)
+        private async Task ConfirmCertificateReceiptValueChanged((long Index, string Type) t)
         {
             try
             {
@@ -1050,7 +1050,7 @@ namespace Raven.Server.ServerWide
                         return;
                     }
 
-                    SendToLeaderAsync(new ConfirmServerCertificateReplacedCommand(newClusterCertificate.Thumbprint, oldThumbprint));
+                    await SendToLeaderAsync(new ConfirmServerCertificateReplacedCommand(newClusterCertificate.Thumbprint, oldThumbprint));
                 }
             }
             catch (Exception e)
