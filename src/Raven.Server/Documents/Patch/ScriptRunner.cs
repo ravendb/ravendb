@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Patch
 
                 ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, ConvertJsTimeToTimeSpanString));
 
-                ScriptEngine.SetValue("toDateString", new ClrFunctionInstance(ScriptEngine, ToDateString));
+                ScriptEngine.SetValue("toStringWithFormat", new ClrFunctionInstance(ScriptEngine, ToStringWithFormat));
 
 
                 ScriptEngine.SetValue("scalarToRawString", new ClrFunctionInstance(ScriptEngine, ScalarToRawString));
@@ -633,27 +633,95 @@ namespace Raven.Server.Documents.Patch
                 return new JsValue(asTimeSpan.ToString());
             }
 
-            private static JsValue ToDateString(JsValue self, JsValue[] args)
+            private static JsValue ToStringWithFormat(JsValue self, JsValue[] args)
             {
-                if (args.Length != 2)
+                if (args.Length < 2 || args.Length > 3)
                 {
-                    throw new InvalidOperationException("toDateString(date, format) must be called with exactly 2 arguments");
+                    throw new InvalidOperationException($"No overload for method 'toStringWithFormat' takes {args.Length} arguments. " +
+                                                        "Supported overloads are : toStringWithFormat(object, format), toStringWithFormat(object, culture), toStringWithFormat(object, format, culture).");
                 }
 
-                if (args[0].IsDate() == false)
+                CultureInfo cultureInfo = null;
+                string format = null;
+
+                for (var i = 1; i < args.Length; i++)
                 {
-                    throw new InvalidOperationException("toDateString(date, format) : 'date' argument must be of type 'Date'");
+                    if (args[i].IsString() == false)
+                    {
+                        throw new InvalidOperationException("toStringWithFormat : 'format' and 'culture' must be string arguments");
+                    }
+
+                    GetFormatOrCulture(args[i].AsString(), ref format, ref cultureInfo);
                 }
 
-                if (args[1].IsString() == false)
+                if (args[0].IsDate())
                 {
-                    throw new InvalidOperationException("toDateString(date, format) : 'format' must be a string argument");
+                    var date = args[0].AsDate().ToDateTime();
+                    if (format != null && cultureInfo != null)
+                    {
+                        return date.ToString(format, cultureInfo);
+                    }
+                    return format != null ? 
+                        date.ToString(format) : 
+                        date.ToString(cultureInfo);
+
                 }
 
-                var date = args[0].AsDate().ToDateTime();
-                var format = args[1].AsString();
+                if (args[0].IsNumber())
+                {
+                    var num = args[0].AsNumber();
+                    if (format != null && cultureInfo != null)
+                    {
+                        return num.ToString(format, cultureInfo);
+                    }
+                    return format != null ?
+                        num.ToString(format) :
+                        num.ToString(cultureInfo);
+                }
 
-                return date.ToString(format);
+                if (args[0].IsBoolean() == false)
+                {
+                    throw new InvalidOperationException($"toStringWithFormat() is not supported for objects of type {args[0].Type} ");
+                }
+
+                var boolean = args[0].AsBoolean();
+                return boolean.ToString(cultureInfo);
+            }
+
+            private static void GetFormatOrCulture(string arg, ref string format, ref CultureInfo cultureInfo)
+            {
+                var split = arg.Split(".");
+                if (split.Length < 2 ||
+                    split[0] != nameof(CultureInfo))
+                {
+                    format = arg;
+                }
+                else
+                {
+                    switch (split[1])
+                    {
+                        case "CurrentCulture":
+                            cultureInfo = CultureInfo.CurrentCulture;
+                            break;
+                        case "InvariantCulture":
+                            cultureInfo = CultureInfo.InvariantCulture;
+                            break;
+                        case "CurrentUICulture":
+                            cultureInfo = CultureInfo.CurrentUICulture;
+                            break;
+                        case "DefaultThreadCurrentCulture":
+                            cultureInfo = CultureInfo.DefaultThreadCurrentCulture;
+                            break;
+                        case "DefaultThreadCurrentUICulture":
+                            cultureInfo = CultureInfo.DefaultThreadCurrentUICulture;
+                            break;
+                        case "InstalledUICulture":
+                            cultureInfo = CultureInfo.InstalledUICulture;
+                            break;
+                        default:
+                            throw new InvalidOperationException($"'toStringWithFormat' with CultureInfo `{arg}` is not supported. ");
+                    }
+                }
             }
 
             private static JsValue StartsWith(JsValue self, JsValue[] args)
