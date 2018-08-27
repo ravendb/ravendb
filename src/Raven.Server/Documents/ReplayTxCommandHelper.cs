@@ -209,6 +209,8 @@ namespace Raven.Server.Documents
                     return jsonSerializer.Deserialize<DeleteTombstonesCommandDto>(reader);
                 case nameof(OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand):
                     return jsonSerializer.Deserialize<OutputReduceToCollectionCommandDto>(reader);
+                case nameof(CountersHandler.ExecuteCounterBatchCommand):
+                    return jsonSerializer.Deserialize<ExecuteCounterBatchCommandDto>(reader);
                 default:
                     throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
             }
