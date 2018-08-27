@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Handlers
                 long commandsProgress = 0;
                 var stopwatch = Stopwatch.StartNew();
                 stopwatch.Start();
-                foreach (var replayProgress in Database.TxMerger.Replay(replayStream))
+                foreach (var replayProgress in ReplayTxCommandHelper.Replay(Database, replayStream))
                 {
                     commandsProgress = replayProgress.CommandsProgress;
                     if (replayProgress.CommandsProgress > commandAmountForNextRespond)
