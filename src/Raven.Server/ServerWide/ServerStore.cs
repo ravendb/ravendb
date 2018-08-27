@@ -723,8 +723,8 @@ namespace Raven.Server.ServerWide
                 return;
 
             NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag,
-                NodeTag, _engine.CurrentTerm, _engine.CurrentState, GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails), 
-                DateTime.MinValue); 
+                NodeTag, _engine.CurrentTerm, _engine.CurrentState, GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails),
+                DateTime.MinValue);
             // we set the postpone time to the minimum in order to overwrite it and to send this notification every time when a new client connects. 
         }
 
@@ -924,55 +924,56 @@ namespace Raven.Server.ServerWide
             {
                 using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-                    BlittableJsonReaderObject cert;
-                    int nodesInCluster;
-                    int confirmations;
-                    bool replaceImmediately;
+                    string certBase64;
+                    string oldThumbprint;
 
                     using (context.OpenReadTransaction())
                     {
-                        cert = Cluster.GetItem(context, CertificateReplacement.CertificateReplacementDoc);
+                        var cert = Cluster.GetItem(context, CertificateReplacement.CertificateReplacementDoc);
                         if (cert == null)
                             return;
-                        if (cert.TryGet(nameof(CertificateReplacement.Confirmations), out confirmations) == false)
+                        if (cert.TryGet(nameof(CertificateReplacement.Confirmations), out int confirmations) == false)
                             throw new InvalidOperationException($"Expected to get '{nameof(CertificateReplacement.Confirmations)}' count");
 
-                        if (cert.TryGet(nameof(CertificateReplacement.ReplaceImmediately), out replaceImmediately) == false)
+                        if (cert.TryGet(nameof(CertificateReplacement.ReplaceImmediately), out bool replaceImmediately) == false)
                             throw new InvalidOperationException($"Expected to get `{nameof(CertificateReplacement.ReplaceImmediately)}` property");
 
-                        nodesInCluster = GetClusterTopology(context).AllNodes.Count;
-                    }
+                        int nodesInCluster = GetClusterTopology(context).AllNodes.Count;
 
-                    if (nodesInCluster > confirmations && replaceImmediately == false)
-                    {
-                        if (Server.Certificate?.Certificate?.NotAfter != null &&
-                            (Server.Certificate.Certificate.NotAfter - Server.Time.GetUtcNow().ToLocalTime()).Days > 3)
+                        if (nodesInCluster > confirmations && replaceImmediately == false)
                         {
-                            var msg = $"Not all nodes have confirmed the certificate replacement. Confirmation count: {confirmations}. " +
-                                      $"We still have {(Server.Certificate.Certificate.NotAfter - Server.Time.GetUtcNow().ToLocalTime()).Days} days until expiration. " +
-                                      "The update will happen when all nodes confirm the replacement or we have less than 3 days left for expiration." +
-                                      $"If you wish to force replacing the certificate just for the nodes that are up, please set '{nameof(CertificateReplacement.ReplaceImmediately)}' to true.";
+                            if (Server.Certificate?.Certificate?.NotAfter != null &&
+                                (Server.Certificate.Certificate.NotAfter - Server.Time.GetUtcNow().ToLocalTime()).Days > 3)
+                            {
+                                var msg = $"Not all nodes have confirmed the certificate replacement. Confirmation count: {confirmations}. " +
+                                          $"We still have {(Server.Certificate.Certificate.NotAfter - Server.Time.GetUtcNow().ToLocalTime()).Days} days until expiration. " +
+                                          "The update will happen when all nodes confirm the replacement or we have less than 3 days left for expiration." +
+                                          $"If you wish to force replacing the certificate just for the nodes that are up, please set '{nameof(CertificateReplacement.ReplaceImmediately)}' to true.";
 
-                            if (Logger.IsOperationsEnabled)
-                                Logger.Operations(msg);
+                                if (Logger.IsOperationsEnabled)
+                                    Logger.Operations(msg);
 
-                            NotificationCenter.Add(AlertRaised.Create(
-                                null,
-                                CertificateReplacement.CertReplaceAlertTitle,
-                                msg,
-                                AlertType.Certificates_ReplacePending,
-                                NotificationSeverity.Warning));
-                            return;
+                                NotificationCenter.Add(AlertRaised.Create(
+                                    null,
+                                    CertificateReplacement.CertReplaceAlertTitle,
+                                    msg,
+                                    AlertType.Certificates_ReplacePending,
+                                    NotificationSeverity.Warning));
+                                return;
+                            }
                         }
+
+                        if (cert.TryGet(nameof(CertificateReplacement.Certificate), out certBase64) == false ||
+                            cert.TryGet(nameof(CertificateReplacement.Thumbprint), out string certThumbprint) == false)
+                            throw new InvalidOperationException(
+                                $"Invalid 'server/cert' value, expected to get '{nameof(CertificateReplacement.Certificate)}' and '{nameof(CertificateReplacement.Thumbprint)}' properties");
+
+                        if (certThumbprint == Server.Certificate?.Certificate?.Thumbprint)
+                            return;
+
+                        if (cert.TryGet(nameof(CertificateReplacement.OldThumbprint), out oldThumbprint) == false)
+                            oldThumbprint = string.Empty;
                     }
-
-                    if (cert.TryGet(nameof(CertificateReplacement.Certificate), out string certBase64) == false ||
-                        cert.TryGet(nameof(CertificateReplacement.Thumbprint), out string certThumbprint) == false)
-                        throw new InvalidOperationException(
-                            $"Invalid 'server/cert' value, expected to get '{nameof(CertificateReplacement.Certificate)}' and '{nameof(CertificateReplacement.Thumbprint)}' properties");
-
-                    if (certThumbprint == Server.Certificate?.Certificate?.Thumbprint)
-                        return;
 
                     // and now we have to replace the cert...
                     if (string.IsNullOrEmpty(Configuration.Security.CertificatePath))
@@ -1048,9 +1049,6 @@ namespace Raven.Server.ServerWide
 
                         return;
                     }
-
-                    if (cert.TryGet(nameof(CertificateReplacement.OldThumbprint), out string oldThumbprint) == false)
-                        oldThumbprint = string.Empty;
 
                     SendToLeaderAsync(new ConfirmServerCertificateReplacedCommand(newClusterCertificate.Thumbprint, oldThumbprint));
                 }
@@ -1485,7 +1483,7 @@ namespace Raven.Server.ServerWide
 
                     exceptionAggregator.Execute(_shutdownNotification.Dispose);
 
-                    exceptionAggregator.Execute(()=> _timer?.Dispose());
+                    exceptionAggregator.Execute(() => _timer?.Dispose());
 
                     exceptionAggregator.ThrowIfNeeded();
                 }
@@ -1532,7 +1530,7 @@ namespace Raven.Server.ServerWide
                     foreach (var db in databasesToCleanup)
                     {
 
-                        if (DatabasesLandlord.DatabasesCache.TryGetValue(db, out Task<DocumentDatabase> resourceTask) == false || 
+                        if (DatabasesLandlord.DatabasesCache.TryGetValue(db, out Task<DocumentDatabase> resourceTask) == false ||
                             resourceTask == null ||
                             resourceTask.Status != TaskStatus.RanToCompletion)
                         {
@@ -1564,7 +1562,7 @@ namespace Raven.Server.ServerWide
                         if (idleDbInstance.Operations.HasActive)
                             continue;
 
-                        if(idleDbInstance.PeriodicBackupRunner.HasPeriodicBackups())
+                        if (idleDbInstance.PeriodicBackupRunner.HasPeriodicBackups())
                             continue;
 
                         DatabasesLandlord.UnloadDirectly(db);
@@ -1612,7 +1610,7 @@ namespace Raven.Server.ServerWide
 
             Debug.Assert(topology != null);
 
-            if(clusterTopology.AllNodes.Count == 0)
+            if (clusterTopology.AllNodes.Count == 0)
                 throw new InvalidOperationException($"Database {record.DatabaseName} cannot be created, because the cluster topology is empty (shouldn't happen)!");
 
             if (record.Topology.ReplicationFactor == 0)
@@ -1739,14 +1737,14 @@ namespace Raven.Server.ServerWide
         {
             var response = await SendToLeaderAsyncInternal(cmd);
 
-            #if DEBUG
-            
+#if DEBUG
+
             if (response.Result.ContainsBlittableObject())
             {
                 throw new InvalidOperationException($"{nameof(ServerStore)}::{nameof(SendToLeaderAsync)}(CommandBase) should not return command results with blittable json objects. This is not supposed to happen and should be reported.");
             }
 
-            #endif
+#endif
 
             return response;
         }
