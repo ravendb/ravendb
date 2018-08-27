@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Json.Converters;
 using Sparrow;
 using Sparrow.Json;
@@ -29,23 +30,23 @@ namespace Raven.Client.Http
             }
         }
 
-        private static string GetPath(string topologyHash)
+        private static string GetPath(string topologyHash, DocumentConventions conventions)
         {
-            return Path.Combine(AppContext.BaseDirectory, topologyHash + ".raven-cluster-topology");
+            return Path.Combine(conventions.TopologyCacheLocation, $"{topologyHash}.raven-cluster-topology");
         }
 
-        public static ClusterTopologyResponse TryLoad(string topologyHash, JsonOperationContext context)
+        public static ClusterTopologyResponse TryLoad(string topologyHash, DocumentConventions conventions, JsonOperationContext context)
         {
             try
             {
-                var path = GetPath(topologyHash);
+                var path = GetPath(topologyHash, conventions);
                 if (File.Exists(path) == false)
                     return null;
 
                 using (var stream = SafeFileStream.Create(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                using (var blittableJsonReaderObject = context.Read(stream, "raven-cluster-topology"))
+                using (var json = context.Read(stream, "raven-cluster-topology"))
                 {
-                    return JsonDeserializationClient.ClusterTopology(blittableJsonReaderObject);
+                    return JsonDeserializationClient.ClusterTopology(json);
                 }
             }
             catch (Exception e)
@@ -56,11 +57,11 @@ namespace Raven.Client.Http
             }
         }
 
-        public static void TrySaving(string topologyHash, ClusterTopologyResponse clusterTopology, JsonOperationContext context)
+        public static void TrySaving(string topologyHash, ClusterTopologyResponse clusterTopology, DocumentConventions conventions, JsonOperationContext context)
         {
             try
             {
-                var path = GetPath(topologyHash);
+                var path = GetPath(topologyHash, conventions);
                 if (clusterTopology == null)
                 {
                     Clear(path);

@@ -8,7 +8,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Security;
-using System.Net.Sockets;
 using System.Runtime.ExceptionServices;
 using System.Security.Authentication;
 using System.Security.Cryptography;
@@ -31,7 +30,6 @@ using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
-using Sparrow.Platform;
 using Sparrow.Threading;
 
 namespace Raven.Client.Http
@@ -286,7 +284,7 @@ namespace Raven.Client.Http
                     await ExecuteAsync(node, null, context, command, shouldRetry: false).ConfigureAwait(false);
                     var topology = command.Result;
 
-                    DatabaseTopologyLocalCache.TrySaving(_databaseName, TopologyHash, topology, context);
+                    DatabaseTopologyLocalCache.TrySaving(_databaseName, TopologyHash, topology, Conventions, context);
 
                     if (_nodeSelector == null)
                     {
@@ -592,7 +590,7 @@ namespace Raven.Client.Http
 
         protected virtual bool TryLoadFromCache(JsonOperationContext context)
         {
-            var cachedTopology = DatabaseTopologyLocalCache.TryLoad(_databaseName, TopologyHash, context);
+            var cachedTopology = DatabaseTopologyLocalCache.TryLoad(_databaseName, TopologyHash, Conventions, context);
             if (cachedTopology == null)
                 return false;
 

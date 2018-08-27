@@ -94,7 +94,7 @@ namespace Raven.Client.Http
                     var command = new GetClusterTopologyCommand();
                     await ExecuteAsync(node, null, context, command, shouldRetry: false).ConfigureAwait(false);
 
-                    ClusterTopologyLocalCache.TrySaving(TopologyHash, command.Result, context);
+                    ClusterTopologyLocalCache.TrySaving(TopologyHash, command.Result, Conventions, context);
 
                     var results = command.Result;
                     var newTopology = new Topology
@@ -157,7 +157,7 @@ namespace Raven.Client.Http
 
         protected override bool TryLoadFromCache(JsonOperationContext context)
         {
-            var clusterTopology = ClusterTopologyLocalCache.TryLoad(TopologyHash, context);
+            var clusterTopology = ClusterTopologyLocalCache.TryLoad(TopologyHash, Conventions, context);
             if (clusterTopology == null)
                 return false;
 

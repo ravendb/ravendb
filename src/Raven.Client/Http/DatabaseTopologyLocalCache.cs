@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Json.Converters;
 using Sparrow;
 using Sparrow.Json;
@@ -28,14 +29,14 @@ namespace Raven.Client.Http
             }
         }
 
-        private static string GetPath(string databaseName, string topologyHash)
+        private static string GetPath(string databaseName, string topologyHash, DocumentConventions conventions)
         {
-            return Path.Combine(AppContext.BaseDirectory, $"{databaseName}.{topologyHash}.raven-database-topology");
+            return Path.Combine(conventions.TopologyCacheLocation, $"{databaseName}.{topologyHash}.raven-database-topology");
         }
 
-        public static Topology TryLoad(string databaseName, string topologyHash, JsonOperationContext context)
+        public static Topology TryLoad(string databaseName, string topologyHash, DocumentConventions conventions, JsonOperationContext context)
         {
-            var path = GetPath(databaseName, topologyHash);
+            var path = GetPath(databaseName, topologyHash, conventions);
             return TryLoad(path, context);
         }
 
@@ -47,9 +48,9 @@ namespace Raven.Client.Http
                     return null;
 
                 using (var stream = SafeFileStream.Create(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                using (var blittableJsonReaderObject = context.Read(stream, "raven-database-topology"))
+                using (var json = context.Read(stream, "raven-database-topology"))
                 {
-                    return JsonDeserializationClient.Topology(blittableJsonReaderObject);
+                    return JsonDeserializationClient.Topology(json);
                 }
             }
             catch (Exception e)
@@ -60,23 +61,23 @@ namespace Raven.Client.Http
             }
         }
 
-        public static void TrySaving(string databaseName, string topologyHash, Topology topology, JsonOperationContext context)
+        public static void TrySaving(string databaseName, string topologyHash, Topology topology, DocumentConventions conventions, JsonOperationContext context)
         {
             try
             {
-                var path = GetPath(databaseName, topologyHash);
+                var path = GetPath(databaseName, topologyHash, conventions);
                 if (topology == null)
                 {
                     Clear(databaseName);
                     return;
                 }
 
-                var exisitngTopology = TryLoad(path, context);
-                if (exisitngTopology?.Etag >= topology.Etag)
+                var existingTopology = TryLoad(path, context);
+                if (existingTopology?.Etag >= topology.Etag)
                 {
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Skiping save topology with etag {topology.Etag} to cache " +
-                                     $"as the cache already have a topology with etag: {exisitngTopology.Etag}");
+                        _logger.Info($"Skipping save topology with etag {topology.Etag} to cache " +
+                                     $"as the cache already have a topology with etag: {existingTopology.Etag}");
                     return;
                 }
 
@@ -84,26 +85,26 @@ namespace Raven.Client.Http
                 using (var writer = new BlittableJsonTextWriter(context, stream))
                 {
                     writer.WriteStartObject();
-                    
+
                     writer.WritePropertyName(context.GetLazyString(nameof(topology.Nodes)));
                     writer.WriteStartArray();
                     for (var i = 0; i < topology.Nodes.Count; i++)
                     {
                         var node = topology.Nodes[i];
-                        if(i != 0)
+                        if (i != 0)
                             writer.WriteComma();
                         WriteNode(writer, node, context);
                     }
                     writer.WriteEndArray();
-                    
+
                     writer.WriteComma();
                     writer.WritePropertyName(context.GetLazyString(nameof(topology.Etag)));
                     writer.WriteInteger(topology.Etag);
-                    
+
                     writer.WriteComma();
                     writer.WritePropertyName(context.GetLazyString("PersistedAt"));
                     writer.WriteString(DateTimeOffset.UtcNow.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
-                    
+
                     writer.WriteEndObject();
                 }
             }

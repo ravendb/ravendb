@@ -86,6 +86,8 @@ namespace Raven.Client.Documents.Conventions
         /// </summary>
         public DocumentConventions()
         {
+            _topologyCacheLocation = AppContext.BaseDirectory;
+
             ReadBalanceBehavior = ReadBalanceBehavior.None;
 
             FindIdentityProperty = q => q.Name == "Id";
@@ -174,6 +176,7 @@ namespace Raven.Client.Documents.Conventions
         private Func<MemberInfo, string> _propertyNameConverter;
         private Func<Type, bool> _typeIsKnownServerSide = _ => false;
         private OperationStatusFetchMode _operationStatusFetchMode;
+        private string _topologyCacheLocation;
 
         public Func<MemberInfo, string> PropertyNameConverter
         {
@@ -529,6 +532,27 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _operationStatusFetchMode = value;
+            }
+        }
+
+        /// <summary>
+        /// Changes the location of topology cache files. By default it is set to application base directory (AppContext.BaseDirectory)
+        /// </summary>
+        public string TopologyCacheLocation
+        {
+            get => _topologyCacheLocation;
+            set
+            {
+                AssertNotFrozen();
+
+                if (string.IsNullOrWhiteSpace(value))
+                    throw new ArgumentNullException(nameof(value));
+
+                var directory = new DirectoryInfo(value);
+                if (directory.Exists == false)
+                    throw new InvalidOperationException("Topology cache location directory does not exist. Please create the directory first.");
+
+                _topologyCacheLocation = directory.FullName;
             }
         }
 
