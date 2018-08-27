@@ -114,7 +114,15 @@ namespace Raven.Database.FileSystem.Synchronization
                     if (destinationMetadata == null)
                     {
                         // we have a rename tombstone but file does not exists on destination
-                        return new ContentUpdateWorkItem(rename, localServerUrl, storage, sigGenerator, configuration);
+
+                        var result = new ContentUpdateWorkItem(rename, localServerUrl, storage, sigGenerator, configuration);
+
+                        // we need to use rename tombstone etag here
+                        // we need to record that we processed rename tombstone, not the current file which can have much larger etag
+
+                        result.ForceSetEtag(Etag.Parse(localMetadata.Value<string>(Constants.MetadataEtagField)));
+
+                        return result;
                     } 
                 }
                 else if (destinationMetadata == null)

@@ -600,6 +600,17 @@ namespace Raven.Database.FileSystem.Synchronization
                     continue;
                 }
 
+                if (EtagUtil.IsGreaterThan(work.FileETag, fileHeader.Etag))
+                {
+                    // the file has changed since we got it from GetFilesToSynchronization
+                    // let's skip it now, we'll synchronize it with the new etag later on
+
+                    if (Log.IsDebugEnabled)
+                        Log.Debug("File '{0}' was not synchronized to {1}. Because it was updated meanwhile. We'll synchronize it later (iteration etag: {2}, current etag: {3})", file, destinationUrl, fileHeader.Etag, work.FileETag);
+
+                    continue;
+                }
+
                 if (synchronizationQueue.EnqueueSynchronization(destinationUrl, work))
                 {
                     publisher.Publish(new SynchronizationUpdateNotification

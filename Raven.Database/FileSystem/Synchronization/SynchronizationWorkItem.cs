@@ -21,6 +21,9 @@ namespace Raven.Database.FileSystem.Synchronization
         private readonly ConflictResolver conflictResolver;
         protected readonly CancellationTokenSource Cts = new CancellationTokenSource();
         protected FilesConvention Convention = new FilesConvention();
+        private Etag forcedEtag;
+
+
         protected SynchronizationWorkItem(string fileName, string sourceServerUrl, ITransactionalStorage storage)
         {
             Storage = storage;
@@ -45,7 +48,12 @@ namespace Raven.Database.FileSystem.Synchronization
 
         public Etag FileETag
         {
-            get { return Etag.Parse(FileMetadata.Value<string>(Constants.MetadataEtagField)); }
+            get { return forcedEtag ?? Etag.Parse(FileMetadata.Value<string>(Constants.MetadataEtagField)); }
+        }
+
+        public void ForceSetEtag(Etag etag)
+        {
+            forcedEtag = etag;
         }
 
         public bool IsCancelled
