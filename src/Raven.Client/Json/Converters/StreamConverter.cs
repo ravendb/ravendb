@@ -17,12 +17,12 @@ namespace Raven.Client.Json.Converters
             if (!(writer is BlittableJsonWriter blittableJsonWriter))
             {
                 throw new SerializationException(
-                    $"Try to write {nameof(LazyStringValue)} property/field by {writer.GetType()} witch is unsuitable reader. Should use {nameof(BlittableJsonWriter)}");
+                    $"Try to write {nameof(LazyStringValue)} property/field by {writer.GetType()} which is unsuitable reader. Should use {nameof(BlittableJsonWriter)}");
             }
 
             if (!(value is Stream stream))
             {
-                throw new SerializationException($"Try to write {value.GetType()} witch is not {nameof(Stream)} value with {nameof(StreamConverter)}");
+                throw new SerializationException($"Try to write {value.GetType()} which is not {nameof(Stream)} value with {nameof(StreamConverter)}");
             }
 
             if (false == stream.CanSeek)
@@ -42,7 +42,7 @@ namespace Raven.Client.Json.Converters
             if (!(reader is BlittableJsonReader blittableReader))
             {
                 throw new SerializationException(
-                    $"Try to read {nameof(Stream)} property/field by {reader.GetType()} witch is unsuitable reader. Should use {nameof(BlittableJsonReader)}");
+                    $"Try to read {nameof(Stream)} property/field by {reader.GetType()} which is unsuitable reader. Should use {nameof(BlittableJsonReader)}");
             }
 
             if (blittableReader.Value == null)

@@ -19,7 +19,7 @@ namespace Raven.Client.Json.Converters
             if (!(reader is BlittableJsonReader blittableReader))
             {
                 throw new SerializationException(
-                    $"Try to read {nameof(LazyStringValue)} property/field by {reader.GetType()} witch is unsuitable reader. Should use {nameof(BlittableJsonReader)}");
+                    $"Try to read {nameof(LazyStringValue)} property/field by {reader.GetType()} which is unsuitable reader. Should use {nameof(BlittableJsonReader)}");
             }
 
             if (blittableReader.Value == null)

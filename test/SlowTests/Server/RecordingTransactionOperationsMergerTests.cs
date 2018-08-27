@@ -106,7 +106,7 @@ namespace SlowTests.Server
                     session.Store(user, id);
                     session.SaveChanges();
                 }
-                
+
                 var counterOperations = new List<CounterOperation>
                 {
                     new CounterOperation
@@ -1180,6 +1180,64 @@ namespace SlowTests.Server
                     //Assert
                     Assert.All(replayUsers, u => Assert.True(u.Age == newAge, $"The age of {u.Name} should be {newAge} but is {u.Age}"));
                 }
+            }
+        }
+
+        [Fact]
+        public void RecordingCountersCommandsAsBatch()
+        {
+            var recordFilePath = NewDataPath();
+
+            var user = new User { Name = "August" };
+
+            const string id = "users/A-1";
+            //Recording
+            const string incrementedCounter = "likes";
+            const string deletedCounter = "Anger";
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(user, id);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(user);
+                    session.SaveChanges();
+
+                    session.CountersFor(user).Increment(incrementedCounter, 100);
+                    session.CountersFor(user).Increment(deletedCounter, 100);
+                    session.SaveChanges();
+
+                    session.CountersFor(user).Delete(deletedCounter);
+                    session.SaveChanges();
+                }
+
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+            }
+
+            //Replay
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
+            {
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.CountersFor(user.Id).GetAll();
+
+                    //Assert
+                    var actualCounters = result.Select(c => c.Key).ToArray();
+                    Assert.Contains(incrementedCounter, actualCounters);
+                    Assert.DoesNotContain(deletedCounter, actualCounters);
+                }
+
             }
         }
 

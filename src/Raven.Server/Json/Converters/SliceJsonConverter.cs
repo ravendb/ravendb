@@ -21,12 +21,12 @@ namespace Raven.Server.Json.Converters
             if (!(writer is BlittableJsonWriter blittableJsonWriter))
             {
                 throw new SerializationException(
-                    $"Try to write {nameof(Slice)} property/field by {writer.GetType()} witch is unsuitable reader. Should use {nameof(BlittableJsonWriter)}");
+                    $"Try to write {nameof(Slice)} property/field by {writer.GetType()} which is unsuitable reader. Should use {nameof(BlittableJsonWriter)}");
             }
 
             if (!(value is Slice slice))
             {
-                throw new SerializationException($"Try to write {value.GetType()} witch is not {nameof(Slice)} value with {nameof(SliceJsonConverter)}");
+                throw new SerializationException($"Try to write {value.GetType()} which is not {nameof(Slice)} value with {nameof(SliceJsonConverter)}");
             }
 
             var buffer = new byte[slice.Size];
@@ -41,7 +41,7 @@ namespace Raven.Server.Json.Converters
             if (!(reader is BlittableJsonReader blittableReader))
             {
                 throw new SerializationException(
-                    $"Try to read {nameof(Slice)} property/field by {reader.GetType()} witch is unsuitable reader. Should use {nameof(BlittableJsonReader)}");
+                    $"Try to read {nameof(Slice)} property/field by {reader.GetType()} which is unsuitable reader. Should use {nameof(BlittableJsonReader)}");
             }
 
             if (blittableReader.Value == null)
