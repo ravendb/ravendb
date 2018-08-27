@@ -2591,6 +2591,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 new JavascriptConversionExtensions.TransparentIdentifierSupport(),
                 JavascriptConversionExtensions.ReservedWordsSupport.Instance,
                 JavascriptConversionExtensions.InvokeSupport.Instance,
+                JavascriptConversionExtensions.ToStringSupport.Instance,
                 JavascriptConversionExtensions.DateTimeSupport.Instance,
                 JavascriptConversionExtensions.NullCoalescingSupport.Instance,
                 JavascriptConversionExtensions.NestedConditionalSupport.Instance,
