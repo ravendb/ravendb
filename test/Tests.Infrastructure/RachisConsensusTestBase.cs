@@ -346,21 +346,21 @@ namespace Tests.Infrastructure
 
         public class CountingStateMachine : RachisStateMachine
         {
-            public long Read(TransactionOperationContext context, string name)
+            public string Read(TransactionOperationContext context, string name)
             {
                 var tree = context.Transaction.InnerTransaction.ReadTree("values");
                 var read = tree.Read(name);
-                if (read == null)
-                    return 0;
-                return read.Reader.ReadLittleEndianInt64();
+                return read?.Reader.ToStringValue();
             }
 
             protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
             {
-                Assert.True(cmd.TryGet("Name", out string name));
-                Assert.True(cmd.TryGet("Value", out int val));
+                Assert.True(cmd.TryGet(nameof(TestCommand.Name), out string name));
+                Assert.True(cmd.TryGet(nameof(TestCommand.Value), out int val));
+
                 var tree = context.Transaction.InnerTransaction.CreateTree("values");
-                tree.Increment(name, val);
+                var current = tree.Read(name)?.Reader.ToStringValue();
+                tree.Add(name, current + val);
             }
 
             protected override RachisVersionValidation InitializeValidator()

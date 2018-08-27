@@ -25,7 +25,6 @@ namespace RachisTests
             var e = SetupServer();
 
             var followers = new[] { b, c, d, e };
-
             foreach (var follower in followers)
             {
                 await a.AddToClusterAsync(follower.Url);
@@ -33,35 +32,22 @@ namespace RachisTests
             }
 
             var leaderSelected = followers.Select(x => x.WaitForState(RachisState.Leader, CancellationToken.None).ContinueWith(_ => x)).ToArray();
-
-            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            for (int i = 0; i < 10; i++)
             {
-                for (int i = 0; i < 10; i++)
-                {
-                    await a.PutAsync(new TestCommand { Name = "test", Value = i });
-                }
+                await a.PutAsync(new TestCommand { Name = "test", Value = i });
             }
-
-
             foreach (var follower in followers)
             {
                 Disconnect(follower.Url, a.Url);
             }
 
             var leader = await await Task.WhenAny(leaderSelected);
-
-
-
-            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            for (int i = 10; i < 20; i++)
             {
-                for (int i = 10; i < 20; i++)
-                {
-                    await leader.PutAsync(new TestCommand { Name = "test", Value = i });
-                }
+                await leader.PutAsync(new TestCommand { Name = "test", Value = i });
             }
 
             followers = followers.Except(new[] { leader }).ToArray();
-
             leaderSelected = followers.Select(x => x.WaitForState(RachisState.Leader, CancellationToken.None).ContinueWith(_ => x)).ToArray();
 
             foreach (var follower in followers)
@@ -70,23 +56,16 @@ namespace RachisTests
             }
 
             leader = await await Task.WhenAny(leaderSelected);
-
-
-
-            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            for (int i = 20; i < 30; i++)
             {
-                for (int i = 20; i < 30; i++)
-                {
-                    await leader.PutAsync(new TestCommand { Name = "test", Value = i });
-                }
+                await leader.PutAsync(new TestCommand { Name = "test", Value = i });
             }
 
-            TransactionOperationContext context;
-            using (leader.ContextPool.AllocateOperationContext(out context))
+            using (leader.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var actual = leader.StateMachine.Read(context, "test");
-                var expected = Enumerable.Range(0, 30).Sum();
+                var expected = string.Join("", Enumerable.Range(0, 30));
                 Assert.Equal(expected, actual);
             }
         }
@@ -123,36 +102,28 @@ namespace RachisTests
             Disconnect(b.Url, a.Url);
             Disconnect(c.Url, a.Url);
 
-
             await Task.WhenAny(bLeader, cLeader);
         }
 
         [Fact]
         public async Task ClusterWithLateJoiningNodeRequiringSnapshot()
         {
-            var expected = 45;
+            var expected = "0123456789";
             var a = SetupServer(true);
 
-            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            for (var i = 0; i < 5; i++)
             {
-                for (var i = 0; i < 5; i++)
-                {
-                    await a.PutAsync(new TestCommand { Name = "test", Value = i });
-                }
+                await a.PutAsync(new TestCommand { Name = "test", Value = i });
             }
 
             var b = SetupServer();
-
             await a.AddToClusterAsync(b.Url);
             await b.WaitForTopology(Leader.TopologyModification.Voter);
             long lastIndex = 0;
-            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            for (var i = 0; i < 5; i++)
             {
-                for (var i = 0; i < 5; i++)
-                {
-                    var (etag, _) = await a.PutAsync(new TestCommand { Name = "test", Value = i + 5 });
-                    lastIndex = etag;
-                }
+                var (etag, _) = await a.PutAsync(new TestCommand { Name = "test", Value = i + 5 });
+                lastIndex = etag;
             }
 
             Assert.True(await b.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex).WaitAsync(15000));
@@ -167,38 +138,27 @@ namespace RachisTests
         [Fact]
         public async Task ClusterWithTwoNodes()
         {
-            var expected = 45;
+            var expected = "0123456789";
             var a = SetupServer(true);
             var b = SetupServer();
 
             await a.AddToClusterAsync(b.Url);
             await b.WaitForTopology(Leader.TopologyModification.Voter);
 
-            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            var tasks = new List<Task>();
+            for (var i = 0; i < 9; i++)
             {
-                var tasks = new List<Task>();
-                for (var i = 0; i < 9; i++)
-                {
-                    tasks.Add(a.PutAsync(new TestCommand { Name = "test", Value = i }));
-                }
+                tasks.Add(a.PutAsync(new TestCommand { Name = "test", Value = i }));
+            }
 
-                var (lastIndex, _) = await a.PutAsync(new TestCommand { Name = "test", Value = 9 });
+            var (lastIndex, _) = await a.PutAsync(new TestCommand { Name = "test", Value = 9 });
+            var waitForCommitIndexChange = b.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
+            Assert.True(await waitForCommitIndexChange.WaitAsync(TimeSpan.FromSeconds(5)));
 
-                foreach (var task in tasks)
-                {
-                    Assert.Equal(TaskStatus.RanToCompletion, task.Status);
-                }
-
-                var waitForCommitIndexChange = b.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, lastIndex);
-
-                Assert.True(await waitForCommitIndexChange.WaitAsync(TimeSpan.FromSeconds(5)));
-
-                TransactionOperationContext context;
-                using (b.ContextPool.AllocateOperationContext(out context))
-                using (context.OpenReadTransaction())
-                {
-                    Assert.Equal(expected, b.StateMachine.Read(context, "test"));
-                }
+            using (b.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                Assert.Equal(expected, b.StateMachine.Read(context, "test"));
             }
         }
 
@@ -207,19 +167,15 @@ namespace RachisTests
         {
             var rachis = SetupServer(true);
 
-            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            for (var i = 0; i < 10; i++)
             {
-                for (var i = 0; i < 10; i++)
-                {
-                    await rachis.PutAsync(new TestCommand { Name = "test", Value = i });
-                }
+                await rachis.PutAsync(new TestCommand { Name = "test", Value = i });
+            }
 
-                TransactionOperationContext context;
-                using (rachis.ContextPool.AllocateOperationContext(out context))
-                using (context.OpenReadTransaction())
-                {
-                    Assert.Equal(45, rachis.StateMachine.Read(context, "test"));
-                }
+            using (rachis.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                Assert.Equal("0123456789", rachis.StateMachine.Read(context, "test"));
             }
         }
     }
