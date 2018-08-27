@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -38,7 +39,7 @@ namespace SlowTests.Issues
                         });
 
                     Assert.Equal("from index 'BookingIndex' as x where x.FullName = $p0 " +
-                                 "select { FullName : x.FullName, StartDate : toDateString(new Date(Date.parse(x.Start)), \"dd.MM.yyyy\") }"
+                                 "select { FullName : x.FullName, StartDate : toStringWithFormat(new Date(Date.parse(x.Start)), \"dd.MM.yyyy\") }"
                             , query.ToString());
 
                     var result = query.Single();
@@ -46,6 +47,196 @@ namespace SlowTests.Issues
                     // Assert
                     Assert.NotNull(result);
                     Assert.Equal("01.01.2018", result.StartDate);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void DateToStringWithInvariantCulture()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var start = DateTime.Parse("2018-01-01T11:11:11");
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.WaitForIndexesAfterSaveChanges(TimeSpan.FromSeconds(2));
+
+                    session.Store(new Booking { FirstName = "Alex", LastName = "Me", Start = start });
+                    session.Store(new Booking { FirstName = "You", LastName = "Me", Start = DateTime.Parse("2017-11-11T10:10:10") });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Booking>()
+                        .Where(x => x.FirstName == "Alex")
+                        .Select(x => new {
+                            StartDate = x.Start.ToString(CultureInfo.InvariantCulture)
+                        });
+
+                    Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
+                                 "select { StartDate : toStringWithFormat(new Date(Date.parse(x.Start)), \"CultureInfo.InvariantCulture\") }"
+                        , query.ToString());
+
+                    var result = query.Single();
+
+                    // Assert
+                    Assert.NotNull(result);
+                    Assert.Equal(start.ToString(CultureInfo.InvariantCulture), result.StartDate);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void DateToStringWithFormatAndCulture()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var start = DateTime.Parse("2018-01-01T11:11:11");
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.WaitForIndexesAfterSaveChanges(TimeSpan.FromSeconds(2));
+
+                    session.Store(new Booking { FirstName = "Alex", LastName = "Me", Start = start });
+                    session.Store(new Booking { FirstName = "You", LastName = "Me", Start = DateTime.Parse("2017-11-11T10:10:10") });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Booking>()
+                        .Where(x => x.FirstName == "Alex")
+                        .Select(x => new {
+                            StartDate = x.Start.ToString("dd.MM.yyyy", CultureInfo.CurrentCulture)
+                        });
+
+                    Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
+                                 "select { StartDate : toStringWithFormat(new Date(Date.parse(x.Start)), \"dd.MM.yyyy\", \"CultureInfo.CurrentCulture\") }"
+                        , query.ToString());
+
+                    var result = query.Single();
+
+                    // Assert
+                    Assert.NotNull(result);
+                    Assert.Equal(start.ToString("dd.MM.yyyy", CultureInfo.CurrentCulture), result.StartDate);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void NumberToStringWithFormat()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var num = 12345000;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.WaitForIndexesAfterSaveChanges(TimeSpan.FromSeconds(2));
+
+                    session.Store(new Booking { FirstName = "Alex", LastName = "Me", Number = num});
+                    session.Store(new Booking { FirstName = "You", LastName = "Me", Number = 20 });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Booking>()
+                        .Where(x => x.FirstName == "Alex")
+                        .Select(x => new {
+                            Number = x.Number.ToString("000")
+                        });
+
+                    Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
+                                 "select { Number : toStringWithFormat(x.Number, \"000\") }"
+                        , query.ToString());
+
+                    var result = query.Single();
+
+                    // Assert
+                    Assert.NotNull(result);
+                    Assert.Equal(num.ToString("000"), result.Number);
+                }
+            }
+        }
+
+        [Fact]
+        public void NumberToStringWithCulture()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var num = 12345000;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.WaitForIndexesAfterSaveChanges(TimeSpan.FromSeconds(2));
+
+                    session.Store(new Booking { FirstName = "Alex", LastName = "Me", Number = num });
+                    session.Store(new Booking { FirstName = "You", LastName = "Me", Number = 20 });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Booking>()
+                        .Where(x => x.FirstName == "Alex")
+                        .Select(x => new {
+                            Number = x.Number.ToString(CultureInfo.InvariantCulture)
+                        });
+
+                    Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
+                                 "select { Number : toStringWithFormat(x.Number, \"CultureInfo.InvariantCulture\") }"
+                        , query.ToString());
+
+                    var result = query.Single();
+
+                    // Assert
+                    Assert.NotNull(result);
+                    Assert.Equal(num.ToString(CultureInfo.InvariantCulture), result.Number);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void NumberToStringWithFormatAndCulture()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var num = 12345000;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.WaitForIndexesAfterSaveChanges(TimeSpan.FromSeconds(2));
+
+                    session.Store(new Booking { FirstName = "Alex", LastName = "Me", Number = num });
+                    session.Store(new Booking { FirstName = "You", LastName = "Me", Number = 20 });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Booking>()
+                        .Where(x => x.FirstName == "Alex")
+                        .Select(x => new {
+                            Number = x.Number.ToString("000", CultureInfo.InvariantCulture)
+                        });
+
+                    Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
+                                 "select { Number : toStringWithFormat(x.Number, \"000\", \"CultureInfo.InvariantCulture\") }"
+                        , query.ToString());
+
+                    var result = query.Single();
+
+                    // Assert
+                    Assert.NotNull(result);
+                    Assert.Equal(num.ToString("000", CultureInfo.InvariantCulture), result.Number);
+
                 }
             }
         }
@@ -56,6 +247,7 @@ namespace SlowTests.Issues
             public string FirstName { get; set; }
             public string LastName { get; set; }
             public DateTime Start { get; set; }
+            public int Number { get; set; }
         }
 
         private class BookingIndex : AbstractIndexCreationTask<Booking>
@@ -80,6 +272,5 @@ namespace SlowTests.Issues
                 Store("FullName", FieldStorage.Yes);
             }
         }
-
     }
 }
