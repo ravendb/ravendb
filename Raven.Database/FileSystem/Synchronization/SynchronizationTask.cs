@@ -465,7 +465,7 @@ namespace Raven.Database.FileSystem.Synchronization
             {
                 lastReplicatedEtagRecord.Seen++;
 
-                if (lastReplicatedEtagRecord.Seen >= 5)
+                if (lastReplicatedEtagRecord.Seen >= 10)
                 {
                     // to prevent replication looping and effectively got stuck when dealing with very old rename tombstones (we didn't touch a renamed file
                     // in the past so a renamed file etag so will be smaller than its related tombstone)
@@ -473,10 +473,12 @@ namespace Raven.Database.FileSystem.Synchronization
                     // let's do it _only_ if we saw the same etag multiple times
 
                     forceIncrementingEtag = true;
-
-                    if (Log.IsDebugEnabled)
-                        Log.Debug("Going to force incrementing last synchronized etag as last source file etag: " + lastReplicatedEtagRecord.Etag + " was already seen " + lastReplicatedEtagRecord.Seen + " times. This should prevent from getting stuck.");
                 }
+            }
+            else
+            {
+                lastReplicatedEtagRecord.Etag = synchronizationInfo.LastSourceFileEtag;
+                lastReplicatedEtagRecord.Seen = 0;
             }
  
             var toSynchronization = GetFilesToSynchronization(synchronizationInfo.LastSourceFileEtag, NumberOfFilesToCheckForSynchronization);
@@ -627,10 +629,11 @@ namespace Raven.Database.FileSystem.Synchronization
             {
                 await destinationSyncClient.IncrementLastETagAsync(storage.Id, FileSystemUrl, maxEtagOfFilteredDoc).ConfigureAwait(false);
 
+                if (forceIncrementingEtag && Log.IsDebugEnabled)
+                    Log.Debug("Forced to increment last synchronized etag (to " + maxEtagOfFilteredDoc + ") as last synchronized file etag: " + lastReplicatedEtagRecord.Etag + " was already seen " + lastReplicatedEtagRecord.Seen + " times. This should prevent from getting stuck. Destination: " + destinationUrl);
+
                 if (forceIncrementingEtag)
-                {
                     lastReplicatedEtagRecord.Seen = 0;
-                }
 
                 return false; // we bumped the last synced etag on a destination server, let it know it need to repeat the operation
             }
