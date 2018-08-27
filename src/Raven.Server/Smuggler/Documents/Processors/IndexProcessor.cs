@@ -236,7 +236,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
             if (string.IsNullOrWhiteSpace(str))
                 return str;
 
-            str = str.Replace("new Raven.Abstractions.Linq.DynamicList", string.Empty);
+            str = str.Replace("new Raven.Abstractions.Linq.DynamicList", "DynamicArray");
             var regex = new Regex(@"([\w_.]+)\.__document_id");
             return regex.Replace(str, "Id($1)");
         }
