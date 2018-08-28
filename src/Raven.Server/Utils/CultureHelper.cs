@@ -5,7 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Raven.Client.Util;
 
 namespace Raven.Server.Utils
@@ -45,5 +47,11 @@ namespace Raven.Server.Utils
                 CultureInfo.CurrentUICulture = oldCurrentUiCulture;
             });
         }
+
+        private static readonly Lazy<Dictionary<string, CultureInfo>> CulturesLazy = new Lazy<Dictionary<string, CultureInfo>>(() => 
+            CultureInfo.GetCultures(CultureTypes.AllCultures).ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase));
+
+        internal static Dictionary<string, CultureInfo> Cultures => CulturesLazy.Value;
+
     }
 }
