@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Jint.Native;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -161,6 +165,11 @@ namespace Raven.Server.Documents.Patch
                     return 1;
                 }
 
+                if (_run.UpdateDocumentCounters)
+                {
+                    modifiedDocument = UpdateCountersInMetadata(context, modifiedDocument, originalDocument);
+                }
+
                 DocumentsStorage.PutOperationResults? putResult = null;
 
                 if (originalDoc == null)
@@ -171,12 +180,14 @@ namespace Raven.Server.Documents.Patch
                     result.Status = PatchStatus.Created;
                 }
                 else if (DocumentCompare.IsEqualTo(originalDoc, modifiedDocument,
-                    tryMergeMetadataConflicts: true) == DocumentCompareResult.NotEqual)
+                    tryMergeMetadataConflicts: true) != DocumentCompareResult.Equal)
                 {
                     Debug.Assert(originalDocument != null);
                     if (_isTest == false || _run.PutOrDeleteCalled)
+                    {
                         putResult = _database.DocumentsStorage.Put(context, originalDocument.Id,
                             originalDocument.ChangeVector, modifiedDocument, null, null, originalDocument.Flags);
+                    }
 
                     result.Status = PatchStatus.Patched;
                 }
@@ -191,6 +202,31 @@ namespace Raven.Server.Documents.Patch
                 PatchResult = result;
                 return 1;
             }
+        }
+
+        private BlittableJsonReaderObject UpdateCountersInMetadata(DocumentsOperationContext context, BlittableJsonReaderObject modifiedDocument, Document originalDocument)
+        {
+            var metadata = modifiedDocument.GetMetadata();
+            if (metadata.Modifications == null)
+                metadata.Modifications = new DynamicJsonValue(metadata);
+
+            var countersFromStorage = context.DocumentDatabase.DocumentsStorage.CountersStorage.GetCountersForDocument(context, _id).ToList();
+            if (countersFromStorage.Count == 0)
+            {
+                metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
+                originalDocument.Flags &= ~DocumentFlags.HasCounters;
+            }
+            else
+            {
+                metadata.Modifications[Constants.Documents.Metadata.Counters] = new DynamicJsonArray(countersFromStorage);
+                originalDocument.Flags |= DocumentFlags.HasCounters;
+            }
+
+            modifiedDocument.Modifications = new DynamicJsonValue(modifiedDocument)
+                {[Constants.Documents.Metadata.Key] = metadata};
+
+            modifiedDocument = context.ReadObject(modifiedDocument, _id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            return modifiedDocument;
         }
 
         public void Dispose()

@@ -116,6 +116,7 @@ namespace Raven.Server.Documents.Patch
             private HashSet<string> _documentIds;
             public bool ReadOnly;
             private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
+            public bool UpdateDocumentCounters;
 
             public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<string> scriptsSource)
             {
@@ -717,16 +718,12 @@ namespace Raven.Server.Documents.Patch
 
                 _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, CollectionName.GetCollectionName(document), name, (long)value);
 
-                _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(_docsCtx, document, id, metadata, new List<CounterOperation>
+                if (metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false ||
+                    counters.BinarySearch(name, StringComparison.OrdinalIgnoreCase) < 0)
                 {
-                    new CounterOperation
-                    {
-                        Type = CounterOperationType.Increment,
-                        CounterName = name,
-                        Delta = (long)value
-                    }
-                });
-               
+                    UpdateDocumentCounters = true;
+                }
+                
                 return JsBoolean.True;
             }
 
@@ -738,6 +735,8 @@ namespace Raven.Server.Documents.Patch
                 {
                     throw new InvalidOperationException("deleteCounter(doc, name) must be called with exactly 2 arguments");
                 }
+
+                UpdateDocumentCounters = true;
 
                 BlittableJsonReaderObject metadata;
                 BlittableJsonReaderObject document;
@@ -767,15 +766,6 @@ namespace Raven.Server.Documents.Patch
                 var name = args[1].AsString();
 
                 _database.DocumentsStorage.CountersStorage.DeleteCounter(_docsCtx, id, CollectionName.GetCollectionName(document), name);
-
-                _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(_docsCtx, document, id, metadata, new List<CounterOperation>
-                {
-                    new CounterOperation
-                    {
-                        Type = CounterOperationType.Delete,
-                        CounterName = name
-                    }
-                });
               
                 return JsBoolean.True;
             }
