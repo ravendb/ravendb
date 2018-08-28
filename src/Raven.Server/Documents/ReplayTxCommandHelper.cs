@@ -209,6 +209,8 @@ namespace Raven.Server.Documents
                     return jsonSerializer.Deserialize<DeleteTombstonesCommandDto>(reader);
                 case nameof(OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand):
                     return jsonSerializer.Deserialize<OutputReduceToCollectionCommandDto>(reader);
+                case nameof(BatchHandler.ClusterTransactionMergedCommand):
+                    return jsonSerializer.Deserialize<ClusterTransactionMergedCommandDto>(reader);
                 case nameof(CountersHandler.ExecuteCounterBatchCommand):
                     return jsonSerializer.Deserialize<ExecuteCounterBatchCommandDto>(reader);
                 default:
@@ -223,6 +225,7 @@ namespace Raven.Server.Documents
             jsonSerializer.Converters.Add(BlittableJsonConverter.Instance);
             jsonSerializer.Converters.Add(LazyStringValueJsonConverter.Instance);
             jsonSerializer.Converters.Add(StreamConverter.Instance);
+            jsonSerializer.Converters.Add(BlittableJsonReaderArrayConverter.Instance);
             return jsonSerializer;
         }
     }

@@ -59,7 +59,7 @@ namespace SlowTests.Server
                 typeof(TransactionOperationsMerger.MergedTransactionCommand),
                 typeof(ExecuteRateLimitedOperations<>),
                 typeof(TransactionsRecordingCommand),
-                //Todo To check if it make sense to changed the accessibility of this type for adding it to the list and if not to find alternative
+                typeof(BatchHandler.TransactionMergedCommand),
                 typeof(AbstractQueryRunner.BulkOperationCommand<>)
             };
 
@@ -84,6 +84,54 @@ namespace SlowTests.Server
             });
         }
 
+        [Fact]
+        public void RecordingClusterTransactionMergedCommand()
+        {
+
+            var recordFilePath = NewDataPath();
+
+            var onlyStored = new User { Name = "Andrea"};
+            var deleted = new User { Name = "Brooke" };
+
+            //Recording
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
+
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    session.Store(onlyStored);
+                    session.Store(deleted);
+                    session.SaveChanges();
+
+                    session.Delete(deleted);
+                    session.SaveChanges();
+                }
+
+                store.Maintenance.Send(new StopTransactionsRecordingOperation());
+            }
+
+            //Replay
+            using (var store = GetDocumentStore())
+            using (var replayStream = new FileStream(recordFilePath, FileMode.Open))
+            {
+                var command = new GetNextOperationIdCommand();
+                store.Commands().Execute(command);
+                store.Maintenance.Send(new ReplayTransactionsRecordingOperation(replayStream, command.Result));
+
+                //Assert
+                using (var session = store.OpenSession())
+                {
+                    var actualUser = session.Load<User>(onlyStored.Id);
+                    Assert.Equal(onlyStored, actualUser, new UserComparer());
+                    deleted = session.Load<User>(deleted.Id);
+                    Assert.Null(deleted);
+                }
+            }
+        }
 
         [Fact]
         public void RecordingExecuteCounterBatchCommand()

@@ -20,8 +20,7 @@ namespace SlowTests.Blittable
     {
         public class Command
         {
-            //Todo To consider if should deal with BlittableJsonReaderArray
-            //        public BlittableJsonReaderArray BlittableArray { get; set; }
+            public BlittableJsonReaderArray BlittableArray { get; set; }
             public BlittableJsonReaderObject BlittableObject { get; set; }
             public LazyStringValue LazyString { get; set; }
 
@@ -34,6 +33,82 @@ namespace SlowTests.Blittable
             }
 
             public int GetId() => _id;
+        }
+
+        [Fact]
+        public void JsonDeserialize_WhenBlittableArrayBlittableObjectAndLazyStringAreNull_ShouldResultInCopy()
+        {
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext readContext))
+            {
+                Command actual;
+                BlittableJsonReaderArray expected;
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext writeContext))
+                using (var writer = new BlittableJsonWriter(writeContext))
+                {
+                    var jsonSerializer = new JsonSerializer
+                    {
+                        ContractResolver = new DefaultRavenContractResolver(),
+                    };
+                    jsonSerializer.Converters.Add(new BlittableJsonReaderArrayConverter());
+                    jsonSerializer.Converters.Add(new LazyStringValueJsonConverter());
+                    jsonSerializer.Converters.Add(new BlittableJsonConverter());
+
+                    var command = new Command();
+                    jsonSerializer.Serialize(writer, command);
+                    writer.FinalizeDocument();
+
+                    var toDeseialize = writer.CreateReader();
+
+                    using (var reader = new BlittableJsonReader(readContext))
+                    {
+                        reader.Init(toDeseialize);
+                        actual = jsonSerializer.Deserialize<Command>(reader);
+                    }
+                }
+
+                Assert.Null(actual.BlittableArray);
+                Assert.Null(actual.BlittableObject);
+                Assert.Null(actual.LazyString);
+            }
+        }
+
+        [Fact]
+        public void JsonDeserialize_WhenHasBlittableJsonReaderArrayProperty_ShouldResultInCopy()
+        {
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext readContext))
+            {
+                Command actual;
+                BlittableJsonReaderArray expected;
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext writeContext))
+                using (var writer = new BlittableJsonWriter(writeContext))
+                {
+                    var data = new { Property = new []{"Value1", "Value2" } };
+                    var readerObject = EntityToBlittable.ConvertCommandToBlittable(data, readContext);
+                    readerObject.TryGet(nameof(data.Property), out expected);
+
+                    var jsonSerializer = new JsonSerializer
+                    {
+                        ContractResolver = new DefaultRavenContractResolver(),
+                    };
+                    jsonSerializer.Converters.Add(new BlittableJsonReaderArrayConverter());
+                    jsonSerializer.Converters.Add(new LazyStringValueJsonConverter());
+                    jsonSerializer.Converters.Add(new BlittableJsonConverter());
+
+                    var command = new Command { BlittableArray = expected };
+                    jsonSerializer.Serialize(writer, command);
+                    writer.FinalizeDocument();
+
+                    var toDeseialize = writer.CreateReader();
+
+                    using (var reader = new BlittableJsonReader(readContext))
+                    {
+                        reader.Init(toDeseialize);
+                        actual = jsonSerializer.Deserialize<Command>(reader);
+                    }
+                }
+
+                Assert.Equal(expected, actual.BlittableArray);
+            }
         }
 
         [Fact]

@@ -171,7 +171,9 @@ namespace Raven.Client.Json
                         Array = (BlittableJsonReaderArray)value
                     };
                     _items.Push(newArray);
-                    SetToken(JsonToken.StartArray);
+
+                    //The value is passed in case the field/property should remains BlittableJsonReaderArray
+                    SetToken(JsonToken.StartArray, value);
                     return true;
                 case BlittableJsonToken.Integer:
                     SetToken(JsonToken.Integer, (long)value);
@@ -358,6 +360,12 @@ namespace Raven.Client.Json
         public void SkipBlittableInside()
         {
             SetToken(JsonToken.EndObject);
+            _items.Pop();
+        }
+
+        public void SkipBlittableArrayInside()
+        {
+            SetToken(JsonToken.EndArray);
             _items.Pop();
         }
     }

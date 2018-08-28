@@ -609,7 +609,10 @@ namespace Raven.Server.Documents.Handlers
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
-                throw new NotImplementedException();
+                return new ClusterTransactionMergedCommandDto
+                {
+                    Batch = _batch
+                };
             }
         }
 
@@ -968,6 +971,17 @@ namespace Raven.Server.Documents.Handlers
             public Index Index;
             public AsyncManualResetEvent.FrozenAwaiter IndexBatchAwaiter;
             public AsyncWaitForIndexing WaitForIndexing;
+        }
+    }
+
+    public class ClusterTransactionMergedCommandDto : TransactionOperationsMerger.IReplayableCommandDto<BatchHandler.ClusterTransactionMergedCommand>
+    {
+        public List<ClusterTransactionCommand.SingleClusterDatabaseCommand> Batch { get; set; }
+
+        public BatchHandler.ClusterTransactionMergedCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            var command = new BatchHandler.ClusterTransactionMergedCommand(database, Batch);
+            return command;
         }
     }
 
