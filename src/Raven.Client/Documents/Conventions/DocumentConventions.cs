@@ -552,7 +552,22 @@ namespace Raven.Client.Documents.Conventions
                 if (directory.Exists == false)
                     throw new InvalidOperationException("Topology cache location directory does not exist. Please create the directory first.");
 
-                _topologyCacheLocation = directory.FullName;
+                var path = directory.FullName;
+
+                try
+                {
+                    // checking write permissions
+                    var fileName = Guid.NewGuid().ToString("N");
+                    var fullPath = Path.Combine(path, fileName);
+                    File.WriteAllText(fullPath, string.Empty);
+                    File.Delete(fullPath);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"You do not have write permissions to topology cache at '{path}'. Please see inner exception for more details.", e);
+                }
+
+                _topologyCacheLocation = path;
             }
         }
 
