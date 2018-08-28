@@ -26,7 +26,7 @@
                         <i class="icon-plus"></i>
                         <span>Add node to group</span>
                     </button>
-                    <div class="dropdown">
+                    <div class="dropdown dropdown-right">
                         <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true"
                                 aria-expanded="true">
                             <i class="icon-settings"></i><span>Settings</span>
@@ -56,7 +56,7 @@
                                     </div>
                                 </div>
                                 <div class="status" data-bind="visible: !$root.inSortableMode()">
-                                    <!-- TODO 
+                                    <!-- TODO
                                     <h5>STATUS</h5>
                                     <div class="btn-group dropdown-right">
                                         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
@@ -72,7 +72,7 @@
 
                             <div class="actions-container" data-bind="visible: !$root.inSortableMode()">
                                 <div class="actions">
-                                    <!-- TODO: 
+                                    <!-- TODO:
                                     <div class="dropdown">
                                         <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                                             <i class="icon-play"></i> <span>Actions</span>
@@ -120,7 +120,7 @@
                         </div>
                     </div>
                 </div>
-                
+
             </div>
         </div>
         <div class="col-sm-12 col-lg-6 flex-vertical">
@@ -171,7 +171,7 @@
                     <div class="col-sm-4">
                         <h5>CONNECTION STATUS</h5>
                         <div><i class="icon-arrow"></i> <span>Connection</span></div>
-                        <div><i class="icon-arrow-dashed"></i> <span>Partial Connection (ETL)</span></div> 
+                        <div><i class="icon-arrow-dashed"></i> <span>Partial Connection (ETL)</span></div>
                         <div><i class="icon-arrow-dashed text-warning"></i> <span>Disabled Connection</span></div>
                         <div><i class="icon-arrow-dashed text-danger"></i> <span>Broken Connection</span></div>
                     </div>
@@ -182,23 +182,21 @@
 </div>
 
 <script type="text/html" id="db-group-settings-template">
-    <div class="row settings-item">
+    <div class="settings-item padding padding-xs">
         <div data-bind="css: {'has-warning': $root.showDynamicDatabaseDistributionWarning()}">
-            <div class="col-xs-offset-1 col-xs-8">
-                <div class="control-label">Allow dynamic database distribution</div>
-            </div>
-            <div class="col-xs-3">
-                <div class="toggle">
-                    <input type="checkbox" class="styled" data-bind="checked: currentDatabaseInfo().dynamicDatabaseDistribution, enable:!$root.showDynamicDatabaseDistributionWarning()">
-                    <label></label>
+            <div class="flex-horizontal">
+                <div class="control-label flex-grow">Allow dynamic database distribution</div>
+                <div class="flex-noshrink">
+                    <div class="toggle">
+                        <input type="checkbox" class="styled" data-bind="checked: currentDatabaseInfo().dynamicDatabaseDistribution, enable:!$root.showDynamicDatabaseDistributionWarning()">
+                        <label></label>
+                    </div>
                 </div>
             </div>
-            <div class="col-xs-offset-1 col-xs-10">
-                <div class="help-block" data-bind="visible: $root.showDynamicDatabaseDistributionWarning">
-                    Your current license doesn't include the dynamic nodes distribution feature.
-                </div>
+            <div class="help-block" data-bind="visible: $root.showDynamicDatabaseDistributionWarning">
+                Your current license doesn't include the dynamic nodes distribution feature.
             </div>
         </div>
     </div>
-    
+
 </script>

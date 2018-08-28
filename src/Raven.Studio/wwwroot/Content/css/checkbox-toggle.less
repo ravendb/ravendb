@@ -93,11 +93,6 @@
     display: flex;
     align-items: center;
 
-    &.input-sm {
-        height: 29px;
-        padding: 0;
-    }
-
     &:hover {
         label:after {
             background-color: @gray-light;
@@ -114,6 +109,7 @@
         margin-bottom: 0;
         font-weight: normal;
         cursor: pointer;
+        min-height: 27px;
 
         &::before {
             display: inline-block;
@@ -201,6 +197,20 @@
 
         &:first-of-type {
             padding-left: 0;
+        }
+    }
+
+    &.input-sm {
+        height: 29px;
+        padding: 0;
+    }
+
+    &.input-xs {
+        height: 16px;
+        padding: 0;
+
+        label {
+            font-size: 11px;
         }
     }
 }
