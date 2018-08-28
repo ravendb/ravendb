@@ -109,6 +109,11 @@ h1 {
     margin-bottom: @grid-gutter-width;
 }
 
+h5 {
+    margin-top:0;
+    margin-bottom: 3px;
+}
+
 h6 {
     text-transform: uppercase;
 }
@@ -328,11 +333,11 @@ a {
 
 .flex-row {
     display: flex;
-    flex-wrap: wrap;
     flex-direction: column;
 
     @media (min-width: @screen-sm) {
         flex-direction: row;
+        flex-wrap: wrap;
     }
 
     .flex-bottom {

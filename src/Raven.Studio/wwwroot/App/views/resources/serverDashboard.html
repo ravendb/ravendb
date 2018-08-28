@@ -239,14 +239,16 @@
         </div>
         <div class="dashboard-item dashboard-storage" data-bind="with: driveUsageSection">
             <div class="panel panel-default">
-                <div class="panel-heading flex-horizontal">
-                    <h3 class="panel-title"><i class="icon-storage"></i><span>STORAGE</span></h3>
-                    <div class="flex-separator"></div>
-                    <div class="toggle toggle-right">
-                        <input id="include-temp" class="styled" type="checkbox" data-bind="checked: includeTemporaryBuffers">
-                        <label for="include-temp" class="properties-label">
-                            Include temporary buffers
-                        </label>
+                <div class="panel-heading">
+                    <div class="flex-horizontal">
+                        <h3 class="panel-title"><i class="icon-storage"></i><span>STORAGE</span></h3>
+                        <div class="flex-separator"></div>
+                        <div class="toggle toggle-right">
+                            <input id="include-temp" class="styled" type="checkbox" data-bind="checked: includeTemporaryBuffers">
+                            <label for="include-temp" class="properties-label">
+                                Include temporary buffers
+                            </label>
+                        </div>
                     </div>
                 </div>
                 <div class="panel-body flex-vertical">
