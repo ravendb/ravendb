@@ -682,11 +682,9 @@ namespace Raven.Server.Web.Authentication
             var collection = new X509Certificate2Collection();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                if (ServerStore.CurrentRachisState == RachisState.Passive)
-                {
-                    collection.Import(Server.Certificate.Certificate.Export(X509ContentType.Cert), (string)null, X509KeyStorageFlags.MachineKeySet);
-                }
-                else
+                collection.Import(Server.Certificate.Certificate.Export(X509ContentType.Cert), (string)null, X509KeyStorageFlags.MachineKeySet);
+
+                if (ServerStore.CurrentRachisState != RachisState.Passive)
                 {
                     using (context.OpenReadTransaction())
                     {
@@ -697,15 +695,13 @@ namespace Raven.Server.Web.Authentication
                             var clusterNodes = allItems.Select(item => JsonDeserializationServer.CertificateDefinition(item.Value))
                                 .Where(certificateDef => certificateDef.SecurityClearance == SecurityClearance.ClusterNode)
                                 .ToList();
-
-                            if (clusterNodes.Count == 0)
-                                throw new InvalidOperationException(
-                                    "Cannot get ClusterNode certificates, there should be at least one but it doesn't exist. This shouldn't happen!");
-
+                            
                             foreach (var cert in clusterNodes)
                             {
                                 var x509Certificate2 = new X509Certificate2(Convert.FromBase64String(cert.Certificate), (string)null, X509KeyStorageFlags.MachineKeySet);
-                                collection.Import(x509Certificate2.Export(X509ContentType.Cert), (string)null, X509KeyStorageFlags.MachineKeySet);
+
+                                if (collection.Contains(x509Certificate2) == false)
+                                    collection.Import(x509Certificate2.Export(X509ContentType.Cert), (string)null, X509KeyStorageFlags.MachineKeySet);
                             }
                         }
                         finally
