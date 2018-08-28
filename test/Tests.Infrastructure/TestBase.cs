@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -14,6 +15,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Raven.Client.Http;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
@@ -357,10 +359,51 @@ namespace FastTests
                 if (deletePrevious)
                     IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
 
-                var server = new RavenServer(configuration);
-                server.Initialize();
+                if (PlatformDetails.Is32Bits == false)
+                {                    
+                    var server = new RavenServer(configuration);
+                    server.Initialize();
 
-                return server;
+                    return server;
+                }
+                else
+                {
+                    RavenServer server;
+                    var retries = 5;
+                    Win32Exception lastException = null;
+                    while (true)
+                    {
+                        if (retries == 0)
+                        {
+                            if (lastException != null)
+                                throw new OutOfMemoryException("Failed to allocate needed memory map, perhaps out of 32-bit memory space?", lastException);
+                            
+                            throw new OutOfMemoryException("Failed to allocate needed memory map, perhaps out of 32-bit memory space?");
+                        }
+
+                        try
+                        {
+                            server = new RavenServer(configuration);
+                            server.Initialize();
+                        }
+                        catch (Win32Exception e)
+                        {
+                            Console.WriteLine("------------------------------");
+                            Console.WriteLine(e);
+                            Console.WriteLine("------------------------------");
+                            retries--;
+                            GC.Collect();
+                            GC.WaitForFullGCComplete(3000);
+                            Thread.Sleep(1000);
+                            lastException = e;
+                            continue;
+                        }                     
+
+                        break;
+                    }
+
+                    return server;
+                }
             }
         }
 
