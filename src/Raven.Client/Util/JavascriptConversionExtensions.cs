@@ -1267,10 +1267,11 @@ namespace Raven.Client.Util
                     {
                         writer.Write(", ");
 
-                        if (arg is MemberExpression me &&
-                            me.Type == typeof(CultureInfo))
+                        if (arg.Type == typeof(CultureInfo) &&
+                            LinqPathProvider.GetValueFromExpressionWithoutConversion(arg, out var obj) &&
+                            obj is CultureInfo culture)
                         {
-                            writer.Write($"\"{me}\"");
+                            writer.Write($"\"{culture.Name}\"");
                         }
                         else
                         {

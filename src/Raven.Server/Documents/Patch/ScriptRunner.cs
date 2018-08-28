@@ -117,6 +117,8 @@ namespace Raven.Server.Documents.Patch
             public bool ReadOnly;
             private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
 
+            private static Dictionary<string, CultureInfo> _cultureInfoDict;
+
             public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<string> scriptsSource)
             {
                 _database = database;
@@ -867,37 +869,19 @@ namespace Raven.Server.Documents.Patch
 
             private static void GetFormatOrCulture(string arg, ref string format, ref CultureInfo cultureInfo)
             {
-                var split = arg.Split(".");
-                if (split.Length < 2 ||
-                    split[0] != nameof(CultureInfo))
+                if (_cultureInfoDict == null)
                 {
-                    format = arg;
+                    _cultureInfoDict = CultureInfo.GetCultures(CultureTypes.AllCultures)
+                        .ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase);
+                }
+
+                if (_cultureInfoDict.TryGetValue(arg, out var culture))
+                {
+                    cultureInfo = culture;
                 }
                 else
                 {
-                    switch (split[1])
-                    {
-                        case "CurrentCulture":
-                            cultureInfo = CultureInfo.CurrentCulture;
-                            break;
-                        case "InvariantCulture":
-                            cultureInfo = CultureInfo.InvariantCulture;
-                            break;
-                        case "CurrentUICulture":
-                            cultureInfo = CultureInfo.CurrentUICulture;
-                            break;
-                        case "DefaultThreadCurrentCulture":
-                            cultureInfo = CultureInfo.DefaultThreadCurrentCulture;
-                            break;
-                        case "DefaultThreadCurrentUICulture":
-                            cultureInfo = CultureInfo.DefaultThreadCurrentUICulture;
-                            break;
-                        case "InstalledUICulture":
-                            cultureInfo = CultureInfo.InstalledUICulture;
-                            break;
-                        default:
-                            throw new InvalidOperationException($"'toStringWithFormat' with CultureInfo `{arg}` is not supported. ");
-                    }
+                    format = arg;
                 }
             }
 
