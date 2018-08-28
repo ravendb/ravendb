@@ -81,12 +81,14 @@
                  </div>
             </div>
         </div>
-        <button class="btn btn-sm btn-info btn-checkable" data-bind="click: toggleTail, css: { active: tailEnabled }">
-            <i class="icon-logs"></i> <span>Monitoring (tail -f)</span>
-        </button>
-        <button class="btn btn-sm btn-danger" data-bind="click: clear">
-            <i class="icon-cancel"></i><span>Clear</span>
-        </button>
+        <div class="btn-group">
+            <button class="btn btn-sm btn-info btn-checkable" data-bind="click: toggleTail, css: { active: tailEnabled }">
+                <i class="icon-logs"></i> <span>Monitoring (tail -f)</span>
+            </button>
+            <button class="btn btn-sm btn-danger" data-bind="click: clear">
+                <i class="icon-cancel"></i><span>Clear</span>
+            </button>
+        </div>
     </div>
     <div class="log-list flex-grow scroll" data-bind="event: { mousedown: _.partial(updateMouseStatus, true), mouseup: _.partial(updateMouseStatus, false) }">
         <list-view params="controller: listController, emptyTemplate: 'empty-admin-logs-template', itemHeightProvider: itemHeightProvider, itemHtmlProvider: itemHtmlProvider"></list-view>

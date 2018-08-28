@@ -30,7 +30,7 @@
             <div class="scroll flex-grow" data-bind="foreach: topology().nodes">
                 <div class="panel panel-state">
                     <div data-bind="attr: { 'data-state-text': createStateObservable($root.topology), class: 'state ' + createStateClassObservable($root.topology)() } "></div>
-                    <div class="padding flex-horizontal">
+                    <div class="padding flex-horizontal flex-wrap">
                         <div class="info-container flex-horizontal">                  
                                 <div class="node flex-grow">
                                     <h5>TAG</h5>
@@ -55,8 +55,7 @@
                                     </h3>
                                 </div>                            
                         </div>
-                        <div class="flex-separator"></div>
-                        <div class="actions-container">
+                        <div class="actions-container flex-grow">
                             <div class="actions">
                                 <button class="btn btn-default" title="Promote watcher to become member/promotable" 
                                         data-bind="click: _.partial($parent.promote, $data), css: { 'btn-spinner': _.includes($root.spinners.promote(), tag()) }, 
@@ -106,7 +105,7 @@
                     </div>
                     <div class="panel-addon">
                         <div class="padding">
-                            <div class="flex-horizontal info-container">
+                            <div class="flex-horizontal flex-wrap">
                                 <div class="address">
                                     <h5>ADDRESS</h5>
                                     <a target="_blank" data-bind="attr: { href: serverUrl }"><span data-bind="text: serverUrl"></span></a>
@@ -131,9 +130,11 @@
                                     <h5><i class="icon-server"></i> &nbsp; VERSION</h5>
                                     <strong class="text-lighter" data-toggle="tooltip" title="Server version installed on this node" data-bind="text: nodeServerVersion" data-animation="true"></strong>
                                 </div>
-                                <div class="serverVersion" data-bind="if: osFullName">
-                                    <h5><i class="icon-about"></i> &nbsp; OS</h5>
-                                    <strong class="text-lighter" data-toggle="tooltip" data-html="true" data-bind="text: osFullName, attr: { 'title': osTitle }" data-animation="true"></strong>
+                                <div class="os text-center" data-bind="if: osFullName">
+                                    <h5>OS</h5>
+                                    <strong class="text-lighter" data-toggle="tooltip" data-html="true" data-bind="attr: { 'title': osTitle }" data-animation="true">
+                                        <i class="icon-windows"></i>
+                                    </strong>
                                 </div>
                             </div> 
                         </div>
