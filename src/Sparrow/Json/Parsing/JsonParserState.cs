@@ -57,9 +57,11 @@ namespace Sparrow.Json.Parsing
                 // PERF: We use the values directly because it is 5x faster than iterating over a constant array.
                 // 8  => '\b' => 0000 1000
                 // 9  => '\t' => 0000 1001
-                // 13 => '\r' => 0000 1101
                 // 10 => '\n' => 0000 1010
+
                 // 12 => '\f' => 0000 1100
+                // 13 => '\r' => 0000 1101
+
                 // 34 => '\\' => 0010 0010
                 // 92 =>  '"' => 0101 1100
 
@@ -69,7 +71,7 @@ namespace Sparrow.Json.Parsing
                     continue;
                 }
 
-                if (value < 32 || value >= 127 && value <= 159)
+                if (value < 32)
                 {
                     controlCount++;
                 }

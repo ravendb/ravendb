@@ -60,6 +60,11 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             {
                 var bytes = new byte[r.Next(1, 2000)];
                 r.NextBytes(bytes);
+                for (int j = 0; j < bytes.Length; j++)
+                {
+                    if (bytes[j] < 32)
+                        bytes[j] += 32;
+                }
 
                 var expected = Encoding.UTF8.GetString(bytes);
 
