@@ -113,8 +113,6 @@ namespace Raven.Server.Documents.Patch
             public bool ReadOnly;
             private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
 
-            private static Dictionary<string, CultureInfo> _cultureInfoDict;
-
             public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<string> scriptsSource)
             {
                 _database = database;
@@ -637,13 +635,13 @@ namespace Raven.Server.Documents.Patch
 
             private static JsValue ToStringWithFormat(JsValue self, JsValue[] args)
             {
-                if (args.Length < 2 || args.Length > 3)
+                if (args.Length < 1 || args.Length > 3)
                 {
                     throw new InvalidOperationException($"No overload for method 'toStringWithFormat' takes {args.Length} arguments. " +
-                                                        "Supported overloads are : toStringWithFormat(object, format), toStringWithFormat(object, culture), toStringWithFormat(object, format, culture).");
+                                                        "Supported overloads are : toStringWithFormat(object), toStringWithFormat(object, format), toStringWithFormat(object, culture), toStringWithFormat(object, format, culture).");
                 }
 
-                CultureInfo cultureInfo = null;
+                var cultureInfo = CultureInfo.InvariantCulture;
                 string format = null;
 
                 for (var i = 1; i < args.Length; i++)
@@ -653,18 +651,21 @@ namespace Raven.Server.Documents.Patch
                         throw new InvalidOperationException("toStringWithFormat : 'format' and 'culture' must be string arguments");
                     }
 
-                    GetFormatOrCulture(args[i].AsString(), ref format, ref cultureInfo);
+                    var arg = args[i].AsString();
+                    if (CultureHelper.Cultures.TryGetValue(arg, out var culture))
+                    {
+                        cultureInfo = culture;
+                        continue;
+                    }
+
+                    format = arg;
                 }
 
                 if (args[0].IsDate())
                 {
                     var date = args[0].AsDate().ToDateTime();
-                    if (format != null && cultureInfo != null)
-                    {
-                        return date.ToString(format, cultureInfo);
-                    }
                     return format != null ? 
-                        date.ToString(format) : 
+                        date.ToString(format, cultureInfo) : 
                         date.ToString(cultureInfo);
 
                 }
@@ -672,12 +673,8 @@ namespace Raven.Server.Documents.Patch
                 if (args[0].IsNumber())
                 {
                     var num = args[0].AsNumber();
-                    if (format != null && cultureInfo != null)
-                    {
-                        return num.ToString(format, cultureInfo);
-                    }
                     return format != null ?
-                        num.ToString(format) :
+                        num.ToString(format, cultureInfo) :
                         num.ToString(cultureInfo);
                 }
 
@@ -688,24 +685,6 @@ namespace Raven.Server.Documents.Patch
 
                 var boolean = args[0].AsBoolean();
                 return boolean.ToString(cultureInfo);
-            }
-
-            private static void GetFormatOrCulture(string arg, ref string format, ref CultureInfo cultureInfo)
-            {
-                if (_cultureInfoDict == null)
-                {
-                    _cultureInfoDict = CultureInfo.GetCultures(CultureTypes.AllCultures)
-                        .ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase);
-                }
-
-                if (_cultureInfoDict.TryGetValue(arg, out var culture))
-                {
-                    cultureInfo = culture;
-                }
-                else
-                {
-                    format = arg;
-                }
             }
 
             private static JsValue StartsWith(JsValue self, JsValue[] args)

@@ -77,7 +77,7 @@ namespace SlowTests.Issues
                         });
 
                     Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
-                                 "select { StartDate : toStringWithFormat(new Date(Date.parse(x.Start)), \"\") }"
+                                 "select { StartDate : toStringWithFormat(new Date(Date.parse(x.Start))) }"
                         , query.ToString());
 
                     var result = query.Single();
@@ -130,7 +130,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void DateToStringWithFormatAndCulture()
+        public void DateToStringWithFormatAndCurrentCulture()
         {
             using (var store = GetDocumentStore())
             {
@@ -162,6 +162,45 @@ namespace SlowTests.Issues
                     // Assert
                     Assert.NotNull(result);
                     Assert.Equal(start.ToString("dd.MM.yyyy", CultureInfo.CurrentCulture), result.StartDate);
+
+                }
+            }
+        }
+
+
+        [Fact]
+        public void DateToStringWithFormatAndInvariantCulture()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var start = DateTime.Parse("2018-01-01T11:11:11");
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.WaitForIndexesAfterSaveChanges(TimeSpan.FromSeconds(2));
+
+                    session.Store(new Booking { FirstName = "Alex", LastName = "Me", Start = start });
+                    session.Store(new Booking { FirstName = "You", LastName = "Me", Start = DateTime.Parse("2017-11-11T10:10:10") });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Booking>()
+                        .Where(x => x.FirstName == "Alex")
+                        .Select(x => new {
+                            StartDate = x.Start.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)
+                        });
+
+                    Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
+                                 "select { StartDate : toStringWithFormat(new Date(Date.parse(x.Start)), \"dd.MM.yyyy\") }"
+                        , query.ToString());
+
+                    var result = query.Single();
+
+                    // Assert
+                    Assert.NotNull(result);
+                    Assert.Equal(start.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture), result.StartDate);
 
                 }
             }
@@ -229,7 +268,7 @@ namespace SlowTests.Issues
                         });
 
                     Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
-                                 "select { Number : toStringWithFormat(x.Number, \"\") }"
+                                 "select { Number : toStringWithFormat(x.Number) }"
                         , query.ToString());
 
                     var result = query.Single();

@@ -1208,16 +1208,19 @@ namespace Raven.Client.Util
 
                     foreach (var arg in mce.Arguments)
                     {
-                        writer.Write(", ");
 
                         if (arg.Type == typeof(CultureInfo) &&
                             LinqPathProvider.GetValueFromExpressionWithoutConversion(arg, out var obj) &&
                             obj is CultureInfo culture)
                         {
+                            if (culture.Name == string.Empty)
+                                continue;
+                            writer.Write(", ");
                             writer.Write($"\"{culture.Name}\"");
                         }
                         else
                         {
+                            writer.Write(", ");
                             context.Visitor.Visit(arg);
                         }
                     }
