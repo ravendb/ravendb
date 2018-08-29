@@ -85,7 +85,7 @@ namespace Voron.Util.Settings
                 result.StartsWith(@"\\?\") == false)
                 result = @"\\?\" + result;
 
-            if (result.EndsWith(@"\") || result.EndsWith("/"))
+            if (result.Length > 1 && (result.EndsWith(@"\") || result.EndsWith("/")))
                 result = result.TrimEnd('\\', '/');
 
             if (PlatformDetails.RunningOnPosix)
