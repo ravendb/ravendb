@@ -40,12 +40,12 @@ class migrateDatabaseCommand<T> extends commandBase {
     
     static getDatabaseNames(db: database, dto: Raven.Server.Smuggler.Migration.MigrationConfiguration) {
         dto.InputConfiguration.Command = "databases";
-        return new migrateDatabaseCommand<{ Databases: Array<string> }>(db, dto, true);
+        return new migrateDatabaseCommand<{ Databases: Array<string> }>(db, dto, false);
     }
     
     static getCollections(db: database, dto: Raven.Server.Smuggler.Migration.MigrationConfiguration) {
         dto.InputConfiguration.Command = "collections";
-        return new migrateDatabaseCommand<{ Collections: Array<string>; HasGridFS: boolean; }>(db, dto, true);
+        return new migrateDatabaseCommand<{ Collections: Array<string>; HasGridFS: boolean; }>(db, dto, false);
     }
 }
 
