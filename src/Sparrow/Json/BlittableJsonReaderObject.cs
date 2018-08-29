@@ -907,9 +907,7 @@ NotFound:
                         case '\t':
                             break;
                         default:
-                            if(escChar >= 32)
-                                throw new InvalidDataException("String not valid, invalid escape character: " + escChar);
-                            break;
+                            throw new InvalidDataException("String not valid, invalid escape character: " + escChar);
                     }
                     totalEscCharLen += escCharOffsetLen;
                     prevEscCharOffset = escCharOffset + 1;
