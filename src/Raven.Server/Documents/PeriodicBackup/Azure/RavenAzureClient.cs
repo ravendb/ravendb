@@ -335,7 +335,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             var client = GetClient();
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, requestMessage.Headers);
 
-            var response = await client.SendAsync(requestMessage, CancellationToken);
+            var response = await client.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, CancellationToken);
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return null;
 
