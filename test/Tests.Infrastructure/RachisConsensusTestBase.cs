@@ -135,6 +135,7 @@ namespace Tests.Infrastructure
             var configuration = new RavenConfiguration(caller, ResourceType.Server);
             configuration.Initialize();
             configuration.Core.RunInMemory = true;
+            configuration.Core.PublicServerUrl = new UriSetting($"http://localhost:{((IPEndPoint)tcpListener.LocalEndpoint).Port}");
             configuration.Cluster.ElectionTimeout = new TimeSetting(electionTimeout, TimeUnit.Milliseconds);
             var serverStore = new RavenServer(configuration).ServerStore;
             serverStore.Initialize();
