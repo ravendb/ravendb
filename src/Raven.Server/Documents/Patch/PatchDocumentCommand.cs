@@ -165,9 +165,26 @@ namespace Raven.Server.Documents.Patch
                     return 1;
                 }
 
-                if (_run.UpdateDocumentCounters)
+                if (_run.UpdatedDocumentCounterIds != null)
                 {
-                    modifiedDocument = UpdateCountersInMetadata(context, modifiedDocument, originalDocument);
+                    foreach (var docId in _run.UpdatedDocumentCounterIds)
+                    {
+                        if (docId.Equals(_id, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Debug.Assert(originalDocument != null);
+                            modifiedDocument = UpdateCountersInMetadata(context, modifiedDocument, docId, ref originalDocument.Flags);
+                        }
+                        else
+                        {
+                            var docToUpdate = _database.DocumentsStorage.Get(context, docId);
+                            var docBlittableToUpdate = UpdateCountersInMetadata(context, docToUpdate.Data, docId, ref docToUpdate.Flags);
+                            if (_isTest == false)
+                            {
+                                _database.DocumentsStorage.Put(context, docId,
+                                    docToUpdate.ChangeVector, docBlittableToUpdate, null, null, docToUpdate.Flags);
+                            }
+                        }
+                    }
                 }
 
                 DocumentsStorage.PutOperationResults? putResult = null;
@@ -204,28 +221,31 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        private BlittableJsonReaderObject UpdateCountersInMetadata(DocumentsOperationContext context, BlittableJsonReaderObject modifiedDocument, Document originalDocument)
+        private static BlittableJsonReaderObject UpdateCountersInMetadata(
+            DocumentsOperationContext context,
+            BlittableJsonReaderObject modifiedDocument,
+            string id, ref DocumentFlags flags)
         {
             var metadata = modifiedDocument.GetMetadata();
             if (metadata.Modifications == null)
                 metadata.Modifications = new DynamicJsonValue(metadata);
 
-            var countersFromStorage = context.DocumentDatabase.DocumentsStorage.CountersStorage.GetCountersForDocument(context, _id).ToList();
+            var countersFromStorage = context.DocumentDatabase.DocumentsStorage.CountersStorage.GetCountersForDocument(context, id).ToList();
             if (countersFromStorage.Count == 0)
             {
                 metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
-                originalDocument.Flags &= ~DocumentFlags.HasCounters;
+                flags &= ~DocumentFlags.HasCounters;
             }
             else
             {
                 metadata.Modifications[Constants.Documents.Metadata.Counters] = new DynamicJsonArray(countersFromStorage);
-                originalDocument.Flags |= DocumentFlags.HasCounters;
+                flags |= DocumentFlags.HasCounters;
             }
 
             modifiedDocument.Modifications = new DynamicJsonValue(modifiedDocument)
                 {[Constants.Documents.Metadata.Key] = metadata};
 
-            modifiedDocument = context.ReadObject(modifiedDocument, _id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            modifiedDocument = context.ReadObject(modifiedDocument, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             return modifiedDocument;
         }
 
