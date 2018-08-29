@@ -1,4 +1,3 @@
-using System;
 using System.Runtime.CompilerServices;
 using Sparrow.Collections;
 
@@ -7,7 +6,6 @@ namespace Sparrow.Json.Parsing
     public unsafe class JsonParserState
     {
         public const int EscapePositionItemSize = 5;
-        public const int ControlCharacterItemSize = 5;
         public byte* StringBuffer;
         public int StringSize;
         public int? CompressedSize;
@@ -16,7 +14,7 @@ namespace Sparrow.Json.Parsing
         public JsonParserTokenContinuation Continuation;
 
         public readonly FastList<int> EscapePositions = new FastList<int>();
-
+       
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteVariableSizeInt(ref byte* dest, int value)
         {
@@ -48,11 +46,10 @@ namespace Sparrow.Json.Parsing
         public static int FindEscapePositionsMaxSize(string str)
         {
             var count = 0;
-            var controlCount = 0;
-
+            
             for (int i = 0; i < str.Length; i++)
             {
-                char value = str[i];
+                byte value = (byte)str[i];
 
                 // PERF: We use the values directly because it is 5x faster than iterating over a constant array.
                 // 8  => '\b' => 0000 1000
@@ -64,34 +61,23 @@ namespace Sparrow.Json.Parsing
                 // 92 =>  '"' => 0101 1100
 
                 if (value == 92 || value == 34 || (value >= 8 && value <= 13 && value != 11))
-                {
                     count++;
-                    continue;
-                }
-
-                if (value < 32 || value >= 127 && value <= 159)
-                {
-                    controlCount++;
-                }
-
             }
 
             // we take 5 because that is the max number of bytes for variable size int
             // plus 1 for the actual number of positions
 
             // NOTE: this is used by FindEscapePositionsIn, change only if you also modify FindEscapePositionsIn
-            return (count + 1) * EscapePositionItemSize + controlCount * ControlCharacterItemSize;
+            return (count + 1) * EscapePositionItemSize; 
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void FindEscapePositionsIn(byte* str, ref int len, int previousComputedMaxSize)
+        public void FindEscapePositionsIn(byte* str, int len, int previousComputedMaxSize)
         {
-            FindEscapePositionsIn(EscapePositions, str, ref len, previousComputedMaxSize);
+            FindEscapePositionsIn(EscapePositions, str, len, previousComputedMaxSize);
         }
 
-        public static void FindEscapePositionsIn(FastList<int> buffer, byte* str, ref int len, int previousComputedMaxSize)
+        public static void FindEscapePositionsIn(FastList<int> buffer, byte* str, int len, int previousComputedMaxSize)
         {
-            var originalLen = len;
             buffer.Clear();
             if (previousComputedMaxSize == EscapePositionItemSize)
             {
@@ -118,40 +104,8 @@ namespace Sparrow.Json.Parsing
                 {
                     buffer.Add(i - lastEscape);
                     lastEscape = i + 1;
-                    continue;
-                }
-
-                //Control character ascii values
-                if (value < 32)
-                {
-                    if (len + ControlCharacterItemSize > originalLen + previousComputedMaxSize)
-                        ThrowInvalidSizeForEscapeControlChars(previousComputedMaxSize);
-
-                    // move rest of buffer 
-                    // write \u0000
-                    // update size
-                    var from = str + i + 1;
-                    var to = str + i + 1 + ControlCharacterItemSize;
-                    var sizeToCopy = len - i -1;
-                    //here we only shifting by 5 bytes since we are going to override the byte at the current position.
-                    Memory.Copy(to, from, sizeToCopy);
-                   
-                    str[i] = (byte)'\\';
-                    str[i+1] = (byte)'u';
-                    fixed (byte* controlString = AbstractBlittableJsonTextWriter.ControlCodeEscapes[value])
-                    {
-                        Memory.Copy(str + i + 2, controlString, 4);
-                    }
-                    //The original string already had one byte so we only added 5.
-                    len += ControlCharacterItemSize;
-                    i += 6;
                 }
             }
-        }
-
-        private static void ThrowInvalidSizeForEscapeControlChars(int previousComputedMaxSize)
-        {
-            throw new InvalidOperationException($"The previousComputedMaxSize: {previousComputedMaxSize} is too small to support the required escape positions. Did you not call FindMaxNumberOfEscapePositions?");
         }
 
         public int WriteEscapePositionsTo(byte* buffer)
