@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -116,7 +117,7 @@ namespace Raven.Server.Documents.Patch
             private HashSet<string> _documentIds;
             public bool ReadOnly;
             private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
-            public bool UpdateDocumentCounters;
+            public HashSet<string> UpdatedDocumentCounterIds;
 
             public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<string> scriptsSource)
             {
@@ -684,30 +685,32 @@ namespace Raven.Server.Documents.Patch
             
                 var signature = args.Length == 2 ? "incrementCounter(doc, name)" : "incrementCounter(doc, name, value)";
 
-                BlittableJsonReaderObject metadata;
-                BlittableJsonReaderObject document;
-                string id;
+                BlittableJsonReaderObject metadata = null;
+                BlittableJsonReaderObject docBlittable = null;
+                string id = null;
 
                 if (args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance doc)
                 {
                     id = doc.DocumentId;
-                    document = doc.Blittable;
-                    metadata = document.GetMetadata();
+                    docBlittable = doc.Blittable;
+                    metadata = docBlittable.GetMetadata();
                 }
                 else if (args[0].IsString())
                 {
                     id = args[0].AsString();
-                    document = _database.DocumentsStorage.Get(_docsCtx, id).Data;
-                    metadata = document.GetMetadata();
+                    docBlittable = _database.DocumentsStorage.Get(_docsCtx, id).Data;
+                    metadata = docBlittable.GetMetadata();
                 }
                 else
                 {
-                    throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself");
+                    ThrowInvalidDocumentArgsType(signature);
                 }
+
+                Debug.Assert(id != null && metadata != null && docBlittable != null);
 
                 if (args[1].IsString() == false)
                 {
-                    throw new InvalidOperationException($"{signature}: 'name' must be a string argument");
+                    ThrowInvalidCounterName(signature);
                 }
                 var name = args[1].AsString();
 
@@ -715,19 +718,37 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length == 3)
                 {
                     if (args[2].IsNumber() == false)
-                        throw new InvalidOperationException("incrementCounter(doc, name, value): 'value' must be a number argument");
+                        ThrowInvalidCounterValue();
                     value = args[2].AsNumber();
                 }
 
-                _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, CollectionName.GetCollectionName(document), name, (long)value);
+                _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name, (long)value);
 
                 if (metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false ||
                     counters.BinarySearch(name, StringComparison.OrdinalIgnoreCase) < 0)
                 {
-                    UpdateDocumentCounters = true;
+                    if (UpdatedDocumentCounterIds == null)
+                        UpdatedDocumentCounterIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    UpdatedDocumentCounterIds.Add(id);
                 }
                 
                 return JsBoolean.True;
+            }
+
+            private static void ThrowInvalidCounterValue()
+            {
+                throw new InvalidOperationException("incrementCounter(doc, name, value): 'value' must be a number argument");
+            }
+
+            private static void ThrowInvalidCounterName(string signature)
+            {
+                throw new InvalidOperationException($"{signature}: 'name' must be a string argument");
+            }
+
+            private static void ThrowInvalidDocumentArgsType(string signature)
+            {
+                throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself");
             }
 
             private JsValue DeleteCounter(JsValue self, JsValue[] args)
@@ -739,9 +760,6 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException("deleteCounter(doc, name) must be called with exactly 2 arguments");
                 }
 
-                UpdateDocumentCounters = true;
-
-                BlittableJsonReaderObject metadata;
                 BlittableJsonReaderObject document;
 
                 string id;
@@ -749,13 +767,11 @@ namespace Raven.Server.Documents.Patch
                 {
                     id = doc.DocumentId;
                     document = doc.Blittable;
-                    metadata = document.GetMetadata();
                 }
                 else if (args[0].IsString())
                 {
                     id = args[0].AsString();
                     document = _database.DocumentsStorage.Get(_docsCtx, id).Data;
-                    metadata = document.GetMetadata();
                 }
                 else
                 {
@@ -766,8 +782,13 @@ namespace Raven.Server.Documents.Patch
                 {
                     throw new InvalidOperationException("deleteCounter(doc, name): 'name' must be a string argument");
                 }
-                var name = args[1].AsString();
 
+                if (UpdatedDocumentCounterIds == null)
+                    UpdatedDocumentCounterIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                UpdatedDocumentCounterIds.Add(id);
+
+                var name = args[1].AsString();
                 _database.DocumentsStorage.CountersStorage.DeleteCounter(_docsCtx, id, CollectionName.GetCollectionName(document), name);
               
                 return JsBoolean.True;
