@@ -17,6 +17,7 @@ using Jint.Runtime.Interop;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Extensions;
 using Raven.Server.Config;
@@ -679,8 +680,7 @@ namespace Raven.Server.Documents.Patch
 
                 if (args.Length < 2 || args.Length > 3)
                 {
-                    throw new InvalidOperationException($"There is no overload of method 'incrementCounter' that takes {args.Length} arguments." +
-                                                        "Supported overloads are : 'incrementCounter(doc, name)' , 'incrementCounter(doc, name, value)'");
+                    ThrowInvalidIncrementCounterArgs(args);
                 }
             
                 var signature = args.Length == 2 ? "incrementCounter(doc, name)" : "incrementCounter(doc, name, value)";
@@ -698,7 +698,14 @@ namespace Raven.Server.Documents.Patch
                 else if (args[0].IsString())
                 {
                     id = args[0].AsString();
-                    docBlittable = _database.DocumentsStorage.Get(_docsCtx, id).Data;
+                    var document = _database.DocumentsStorage.Get(_docsCtx, id);
+                    if (document == null)
+                    {
+                        ThrowMissingDocument(id);
+                        Debug.Assert(false); // never hit
+                    }
+
+                    docBlittable = document.Data;
                     metadata = docBlittable.GetMetadata();
                 }
                 else
@@ -736,6 +743,12 @@ namespace Raven.Server.Documents.Patch
                 return JsBoolean.True;
             }
 
+            private static void ThrowInvalidIncrementCounterArgs(JsValue[] args)
+            {
+                throw new InvalidOperationException($"There is no overload of method 'incrementCounter' that takes {args.Length} arguments." +
+                                                    "Supported overloads are : 'incrementCounter(doc, name)' , 'incrementCounter(doc, name, value)'");
+            }
+
             private static void ThrowInvalidCounterValue()
             {
                 throw new InvalidOperationException("incrementCounter(doc, name, value): 'value' must be a number argument");
@@ -751,36 +764,50 @@ namespace Raven.Server.Documents.Patch
                 throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself");
             }
 
+            private static void ThrowMissingDocument(string id)
+            {
+                throw new DocumentDoesNotExistException(id, "Cannot operate on counters of a missing document.");
+            }
+
             private JsValue DeleteCounter(JsValue self, JsValue[] args)
             {
                 AssertValidDatabaseContext();
 
                 if (args.Length !=2)
                 {
-                    throw new InvalidOperationException("deleteCounter(doc, name) must be called with exactly 2 arguments");
+                    ThrowInvalidDeleteCounterArgs();
                 }
 
-                BlittableJsonReaderObject document;
+                string id = null;
+                BlittableJsonReaderObject docBlittable = null;
 
-                string id;
                 if (args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance doc)
                 {
                     id = doc.DocumentId;
-                    document = doc.Blittable;
+                    docBlittable = doc.Blittable;
                 }
                 else if (args[0].IsString())
                 {
                     id = args[0].AsString();
-                    document = _database.DocumentsStorage.Get(_docsCtx, id).Data;
+                    var document = _database.DocumentsStorage.Get(_docsCtx, id);
+                    if (document == null)
+                    {
+                        ThrowMissingDocument(id);
+                        Debug.Assert(false); // never hit
+                    }
+
+                    docBlittable = document.Data;
                 }
                 else
                 {
-                    throw new InvalidOperationException("deleteCounter(doc, name): 'doc' must be a string argument (the document id) or the actual document instance itself");
+                    ThrowInvalidDeleteCounterDocumentArg();
                 }
+
+                Debug.Assert(id != null && docBlittable != null);
 
                 if (args[1].IsString() == false)
                 {
-                    throw new InvalidOperationException("deleteCounter(doc, name): 'name' must be a string argument");
+                    ThrowDeleteCounterNameArg();
                 }
 
                 if (UpdatedDocumentCounterIds == null)
@@ -789,22 +816,37 @@ namespace Raven.Server.Documents.Patch
                 UpdatedDocumentCounterIds.Add(id);
 
                 var name = args[1].AsString();
-                _database.DocumentsStorage.CountersStorage.DeleteCounter(_docsCtx, id, CollectionName.GetCollectionName(document), name);
+                _database.DocumentsStorage.CountersStorage.DeleteCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name);
               
                 return JsBoolean.True;
             }
 
-            private JsValue ThrowOnLoadDocument(JsValue self, JsValue[] args)
+            private static void ThrowDeleteCounterNameArg()
+            {
+                throw new InvalidOperationException("deleteCounter(doc, name): 'name' must be a string argument");
+            }
+
+            private static void ThrowInvalidDeleteCounterDocumentArg()
+            {
+                throw new InvalidOperationException("deleteCounter(doc, name): 'doc' must be a string argument (the document id) or the actual document instance itself");
+            }
+
+            private static void ThrowInvalidDeleteCounterArgs()
+            {
+                throw new InvalidOperationException("deleteCounter(doc, name) must be called with exactly 2 arguments");
+            }
+
+            private static JsValue ThrowOnLoadDocument(JsValue self, JsValue[] args)
             {
                 throw new MissingMethodException("The method LoadDocument was renamed to 'load'");
             }
 
-            private JsValue ThrowOnPutDocument(JsValue self, JsValue[] args)
+            private static JsValue ThrowOnPutDocument(JsValue self, JsValue[] args)
             {
                 throw new MissingMethodException("The method PutDocument was renamed to 'put'");
             }
 
-            private JsValue ThrowOnDeleteDocument(JsValue self, JsValue[] args)
+            private static JsValue ThrowOnDeleteDocument(JsValue self, JsValue[] args)
             {
                 throw new MissingMethodException("The method DeleteDocument was renamed to 'del'");
             }

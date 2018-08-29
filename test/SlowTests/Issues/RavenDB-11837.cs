@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions.Documents;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -142,6 +144,42 @@ namespace SlowTests.Issues
                     Assert.Equal(1000, counters["likes"]);
                     Assert.Equal(6000, counters["downloads"]);
                 }
+            }
+        }
+
+        [Fact]
+        public void ThrowIfCounterDoesntExist()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var testDoc1 = new TestDoc
+                {
+                    Name = "Aviv"
+                };
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(testDoc1);
+                    session.SaveChanges();
+                }
+
+                Assert.Throws<DocumentDoesNotExistException>(() =>
+                {
+                    store.Operations
+                        .Send(new PatchOperation(testDoc1.Id, null, new PatchRequest
+                        {
+                            Script = @" incrementCounter('stam-id', 'dislikes', 100)"
+                        }));
+                });
+
+                Assert.Throws<DocumentDoesNotExistException>(() =>
+                {
+                    store.Operations
+                        .Send(new PatchOperation(testDoc1.Id, null, new PatchRequest
+                        {
+                            Script = @" deleteCounter('stam-id', 'dislikes')"
+                        }));
+                });
             }
         }
 
