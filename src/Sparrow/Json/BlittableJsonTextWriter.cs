@@ -96,7 +96,6 @@ namespace Sparrow.Json
         public static readonly byte[] FalseBuffer = { (byte)'f', (byte)'a', (byte)'l', (byte)'s', (byte)'e', };
 
         private static readonly byte[] EscapeCharacters;
-        public static readonly byte[][] ControlCodeEscapes;
 
         private int _pos;
         private readonly byte* _buffer;
@@ -106,18 +105,8 @@ namespace Sparrow.Json
 
         static AbstractBlittableJsonTextWriter()
         {
-            ControlCodeEscapes = new byte[32][];
-
-            for (int i = 0; i < 32; i++)
-            {
-                ControlCodeEscapes[i] = Encodings.Utf8.GetBytes(i.ToString("X4"));
-            }
-
             EscapeCharacters = new byte[256];
-            for (int i = 0; i < 32; i++)
-                EscapeCharacters[i] = 0;
-
-            for (int i = 20; i < EscapeCharacters.Length; i++)
+            for (int i = 0; i < EscapeCharacters.Length; i++)
                 EscapeCharacters[i] = 255;
 
             EscapeCharacters[(byte)'\b'] = (byte)'b';
@@ -314,7 +303,8 @@ namespace Sparrow.Json
                 var b = *(strBuffer++);
 
                 int auxPos = _pos;
-                WriteEscapeCharacter(buffer, b, ref auxPos);
+                buffer[auxPos++] = (byte)'\\';
+                buffer[auxPos++] = GetEscapeCharacter(b);
                 _pos = auxPos;
             }
 
@@ -339,7 +329,9 @@ namespace Sparrow.Json
                 size -= bytesToSkip + 1 /*for the escaped char we skip*/;
                 var b = *(strBuffer++);
 
-                WriteEscapeCharacter(_buffer, b, ref _pos);
+                EnsureBuffer(2);
+                _buffer[_pos++] = (byte)'\\';
+                _buffer[_pos++] = GetEscapeCharacter(b);
             }
 
             // write remaining (or full string) to the buffer in one shot
@@ -350,28 +342,12 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void WriteEscapeCharacter(byte* buffer, byte b, ref int pos)
+        private byte GetEscapeCharacter(byte b)
         {
             byte r = EscapeCharacters[b];
-            if(r == 0)
-            {
-                EnsureBuffer(6);
-                buffer[pos++] = (byte)'\\';
-                buffer[pos++] = (byte)'u';
-                fixed (byte* esc = ControlCodeEscapes[r])
-                    Memory.Copy(buffer + pos, esc, 4);
-                pos += 4;
-                return;
-            }
-            else if (r != 255)
-            {
-                EnsureBuffer(2);
-                buffer[pos++] = (byte)'\\';
-                buffer[pos++] = b;
-                return;
-            }
-
-            ThrowInvalidEscapeCharacter(b);
+            if (r == 255)
+                ThrowInvalidEscapeCharacter(b);
+            return r;
         }
 
         private void ThrowInvalidEscapeCharacter(byte b)
@@ -410,7 +386,8 @@ namespace Sparrow.Json
                     var b = *(strBuffer++);
 
                     var auxPos = _pos;
-                    WriteEscapeCharacter(_buffer, b, ref auxPos);
+                    _buffer[auxPos++] = (byte)'\\';
+                    _buffer[auxPos++] = GetEscapeCharacter(b);
                     _pos = auxPos;
                 }
 
@@ -444,7 +421,9 @@ WriteLargeCompressedString:
                 size -= bytesToSkip + 1 /*for the escaped char we skip*/;
                 var b = *(strBuffer++);
 
-                WriteEscapeCharacter(_buffer, b, ref _pos);
+                EnsureBuffer(2);
+                _buffer[_pos++] = (byte)'\\';
+                _buffer[_pos++] = GetEscapeCharacter(b);
             }
 
             // write remaining (or full string) to the buffer in one shot

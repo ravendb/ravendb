@@ -792,8 +792,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                         var escapePositionsMaxSize = JsonParserState.FindEscapePositionsMaxSize(lsvString);
                         var lsv = context.AllocateStringValue(null,b,lsvStringBytes.Length);
                         var escapePositions = new FastList<int>();
-                        var len = lsvStringBytes.Length;
-                        JsonParserState.FindEscapePositionsIn(escapePositions, b, ref len, escapePositionsMaxSize);
+                        JsonParserState.FindEscapePositionsIn(escapePositions, b, lsvStringBytes.Length, escapePositionsMaxSize);
                         lsv.EscapePositions = escapePositions.ToArray();
 
                         builder.WritePropertyName("LSVString");
