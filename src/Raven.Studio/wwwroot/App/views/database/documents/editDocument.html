@@ -114,16 +114,16 @@
                     <div data-bind="visible: !$root.isCreatingNewDocument()">
                         <dt>Change Vector:</dt>
                         <dd>
-                            <span class="toggle" data-placement="bottom" data-toggle="tooltip" data-html="true" data-animation="true"
+                            <span data-placement="bottom" data-toggle="tooltip" data-html="true" data-animation="true"
                                   data-bind="attr: { 'data-original-title': $root.changeVectorHtml() }">
-                                    <div data-bind="foreach: $root.changeVector">
+                                    <span data-bind="foreach: $root.changeVector">
                                         <span class="badge badge-default" data-bind="text: shortFormat"></span>
-                                    </div>
+                                    </span>
                              </span>
                         </dd>
                         <dt>Modified:</dt>
                         <dd>
-                            <span class="toggle" data-placement="bottom" data-toggle="tooltip" data-html="true" data-animation="true"
+                            <span data-placement="bottom" data-toggle="tooltip" data-html="true" data-animation="true"
                                   data-bind="attr: { 'data-original-title': '<h4>Last Modified Time</h4>' + lastModifiedFullDate() }">
                                 <span data-bind="text: lastModifiedInterval"></span>
                             </span>
@@ -131,7 +131,7 @@
                     </div>
                     <dt>Size:</dt>
                     <dd>
-                        <span class="toggle" data-placement="bottom" data-toggle="tooltip" data-html="true" data-animation="true"
+                        <span data-placement="bottom" data-toggle="tooltip" data-html="true" data-animation="true"
                              data-bind="attr: { 'data-original-title': $root.documentSizeHtml() }">
                             <span data-bind="text: $root.computedDocumentSize()"></span> KB
                         </span>
