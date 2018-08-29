@@ -86,7 +86,7 @@ class certificateModel {
     private initValidation() {
         this.name.extend({
             required: {
-                onlyIf: () => this.mode() !== "editExisting"
+                onlyIf: () => this.mode() !== "replace"
             }
         });
         
@@ -114,7 +114,6 @@ class certificateModel {
     
     toReplaceCertificateDto() {
         return {
-            Name: this.name(),
             Certificate: this.certificateAsBase64(),
             Password: this.certificatePassphrase(),
         }
