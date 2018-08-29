@@ -223,7 +223,7 @@
                             </small>
                         </div>
                         <div class="flex-form">
-                            <div class="form-group" data-bind="validationElement: name">
+                            <div class="form-group" data-bind="validationElement: name, visible: mode() !== 'replace'">
                                 <label class="control-label">
                                     Name
                                 </label>
