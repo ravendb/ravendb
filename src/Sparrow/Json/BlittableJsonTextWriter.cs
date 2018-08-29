@@ -117,7 +117,7 @@ namespace Sparrow.Json
             for (int i = 0; i < 32; i++)
                 EscapeCharacters[i] = 0;
 
-            for (int i = 32; i < EscapeCharacters.Length; i++)
+            for (int i = 20; i < EscapeCharacters.Length; i++)
                 EscapeCharacters[i] = 255;
 
             EscapeCharacters[(byte)'\b'] = (byte)'b';
@@ -363,12 +363,11 @@ namespace Sparrow.Json
                 pos += 4;
                 return;
             }
-
-            if (r != 255)
+            else if (r != 255)
             {
                 EnsureBuffer(2);
                 buffer[pos++] = (byte)'\\';
-                buffer[pos++] = EscapeCharacters[b];
+                buffer[pos++] = b;
                 return;
             }
 
