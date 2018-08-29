@@ -188,9 +188,20 @@
 
     .address, .cores, .memory, .serverVersion, .os{
         margin-top: 0;
-        line-height: 13px;
+        line-height: 18px;
         margin-right: @grid-gutter-width/2;
         white-space: nowrap;
+    }
+    
+    .serverVersion {
+        max-width: 150px;
+        flex-grow: 0;
+        
+        &, & > strong {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
     }
 
     .destination-item {
