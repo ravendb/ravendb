@@ -128,12 +128,12 @@
                                 </div>
                                 <div class="serverVersion" data-bind="if: nodeServerVersion">
                                     <h5><i class="icon-server"></i> &nbsp; VERSION</h5>
-                                    <strong class="text-lighter" data-toggle="tooltip" title="Server version installed on this node" data-bind="text: nodeServerVersion" data-animation="true"></strong>
+                                    <strong class="text-lighter" data-toggle="tooltip" data-bind="text: nodeServerVersion, attr: { title: 'Server version installed on this node: ' + nodeServerVersion() }" data-animation="true"></strong>
                                 </div>
                                 <div class="os text-center" data-bind="if: osFullName">
                                     <h5>OS</h5>
                                     <strong class="text-lighter" data-toggle="tooltip" data-html="true" data-bind="attr: { 'title': osTitle }" data-animation="true">
-                                        <i class="icon-windows"></i>
+                                        <i data-bind="attr: { class: osIcon }"></i>
                                     </strong>
                                 </div>
                             </div> 
