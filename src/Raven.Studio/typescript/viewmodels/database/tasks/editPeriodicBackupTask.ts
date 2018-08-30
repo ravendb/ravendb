@@ -7,6 +7,7 @@ import getPeriodicBackupConfigurationCommand = require("commands/database/tasks/
 import getPeriodicBackupConfigCommand = require("commands/database/tasks/getPeriodicBackupConfigCommand");
 import testPeriodicBackupCredentialsCommand = require("commands/database/tasks/testPeriodicBackupCredentialsCommand");
 import popoverUtils = require("common/popoverUtils");
+import eventsCollector = require("common/eventsCollector");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 
@@ -199,6 +200,8 @@ class editPeriodicBackupTask extends viewModelBase {
         const dto = this.configuration().toDto();
         dto.LocalSettings.FolderPath = (this.serverConfiguration().LocalRootPath || "") + dto.LocalSettings.FolderPath;
 
+        eventsCollector.default.reportEvent("periodic-backup", "save");
+        
         new savePeriodicBackupConfigurationCommand(this.activeDatabase(), dto)
             .execute()
             .done(() => {

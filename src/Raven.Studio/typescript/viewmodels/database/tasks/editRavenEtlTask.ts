@@ -384,6 +384,8 @@ class editRavenEtlTask extends viewModelBase {
 
         // 5. All is well, Save Raven Etl task
         savingNewStringAction.done(()=> {
+            eventsCollector.default.reportEvent("raven-etl", "save");
+            
             const scriptsToReset = editedEtl.transformationScripts().filter(x => x.resetScript()).map(x => x.name());
 
             const dto = editedEtl.toDto();

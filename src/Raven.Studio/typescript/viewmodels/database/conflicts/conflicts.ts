@@ -126,7 +126,7 @@ class conflicts extends viewModelBase {
             });
     }
 
-    // id requsted in url might not be available in first chunk
+    // id requested in url might not be available in first chunk
     // watch for conflicts until we find item to highlight
     private syncSelection(items: Array<replicationConflictListItemDto>) {
         const alreadyHasSelection = this.gridController().getSelectedItems().length;

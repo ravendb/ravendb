@@ -26,6 +26,7 @@ import changeSubscription = require("common/changeSubscription");
 import databasesManager = require("common/shell/databasesManager");
 import generalUtils = require("common/generalUtils");
 import popoverUtils = require("common/popoverUtils");
+import eventsCollector = require("common/eventsCollector");
 
 class databases extends viewModelBase {
 
@@ -468,6 +469,8 @@ class databases extends viewModelBase {
         const enableIndexing = db.indexingDisabled();
         const message = enableIndexing ? "Enable" : "Disable";
 
+        eventsCollector.default.reportEvent("databases", "toggle-indexing");
+
         this.confirmationMessage("Are you sure?", message + " indexing?")
             .done(result => {
                 if (result.can) {
@@ -485,6 +488,8 @@ class databases extends viewModelBase {
     }
     
     compactDatabase(db: databaseInfo) {
+        eventsCollector.default.reportEvent("databases", "compact");
+        
         this.confirmationMessage("Are you sure?", "Do you want to compact '" + db.name + "'?", ["No", "Yes, compact"])
             .done(result => {
                 if (result.can) {
@@ -510,6 +515,8 @@ class databases extends viewModelBase {
     }
 
     togglePauseDatabaseIndexing(db: databaseInfo) {
+        eventsCollector.default.reportEvent("databases", "pause-indexing");
+        
         const pauseIndexing = db.indexingPaused();
         const message = pauseIndexing ? "Resume" : "Pause";
 
@@ -532,11 +539,15 @@ class databases extends viewModelBase {
     }
     
     newDatabaseFromBackup() {
+        eventsCollector.default.reportEvent("databases", "new-from-backup");
+        
         const createDbView = new createDatabase("restore");
         app.showBootstrapDialog(createDbView);
     }
     
     newDatabaseFromLegacyDatafiles() {
+        eventsCollector.default.reportEvent("databases", "new-from-legacy");
+        
         const createDbView = new createDatabase("legacyMigration");
         app.showBootstrapDialog(createDbView);
     }

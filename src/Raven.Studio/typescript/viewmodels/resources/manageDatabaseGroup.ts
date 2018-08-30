@@ -129,7 +129,7 @@ class manageDatabaseGroup extends viewModelBase {
 
     enableNodesSort() {
         this.inSortableMode(true);
-        
+
         const list = $(".nodes-list .not-deleted-nodes")[0];
 
         this.sortable = new Sortable(list,
