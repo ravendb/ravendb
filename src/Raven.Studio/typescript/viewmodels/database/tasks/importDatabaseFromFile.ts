@@ -78,9 +78,12 @@ class importDatabaseFromFile extends viewModelBase {
                 delete args.TransformScript;
             }
             const json = JSON.stringify(args);
+            const usingWindows = navigator.platform.startsWith("Win");
 
-            const curl = "curl" + (navigator.platform.startsWith("Win") ? ".exe" : "");
-            return curl + " -F 'importOptions=" + json.replace(/"/g, '\\"') + "' -F 'file=@.\\Dump of Database.ravendbdump' " +
+            const fileName = this.importedFileName() || "Dump of Database.ravendbdump";
+            
+            const curl = "curl" + ( usingWindows ? ".exe" : "");
+            return curl + " -F 'importOptions=" + json.replace(/"/g, '\\"') + "' -F 'file=@.\\" + fileName + "' " +
                 appUrl.forServer() + appUrl.forDatabaseQuery(db) + endpoints.databases.smuggler.smugglerImport;
         });
 
