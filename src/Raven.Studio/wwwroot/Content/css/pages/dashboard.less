@@ -10,14 +10,14 @@
 @dashboard-reduce-color: #d83731;
 
 #dashboard-container {
-    
+
     .disabled {
         a {
             cursor: not-allowed;
             opacity: 0.5;
         }
     }
-    
+
     .tooltip-inner {
         max-width: 255px;
         white-space: nowrap;
@@ -245,9 +245,18 @@
     }
 
     #storageChart {
-        circle.border {
-            stroke: solid 1px #39434f;
-            fill: none;
+        .arc {
+            path {
+                transition: fill .2s cubic-bezier(0.5, 0, 1, 0.5), stroke .1s ease;
+            }
+
+            &:hover, &.active {
+                path {
+                    fill: @gray-lighter;
+                    stroke-width: .5px;
+                    stroke: #FFF;
+                }
+            }
         }
     }
 
