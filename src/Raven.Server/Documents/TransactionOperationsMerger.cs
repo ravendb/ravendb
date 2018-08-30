@@ -2,18 +2,21 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Server.Exceptions;
+using Newtonsoft.Json;
+using Raven.Client.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Debugging;
-using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 using static Sparrow.DatabasePerformanceMetrics;
@@ -26,6 +29,7 @@ namespace Raven.Server.Documents
     /// </summary>
     public class TransactionOperationsMerger : IDisposable
     {
+
         private readonly DocumentDatabase _parent;
         private readonly CancellationToken _shutdown;
         private bool _runTransactions = true;
@@ -65,9 +69,35 @@ namespace Raven.Server.Documents
             _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => MergeOperationThreadProc(), null, TransactionMergerThreadName);
         }
 
-        public abstract class MergedTransactionCommand
+        public interface IRecordableCommand
         {
-            public abstract int Execute(DocumentsOperationContext context);
+            IReplayableCommandDto<MergedTransactionCommand> ToDto(JsonOperationContext context);
+        }
+
+        public interface IReplayableCommandDto<out T> where T : MergedTransactionCommand
+        {
+            T ToCommand(DocumentsOperationContext context, DocumentDatabase database);
+        }
+
+        public abstract class MergedTransactionCommand : IRecordableCommand
+        {
+            protected abstract int ExecuteCmd(DocumentsOperationContext context);
+
+            internal int ExecuteDirectly(DocumentsOperationContext context)
+            {
+                return ExecuteCmd(context);
+            }
+
+            public virtual int Execute(DocumentsOperationContext context, RecordingState recordingState)
+            {
+                recordingState?.Record(context, this);
+
+                return ExecuteCmd(context);
+            }
+
+            public abstract IReplayableCommandDto<MergedTransactionCommand> ToDto(JsonOperationContext context);
+
+            [JsonIgnore]
             public readonly TaskCompletionSource<object> TaskCompletionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             public Exception Exception;
 
@@ -81,9 +111,9 @@ namespace Raven.Server.Documents
         public async Task Enqueue(MergedTransactionCommand cmd)
         {
             _edi?.Throw();
-
             _operations.Enqueue(cmd);
             _waitHandle.Set();
+
 
             if (_concurrentOperations.TryAddCount() == false)
                 ThrowTxMergerWasDisposed();
@@ -110,6 +140,157 @@ namespace Raven.Server.Documents
             throw new ObjectDisposedException("Transaction Merger");
         }
 
+        public abstract class RecordingState : IDisposable
+        {
+            public abstract void Record(DocumentsOperationContext context, MergedTransactionCommand cmd);
+
+            internal abstract void Record(DocumentsOperationContext context, TxInstruction tx, bool doRecord = true);
+
+            public abstract void Prepare(ref RecordingState state);
+
+            private static BlittableJsonReaderObject SerializeRecordingCommandDetails(
+                JsonOperationContext context,
+                RecordingDetails commandDetails)
+            {
+                using (var writer = new BlittableJsonWriter(context))
+                {
+                    var jsonSerializer = ReplayTxCommandHelper.GetJsonSerializer();
+
+                    jsonSerializer.Serialize(writer, commandDetails);
+                    writer.FinalizeDocument();
+
+                    return writer.CreateReader();
+                }
+            }
+
+            protected class EnabledRecordingState : RecordingState
+            {
+                private readonly TransactionOperationsMerger _txOpMerger;
+                private int _isDisposed = 0;
+
+                public EnabledRecordingState(TransactionOperationsMerger txOpMerger)
+                {
+                    _txOpMerger = txOpMerger;
+                }
+
+                public override void Record(DocumentsOperationContext context, MergedTransactionCommand operation)
+                {
+                    var obj = new RecordingCommandDetails(operation.GetType().Name)
+                    {
+                        Command = operation.ToDto(context)
+                    };
+
+                    Record(obj, context);
+                }
+
+                internal override void Record(DocumentsOperationContext ctx, TxInstruction tx, bool doRecord = true)
+                {
+                    if (doRecord == false)
+                    {
+                        return;
+                    }
+
+                    var commandDetails = new RecordingDetails(tx.ToString());
+
+                    Record(commandDetails, ctx);
+                }
+
+                private void Record(RecordingDetails commandDetails, JsonOperationContext context)
+                {
+                    using (var commandDetailsReader = SerializeRecordingCommandDetails(context, commandDetails))
+                    using (var writer = new BlittableJsonTextWriter(context, _txOpMerger._recording.Stream))
+                    {
+                        writer.WriteComma();
+                        context.Write(writer, commandDetailsReader);
+                    }
+                }
+
+                public override void Prepare(ref RecordingState state)
+                {
+                    if (IsShutdown == false)
+                        return;
+
+                    state = null;
+                    Dispose();
+
+                    _txOpMerger._recording.Stream?.Dispose();
+                    _txOpMerger._recording.Stream = null;
+                }
+
+                public override void Dispose()
+                {
+                    if (1 == Interlocked.CompareExchange(ref _isDisposed, 1, 0))
+                    {
+                        return;
+                    }
+
+                    using (_txOpMerger._parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    {
+                        using (var writer = new BlittableJsonTextWriter(ctx, _txOpMerger._recording.Stream))
+                        {
+                            writer.WriteEndArray();
+                        }
+                    }
+                }
+            }
+
+            public class BeforeEnabledRecordingState : RecordingState
+            {
+                private readonly TransactionOperationsMerger _txOpMerger;
+
+                public BeforeEnabledRecordingState(TransactionOperationsMerger txOpMerger)
+                {
+                    _txOpMerger = txOpMerger;
+                }
+
+                public override void Record(DocumentsOperationContext context, MergedTransactionCommand cmd)
+                {
+
+                }
+
+                internal override void Record(DocumentsOperationContext context, TxInstruction tx, bool doRecord = true)
+                {
+
+                }
+
+                public override void Prepare(ref RecordingState state)
+                {
+                    if (IsShutdown)
+                    {
+                        state = null;
+                        return;
+                    }
+
+                    using (_txOpMerger._parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (var writer = new BlittableJsonTextWriter(context, _txOpMerger._recording.Stream))
+                    {
+                        writer.WriteStartArray();
+
+                        var commandDetails = new StartRecordingDetails();
+                        var commandDetailsReader = SerializeRecordingCommandDetails(context, commandDetails);
+
+                        context.Write(writer, commandDetailsReader);
+                    }
+
+                    state = new EnabledRecordingState(_txOpMerger);
+                }
+
+                public override void Dispose()
+                {
+
+                }
+            }
+
+            protected bool IsShutdown { private set; get; }
+
+            public void Shutdown()
+            {
+                IsShutdown = true;
+            }
+
+            public abstract void Dispose();
+        }
+
         private void MergeOperationThreadProc()
         {
             try
@@ -133,6 +314,8 @@ namespace Raven.Server.Documents
                 {
                     while (_runTransactions)
                     {
+                        _recording.State?.Prepare(ref _recording.State);
+
                         if (_operations.IsEmpty)
                         {
                             using (var generalMeter = GeneralWaitPerformanceMetrics.MeterPerformanceRate())
@@ -284,6 +467,7 @@ namespace Raven.Server.Documents
                 {
                     try
                     {
+                        _recording.State?.Record(context, TxInstruction.BeginTx);
                         tx = context.OpenWriteTransaction();
                     }
                     catch (Exception e)
@@ -299,7 +483,11 @@ namespace Raven.Server.Documents
                         }
                         finally
                         {
-                            tx?.Dispose();
+                            if (tx != null)
+                            {
+                                _recording.State?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
+                                tx.Dispose();
+                            }
                         }
                     }
                     PendingOperations result;
@@ -326,7 +514,11 @@ namespace Raven.Server.Documents
                         }
 
                         // need to dispose here since we are going to open new tx for each operation
-                        tx?.Dispose();
+                        if (tx != null)
+                        {
+                            _recording.State?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
+                            tx.Dispose();
+                        }
 
                         NotifyTransactionFailureAndRerunIndependently(pendingOps, e);
                         return;
@@ -338,8 +530,12 @@ namespace Raven.Server.Documents
                             try
                             {
                                 tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
+
+                                _recording.State?.Record(context, TxInstruction.Commit);
                                 tx.Commit();
+
                                 SlowWriteNotification.Notify(stats, _parent);
+                                _recording.State?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
                                 tx.Dispose();
                             }
                             catch (Exception e)
@@ -365,11 +561,18 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                tx?.Dispose();
+                if (tx != null)
+                {
+                    using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        _recording.State?.Record(context, TxInstruction.DisposeTx, tx.Disposed == false);
+                    }
+                    tx.Dispose();
+                }
             }
         }
 
-        private static void UpdateGlobalReplicationInfoBeforeCommit(DocumentsOperationContext context)
+        internal static void UpdateGlobalReplicationInfoBeforeCommit(DocumentsOperationContext context)
         {
             if (string.IsNullOrEmpty(context.LastDatabaseChangeVector) == false)
             {
@@ -416,6 +619,8 @@ namespace Raven.Server.Documents
                     try
                     {
                         previous.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out commitStats);
+
+                        _recording.State?.Record(context, TxInstruction.BeginAsyncCommitAndStartNewTransaction);
                         context.Transaction = previous.BeginAsyncCommitAndStartNewTransaction();
                     }
                     catch (Exception e)
@@ -431,7 +636,7 @@ namespace Raven.Server.Documents
                             try
                             {
                                 //already throwing, attempt to complete previous tx
-                                CompletePreviousTransaction(previous, commitStats, ref previousPendingOps, throwOnError: false);
+                                CompletePreviousTransaction(context, previous, commitStats, ref previousPendingOps, throwOnError: false);
                             }
                             finally
                             {
@@ -462,7 +667,7 @@ namespace Raven.Server.Documents
                                 transactionMeter.Dispose();
                             }
                             calledCompletePreviousTx = true;
-                            CompletePreviousTransaction(previous, commitStats, ref previousPendingOps, throwOnError: true);
+                            CompletePreviousTransaction(context, previous, commitStats, ref previousPendingOps, throwOnError: true);
                         }
                         catch (Exception e)
                         {
@@ -478,7 +683,9 @@ namespace Raven.Server.Documents
                             {
                                 if (calledCompletePreviousTx == false)
                                 {
-                                    CompletePreviousTransaction(previous,
+                                    CompletePreviousTransaction(
+                                        context,
+                                        previous,
                                         commitStats,
                                         ref previousPendingOps,
                                         // if this previous threw, it won't throw again
@@ -492,6 +699,8 @@ namespace Raven.Server.Documents
                             NotifyTransactionFailureAndRerunIndependently(currentPendingOps, e);
                             return;
                         }
+
+                        _recording.State?.Record(context, TxInstruction.DisposePrevTx, previous.Disposed == false);
                         previous.Dispose();
 
                         switch (result)
@@ -500,8 +709,13 @@ namespace Raven.Server.Documents
                                 try
                                 {
                                     context.Transaction.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
+
+                                    _recording.State?.Record(context, TxInstruction.Commit);
                                     context.Transaction.Commit();
+
                                     SlowWriteNotification.Notify(stats, _parent);
+
+                                    _recording.State?.Record(context, TxInstruction.DisposeTx, context.Transaction.Disposed == false);
                                     context.Transaction.Dispose();
                                 }
                                 catch (Exception e)
@@ -526,17 +740,23 @@ namespace Raven.Server.Documents
                     }
                     finally
                     {
-                        context.Transaction?.Dispose();
+                        if (context.Transaction != null)
+                        {
+                            _recording.State?.Record(context, TxInstruction.DisposeTx, context.Transaction.Disposed == false);
+                            context.Transaction.Dispose();
+                        }
                     }
                 }
             }
             finally
             {
+                _recording.State?.Record(context, TxInstruction.DisposeTx, previous.Disposed == false);
                 previous.Dispose();
             }
         }
 
         private void CompletePreviousTransaction(
+            DocumentsOperationContext context,
             RavenTransaction previous,
             CommitStats commitStats,
             ref List<MergedTransactionCommand> previousPendingOps,
@@ -544,6 +764,7 @@ namespace Raven.Server.Documents
         {
             try
             {
+                _recording.State?.Record(context, TxInstruction.EndAsyncCommit);
                 previous.EndAsyncCommit();
 
                 //not sure about this 'if'
@@ -599,7 +820,8 @@ namespace Raven.Server.Documents
 
                 pendingOps.Add(op);
                 meter.IncrementCounter(1);
-                meter.IncrementCommands(op.Execute(context));
+
+                meter.IncrementCommands(op.Execute(context, _recording.State));
 
                 var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
                 var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
@@ -781,11 +1003,17 @@ namespace Raven.Server.Documents
                         {
                             using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                             {
+                                _recording.State?.Record(context, TxInstruction.BeginTx);
                                 using (var tx = context.OpenWriteTransaction())
                                 {
+
                                     op.RetryOnError = false;
-                                    op.Execute(context);
+
+                                    op.Execute(context, _recording.State);
+
                                     tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
+
+                                    _recording.State?.Record(context, TxInstruction.Commit);
                                     tx.Commit();
                                     SlowWriteNotification.Notify(stats, _parent);
                                 }
@@ -794,7 +1022,7 @@ namespace Raven.Server.Documents
                         }
                         catch (Exception e)
                         {
-                            if(alreadyRetried == false && op.RetryOnError)
+                            if (alreadyRetried == false && op.RetryOnError)
                             {
                                 alreadyRetried = true;
                                 continue;
@@ -816,6 +1044,8 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
+            StopRecording();
+
             _runTransactions = false;
 
             // once all the concurrent transactions are done, this will signal the event, preventing
@@ -824,7 +1054,10 @@ namespace Raven.Server.Documents
 
             _waitHandle.Set();
             _txLongRunningOperation?.Join(int.MaxValue);
+
             _waitHandle.Dispose();
+            _recording.State?.Dispose();
+            _recording.Stream?.Dispose();
 
             // make sure that the queue is empty and there are no pending 
             // transactions waiting. 
@@ -846,6 +1079,35 @@ namespace Raven.Server.Documents
             while (_operations.TryDequeue(out MergedTransactionCommand result))
             {
                 result.TaskCompletionSource.TrySetCanceled();
+            }
+        }
+
+        private RecordingTx _recording = default;
+
+        private struct RecordingTx
+        {
+            public RecordingState State;
+            public Stream Stream;
+        }
+
+        public void StartRecording(string filePath)
+        {
+            var recordingFileStream = new FileStream(filePath, FileMode.Create);
+            if (null != Interlocked.CompareExchange(ref _recording.State, new RecordingState.BeforeEnabledRecordingState(this), null))
+            {
+                recordingFileStream.Dispose();
+                File.Delete(filePath);
+            }
+            _recording.Stream = new GZipStream(recordingFileStream, CompressionMode.Compress);
+        }
+
+        public void StopRecording()
+        {
+            var recordingState = _recording.State;
+            if (recordingState != null)
+            {
+                recordingState.Shutdown();
+                _waitHandle.Set();
             }
         }
     }

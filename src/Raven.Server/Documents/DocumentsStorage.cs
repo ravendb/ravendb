@@ -1774,10 +1774,8 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static LazyStringValue TableValueToId(JsonOperationContext context, int index, ref TableValueReader tvr)
         {
-            // See format of the lazy string ID in the GetLowerIdSliceAndStorageKey method
-            var ptr = tvr.Read(index, out int size);
-            size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out byte offset);
-            return context.AllocateStringValue(null, ptr + offset, size);
+            var ptr = tvr.Read(index, out _);
+            return context.GetLazyStringValue(ptr);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

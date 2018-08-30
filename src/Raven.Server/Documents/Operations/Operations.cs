@@ -394,7 +394,10 @@ namespace Raven.Server.Documents.Operations
 
             [Description("Bulk Insert")]
             BulkInsert,
-            
+
+            [Description("Replay Transaction Commands")]
+            ReplayTransactionCommands,
+
             [Description("Certificate generation")]
             CertificateGeneration,
             

@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Operations.Counters;
@@ -36,6 +37,7 @@ namespace Raven.Server.Documents.Handlers
             public bool FromEtl;
             public bool ReturnDocument;
 
+            [JsonIgnore]
             public PatchDocumentCommand PatchCommand;
 
             #region Attachment
