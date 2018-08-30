@@ -41,7 +41,6 @@ namespace SlowTests.Blittable
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext readContext))
             {
                 Command actual;
-                BlittableJsonReaderArray expected;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext writeContext))
                 using (var writer = new BlittableJsonWriter(writeContext))
                 {
@@ -49,9 +48,9 @@ namespace SlowTests.Blittable
                     {
                         ContractResolver = new DefaultRavenContractResolver(),
                     };
-                    jsonSerializer.Converters.Add(new BlittableJsonReaderArrayConverter());
-                    jsonSerializer.Converters.Add(new LazyStringValueJsonConverter());
-                    jsonSerializer.Converters.Add(new BlittableJsonConverter());
+                    jsonSerializer.Converters.Add(BlittableJsonReaderArrayConverter.Instance);
+                    jsonSerializer.Converters.Add(LazyStringValueJsonConverter.Instance);
+                    jsonSerializer.Converters.Add(BlittableJsonConverter.Instance);
 
                     var command = new Command();
                     jsonSerializer.Serialize(writer, command);
@@ -82,7 +81,7 @@ namespace SlowTests.Blittable
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext writeContext))
                 using (var writer = new BlittableJsonWriter(writeContext))
                 {
-                    var data = new { Property = new []{"Value1", "Value2" } };
+                    var data = new { Property = new[] { "Value1", "Value2" } };
                     var readerObject = EntityToBlittable.ConvertCommandToBlittable(data, readContext);
                     readerObject.TryGet(nameof(data.Property), out expected);
 
@@ -90,9 +89,9 @@ namespace SlowTests.Blittable
                     {
                         ContractResolver = new DefaultRavenContractResolver(),
                     };
-                    jsonSerializer.Converters.Add(new BlittableJsonReaderArrayConverter());
-                    jsonSerializer.Converters.Add(new LazyStringValueJsonConverter());
-                    jsonSerializer.Converters.Add(new BlittableJsonConverter());
+                    jsonSerializer.Converters.Add(BlittableJsonReaderArrayConverter.Instance);
+                    jsonSerializer.Converters.Add(LazyStringValueJsonConverter.Instance);
+                    jsonSerializer.Converters.Add(BlittableJsonConverter.Instance);
 
                     var command = new Command { BlittableArray = expected };
                     jsonSerializer.Serialize(writer, command);
@@ -120,7 +119,7 @@ namespace SlowTests.Blittable
                 {
                     ContractResolver = new DefaultRavenContractResolver(),
                 };
-                jsonSerializer.Converters.Add(new BlittableJsonConverter());
+                jsonSerializer.Converters.Add(BlittableJsonConverter.Instance);
 
                 var data = new { SomeProperty = "SomeValue" };
                 var expected = EntityToBlittable.ConvertCommandToBlittable(data, context);
@@ -225,7 +224,7 @@ namespace SlowTests.Blittable
                         ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                     };
 
-                    jsonSerializer.Converters.Add(new LazyStringValueJsonConverter());
+                    jsonSerializer.Converters.Add(LazyStringValueJsonConverter.Instance);
                     var command = new Command { LazyString = expected };
                     jsonSerializer.Serialize(writer, command);
                     writer.FinalizeDocument();
@@ -260,7 +259,7 @@ namespace SlowTests.Blittable
                         ContractResolver = new DefaultRavenContractResolver(),
                     };
 
-                    jsonSerializer.Converters.Add(new BlittableJsonConverter());
+                    jsonSerializer.Converters.Add(BlittableJsonConverter.Instance);
                     var command = new Command { BlittableObject = expected };
                     jsonSerializer.Serialize(writer, command);
                     writer.FinalizeDocument();
@@ -293,7 +292,7 @@ namespace SlowTests.Blittable
                     ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 };
 
-                jsonSerializer.Converters.Add(new LazyStringValueJsonConverter());
+                jsonSerializer.Converters.Add(LazyStringValueJsonConverter.Instance);
                 var command = new Command { LazyString = expected };
                 jsonSerializer.Serialize(writer, command);
                 writer.FinalizeDocument();
@@ -319,7 +318,7 @@ namespace SlowTests.Blittable
                     ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 };
 
-                jsonSerializer.Converters.Add(new BlittableJsonConverter());
+                jsonSerializer.Converters.Add(BlittableJsonConverter.Instance);
                 var command = new Command { BlittableObject = expected };
                 jsonSerializer.Serialize(writer, command);
                 writer.FinalizeDocument();
@@ -331,7 +330,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [Fact (Skip = "To consider if should support direct serialize of LazyStringValue")]
         //Todo To consider if should support direct serialize of LazyStringValue
         public void JsonSerialize_WhenLazyStringValueIsTheRoot_ShouldSerialize()
         {
@@ -346,7 +345,7 @@ namespace SlowTests.Blittable
                     ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 };
 
-                jsonSerializer.Converters.Add(new LazyStringValueJsonConverter());
+                jsonSerializer.Converters.Add(LazyStringValueJsonConverter.Instance);
                 jsonSerializer.Serialize(writer, expected);
                 writer.FinalizeDocument();
 
@@ -372,7 +371,7 @@ namespace SlowTests.Blittable
                     ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 };
 
-                jsonSerializer.Converters.Add(new BlittableJsonConverter());
+                jsonSerializer.Converters.Add(BlittableJsonConverter.Instance);
                 var command = new Command { BlittableObject = expected };
                 jsonSerializer.Serialize(writer, command);
                 writer.FinalizeDocument();
@@ -384,7 +383,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [Fact (Skip = "To consider if should support direct serialize of BlittableObject")]
         //Todo To consider if should support direct serialize of BlittableObject
         public void JsonSerialize_WhenBlittableIsTheRoot_ShouldResultInCopy()
         {
@@ -403,7 +402,7 @@ namespace SlowTests.Blittable
                     ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 };
 
-                jsonSerializer.Converters.Add(new BlittableJsonConverter());
+                jsonSerializer.Converters.Add(BlittableJsonConverter.Instance);
                 jsonSerializer.Serialize(writer, blittableData);
                 writer.FinalizeDocument();
 

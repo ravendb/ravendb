@@ -53,7 +53,49 @@ namespace Sparrow.Json
         {
             _parent?.BlittableValidation();
         }
-        
+
+        //Todo Fixing the clone implementation to support this situation or throw clear error
+        public BlittableJsonReaderArray Clone(JsonOperationContext context, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
+        {
+            using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+            {
+                builder.Reset(usageMode);
+                builder.StartArrayDocument();
+                builder.StartWriteArray();
+                using (var itr = GetEnumerator())
+                {
+                    while (itr.MoveNext())
+                    {
+                        switch (itr.Current)
+                        {
+                            case BlittableJsonReaderObject item:
+                                var clone = item.CloneOnTheSameContext();
+                                builder.WriteEmbeddedBlittableDocument(clone.BasePointer, clone.Size);
+                                break;
+                            case LazyStringValue item:
+                                builder.WriteValue(item);
+                                break;
+                            case long item:
+                                builder.WriteValue(item);
+                                break;
+                            case LazyNumberValue item:
+                                builder.WriteValue(item);
+                                break;
+                            case LazyCompressedStringValue item:
+                                builder.WriteValue(item);
+                                break;
+                            default:
+                                throw new InvalidDataException($"Actual value type is {itr.Current.GetType()}. Should be known serialized type and should not happen. ");
+                        }
+                    }
+                }
+                builder.WriteArrayEnd();
+                builder.FinalizeDocument();
+
+                return builder.CreateArrayReader();
+            }
+        }
+
         public void Dispose()
         {            
             _parent?.Dispose();

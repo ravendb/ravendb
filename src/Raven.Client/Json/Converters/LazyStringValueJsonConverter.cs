@@ -5,39 +5,26 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json.Converters
 {
-    internal sealed class LazyStringValueJsonConverter : RavenJsonConverter
+    internal sealed class LazyStringValueJsonConverter : RavenTypeJsonConverter<LazyStringValue>
     {
         public static readonly LazyStringValueJsonConverter Instance = new LazyStringValueJsonConverter();
 
-        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        private LazyStringValueJsonConverter() {}
+
+        protected override void WriteJson(BlittableJsonWriter writer, LazyStringValue value, JsonSerializer serializer)
         {
-            writer.WriteValue(value);
+            writer.WriteValue((object)value);
         }
 
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        internal override LazyStringValue ReadJson(BlittableJsonReader reader)
         {
-            if (!(reader is BlittableJsonReader blittableReader))
-            {
-                throw new SerializationException(
-                    $"Try to read {nameof(LazyStringValue)} property/field by {reader.GetType()} which is unsuitable reader. Should use {nameof(BlittableJsonReader)}");
-            }
-
-            if (blittableReader.Value == null)
-            {
-                return null;
-            }
-
             //Todo It will be better to change the reader to set the value as LazyStringValue 
-            if (blittableReader.Value is string strValue)
+            if (!(reader.Value is string strValue))
             {
-                return blittableReader.Context.GetLazyString(strValue);
+                throw new SerializationException($"Try to read {nameof(LazyStringValue)} from {reader.Value.GetType()}. Should be string here");
             }
-            throw new SerializationException($"Try to read {nameof(LazyStringValue)} from {blittableReader.Value.GetType()}. Should be string here");
-        }
 
-        public override bool CanConvert(Type objectType)
-        {
-            return objectType == typeof(LazyStringValue);
+            return reader.Context.GetLazyString(strValue);
         }
     }
 }

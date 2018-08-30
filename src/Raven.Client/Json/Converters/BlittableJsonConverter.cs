@@ -6,50 +6,37 @@ using Sparrow.Json;
 namespace Raven.Client.Json.Converters
 {
 
-    internal sealed class BlittableJsonConverter : RavenJsonConverter
+    internal sealed class BlittableJsonConverter : RavenTypeJsonConverter<BlittableJsonReaderObject>
     {
         public static readonly BlittableJsonConverter Instance = new BlittableJsonConverter();
 
-        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        private BlittableJsonConverter() {}
+
+        protected override void WriteJson(BlittableJsonWriter writer, BlittableJsonReaderObject value, JsonSerializer serializer)
         {
             writer.WriteValue(value);
         }
 
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        internal override BlittableJsonReaderObject ReadJson(BlittableJsonReader blittableReader)
         {
-            if (!(reader is BlittableJsonReader blittableReader))
+            if (!(blittableReader.Value is BlittableJsonReaderObject blittableValue))
             {
                 throw new SerializationException(
-                    $"Try to read {nameof(BlittableJsonReaderObject)} property/field by {reader.GetType()} which is unsuitable reader. Should use {nameof(BlittableJsonReader)}");
+                    $"Can't convert {blittableReader.Value.GetType()} type to {nameof(BlittableJsonReaderObject)}. The value must to be a complex object");
             }
 
-            if (blittableReader.Value == null)
+            if (blittableReader.TokenType == JsonToken.StartObject)
             {
-                return null;
+                //Skip in order to prevent unnecessary movement inside the blittable
+                //when field\property type is BlittableJsonReaderObject
+                blittableReader.SkipBlittableInside();
             }
 
-            if (blittableReader.Value is BlittableJsonReaderObject blittableValue)
-            {
-                if (reader.TokenType == JsonToken.StartObject)
-                {
-                    //Skip in order to prevent unnecessary movement inside the blittable
-                    //when field\property type is BlittableJsonReaderObject
-                    blittableReader.SkipBlittableInside();
-                }
-
-                return
-                    blittableValue.BelongsToContext(blittableReader.Context) &&
-                    blittableValue.HasParent == false
-                        ? blittableValue
-                        : blittableValue.Clone(blittableReader.Context);
-            }
-            throw new SerializationException(
-                $"Can't convert {blittableReader.Value.GetType()} type to {nameof(BlittableJsonReaderObject)}. The value must to be a complex object");
-        }
-
-        public override bool CanConvert(Type objectType)
-        {
-            return objectType == typeof(BlittableJsonReaderObject);
+            return
+                blittableValue.BelongsToContext(blittableReader.Context) &&
+                blittableValue.HasParent == false
+                    ? blittableValue
+                    : blittableValue.Clone(blittableReader.Context);
         }
     }
 }

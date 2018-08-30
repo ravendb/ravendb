@@ -12,50 +12,29 @@ using Voron;
 
 namespace Raven.Server.Json.Converters
 {
-    internal sealed class SliceJsonConverter : RavenJsonConverter
+    internal sealed class SliceJsonConverter : RavenTypeJsonConverter<Slice>
     {
         public static readonly SliceJsonConverter Instance = new SliceJsonConverter();
 
-        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        private SliceJsonConverter() {}
+
+        protected override void WriteJson(BlittableJsonWriter writer, Slice value, JsonSerializer serializer)
         {
-            if (!(writer is BlittableJsonWriter blittableJsonWriter))
-            {
-                throw new SerializationException(
-                    $"Try to write {nameof(Slice)} property/field by {writer.GetType()} which is unsuitable reader. Should use {nameof(BlittableJsonWriter)}");
-            }
-
-            if (!(value is Slice slice))
-            {
-                throw new SerializationException($"Try to write {value.GetType()} which is not {nameof(Slice)} value with {nameof(SliceJsonConverter)}");
-            }
-
-            var buffer = new byte[slice.Size];
-            slice.CopyTo(buffer);
+            var buffer = new byte[value.Size];
+            value.CopyTo(buffer);
             var strValue = Convert.ToBase64String(buffer);
 
-            blittableJsonWriter.WriteValue(strValue);
+            writer.WriteValue(strValue);
         }
 
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        internal override Slice ReadJson(BlittableJsonReader reader)
         {
-            if (!(reader is BlittableJsonReader blittableReader))
+            if (!(reader.Value is string strValue))
             {
-                throw new SerializationException(
-                    $"Try to read {nameof(Slice)} property/field by {reader.GetType()} which is unsuitable reader. Should use {nameof(BlittableJsonReader)}");
+                throw new SerializationException($"Try to read {nameof(Slice)} from {reader.Value.GetType()}. Should be string here");
             }
 
-            if (blittableReader.Value == null)
-            {
-                return null;
-            }
-
-            if (!(blittableReader.Value is string strValue))
-            {
-                throw new SerializationException($"Try to read {nameof(Slice)} from non string value");
-            }
-
-            //TODO To create slice by JsonOperationContext
-            if (!(blittableReader.Context is DocumentsOperationContext context))
+            if (!(reader.Context is DocumentsOperationContext context))
             {
                 throw new SerializationException($"{nameof(DocumentsOperationContext)} must to be used for reading {nameof(Slice)}");
             }
@@ -64,11 +43,6 @@ namespace Raven.Server.Json.Converters
             Slice.From(context.Allocator, buffer, ByteStringType.Immutable, out var slice);
 
             return slice;
-        }
-
-        public override bool CanConvert(Type objectType)
-        {
-            return objectType == typeof(Slice);
         }
     }
 }
