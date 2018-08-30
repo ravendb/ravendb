@@ -349,7 +349,10 @@ namespace FastTests
                 configuration.Replication.RetryReplicateAfter = new TimeSetting(3, TimeUnit.Seconds);
                 configuration.Cluster.AddReplicaTimeout = new TimeSetting(10, TimeUnit.Seconds);
                 configuration.Licensing.EulaAccepted = true;
-                configuration.Core.FeaturesAvailability = FeaturesAvailability.Experimental;
+                if (customSettings == null || customSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)) == false)
+                {
+                    configuration.Core.FeaturesAvailability = FeaturesAvailability.Experimental;
+                }
 
                 if (deletePrevious)
                     IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
