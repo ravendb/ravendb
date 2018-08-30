@@ -19,12 +19,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     {
         private readonly OutputReduceToCollectionCommand _outputReduceToCollectionCommand;
 
-        public OutputReduceIndexWriteOperation(MapReduceIndex index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
+        public OutputReduceIndexWriteOperation(MapReduceIndex index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction,
+            LuceneIndexPersistence persistence, JsonOperationContext indexContext)
             : base(index, directory, converter, writeTransaction, persistence)
         {
             var outputReduceToCollection = index.Definition.OutputReduceToCollection;
             Debug.Assert(string.IsNullOrWhiteSpace(outputReduceToCollection) == false);
-            _outputReduceToCollectionCommand = new OutputReduceToCollectionCommand(DocumentDatabase, outputReduceToCollection, index);
+            _outputReduceToCollectionCommand = new OutputReduceToCollectionCommand(DocumentDatabase, outputReduceToCollection, index, indexContext);
         }
 
         public override void Commit(IndexingStatsScope stats)
@@ -53,9 +54,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public override void Delete(LazyStringValue key, IndexingStatsScope stats)
         {
-            base.Delete(key, stats);
-
-            _outputReduceToCollectionCommand.DeleteReduce(key);
+            throw new NotSupportedException("Deleting index entries by id() field isn't supported by map-reduce indexes");
         }
 
         public override void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)
@@ -65,50 +64,72 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _outputReduceToCollectionCommand.DeleteReduce(reduceKeyHash);
         }
 
+        public override void Dispose()
+        {
+            base.Dispose();
+
+            _outputReduceToCollectionCommand.Dispose();
+        }
+
         public class OutputReduceToCollectionCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
+            private const string MultipleOutputsForSameReduceKeyHashSeparator = "/";
+
             private readonly DocumentDatabase _database;
             private readonly string _outputReduceToCollection;
             private readonly MapReduceIndex _index;
-            private readonly List<OutputReduceDocument> _reduceDocuments = new List<OutputReduceDocument>();
-            private readonly JsonOperationContext _jsonContext;
-            private readonly List<IDisposable> _disposables = new List<IDisposable>();
-            public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, MapReduceIndex index)
+            private readonly List<string> _reduceKeyHashesToDelete = new List<string>();
+
+            private readonly Dictionary<string, List<BlittableJsonReaderObject>> _reduceDocuments =
+                new Dictionary<string, List<BlittableJsonReaderObject>>();
+            private readonly JsonOperationContext _indexContext;
+
+            public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, MapReduceIndex index, JsonOperationContext context)
             {
                 _database = database;
                 _outputReduceToCollection = outputReduceToCollection;
                 _index = index;
-                _jsonContext = JsonOperationContext.ShortTermSingleUse();
-            }
-
-            private class OutputReduceDocument
-            {
-                public bool IsDelete;
-                public string Key;
-                public BlittableJsonReaderObject Document;
+                _indexContext = context;
             }
 
             public override int Execute(DocumentsOperationContext context)
             {
-                foreach (var reduceDocument in _reduceDocuments)
+                foreach (var reduceKeyHash in _reduceKeyHashesToDelete)
                 {
-                    var key = reduceDocument.Key;
-                    if (reduceDocument.IsDelete)
-                    {
-                        _database.DocumentsStorage.Delete(context, key, null);
-                        continue;
-                    }
+                    var deleteResult = _database.DocumentsStorage.Delete(context, GetOutputDocumentKey(reduceKeyHash), null);
 
-                    var document = reduceDocument.Document;
-                    _database.DocumentsStorage.Put(context, key, null, document, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
-                    context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(key, document.Size);
+                    if (deleteResult == null)
+                    {
+                        // document with a given reduce key hash doesn't exist 
+                        // let's try to delete documents by reduce key hash prefix in case we got hash collision
+
+                        _database.DocumentsStorage.DeleteDocumentsStartingWith(context, GetOutputDocumentKeyForSameReduceKeyHashPrefix(reduceKeyHash));
+                    }
                 }
+
+                foreach (var output in _reduceDocuments)
+                {
+                    for (var i = 0; i < output.Value.Count; i++) // we have hash collision so there might be multiple outputs for the same reduce key hash
+                    {
+                        var key = output.Value.Count == 1 ? GetOutputDocumentKey(output.Key) : GetOutputDocumentKeyForSameReduceKeyHash(output.Key, i);
+                        var doc = output.Value[i];
+
+                        _database.DocumentsStorage.Put(context, key, null, doc, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
+
+                        context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(key, doc.Size);
+                    }
+                }
+
                 return _reduceDocuments.Count;
             }
 
             public void AddReduce(string reduceKeyHash, object reduceObject)
             {
-                var key = _outputReduceToCollection + "/" + reduceKeyHash;
+                if (_reduceDocuments.TryGetValue(reduceKeyHash, out var outputs) == false)
+                {
+                    outputs = new List<BlittableJsonReaderObject>(1);
+                    _reduceDocuments.Add(reduceKeyHash, outputs);
+                }
 
                 var djv = new DynamicJsonValue();
 
@@ -124,31 +145,40 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     [Constants.Documents.Metadata.Collection] = _outputReduceToCollection
                 };
 
-                _reduceDocuments.Add(new OutputReduceDocument
-                {
-                    Key = key,
-                    Document = _jsonContext.ReadObject(djv, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk)
-                });
+                var doc = _indexContext.ReadObject(djv, "output-of-reduce-doc", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+                outputs.Add(doc);
             }
 
             public void DeleteReduce(string reduceKeyHash)
             {
-                var key = _outputReduceToCollection + "/" + reduceKeyHash;
+                _reduceKeyHashesToDelete.Add(reduceKeyHash);
+            }
 
-                _reduceDocuments.Add(new OutputReduceDocument
-                {
-                    IsDelete = true,
-                    Key = key
-                });
+            private string GetOutputDocumentKey(string reduceKeyHash)
+            {
+                return _outputReduceToCollection + "/" + reduceKeyHash;
+            }
+
+            private string GetOutputDocumentKeyForSameReduceKeyHash(string reduceKeyHash, int outputNumber)
+            {
+                return GetOutputDocumentKeyForSameReduceKeyHashPrefix(reduceKeyHash) + outputNumber;
+            }
+
+            private string GetOutputDocumentKeyForSameReduceKeyHashPrefix(string reduceKeyHash)
+            {
+                return GetOutputDocumentKey(reduceKeyHash) + MultipleOutputsForSameReduceKeyHashSeparator;
             }
 
             public void Dispose()
             {
                 foreach (var r in _reduceDocuments)
                 {
-                    r.Document.Dispose();
+                    foreach (var doc in r.Value)
+                    {
+                        doc.Dispose();
+                    }
                 }
-                _jsonContext?.Dispose();
             }
         }
     }

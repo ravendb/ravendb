@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -6,67 +7,26 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce;
-using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
-using Raven.Server.Documents.Queries;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
-using Sparrow.Utils;
 using Xunit;
 
 namespace SlowTests.Server.Documents.Indexing.Static
 {
-    public class CollisionsOfReduceKeyHashes : RavenLowLevelTestBase
+    public class RavenDB_11469 : RavenLowLevelTestBase
     {
         [Theory]
         [InlineData(5, new[] { "Israel", "Poland" })]
         [InlineData(100, new[] { "Israel", "Poland", "USA" })]
-        public async Task Auto_index_should_produce_multiple_outputs(int numberOfUsers, string[] locations)
+        public async Task Map_reduce_index_should_produce_multiple_output_docs_even_there_is_hash_collision(int numberOfUsers, string[] locations)
         {
-            using (var database = CreateDocumentDatabase())
-            {
-                var index = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Users", new[]
-                {
-                    new AutoIndexField
-                    {
-                        Name = "Count",
-                        Aggregation = AggregationOperation.Count,
-                        Storage = FieldStorage.Yes
-                    }
-                }, new[]
-                {
-                    new AutoIndexField
-                    {
-                        Name = "Location",
-                        Storage = FieldStorage.Yes
-                    },
-                }), database);
+            var outputToCollectionName = "Locations";
 
-                index._threadAllocations = NativeMemory.CurrentThreadStats;
-
-                var mapReduceContext = new MapReduceIndexingContext();
-                using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))
-                {
-                    var indexStorage = new IndexStorage(index, contextPool, database);
-
-                    var reducer = new ReduceMapResultsOfAutoIndex(index, index.Definition, indexStorage,
-                        new MetricCounters(), mapReduceContext);
-
-                    await ActualTest(numberOfUsers, locations, index, mapReduceContext, reducer, database);
-                }
-            }
-        }
-
-        [Theory]
-        [InlineData(5, new[] { "Israel", "Poland" })]
-        [InlineData(100, new[] { "Israel", "Poland", "USA" })]
-        public async Task Static_index_should_produce_multiple_outputs(int numberOfUsers, string[] locations)
-        {
             using (var database = CreateDocumentDatabase())
             {
                 var index = MapReduceIndex.CreateNew(new IndexDefinition()
@@ -80,10 +40,9 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     {
                         {"Location", new IndexFieldOptions {Storage = FieldStorage.Yes}},
                         {"Count", new IndexFieldOptions {Storage = FieldStorage.Yes}}
-                    }
+                    },
+                    OutputReduceToCollection = outputToCollectionName
                 }, database);
-
-                index._threadAllocations = NativeMemory.CurrentThreadStats;
 
                 var mapReduceContext = new MapReduceIndexingContext();
                 using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))
@@ -91,13 +50,13 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     var indexStorage = new IndexStorage(index, contextPool, database);
                     var reducer = new ReduceMapResultsOfStaticIndex(index, index._compiled.Reduce, index.Definition, indexStorage, new MetricCounters(), mapReduceContext);
 
-                    await ActualTest(numberOfUsers, locations, index, mapReduceContext, reducer, database);
+                    await ActualTest(numberOfUsers, locations, index, mapReduceContext, reducer, database, outputToCollectionName);
                 }
             }
         }
 
         private static async Task ActualTest(int numberOfUsers, string[] locations, Index index,
-            MapReduceIndexingContext mapReduceContext, IIndexingWork reducer, DocumentDatabase database)
+            MapReduceIndexingContext mapReduceContext, IIndexingWork reducer, DocumentDatabase database, string outputToCollectionName)
         {
             TransactionOperationContext indexContext;
             using (index._contextPool.AllocateOperationContext(out indexContext))
@@ -126,7 +85,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     mapReduceContext.StoreByReduceKeyHash.Add(hashOfReduceKey, store);
 
                     var writeOperation =
-                        new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, null));
+                        new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, indexContext));
 
                     var stats = new IndexingStatsScope(new IndexingRunStats());
                     reducer.Execute(null, indexContext,
@@ -145,14 +104,10 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     tx.Commit();
                 }
 
-                using (var termSingleUse = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (context.OpenReadTransaction())
                 {
-                    var queryResult = await
-                        index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"),
-                            termSingleUse,
-                            OperationCancelToken.None);
-
-                    var results = queryResult.Results;
+                    var results = database.DocumentsStorage.GetDocumentsFrom(context, outputToCollectionName, 0, 0, int.MaxValue).ToList();
 
                     Assert.Equal(locations.Length, results.Count);
 
@@ -189,7 +144,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     mapReduceContext.StoreByReduceKeyHash.Add(hashOfReduceKey, store);
 
                     var writeOperation =
-                        new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, null));
+                        new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, indexContext));
                     try
                     {
 
@@ -209,21 +164,17 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     }
                     finally
                     {
-                        if(writeOperation.IsValueCreated)
+                        if (writeOperation.IsValueCreated)
                             writeOperation.Value.Dispose();
                     }
 
                     tx.Commit();
                 }
 
-                using (var shortTermSingleUse = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (context.OpenReadTransaction())
                 {
-                    var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"),
-                                shortTermSingleUse,
-                                OperationCancelToken.None);
-
-
-                    var results = queryResult.Results;
+                    var results = database.DocumentsStorage.GetDocumentsFrom(context, outputToCollectionName, 0, 0, int.MaxValue).ToList();
 
                     Assert.Equal(locations.Length, results.Count);
 
@@ -253,7 +204,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     mapReduceContext.StoreByReduceKeyHash.Add(hashOfReduceKey, store);
 
                     var writeOperation =
-                        new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, null));
+                        new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, indexContext));
                     try
                     {
                         var stats = new IndexingStatsScope(new IndexingRunStats());
@@ -268,23 +219,21 @@ namespace SlowTests.Server.Documents.Indexing.Static
 
                         index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
 
+                        mapReduceContext.Dispose();
+
                         tx.Commit();
                     }
                     finally
                     {
-                        if(writeOperation.IsValueCreated)
+                        if (writeOperation.IsValueCreated)
                             writeOperation.Value.Dispose();
                     }
                 }
 
-                using (var documentsOperationContext = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (context.OpenReadTransaction())
                 {
-                    var queryResult = await index.Query(new IndexQueryServerSide("FROM Users ORDER BY Location"),
-                         documentsOperationContext,
-                         OperationCancelToken.None);
-
-
-                    var results = queryResult.Results;
+                    var results = database.DocumentsStorage.GetDocumentsFrom(context, outputToCollectionName, 0, 0, int.MaxValue).ToList();
 
                     Assert.Equal(locations.Length, results.Count);
 
@@ -295,6 +244,58 @@ namespace SlowTests.Server.Documents.Indexing.Static
                         long expected = numberOfUsers / locations.Length + numberOfUsers % (locations.Length - i);
                         Assert.Equal(expected - 1, results[i].Data["Count"]);
                     }
+                }
+
+                // delete entries for one reduce key
+
+                using (var tx = indexContext.OpenWriteTransaction())
+                {
+                    mapReduceContext.MapPhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition, IndexField>.MapPhaseTreeName);
+                    mapReduceContext.ReducePhaseTree = tx.InnerTransaction.CreateTree(MapReduceIndexBase<MapIndexDefinition, IndexField>.ReducePhaseTreeName);
+
+                    var store = new MapReduceResultsStore(hashOfReduceKey, MapResultsStorageType.Tree, indexContext, mapReduceContext, true);
+
+                    for (int i = 0; i < numberOfUsers; i++)
+                    {
+                        if (i % locations.Length == 0)
+                            store.Delete(i);
+                    }
+
+                    mapReduceContext.StoreByReduceKeyHash.Add(hashOfReduceKey, store);
+
+                    var writeOperation =
+                        new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction, indexContext));
+                    try
+                    {
+                        var stats = new IndexingStatsScope(new IndexingRunStats());
+                        reducer.Execute(null, indexContext,
+                            writeOperation,
+                            stats, CancellationToken.None);
+
+                        using (var indexWriteOperation = writeOperation.Value)
+                        {
+                            indexWriteOperation.Commit(stats);
+                        }
+
+                        index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
+
+                        mapReduceContext.Dispose();
+
+                        tx.Commit();
+                    }
+                    finally
+                    {
+                        if (writeOperation.IsValueCreated)
+                            writeOperation.Value.Dispose();
+                    }
+                }
+
+                using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
+                using (context.OpenReadTransaction())
+                {
+                    var results = database.DocumentsStorage.GetDocumentsFrom(context, outputToCollectionName, 0, 0, int.MaxValue).ToList();
+
+                    Assert.Equal(locations.Length - 1, results.Count);
                 }
             }
         }
