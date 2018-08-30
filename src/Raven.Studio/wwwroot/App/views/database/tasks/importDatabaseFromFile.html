@@ -89,17 +89,34 @@
                         </div>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label class="control-label">Command</label>
-                    <div class="input-group">
-                        <span class="input-group-btn">
-                            <button data-bind="click: $root.copyCommandToClipboard" class="btn btn-default">
-                                <i class="icon-copy"></i>
-                                <span>Copy to clipboard</span>
-                            </button>
-                        </span>
-                        <input onClick="this.select();" class="form-control" readonly data-bind="value: $root.importCommand">
+
+                <div class="flex-horizontal">
+                    <div class="btn-group">
+                        <button data-bind="click: _.partial($root.copyCommandToClipboard, $root.importCommandPowerShell())" class="btn btn-default">
+                            <i class="icon-copy"></i>
+                            <span>Copy command as PowerShell</span>
+                        </button>
+                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a href="#" data-bind="click: _.partial($root.copyCommandToClipboard, $root.importCommandCmd())">
+                                    <i class="icon-copy"></i> Copy as cURL (cmd)
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" data-bind="click: _.partial($root.copyCommandToClipboard, $root.importCommandBash())">
+                                    <i class="icon-copy"></i> Copy as cURL (bash)
+                                </a>
+                            </li>
+                        </ul>
                     </div>
+                    <div class="flex-grow">
+                        <input onClick="this.select();" class="form-control" readonly data-bind="value: $root.importCommandPowerShell" />    
+                    </div>
+                    
                 </div>
             </div>
             <hr />
