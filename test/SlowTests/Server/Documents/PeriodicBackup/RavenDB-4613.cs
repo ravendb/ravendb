@@ -14,12 +14,13 @@ using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Azure;
+using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
-    public class RavenDB_4163 : NoDisposalNeeded
+    public class RavenDB_4163 : RavenTestBase
     {
         private const string AzureAccountName = "devstoreaccount1";
         private const string AzureAccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
@@ -125,7 +126,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var containerNames = await client.GetContainerNames(500);
                 Assert.False(containerNames.Exists(x => x.Equals(containerName)));
 
-                var e = await Assert.ThrowsAsync<ContainerNotFoundException>(async() => await client.TestConnection());
+                var e = await Assert.ThrowsAsync<ContainerNotFoundException>(async () => await client.TestConnection());
                 Assert.Equal($"Container '{containerName}' not found!", e.Message);
 
                 containerNames = await client.GetContainerNames(500);
@@ -149,10 +150,22 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await client.DeleteContainer();
                     await client.PutContainer();
 
-                    var sb = new StringBuilder();
-                    for (var i = 0; i < sizeInMB * 1024 * 1024; i++)
+                    var path = NewDataPath(forceCreateDir: true);
+                    var filePath = Path.Combine(path, Guid.NewGuid().ToString());
+
+                    var sizeMb = new Size(sizeInMB, SizeUnit.Megabytes);
+                    var size64Kb = new Size(64, SizeUnit.Kilobytes);
+
+                    var buffer = Enumerable.Range(0, (int)size64Kb.GetValue(SizeUnit.Bytes))
+                        .Select(x => (byte)'a')
+                        .ToArray();
+
+                    using (var file = File.Open(filePath, FileMode.CreateNew))
                     {
-                        sb.Append("a");
+                        for (var i = 0; i < sizeMb.GetValue(SizeUnit.Bytes) / buffer.Length; i++)
+                        {
+                            file.Write(buffer, 0, buffer.Length);
+                        }
                     }
 
                     var value1 = Guid.NewGuid().ToString();
@@ -160,23 +173,36 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var value3 = Guid.NewGuid().ToString();
 
                     long streamLength;
-                    using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(sb.ToString())))
+                    using (var file = File.Open(filePath, FileMode.Open))
                     {
-                        streamLength = memoryStream.Length;
-                        await client.PutBlob(blobKey, memoryStream,
+                        streamLength = file.Length;
+                        await client.PutBlob(blobKey, file,
                             new Dictionary<string, string>
                             {
-                                {"property1", value1},
-                                {"property2", value2},
-                                {"property3", value3}
+                                    {"property1", value1},
+                                    {"property2", value2},
+                                    {"property3", value3}
                             });
                     }
-                        
+
                     var blob = await client.GetBlob(blobKey);
                     Assert.NotNull(blob);
 
                     using (var reader = new StreamReader(blob.Data))
-                        Assert.Equal(sb.ToString(), reader.ReadToEnd());
+                    {
+                        var readBuffer = new char[buffer.Length];
+
+                        long read, totalRead = 0;
+                        while ((read = await reader.ReadAsync(readBuffer, 0, readBuffer.Length)) > 0)
+                        {
+                            for (var i = 0; i < read; i++)
+                                Assert.Equal(buffer[i], (byte)readBuffer[i]);
+
+                            totalRead += read;
+                        }
+
+                        Assert.Equal(streamLength, totalRead);
+                    }
 
                     var property1 = blob.Metadata.Keys.Single(x => x.Contains("property1"));
                     var property2 = blob.Metadata.Keys.Single(x => x.Contains("property2"));

@@ -270,7 +270,7 @@ namespace Raven.Migrator.MongoDB
         {
             var online = database.RunCommandAsync((Command<BsonDocument>)"{ping:1}").Wait(TimeSpan.FromSeconds(5));
             if (online == false)
-                throw new InvalidOperationException($"Couldn't conncet to: {_configuration.ConnectionString}");
+                throw new InvalidOperationException($"Couldn't connect to: {_configuration.ConnectionString}");
         }
     }
 }

@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.Serialization;
 using Esprima.Ast;
+using System.Linq;
 using Jint.Native;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
@@ -166,6 +168,28 @@ namespace Raven.Server.Documents.Patch
                     return 1;
                 }
 
+                if (_run.UpdatedDocumentCounterIds != null)
+                {
+                    foreach (var docId in _run.UpdatedDocumentCounterIds)
+                    {
+                        if (docId.Equals(_id, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Debug.Assert(originalDocument != null);
+                            modifiedDocument = UpdateCountersInMetadata(context, modifiedDocument, docId, ref originalDocument.Flags);
+                        }
+                        else
+                        {
+                            var docToUpdate = _database.DocumentsStorage.Get(context, docId);
+                            var docBlittableToUpdate = UpdateCountersInMetadata(context, docToUpdate.Data, docId, ref docToUpdate.Flags);
+                            if (_isTest == false)
+                            {
+                                _database.DocumentsStorage.Put(context, docId,
+                                    docToUpdate.ChangeVector, docBlittableToUpdate, null, null, docToUpdate.Flags);
+                            }
+                        }
+                    }
+                }
+
                 DocumentsStorage.PutOperationResults? putResult = null;
 
                 if (originalDoc == null)
@@ -176,12 +200,14 @@ namespace Raven.Server.Documents.Patch
                     result.Status = PatchStatus.Created;
                 }
                 else if (DocumentCompare.IsEqualTo(originalDoc, modifiedDocument,
-                    tryMergeMetadataConflicts: true) == DocumentCompareResult.NotEqual)
+                    tryMergeMetadataConflicts: true) != DocumentCompareResult.Equal)
                 {
                     Debug.Assert(originalDocument != null);
                     if (_isTest == false || _run.PutOrDeleteCalled)
+                    {
                         putResult = _database.DocumentsStorage.Put(context, originalDocument.Id,
                             originalDocument.ChangeVector, modifiedDocument, null, null, originalDocument.Flags);
+                    }
 
                     result.Status = PatchStatus.Patched;
                 }
@@ -196,6 +222,34 @@ namespace Raven.Server.Documents.Patch
                 PatchResult = result;
                 return 1;
             }
+        }
+
+        private static BlittableJsonReaderObject UpdateCountersInMetadata(
+            DocumentsOperationContext context,
+            BlittableJsonReaderObject modifiedDocument,
+            string id, ref DocumentFlags flags)
+        {
+            var metadata = modifiedDocument.GetMetadata();
+            if (metadata.Modifications == null)
+                metadata.Modifications = new DynamicJsonValue(metadata);
+
+            var countersFromStorage = context.DocumentDatabase.DocumentsStorage.CountersStorage.GetCountersForDocument(context, id).ToList();
+            if (countersFromStorage.Count == 0)
+            {
+                metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
+                flags &= ~DocumentFlags.HasCounters;
+            }
+            else
+            {
+                metadata.Modifications[Constants.Documents.Metadata.Counters] = new DynamicJsonArray(countersFromStorage);
+                flags |= DocumentFlags.HasCounters;
+            }
+
+            modifiedDocument.Modifications = new DynamicJsonValue(modifiedDocument)
+                {[Constants.Documents.Metadata.Key] = metadata};
+
+            modifiedDocument = context.ReadObject(modifiedDocument, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            return modifiedDocument;
         }
 
         public void Dispose()

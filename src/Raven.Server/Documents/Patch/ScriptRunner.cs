@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -16,6 +17,7 @@ using Jint.Runtime.Interop;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Extensions;
 using Raven.Server.Config;
@@ -116,6 +118,7 @@ namespace Raven.Server.Documents.Patch
             private HashSet<string> _documentIds;
             public bool ReadOnly;
             private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
+            public HashSet<string> UpdatedDocumentCounterIds;
 
             public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<string> scriptsSource)
             {
@@ -169,6 +172,9 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("Raven_Max", new ClrFunctionInstance(ScriptEngine, Raven_Max));
 
                 ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, ConvertJsTimeToTimeSpanString));
+
+                ScriptEngine.SetValue("toStringWithFormat", new ClrFunctionInstance(ScriptEngine, ToStringWithFormat));
+
 
                 ScriptEngine.SetValue("scalarToRawString", new ClrFunctionInstance(ScriptEngine, ScalarToRawString));
 
@@ -674,36 +680,44 @@ namespace Raven.Server.Documents.Patch
 
                 if (args.Length < 2 || args.Length > 3)
                 {
-                    throw new InvalidOperationException($"There is no overload of method 'incrementCounter' that takes {args.Length} arguments." +
-                                                        "Supported overloads are : 'incrementCounter(doc, name)' , 'incrementCounter(doc, name, value)'");
+                    ThrowInvalidIncrementCounterArgs(args);
                 }
             
                 var signature = args.Length == 2 ? "incrementCounter(doc, name)" : "incrementCounter(doc, name, value)";
 
-                BlittableJsonReaderObject metadata;
-                BlittableJsonReaderObject document;
-                string id;
+                BlittableJsonReaderObject metadata = null;
+                BlittableJsonReaderObject docBlittable = null;
+                string id = null;
 
                 if (args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance doc)
                 {
                     id = doc.DocumentId;
-                    document = doc.Blittable;
-                    metadata = document.GetMetadata();
+                    docBlittable = doc.Blittable;
+                    metadata = docBlittable.GetMetadata();
                 }
                 else if (args[0].IsString())
                 {
                     id = args[0].AsString();
-                    document = _database.DocumentsStorage.Get(_docsCtx, id).Data;
-                    metadata = document.GetMetadata();
+                    var document = _database.DocumentsStorage.Get(_docsCtx, id);
+                    if (document == null)
+                    {
+                        ThrowMissingDocument(id);
+                        Debug.Assert(false); // never hit
+                    }
+
+                    docBlittable = document.Data;
+                    metadata = docBlittable.GetMetadata();
                 }
                 else
                 {
-                    throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself");
+                    ThrowInvalidDocumentArgsType(signature);
                 }
+
+                Debug.Assert(id != null && metadata != null && docBlittable != null);
 
                 if (args[1].IsString() == false)
                 {
-                    throw new InvalidOperationException($"{signature}: 'name' must be a string argument");
+                    ThrowInvalidCounterName(signature);
                 }
                 var name = args[1].AsString();
 
@@ -711,23 +725,48 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length == 3)
                 {
                     if (args[2].IsNumber() == false)
-                        throw new InvalidOperationException("incrementCounter(doc, name, value): 'value' must be a number argument");
+                        ThrowInvalidCounterValue();
                     value = args[2].AsNumber();
                 }
 
-                _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, CollectionName.GetCollectionName(document), name, (long)value);
+                _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name, (long)value);
 
-                _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(_docsCtx, document, id, metadata, new List<CounterOperation>
+                if (metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false ||
+                    counters.BinarySearch(name, StringComparison.OrdinalIgnoreCase) < 0)
                 {
-                    new CounterOperation
-                    {
-                        Type = CounterOperationType.Increment,
-                        CounterName = name,
-                        Delta = (long)value
-                    }
-                });
-               
+                    if (UpdatedDocumentCounterIds == null)
+                        UpdatedDocumentCounterIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    UpdatedDocumentCounterIds.Add(id);
+                }
+                
                 return JsBoolean.True;
+            }
+
+            private static void ThrowInvalidIncrementCounterArgs(JsValue[] args)
+            {
+                throw new InvalidOperationException($"There is no overload of method 'incrementCounter' that takes {args.Length} arguments." +
+                                                    "Supported overloads are : 'incrementCounter(doc, name)' , 'incrementCounter(doc, name, value)'");
+            }
+
+            private static void ThrowInvalidCounterValue()
+            {
+                throw new InvalidOperationException("incrementCounter(doc, name, value): 'value' must be a number argument");
+            }
+
+            private static void ThrowInvalidCounterName(string signature)
+            {
+                throw new InvalidOperationException($"{signature}: 'name' must be a string argument");
+            }
+
+            private static void ThrowInvalidDocumentArgsType(string signature)
+            {
+                throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself");
+            }
+
+            private static void ThrowMissingDocument(string id)
+            {
+                throw new DocumentDoesNotExistException(id, "Cannot operate on counters of a missing document.");
             }
 
             private JsValue DeleteCounter(JsValue self, JsValue[] args)
@@ -736,61 +775,78 @@ namespace Raven.Server.Documents.Patch
 
                 if (args.Length !=2)
                 {
-                    throw new InvalidOperationException("deleteCounter(doc, name) must be called with exactly 2 arguments");
+                    ThrowInvalidDeleteCounterArgs();
                 }
 
-                BlittableJsonReaderObject metadata;
-                BlittableJsonReaderObject document;
+                string id = null;
+                BlittableJsonReaderObject docBlittable = null;
 
-                string id;
                 if (args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance doc)
                 {
                     id = doc.DocumentId;
-                    document = doc.Blittable;
-                    metadata = document.GetMetadata();
+                    docBlittable = doc.Blittable;
                 }
                 else if (args[0].IsString())
                 {
                     id = args[0].AsString();
-                    document = _database.DocumentsStorage.Get(_docsCtx, id).Data;
-                    metadata = document.GetMetadata();
+                    var document = _database.DocumentsStorage.Get(_docsCtx, id);
+                    if (document == null)
+                    {
+                        ThrowMissingDocument(id);
+                        Debug.Assert(false); // never hit
+                    }
+
+                    docBlittable = document.Data;
                 }
                 else
                 {
-                    throw new InvalidOperationException("deleteCounter(doc, name): 'doc' must be a string argument (the document id) or the actual document instance itself");
+                    ThrowInvalidDeleteCounterDocumentArg();
                 }
+
+                Debug.Assert(id != null && docBlittable != null);
 
                 if (args[1].IsString() == false)
                 {
-                    throw new InvalidOperationException("deleteCounter(doc, name): 'name' must be a string argument");
+                    ThrowDeleteCounterNameArg();
                 }
+
+                if (UpdatedDocumentCounterIds == null)
+                    UpdatedDocumentCounterIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                UpdatedDocumentCounterIds.Add(id);
+
                 var name = args[1].AsString();
-
-                _database.DocumentsStorage.CountersStorage.DeleteCounter(_docsCtx, id, CollectionName.GetCollectionName(document), name);
-
-                _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(_docsCtx, document, id, metadata, new List<CounterOperation>
-                {
-                    new CounterOperation
-                    {
-                        Type = CounterOperationType.Delete,
-                        CounterName = name
-                    }
-                });
+                _database.DocumentsStorage.CountersStorage.DeleteCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name);
               
                 return JsBoolean.True;
             }
 
-            private JsValue ThrowOnLoadDocument(JsValue self, JsValue[] args)
+            private static void ThrowDeleteCounterNameArg()
+            {
+                throw new InvalidOperationException("deleteCounter(doc, name): 'name' must be a string argument");
+            }
+
+            private static void ThrowInvalidDeleteCounterDocumentArg()
+            {
+                throw new InvalidOperationException("deleteCounter(doc, name): 'doc' must be a string argument (the document id) or the actual document instance itself");
+            }
+
+            private static void ThrowInvalidDeleteCounterArgs()
+            {
+                throw new InvalidOperationException("deleteCounter(doc, name) must be called with exactly 2 arguments");
+            }
+
+            private static JsValue ThrowOnLoadDocument(JsValue self, JsValue[] args)
             {
                 throw new MissingMethodException("The method LoadDocument was renamed to 'load'");
             }
 
-            private JsValue ThrowOnPutDocument(JsValue self, JsValue[] args)
+            private static JsValue ThrowOnPutDocument(JsValue self, JsValue[] args)
             {
                 throw new MissingMethodException("The method PutDocument was renamed to 'put'");
             }
 
-            private JsValue ThrowOnDeleteDocument(JsValue self, JsValue[] args)
+            private static JsValue ThrowOnDeleteDocument(JsValue self, JsValue[] args)
             {
                 throw new MissingMethodException("The method DeleteDocument was renamed to 'del'");
             }
@@ -807,10 +863,64 @@ namespace Raven.Server.Documents.Patch
                 return asTimeSpan.ToString();
             }
 
+            private static JsValue ToStringWithFormat(JsValue self, JsValue[] args)
+            {
+                if (args.Length < 1 || args.Length > 3)
+                {
+                    throw new InvalidOperationException($"No overload for method 'toStringWithFormat' takes {args.Length} arguments. " +
+                                                        "Supported overloads are : toStringWithFormat(object), toStringWithFormat(object, format), toStringWithFormat(object, culture), toStringWithFormat(object, format, culture).");
+                }
+
+                var cultureInfo = CultureInfo.InvariantCulture;
+                string format = null;
+
+                for (var i = 1; i < args.Length; i++)
+                {
+                    if (args[i].IsString() == false)
+                    {
+                        throw new InvalidOperationException("toStringWithFormat : 'format' and 'culture' must be string arguments");
+                    }
+
+                    var arg = args[i].AsString();
+                    if (CultureHelper.Cultures.TryGetValue(arg, out var culture))
+                    {
+                        cultureInfo = culture;
+                        continue;
+                    }
+
+                    format = arg;
+                }
+
+                if (args[0].IsDate())
+                {
+                    var date = args[0].AsDate().ToDateTime();
+                    return format != null ? 
+                        date.ToString(format, cultureInfo) : 
+                        date.ToString(cultureInfo);
+
+                }
+
+                if (args[0].IsNumber())
+                {
+                    var num = args[0].AsNumber();
+                    return format != null ?
+                        num.ToString(format, cultureInfo) :
+                        num.ToString(cultureInfo);
+                }
+
+                if (args[0].IsBoolean() == false)
+                {
+                    throw new InvalidOperationException($"toStringWithFormat() is not supported for objects of type {args[0].Type} ");
+                }
+
+                var boolean = args[0].AsBoolean();
+                return boolean.ToString(cultureInfo);
+            }
+
             private static JsValue StartsWith(JsValue self, JsValue[] args)
             {
                 if (args.Length != 2 || args[0].IsString() == false || args[1].IsString() == false)
-                    throw new InvalidOperationException("startsWith(text, contained) must be called with two string paremters");
+                    throw new InvalidOperationException("startsWith(text, contained) must be called with two string parameters");
                 
                 return args[0].AsString().StartsWith(args[1].AsString(), StringComparison.OrdinalIgnoreCase);
             }
@@ -818,7 +928,7 @@ namespace Raven.Server.Documents.Patch
             private static JsValue EndsWith(JsValue self, JsValue[] args)
             {
                 if (args.Length != 2 || args[0].IsString() == false || args[1].IsString() == false)
-                    throw new InvalidOperationException("endsWith(text, contained) must be called with two string paremters");
+                    throw new InvalidOperationException("endsWith(text, contained) must be called with two string parameters");
 
                 return args[0].AsString().EndsWith(args[1].AsString(), StringComparison.OrdinalIgnoreCase);
             }
@@ -826,7 +936,7 @@ namespace Raven.Server.Documents.Patch
             private JsValue Regex(JsValue self, JsValue[] args)
             {
                 if (args.Length != 2 || args[0].IsString() == false || args[1].IsString() == false)
-                    throw new InvalidOperationException("regex(text, regex) must be called with two string paremters");
+                    throw new InvalidOperationException("regex(text, regex) must be called with two string parameters");
 
                 var regex = _regexCache.Get(args[1].AsString());
 
@@ -1151,7 +1261,7 @@ namespace Raven.Server.Documents.Patch
                 if (val.IsNull() || val.IsUndefined())
                     return null;
                 if (val.IsArray())
-                    throw new InvalidOperationException("Returning arrays from scripts is not supported, only objects or primitves");
+                    throw new InvalidOperationException("Returning arrays from scripts is not supported, only objects or primitives");
                 throw new NotSupportedException("Unable to translate " + val.Type);
             }
         }

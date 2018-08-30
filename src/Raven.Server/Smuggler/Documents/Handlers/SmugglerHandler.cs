@@ -194,11 +194,11 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                        let requestUri = url.TrimEnd('/') + "/" + content.Element(ns + "Key").Value
                        select (Func<Task<Stream>>)(async () =>
                       {
-                          var respone = await HttpClient.GetAsync(requestUri);
-                          if (respone.IsSuccessStatusCode == false)
+                          var response = await HttpClient.GetAsync(requestUri);
+                          if (response.IsSuccessStatusCode == false)
                               throw new InvalidOperationException("Request failed on " + requestUri + " with " +
-                                                                  await respone.Content.ReadAsStreamAsync());
-                          return await respone.Content.ReadAsStreamAsync();
+                                                                  await response.Content.ReadAsStreamAsync());
+                          return await response.Content.ReadAsStreamAsync();
                       });
 
             var files = new BlockingCollection<Func<Task<Stream>>>(new ConcurrentQueue<Func<Task<Stream>>>(urls));
@@ -220,8 +220,9 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
         private async Task BulkImport(BlockingCollection<Func<Task<Stream>>> files, string directory)
         {
+            var maxTasks = GetIntValueQueryString("maxTasks", required: false) ?? ProcessorInfo.ProcessorCount / 2;
             var results = new ConcurrentQueue<SmugglerResult>();
-            var tasks = new Task[Math.Max(1, ProcessorInfo.ProcessorCount / 2)];
+            var tasks = new Task[Math.Max(1, maxTasks)];
 
             var finalResult = new SmugglerResult();
 
@@ -409,10 +410,10 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     NoContentStatus();
                     return;
                 }
-                
+
                 if (string.IsNullOrWhiteSpace(migrationConfiguration.DatabaseTypeName))
                     throw new ArgumentException("DatabaseTypeName cannot be null or empty");
-                
+
                 var processStartInfo = new ProcessStartInfo
                 {
                     FileName = migratorFile.FullName,
@@ -447,7 +448,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     var errorReadTask = ReadOutput(process.StandardError);
                     var outputReadTask = ReadOutput(process.StandardOutput);
 
-                    await Task.WhenAll(new Task[] {errorReadTask, outputReadTask}).ConfigureAwait(false);
+                    await Task.WhenAll(new Task[] { errorReadTask, outputReadTask }).ConfigureAwait(false);
 
                     Debug.Assert(process.HasExited, "Migrator is still running!");
 

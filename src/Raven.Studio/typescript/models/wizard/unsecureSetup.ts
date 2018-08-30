@@ -28,12 +28,28 @@ class unsecureSetup {
     }
     
     private initValidation() {
+        const currentHttpPort = window.location.port || "80";
+        
         this.port.extend({
-            number: true
+            number: true,
+            notEqual: {
+                params: currentHttpPort,
+                message: "Port is in use by the Setup Wizard"
+            }
         });
         
         this.tcpPort.extend({
-            number: true
+            number: true,
+            notEqual: {
+                params: currentHttpPort,
+                message: "Port is in use by the Setup Wizard"
+            },
+            validation: [
+                {
+                    validator: (val: string) => !val || val !== this.port(),
+                    message: "Please use different ports for HTTP and TCP bindings"
+                }
+            ]
         });
 
         nodeInfo.setupNodeTagValidation(this.localNodeTag);

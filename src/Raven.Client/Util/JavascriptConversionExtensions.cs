@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -1233,6 +1234,59 @@ namespace Raven.Client.Util
             }
         }
 
+        public class ToStringSupport : JavascriptConversionExtension
+        {
+            public static readonly ToStringSupport Instance = new ToStringSupport();
+
+            private ToStringSupport()
+            {                
+            }
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (!(context.Node is MethodCallExpression mce) || 
+                    mce.Method.Name != "ToString")
+                    return;
+
+                context.PreventDefault();
+
+                var writer = context.GetWriter();
+                using (writer.Operation(mce))
+                {
+                    if (mce.Arguments.Count == 0)
+                    {
+                        context.Visitor.Visit(mce.Object);
+                        writer.Write(".toString()");
+                        return;
+                    }
+
+                    writer.Write("toStringWithFormat(");
+                    context.Visitor.Visit(mce.Object);
+
+                    foreach (var arg in mce.Arguments)
+                    {
+
+                        if (arg.Type == typeof(CultureInfo) &&
+                            LinqPathProvider.GetValueFromExpressionWithoutConversion(arg, out var obj) &&
+                            obj is CultureInfo culture)
+                        {
+                            if (culture.Name == string.Empty)
+                                continue;
+                            writer.Write(", ");
+                            writer.Write($"\"{culture.Name}\"");
+                        }
+                        else
+                        {
+                            writer.Write(", ");
+                            context.Visitor.Visit(arg);
+                        }
+                    }
+
+                    writer.Write(")");
+                }
+            }
+        }
+
         public class DateTimeSupport : JavascriptConversionExtension
         {
             public static readonly DateTimeSupport Instance = new DateTimeSupport();
@@ -1318,7 +1372,7 @@ namespace Raven.Client.Util
                     return;
                 }
 
-                if (node.Expression.Type == typeof(DateTime) && node.Expression is MemberExpression memberExpression)
+                if (node.Expression?.Type == typeof(DateTime) && node.Expression is MemberExpression memberExpression)
                 {
                     var writer = context.GetWriter();
                     context.PreventDefault();
@@ -1887,8 +1941,9 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is MethodCallExpression mce) || mce.Method.DeclaringType != typeof(string))
-                    return;
+                if (!(context.Node is MethodCallExpression mce) || 
+                    mce.Method.DeclaringType != typeof(string))
+                    return; 
 
                 string newName;
                 switch (mce.Method.Name)

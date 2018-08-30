@@ -119,16 +119,7 @@ namespace Raven.Server
             var sp = Stopwatch.StartNew();
             Certificate = LoadCertificate() ?? new CertificateHolder();
 
-            try
-            {
-                ServerStore.Initialize();
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Could not open the server store", e);
-                throw;
-            }
+            
 
             if (Logger.IsInfoEnabled)
                 Logger.Info(string.Format("Server store started took {0:#,#;;0} ms", sp.ElapsedMilliseconds));
@@ -276,6 +267,18 @@ namespace Raven.Server
 
                 _tcpListenerStatus = StartTcpListener();
 
+                try
+                {
+                    ServerStore.Initialize();
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("Could not open the server store", e);
+                    throw;
+                }
+
+
                 ServerStore.TriggerDatabases();
 
                 StartSnmp();
@@ -288,6 +291,7 @@ namespace Raven.Server
                     Logger.Operations("Could not start server", e);
                 throw;
             }
+
         }
 
         private void RedirectsHttpTrafficToHttps()

@@ -23,6 +23,7 @@ class clusterNode {
     osInfo = ko.observable<Raven.Client.ServerWide.Operations.OsInfo>();
     osFullName: KnockoutComputed<string>;
     osTitle: KnockoutComputed<string>;
+    osIcon: KnockoutComputed<string>;
 
     constructor() {
         this.isPassive = ko.pureComputed(() => this.tag() === "?");
@@ -59,6 +60,17 @@ class clusterNode {
             osTitle += "</div>";
             return osTitle;
         });
+        
+        this.osIcon = ko.pureComputed(() => {
+            switch (this.osInfo().Type) {
+                case "Linux":
+                    return "icon-linux";
+                case "Windows":
+                    return "icon-windows";
+                case "MacOS":
+                    return "icon-apple";
+            }
+        })
     }
     
     errorDetailsShort = ko.pureComputed(() => {

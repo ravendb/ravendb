@@ -7,7 +7,7 @@ using Xunit;
 
 namespace SlowTests.Blittable
 {
-    public class BlittableJsonReaderObjectTest : RavenTestBase
+    public class BlittableJsonReaderArrayTest : RavenTestBase
     {
         [Fact]
         public void Clone_WhenContainItemsOfStrings_ShouldBeEqualToOrigin()
