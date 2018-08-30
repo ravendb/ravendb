@@ -782,6 +782,11 @@ NotFound:
                 "Attempted to copy a nested object. This will actually copy the whole object, which is probably not what you wanted.");
         }
 
+        public BlittableJsonReaderObject CloneOnTheSameContext()
+        {
+            return Clone(_context);
+        }
+
         public BlittableJsonReaderObject Clone(JsonOperationContext context)
         {
             if (_parent != null)

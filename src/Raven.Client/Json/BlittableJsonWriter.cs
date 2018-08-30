@@ -202,7 +202,7 @@ namespace Raven.Client.Json
                 case double d:
                     _manualBlittableJsonDocumentBuilder.WriteValue(d);
                     break;
-                case decimal decVal:                    
+                case decimal decVal:
                     _manualBlittableJsonDocumentBuilder.WriteValue(decVal);
                     break;
                 case float f:
@@ -327,7 +327,7 @@ namespace Raven.Client.Json
         }
 
         public override void WriteValue(decimal value)
-        {            
+        {
             _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
@@ -405,7 +405,7 @@ namespace Raven.Client.Json
         public override void WriteValue(decimal? value)
         {
             if (value != null)
-            {                
+            {
                 _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
             }
             else
@@ -550,6 +550,25 @@ namespace Raven.Client.Json
 
         public override void WriteValue(object value)
         {
+            switch (value)
+            {
+                case BlittableJsonReaderObject readerObject:
+                    if (false == readerObject.HasParent)
+                    {
+                        _manualBlittableJsonDocumentBuilder.WriteEmbeddedBlittableDocument(readerObject);
+                    }
+                    else
+                    {
+                        using (var clonedBlittable = readerObject.CloneOnTheSameContext())
+                        {
+                            _manualBlittableJsonDocumentBuilder.WriteEmbeddedBlittableDocument(clonedBlittable);
+                        }
+                    }
+                    return;
+                case LazyStringValue lazyStringValue:
+                    _manualBlittableJsonDocumentBuilder.WriteValue(lazyStringValue);
+                    return;
+            }
             base.WriteValue(value);
         }
 

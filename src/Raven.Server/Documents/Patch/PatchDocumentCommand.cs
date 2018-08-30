@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.Serialization;
+using Esprima.Ast;
 using System.Linq;
 using Jint.Native;
 using Raven.Client;
@@ -29,8 +31,9 @@ namespace Raven.Server.Documents.Patch
         private readonly ScriptRunner.SingleRun _runIfMissing;
         private ScriptRunner.ReturnRun _returnRun;
         private ScriptRunner.ReturnRun _returnRunIfMissing;
-        private readonly BlittableJsonReaderObject _patchIfMissingArgs;
-        private readonly BlittableJsonReaderObject _patchArgs;
+
+        private readonly (PatchRequest Run, BlittableJsonReaderObject Args) _patchIfMissing;
+        private readonly (PatchRequest Run, BlittableJsonReaderObject Args) _patch;
 
         public List<string> DebugOutput => _run.DebugOutput;
 
@@ -41,21 +44,21 @@ namespace Raven.Server.Documents.Patch
             string id,
             LazyStringValue expectedChangeVector,
             bool skipPatchIfChangeVectorMismatch,
-            (PatchRequest run, BlittableJsonReaderObject args) patch,
-            (PatchRequest run, BlittableJsonReaderObject args) patchIfMissing,
+            (PatchRequest Run, BlittableJsonReaderObject Args) patch,
+            (PatchRequest Run, BlittableJsonReaderObject Args) patchIfMissing,
             DocumentDatabase database,
             bool isTest,
             bool debugMode,
             bool collectResultsNeeded)
         {
             _externalContext = collectResultsNeeded ? context : null;
-            _patchIfMissingArgs = patchIfMissing.args;
-            _patchArgs = patch.args;
-            _returnRun = database.Scripts.GetScriptRunner(patch.run, false, out _run);
+            _patchIfMissing = patchIfMissing;
+            _patch = patch;
+            _returnRun = database.Scripts.GetScriptRunner(patch.Run, false, out _run);
             _run.DebugMode = debugMode;
             if (_runIfMissing != null)
                 _runIfMissing.DebugMode = debugMode;
-            _returnRunIfMissing = database.Scripts.GetScriptRunner(patchIfMissing.run, false, out _runIfMissing);
+            _returnRunIfMissing = database.Scripts.GetScriptRunner(patchIfMissing.Run, false, out _runIfMissing);
             _id = id;
             _expectedChangeVector = expectedChangeVector;
             _skipPatchIfChangeVectorMismatch = skipPatchIfChangeVectorMismatch;
@@ -63,7 +66,7 @@ namespace Raven.Server.Documents.Patch
             _isTest = isTest;
             _debugMode = debugMode;
 
-            if(string.IsNullOrEmpty(id) || id.EndsWith('/') || id.EndsWith('|'))
+            if (string.IsNullOrEmpty(id) || id.EndsWith('/') || id.EndsWith('|'))
             {
                 throw new ArgumentException("The id argument has invalid value: '" + id + "'", "id");
             }
@@ -71,7 +74,7 @@ namespace Raven.Server.Documents.Patch
 
         public PatchResult PatchResult { get; private set; }
 
-        public override int Execute(DocumentsOperationContext context)
+        protected override int ExecuteCmd(DocumentsOperationContext context)
         {
             var originalDocument = _database.DocumentsStorage.Get(context, _id);
             _run.DebugMode = _debugMode;
@@ -124,12 +127,12 @@ namespace Raven.Server.Documents.Patch
             }
 
             object documentInstance;
-            var args = _patchArgs;
+            var args = _patch.Args;
             BlittableJsonReaderObject originalDoc;
             if (originalDocument == null)
             {
                 _run = _runIfMissing;
-                args = _patchIfMissingArgs;
+                args = _patchIfMissing.Args;
                 documentInstance = _runIfMissing.CreateEmptyObject();
                 originalDoc = null;
             }
@@ -254,5 +257,48 @@ namespace Raven.Server.Documents.Patch
             _returnRun.Dispose();
             _returnRunIfMissing.Dispose();
         }
+
+        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+        {
+            return new PatchDocumentCommandDto
+            {
+                Id = _id,
+                ExpectedChangeVector = _expectedChangeVector,
+                SkipPatchIfChangeVectorMismatch = _skipPatchIfChangeVectorMismatch,
+                Patch = _patch,
+                PatchIfMissing = _patchIfMissing,
+                IsTest = _isTest,
+                DebugMode = _debugMode,
+                CollectResultsNeeded = _externalContext != null
+            };
+        }
+    }
+
+    public class PatchDocumentCommandDto : TransactionOperationsMerger.IReplayableCommandDto<PatchDocumentCommand>
+    {
+        public string Id;
+        public LazyStringValue ExpectedChangeVector;
+        public bool SkipPatchIfChangeVectorMismatch;
+        public (PatchRequest run, BlittableJsonReaderObject args) Patch;
+        public (PatchRequest run, BlittableJsonReaderObject args) PatchIfMissing;
+        public bool IsTest;
+        public bool DebugMode;
+        public bool CollectResultsNeeded;
+
+        public PatchDocumentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            return new PatchDocumentCommand(
+                context,
+                Id,
+                ExpectedChangeVector,
+                SkipPatchIfChangeVectorMismatch,
+                Patch,
+                PatchIfMissing,
+                database,
+                IsTest,
+                DebugMode,
+                CollectResultsNeeded);
+        }
     }
 }
+

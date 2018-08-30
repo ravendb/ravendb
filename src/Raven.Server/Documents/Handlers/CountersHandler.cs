@@ -26,8 +26,11 @@ namespace Raven.Server.Documents.Handlers
         public class ExecuteCounterBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             public bool HasWrites;
-            public CountersDetail CountersDetail;
             public string LastChangeVector;
+            public CountersDetail CountersDetail = new CountersDetail
+            {
+                Counters = new List<CounterDetail>()
+            };
 
             private readonly DocumentDatabase _database;
             private readonly bool _replyWithAllNodesValues;
@@ -40,10 +43,6 @@ namespace Raven.Server.Documents.Handlers
                 _dictionary = new Dictionary<string, List<CounterOperation>>();
                 _replyWithAllNodesValues = counterBatch?.ReplyWithAllNodesValues?? false;
                 _fromEtl = counterBatch?.FromEtl ?? false;
-                CountersDetail = new CountersDetail
-                {
-                    Counters = new List<CounterDetail>()
-                };
 
                 if (counterBatch == null)
                     return;
@@ -59,16 +58,26 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
 
+            /// <summary>
+            /// Used only from replay Tx commands
+            /// </summary>
+            public ExecuteCounterBatchCommand(
+                DocumentDatabase database,
+                Dictionary<string, List<CounterOperation>> operationsPreDocument,
+                bool replyWithAllNodesValues,
+                bool fromEtl)
+            {
+                _database = database;
+                _replyWithAllNodesValues = replyWithAllNodesValues;
+                _fromEtl = fromEtl;
+                _dictionary = operationsPreDocument;
+            }
+
             // used only from smuggler import
             public ExecuteCounterBatchCommand(DocumentDatabase database)
             {
                 _database = database;
                 _dictionary = new Dictionary<string, List<CounterOperation>>();
-
-                CountersDetail = new CountersDetail
-                {
-                    Counters = new List<CounterDetail>()
-                };
             }
 
             public void Add(string id, CounterOperation op)
@@ -84,7 +93,7 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 if (_database.ServerStore.Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
                     FeaturesAvailabilityException.Throw("Counters");
@@ -199,6 +208,16 @@ namespace Raven.Server.Documents.Handlers
                 return CountersDetail.Counters.Count;
             }
 
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new ExecuteCounterBatchCommandDto
+                {
+                    Dictionary = _dictionary,
+                    ReplyWithAllNodesValues = _replyWithAllNodesValues,
+                    FromEtl = _fromEtl
+                };
+            }
+
             private static void ThrowArtificialDocument(Document doc)
             {
                 throw new InvalidOperationException($"Document '{doc.Id}' has '{nameof(DocumentFlags.Artificial)}' flag set. " +
@@ -282,7 +301,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     using (context.OpenReadTransaction())
                     {
-                        cmd.Execute(context);
+                        cmd.ExecuteDirectly(context);
                     }
                 }
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -340,6 +359,20 @@ namespace Raven.Server.Documents.Handlers
         private static void ThrowMissingDocument(string docId)
         {
             throw new DocumentDoesNotExistException(docId, "Cannot operate on counters of a missing document.");
+        }
+    }
+
+    public class ExecuteCounterBatchCommandDto : TransactionOperationsMerger.IReplayableCommandDto<CountersHandler.ExecuteCounterBatchCommand>
+    {
+        public bool ReplyWithAllNodesValues;
+        public bool FromEtl;
+        public Dictionary<string, List<CounterOperation>> Dictionary;
+
+        public CountersHandler.ExecuteCounterBatchCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            var command = new CountersHandler.
+                ExecuteCounterBatchCommand(database, Dictionary, ReplyWithAllNodesValues, FromEtl);
+            return command;
         }
     }
 }

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Server.Background;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents
@@ -118,7 +119,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private class DeleteTombstonesCommand : TransactionOperationsMerger.MergedTransactionCommand
+        internal class DeleteTombstonesCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly Dictionary<string, long> _tombstones;
             private readonly long _minAllDocsEtag;
@@ -133,7 +134,7 @@ namespace Raven.Server.Documents
                 _logger = logger;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 var deletionCount = 0;
 
@@ -163,6 +164,28 @@ namespace Raven.Server.Documents
 
                 return deletionCount;
             }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new DeleteTombstonesCommandDto
+                {
+                    Tombstones = _tombstones,
+                    MinAllDocsEtag = _minAllDocsEtag
+                };
+            }
+        }
+    }
+
+    internal class DeleteTombstonesCommandDto : TransactionOperationsMerger.IReplayableCommandDto<TombstoneCleaner.DeleteTombstonesCommand>
+    {
+        public Dictionary<string, long> Tombstones;
+        public long MinAllDocsEtag;
+
+        public TombstoneCleaner.DeleteTombstonesCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            var log = LoggingSource.Instance.GetLogger<TombstoneCleaner.DeleteTombstonesCommand>(database.Name);
+            var command = new TombstoneCleaner.DeleteTombstonesCommand(Tombstones, MinAllDocsEtag, database, log);
+            return command;
         }
     }
 
