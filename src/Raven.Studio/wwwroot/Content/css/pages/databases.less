@@ -101,8 +101,14 @@
             transition: background-color 0.15s ease;
         }
 
+        .database-encryption-status {
+            text-align: center;
+            width: 21px;
+            margin-right: @grid-gutter-width/4;
+            align-self: flex-start;
+        }
+
         .dbgroup-node-type {
-            margin-left: 36px;
             display: flex;
             flex-wrap: wrap;
 
@@ -142,7 +148,7 @@
             font-size: 19px;
             display: flex;
             align-items: center;
-            width: 380px;
+            max-width: 380px;
             flex-shrink: 0;
 
             .checkbox {
@@ -211,60 +217,6 @@
             &:hover {
                 color: lighten(@gray-light, 25%);
                 transition: color .15s ease;
-            }
-        }
-    }
-
-    &.databases_compact {
-        .panel {
-            margin-bottom: 10px;
-        }
-
-        .hidden-compact {
-            display: none;
-        }
-
-        .properties-item {
-            min-width: 0;
-        }
-
-        .info-container {
-            width: 330px;
-        }
-
-        .properties-container {
-            min-height: 0;
-        }
-
-        .database-item {
-            .database-name {
-                font-size: 18px;
-                line-height: 120%;
-            }
-
-            .state::before {
-                content: '';
-            }
-
-            .properties-container {
-
-                .properties-item {
-                    width: auto;
-                    float: left;
-                    font-size: 90%;
-                    text-overflow: ellipsis;
-
-                    .set-size {
-                        position: static;
-                        padding-right: 10px;
-                    }
-                }
-            }
-
-            .database-item {
-                .btn-group .btn {
-                    .btn-sm;
-                }
             }
         }
     }

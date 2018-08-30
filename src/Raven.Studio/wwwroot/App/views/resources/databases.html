@@ -126,31 +126,36 @@
                                 </a>
 
                             </h3>
-                            <small class="margin-right margin-right-sm" title="This database is encrypted" data-bind="visible: isEncrypted"><i class="icon-encryption"></i></small>
                         </div>
-                        <div class="dbgroup-node-type">
-                            <!-- ko foreach: _.slice(nodes(), 0, 5) --> 
-                            <div>
-                                <a data-bind="attr: { href: $root.createAllDocumentsUrlObservableForNode($parent, $data), target: tag() === $root.clusterManager.localNodeTag() ? undefined : '_blank', title: type() },
+                        <div class="flex-horizontal">
+                            <div class="database-encryption-status">
+                                <small title="This database is encrypted" data-bind="visible: isEncrypted"><i class="icon-encryption text-success"></i></small>
+                                <small title="This database is not encrypted" data-bind="visible: !isEncrypted()"><i class="icon-unlock text-black"></i></small>
+                            </div>
+                            <div class="dbgroup-node-type">
+                                <!-- ko foreach: _.slice(nodes(), 0, 5) -->
+                                <div>
+                                    <a data-bind="attr: { href: $root.createAllDocumentsUrlObservableForNode($parent, $data), target: tag() === $root.clusterManager.localNodeTag() ? undefined : '_blank', title: type() },
                                               css: { 'link-disabled': $parent.isBeingDeleted }">
-                                    <i data-bind="attr: { class: cssIcon }"></i>
-                                    <span data-bind="text: 'Node ' + tag()"></span>
-                                </a>
-                            </div>
-                            <!-- /ko -->
-                            <!-- ko foreach: deletionInProgress -->
-                            <div>
-                                <div title="Deletion in progress" class="text-warning pulse">
-                                    <i class="icon-trash"></i>
-                                    <span data-bind="text: 'Node ' + $data"></span>
+                                        <i data-bind="attr: { class: cssIcon }"></i>
+                                        <span data-bind="text: 'Node ' + tag()"></span>
+                                    </a>
                                 </div>
-                            </div>
-                            <!-- /ko -->
-                            <div data-bind="visible: nodes().length > 5">
-                                <a href="#" data-bind="attr: { href:  $root.createManageDbGroupUrlObsevable($data) }" data-toggle="more-nodes-tooltip">
-                                    <i class="icon-dbgroup"></i>
-                                    <span>+<span data-bind="text: nodes().length - 5"></span> more</span>
-                                </a>
+                                <!-- /ko -->
+                                <!-- ko foreach: deletionInProgress -->
+                                <div>
+                                    <div title="Deletion in progress" class="text-warning pulse">
+                                        <i class="icon-trash"></i>
+                                        <span data-bind="text: 'Node ' + $data"></span>
+                                    </div>
+                                </div>
+                                <!-- /ko -->
+                                <div data-bind="visible: nodes().length > 5">
+                                    <a href="#" data-bind="attr: { href:  $root.createManageDbGroupUrlObsevable($data) }" data-toggle="more-nodes-tooltip">
+                                        <i class="icon-dbgroup"></i>
+                                        <span>+<span data-bind="text: nodes().length - 5"></span> more</span>
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
