@@ -49,6 +49,7 @@
         background-position: bottom right;
         background-size: auto 100%;
         position: relative;
+        overflow: hidden;
 
         svg {
             position: absolute;
@@ -313,6 +314,10 @@
             display: flex;
             flex-direction: column;
             padding: @grid-gutter-width/4;
+
+            &.dashboard-node {
+                flex-grow: 0;
+            }
 
             .panel {
                 flex-grow: 1;
