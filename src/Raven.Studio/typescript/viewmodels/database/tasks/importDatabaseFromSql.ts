@@ -14,6 +14,7 @@ import defaultAceCompleter = require("common/defaultAceCompleter");
 import popoverUtils = require("common/popoverUtils");
 import messagePublisher = require("common/messagePublisher");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import eventsCollector = require("common/eventsCollector");
 import referenceUsageDialog = require("viewmodels/database/tasks/referenceUsageDialog");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import documentMetadata = require("models/database/documents/documentMetadata");
@@ -165,6 +166,8 @@ class importDatabaseFromSql extends viewModelBase {
         if (!this.isValid(this.continueFlowValidationGroup)) {
             return;
         }
+
+        eventsCollector.default.reportEvent("import-sql", "continue-with-file");
         
         const fileInput = <HTMLInputElement>document.querySelector("#jsImportSqlFilePicker");
         const self = this;
@@ -210,7 +213,7 @@ class importDatabaseFromSql extends viewModelBase {
         }
     }
 
-    nextStep() {        
+    nextStep() {
         if (!this.isValid(this.model.getValidationGroup())) {
             return false;
         }
@@ -293,6 +296,8 @@ class importDatabaseFromSql extends viewModelBase {
         const db = this.activeDatabase();
         
         this.spinners.importing(true);
+
+        eventsCollector.default.reportEvent("import-sql", "migrate");
         
         new migrateSqlDatabaseCommand(db, dto)
             .execute()

@@ -127,6 +127,8 @@ class cmpXchg extends viewModelBase {
         if (selection.length === 0) {
             throw new Error("No elements to delete");
         }
+
+        eventsCollector.default.reportEvent("cmpXchg", "delete");
         
         const deleteDialog = new deleteCompareExchangeConfirm(selection.map(x => x.Key));
 

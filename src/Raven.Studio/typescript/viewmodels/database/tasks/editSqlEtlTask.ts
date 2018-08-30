@@ -145,6 +145,8 @@ class sqlTaskTestMode {
                 Configuration: this.configurationProvider(),
                 Connection: this.connectionProvider()
             } as Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters.TestSqlEtlScript;
+
+            eventsCollector.default.reportEvent("sql-etl", "test-replication");
             
             new testSqlReplicationCommand(this.db(), dto)
                 .execute()
@@ -506,7 +508,9 @@ class editSqlEtlTask extends viewModelBase {
         }
         
         // 6. All is well, Save Sql Etl task
-        savingNewStringAction.done(()=> {
+        savingNewStringAction.done(() => {
+            eventsCollector.default.reportEvent("sql-etl", "save");
+            
             const scriptsToReset = this.editedSqlEtl()
                 .transformationScripts()
                 .filter(x => x.resetScript())

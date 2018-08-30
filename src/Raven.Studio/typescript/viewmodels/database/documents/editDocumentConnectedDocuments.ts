@@ -4,6 +4,7 @@ import router = require("plugins/router");
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
 import recentDocumentsCtr = require("models/database/documents/recentDocuments");
+import eventsCollector = require("common/eventsCollector");
 
 import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDocumentsIDsCommand");
 import getDocumentRevisionsCommand = require("commands/database/documents/getDocumentRevisionsCommand");
@@ -431,6 +432,7 @@ class connectedDocuments {
     }
 
     private deleteAttachment(file: attachmentItem) {
+        eventsCollector.default.reportEvent("attachments", "delete");
         viewHelpers.confirmationMessage("Delete attachment", `Are you sure you want to delete attachment: ${file.name}?`, ["Cancel", "Delete"])
             .done((result) => {
                 if (result.can) {
@@ -442,6 +444,7 @@ class connectedDocuments {
     }
     
     private deleteCounter(counter: counterItem) {
+        eventsCollector.default.reportEvent("counter", "delete");
         viewHelpers.confirmationMessage("Delete counter", `Are you sure you want to delete counter ${counter.counterName}?`, ["Cancel", "Delete"])
             .done((result) => {
                 if (result.can) {
@@ -453,6 +456,7 @@ class connectedDocuments {
     }
 
     private setCounter(counter: counterItem) {
+        eventsCollector.default.reportEvent("counters", "set");
         const setCounterView = new setCounterDialog(counter, this.document().getId(), this.db());        
                 
         app.showBootstrapDialog(setCounterView);

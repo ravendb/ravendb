@@ -727,6 +727,7 @@ class indexes extends viewModelBase {
 
     showStaleReasons(idx: index) {
         const view = new indexStalenessReasons(this.activeDatabase(), idx.name);
+        eventsCollector.default.reportEvent("indexes", "show-stale-reasons");
         app.showBootstrapDialog(view);
     }
 }
