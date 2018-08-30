@@ -36,7 +36,9 @@ class importDatabaseFromFile extends viewModelBase {
     isUploading = ko.observable<boolean>(false);
     uploadStatus = ko.observable<number>();
 
-    importCommand: KnockoutComputed<string>;
+    importCommandPowerShell: KnockoutComputed<string>;
+    importCommandCmd: KnockoutComputed<string>;
+    importCommandBash: KnockoutComputed<string>;
 
     validationGroup = ko.validatedObservable({
         importedFileName: this.importedFileName,
@@ -64,27 +66,54 @@ class importDatabaseFromFile extends viewModelBase {
                 this.model.transformScript("");
             }
         });
+        
+        const modelAsJson = () => {
+            const args = this.model.toDto();
+            if (!args.TransformScript) {
+                delete args.TransformScript;
+            }
+            return JSON.stringify(args);
+        };
+        
+        const fileNameProvider = () => this.importedFileName() || "Dump of Database.ravendbdump";
+        const commandEndpointUrl = (db: database) => appUrl.forServer() + appUrl.forDatabaseQuery(db) + endpoints.databases.smuggler.smugglerImport;
+        
+        
 
-        //TODO: change input file name to be full document path
+        this.importCommandPowerShell = ko.pureComputed(() => {
+            const db = this.activeDatabase();
+            if (!db) {
+                return "";
+            }
+            
+            const json = modelAsJson();
+            const fileName = fileNameProvider();
 
-        this.importCommand = ko.pureComputed(() => {
+            return `curl.exe -F 'importOptions=${json.replace(/"/g, '\\"')}' -F 'file=@.\\${fileName}' ${commandEndpointUrl(db)}`;
+        });
+        
+        this.importCommandBash = ko.pureComputed(() => {
             const db = this.activeDatabase();
             if (!db) {
                 return "";
             }
 
-            const args = this.model.toDto();
-            if (!args.TransformScript) {
-                delete args.TransformScript;
-            }
-            const json = JSON.stringify(args);
-            const usingWindows = navigator.platform.startsWith("Win");
-
-            const fileName = this.importedFileName() || "Dump of Database.ravendbdump";
+            const json = modelAsJson();
+            const fileName = fileNameProvider();
             
-            const curl = "curl" + ( usingWindows ? ".exe" : "");
-            return curl + " -F 'importOptions=" + json.replace(/"/g, '\\"') + "' -F 'file=@.\\" + fileName + "' " +
-                appUrl.forServer() + appUrl.forDatabaseQuery(db) + endpoints.databases.smuggler.smugglerImport;
+            return `curl -F 'importOptions=${json}' -F 'file=@${fileName}' ${commandEndpointUrl(db)}`;
+        });
+        
+        this.importCommandCmd = ko.pureComputed(() => {
+            const db = this.activeDatabase();
+            if (!db) {
+                return "";
+            }
+
+            const json = modelAsJson();
+            const fileName = fileNameProvider();
+
+            return `curl.exe -F "importOptions=${json.replace(/"/g, '\\"')}" -F "file=@.\\${fileName}" ${commandEndpointUrl(db)}`;
         });
 
         this.isUploading.subscribe((newValue) => {
@@ -97,7 +126,7 @@ class importDatabaseFromFile extends viewModelBase {
 
         this.setupValidation();
     }
-
+    
     private setupValidation() {
         this.importedFileName.extend({
             required: true
@@ -107,7 +136,7 @@ class importDatabaseFromFile extends viewModelBase {
     attached() {
         super.attached();
 
-        popoverUtils.longWithHover($(".scriptPopover"),
+        popoverUtils.longWithHover($("#scriptPopover"),
             {
                 content:
                 "<div class=\"text-center\">Transform scripts are written in JavaScript </div>" +
@@ -231,8 +260,8 @@ class importDatabaseFromFile extends viewModelBase {
         }
     }
 
-    copyCommandToClipboard() {
-        copyToClipboard.copy(this.importCommand(), "Command was copied to clipboard.");
+    copyCommandToClipboard(command: string) {
+        copyToClipboard.copy(command, "Command was copied to clipboard.");
     }
 
     private getNextOperationId(db: database): JQueryPromise<number> {
