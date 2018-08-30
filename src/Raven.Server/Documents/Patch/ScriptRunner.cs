@@ -16,12 +16,13 @@ using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Lucene.Net.Store;
 using Raven.Client;
-using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Extensions;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -630,6 +631,9 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue GetCounterInternal(JsValue[] args, bool raw = false)
             {
+                if (_database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
+                    FeaturesAvailabilityException.Throw("Counters");
+
                 AssertValidDatabaseContext();
                 var signatue = raw ? "counterRaw(doc, name)" : "counter(doc, name)";
                 if (args.Length != 2)
@@ -676,6 +680,9 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue IncrementCounter(JsValue self, JsValue[] args)
             {
+                if (_database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
+                    FeaturesAvailabilityException.Throw("Counters");
+
                 AssertValidDatabaseContext();
 
                 if (args.Length < 2 || args.Length > 3)
@@ -771,6 +778,9 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue DeleteCounter(JsValue self, JsValue[] args)
             {
+                if (_database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
+                    FeaturesAvailabilityException.Throw("Counters");
+
                 AssertValidDatabaseContext();
 
                 if (args.Length !=2)
