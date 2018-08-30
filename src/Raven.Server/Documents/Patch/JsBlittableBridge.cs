@@ -455,7 +455,7 @@ namespace Raven.Server.Documents.Patch
             foreach (var modificationKvp in obj.OwnValues)
             {
                 //We already iterated through those properties while iterating the original properties set.
-                if(modifiedProperties.Contains(modificationKvp.Key))
+                if(modifiedProperties != null && modifiedProperties.Contains(modificationKvp.Key))
                     continue;
 
                 var propertyName = modificationKvp.Key;
