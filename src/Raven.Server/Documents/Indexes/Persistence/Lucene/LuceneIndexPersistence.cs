@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
+using Sparrow.Json;
 using Sparrow.Threading;
 using Voron;
 using Voron.Impl;
@@ -160,7 +161,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             new IndexWriter(directory, _dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED, state).Dispose();
         }
 
-        public IndexWriteOperation OpenIndexWriter(Transaction writeTransaction)
+        public IndexWriteOperation OpenIndexWriter(Transaction writeTransaction, JsonOperationContext indexContext)
         {
             CheckDisposed();
             CheckInitialized();
@@ -169,7 +170,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 var mapReduceIndex = (MapReduceIndex)_index;
                 if (string.IsNullOrWhiteSpace(mapReduceIndex.Definition.OutputReduceToCollection) == false)
-                    return new OutputReduceIndexWriteOperation(mapReduceIndex, _directory, _converter, writeTransaction, this);
+                    return new OutputReduceIndexWriteOperation(mapReduceIndex, _directory, _converter, writeTransaction, this, indexContext);
             }
 
             return new IndexWriteOperation(
