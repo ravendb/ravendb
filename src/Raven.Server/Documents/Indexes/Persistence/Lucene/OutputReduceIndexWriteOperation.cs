@@ -85,14 +85,28 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             private readonly JsonOperationContext _indexContext;
 
             public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, MapReduceIndex index, JsonOperationContext context)
+                : this(database, outputReduceToCollection)
             {
-                _database = database;
-                _outputReduceToCollection = outputReduceToCollection;
                 _index = index;
                 _indexContext = context;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            /// <summary>
+            ///This constructor should be used for replay transaction operations only
+            /// </summary>
+            internal OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, Dictionary<string, List<BlittableJsonReaderObject>> reduceDocuments)
+                : this(database, outputReduceToCollection)
+            {
+                _reduceDocuments = reduceDocuments;
+            }
+
+            public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection)
+            {
+                _database = database;
+                _outputReduceToCollection = outputReduceToCollection;
+            }
+
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 foreach (var reduceKeyHash in _reduceKeyHashesToDelete)
                 {
@@ -121,6 +135,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
 
                 return _reduceDocuments.Count;
+            }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new OutputReduceToCollectionCommandDto
+                {
+                    OutputReduceToCollection = _outputReduceToCollection,
+                    ReduceDocuments = _reduceDocuments
+                };
             }
 
             public void AddReduce(string reduceKeyHash, object reduceObject)
@@ -180,6 +203,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     }
                 }
             }
+        }
+    }
+
+    public class OutputReduceToCollectionCommandDto : TransactionOperationsMerger.IReplayableCommandDto<OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand>
+    {
+        public string OutputReduceToCollection;
+        public Dictionary<string, List<BlittableJsonReaderObject>> ReduceDocuments;
+
+        public OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            var command = new OutputReduceIndexWriteOperation.OutputReduceToCollectionCommand(database, OutputReduceToCollection, ReduceDocuments);
+            return command;
         }
     }
 }

@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Queries
             };
         }
 
-        private class BulkOperationCommand<T> : TransactionOperationsMerger.MergedTransactionCommand where T : TransactionOperationsMerger.MergedTransactionCommand
+        internal class BulkOperationCommand<T> : TransactionOperationsMerger.MergedTransactionCommand where T : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly T _command;
             private readonly bool _retrieveDetails;
@@ -182,14 +182,24 @@ namespace Raven.Server.Documents.Queries
                 _getDetails = getDetails;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            public override int Execute(DocumentsOperationContext context, TransactionOperationsMerger.RecordingState recording)
             {
-                var count = _command.Execute(context);
+                var count = _command.Execute(context, recording);
 
                 if (_retrieveDetails)
                     AfterExecute?.Invoke(_getDetails(_command));
 
                 return count;
+            }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                throw new NotSupportedException($"ToDto() of {nameof(BulkOperationCommand<T>)} Should not be called");
+            }
+
+            protected override int ExecuteCmd(DocumentsOperationContext context)
+            {
+                throw new NotSupportedException("Should only call Execute() here");
             }
 
             public Action<IBulkOperationDetails> AfterExecute { private get; set; }

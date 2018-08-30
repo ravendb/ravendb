@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -23,6 +24,10 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Json;
 using Raven.Server.Json;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Server.Documents.Replication;
+using System.Runtime.ExceptionServices;
+using Newtonsoft.Json;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Config.Categories;
@@ -31,6 +36,9 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
 using Voron;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
+using Raven.Server.Documents.Patch;
+using Raven.Server.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -434,7 +442,7 @@ namespace Raven.Server.Documents.Handlers
                 _batch = batch;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 if (Database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
                     FeaturesAvailabilityException.Throw("Cluster Transactions");
@@ -598,6 +606,14 @@ namespace Raven.Server.Documents.Handlers
                     return null;
                 return Database.DocumentsStorage.ExtractCollectionName(context, conflicts[0].Collection);
             }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new ClusterTransactionMergedCommandDto
+                {
+                    Batch = _batch
+                };
+            }
         }
 
         public class MergedBatchCommand : TransactionMergedCommand, IDisposable
@@ -636,6 +652,16 @@ namespace Raven.Server.Documents.Handlers
                 return sb.ToString();
             }
 
+            
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new MergedBatchCommandDto
+                {
+                    ParsedCommands = ParsedCommands.ToArray(),
+                    AttachmentStreams = AttachmentStreams
+                };
+            }
+
             private bool CanAvoidThrowingToMerger(Exception e, int commandOffset)
             {
                 // if a concurrency exception has been thrown, because the user passed a change vector,
@@ -650,7 +676,7 @@ namespace Raven.Server.Documents.Handlers
                 return false;
             }
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 if (IsClusterTransaction)
                 {
@@ -705,7 +731,7 @@ namespace Raven.Server.Documents.Handlers
                         case CommandType.PATCH:
                             try
                             {
-                                cmd.PatchCommand.Execute(context);
+                                cmd.PatchCommand.ExecuteDirectly(context);
                             }
                             catch (ConcurrencyException e) when (CanAvoidThrowingToMerger(e, i))
                             {
@@ -876,7 +902,7 @@ namespace Raven.Server.Documents.Handlers
                             });
                             try
                             {
-                                counterBatchCmd.Execute(context);
+                                counterBatchCmd.ExecuteDirectly(context);
                             }
                             catch (DocumentDoesNotExistException e) when (CanAvoidThrowingToMerger(e, i))
                             {
@@ -948,4 +974,51 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
+    public class ClusterTransactionMergedCommandDto : TransactionOperationsMerger.IReplayableCommandDto<BatchHandler.ClusterTransactionMergedCommand>
+    {
+        public List<ClusterTransactionCommand.SingleClusterDatabaseCommand> Batch { get; set; }
+
+        public BatchHandler.ClusterTransactionMergedCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            var command = new BatchHandler.ClusterTransactionMergedCommand(database, Batch);
+            return command;
+        }
+    }
+
+    public class MergedBatchCommandDto : TransactionOperationsMerger.IReplayableCommandDto<BatchHandler.MergedBatchCommand>
+    {
+        public BatchRequestParser.CommandData[] ParsedCommands { get; set; }
+        public Queue<BatchHandler.MergedBatchCommand.AttachmentStream> AttachmentStreams;
+
+        public BatchHandler.MergedBatchCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            for (var i = 0; i < ParsedCommands.Length; i++)
+            {
+                if (ParsedCommands[i].Type != CommandType.PATCH)
+                {
+                    continue;
+                }
+
+                ParsedCommands[i].PatchCommand = new PatchDocumentCommand(context, 
+                    ParsedCommands[i].Id, 
+                    ParsedCommands[i].ChangeVector,
+                    false,
+                    (ParsedCommands[i].Patch, ParsedCommands[i].PatchArgs),
+                    (ParsedCommands[i].PatchIfMissing, ParsedCommands[i].PatchIfMissingArgs),
+                    database,
+                    false,
+                    false,
+                    true
+                );
+            }
+
+            var newCmd = new BatchHandler.MergedBatchCommand(database)
+            {
+                ParsedCommands = ParsedCommands,
+                AttachmentStreams = AttachmentStreams
+            };
+
+            return newCmd;
+        }
+    }
 }

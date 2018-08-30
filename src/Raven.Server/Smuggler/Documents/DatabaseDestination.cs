@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
@@ -268,12 +269,12 @@ namespace Raven.Server.Smuggler.Documents
             public void WriteKeyValue(string key, BlittableJsonReaderObject value)
             {
                 const int batchSize = 1024;
-                    _compareExchangeCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context));
+                _compareExchangeCommands.Add(new AddOrUpdateCompareExchangeCommand(_database.Name, key, value, 0, _context));
 
-                    if (_compareExchangeCommands.Count < batchSize)
-                        return;
+                if (_compareExchangeCommands.Count < batchSize)
+                    return;
 
-                    SendCommands(_context);
+                SendCommands(_context);
             }
 
             public void Dispose()
@@ -412,7 +413,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class MergedBatchPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
+        public class MergedBatchPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             public bool IsRevision;
 
@@ -441,7 +442,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public DocumentsOperationContext Context => _context;
 
-            public override int Execute(DocumentsOperationContext context)
+            protected override int ExecuteCmd(DocumentsOperationContext context)
             {
                 if (_log.IsInfoEnabled)
                     _log.Info($"Importing {Documents.Count:#,#0} documents");
@@ -639,6 +640,35 @@ namespace Raven.Server.Smuggler.Documents
             {
                 Documents.Add(document);
             }
+
+            public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+            {
+                return new MergedBatchPutCommandDto
+                {
+                    BuildType = _buildType,
+                    Documents = Documents,
+                    IsRevision = IsRevision
+                };
+            }
+        }
+
+        public class MergedBatchPutCommandDto : TransactionOperationsMerger.IReplayableCommandDto<MergedBatchPutCommand>
+        {
+            public BuildVersionType BuildType;
+            public List<DocumentItem> Documents;
+            public bool IsRevision;
+
+            public MergedBatchPutCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+            {
+                var log = LoggingSource.Instance.GetLogger<DatabaseDestination>(database.Name);
+                var command = new MergedBatchPutCommand(database, BuildType, log)
+                {
+                    IsRevision = IsRevision
+                };
+                Documents.ForEach(d => command.Add(d));
+
+                return command;
+            }
         }
 
         private class CounterActions : ICounterActions
@@ -699,7 +729,7 @@ namespace Raven.Server.Smuggler.Documents
                 _prevCommandTask = commandTask;
 
                 if (prevCommand != null)
-                {                   
+                {
                     AsyncHelpers.RunSync(() => prevCommandTask);
                 }
 
@@ -727,6 +757,5 @@ namespace Raven.Server.Smuggler.Documents
                 _cmd = null;
             }
         }
-
     }
 }

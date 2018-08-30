@@ -244,7 +244,7 @@ namespace Raven.Server.Documents.Handlers
 
                 using (context.OpenWriteTransaction())
                 {
-                    command.Execute(context);
+                    command.Execute(context, null);
                 }
 
                 switch (command.PatchResult.Status)

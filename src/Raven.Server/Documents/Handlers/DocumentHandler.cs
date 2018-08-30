@@ -392,7 +392,7 @@ namespace Raven.Server.Documents.Handlers
                         // testing patching is rare enough not to optimize it
                         using (context.OpenWriteTransaction())
                         {
-                            command.Execute(context);
+                            command.Execute(context, null);
                         }
                     }
 
@@ -534,7 +534,7 @@ namespace Raven.Server.Documents.Handlers
             _database = database;
         }
 
-        public override int Execute(DocumentsOperationContext context)
+        protected override int ExecuteCmd(DocumentsOperationContext context)
         {
             try
             {
@@ -565,6 +565,28 @@ namespace Raven.Server.Documents.Handlers
         public void Dispose()
         {
             _document?.Dispose();
+        }
+
+        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+        {
+            return new MergedPutCommandDto()
+            {
+                Id = _id,
+                ExpectedChangeVector = _expectedChangeVector,
+                Document = _document
+            };
+        }
+
+        public class MergedPutCommandDto : TransactionOperationsMerger.IReplayableCommandDto<MergedPutCommand>
+        {
+            public string Id { get; set; }
+            public LazyStringValue ExpectedChangeVector { get; set; }
+            public BlittableJsonReaderObject Document { get; set; }
+
+            public MergedPutCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+            {
+                return new MergedPutCommand(Document, Id, ExpectedChangeVector, database);
+            }
         }
     }
 }

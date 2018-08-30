@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Replication.Messages;
@@ -21,6 +22,7 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Indexes;
@@ -44,6 +46,8 @@ namespace Raven.Server.Json
 {
     internal sealed class JsonDeserializationServer : JsonDeserializationBase
     {
+        public static readonly Func<BlittableJsonReaderObject, StartTransactionsRecordingOperation.Parameters> StartTransactionsRecordingOperationParameters = GenerateJsonDeserializationRoutine<StartTransactionsRecordingOperation.Parameters>();
+
         public static readonly Func<BlittableJsonReaderObject, ServerWideDebugInfoPackageHandler.NodeDebugInfoRequestHeader> NodeDebugInfoRequestHeader = GenerateJsonDeserializationRoutine<ServerWideDebugInfoPackageHandler.NodeDebugInfoRequestHeader>();
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseStatusReport> DatabaseStatusReport = GenerateJsonDeserializationRoutine<DatabaseStatusReport>();
