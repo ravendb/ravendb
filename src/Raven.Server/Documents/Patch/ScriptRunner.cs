@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Patch
             _creationTime = DateTime.UtcNow;
         }
 
-        public DynamicJsonValue GetDebugInfo(bool detailed=false)
+        public DynamicJsonValue GetDebugInfo(bool detailed = false)
         {
             var djv = new DynamicJsonValue
             {
@@ -63,10 +63,10 @@ namespace Raven.Server.Documents.Patch
                 ["CreationTime"] = _creationTime,
                 ["LastRun"] = _lastRun,
                 ["Runs"] = Runs,
-                ["CachedScriptsCount"] = _cache.Count                
+                ["CachedScriptsCount"] = _cache.Count
             };
             if (detailed)
-                djv["ScriptsSource"] = ScriptsSource;                
+                djv["ScriptsSource"] = ScriptsSource;
 
             return djv;
         }
@@ -118,6 +118,8 @@ namespace Raven.Server.Documents.Patch
             public HashSet<string> Includes;
             private HashSet<string> _documentIds;
             public bool ReadOnly;
+            public string OriginalDocumentId;
+            public bool RefreshOriginalDocument;
             private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
             public HashSet<string> UpdatedDocumentCounterIds;
 
@@ -142,7 +144,7 @@ namespace Raven.Server.Documents.Patch
                 });
                 ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, OutputDebug));
                 ObjectInstance consoleObject = new ObjectInstance(ScriptEngine);
-                consoleObject.FastAddProperty("log", new ClrFunctionInstance(ScriptEngine, OutputDebug),false,false,false);
+                consoleObject.FastAddProperty("log", new ClrFunctionInstance(ScriptEngine, OutputDebug), false, false, false);
                 ScriptEngine.SetValue("console", consoleObject);
                 ScriptEngine.SetValue("include", new ClrFunctionInstance(ScriptEngine, IncludeDoc));
                 ScriptEngine.SetValue("load", new ClrFunctionInstance(ScriptEngine, LoadDocument));
@@ -425,9 +427,9 @@ namespace Raven.Server.Documents.Patch
                     reader = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     var put = _database.DocumentsStorage.Put(
-                        _docsCtx, 
-                        id, 
-                        _docsCtx.GetLazyString(changeVector), 
+                        _docsCtx,
+                        id,
+                        _docsCtx.GetLazyString(changeVector),
                         reader,
                         //RavenDB-11391 Those flags were added to cause attachment/counter metadata table check & remove metadata properties if not necessary
                         nonPersistentFlags: NonPersistentDocumentFlags.ResolveAttachmentsConflict | NonPersistentDocumentFlags.ResolveCountersConflict
@@ -441,6 +443,9 @@ namespace Raven.Server.Documents.Patch
                             ["Data"] = reader
                         });
                     }
+
+                    if (RefreshOriginalDocument == false && string.Equals(put.Id, OriginalDocumentId, StringComparison.OrdinalIgnoreCase))
+                        RefreshOriginalDocument = true;
 
                     return put.Id;
                 }
@@ -476,6 +481,10 @@ namespace Raven.Server.Documents.Patch
                 if (DebugMode)
                     DebugActions.DeleteDocument.Add(id);
                 var result = _database.DocumentsStorage.Delete(_docsCtx, id, changeVector);
+
+                if (RefreshOriginalDocument == false && string.Equals(OriginalDocumentId, id, StringComparison.OrdinalIgnoreCase))
+                    RefreshOriginalDocument = true;
+
                 return result != null;
             }
 
@@ -904,8 +913,8 @@ namespace Raven.Server.Documents.Patch
                 if (args[0].IsDate())
                 {
                     var date = args[0].AsDate().ToDateTime();
-                    return format != null ? 
-                        date.ToString(format, cultureInfo) : 
+                    return format != null ?
+                        date.ToString(format, cultureInfo) :
                         date.ToString(cultureInfo);
 
                 }
@@ -1062,9 +1071,17 @@ namespace Raven.Server.Documents.Patch
 
             public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, object[] args)
             {
+                return Run(jsonCtx, docCtx, method, null, args);
+            }
+
+            public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, string documentId, object[] args)
+            {
                 _docsCtx = docCtx;
                 _jsonCtx = jsonCtx ?? ThrowArgumentNull();
+
                 Reset();
+                OriginalDocumentId = documentId;
+
                 if (_args.Length != args.Length)
                     _args = new JsValue[args.Length];
                 for (var i = 0; i < args.Length; i++)
@@ -1119,6 +1136,8 @@ namespace Raven.Server.Documents.Patch
                 }
                 Includes?.Clear();
                 PutOrDeleteCalled = false;
+                OriginalDocumentId = null;
+                RefreshOriginalDocument = false;
                 ScriptEngine.ResetCallStack();
                 ScriptEngine.ResetStatementsCount();
                 ScriptEngine.ResetTimeoutTicks();
