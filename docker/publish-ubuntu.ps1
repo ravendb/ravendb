@@ -72,6 +72,8 @@ function RemoveImages($imageTags) {
 }
 function GetImageTags($repo, $version) {
         return @(
+            "$($repo):latest",
+            "$($repo):ubuntu-latest",
             "$($repo):4.1-ubuntu-latest",
             "$($repo):$($version)-ubuntu.18.04-x64"
         )
