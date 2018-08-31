@@ -1,6 +1,8 @@
 ﻿using System;
+using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Server.Documents.ETL;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -52,6 +54,23 @@ loadToPeople(person);
                     Assert.NotNull(person);
                     Assert.Equal("James", person.Name); // throws here, actual: Joe
                 }
+            }
+        }
+
+        [Fact]
+        public void CanDeleteEverything()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new CreateSampleDataOperation());
+
+                WaitForIndexing(store);
+
+                var operation = store.Operations.Send(new PatchByQueryOperation("from @all_docs as doc update {  del(id(doc)); }"));
+                operation.WaitForCompletion();
+
+                var stats = store.Maintenance.Send(new GetStatisticsOperation());
+                Assert.Equal(8, stats.CountOfDocuments); // hi-lo
             }
         }
     }
