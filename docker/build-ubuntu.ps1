@@ -28,8 +28,6 @@ function BuildUbuntuDockerImage ($version) {
 
     docker build $DockerfileDir `
         -t "$($repo):$version-ubuntu.16.04-x64" `
-        -t "$($repo):latest" `
-        -t "$($repo):ubuntu-latest" `
         -t "$($repo):4.0-ubuntu-latest"
 
     Remove-Item -Path $dockerPackagePath
