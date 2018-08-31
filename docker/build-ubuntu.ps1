@@ -27,6 +27,8 @@ function BuildUbuntuDockerImage ($version) {
     write-host "Tags: $($repo):$version-ubuntu.18.04-x64 $($repo):4.1-ubuntu-latest"
 
     docker build $DockerfileDir `
+        -t "$($repo):latest" `
+        -t "$($repo):ubuntu-latest" `
         -t "$($repo):$version-ubuntu.18.04-x64" `
         -t "$($repo):4.1-ubuntu-latest"
 
