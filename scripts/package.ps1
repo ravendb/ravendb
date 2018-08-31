@@ -57,6 +57,7 @@ function LayoutServerPackage ( $packageDir, $projectDir, $packOpts ) {
     CopyServerStartAsServiceScript $projectDir $packageDir $packOpts
     CopyServerToolsToServerOutputDirectory $packOpts.OutDirs
     CopyServerReadmeFile $target $packageDir
+    AddRuntimeTxt $projectDir $packageDir
     LayoutServerDirectory $projectDir $($packOpts.OutDirs.Server) $packageDir $target
 }
 
