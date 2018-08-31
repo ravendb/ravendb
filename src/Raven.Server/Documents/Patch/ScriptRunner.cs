@@ -482,8 +482,8 @@ namespace Raven.Server.Documents.Patch
                     DebugActions.DeleteDocument.Add(id);
                 var result = _database.DocumentsStorage.Delete(_docsCtx, id, changeVector);
 
-                if (RefreshOriginalDocument == false && string.Equals(OriginalDocumentId, id, StringComparison.OrdinalIgnoreCase))
-                    RefreshOriginalDocument = true;
+                if (RefreshOriginalDocument && string.Equals(OriginalDocumentId, id, StringComparison.OrdinalIgnoreCase))
+                    RefreshOriginalDocument = false;
 
                 return result != null;
             }
