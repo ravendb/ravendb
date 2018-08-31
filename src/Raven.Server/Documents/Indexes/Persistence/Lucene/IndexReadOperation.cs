@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var docsToGet = pageSize;
             var position = query.Start;
 
-            if (query.Metadata.IsOptimizedSortOnly && _index.Definition.HasDynamicFields == false)
+            if (query.Metadata.IsOptimizedSortOnly && _index.Definition.HasDynamicFields == false && _index.IsMultiMap == false)
             {
                 foreach (var result in QuerySortOnly(query, retriever, position, pageSize, totalResults, token))
                     yield return result;
