@@ -35,6 +35,7 @@ $ErrorActionPreference = "Stop"
 . '.\scripts\sign.ps1'
 . '.\scripts\docker.ps1'
 . '.\scripts\schemaInfo.ps1'
+. '.\scripts\runtime.ps1'
 
 if ($Help) {
     Help
