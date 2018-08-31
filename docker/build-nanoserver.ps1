@@ -28,7 +28,6 @@ function BuildWindowsDockerImage ($version) {
 
     docker build $DockerfileDir `
         -t "$($repo):$version-windows-nanoserver" `
-        -t "$($repo):windows-nanoserver-latest" `
         -t "$($repo):4.0-windows-nanoserver-latest"
 
     Remove-Item -Path $dockerPackagePath
