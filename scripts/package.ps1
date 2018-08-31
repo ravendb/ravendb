@@ -30,7 +30,6 @@ function CreatePackageLayout ( $packageDir, $projectDir, $packOpts ) {
 
 function LayoutRegularPackage ( $packageDir, $projectDir, $packOpts ) {
     $target = $packOpts.Target
-
     CopyStudioPackage $packOpts
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
@@ -38,6 +37,7 @@ function LayoutRegularPackage ( $packageDir, $projectDir, $packOpts ) {
     CopyStartAsServiceScript $projectDir $packageDir $packOpts
     CopyTools $packOpts.OutDirs
     CopyReadmeFile $target $packageDir
+    AddRuntimeTxt $projectDir $packageDir
     CreatePackageServerLayout $projectDir $($packOpts.OutDirs.Server) $packageDir $target
 }
 function CopyStudioPackage ( $packOpts ) {
