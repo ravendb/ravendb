@@ -13,7 +13,7 @@ namespace SlowTests.Issues
         public void SearchBooking_ProjectionWithDateTimeToStringAndFormat_ReturnsResult()
         {
             using (var store = GetDocumentStore())
-            { 
+            {
                 // Arrange  
                 store.ExecuteIndex(new BookingIndex());
 
@@ -33,7 +33,8 @@ namespace SlowTests.Issues
                 {
                     var query = session.Query<BookingIndex.Result, BookingIndex>()
                         .Where(x => x.FullName == "Alex Me")
-                        .Select(x => new {
+                        .Select(x => new
+                        {
                             FullName = x.FullName,
                             StartDate = x.Start.ToString("dd.MM.yyyy")
                         });
@@ -72,7 +73,8 @@ namespace SlowTests.Issues
                 {
                     var query = session.Query<Booking>()
                         .Where(x => x.FirstName == "Alex")
-                        .Select(x => new {
+                        .Select(x => new
+                        {
                             StartDate = x.Start.ToString(CultureInfo.InvariantCulture)
                         });
 
@@ -111,12 +113,13 @@ namespace SlowTests.Issues
                 {
                     var query = session.Query<Booking>()
                         .Where(x => x.FirstName == "Alex")
-                        .Select(x => new {
+                        .Select(x => new
+                        {
                             StartDate = x.Start.ToString(CultureInfo.CurrentCulture)
                         });
 
                     Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
-                                 "select { StartDate : toStringWithFormat(new Date(Date.parse(x.Start)), \"en-US\") }"
+                                 $"select {{ StartDate : toStringWithFormat(new Date(Date.parse(x.Start)), \"{CultureInfo.CurrentCulture.Name}\") }}"
                         , query.ToString());
 
                     var result = query.Single();
@@ -149,12 +152,13 @@ namespace SlowTests.Issues
                 {
                     var query = session.Query<Booking>()
                         .Where(x => x.FirstName == "Alex")
-                        .Select(x => new {
+                        .Select(x => new
+                        {
                             StartDate = x.Start.ToString("dd.MM.yyyy", CultureInfo.CurrentCulture)
                         });
 
                     Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
-                                 "select { StartDate : toStringWithFormat(new Date(Date.parse(x.Start)), \"dd.MM.yyyy\", \"en-US\") }"
+                                 $"select {{ StartDate : toStringWithFormat(new Date(Date.parse(x.Start)), \"dd.MM.yyyy\", \"{CultureInfo.CurrentCulture.Name}\") }}"
                         , query.ToString());
 
                     var result = query.Single();
@@ -188,7 +192,8 @@ namespace SlowTests.Issues
                 {
                     var query = session.Query<Booking>()
                         .Where(x => x.FirstName == "Alex")
-                        .Select(x => new {
+                        .Select(x => new
+                        {
                             StartDate = x.Start.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)
                         });
 
@@ -217,7 +222,7 @@ namespace SlowTests.Issues
                 {
                     session.Advanced.WaitForIndexesAfterSaveChanges(TimeSpan.FromSeconds(2));
 
-                    session.Store(new Booking { FirstName = "Alex", LastName = "Me", Number = num});
+                    session.Store(new Booking { FirstName = "Alex", LastName = "Me", Number = num });
                     session.Store(new Booking { FirstName = "You", LastName = "Me", Number = 20 });
                     session.SaveChanges();
                 }
@@ -226,7 +231,8 @@ namespace SlowTests.Issues
                 {
                     var query = session.Query<Booking>()
                         .Where(x => x.FirstName == "Alex")
-                        .Select(x => new {
+                        .Select(x => new
+                        {
                             Number = x.Number.ToString("000")
                         });
 
@@ -263,7 +269,8 @@ namespace SlowTests.Issues
                 {
                     var query = session.Query<Booking>()
                         .Where(x => x.FirstName == "Alex")
-                        .Select(x => new {
+                        .Select(x => new
+                        {
                             Number = x.Number.ToString(CultureInfo.InvariantCulture)
                         });
 
@@ -301,12 +308,13 @@ namespace SlowTests.Issues
                 {
                     var query = session.Query<Booking>()
                         .Where(x => x.FirstName == "Alex")
-                        .Select(x => new {
+                        .Select(x => new
+                        {
                             Number = x.Number.ToString(CultureInfo.CurrentCulture)
                         });
 
                     Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
-                                 "select { Number : toStringWithFormat(x.Number, \"en-US\") }"
+                                 $"select {{ Number : toStringWithFormat(x.Number, \"{CultureInfo.CurrentCulture.Name}\") }}"
                         , query.ToString());
 
                     var result = query.Single();
@@ -339,12 +347,13 @@ namespace SlowTests.Issues
                 {
                     var query = session.Query<Booking>()
                         .Where(x => x.FirstName == "Alex")
-                        .Select(x => new {
+                        .Select(x => new
+                        {
                             Number = x.Number.ToString("000", CultureInfo.CurrentCulture)
                         });
 
                     Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
-                                 "select { Number : toStringWithFormat(x.Number, \"000\", \"en-US\") }"
+                                 $"select {{ Number : toStringWithFormat(x.Number, \"000\", \"{CultureInfo.CurrentCulture.Name}\") }}"
                         , query.ToString());
 
                     var result = query.Single();
