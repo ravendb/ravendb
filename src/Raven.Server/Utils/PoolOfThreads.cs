@@ -30,6 +30,9 @@ namespace Raven.Server.Utils
         });
 
         public static PoolOfThreads GlobalRavenThreadPool => _globalRavenThreadPool.Value;
+
+        public ConcurrentQueue<PooledThread> Pool => _pool;
+
         private static Logger _log = LoggingSource.Instance.GetLogger<PoolOfThreads>("Server");
         private float _minimumFreeCommittedMemory = 0.05f;
 
@@ -101,7 +104,7 @@ namespace Raven.Server.Utils
             return pooled.SetWorkForThread(action, state, name);
         }
 
-        internal class PooledThread
+        public class PooledThread
         {
             private static readonly FieldInfo RuntimeThreadField;
             private static readonly FieldInfo ThreadFieldName;
@@ -117,6 +120,10 @@ namespace Raven.Server.Utils
             private Process _currentProcess;
 
             public DateTime StartedAt { get; internal set; }
+
+            public ulong CurrentUnmangedThreadId => _currentUnmangedThreadId;
+
+            public string Name => _name;
 
             static PooledThread()
             {

@@ -42,6 +42,8 @@ namespace Sparrow.LowMemory
             public long LowMemThreshold { get; set; }
         }
 
+        public event Action LowMemoryEvent;
+
         public LowMemEventDetails[] LowMemEventDetailsStack = new LowMemEventDetails[256];
         private int _lowMemEventDetailsIndex;
         private int _clearInactiveHandlersCounter;
@@ -92,6 +94,7 @@ namespace Sparrow.LowMemory
             finally
             {
                 _inactiveHandlers.Clear();
+                OnLowMemoryEvent();
             }
         }
 
@@ -383,6 +386,11 @@ namespace Sparrow.LowMemory
         public void SimulateLowMemoryNotification()
         {
             _simulatedLowMemory.Set();
+        }
+
+        protected void OnLowMemoryEvent()
+        {
+            LowMemoryEvent?.Invoke();
         }
     }
 }

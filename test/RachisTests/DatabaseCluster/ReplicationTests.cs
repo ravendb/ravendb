@@ -33,7 +33,7 @@ namespace RachisTests.DatabaseCluster
     {
         [Fact]
         public async Task WaitForCommandToApply()
-        {
+        {            
             var clusterSize = 5;
             var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
@@ -132,6 +132,45 @@ namespace RachisTests.DatabaseCluster
                     TimeSpan.FromSeconds(clusterSize + 5),
                     certificate: clientCertificate));
 
+            }
+        }
+
+        [Fact]
+        public void DatabaseCreateAndDeleteTest()
+        {
+            using (var store = new DocumentStore
+            {
+                Urls = new[] {Server.WebUrl}
+            })
+            {
+                store.Initialize();
+
+                var putResult = store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord("FooBar")));
+                Server.ServerStore.Cluster.WaitForIndexNotification(putResult.RaftCommandIndex).Wait();
+
+                var deleteResult = store.Maintenance.Server.Send(new DeleteDatabasesOperation("FooBar", true));
+                Server.ServerStore.Cluster.WaitForIndexNotification(deleteResult.RaftCommandIndex).Wait();
+            }
+        }
+
+        [Fact]
+        public void VerySimpleTest()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User{ Name = "Foo" },"foo/bar");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var foo = session.Load<User>("foo/bar");
+                    Assert.NotNull(foo);
+                }
+
+                Thread.Sleep(1500);
             }
         }
 
@@ -260,7 +299,8 @@ namespace RachisTests.DatabaseCluster
                     lastException = e;
                     GC.Collect();
                     GC.WaitForFullGCComplete(2000);
-                    Thread.Sleep(2000);
+
+                    Raven.Server.Extensions.MemoryExtensions.EmptyWorkingSet(null);
                 }
             }
 

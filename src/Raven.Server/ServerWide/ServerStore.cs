@@ -364,6 +364,8 @@ namespace Raven.Server.ServerWide
             await _engine.RemoveFromClusterAsync(nodeTag).WithCancellation(_shutdownNotification.Token);
         }
 
+        public LowMemoryNotification LowMemoryNotification => LowMemoryNotification.Instance;
+
         public void Initialize()
         {
             Configuration.CheckDirectoryPermissions();

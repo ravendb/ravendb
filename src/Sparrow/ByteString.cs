@@ -467,7 +467,7 @@ namespace Sparrow
     /// <summary>
     /// This class implements a direct allocator, mostly used for testing.   
     /// </summary>
-    public struct ByteStringDirectAllocator : IByteStringAllocator
+    public class ByteStringDirectAllocator : IByteStringAllocator
     {
         public UnmanagedGlobalSegment Allocate(int size)
         {
@@ -480,7 +480,7 @@ namespace Sparrow
         }
     }
 
-    public struct ByteStringMemoryCache : IByteStringAllocator, ILowMemoryHandler
+    public class ByteStringMemoryCache : IByteStringAllocator, ILowMemoryHandler
     {
         private static readonly ThreadLocal<SegmentStack> SegmentsPool;
         private static readonly SharedMultipleUseFlag LowMemoryFlag;
@@ -494,8 +494,12 @@ namespace Sparrow
             Cleaner = new NativeMemoryCleaner<SegmentStack, UnmanagedGlobalSegment>(SegmentsPool, LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 
             ThreadLocalCleanup.ReleaseThreadLocalState += CleanForCurrentThread;
+        }
 
-            LowMemoryNotification.Instance.RegisterLowMemoryHandler(ByteStringContext.Allocator);
+        public ByteStringMemoryCache()
+        {
+            //each instance of this should handle low memory...
+            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
         [ThreadStatic]
@@ -635,10 +639,8 @@ namespace Sparrow
         { }
     }
 
-    public unsafe class ByteStringContext<TAllocator> : IDisposable where TAllocator : struct, IByteStringAllocator
+    public unsafe class ByteStringContext<TAllocator> : IDisposable where TAllocator : class, IByteStringAllocator, new()
     {
-        public static TAllocator Allocator;
-
         private class SegmentInformation
         {
             public readonly UnmanagedGlobalSegment Memory;
@@ -679,7 +681,7 @@ namespace Sparrow
                 get { return (int)(End - Current); }
             }
         }
-
+        private static readonly TAllocator Allocator = new TAllocator();
         private const int LogMinBlockSize = 16;
 
         /// <summary>
@@ -1117,7 +1119,7 @@ namespace Sparrow
         }
 
         private SegmentInformation AllocateSegment(int size)
-        {
+        {            
             var memorySegment = Allocator.Allocate(size);
             if(memorySegment.Segment == null)
                 ThrowInvalidMemorySegmentOnAllocation();
@@ -1579,6 +1581,7 @@ namespace Sparrow
             }
         }
 
+        // ReSharper disable once StaticMemberInGenericType
         [ThreadStatic] private static bool _isFinalizerThread;
         private readonly SharedMultipleUseFlag _lowMemoryFlag;
 
@@ -1597,7 +1600,7 @@ namespace Sparrow
                 segment.Memory.Dispose();
             }
             else
-            {
+            {                
                 Allocator.Free(segment.Memory);
             }
         }

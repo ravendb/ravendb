@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -23,7 +24,7 @@ namespace Sparrow.Utils
 
         public static void NotifyCurrentThreadAboutToClose()
         {
-            ThreadAllocations.Value = null;
+            ThreadAllocations.Value = null;            
         }
 
         public static ThreadStats CurrentThreadStats => ThreadAllocations.Value;

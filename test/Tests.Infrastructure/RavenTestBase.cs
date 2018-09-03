@@ -146,7 +146,7 @@ namespace FastTests
 
                     if (options.CreateDatabase)
                     {
-                        foreach (var server in Servers)
+                        foreach (var server in Servers.Union(new []{ Server }))
                         {
                             using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             {

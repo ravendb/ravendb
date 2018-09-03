@@ -58,7 +58,7 @@ namespace FastTests
 
         private RavenServer _localServer;
 
-        protected List<RavenServer> Servers = new List<RavenServer>();
+        public List<RavenServer> Servers = new List<RavenServer>();
 
         private static readonly object ServerLocker = new object();
 
@@ -85,7 +85,8 @@ namespace FastTests
             };
 #endif
 
-            System.Threading.ThreadPool.SetMinThreads(250, 250);
+            if(Environment.Is64BitProcess)
+                System.Threading.ThreadPool.SetMinThreads(250, 250);
 
             var maxNumberOfConcurrentTests = Math.Max(ProcessorInfo.ProcessorCount / 2, 2);
 
@@ -251,6 +252,8 @@ namespace FastTests
             }
         }
 
+        public static RavenServer GlobalServer => _globalServer;
+
         private static void UnloadServer(AssemblyLoadContext obj)
         {
             try
@@ -394,7 +397,6 @@ namespace FastTests
                             retries--;
                             GC.Collect();
                             GC.WaitForFullGCComplete(3000);
-                            Thread.Sleep(1000);
                             lastException = e;
                             continue;
                         }                     
