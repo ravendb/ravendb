@@ -175,18 +175,24 @@
     width: @controls-width;
 }
 
+#test-container {
+    #preview {
+        pre {
+            height: 40vh;
+        }
+    }   
+}
+
 .patch-container {
     position: relative;
     display: flex;
-
+    
     .patch-main {
         width: 100%;
         .help-block {
             margin-bottom:0 !important;
         }
     }
-
-
 
     .patch-controls, .query-controls, .test-controls {
         margin-left: @line-height-computed/2;
@@ -267,13 +273,6 @@
         }
     }
 
-    #preview {
-        pre {
-            min-height: 200px;
-            //max-height:60vh;
-        }
-    }
-
     #puts {
         .put-item {
             display: flex;
@@ -323,11 +322,6 @@
                 }
             }
         }
-    }
-
-    .flex-grow.scroll {
-        max-height: 50vh;
-        overflow-y: auto;
     }
 }
 
