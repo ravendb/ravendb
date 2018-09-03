@@ -30,7 +30,7 @@ namespace Raven.Server.Documents
         private readonly DocumentsStorage _documentsStorage;
 
         private static readonly Slice CountersTombstonesSlice;
-        private static readonly Slice AllCountersEtagSlice;
+        public static readonly Slice AllCountersEtagSlice;
         private static readonly Slice CollectionCountersEtagsSlice;
         private static readonly Slice CounterKeysSlice;
 
@@ -591,8 +591,13 @@ namespace Raven.Server.Documents
                 return null;
 
             if (deletedEtag == -1)
-                deletedEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
+            {
+                deletedEtag = -_documentsStorage.GenerateNextEtag();
+            }
+
             var newEtag = _documentsStorage.GenerateNextEtag();
+            _documentsStorage.EnsureLastEtagIsPersisted(context, newEtag);
+
             var newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
 
             CreateTombstone(context, key, collection, deletedEtag, lastModifiedTicks, newEtag, newChangeVector);
