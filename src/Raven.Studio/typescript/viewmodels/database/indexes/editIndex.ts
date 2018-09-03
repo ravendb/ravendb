@@ -109,25 +109,26 @@ class editIndex extends viewModelBase {
     canActivate(indexToEdit: string): JQueryPromise<canActivateResultDto> {
         const indexToEditName = indexToEdit || undefined;
         
-        super.canActivate(indexToEditName);
+        return $.when<any>(super.canActivate(indexToEditName))
+            .then(() => {
+                const db = this.activeDatabase();
 
-        const db = this.activeDatabase();
+                if (indexToEditName) {
+                    this.isEditingExistingIndex(true);
+                    const canActivateResult = $.Deferred<canActivateResultDto>();
+                    this.fetchIndexToEdit(indexToEditName)
+                        .done(() => canActivateResult.resolve({ can: true }))
+                        .fail(() => {
+                            messagePublisher.reportError("Could not find " + indexToEditName + " index");
+                            canActivateResult.resolve({ redirect: appUrl.forIndexes(db) });
+                        });
+                    return canActivateResult;
+                } else {
+                    this.editedIndex(indexDefinition.empty());
+                }
 
-        if (indexToEditName) {
-            this.isEditingExistingIndex(true);
-            const canActivateResult = $.Deferred<canActivateResultDto>();
-            this.fetchIndexToEdit(indexToEditName)
-                .done(() => canActivateResult.resolve({ can: true }))
-                .fail(() => {
-                    messagePublisher.reportError("Could not find " + indexToEditName + " index");
-                    canActivateResult.resolve({ redirect: appUrl.forIndexes(db) });
-                });
-            return canActivateResult;
-        } else {
-            this.editedIndex(indexDefinition.empty());
-        }
-
-        return $.Deferred<canActivateResultDto>().resolve({ can: true });
+                return $.Deferred<canActivateResultDto>().resolve({ can: true });
+            })
     }
 
     activate(indexToEditName: string) {

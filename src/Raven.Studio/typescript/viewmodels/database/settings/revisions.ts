@@ -48,16 +48,17 @@ class revisions extends viewModelBase {
         });
     }
 
-    canActivate(args: any) {
-        super.canActivate(args);
+    canActivate(args: any): boolean | JQueryPromise<canActivateResultDto> {
+        return $.when<any>(super.canActivate(args))
+            .then(() => {
+                const deferred = $.Deferred<canActivateResultDto>();
 
-        const deferred = $.Deferred<canActivateResultDto>();
+                this.fetchRevisionsConfiguration(this.activeDatabase())
+                    .done(() => deferred.resolve({ can: true }))
+                    .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseRecord(this.activeDatabase()) }));
 
-        this.fetchRevisionsConfiguration(this.activeDatabase())
-            .done(() => deferred.resolve({ can: true }))
-            .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseRecord(this.activeDatabase()) }));
-
-        return deferred;
+                return deferred;
+            });
     }
 
     activate(args: any) {

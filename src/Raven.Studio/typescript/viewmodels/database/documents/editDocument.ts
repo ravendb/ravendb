@@ -104,17 +104,18 @@ class editDocument extends viewModelBase {
     }
 
     canActivate(args: any) {
-        super.canActivate(args);
-
-        if (args && args.revisionBinEntry && args.id) {
-            return this.activateByRevisionsBinEntry(args.id);
-        } else if (args && args.id && args.revision) {
-            return this.activateByRevision(args.id, args.revision);
-        } else if (args && args.id) {
-            return this.activateById(args.id);
-        } else {
-            return $.Deferred().resolve({ can: true });
-        }
+        return $.when<any>(super.canActivate(args))
+            .then(() => {
+                if (args && args.revisionBinEntry && args.id) {
+                    return this.activateByRevisionsBinEntry(args.id);
+                } else if (args && args.id && args.revision) {
+                    return this.activateByRevision(args.id, args.revision);
+                } else if (args && args.id) {
+                    return this.activateById(args.id);
+                } else {
+                    return $.Deferred().resolve({ can: true });
+                }
+            });
     }
 
     activate(navigationArgs: { list: string, database: string, item: string, id: string, new: string, index: string, revision: number }) {

@@ -51,13 +51,14 @@ class editCmpXchg extends viewModelBase {
     }
 
     canActivate(args: any) {
-        super.canActivate(args);
-
-        if (args && args.key) {
-            return this.activateByKey(args.key);
-        } else {
-            return $.Deferred().resolve({ can: true });
-        }
+        return $.when<any>(super.canActivate(args))
+            .then(() => {
+                if (args && args.key) {
+                    return this.activateByKey(args.key);
+                } else {
+                    return $.Deferred().resolve({ can: true });
+                }
+            });
     }
 
     activate(navigationArgs: { database: string, key: string }) {
