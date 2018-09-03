@@ -382,12 +382,13 @@ class query extends viewModelBase {
         });
     }
 
-    canActivate(args: any) {
-        super.canActivate(args);
+    canActivate(args: any): boolean | JQueryPromise<canActivateResultDto> {
+        return $.when<any>(super.canActivate(args))
+            .then(() => {
+                this.loadSavedQueries();
 
-        this.loadSavedQueries();
-
-        return true;
+                return { can: true };
+            }); 
     }
 
     activate(indexNameOrRecentQueryHash?: string) {

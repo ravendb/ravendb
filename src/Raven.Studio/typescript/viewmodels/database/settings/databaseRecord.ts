@@ -36,24 +36,26 @@ class databaseRecord extends viewModelBase {
     }
 
     canActivate(args: any) {
-        super.canActivate(args);
-        var deferred = $.Deferred();
-        
-        this.isForbidden(!accessManager.default.clusterAdminOrClusterNode());
-        
-        if (this.isForbidden()) {
-            deferred.resolve({ can: true });
-        } else {
-            var db: database = this.activeDatabase();
-            this.fetchDatabaseSettings(db)
-                .done(() => deferred.resolve({ can: true }))
-                .fail((response: JQueryXHR) => {
-                    messagePublisher.reportError("Error fetching database settings!", response.responseText, response.statusText);
-                    deferred.resolve({ redirect: appUrl.forStatus(db) });
-                });
-        }
+        return $.when<any>(super.canActivate(args))
+            .then(() => {
+                const deferred = $.Deferred<canActivateResultDto>();
 
-        return deferred;
+                this.isForbidden(!accessManager.default.clusterAdminOrClusterNode());
+
+                if (this.isForbidden()) {
+                    deferred.resolve({ can: true });
+                } else {
+                    const db: database = this.activeDatabase();
+                    this.fetchDatabaseSettings(db)
+                        .done(() => deferred.resolve({ can: true }))
+                        .fail((response: JQueryXHR) => {
+                            messagePublisher.reportError("Error fetching database settings!", response.responseText, response.statusText);
+                            deferred.resolve({ redirect: appUrl.forStatus(db) });
+                        });
+                }
+
+                return deferred;
+            });
     }
 
     activate(args: any) {
