@@ -51,7 +51,7 @@ namespace Raven.Server.Web.System
             }
             if (NameUtils.IsValidResourceName(name) == false)
             {
-                errorMessage = string.Format($"The name '{name}' is not permitted. Only letters, digits and characters that match regex '{NameUtils.ValidResourceNameCharacters}' are allowed.");
+                errorMessage = string.Format($"The name '{name}' is not permitted. Only letters, digits and characters ('_', '.', '-') are allowed.");
                 return false;
             }
             if (name.Length > Constants.Documents.MaxDatabaseNameLength)
