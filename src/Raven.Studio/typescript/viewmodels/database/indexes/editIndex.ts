@@ -26,6 +26,7 @@ import additionalSource = require("models/database/index/additionalSource");
 import index = require("models/database/index/index");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import mapIndexSyntax = require("viewmodels/database/indexes/mapIndexSyntax");
+import fileDownloader = require("common/fileDownloader");
 import mapReduceIndexSyntax = require("viewmodels/database/indexes/mapReduceIndexSyntax");
 import additionalSourceSyntax = require("viewmodels/database/indexes/additionalSourceSyntax");
 
@@ -627,6 +628,12 @@ class editIndex extends viewModelBase {
         } else {
             return fileName;
         }
+    }
+
+    downloadAdditionalSource(source: additionalSource) {
+        const code = source.code();
+
+        fileDownloader.downloadAsTxt(code, source.name());
     }
 
     deleteAdditionalSource(sourceToDelete: additionalSource) {

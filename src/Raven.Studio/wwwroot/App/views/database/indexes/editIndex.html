@@ -190,7 +190,8 @@
                         <ul class="item-list flex-noshrink" data-bind="foreach: editedIndex().additionalSources">
                             <li class="item" data-bind="css: { active: $data === $root.selectedSourcePreview() }">
                                 <a href="#" data-bind="click: $root.previewAdditionalSource, text: name" class="column-name"></a>
-                                <a class="remove" data-bind="click: $root.deleteAdditionalSource" href="#"><i class="icon-trash"></i></a>
+                                <a title="Download this file" class="download" data-bind="click: $root.downloadAdditionalSource" href="#"><i class="icon-export"></i></a>
+                                <a title="Remove this entry" class="remove" data-bind="click: $root.deleteAdditionalSource" href="#"><i class="icon-trash"></i></a>
                             </li>
                         </ul>
                         <div class="flex-grow margin-left" data-bind="html: $root.additionalSourcePreviewHtml">
