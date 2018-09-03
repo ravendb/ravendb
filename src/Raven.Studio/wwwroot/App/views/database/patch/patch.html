@@ -143,11 +143,13 @@
                             <div class="row flex-row">
                                 <div class="col-sm-6 flex-vertical">
                                     <h3 class="flex-header">Before</h3>
-                                    <pre class="flex-grow scroll" data-bind="html: formatAsJson(beforeDoc)"></pre>
+                                    <pre id="beforeDocEditor"
+                                         data-bind="aceEditor: { code: beforeDoc, fontSize:'14px', lang: 'ace/mode/json', readOnly: true }"></pre>
                                 </div>
                                 <div class="col-sm-6 flex-vertical">
                                     <h3 class="flex-header">After</h3>
-                                    <pre class="flex-grow scroll" data-bind="html: formatAsJson(afterDoc)"></pre>
+                                    <pre id="afterDocEditor" 
+                                         data-bind="aceEditor: { code: afterDoc, fontSize:'14px', lang: 'ace/mode/json', readOnly: true }"></pre>
                                 </div>
                             </div>
                         </div>

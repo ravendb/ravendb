@@ -21,8 +21,8 @@ class patchTester extends viewModelBase {
     query: KnockoutObservable<string>;
     documentId = ko.observable<string>();
 
-    beforeDoc = ko.observable<any>();
-    afterDoc = ko.observable<any>();
+    beforeDoc = ko.observable<string>("");
+    afterDoc = ko.observable<string>("");
 
     actions = {
         loadDocument: ko.observableArray<string>(),
@@ -67,18 +67,6 @@ class patchTester extends viewModelBase {
         });
 
         this.docsIdsAutocompleteSource = new docsIdsBasedOnQueryFetcher(this.db);
-    }
-
-    formatAsJson(input: KnockoutObservable<any> | any) {
-        return ko.pureComputed(() => {
-            const value = ko.unwrap(input);
-            if (_.isUndefined(value)) {
-                return "";
-            } else {
-                const json = JSON.stringify(value, null, 4);
-                return Prism.highlight(json, (Prism.languages as any).javascript);
-            }
-        });
     }
 
     private initObservables() {
@@ -139,8 +127,8 @@ class patchTester extends viewModelBase {
         this.actions.putDocument([]);
         this.actions.deleteDocument([]);
         this.actions.info([]);
-        this.afterDoc(undefined);
-        this.beforeDoc(undefined);
+        this.afterDoc("");
+        this.beforeDoc("");
     }
 
     loadDocument() {
@@ -157,7 +145,7 @@ class patchTester extends viewModelBase {
                     const docDto = doc.toDto(true);
                     const metaDto = docDto["@metadata"];
                     documentMetadata.filterMetadata(metaDto);
-                    this.beforeDoc(docDto);
+                    this.beforeDoc(JSON.stringify(docDto, null, 4));
                 }
             })
             .fail((xhr: JQueryXHR) => {
@@ -191,8 +179,8 @@ class patchTester extends viewModelBase {
                     .done((result: any) => {
                         const modifiedDocument = new document(result.ModifiedDocument).toDto(true);
                         const originalDocument = new document(result.OriginalDocument).toDto(true);
-                        this.beforeDoc(originalDocument);
-                        this.afterDoc(modifiedDocument);
+                        this.beforeDoc(JSON.stringify(originalDocument, null, 4));
+                        this.afterDoc(JSON.stringify(modifiedDocument, null, 4));
                         const debug = result.Debug;
                         const actions = debug.Actions as Raven.Server.Documents.Patch.PatchDebugActions;
                         this.actions.loadDocument(actions.LoadDocument);
