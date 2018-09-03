@@ -1616,7 +1616,7 @@ namespace Raven.Server.Rachis
         public virtual void Dispose()
         {
             _disposeEvent.Set();
-            Timeout.Dispose();
+            Timeout?.Dispose(); //prevent NRE if an exception is thrown in Initialize()
             OnDispose?.Invoke(this, EventArgs.Empty);
             _topologyChanged.TrySetCanceled();
             _stateChanged.TrySetCanceled();

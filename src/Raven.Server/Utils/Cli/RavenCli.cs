@@ -959,7 +959,8 @@ namespace Raven.Server.Utils.Cli
             string WorkingSet,
             string TotalUnmanagedAllocations,
             string ManagedMemory,
-            string TotalMemoryMapped) MemoryStatsWithMemoryMappedInfo()
+            string TotalMemoryMapped,
+            IReadOnlyCollection<(string ThreadName,long TotalAllocations,ulong ThreadId)> AllocationsPerThread) MemoryStatsWithMemoryMappedInfo()
         {
             var stats = MemoryInformation.MemoryStats();
 
@@ -975,11 +976,21 @@ namespace Raven.Server.Utils.Cli
                 totalMemoryMapped += maxMapped;
             }
 
+            var allocationsPerThread = new List<(string,long,ulong)>();
+            foreach (var threadStat in NativeMemory.AllThreadStats)
+            {
+                if (threadStat.IsThreadAlive() == false)
+                    continue;
+
+                allocationsPerThread.Add((threadStat.Name,threadStat.TotalAllocated,threadStat.UnmanagedThreadId));
+            }
+
             return (
                 SizeClient.Humane(stats.WorkingSet),
                 SizeClient.Humane(stats.TotalUnmanagedAllocations),
                 SizeClient.Humane(stats.ManagedMemory),
-                SizeClient.Humane(totalMemoryMapped));
+                SizeClient.Humane(totalMemoryMapped),
+                allocationsPerThread);
         }
 
         private static bool CommandImportDir(List<string> args, RavenCli cli)

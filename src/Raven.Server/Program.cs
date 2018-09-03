@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -16,6 +17,7 @@ using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Utils;
 
 namespace Raven.Server
 {
@@ -317,6 +319,82 @@ namespace Raven.Server
         public static void WriteServerStatsAndWaitForEsc(RavenServer server)
         {
             Console.WriteLine("Showing stats, press any key to close...");
+            ContinuouslyWriteServerStats(server);
+
+            Console.ReadKey(true);
+            Console.WriteLine();
+            Console.WriteLine($"Stats halted.");
+        }
+
+        private static readonly Random Random = new Random();
+        public static  (
+            string WorkingSet,
+            string TotalUnmanagedAllocations,
+            string ManagedMemory,
+            string TotalMemoryMapped,
+            IReadOnlyCollection<(string ThreadName,long TotalAllocations,ulong ThreadId)> AllocationsPerThread) WriteServerStatsOnce(RavenServer server)
+        {
+            Console.WriteLine("    working set     | native mem      | managed mem     | mmap size         | reqs/sec       | docs (all dbs)");
+            var i = Random.Next();
+            var stats = RavenCli.MemoryStatsWithMemoryMappedInfo();
+            var reqCounter = server.Metrics.Requests.RequestsPerSec;
+
+            Console.Write($"\r {(i++ % 2 == 0 ? "*" : "+")} ");
+
+            Console.Write($" {stats.WorkingSet,-14} ");
+            Console.Write($" | {stats.TotalUnmanagedAllocations,-14} ");
+            Console.Write($" | {stats.ManagedMemory,-14} ");
+            Console.Write($" | {stats.TotalMemoryMapped,-17} ");
+
+            Console.Write($"| {Math.Round(reqCounter.OneSecondRate, 1),-14:#,#.#;;0} ");
+
+            long allDocs = 0;
+            foreach (var value in server.ServerStore.DatabasesLandlord.DatabasesCache.Values)
+            {
+                if (value.Status != TaskStatus.RanToCompletion)
+                    continue;
+
+                try
+                {
+                    allDocs += value.Result.DocumentsStorage.GetNumberOfDocuments();
+                }
+                catch (Exception)
+                {
+                    // may run out of virtual address space, or just shutdown, etc
+                }
+            }
+
+            Console.Write($"| {allDocs,14:#,#.#;;0}      ");
+
+            const int topThreadCount = 10;
+
+            Console.WriteLine($"{Environment.NewLine}Top {topThreadCount} threads (descending order by total allocations):{Environment.NewLine}");
+            Console.WriteLine("========================================================================================================");
+            Console.WriteLine(" Id      | Thread Name                                                           | Total Allocations (bytes)     ");
+            Console.WriteLine("========================================================================================================");
+            foreach (var stat in stats.AllocationsPerThread.OrderByDescending(x => x.TotalAllocations).Take(topThreadCount))
+            {
+                Console.Write($" {stat.ThreadId,-6} ");
+                var threadData =
+                    PoolOfThreads.GlobalRavenThreadPool.Pool.FirstOrDefault(x => x.CurrentUnmangedThreadId == stat.ThreadId);
+
+                if (threadData != null)
+                {
+                    Console.Write($" | {stat.ThreadName + "\\" + threadData.Name,-67} ");
+                }
+                else
+                {
+                    Console.Write($" | {stat.ThreadName,-67} ");
+                }
+
+                Console.Write($"  | {Sizes.Humane(stat.TotalAllocations),-30} {Environment.NewLine}");
+            }
+
+            return stats;
+        }
+
+        public static void ContinuouslyWriteServerStats(RavenServer server)
+        {
             Console.WriteLine("    working set     | native mem      | managed mem     | mmap size         | reqs/sec       | docs (all dbs)");
             var i = 0;
             while (Console.KeyAvailable == false)
@@ -356,10 +434,6 @@ namespace Raven.Server
                     Thread.Sleep(100);
                 }
             }
-
-            Console.ReadKey(true);
-            Console.WriteLine();
-            Console.WriteLine($"Stats halted.");
         }
     }
 }

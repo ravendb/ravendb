@@ -114,18 +114,23 @@ namespace RachisTests
 
             var oldTag = follower.Tag;
             var url = follower.Url;
-            Assert.True(await leader.RemoveFromClusterAsync(oldTag).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 10)), "Was unable to remove node from cluster in time");
+            Assert.True(await leader.RemoveFromClusterAsync(oldTag).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 10)),
+                "Was unable to remove node from cluster in time");
             foreach (var node in RachisConsensuses)
             {
                 if (node.Url == url)
                     continue;
-                Assert.True(await node.WaitForTopology(Leader.TopologyModification.Remove, follower.Tag).WaitAsync(TimeSpan.FromMilliseconds(node.ElectionTimeout.TotalMilliseconds * 10)), "Node was not removed from topology in time");
+                Assert.True(
+                    await node.WaitForTopology(Leader.TopologyModification.Remove, follower.Tag)
+                        .WaitAsync(TimeSpan.FromMilliseconds(node.ElectionTimeout.TotalMilliseconds * 10)), "Node was not removed from topology in time");
             }
 
             follower.Url = url;
-            var isAddedSuccessfully = await leader.AddToClusterAsync(follower.Url, follower.Tag).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5));
+            var isAddedSuccessfully = await leader.AddToClusterAsync(follower.Url, follower.Tag)
+                .WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5));
             Assert.True(isAddedSuccessfully);
-            var waitForTopologySuccessful = await follower.WaitForTopology(Leader.TopologyModification.Voter).WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5));
+            var waitForTopologySuccessful = await follower.WaitForTopology(Leader.TopologyModification.Voter)
+                .WaitAsync(TimeSpan.FromMilliseconds(leader.ElectionTimeout.TotalMilliseconds * 5));
             Assert.True(waitForTopologySuccessful);
 
             using (leader.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
