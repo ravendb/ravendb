@@ -77,6 +77,7 @@ class virtualGrid<T> {
 
     private initController() {
         this.controller = {
+            findRowForCell: cell => this.findRowForCell(cell),
             headerVisible: v => this.settings.showHeader(v),
             init: (fetcher, columnsProvider) => this.init(fetcher, columnsProvider),
             reset: (hard: boolean = true) => this.resetItems(hard),
