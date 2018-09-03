@@ -331,6 +331,7 @@ namespace Sparrow.LowMemory
             {
                 var result = smapsReader.CalculateMemUsageFromSmaps<SmapsReaderNoAllocResults>();
                 memInfo.AvailableMemory.Add(result.SharedClean, SizeUnit.Bytes);
+                memInfo.AvailableMemory.Add(result.PrivateClean, SizeUnit.Bytes);
                 sharedCleanInBytes = result.SharedClean;
             }
             else
