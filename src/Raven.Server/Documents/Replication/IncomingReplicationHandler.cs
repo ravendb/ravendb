@@ -640,7 +640,7 @@ namespace Raven.Server.Documents.Replication
         private readonly TcpConnectionOptions _connectionOptions;
         private readonly ConflictManager _conflictManager;
         private IDisposable _connectionOptionsDisposable;
-        private (IDisposable ReleaseBuffer, JsonOperationContext.ManagedPinnedBuffer Buffer) _copiedBuffer;
+        private readonly (IDisposable ReleaseBuffer, JsonOperationContext.ManagedPinnedBuffer Buffer) _copiedBuffer;
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
 
         private struct ReplicationItem : IDisposable
@@ -913,7 +913,7 @@ namespace Raven.Server.Documents.Replication
                     }
                     catch (ThreadStateException)
                     {
-                        // expected if the thread hsan't been started yet
+                        // expected if the thread hasn't been started yet
                     }
                 }
 
@@ -1188,27 +1188,27 @@ namespace Raven.Server.Documents.Replication
                 }
                 finally
                 {
-                    _incoming._attachmentStreamsTempFile.Reset();
+                    _incoming._attachmentStreamsTempFile?.Reset();
                     IsIncomingReplication = false;
                 }
             }
 
-            public readonly string IncomingReplicationStr = "Incoming Replication";
+            private const string IncomingReplicationStr = "Incoming Replication";
 
-            public void AssertAttachmentsFromReplication(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
+            private void AssertAttachmentsFromReplication(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
             {
                 foreach (LazyStringValue hash in GetAttachmentsHashesFromDocumentMetadata(document))
                 {
                     if (_incoming._database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, hash) == false)
                     {
-                        var msg = $"Document '{id}' has attachment '{hash?.ToString() ?? "uknown"}' " +
-                                  $"listed as one of his attachments but it doesn't exist in the attachment storage";
+                        var msg = $"Document '{id}' has attachment '{hash?.ToString() ?? "unknown"}' " +
+                                  "listed as one of his attachments but it doesn't exist in the attachment storage";
                         throw new MissingAttachmentException(msg);
                     }
                 }
             }
 
-            public IEnumerable<LazyStringValue> GetAttachmentsHashesFromDocumentMetadata(BlittableJsonReaderObject document)
+            private IEnumerable<LazyStringValue> GetAttachmentsHashesFromDocumentMetadata(BlittableJsonReaderObject document)
             {
                 if (document.TryGet(Raven.Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
                     metadata.TryGet(Raven.Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
