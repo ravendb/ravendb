@@ -1168,7 +1168,6 @@ namespace Raven.Server.Documents.Replication
                                 }
                                 finally
                                 {
-                                    _incoming._attachmentStreamsTempFile?.Reset();
                                     _disposables.Add(document);
                                 }
                             }
