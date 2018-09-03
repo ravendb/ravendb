@@ -121,11 +121,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             throw new ArgumentOutOfRangeException(modifiedStore.Type.ToString());
                     }
                 }
+            }
 
-                using (MemoryUsageGuard.GetProcessMemoryUsage(out var memoryUsage, out _))
-                {
-                    stats.RecordReduceMemoryStats(memoryUsage.WorkingSet, memoryUsage.PrivateMemory);
-                }
+            using (MemoryUsageGuard.GetProcessMemoryUsage(out var memoryUsage, out _))
+            {
+                stats.RecordReduceMemoryStats(memoryUsage.WorkingSet, memoryUsage.PrivateMemory);
             }
 
             WriteLastEtags(indexContext);
