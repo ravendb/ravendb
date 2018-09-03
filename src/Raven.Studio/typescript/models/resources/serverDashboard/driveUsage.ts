@@ -164,7 +164,12 @@ class driveUsage {
         this.items.sort((a, b) => generalUtils.sortAlphaNumeric(a.database(), b.database()));
 
         if (this.gridController()) {
+            const selectedItems = this.gridController().getSelectedItems();
             this.gridController().reset(false);
+            if (selectedItems && selectedItems.length) {
+                // maintain selection after grid update
+                this.gridController().setSelectedItems(selectedItems);
+            }
         }
     }
 }

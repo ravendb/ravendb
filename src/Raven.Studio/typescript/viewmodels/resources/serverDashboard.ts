@@ -20,6 +20,7 @@ import createDatabase = require("viewmodels/resources/createDatabase");
 import serverTime = require("common/helpers/database/serverTime");
 import accessManager = require("common/shell/accessManager");
 import utils = require("widgets/virtualGrid/virtualGridUtils");
+import driveUsageDetails = require("models/resources/serverDashboard/driveUsageDetails");
 
 class machineResourcesSection {
 
@@ -471,13 +472,42 @@ class driveUsageSection {
     }
     
     init() {
-        this.storageChart = new storagePieChart("#storageChart");
+        this.storageChart = new storagePieChart("#storageChart", db => this.highlightRowInTable(db));
         
         this.includeTemporaryBuffers.subscribe(() => {
             this.table().forEach(item => {
                 item.gridController().reset(true);
             });
             this.updateChart(this.data, true);
+        });
+        
+        this.initTableHighlightEvents();
+    }
+
+    initTableHighlightEvents() {
+        const storageContainer = $(".dashboard-storage");
+        storageContainer.on("mouseenter", ".virtual-row", event => {
+            this.table().forEach(table => {
+                const row = table.gridController().findRowForCell(event.target);
+                if (row) {
+                    this.storageChart.highlightDatabase((row.data as driveUsageDetails).database(), storageContainer);
+                }
+            });
+        });
+
+        storageContainer.on("mouseleave", ".virtual-row", event => {
+            this.storageChart.highlightDatabase(null, storageContainer);
+        });
+    }
+    
+    private highlightRowInTable(dbName: string) {
+        this.table().forEach(usage => {
+            if (dbName) {
+                const item = usage.gridController().findItem((item, idx) => item.database() === dbName);
+                usage.gridController().setSelectedItems([item]);
+            } else {
+                usage.gridController().setSelectedItems([]);
+            }
         });
     }
     

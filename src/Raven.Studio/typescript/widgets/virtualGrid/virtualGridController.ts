@@ -1,6 +1,7 @@
 ﻿/// <reference path="../../../typings/tsd.d.ts"/>
 
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+import virtualRow = require("widgets/virtualGrid/virtualRow");
 import virtualGridSelection = require("widgets/virtualGrid/virtualGridSelection");
 
 interface virtualGridController<T> { 
@@ -10,6 +11,8 @@ interface virtualGridController<T> {
     headerVisible(value: boolean): void;
 
     reset(hard?: boolean): void;
+
+    findRowForCell(cellElement: JQuery | Element): virtualRow;
 
     findItem(predicate: (item: T, idx: number) => boolean): T;
 

@@ -8,9 +8,11 @@ class storagePieChart {
     private svg: d3.Selection<void>;
     private colorScale: d3.scale.Ordinal<string, string>;
     private containerSelector: string;
+    private highlightTable: (dbName: string) => void;
     
-    constructor(containerSelector: string) {
+    constructor(containerSelector: string, highlightTable: (dbName: string) => void) {
         this.containerSelector = containerSelector;
+        this.highlightTable = highlightTable;
         const container = d3.select(containerSelector);
 
         const $container = $(containerSelector);
@@ -29,6 +31,28 @@ class storagePieChart {
         
         this.colorScale = d3.scale.ordinal<string>()
             .range(["#f75e71", "#f38861", "#f0ae5e", "#edcd51", "#7bd85d", "#37c4ac", "#2f9ef3", "#6972ee", "#9457b5", "#d45598"]);
+        
+        this.initHighlightEvents($container);
+    }
+    
+    private initHighlightEvents(container: JQuery) {
+        $(container).on("mouseenter", "path", event => {
+            const dbName = $(event.target).attr("data-db-name");
+            this.highlightTable(dbName);
+        });
+        
+        $(container).on("mouseleave", "path", event => {
+            const dbName = $(event.target).attr("data-db-name");
+            this.highlightTable(null);
+        });
+    }
+    
+    highlightDatabase(dbName: string, container: JQuery) {
+        if (dbName) {
+            $("[data-db-name=" + dbName + "]", container).addClass("active");
+        } else {
+            $("path", container).removeClass("active");
+        }
     }
     
     onResize() {
@@ -75,10 +99,17 @@ class storagePieChart {
             .append("g")
             .attr("class", "arc");
        
-        enteringArcs.append("path")
+        const paths = enteringArcs.append("path");
+        
+        paths
+            .attr("data-db-name", d => d.data.Database)
             .attr("d", d => arc(d as any))
             .attr("fill", d => this.colorScale(d.data.Database))
             .each(function (d) { this._current = d; });
+        
+        paths
+            .append("title")
+            .html(d => d.data.Database);
 
         if (withTween) {
             const arcTween = function (a: d3.layout.pie.Arc<{ Database: string, Size: number }>) {
