@@ -116,7 +116,7 @@ namespace Raven.Server.Extensions
                 var result = SetProcessWorkingSetSizeEx(process.Handle, -1, -1, flags);
                 if (result == false)
                 {
-                    logger.Info($"Failed to empty working set, error code: {Marshal.GetLastWin32Error()}");
+                    logger?.Info($"Failed to empty working set, error code: {Marshal.GetLastWin32Error()}");
                 }
             }
         }
