@@ -29,9 +29,7 @@ namespace SlowTests.Issues
                     store.Maintenance.Server.Send(new CreateDatabaseOperation(dbRecord));
                 });
 
-                Assert.Contains($@"Forbidden data directory path for database ""test"" : ""{Server.Configuration.Core.DataDirectory}"". " +
-                                "This is the root path that RavenDB server uses to store data.", e.Message);
-
+                Assert.Contains($"Forbidden data directory path for database 'test': '{Server.Configuration.Core.DataDirectory}'. This is the root path that RavenDB server uses to store data.", e.Message);
             }
         }
 
@@ -55,9 +53,7 @@ namespace SlowTests.Issues
                     store.Maintenance.Server.Send(new CreateDatabaseOperation(dbRecord));
                 });
 
-                Assert.Contains($@"Forbidden data directory path for database ""test"" : ""{root}"". " +
-                                "You cannot use the root directory of the drive as the database path.", e.Message);
-
+                Assert.Contains($"Forbidden data directory path for database 'test': '{root}'. You cannot use the root directory of the drive as the database path.", e.Message);
             }
         }
     }
