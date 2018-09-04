@@ -464,12 +464,27 @@ namespace Sparrow
         }
     }
 
-    public struct ByteStringMemoryCache : IByteStringAllocator, ILowMemoryHandler
+    public struct ByteStringMemoryCache : IByteStringAllocator
     {
         private static readonly ThreadLocal<SegmentStack> SegmentsPool;
         private static readonly SharedMultipleUseFlag LowMemoryFlag;
+        private static readonly LowMemoryHandler LowMemoryHandlerInstance = new LowMemoryHandler();
 
         public static readonly NativeMemoryCleaner<SegmentStack, UnmanagedGlobalSegment> Cleaner;
+
+        private class LowMemoryHandler : ILowMemoryHandler
+        {
+            public void LowMemory()
+            {
+                if (LowMemoryFlag.Raise())
+                    Cleaner.CleanNativeMemory(null);
+            }
+
+            public void LowMemoryOver()
+            {
+                LowMemoryFlag.Lower();
+            }
+        }
 
         static ByteStringMemoryCache()
         {
@@ -479,7 +494,7 @@ namespace Sparrow
 
             ThreadLocalCleanup.ReleaseThreadLocalState += CleanForCurrentThread;
 
-            LowMemoryNotification.Instance.RegisterLowMemoryHandler(ByteStringContext.Allocator);
+            LowMemoryNotification.Instance.RegisterLowMemoryHandler(LowMemoryHandlerInstance);
         }
 
         [ThreadStatic]
@@ -552,7 +567,6 @@ namespace Sparrow
             throw new InvalidOperationException("Attempt to return a memory segment that has already been disposed");
         }
 
-
         public static void CleanForCurrentThread()
         {
             if (SegmentsPool.IsValueCreated == false)
@@ -567,18 +581,7 @@ namespace Sparrow
                 current = current.Next;
             }
         }
-
-        public void LowMemory()
-        {
-            if (LowMemoryFlag.Raise())
-                Cleaner.CleanNativeMemory(null);
-        }
-
-        public void LowMemoryOver()
-        {
-            LowMemoryFlag.Lower();
-        }
-
+      
         public class SegmentStack : StackHeader<UnmanagedGlobalSegment>
         {
             ~SegmentStack()

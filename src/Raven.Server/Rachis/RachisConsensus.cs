@@ -1612,7 +1612,7 @@ namespace Raven.Server.Rachis
         public virtual void Dispose()
         {
             _disposeEvent.Set();
-            Timeout.Dispose();
+            Timeout?.Dispose();
             OnDispose?.Invoke(this, EventArgs.Empty);
             _topologyChanged.TrySetCanceled();
             _stateChanged.TrySetCanceled();
