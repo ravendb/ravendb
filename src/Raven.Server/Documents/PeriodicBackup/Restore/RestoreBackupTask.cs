@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         }
                     };
 
-                    DatabaseHelper.Validate(databaseName, restoreSettings.DatabaseRecord);
+                    DatabaseHelper.Validate(databaseName, restoreSettings.DatabaseRecord, _serverStore.Configuration);
                 }
 
                 var databaseRecord = restoreSettings.DatabaseRecord;
@@ -553,7 +553,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                                     restoreSettings = JsonDeserializationServer.RestoreSettings(json);
 
                                     restoreSettings.DatabaseRecord.DatabaseName = _restoreConfiguration.DatabaseName;
-                                    DatabaseHelper.Validate(_restoreConfiguration.DatabaseName, restoreSettings.DatabaseRecord);
+                                    DatabaseHelper.Validate(_restoreConfiguration.DatabaseName, restoreSettings.DatabaseRecord, _serverStore.Configuration);
 
                                     if (restoreSettings.DatabaseRecord.Encrypted && _hasEncryptionKey == false)
                                         throw new ArgumentException("Database snapshot is encrypted but the encryption key is missing!");

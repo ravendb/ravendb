@@ -343,7 +343,7 @@ namespace Raven.Server.Web.System
 
             try
             {
-                DatabaseHelper.Validate(name, databaseRecord);
+                DatabaseHelper.Validate(name, databaseRecord, Server.Configuration);
             }
             catch (Exception e)
             {
