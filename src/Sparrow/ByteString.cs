@@ -683,7 +683,8 @@ namespace Sparrow
             }
         }
 
-        private const int LogMinBlockSize = 16;
+        // Log₂(MinBlockSizeInBytes)
+        private const int LogMinBlockSize = 12;
 
         /// <summary>
         /// This list keeps all the segments already instantiated in order to release them after context finalization. 
@@ -1016,7 +1017,7 @@ namespace Sparrow
 
             var byteString = Create(segment.Current, length, segment.Size, type);
             segment.Current += byteString._pointer->Size;
-            _currentlyAllocated += size;
+            _currentlyAllocated += byteString._pointer->Size;
 
             return byteString;
         }
