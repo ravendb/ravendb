@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Sparrow.Utils;
@@ -75,6 +76,8 @@ namespace Raven.Embedded
                 UseShellExecute = false
             };
 
+            RemoveEnvironmentVariables(processStartInfo);
+
             Process process = null;
             try
             {
@@ -92,5 +95,25 @@ namespace Raven.Embedded
             return process;
         }
 
+        private static void RemoveEnvironmentVariables(ProcessStartInfo processStartInfo)
+        {
+            if (processStartInfo.Environment == null || processStartInfo.Environment.Count == 0)
+                return;
+
+            var variablesToRemove = new List<string>();
+            foreach (var key in processStartInfo.Environment.Keys)
+            {
+                if (key == null)
+                    continue;
+
+                if (key.StartsWith("APP_POOL_", StringComparison.OrdinalIgnoreCase)
+                    || key.StartsWith("ASPNETCORE_", StringComparison.OrdinalIgnoreCase)
+                    || key.StartsWith("IIS_", StringComparison.OrdinalIgnoreCase))
+                    variablesToRemove.Add(key);
+            }
+
+            foreach (var key in variablesToRemove)
+                processStartInfo.Environment.Remove(key);
+        }
     }
 }
