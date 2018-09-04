@@ -27,7 +27,7 @@ namespace Raven.Server.Web.System
                 {
                     foreach (var configurationEntryAttribute in categoryProperty.GetCustomAttributes<ConfigurationEntryAttribute>())
                     {
-                        if(configurationEntryAttribute.Scope == ConfigurationEntryScope.ServerWideOrPerDatabase)
+                        if (configurationEntryAttribute.Scope == ConfigurationEntryScope.ServerWideOrPerDatabase)
                             continue;
 
                         Array.Resize(ref keys, keys.Length + 1);
@@ -91,11 +91,11 @@ namespace Raven.Server.Web.System
                 var databasePath = new PathSetting(dataDir, serverConfiguration.Core.DataDirectory.FullPath);
 
                 if (databasePath.Equals(serverConfiguration.Core.DataDirectory))
-                    throw new InvalidOperationException($@"Forbidden data directory path for database ""{name}"" : ""{dataDir}"". " +
-                                                        "This is the root path that RavenDB server uses to store data.");
+                    throw new InvalidOperationException(
+                        $"Forbidden data directory path for database '{name}': '{dataDir}'. This is the root path that RavenDB server uses to store data.");
                 if (Path.GetPathRoot(databasePath.FullPath) == databasePath.FullPath)
-                    throw new InvalidOperationException($@"Forbidden data directory path for database ""{name}"" : ""{dataDir}"". " +
-                                                        "You cannot use the root directory of the drive as the database path.");
+                    throw new InvalidOperationException(
+                        $"Forbidden data directory path for database '{name}': '{dataDir}'. You cannot use the root directory of the drive as the database path.");
             }
 
             foreach (var key in ServerWideOnlyConfigurationKeys.Value)
