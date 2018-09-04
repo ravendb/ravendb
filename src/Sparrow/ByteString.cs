@@ -629,7 +629,7 @@ namespace Sparrow
 
     public sealed class ByteStringContext : ByteStringContext<ByteStringMemoryCache>
     {
-        public const int MinBlockSizeInBytes = 64 * 1024; // If this is changed, we need to change also LogMinBlockSize.
+        public const int MinBlockSizeInBytes = 4 * 1024; // If this is changed, we need to change also LogMinBlockSize.
         public const int MaxAllocationBlockSizeInBytes = 256 * MinBlockSizeInBytes;
         public const int DefaultAllocationBlockSizeInBytes = 1 * MinBlockSizeInBytes;
         public const int MinReusableBlockSizeInBytes = 8;
@@ -738,9 +738,6 @@ namespace Sparrow
             if (_disposed)
                 ThrowObjectDisposed();
 
-            if (_wholeSegments.Count == 2)
-                return; // nothing to do
-
             Array.Clear(_internalReusableStringPoolCount, 0, _internalReusableStringPoolCount.Length);
             foreach (var stack in _internalReusableStringPool)
             {
@@ -752,7 +749,13 @@ namespace Sparrow
             _externalFastPoolCount = 0;
             _externalCurrentLeft = (int)(_externalCurrent.End - _externalCurrent.Start) / _externalAlignedSize;
 
+            _internalCurrent.Current = _internalCurrent.Start;
+            _externalCurrent.Current = _externalCurrent.Start;
+
             _currentlyAllocated = 0;
+
+            if (_wholeSegments.Count == 2)
+                return;
 
             for (int i = 0; i < _wholeSegments.Count; i++)
             {
@@ -763,9 +766,6 @@ namespace Sparrow
                 _wholeSegments.RemoveAt(i);
                 i--;
             }
-            _internalCurrent.Current = _internalCurrent.Start;
-            _externalCurrent.Current = _externalCurrent.Start;
-
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -812,7 +812,7 @@ namespace Sparrow
             {
                 if (_externalCurrentLeft == 0)
                 {
-                    var tmp = Math.Min(16 * Constants.Size.Megabyte, _allocationBlockSize * 2);
+                    var tmp = Math.Min(2 * Constants.Size.Megabyte, _allocationBlockSize * 2);
                     AllocateExternalSegment(tmp);
                     _allocationBlockSize = tmp;
                 }
@@ -942,7 +942,7 @@ namespace Sparrow
             }
             else
             {
-                _allocationBlockSize = Math.Min(16 * Constants.Size.Megabyte, _allocationBlockSize * 2);
+                _allocationBlockSize = Math.Min(2 * Constants.Size.Megabyte, _allocationBlockSize * 2);
                 _internalCurrent = AllocateSegment(_allocationBlockSize);
             }
 
@@ -1016,6 +1016,7 @@ namespace Sparrow
 
             var byteString = Create(segment.Current, length, segment.Size, type);
             segment.Current += byteString._pointer->Size;
+            _currentlyAllocated += size;
 
             return byteString;
         }
