@@ -104,7 +104,11 @@
                 </label>
             </div>
             <div class="col-md-8">
-                <input type="text" class="form-control" placeholder="Resource data directory (absolute path)" data-bind="textInput: dataDirectory" />
+                <div class="has-feedback">
+                    <input type="text" class="form-control" placeholder="Resource data directory (absolute path)" data-bind="textInput: dataDirectory" />
+                    <span class="glyphicon glyphicon-ok text-success form-control-feedback"
+                          data-bind="visible: dataDirectory() && dataDirectory.isValid() && !dataDirectory.isValidating()"></span>
+                </div>
             </div>
         </div>
 
@@ -219,7 +223,11 @@
                 </label>
             </div>
             <div class="col-md-8">
-                <input type="text" class="form-control" data-bind="textInput: dataExporterFullPath" placeholder="Raven.StorageExporter.exe location (absolute path)" />
+                <div class="has-feedback">
+                    <input type="text" class="form-control" data-bind="textInput: dataExporterFullPath" placeholder="Raven.StorageExporter.exe location (absolute path)" />
+                    <span class="glyphicon glyphicon-ok text-success form-control-feedback"
+                          data-bind="visible: dataExporterFullPath() && dataExporterFullPath.isValid() && !dataExporterFullPath.isValidating()"></span>
+                </div>
             </div>
         </div>
     </div>
