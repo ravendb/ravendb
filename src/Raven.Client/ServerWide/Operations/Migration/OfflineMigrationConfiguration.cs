@@ -8,6 +8,10 @@ namespace Raven.Client.ServerWide.Operations.Migration
 {
     public class OfflineMigrationConfiguration
     {
+        private const string StorageExporterExecutable = "Raven.StorageExporter.exe";
+        private const string EsentDataFile = "Data.jfm";
+        private const string VoronDataFile = "Raven.voron";
+        
         private OfflineMigrationConfiguration()
         {
             // for deserialization
@@ -46,6 +50,39 @@ namespace Raven.Client.ServerWide.Operations.Migration
 
             if (string.IsNullOrWhiteSpace(DatabaseRecord.DatabaseName))
                 throw new ArgumentNullException(nameof(DatabaseRecord.DatabaseName));
+        }
+
+        internal static string EffectiveDataExporterFullPath(string fullPath)
+        {
+            var path = fullPath.Trim('"');
+            if (Directory.Exists(path))
+            {
+                // looks like user provided dir instead of full path
+                // try to add executable name
+                return Path.Combine(path, StorageExporterExecutable);
+            }
+
+            //otherwise return what we have
+            return path;
+        }
+        
+        internal static void ValidateDataDirectory(string dataDirectory)
+        {
+            if (Directory.Exists(dataDirectory) == false)
+                throw new DirectoryNotFoundException($"Could not find directory {dataDirectory}");
+
+            var esentDataFile = Path.Combine(dataDirectory, EsentDataFile);
+            var voronDataFile = Path.Combine(dataDirectory, VoronDataFile);
+            if (!File.Exists(esentDataFile) && !File.Exists(voronDataFile)) 
+                throw new FileNotFoundException($"Data directory should contain file '{EsentDataFile}' or '{VoronDataFile}'");
+        }
+
+        internal static void ValidateExporterPath(string dataExporterPath)
+        {
+            var effectivePath = EffectiveDataExporterFullPath(dataExporterPath);
+            
+            if (File.Exists(effectivePath) == false)
+                throw new FileNotFoundException($"Could not find file {StorageExporterExecutable} at given location");
         }
 
         internal (string Commandline, string TmpFile) GenerateExporterCommandLine()

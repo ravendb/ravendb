@@ -422,6 +422,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(ServerWideStudioConfiguration));
             scripter.AddType(typeof(StudioConfiguration));
 
+            scripter.AddType(typeof(StudioTasksHandler.OfflineMigrationValidation));
+
             return scripter;
         }
     }

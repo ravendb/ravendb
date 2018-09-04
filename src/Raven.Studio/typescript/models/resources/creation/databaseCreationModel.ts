@@ -6,9 +6,13 @@ import getRestorePointsCommand = require("commands/resources/getRestorePointsCom
 import generalUtils = require("common/generalUtils");
 import recentError = require("common/notifications/models/recentError");
 import validateNameCommand = require("commands/resources/validateNameCommand");
+import validateOfflineMigration = require("commands/resources/validateOfflineMigration");
+import storageKeyProvider = require("common/storage/storageKeyProvider");
 
 class databaseCreationModel {
     static unknownDatabaseName = "Unknown Database";
+    
+    static storageExporterPathKeyName = storageKeyProvider.storageKeyFor("storage-exporter-path");
 
     readonly configurationSections: Array<availableConfigurationSection> = [
         {
@@ -348,9 +352,15 @@ class databaseCreationModel {
         });
         
         this.setupReplicationValidation(maxReplicationFactor);
-        this.setupRestoreValidation();
         this.setupEncryptionValidation();
-        this.setupLegacyMigrationValidation();
+        
+        if (this.creationMode === "restore") {
+            this.setupRestoreValidation();
+        }
+        if (this.creationMode === "legacyMigration") {
+            this.setupLegacyMigrationValidation();    
+        }
+        
     }
     
     private setupReplicationValidation(maxReplicationFactor: number) {
@@ -417,15 +427,52 @@ class databaseCreationModel {
         });
     }
     
+    private getSavedDataExporterPath() {
+        return localStorage.getItem(databaseCreationModel.storageExporterPathKeyName);
+    }
+    
     private setupLegacyMigrationValidation() {
         const migration = this.legacyMigration;
 
+        const checkDataExporterFullPath = (val: string, params: any, callback: (currentValue: string, result: string | boolean) => void) => {
+            validateOfflineMigration.validateMigratorPath(migration.dataExporterFullPath())
+                .execute()
+                .done((response: Raven.Server.Web.Studio.StudioTasksHandler.OfflineMigrationValidation) => {
+                    callback(migration.dataExporterFullPath(), response.IsValid || response.ErrorMessage);
+                });
+        };
+
         migration.dataExporterFullPath.extend({
-            required: true
+            required: true,
+            validation: {
+                async: true,
+                validator: generalUtils.debounceAndFunnel(checkDataExporterFullPath)
+            }
         });
+        
+        const savedPath = this.getSavedDataExporterPath();
+        if (savedPath) {
+            migration.dataExporterFullPath(savedPath);
+        }
+        
+        migration.dataExporterFullPath.subscribe(path => {
+            localStorage.setItem(databaseCreationModel.storageExporterPathKeyName, path);
+        });
+        
+        const checkDataDir = (val: string, params: any, callback: (currentValue: string, result: string | boolean) => void) => {
+            validateOfflineMigration.validateDataDir(migration.dataDirectory())
+                .execute()
+                .done((response: Raven.Server.Web.Studio.StudioTasksHandler.OfflineMigrationValidation) => {
+                    callback(migration.dataDirectory(), response.IsValid || response.ErrorMessage);
+                });
+        };
 
         migration.dataDirectory.extend({
-            required: true
+            required: true,
+            validation: {
+                async: true,
+                validator: generalUtils.debounceAndFunnel(checkDataDir)
+            }
         });
 
         migration.sourceType.extend({
