@@ -186,6 +186,8 @@ namespace Raven.Server.Documents.Patch
                             }
                         }
                     }
+
+                    _run.UpdatedDocumentCounterIds.Clear();
                 }
 
                 DocumentsStorage.PutOperationResults? putResult = null;
