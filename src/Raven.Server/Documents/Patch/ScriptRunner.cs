@@ -12,7 +12,6 @@ using Jint.Native;
 using Jint.Native.Array;
 using Jint.Native.Function;
 using Jint.Native.Object;
-using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Lucene.Net.Store;
 using Raven.Client;
@@ -207,7 +206,7 @@ namespace Raven.Server.Documents.Patch
 
                 // this is basically the same as Math.min / Math.max, but 
                 // can also be applied to strings, numbers and nulls
-                
+
                 if (args.Length != 2)
                     throw new ArgumentException(caller + "must be called with exactly two arguments");
 
@@ -255,7 +254,7 @@ namespace Raven.Server.Documents.Patch
                 }
 
             }
-            
+
             private JsValue Raven_Max(JsValue self, JsValue[] args)
             {
                 GenericSortTwoElementArray(args);
@@ -592,7 +591,7 @@ namespace Raven.Server.Documents.Patch
 
                 if (args.Length != 1 || args[0].IsString() == false)
                     throw new InvalidOperationException("cmpxchg(key) must be called with a single string argument");
-                
+
                 return CmpXchangeInternal(CompareExchangeCommandBase.GetActualKey(_database.Name, args[0].AsString()));
             }
 
@@ -644,9 +643,9 @@ namespace Raven.Server.Documents.Patch
                     FeaturesAvailabilityException.Throw("Counters");
 
                 AssertValidDatabaseContext();
-                var signatue = raw ? "counterRaw(doc, name)" : "counter(doc, name)";
+                var signature = raw ? "counterRaw(doc, name)" : "counter(doc, name)";
                 if (args.Length != 2)
-                    throw new InvalidOperationException($"{signatue} must be called with exactly 2 arguments");
+                    throw new InvalidOperationException($"{signature} must be called with exactly 2 arguments");
 
                 string id;
                 if (args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance doc)
@@ -659,12 +658,12 @@ namespace Raven.Server.Documents.Patch
                 }
                 else
                 {
-                    throw new InvalidOperationException($"{signatue}: 'doc' must be a string argument (the document id) or the actual document instance itself");
+                    throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself");
                 }
 
                 if (args[1].IsString() == false)
                 {
-                    throw new InvalidOperationException($"{signatue}: 'name' must be a string argument");
+                    throw new InvalidOperationException($"{signature}: 'name' must be a string argument");
                 }
 
                 var name = args[1].AsString();
@@ -698,7 +697,7 @@ namespace Raven.Server.Documents.Patch
                 {
                     ThrowInvalidIncrementCounterArgs(args);
                 }
-            
+
                 var signature = args.Length == 2 ? "incrementCounter(doc, name)" : "incrementCounter(doc, name, value)";
 
                 BlittableJsonReaderObject metadata = null;
@@ -755,7 +754,7 @@ namespace Raven.Server.Documents.Patch
 
                     UpdatedDocumentCounterIds.Add(id);
                 }
-                
+
                 return JsBoolean.True;
             }
 
@@ -792,7 +791,7 @@ namespace Raven.Server.Documents.Patch
 
                 AssertValidDatabaseContext();
 
-                if (args.Length !=2)
+                if (args.Length != 2)
                 {
                     ThrowInvalidDeleteCounterArgs();
                 }
@@ -836,7 +835,7 @@ namespace Raven.Server.Documents.Patch
 
                 var name = args[1].AsString();
                 _database.DocumentsStorage.CountersStorage.DeleteCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name);
-              
+
                 return JsBoolean.True;
             }
 
@@ -940,7 +939,7 @@ namespace Raven.Server.Documents.Patch
             {
                 if (args.Length != 2 || args[0].IsString() == false || args[1].IsString() == false)
                     throw new InvalidOperationException("startsWith(text, contained) must be called with two string parameters");
-                
+
                 return args[0].AsString().StartsWith(args[1].AsString(), StringComparison.OrdinalIgnoreCase);
             }
 
@@ -964,19 +963,19 @@ namespace Raven.Server.Documents.Patch
 
             private static JsValue ScalarToRawString(JsValue self2, JsValue[] args)
             {
-                if (args.Length != 2)                
+                if (args.Length != 2)
                     throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called on with two parameters only");
 
 
                 JsValue firstParam = args[0];
-                if (firstParam.IsObject() &&  args[0].AsObject() is BlittableObjectInstance selfInstance)
+                if (firstParam.IsObject() && args[0].AsObject() is BlittableObjectInstance selfInstance)
                 {
                     JsValue secondParam = args[1];
                     if (secondParam.IsObject() && secondParam.AsObject() is ScriptFunctionInstance lambda)
-                    {                       
+                    {
 
                         var functionAst = lambda.GetFunctionAst();
-                        var propName = functionAst.TryGetFieldFromSimpleLambdaExpression();                        
+                        var propName = functionAst.TryGetFieldFromSimpleLambdaExpression();
 
                         if (selfInstance.OwnValues.TryGetValue(propName, out var existingValue))
                         {
@@ -1021,15 +1020,15 @@ namespace Raven.Server.Documents.Patch
                     else
                     {
                         throw new InvalidOperationException("scalarToRawString(document, lambdaToField) must be called with a second lambda argument");
-                    }                    
+                    }
                 }
                 else
                 {
                     throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called with a document first parameter only");
                 }
 
-                
-            }           
+
+            }
 
             private JsValue CmpXchangeInternal(string key)
             {
@@ -1097,14 +1096,14 @@ namespace Raven.Server.Documents.Patch
                     throw CreateFullError(e);
                 }
                 finally
-                {                    
+                {
                     _refResolver.ExplodeArgsOn(null, null);
                     _docsCtx = null;
                     _jsonCtx = null;
                 }
-            }            
-            
-            
+            }
+
+
             private static JsonOperationContext ThrowArgumentNull()
             {
                 throw new ArgumentNullException("jsonCtx");
@@ -1134,7 +1133,9 @@ namespace Raven.Server.Documents.Patch
                     if (DebugActions == null)
                         DebugActions = new PatchDebugActions();
                 }
+
                 Includes?.Clear();
+                UpdatedDocumentCounterIds?.Clear();
                 PutOrDeleteCalled = false;
                 OriginalDocumentId = null;
                 RefreshOriginalDocument = false;
@@ -1146,22 +1147,6 @@ namespace Raven.Server.Documents.Patch
             public object Translate(JsonOperationContext context, object o)
             {
                 return TranslateToJs(ScriptEngine, context, o);
-            }
-
-            private ArrayInstance GetArrayInstanceFromBlittableArray(Engine engine, JsonOperationContext context, BlittableJsonReaderArray bjra)
-            {                
-                bjra.NoCache = true;               
-                
-                PropertyDescriptor[] items = new PropertyDescriptor[bjra.Length];
-                for (var i = 0; i < bjra.Length; i++)
-                {
-                    JsValue item = TranslateToJs(engine, context, bjra[i]);                        
-                    items[i] = new PropertyDescriptor(item, true, true, true);
-                }
-                var jsArray = new ArrayInstance(engine, items);
-                jsArray.Prototype = engine.Array.PrototypeObject;
-                jsArray.Extensible = true;                
-                return jsArray;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1194,20 +1179,20 @@ namespace Raven.Server.Documents.Patch
                     {
                         LuceneDocument = t.Item2,
                         LuceneState = t.Item3
-                    };                    
+                    };
                 }
                 if (o is Document doc)
-                {                    
-                    return new BlittableObjectInstance(engine, null, Clone(doc.Data, context), doc.Id, doc.LastModified);                    
+                {
+                    return new BlittableObjectInstance(engine, null, Clone(doc.Data, context), doc.Id, doc.LastModified);
                 }
                 if (o is DocumentConflict dc)
                 {
-                    return new BlittableObjectInstance(engine, null, Clone(dc.Doc, context), dc.Id, dc.LastModified);                    
+                    return new BlittableObjectInstance(engine, null, Clone(dc.Doc, context), dc.Id, dc.LastModified);
                 }
 
                 if (o is BlittableJsonReaderObject json)
                 {
-                    return new BlittableObjectInstance(engine, null, json, null, null);                    
+                    return new BlittableObjectInstance(engine, null, json, null, null);
                 }
 
                 if (o == null)
@@ -1310,11 +1295,22 @@ namespace Raven.Server.Documents.Patch
             {
                 if (_run == null)
                     return;
+
                 _run.ReadOnly = false;
+
                 _run.DebugMode = false;
                 _run.DebugOutput?.Clear();
                 _run.DebugActions?.Clear();
+
+                _run.Includes?.Clear();
+
+                _run.OriginalDocumentId = null;
+                _run.RefreshOriginalDocument = false;
+
+                _run.UpdatedDocumentCounterIds?.Clear();
+                
                 _parent._cache.Enqueue(_run);
+
                 _run = null;
                 _parent = null;
             }
