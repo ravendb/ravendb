@@ -5,6 +5,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
+using Raven.Server.Config.Settings;
 using Raven.Server.Utils;
 using Sparrow.Json;
 
@@ -82,12 +83,15 @@ namespace Raven.Server.Web.System
                 throw new InvalidOperationException("Name does not match.");
 
             if (record.Settings != null &&
-                record.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.DataDirectory), out var dataDir) )
+                record.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.DataDirectory), out var dataDir) &&
+                dataDir != null)
             {
-                if (dataDir == serverConfiguration.Core.DataDirectory.FullPath)
+                var databasePath = new PathSetting(dataDir, serverConfiguration.Core.DataDirectory.FullPath);
+
+                if (databasePath.Equals(serverConfiguration.Core.DataDirectory))
                     throw new InvalidOperationException($@"Forbidden data directory path for database ""{name}"" : ""{dataDir}"". " +
                                                         "This is the root path that RavenDB server uses to store data.");
-                if (dataDir == Path.GetPathRoot(serverConfiguration.Core.DataDirectory.FullPath))
+                if (Path.GetPathRoot(databasePath.FullPath) == databasePath.FullPath)
                     throw new InvalidOperationException($@"Forbidden data directory path for database ""{name}"" : ""{dataDir}"". " +
                                                         "You cannot use the root directory of the drive as the database path.");
             }
