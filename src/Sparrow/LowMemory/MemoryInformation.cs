@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -43,6 +44,7 @@ namespace Sparrow.LowMemory
         private static readonly MemoryInfoResult FailedResult = new MemoryInfoResult
         {
             AvailableMemory = new Size(256, SizeUnit.Megabytes),
+            CalculatedAvailableMemory = new Size(256, SizeUnit.Megabytes),
             TotalPhysicalMemory = new Size(256, SizeUnit.Megabytes),
             TotalCommittableMemory = new Size(384, SizeUnit.Megabytes),// also include "page file"
             CurrentCommitCharge = new Size(256, SizeUnit.Megabytes),
@@ -164,7 +166,32 @@ namespace Sparrow.LowMemory
             }
         }
 
-        public static (Size MemAvailable, Size TotalMemory, Size Commited, Size CommitLimit) GetFromProcMemInfo()
+        public static MemoryInfoResult GetMemInfoUsingOneTimeSmapsReader()
+        {
+            SmapsReader smapsReader = null;
+            byte[][] buffers = null;
+            try
+            {
+                if (PlatformDetails.RunningOnLinux)
+                {
+                    var buffer1 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
+                    var buffer2 = ArrayPool<byte>.Shared.Rent(SmapsReader.BufferSize);
+                    buffers = new[] {buffer1, buffer2};
+                    smapsReader = new SmapsReader(new[] {buffer1, buffer2});
+                }
+                return GetMemoryInfo(smapsReader);
+            }
+            finally
+            {
+                if (buffers != null)
+                {
+                    ArrayPool<byte>.Shared.Return(buffers[0]);
+                    ArrayPool<byte>.Shared.Return(buffers[1]);
+                }
+            }
+        }
+
+        public static (Size MemAvailable, Size TotalMemory, Size Commited, Size CommitLimit, Size CalculatedAvailableMemory, Size SharedCleanMemory) GetFromProcMemInfo(SmapsReader smapsReader)
         {
             const string path = "/proc/meminfo";
 
@@ -182,6 +209,17 @@ namespace Sparrow.LowMemory
                     var totalMemInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(MemTotal);
                     var swapTotalInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(SwapTotal);
                     var commitedInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(Committed_AS);
+
+                    var calculatedInBytes = new Size(memAvailableInKb, SizeUnit.Kilobytes);
+                    var sharedCleanMemory = new Size(0, SizeUnit.Bytes);
+                    if (smapsReader != null)
+                    {
+                        var result = smapsReader.CalculateMemUsageFromSmaps<SmapsReaderNoAllocResults>();
+                        calculatedInBytes.Add(result.SharedClean, SizeUnit.Bytes);
+                        calculatedInBytes.Add(result.PrivateClean, SizeUnit.Bytes);
+                        sharedCleanMemory.Set(result.SharedClean, SizeUnit.Bytes);
+                    }
+
                     return (
                         MemAvailable: new Size(Math.Max(memAvailableInKb, memFreeInKb), SizeUnit.Kilobytes),
                         TotalMemory: new Size(totalMemInKb, SizeUnit.Kilobytes),
@@ -189,7 +227,9 @@ namespace Sparrow.LowMemory
 
                         // on Linux, we use the swap + ram as the commit limit, because the actual limit
                         // is dependent on many different factors
-                        CommitLimit: new Size(totalMemInKb + swapTotalInKb, SizeUnit.Kilobytes)
+                        CommitLimit: new Size(totalMemInKb + swapTotalInKb, SizeUnit.Kilobytes),
+                        CalculatedAvailableMemory: calculatedInBytes,
+                        SharedCleanMemory: sharedCleanMemory
                     );
                 }
             }
@@ -198,7 +238,7 @@ namespace Sparrow.LowMemory
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Failed to read value from {path}", ex);
 
-                return (new Size(), new Size(), new Size(), new Size());
+                return (new Size(), new Size(), new Size(), new Size(), new Size(), new Size());
             }
         }
 
@@ -210,7 +250,7 @@ namespace Sparrow.LowMemory
             return (installedMemoryInGb, usableMemoryInGb);
         }
 
-        public static MemoryInfoResult GetMemoryInfo()
+        public static MemoryInfoResult GetMemoryInfo(SmapsReader smapsReader = null)
         {
             if (_failedToGetAvailablePhysicalMemory)
             {
@@ -227,7 +267,7 @@ namespace Sparrow.LowMemory
                 if (PlatformDetails.RunningOnMacOsx)
                     return GetMemoryInfoMacOs();
 
-                return GetMemoryInfoLinux();
+                return GetMemoryInfoLinux(smapsReader);
             }
             catch (Exception e)
             {
@@ -238,9 +278,9 @@ namespace Sparrow.LowMemory
             }
         }
 
-        private static MemoryInfoResult GetMemoryInfoLinux()
+        private static MemoryInfoResult GetMemoryInfoLinux(SmapsReader smapsReader)
         {
-            var fromProcMemInfo = GetFromProcMemInfo();
+            var fromProcMemInfo = GetFromProcMemInfo(smapsReader);
             var totalPhysicalMemoryInBytes = fromProcMemInfo.TotalMemory.GetValue(SizeUnit.Bytes);
 
             var cgroupMemoryLimit = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryLimit);
@@ -267,10 +307,13 @@ namespace Sparrow.LowMemory
                 fromProcMemInfo.MemAvailable,
                 fromProcMemInfo.TotalMemory,
                 fromProcMemInfo.Commited,
-                fromProcMemInfo.CommitLimit);
+                fromProcMemInfo.CommitLimit,
+                fromProcMemInfo.CalculatedAvailableMemory,
+                fromProcMemInfo.SharedCleanMemory
+                );
         }
 
-        private static MemoryInfoResult BuildPosixMemoryInfoResult(Size availableRam, Size totalPhysicalMemory, Size commitedMemory, Size commitLimit)
+        private static MemoryInfoResult BuildPosixMemoryInfoResult(Size availableRam, Size totalPhysicalMemory, Size commitedMemory, Size commitLimit, Size calculatedAvailableMemory, Size sharedCleanMemory)
         {
             SetMemoryRecords(availableRam.GetValue(SizeUnit.Bytes));
 
@@ -280,6 +323,8 @@ namespace Sparrow.LowMemory
                 CurrentCommitCharge = commitedMemory,
 
                 AvailableMemory = availableRam,
+                CalculatedAvailableMemory = calculatedAvailableMemory,
+                SharedCleanMemory = sharedCleanMemory,
                 TotalPhysicalMemory = totalPhysicalMemory,
                 InstalledMemory = totalPhysicalMemory,
                 MemoryUsageRecords = new MemoryInfoResult.MemoryUsageLowHigh
@@ -354,7 +399,9 @@ namespace Sparrow.LowMemory
             // commit limit: physical memory + swap
             var commitLimit = new Size((long)(physicalMemory + swapu.xsu_total), SizeUnit.Bytes);
 
-            return BuildPosixMemoryInfoResult(availableRamInBytes, totalPhysicalMemory, commitedMemory, commitLimit);
+            var calculatedAvailableMemory = availableRamInBytes; // mac (unlike other linux distros) does calculate accurate available memory
+
+            return BuildPosixMemoryInfoResult(availableRamInBytes, totalPhysicalMemory, commitedMemory, commitLimit, calculatedAvailableMemory, Size.Zero);
         }
 
         private static unsafe MemoryInfoResult GetMemoryInfoWindows()
@@ -385,6 +432,8 @@ namespace Sparrow.LowMemory
                 TotalCommittableMemory = new Size((long)memoryStatus.ullTotalPageFile, SizeUnit.Bytes),
                 CurrentCommitCharge = new Size((long)(memoryStatus.ullTotalPageFile - memoryStatus.ullAvailPageFile), SizeUnit.Bytes),
                 AvailableMemory = new Size((long)memoryStatus.ullAvailPhys, SizeUnit.Bytes),
+                CalculatedAvailableMemory = new Size((long)memoryStatus.ullAvailPhys, SizeUnit.Bytes),
+                SharedCleanMemory = Size.Zero,
                 TotalPhysicalMemory = new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
                 InstalledMemory = fetchedInstalledMemory ?
                     new Size(installedMemoryInKb, SizeUnit.Kilobytes) :
@@ -525,6 +574,8 @@ namespace Sparrow.LowMemory
         public Size TotalPhysicalMemory;
         public Size InstalledMemory;
         public Size AvailableMemory;
+        public Size CalculatedAvailableMemory;
+        public Size SharedCleanMemory;
         public MemoryUsageLowHigh MemoryUsageRecords;
     }
 
@@ -535,5 +586,4 @@ namespace Sparrow.LowMemory
         public EarlyOutOfMemoryException(string message) : base(message) { }
         public EarlyOutOfMemoryException(string message, Exception inner) : base(message, inner) { }
     }
-
 }
