@@ -7,7 +7,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.WebSockets;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -29,7 +28,6 @@ using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
-using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Dashboard;
@@ -133,6 +131,12 @@ namespace Raven.Server.ServerWide
 
             _frequencyToCheckForIdleDatabases = Configuration.Databases.FrequencyToCheckForIdle.AsTimeSpan;
 
+            _server.ServerCertificateChanged += OnServerCertificateChanged;
+        }
+
+        private void OnServerCertificateChanged(object sender, EventArgs e)
+        {
+            Interlocked.Exchange(ref _serverCertificateChanged, 1);
         }
 
         public RavenServer Server => _server;
@@ -164,6 +168,7 @@ namespace Raven.Server.ServerWide
         public RachisConsensus<ClusterStateMachine> Engine => _engine;
 
         public ClusterMaintenanceSupervisor ClusterMaintenanceSupervisor;
+        private int _serverCertificateChanged;
 
         public Dictionary<string, ClusterNodeStatusReport> ClusterStats()
         {
@@ -1450,6 +1455,9 @@ namespace Raven.Server.ServerWide
                         return;
 
                     _shutdownNotification.Cancel();
+
+                    _server.ServerCertificateChanged -= OnServerCertificateChanged;
+
                     var toDispose = new List<IDisposable>
                     {
                         _engine,
@@ -1983,24 +1991,14 @@ namespace Raven.Server.ServerWide
 
             var command = new PutRaftCommand(cmdJson);
 
+            var serverCertificateChanged = Interlocked.Exchange(ref _serverCertificateChanged, 0) == 1;
+
             if (_clusterRequestExecutor == null
+                || serverCertificateChanged
                 || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
             {
                 _clusterRequestExecutor?.Dispose();
                 _clusterRequestExecutor = CreateNewClusterRequestExecutor(leaderUrl);
-
-                Server.ServerCertificateChanged += (sender, args) =>
-                {
-                    // When the server certificate changes, we need to start using the new one.
-                    // Since the request executor has the old certificate, we will re-create it and it will pick up the new certificate.
-                    var newClusterRequestExecutor = CreateNewClusterRequestExecutor(leaderUrl);
-
-                    var oldClusterRequestExecutor = _clusterRequestExecutor;
-
-                    Interlocked.Exchange(ref _clusterRequestExecutor, newClusterRequestExecutor);
-
-                    oldClusterRequestExecutor?.Dispose();
-                };
             }
 
             try
