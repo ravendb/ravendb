@@ -80,10 +80,10 @@ namespace Raven.Server.Dashboard
         {
             using (var currentProcess = Process.GetCurrentProcess())
             {
-                var memInfo = MemoryInformation.GetMemoryInfo();
-                var isLowMemory = LowMemoryNotification.Instance.IsLowMemory(memInfo, smapsReader, out var sharedCleanInBytes);
+                var memInfo = MemoryInformation.GetMemoryInfo(smapsReader);
+                var isLowMemory = LowMemoryNotification.Instance.IsLowMemory(memInfo);
                 var workingSet = PlatformDetails.RunningOnLinux
-                    ? MemoryInformation.GetRssMemoryUsage(currentProcess.Id) - sharedCleanInBytes
+                    ? MemoryInformation.GetRssMemoryUsage(currentProcess.Id) - memInfo.SharedCleanMemory.GetValue(SizeUnit.Bytes)
                     : currentProcess.WorkingSet64;
 
                 var cpuInfo = CpuUsage.Calculate();
@@ -92,6 +92,7 @@ namespace Raven.Server.Dashboard
                 {
                     TotalMemory = memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
                     AvailableMemory = memInfo.AvailableMemory.GetValue(SizeUnit.Bytes),
+                    CalculatedAvailableMemory = memInfo.CalculatedAvailableMemory.GetValue(SizeUnit.Bytes),
                     SystemCommitLimit = memInfo.TotalCommittableMemory.GetValue(SizeUnit.Bytes),
                     CommitedMemory = memInfo.CurrentCommitCharge.GetValue(SizeUnit.Bytes),
                     ProcessMemoryUsage = workingSet,
