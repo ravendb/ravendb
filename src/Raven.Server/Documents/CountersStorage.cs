@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using Raven.Client;
 using Raven.Server.Documents.Replication;
@@ -660,98 +661,118 @@ namespace Raven.Server.Documents
             return fst.NumberOfEntries;
         }
 
-        public void UpdateDocumentCounters(DocumentsOperationContext context, BlittableJsonReaderObject doc, string docId, BlittableJsonReaderObject metadata, List<CounterOperation> countersOperations)
+        public void UpdateDocumentCounters(DocumentsOperationContext context, BlittableJsonReaderObject doc, string docId, List<CounterOperation> countersOperations)
         {
-            List<string> updates = null;
-            if (metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters))
+            BlittableJsonReaderArray metadataCounters = null;
+            var initCounterListSize = countersOperations.Count;
+            if (doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                metadata.TryGet(Constants.Documents.Metadata.Counters, out metadataCounters))
             {
-                foreach (var operation in countersOperations)
-                {
-                    // we need to check the updates to avoid inserting duplicate counter names
-                    int loc = updates?.BinarySearch(operation.CounterName, StringComparer.OrdinalIgnoreCase) ??
-                              counters.BinarySearch(operation.CounterName, StringComparison.OrdinalIgnoreCase);
-
-                    switch (operation.Type)
-                    {
-                        case CounterOperationType.Increment:
-                        case CounterOperationType.Put:
-                            if (loc < 0)
-                            {
-                                CreateUpdatesIfNeeded();
-                                updates.Insert(~loc, operation.CounterName);
-                            }
-
-                            break;
-                        case CounterOperationType.Delete:
-                            if (loc >= 0)
-                            {
-                                CreateUpdatesIfNeeded();
-                                updates.RemoveAt(loc);
-                            }
-                            break;
-                        case CounterOperationType.None:
-                        case CounterOperationType.Get:
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException($"Unknown value {operation.Type}");
-                    }
-                }
-            }
-            else
-            {
-                updates = new List<string>(countersOperations.Count);
-                foreach (var operation in countersOperations)
-                {
-                    updates.Add(operation.CounterName);
-                }
-                updates.Sort(StringComparer.OrdinalIgnoreCase);
+                initCounterListSize += metadataCounters.Length;
             }
 
-            if (updates != null)
+            //Todo Maybe should not read from the table if there is metadata on document
+            List<string> counters = null;
+            foreach (var s in GetCountersForDocument(context, docId))
             {
-                if (updates.Count == 0)
+                if (null == counters)
                 {
-                    metadata.Modifications = new DynamicJsonValue(metadata);
-                    metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
+                    counters = new List<string>(initCounterListSize);
                 }
-                else
+                counters.Add(s);
+            }
+
+            //Todo To consider if can count on that this already in order
+            counters?.Sort(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var operation in countersOperations)
+            {
+                // we need to check the updates to avoid inserting duplicate counter names
+                var loc = counters?.BinarySearch(operation.CounterName, StringComparer.OrdinalIgnoreCase) ?? ~0;
+
+                switch (operation.Type)
                 {
-                    metadata.Modifications = new DynamicJsonValue(metadata)
-                    {
-                        [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(updates)
-                    };
+                    case CounterOperationType.Increment:
+                    case CounterOperationType.Put:
+                        if (loc < 0)
+                        {
+                            CreateUpdatesIfNeeded();
+                            counters.Insert(~loc, operation.CounterName);
+                        }
+
+                        break;
+                    case CounterOperationType.Delete:
+                        if (loc >= 0)
+                        {
+                            CreateUpdatesIfNeeded();
+                            counters.RemoveAt(loc);
+                        }
+                        break;
+                    case CounterOperationType.None:
+                    case CounterOperationType.Get:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException($"Unknown value {operation.Type}");
+                }
+            }
+
+            var flags = DocumentFlags.None;
+            if (null == counters || false == counters.Any())
+            {
+                if (null == metadataCounters)
+                {
+                    return;
                 }
 
+                metadata.Modifications = new DynamicJsonValue(metadata);
+                metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
                 doc.Modifications = new DynamicJsonValue(doc)
                 {
                     [Constants.Documents.Metadata.Key] = metadata
                 };
             }
-
-            if (metadata.Modifications != null)
+            else
             {
-                var data = context.ReadObject(doc, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                if (null != metadataCounters &&
+                    metadataCounters.SequenceEqual(counters))
+                {
+                    return;
+                }
 
-                var flags = data.TryGet(Constants.Documents.Metadata.Key, out metadata) &&
-                            metadata.TryGet(Constants.Documents.Metadata.Counters, out object _)
-                    ? DocumentFlags.HasCounters
-                    : DocumentFlags.None;
+                doc.Modifications = new DynamicJsonValue(doc);
+                if (null == metadata)
+                {
+                    doc.Modifications[Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    {
+                        [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(counters)
+                    };
+                }
+                else
+                {
+                    metadata.Modifications = new DynamicJsonValue(metadata)
+                    {
+                        [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(counters)
+                    };
+                    doc.Modifications[Constants.Documents.Metadata.Key] = metadata;
+                }
 
-                _documentDatabase.DocumentsStorage.Put(context, docId, null, data, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByCountersUpdate);
+                flags = DocumentFlags.HasCounters;
             }
+
+            var data = context.ReadObject(doc, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            _documentDatabase.DocumentsStorage.Put(context, docId, null, data, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByCountersUpdate);
 
             void CreateUpdatesIfNeeded()
             {
-                if (updates != null)
+                if (counters != null)
                     return;
 
-                updates = new List<string>(counters.Length + countersOperations.Count);
-                for (int i = 0; i < counters.Length; i++)
+                counters = new List<string>(countersOperations.Count);
+                foreach (var val in counters)
                 {
-                    var val = counters.GetStringByIndex(i);
                     if (val == null)
                         continue;
-                    updates.Add(val);
+                    counters.Add(val);
                 }
             }
         }
