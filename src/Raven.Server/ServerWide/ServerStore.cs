@@ -1989,6 +1989,20 @@ namespace Raven.Server.ServerWide
                 _clusterRequestExecutor?.Dispose();
                 _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, Server.Certificate.Certificate);
                 _clusterRequestExecutor.DefaultTimeout = Engine.OperationTimeout;
+
+                Server.ServerCertificateChanged += (sender, args) =>
+                {
+                    // When the server certificate changes, we need to start using the new one.
+                    // Since the request executor has the old certificate, we will re-create it and it will pick up the new certificate.
+                    var newClusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, Server.Certificate.Certificate);
+                    newClusterRequestExecutor.DefaultTimeout = Engine.OperationTimeout;
+
+                    var oldClusterRequestExecutor = _clusterRequestExecutor;
+
+                    Interlocked.Exchange(ref _clusterRequestExecutor, newClusterRequestExecutor);
+
+                    oldClusterRequestExecutor?.Dispose();
+                };
             }
 
             try
