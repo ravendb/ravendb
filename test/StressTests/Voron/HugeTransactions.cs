@@ -6,14 +6,13 @@
 
 using System;
 using System.IO;
+using System.Threading;
 using FastTests;
 using FastTests.Voron;
-using SlowTests.Voron;
 using Sparrow.Compression;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Global;
-using Voron.Impl;
 using Voron.Impl.Paging;
 using Xunit;
 
@@ -135,66 +134,79 @@ namespace StressTests.Voron
         [InlineData(2)] // in = 3GB, out ~= 1.5GB
         [InlineData(1)] // in = 3GB, out > 3GB (rare case)
         [InlineData(0)] // special case : in = Exactly 1GB, out > 1GB
-        public unsafe void LZ4TestAbove2GB(long devider)
+        public unsafe void LZ4TestAbove2GB(long divider)
         {
-            var options = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, $"bigLz4-test-{devider}.data"));
-            using (var env = new StorageEnvironment(options))
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10)))
             {
-                long Gb = 1024 * 1024 * 1024;
-                long inputSize = 3L * Gb;
-                byte* outputBuffer, inputBuffer, checkedBuffer;
-                var guid = Guid.NewGuid();
-                var outputPager = CreateScratchFile($"output-{devider}-{guid}", env, inputSize, out outputBuffer);
-                var inputPager = CreateScratchFile($"input-{devider}-{guid}", env, inputSize, out inputBuffer);
-                var checkedPager = CreateScratchFile($"checked-{devider}-{guid}", env, inputSize, out checkedBuffer);
-
-                var random = new Random(123);
-
-                if (devider != 0)
+                var options = StorageEnvironmentOptions.ForPath(Path.Combine(DataDir, $"bigLz4-test-{divider}.data"));
+                using (var env = new StorageEnvironment(options))
                 {
-                    for (long p = 0; p < inputSize / devider; p++)
+                    long gb = 1024 * 1024 * 1024;
+                    long inputSize = 3L * gb;
+                    var guid = Guid.NewGuid();
+
+                    using (var outputPager = CreateScratchFile($"output-{divider}-{guid}", env, inputSize, out byte* outputBuffer))
+                    using (var inputPager = CreateScratchFile($"input-{divider}-{guid}", env, inputSize, out byte* inputBuffer))
+                    using (var checkedPager = CreateScratchFile($"checked-{divider}-{guid}", env, inputSize, out byte* checkedBuffer))
                     {
-                        (*(byte*)((long)inputBuffer + p)) = Convert.ToByte(random.Next(0, 255));
+                        var random = new Random(123);
+
+                        if (divider != 0)
+                        {
+                            for (long p = 0; p < inputSize / divider; p++)
+                            {
+                                cts.Token.ThrowIfCancellationRequested();
+
+                                (*(byte*)((long)inputBuffer + p)) = Convert.ToByte(random.Next(0, 255));
+                            }
+                        }
+                        else
+                        {
+                            inputSize = int.MaxValue / 2 - 1; // MAX_INPUT_LENGTH_PER_SEGMENT
+                            for (long p = 0; p < inputSize; p++)
+                            {
+                                cts.Token.ThrowIfCancellationRequested();
+
+                                (*(byte*)((long)inputBuffer + p)) = Convert.ToByte(random.Next(0, 255));
+                            }
+                        }
+
+                        Console.WriteLine("Calculating LZ4 MaximumOutputLength...");
+                        var outputBufferSize = LZ4.MaximumOutputLength(inputSize);
+                        Console.WriteLine("...done");
+
+                        // write some data in known places in inputBuffer
+                        byte testNum = 0;
+                        for (long testPoints = 0; testPoints < inputSize; testPoints += gb)
+                        {
+                            cts.Token.ThrowIfCancellationRequested();
+
+                            var testPointer = (byte*)((long)inputBuffer + testPoints);
+                            *testPointer = ++testNum;
+                        }
+
+                        Console.WriteLine("Encoding LZ4 LongBuffer...");
+                        // encode inputBuffer into outputBuffer
+                        long compressedLen = LZ4.Encode64LongBuffer(inputBuffer, outputBuffer, inputSize, outputBufferSize);
+                        Console.WriteLine("...done");
+
+                        Console.WriteLine("Decoding LZ4 LongBuffers...");
+                        // decode outputBuffer into checkedBuffer
+                        var totalOutputSize = LZ4.Decode64LongBuffers(outputBuffer, compressedLen, checkedBuffer, inputSize, true);
+                        Console.WriteLine("...done");
+
+                        Assert.Equal(compressedLen, totalOutputSize);
+
+                        testNum = 0;
+                        for (long testPoints = 0; testPoints < inputSize; testPoints += gb)
+                        {
+                            cts.Token.ThrowIfCancellationRequested();
+
+                            var testPointer = (byte*)((long)checkedBuffer + testPoints);
+                            Assert.Equal(++testNum, *testPointer);
+                        }
                     }
                 }
-                else
-                {
-                    inputSize = int.MaxValue / 2 - 1; // MAX_INPUT_LENGTH_PER_SEGMENT
-                    for (long p = 0; p < inputSize; p++)
-                    {
-                        (*(byte*)((long)inputBuffer + p)) = Convert.ToByte(random.Next(0, 255));
-                    }
-                }
-
-                var outputBufferSize = LZ4.MaximumOutputLength(inputSize);
-
-                // write some data in known places in inputBuffer
-                long compressedLen = 0;
-                byte testNum = 0;
-                for (long testPoints = 0; testPoints < inputSize; testPoints += Gb)
-                {
-                    var testPointer = (byte*)((long)inputBuffer + testPoints);
-                    *testPointer = ++testNum;
-                }
-
-                // encode inputBuffer into outputBuffer
-                compressedLen = LZ4.Encode64LongBuffer(inputBuffer, outputBuffer, inputSize, outputBufferSize);
-
-                // decode outputBuffer into checkedBuffer
-                var totalOutputSize = LZ4.Decode64LongBuffers(outputBuffer, compressedLen, checkedBuffer, inputSize, true);
-
-                Assert.Equal(compressedLen, totalOutputSize);
-
-                testNum = 0;
-                for (long testPoints = 0; testPoints < inputSize; testPoints += Gb)
-                {
-                    var testPointer = (byte*)((long)checkedBuffer + testPoints);
-                    Assert.Equal(++testNum, *testPointer);
-                }
-
-                outputPager.Dispose();
-                inputPager.Dispose();
-                checkedPager.Dispose();
             }
         }
 
