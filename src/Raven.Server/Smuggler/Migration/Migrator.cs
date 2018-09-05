@@ -338,10 +338,5 @@ namespace Raven.Server.Smuggler.Migration
         {
             return await _serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
         }
-
-        public void DisposeHttpClient()
-        {
-            _httpClient.Dispose();
-        }
     }
 }
