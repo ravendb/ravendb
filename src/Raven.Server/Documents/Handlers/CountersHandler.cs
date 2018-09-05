@@ -92,7 +92,6 @@ namespace Raven.Server.Documents.Handlers
                 foreach (var kvp in _dictionary)
                 {
                     Document doc = null;
-                    BlittableJsonReaderObject metadata = null;
                     var docId = kvp.Key;
                     string docCollection = null;
                     
@@ -154,9 +153,9 @@ namespace Raven.Server.Documents.Handlers
                         }
                     }
 
-                    if (metadata != null)
+                    if(doc != null)
                     {
-                        _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc.Data, docId, metadata, kvp.Value);
+                        _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc.Data, docId, kvp.Value);
                     }
 
                     void LoadDocument()
@@ -176,8 +175,6 @@ namespace Raven.Server.Documents.Handlers
                                 return; // never hit
                             }
 
-                            if (doc.TryGetMetadata(out metadata) == false)
-                                ThrowInvalidDocumentWithNoMetadata(doc);
                             if (doc.Flags.HasFlag(DocumentFlags.Artificial))
                                 ThrowArtificialDocument(doc);
                         }
