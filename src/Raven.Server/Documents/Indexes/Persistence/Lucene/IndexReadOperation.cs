@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var docsToGet = pageSize;
             var position = query.Start;
 
-            if (query.Metadata.IsOptimizedSortOnly && _index.Definition.HasDynamicFields == false && _index.IsMultiMap == false)
+            if (query.Metadata.IsOptimizedSortOnly && _index.Definition.HasDynamicFields == false)
             {
                 foreach (var result in QuerySortOnly(query, retriever, position, pageSize, totalResults, token))
                     yield return result;
@@ -215,21 +215,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> QuerySortOnly(
             IndexQueryServerSide query, IQueryResultRetriever retriever, int start, int pageSize, Reference<int> totalResults, CancellationToken token)
         {
-            int FindDocument(bool isAsc, int i, (int Index, StringIndex Item, IndexReader IndexReader)[] items)
+            int FindDocument(bool isAsc, int i, (Reference<int> Index, HashSet<int> Seen, StringIndex Item, IndexReader IndexReader)[] items)
             {
                 var innerDoc = -1;
                 var tpl = items[i];
-                var index = tpl.Index;
+                var index = tpl.Index.Value;
                 while (index < tpl.Item.reverseOrder.Length)
                 {
                     if (isAsc == false)
                         index = tpl.Item.reverseOrder.Length - index - 1;
 
                     innerDoc = tpl.Item.reverseOrder[index];
-                    if (tpl.IndexReader.HasDeletions && tpl.IndexReader.IsDeleted(innerDoc))
+                    if (tpl.IndexReader.HasDeletions && (tpl.IndexReader.IsDeleted(innerDoc) || tpl.Seen.Add(innerDoc) == false))
                     {
                         innerDoc = -1;
-                        index = ++tpl.Index;
+                        index = ++tpl.Index.Value;
                         continue;
                     }
 
@@ -248,12 +248,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var fieldName = order.Name;
 
             var subReaders = _searcher.IndexReader.GetSequentialSubReaders();
-            var indexes = new(int Index, StringIndex Item, IndexReader IndexReader)[subReaders.Length];
+            var indexes = new(Reference<int> Index, HashSet<int> Seen, StringIndex Item, IndexReader IndexReader)[subReaders.Length];
             for (var i = 0; i < subReaders.Length; i++)
             {
                 var subReader = subReaders[i];
                 var index = FieldCache_Fields.DEFAULT.GetStringIndex(subReader, fieldName, _state);
-                indexes[i] = (0, index, subReader);
+                indexes[i] = (new Reference<int>(), new HashSet<int>(), index, subReader);
             }
 
             while (true)
@@ -296,7 +296,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (idx == -1)
                     yield break;
 
-                indexes[idx].Index++;
+                indexes[idx].Index.Value++;
 
                 if (start-- > 0)
                     continue;
