@@ -242,7 +242,6 @@ namespace Raven.Server.Smuggler.Migration
                     result.AddInfo(message);
 
                     using (cancelToken)
-                    using (_httpClient)
                     {
                         try
                         {
