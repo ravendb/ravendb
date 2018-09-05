@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             Metrics = new EtlMetricsCountersManager();
 
             if (configuration.TestMode == false)
-                _requestExecutor = RequestExecutor.Create(configuration.Connection.TopologyDiscoveryUrls, configuration.Connection.Database, serverStore.Server.Certificate.Certificate, DocumentConventions.Default);
+                _requestExecutor = CreateNewRequestExecutor(configuration, serverStore);
             
             _script = new RavenEtlDocumentTransformer.ScriptInput(transformation);         
 			
@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 // When the server certificate changes, we need to start using the new one.
                 // Since the request executor has the old certificate, we will re-create it and it will pick up the new certificate.
-                var newRequestExecutor = RequestExecutor.Create(configuration.Connection.TopologyDiscoveryUrls, configuration.Connection.Database, serverStore.Server.Certificate.Certificate, DocumentConventions.Default);
+                var newRequestExecutor = CreateNewRequestExecutor(configuration, serverStore);
                 var oldRequestExecutor = _requestExecutor;
 
                 Interlocked.Exchange(ref _requestExecutor, newRequestExecutor);
@@ -47,7 +47,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 oldRequestExecutor?.Dispose();
             };   
         }
-
+		
+        private static RequestExecutor CreateNewRequestExecutor(RavenEtlConfiguration configuration, ServerStore serverStore)
+        {
+            return RequestExecutor.Create(configuration.Connection.TopologyDiscoveryUrls, configuration.Connection.Database, serverStore.Server.Certificate.Certificate, DocumentConventions.Default);
+        }
+		
         protected override IEnumerator<RavenEtlItem> ConvertDocsEnumerator(IEnumerator<Document> docs, string collection)
         {
             return new DocumentsToRavenEtlItems(docs, collection);
