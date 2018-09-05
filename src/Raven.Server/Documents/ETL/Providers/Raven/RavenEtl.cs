@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ETL;
@@ -18,7 +19,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
     {
         public const string RavenEtlTag = "Raven ETL";
 
-        private readonly RequestExecutor _requestExecutor;
+        private RequestExecutor _requestExecutor;
         private string _recentUrl;
         public string Url => _recentUrl;
 
@@ -28,7 +29,19 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             Metrics = new EtlMetricsCountersManager();
             _requestExecutor = RequestExecutor.Create(configuration.Connection.TopologyDiscoveryUrls, configuration.Connection.Database, serverStore.Server.Certificate.Certificate, DocumentConventions.Default);
-            _script = new RavenEtlDocumentTransformer.ScriptInput(transformation);            
+            _script = new RavenEtlDocumentTransformer.ScriptInput(transformation);
+
+            serverStore.Server.ServerCertificateChanged += (sender, args) =>
+            {
+                // When the server certificate changes, we need to start using the new one.
+                // Since the request executor has the old certificate, we will re-create it and it will pick up the new certificate.
+                var newRequestExecutor = RequestExecutor.Create(configuration.Connection.TopologyDiscoveryUrls, configuration.Connection.Database, serverStore.Server.Certificate.Certificate, DocumentConventions.Default);
+                var oldRequestExecutor = _requestExecutor;
+
+                Interlocked.Exchange(ref _requestExecutor, newRequestExecutor);
+
+                oldRequestExecutor?.Dispose();
+            };
         }
 
         protected override IEnumerator<RavenEtlItem> ConvertDocsEnumerator(IEnumerator<Document> docs, string collection)
