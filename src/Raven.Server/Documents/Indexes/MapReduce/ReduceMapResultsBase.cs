@@ -28,6 +28,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public abstract unsafe class ReduceMapResultsBase<T> : IIndexingWork where T : IndexDefinitionBase
     {
+        private static readonly TimeSpan MinReduceDurationToCalculateProcessMemoryUsage = TimeSpan.FromSeconds(1);
         internal static readonly Slice PageNumberSlice;
         internal static readonly string PageNumberToReduceResultTableName = "PageNumberToReduceResult";
         private readonly Logger _logger;
@@ -123,9 +124,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
             }
 
-            using (MemoryUsageGuard.GetProcessMemoryUsage(out var memoryUsage, out _))
+            if (stats.Duration >= MinReduceDurationToCalculateProcessMemoryUsage) 
             {
-                stats.RecordReduceMemoryStats(memoryUsage.WorkingSet, memoryUsage.PrivateMemory);
+                using (MemoryUsageGuard.GetProcessMemoryUsage(out var memoryUsage, out _))
+                {
+                    stats.RecordReduceMemoryStats(memoryUsage.WorkingSet, memoryUsage.PrivateMemory);
+                }
             }
 
             WriteLastEtags(indexContext);
