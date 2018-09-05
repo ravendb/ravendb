@@ -11,6 +11,8 @@ namespace Raven.Server.Json
 {
     public static class BlittableJsonTraverserHelper
     {
+        private const string LastModifiedPath = Constants.Documents.Metadata.Key + "." + Constants.Documents.Metadata.LastModified;
+
         public static bool TryRead(
             BlittableJsonTraverser blittableJsonTraverser,
             Document document,
@@ -19,22 +21,30 @@ namespace Raven.Server.Json
         {
             if (TryRead(blittableJsonTraverser, document.Data, path, out value))
                 return true;
+
             if (path == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
             {
                 value = document.Id;
                 return true;
             }
+
+            if (path == LastModifiedPath)
+            {
+                value = document.LastModified;
+                return true;
+            }
+
             value = null;
             return false;
         }
 
         public static bool TryRead(
-            BlittableJsonTraverser blittableJsonTraverser, 
-            BlittableJsonReaderObject document, 
-            StringSegment path, 
+            BlittableJsonTraverser blittableJsonTraverser,
+            BlittableJsonReaderObject document,
+            StringSegment path,
             out object value)
         {
-            if (blittableJsonTraverser.TryRead(document, path, out value, out StringSegment leftPath) && 
+            if (blittableJsonTraverser.TryRead(document, path, out value, out StringSegment leftPath) &&
                 leftPath.Length == 0)
             {
                 value = TypeConverter.ConvertForIndexing(value);
@@ -144,7 +154,7 @@ namespace Raven.Server.Json
                 return true;
             }
 
-            if (value is string == false && 
+            if (value is string == false &&
                 value is IEnumerable items)
             {
                 value = ReadNestedComputed(blittableJsonTraverser, items, leftPath);
