@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Threading;
 using Sparrow.Collections;
@@ -222,13 +223,16 @@ namespace Sparrow.LowMemory
         {
             _simulatedLowMemory.Reset();
             LowMemoryState = !LowMemoryState;
-            var memInfoForLog = MemoryInformation.GetMemoryInfo();
-            var availableMemForLog = memInfoForLog.AvailableMemory.GetValue(SizeUnit.Bytes);
+
+            var memInfoForLog = MemoryInformation.GetMemInfoUsingOneTimeSmapsReader();
+            var availableMemForLog = memInfoForLog.CalculatedAvailableMemory.GetValue(SizeUnit.Bytes);
+
             AddLowMemEvent(LowMemoryState ? LowMemReason.LowMemStateSimulation : LowMemReason.BackToNormalSimulation,
                 availableMemForLog,
                 -2,
                 memInfoForLog.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
                 memInfoForLog.CurrentCommitCharge.GetValue(SizeUnit.Bytes));
+
             if (_logger.IsInfoEnabled)
                 _logger.Info("Simulating : " + (LowMemoryState ? "Low memory event" : "Back to normal memory usage"));
             RunLowMemoryHandlers(LowMemoryState);
@@ -317,32 +321,21 @@ namespace Sparrow.LowMemory
                 totalUnmanagedAllocations += stats.TotalAllocated;
             }
 
-            var memInfo = MemoryInformation.GetMemoryInfo();
-            var isLowMemory = IsLowMemory(memInfo, smapsReader, out _);
+            var memInfo = MemoryInformation.GetMemoryInfo(smapsReader);
+            var isLowMemory = IsLowMemory(memInfo);
 
             // memInfo.AvailableMemory is updated in IsLowMemory for Linux (adding shared clean)
             memStats = (memInfo.AvailableMemory, memInfo.TotalPhysicalMemory, memInfo.CurrentCommitCharge);
             return isLowMemory;
         }
 
-        public bool IsLowMemory(MemoryInfoResult memInfo, SmapsReader smapsReader, out long sharedCleanInBytes)
+        public bool IsLowMemory(MemoryInfoResult memInfo)
         {
-            if (PlatformDetails.RunningOnLinux)
-            {
-                var result = smapsReader.CalculateMemUsageFromSmaps<SmapsReaderNoAllocResults>();
-                memInfo.AvailableMemory.Add(result.SharedClean, SizeUnit.Bytes);
-                sharedCleanInBytes = result.SharedClean;
-            }
-            else
-            {
-                sharedCleanInBytes = 0;
-            }
-
             // We consider low memory only if we don't have enough free pyhsical memory or
             // the commited memory size if larger than our pyhsical memory.
             // This is to ensure that from one hand we don't hit the disk to do page faults and from the other hand
             // we don't want to stay in low memory due to retained memory.
-            var isLowMemory = memInfo.AvailableMemory < _lowMemoryThreshold;
+            var isLowMemory = memInfo.CalculatedAvailableMemory< _lowMemoryThreshold;
 
             if (PlatformDetails.RunningOnPosix == false)
             {

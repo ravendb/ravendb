@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -51,6 +52,8 @@ using Sparrow.Json;
 using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
@@ -1322,13 +1325,15 @@ namespace Raven.Server.Documents.Indexes
         private static string OutOfMemoryDetails(OutOfMemoryException oome)
         {
             var stats = MemoryInformation.MemoryStats();
-            var memoryInfo = MemoryInformation.GetMemoryInfo();
+
+            var memoryInfo = MemoryInformation.GetMemInfoUsingOneTimeSmapsReader();
 
             return $"Managed memory: {new Size(stats.ManagedMemory, SizeUnit.Bytes)}, " +
                    $"Unmanaged allocations: {new Size(stats.TotalUnmanagedAllocations, SizeUnit.Bytes)}, " +
                    $"Mapped temp: {new Size(stats.MappedTemp, SizeUnit.Bytes)}, " +
                    $"Working set: {new Size(stats.TotalUnmanagedAllocations, SizeUnit.Bytes)}, " +
                    $"Available memory: {memoryInfo.AvailableMemory}, " +
+                   $"Calculated Available memory: {memoryInfo.CalculatedAvailableMemory}, " +
                    $"Total memory: {memoryInfo.TotalPhysicalMemory} {Environment.NewLine}" +
                    $"Error: {oome}";
         }
