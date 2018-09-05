@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Buffers;
 using System.Diagnostics;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Memory
@@ -23,11 +26,11 @@ namespace Raven.Server.ServerWide.Memory
             }
 
             // we run out our memory quota, so we need to see if we can increase it or break
-            var memoryInfoResult = MemoryInformation.GetMemoryInfo();
+            var memoryInfoResult = MemoryInformation.GetMemInfoUsingOneTimeSmapsReader();
 
             using (GetProcessMemoryUsage(out currentUsage, out var mappedSharedMem))
             {
-                var memoryAssumedFreeOrCheapToFree = memoryInfoResult.AvailableMemory + mappedSharedMem;
+                var memoryAssumedFreeOrCheapToFree = memoryInfoResult.CalculatedAvailableMemory;
 
                 // there isn't enough available memory to try, we want to leave some out for other things
                 if (memoryAssumedFreeOrCheapToFree < 
@@ -37,7 +40,7 @@ namespace Raven.Server.ServerWide.Memory
                     {
                         logger.Info(
                             $"{threadStats.Name} which is already using {currentlyInUse}/{currentMaximumAllowedMemory} and the system has " +
-                            $"{memoryInfoResult.AvailableMemory}/{memoryInfoResult.TotalPhysicalMemory} free RAM. Also have ~{mappedSharedMem} in mmap " +
+                            $"{memoryInfoResult.CalculatedAvailableMemory}/{memoryInfoResult.TotalPhysicalMemory} free RAM. Also have ~{mappedSharedMem} in mmap " +
                             "files that can be cleanly released, not enough to proceed in batch.");
                     }
 
@@ -53,7 +56,7 @@ namespace Raven.Server.ServerWide.Memory
                     {
                         logger.Info(
                             $"{threadStats} which is already using {currentlyInUse}/{currentMaximumAllowedMemory} and the system has" +
-                            $"{memoryInfoResult.AvailableMemory}/{memoryInfoResult.TotalPhysicalMemory} free RAM. Also have ~{mappedSharedMem} in mmap " +
+                            $"{memoryInfoResult.CalculatedAvailableMemory}/{memoryInfoResult.TotalPhysicalMemory} free RAM. Also have ~{mappedSharedMem} in mmap " +
                             "files that can be cleanly released, not enough to proceed in batch.");
                     }
                     return false;
@@ -69,7 +72,7 @@ namespace Raven.Server.ServerWide.Memory
                 {
                     logger.Info(
                         $"Increasing memory budget for {threadStats.Name} which is using  {currentlyInUse}/{oldBudget} and the system has" +
-                        $"{memoryInfoResult.AvailableMemory}/{memoryInfoResult.TotalPhysicalMemory} free RAM with {mappedSharedMem} in mmap " +
+                        $"{memoryInfoResult.CalculatedAvailableMemory}/{memoryInfoResult.TotalPhysicalMemory} free RAM with {mappedSharedMem} in mmap " +
                         $"files that can be cleanly released. Budget increased to {currentMaximumAllowedMemory}");
                 }
 
