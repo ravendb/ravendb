@@ -180,12 +180,13 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public IEnumerable<string> GetDocumentsReferencing(string key)
+		public HashSet<string> GetDocumentsReferencing(string key)
 		{
 			return storage.DocumentReferences["ByRef"].SkipTo(new RavenJObject { { "ref", key } })
 				.TakeWhile(x => key.Equals(x.Value<string>("ref"), StringComparison.CurrentCultureIgnoreCase))
 				.Select(x => x.Value<string>("key"))
-				.Distinct(StringComparer.OrdinalIgnoreCase);
+				.Distinct(StringComparer.OrdinalIgnoreCase)
+			    .ToHashSet();
 		}
 
 		public int GetCountOfDocumentsReferencing(string key)
