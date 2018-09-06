@@ -42,7 +42,7 @@ namespace Raven.Database.FileSystem.Plugins
         {
         }
 
-        public virtual void OnUpload(string name, RavenJObject metadata, long pageId, int pagePositionInFile, int pageSize)
+        public virtual void OnUpload(string name, RavenJObject metadata, int pageId, int pagePositionInFile, int pageSize)
         {
         }
 

@@ -145,7 +145,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
         private static int bookmarkMost = SystemParameters.BookmarkMost;
 
-        public long InsertPage(byte[] buffer, int size)
+        public int InsertPage(byte[] buffer, int size)
         {
             var key = new HashKey(buffer, size);
 
@@ -157,7 +157,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
             if (Api.TrySeek(session, Pages, SeekGrbit.SeekEQ))
             {
                 Api.EscrowUpdate(session, Pages, tableColumnsCache.PagesColumns["usage_count"], 1);
-                return Api.RetrieveColumnAsInt64(session, Pages, tableColumnsCache.PagesColumns["id"]).Value;
+                return Api.RetrieveColumnAsInt32(session, Pages, tableColumnsCache.PagesColumns["id"]).Value;
             }
 
             var bookMarkBuffer = new byte[bookmarkMost];
@@ -190,7 +190,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
             Api.JetGotoBookmark(session, Pages, bookMarkBuffer, actualSize);
 
-            return Api.RetrieveColumnAsInt64(session, Pages, tableColumnsCache.PagesColumns["id"]).Value;
+            return Api.RetrieveColumnAsInt32(session, Pages, tableColumnsCache.PagesColumns["id"]).Value;
         }
 
         public FileUpdateResult PutFile(string filename, long? totalSize, RavenJObject metadata, bool tombstone = false)
@@ -240,7 +240,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
             return sb.ToString();
         }
 
-        public void AssociatePage(string filename, long pageId, int pagePositionInFile, int pageSize, bool incrementUsageCount = false)
+        public void AssociatePage(string filename, int pageId, int pagePositionInFile, int pageSize, bool incrementUsageCount = false)
         {
             Api.JetSetCurrentIndex(session, Files, "by_name");
             Api.MakeKey(session, Files, filename, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -286,7 +286,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
                 IncrementUsageCount(pageId);
         }
 
-        private void IncrementUsageCount(long pageId)
+        private void IncrementUsageCount(int pageId)
         {
             Api.JetSetCurrentIndex(session, Pages, "by_id");
             Api.MakeKey(session, Pages, pageId, MakeKeyGrbit.NewKey);
@@ -309,7 +309,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
             return BitConverter.ToInt64(totalSize, 0);
         }
 
-        public int ReadPage(long pageId, byte[] buffer)
+        public int ReadPage(int pageId, byte[] buffer)
         {
             Api.JetSetCurrentIndex(session, Pages, "by_id");
             Api.MakeKey(session, Pages, pageId, MakeKeyGrbit.NewKey);
@@ -375,7 +375,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
                         fileInformation.Pages.Add(new PageInformation
                                                       {
                                                           Size = Api.RetrieveColumnAsInt32(session, Usage, tableColumnsCache.UsageColumns["page_size"]).Value,
-                                                          Id = Api.RetrieveColumnAsInt64(session, Usage, tableColumnsCache.UsageColumns["page_id"]).Value,
+                                                          Id = Api.RetrieveColumnAsInt32(session, Usage, tableColumnsCache.UsageColumns["page_id"]).Value,
                                                           PositionInFile = Api.RetrieveColumnAsInt32(session, Usage, tableColumnsCache.UsageColumns["file_pos"]).Value
                                                       });
                     } while (Api.TryMoveNext(session, Usage) && fileInformation.Pages.Count < pagesToLoad);
@@ -521,7 +521,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
                     if (rowName.Equals(filename, StringComparison.InvariantCultureIgnoreCase) == false)
                         break;
 
-                    var pageId = Api.RetrieveColumnAsInt64(session, Usage, tableColumnsCache.UsageColumns["page_id"]).Value;
+                    var pageId = Api.RetrieveColumnAsInt32(session, Usage, tableColumnsCache.UsageColumns["page_id"]).Value;
 
                     Api.MakeKey(session, Pages, pageId, MakeKeyGrbit.NewKey);
 

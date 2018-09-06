@@ -7,7 +7,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 {
     public class SchemaCreator
     {
-        public const string SchemaVersion = "0.9";
+        public const string SchemaVersion = "0.7";
         private readonly Session session;
 
         public SchemaCreator(Session session)
@@ -26,8 +26,8 @@ namespace Raven.Database.FileSystem.Storage.Esent
                     CreateDetailsTable(dbid);
                     CreateFilesTable(dbid);
                     CreateConfigTable(dbid);
-                    CreateUsageTable(dbid, "usage", session);
-                    CreatePagesTable(dbid, "pages", session);
+                    CreateUsageTable(dbid);
+                    CreatePagesTable(dbid);
                     CreateSignaturesTable(dbid);
                     tx.Commit(CommitTransactionGrbit.None);
                 }
@@ -78,15 +78,15 @@ namespace Raven.Database.FileSystem.Storage.Esent
             }
         }
 
-        public static void CreatePagesTable(JET_DBID dbid, string tableName, Session session)
+        private void CreatePagesTable(JET_DBID dbid)
         {
             JET_TABLEID tableid;
-            Api.JetCreateTable(session, dbid, tableName, 1, 80, out tableid);
+            Api.JetCreateTable(session, dbid, "pages", 1, 80, out tableid);
             JET_COLUMNID columnid;
 
             Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
             {
-                coltyp = JET_coltyp.Currency,
+                coltyp = JET_coltyp.Long,
                 grbit = ColumndefGrbit.ColumnAutoincrement | ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
             }, null, 0, out columnid);
 
@@ -177,16 +177,15 @@ namespace Raven.Database.FileSystem.Storage.Esent
             Api.JetCreateIndex(session, tableid, "by_name", CreateIndexGrbit.IndexDisallowNull, indexDef, indexDef.Length,
                                80);
         }
-
-        public static void CreateUsageTable(JET_DBID dbid, string tableName, Session session)
+        private void CreateUsageTable(JET_DBID dbid)
         {
             JET_TABLEID tableid;
-            Api.JetCreateTable(session, dbid, tableName, 1, 80, out tableid);
+            Api.JetCreateTable(session, dbid, "usage", 1, 80, out tableid);
             JET_COLUMNID columnid;
 
             Api.JetAddColumn(session, tableid, "id", new JET_COLUMNDEF
             {
-                coltyp = JET_coltyp.Currency,
+                coltyp = JET_coltyp.Long,
                 grbit = ColumndefGrbit.ColumnAutoincrement | ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
             }, null, 0, out columnid);
 
@@ -206,7 +205,7 @@ namespace Raven.Database.FileSystem.Storage.Esent
 
             Api.JetAddColumn(session, tableid, "page_id", new JET_COLUMNDEF
             {
-                coltyp = JET_coltyp.Currency,
+                coltyp = JET_coltyp.Long,
                 grbit = ColumndefGrbit.ColumnFixed | ColumndefGrbit.ColumnNotNULL
             }, null, 0, out columnid);
 
