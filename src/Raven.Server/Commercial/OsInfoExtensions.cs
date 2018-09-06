@@ -240,7 +240,7 @@ namespace Raven.Server.Commercial
                     (from line in File.ReadAllLines(path)
                      let splitted = line.Split("=")
                      where splitted.Length == 2
-                     select (Key: splitted[0], Value: splitted[1]))
+                     select (Key: splitted[0], Value: splitted[1]?.Replace("\"", string.Empty)))
                     .ToDictionary(x => x.Key, x => x.Value);
 
                 osReleaseProperties.TryGetValue("NAME", out var name);
