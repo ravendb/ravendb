@@ -37,11 +37,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             Metrics = new EtlMetricsCountersManager();
 
             if (configuration.TestMode == false)
+            {
                 _requestExecutor = CreateNewRequestExecutor(configuration, serverStore);
 
-            serverStore.Server.ServerCertificateChanged += OnServerCertificateChanged;
+                _serverStore.Server.ServerCertificateChanged += OnServerCertificateChanged;
+            }
 
-            _script = new RavenEtlDocumentTransformer.ScriptInput(transformation);    
+            _script = new RavenEtlDocumentTransformer.ScriptInput(transformation);
         }
 
         private void OnServerCertificateChanged(object sender, EventArgs e)
@@ -60,7 +62,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             return RequestExecutor.Create(configuration.Connection.TopologyDiscoveryUrls, configuration.Connection.Database, serverStore.Server.Certificate.Certificate, DocumentConventions.Default);
         }
-		
+
         protected override IEnumerator<RavenEtlItem> ConvertDocsEnumerator(IEnumerator<Document> docs, string collection)
         {
             return new DocumentsToRavenEtlItems(docs, collection);
@@ -116,7 +118,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             }
 
             var batchCommand = new BatchCommand(DocumentConventions.Default, context, commands, options);
-            
+
             try
             {
                 AsyncHelpers.RunSync(() => _requestExecutor.ExecuteAsync(batchCommand, context, token: CancellationToken));
@@ -150,9 +152,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             base.Dispose();
 
-            _serverStore.Server.ServerCertificateChanged -= OnServerCertificateChanged;
+            if (_configuration.TestMode == false)
+            {
+                _serverStore.Server.ServerCertificateChanged -= OnServerCertificateChanged;
 
-            _requestExecutor?.Dispose();
+                _requestExecutor?.Dispose();
+            }
         }
     }
 }
