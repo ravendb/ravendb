@@ -674,7 +674,7 @@ namespace Raven.Server.Documents
             List<string> counters = null;
             foreach (var s in GetCountersForDocument(context, docId))
             {
-                if (null == counters)
+                if (counters == null)
                 {
                     counters = new List<string>(initCounterListSize);
                 }
@@ -684,7 +684,7 @@ namespace Raven.Server.Documents
             UpdateCountersListDueToOperations(ref counters, countersOperations);
 
             var flags = DocumentFlags.None;
-            if (null == counters || false == counters.Any())
+            if (counters == null || counters.Count == 0)
             {
                 if (null == metadataCounters)
                 {
@@ -700,14 +700,14 @@ namespace Raven.Server.Documents
             }
             else
             {
-                if (null != metadataCounters &&
+                if (metadataCounters != null &&
                     metadataCounters.SequenceEqual(counters))
                 {
                     return;
                 }
 
                 doc.Modifications = new DynamicJsonValue(doc);
-                if (null == metadata)
+                if (metadata == null)
                 {
                     doc.Modifications[Constants.Documents.Metadata.Key] = new DynamicJsonValue
                     {
@@ -728,8 +728,6 @@ namespace Raven.Server.Documents
 
             var data = context.ReadObject(doc, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             _documentDatabase.DocumentsStorage.Put(context, docId, null, data, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByCountersUpdate);
-
-            
         }
 
         private static void UpdateCountersListDueToOperations(ref List<string> counters, List<CounterOperation> countersOperations)
