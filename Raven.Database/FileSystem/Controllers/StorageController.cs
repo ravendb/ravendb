@@ -1,6 +1,9 @@
+using System.Collections.Generic;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web.Http;
-
+using Raven.Database.Extensions;
 using Raven.Database.Server.WebApi.Attributes;
 
 namespace Raven.Database.FileSystem.Controllers
@@ -26,6 +29,18 @@ namespace Raven.Database.FileSystem.Controllers
         public Task RetryCopying()
         {
             return Files.ResumeFileCopyingAsync();
+        }
+
+        [HttpGet]
+        [RavenRoute("fs/{fileSystemName}/storage/debug/esent/current-autoincrement-table-values")]
+        public HttpResponseMessage EsentCurrentAutoincrementTableValues()
+        {
+            Dictionary<string, long> result = new Dictionary<string, long>();
+
+            Storage.Batch(x => result = x.Esent_GetCurrentAutoIncrementValues());
+
+            return GetMessageWithObject(result, HttpStatusCode.OK)
+                .WithNoCache();
         }
     }
 }

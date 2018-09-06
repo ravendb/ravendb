@@ -79,6 +79,8 @@ namespace Raven.Database.FileSystem.Storage
         Etag GetLastEtag();
 
         bool IsNested { get; set; }
+
+        Dictionary<string, long> Esent_GetCurrentAutoIncrementValues();
     }
 
     public class FileUpdateResult
