@@ -1097,5 +1097,10 @@ namespace Raven.Database.FileSystem.Storage.Voron
 
             return existingEtag;
         }
+
+        public Dictionary<string, long> Esent_GetCurrentAutoIncrementValues()
+        {
+            throw new NotSupportedException("Method not valid for Voron");
+        }
     }
 }

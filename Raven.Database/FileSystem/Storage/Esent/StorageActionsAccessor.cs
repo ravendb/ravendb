@@ -1043,5 +1043,57 @@ namespace Raven.Database.FileSystem.Storage.Esent
             }
             return existingEtag;
         }
+
+        public Dictionary<string, long> Esent_GetCurrentAutoIncrementValues()
+        {
+            var result = new Dictionary<string, long>(); 
+
+            if (Api.TryMoveLast(session, Usage))
+            {
+                var value = Api.RetrieveColumnAsInt32(session, Usage, tableColumnsCache.UsageColumns["id"]).Value;
+
+                result["UsageTable"] = value;
+            }
+            else
+            {
+                result["UsageTable"] = -1;
+            }
+
+
+            if (Api.TryMoveLast(session, Pages))
+            {
+                var value = Api.RetrieveColumnAsInt32(session, Pages, tableColumnsCache.PagesColumns["id"]).Value;
+
+                result["PagesTable"] = value;
+            }
+            else
+            {
+                result["PagesTable"] = -1;
+            }
+
+            if (Api.TryMoveLast(session, Signatures))
+            {
+                var value = Api.RetrieveColumnAsInt32(session, Signatures, tableColumnsCache.SignaturesColumns["id"]).Value;
+
+                result["SignaturesTable"] = value;
+            }
+            else
+            {
+                result["SignaturesTable"] = -1;
+            }
+
+            if (Api.TryMoveLast(session, Files))
+            {
+                var value = Api.RetrieveColumnAsInt32(session, Files, tableColumnsCache.FilesColumns["id"]).Value;
+
+                result["FilesTable"] = value;
+            }
+            else
+            {
+                result["FilesTable"] = -1;
+            }
+
+            return result;
+        }
     }
 }
