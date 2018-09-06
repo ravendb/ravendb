@@ -388,7 +388,7 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 		}
 
-		public IEnumerable<string> GetDocumentsReferencing(string key)
+		public HashSet<string> GetDocumentsReferencing(string key)
 		{
 			return QueryReferences(key, "by_ref", "key");
 		}
@@ -413,12 +413,15 @@ namespace Raven.Storage.Esent.StorageActions
 			return QueryReferences(key, "by_key", "ref");
 		}
 
-		private IEnumerable<string> QueryReferences(string key, string index, string col)
+        private static readonly HashSet<string> EmptyHashSet = new HashSet<string>();
+
+		private HashSet<string> QueryReferences(string key, string index, string col)
 		{
 			Api.JetSetCurrentIndex(session, IndexedDocumentsReferences, index);
 			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			if (Api.TrySeek(session, IndexedDocumentsReferences, SeekGrbit.SeekEQ) == false)
-				return Enumerable.Empty<string>();
+				return EmptyHashSet;
+
 			Api.MakeKey(session, IndexedDocumentsReferences, key, Encoding.Unicode, MakeKeyGrbit.NewKey);
 			Api.JetSetIndexRange(session, IndexedDocumentsReferences,
 			                     SetIndexRangeGrbit.RangeInclusive | SetIndexRangeGrbit.RangeUpperLimit);

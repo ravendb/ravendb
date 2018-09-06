@@ -878,8 +878,11 @@ namespace Raven.Database
 				TransactionalStorage.Batch(externalActions =>
 				{
 					var referencingKeys = externalActions.Indexing.GetDocumentsReferencing(key);
+				    if (referencingKeys.Count == 0)
+				        return;
+
 					if (participatingIds != null)
-						referencingKeys = referencingKeys.Except(participatingIds);
+						referencingKeys.ExceptWith(participatingIds);
 
 					foreach (var referencing in referencingKeys)
 					{
