@@ -747,8 +747,17 @@ namespace Sparrow
             _externalFastPoolCount = 0;
             _externalCurrentLeft = (int)(_externalCurrent.End - _externalCurrent.Start) / _externalAlignedSize;
 
+            Debug.Assert(_wholeSegments.Count >= 2);
+            // We need to make ensure that the _internalCurrent is linked to an unmanaged segment
+            var index = _wholeSegments.Count - 1;
+            if (_wholeSegments[index] == _externalCurrent)
+            {
+                index = _wholeSegments.Count - 2;
+            }
+            _internalCurrent = _wholeSegments[index];
+
             _internalCurrent.Current = _internalCurrent.Start;
-            _externalCurrent.Current = _externalCurrent.Start;
+            _externalCurrent.Current = _externalCurrent.Start; // no need to reset it, always whole section
 
             _currentlyAllocated = 0;
 
@@ -757,10 +766,11 @@ namespace Sparrow
 
             for (int i = 0; i < _wholeSegments.Count; i++)
             {
-                if (_wholeSegments[i] == _internalCurrent || _wholeSegments[i] == _externalCurrent)
+                var segment = _wholeSegments[i];
+                if (segment == _internalCurrent || segment == _externalCurrent)
                     continue;
 
-                ReleaseSegment(_wholeSegments[i]);
+                ReleaseSegment(segment);
                 _wholeSegments.RemoveAt(i);
                 i--;
             }
