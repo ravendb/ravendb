@@ -2,7 +2,7 @@ namespace Raven.Database.FileSystem.Storage
 {
     public class PageInformation
     {
-        public long Id { get; set; }
+        public int Id { get; set; }
         public int Size { get; set; }
         public int PositionInFile { get; set; }
 

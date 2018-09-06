@@ -162,7 +162,7 @@ namespace Raven.Tests.FileSystem
         [Fact]
         public void CanInsertAndReadPage()
         {
-            var key = 0L;
+            var key = 0;
             storage.Batch(accessor =>
             {
                 key = accessor.InsertPage(new byte[] { 1, 2, 3, 4, 5, 6 }, 4);

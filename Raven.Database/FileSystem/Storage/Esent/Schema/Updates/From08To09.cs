@@ -1,3 +1,4 @@
+/*
 using System;
 using System.IO;
 using System.Text;
@@ -199,3 +200,4 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
         }
     }
 }
+*/

@@ -1,3 +1,5 @@
+/*
+
 using System;
 using System.Text;
 using Microsoft.Isam.Esent.Interop;
@@ -112,3 +114,4 @@ namespace Raven.Database.FileSystem.Storage.Esent.Schema.Updates
         }
     }
 }
+*/

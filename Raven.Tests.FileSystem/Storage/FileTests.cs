@@ -602,7 +602,7 @@ namespace Raven.Tests.FileSystem.Storage
         {
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
-                long pageId = 0;
+                var pageId = 0;
                 storage.Batch(accessor =>
                 {
                     accessor.PutFile("file1", 3, new RavenJObject());
@@ -632,7 +632,7 @@ namespace Raven.Tests.FileSystem.Storage
         {
             using (var storage = NewTransactionalStorage(requestedStorage))
             {
-                long pageId = 0;
+                var pageId = 0;
                 storage.Batch(accessor =>
                 {
                     accessor.PutFile("test0.bin", 3, new RavenJObject());
@@ -752,7 +752,7 @@ namespace Raven.Tests.FileSystem.Storage
             {
                 storage.Batch(accessor => accessor.PutFile("file1", null, new RavenJObject()));
 
-                long pageId = -1;
+                int pageId = -1;
 
                 storage.Batch(accessor => pageId = accessor.InsertPage(new byte[10], 10));
 

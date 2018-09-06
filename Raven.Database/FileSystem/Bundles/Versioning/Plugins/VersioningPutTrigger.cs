@@ -38,7 +38,7 @@ namespace Raven.Database.FileSystem.Bundles.Versioning.Plugins
             actions.PutRevisionFile(name, size, metadata);
         }
 
-        public override void OnUpload(string name, RavenJObject metadata, long pageId, int pagePositionInFile, int pageSize)
+        public override void OnUpload(string name, RavenJObject metadata, int pageId, int pagePositionInFile, int pageSize)
         {
             FileSystem.Storage.Batch(accessor =>
             {
