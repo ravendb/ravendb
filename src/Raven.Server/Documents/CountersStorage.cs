@@ -671,7 +671,6 @@ namespace Raven.Server.Documents
                 initCounterListSize += metadataCounters.Length;
             }
 
-            //Todo Maybe should not read from the table if there is metadata on document
             List<string> counters = null;
             foreach (var s in GetCountersForDocument(context, docId))
             {
@@ -682,39 +681,7 @@ namespace Raven.Server.Documents
                 counters.Add(s);
             }
 
-            //Todo To consider if can count on that this already in order
-            counters?.Sort(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var operation in countersOperations)
-            {
-                // we need to check the updates to avoid inserting duplicate counter names
-                var loc = counters?.BinarySearch(operation.CounterName, StringComparer.OrdinalIgnoreCase) ?? ~0;
-
-                switch (operation.Type)
-                {
-                    case CounterOperationType.Increment:
-                    case CounterOperationType.Put:
-                        if (loc < 0)
-                        {
-                            CreateUpdatesIfNeeded();
-                            counters.Insert(~loc, operation.CounterName);
-                        }
-
-                        break;
-                    case CounterOperationType.Delete:
-                        if (loc >= 0)
-                        {
-                            CreateUpdatesIfNeeded();
-                            counters.RemoveAt(loc);
-                        }
-                        break;
-                    case CounterOperationType.None:
-                    case CounterOperationType.Get:
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException($"Unknown value {operation.Type}");
-                }
-            }
+            UpdateCountersListDueToOperations(ref counters, countersOperations);
 
             var flags = DocumentFlags.None;
             if (null == counters || false == counters.Any())
@@ -762,20 +729,59 @@ namespace Raven.Server.Documents
             var data = context.ReadObject(doc, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             _documentDatabase.DocumentsStorage.Put(context, docId, null, data, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByCountersUpdate);
 
+            
+        }
+
+        private static void UpdateCountersListDueToOperations(ref List<string> counters, List<CounterOperation> countersOperations)
+        {
+            var localCounters = counters;
+
+            foreach (var operation in countersOperations)
+            {
+                // we need to check the updates to avoid inserting duplicate counter names
+                var loc = localCounters?.BinarySearch(operation.CounterName, StringComparer.OrdinalIgnoreCase) ?? ~0;
+
+                switch (operation.Type)
+                {
+                    case CounterOperationType.Increment:
+                    case CounterOperationType.Put:
+                        if (loc < 0)
+                        {
+                            CreateUpdatesIfNeeded();
+                            localCounters.Insert(~loc, operation.CounterName);
+                        }
+
+                        break;
+                    case CounterOperationType.Delete:
+                        if (loc >= 0)
+                        {
+                            CreateUpdatesIfNeeded();
+                            localCounters.RemoveAt(loc);
+                        }
+                        break;
+                    case CounterOperationType.None:
+                    case CounterOperationType.Get:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException($"Unknown value {operation.Type}");
+                }
+            }
+
+            counters = localCounters; 
+
             void CreateUpdatesIfNeeded()
             {
-                if (counters != null)
+                if (localCounters != null)
                     return;
 
-                counters = new List<string>(countersOperations.Count);
-                foreach (var val in counters)
+                localCounters = new List<string>(countersOperations.Count);
+                foreach (var val in localCounters)
                 {
                     if (val == null)
                         continue;
-                    counters.Add(val);
+                    localCounters.Add(val);
                 }
             }
         }
-
     }
 }
