@@ -223,7 +223,9 @@ namespace Raven.Migrator.MongoDB
 
         private static string GetContentType(GridFSFileInfo fileInfo, IDictionary<string, object> dictionary)
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             var contentType = fileInfo.ContentType;
+#pragma warning restore CS0618 // Type or member is obsolete
             if (dictionary.TryGetValue("contentType", out object value))
             {
                 contentType = (string)value;

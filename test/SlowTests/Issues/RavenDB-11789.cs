@@ -85,7 +85,7 @@ namespace SlowTests.Issues
                     {
                         session.SaveChanges();
                     }
-                    catch (Exception e)
+                    catch (Exception)
                     {
                         WaitForUserToContinueTheTest(store);
 
