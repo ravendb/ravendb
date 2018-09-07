@@ -86,7 +86,7 @@ namespace FastTests
             throw new TimeoutException(message);
         }
 
-        protected DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
+        protected virtual DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
         {
             try
             {

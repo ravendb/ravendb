@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Raven.Client.Http;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
@@ -164,7 +165,7 @@ namespace FastTests
 
                 if (certBytes.Length == 0)
                     throw new CryptographicException($"Test certificate length is 0 bytes. Machine: '{Environment.MachineName}', Log: {log}");
-                
+
                 string tempFileName = null;
                 try
                 {
@@ -278,9 +279,20 @@ namespace FastTests
 
                                 foreach (var t in databases)
                                 {
+                                    var databaseName = t.ItemName.Substring(Constants.Documents.Prefix.Length);
+
+                                    try
+                                    {
+                                        AsyncHelpers.RunSync(() => copyGlobalServer.ServerStore.DeleteDatabaseAsync(databaseName, hardDelete: true, null));
+                                    }
+                                    catch (Exception)
+                                    {
+                                        // ignored
+                                    }
+
                                     sb
                                         .Append("- ")
-                                        .AppendLine(t.ItemName.Substring(Constants.Documents.Prefix.Length));
+                                        .AppendLine(databaseName);
                                 }
 
                                 Console.WriteLine(sb.ToString());
