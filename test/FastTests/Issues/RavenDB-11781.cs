@@ -55,12 +55,12 @@ namespace FastTests.Issues
             }
         }
 
-        public class User
+        private class User
         {
             public string Name { get; set; }
         }
 
-        public class MapReduce : AbstractIndexCreationTask<User, MapReduce.Result>
+        private class MapReduce : AbstractIndexCreationTask<User, MapReduce.Result>
         {
             public override string IndexName => "MapReduce";
 
@@ -73,26 +73,26 @@ namespace FastTests.Issues
             public MapReduce()
             {
                 Map = users => from user in users
-                    select new Result
-                    {
-                        Name = user.Name,
-                        Count = 1
-                    };
+                               select new Result
+                               {
+                                   Name = user.Name,
+                                   Count = 1
+                               };
 
                 Reduce = results => from result in results
-                    group result by result.Name
+                                    group result by result.Name
                     into g
-                    select new
-                    {
-                        Name = g.Key,
-                        Count = g.Sum(x => x.Count)
-                    };
+                                    select new
+                                    {
+                                        Name = g.Key,
+                                        Count = g.Sum(x => x.Count)
+                                    };
 
                 OutputReduceToCollection = DocumentConventions.DefaultGetCollectionName(typeof(Result));
             }
         }
 
-        public class MapReduce2 : AbstractIndexCreationTask<User, MapReduce.Result>
+        private class MapReduce2 : AbstractIndexCreationTask<User, MapReduce.Result>
         {
             public override string IndexName => "MapReduce";
 
@@ -105,20 +105,20 @@ namespace FastTests.Issues
             public MapReduce2()
             {
                 Map = users => from user in users
-                    select new Result
-                    {
-                        Name = user.Name,
-                        Count = 2
-                    };
+                               select new Result
+                               {
+                                   Name = user.Name,
+                                   Count = 2
+                               };
 
                 Reduce = results => from result in results
-                    group result by result.Name
+                                    group result by result.Name
                     into g
-                    select new
-                    {
-                        Name = g.Key,
-                        Count = g.Sum(x => x.Count)
-                    };
+                                    select new
+                                    {
+                                        Name = g.Key,
+                                        Count = g.Sum(x => x.Count)
+                                    };
 
                 OutputReduceToCollection = DocumentConventions.DefaultGetCollectionName(typeof(Result));
             }
