@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using BenchmarkTests.Utils;
 using Raven.Client.Documents;
 using Xunit;
@@ -14,6 +15,9 @@ namespace BenchmarkTests.Storing
             {
                 for (int i = 0; i < 100_000; i++)
                 {
+                    if (i % 10_000 == 0)
+                        Console.WriteLine($"Inserted {i} documents");
+
                     using (var session = store.OpenAsyncSession())
                     {
                         await session.StoreAsync(EntityFactory.CreateCompanySmall(i));
@@ -31,6 +35,9 @@ namespace BenchmarkTests.Storing
             {
                 for (int i = 0; i < 50_000; i++)
                 {
+                    if (i % 5_000 == 0)
+                        Console.WriteLine($"Inserted {i * 10} documents");
+
                     using (var session = store.OpenAsyncSession())
                     {
                         for (int j = 0; j < 10; j++)
@@ -51,6 +58,9 @@ namespace BenchmarkTests.Storing
             {
                 for (int i = 0; i < 10_000; i++)
                 {
+                    if (i % 1_000 == 0)
+                        Console.WriteLine($"Inserted {i * 100} documents");
+
                     using (var session = store.OpenAsyncSession())
                     {
                         for (int j = 0; j < 100; j++)
