@@ -12,19 +12,19 @@ namespace SlowTests.MailingList
 {
     public class Jordan : RavenTestBase
     {
-        public class DocumentReference
+        private class DocumentReference
         {
             public string Id { get; set; }
         }
 
-        public class Group
+        private class Group
         {
             public string Id { get; set; }
             public string Name { get; set; }
         }
 
 
-        public class User
+        private class User
         {
             public string Id { get; set; }
             public string FirstName { get; set; }
@@ -32,14 +32,14 @@ namespace SlowTests.MailingList
             public DocumentReference Group { get; set; }
         }
 
-        public class UserInfo
+        private class UserInfo
         {
             public string Id { get; set; }
             public string FirstName { get; set; }
             public string LastName { get; set; }
             public string GroupId { get; set; }
         }
-        public class UserIndex : AbstractIndexCreationTask<User, UserIndex.ReduceResult>
+        private class UserIndex : AbstractIndexCreationTask<User, UserIndex.ReduceResult>
         {
             public UserIndex()
             {
@@ -63,7 +63,8 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = docStore => {
+                ModifyDocumentStore = docStore =>
+                {
 
                     docStore.OnBeforeQuery += (sender, args) => args.QueryCustomization.WaitForNonStaleResults();
                     docStore.Conventions.FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => (path + prop).Replace("[].", "").Replace(".", "");
