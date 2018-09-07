@@ -42,7 +42,7 @@ namespace SlowTests.Issues
             /// <summary>
             /// 
             /// </summary>
-            public static T FromJson<T>( object value)
+            public static T FromJson<T>(object value)
             {
                 return JsonConvert.DeserializeObject<T>(value as string, new JsonSerializerSettings
                 {
@@ -56,7 +56,7 @@ namespace SlowTests.Issues
                 });
             }
 
-            public static string ToJson( object value)
+            public static string ToJson(object value)
             {
                 return JsonConvert.SerializeObject(value, new JsonSerializerSettings
                 {
@@ -135,7 +135,7 @@ namespace SlowTests.Issues
                 }
             }
         }
-        public class User
+        private class User
         {
             private string id;
 
@@ -199,7 +199,7 @@ namespace SlowTests.Issues
         }
 
 
-        public static class Time
+        private static class Time
         {
             public static Instant GetCurrentTime()
             {
