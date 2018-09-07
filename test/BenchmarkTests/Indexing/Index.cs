@@ -16,89 +16,97 @@ namespace BenchmarkTests.Indexing
 {
     public class Map : BenchmarkTestBase
     {
+        private const int NumberOfCompanies = 5_000_000;
+
+        private const int CompanyNameModulo = 10_000;
+
+        private const string IndexDatabaseName = "Index_Companies";
+
+        private const string ReIndexDatabaseName = "ReIndex_Companies";
+
         [Fact]
-        public async Task Simple_Map_1M()
+        public async Task Simple_Map()
         {
-            using (var store = GetSimpleDocumentStore("1M_Companies", deleteDatabaseOnDispose: false))
+            using (var store = GetSimpleDocumentStore(IndexDatabaseName, deleteDatabaseOnDispose: false))
             {
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
-                Assert.Equal(1_000_001, stats.CountOfDocuments); // + hilo
+                Assert.Equal(NumberOfCompanies + 1, stats.CountOfDocuments); // + hilo
 
-                new Simple_Map().Execute(store);
+                new Simple_Map_Index().Execute(store);
 
-                await WaitForIndexAsync(store, store.Database, new Simple_Map().IndexName, TimeSpan.FromMinutes(10));
+                await WaitForIndexAsync(store, store.Database, new Simple_Map_Index().IndexName, TimeSpan.FromMinutes(10));
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
-                var indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(new Simple_Map().IndexName));
-                Assert.Equal(1_000_000, indexStats.EntriesCount);
+                var indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(new Simple_Map_Index().IndexName));
+                Assert.Equal(NumberOfCompanies, indexStats.EntriesCount);
             }
         }
 
         [Fact]
-        public async Task Simple_Map_1M_ReIndex()
+        public async Task Simple_Map_ReIndex()
         {
-            using (var store = GetSimpleDocumentStore("1M_Companies_ReIndex", deleteDatabaseOnDispose: false))
+            using (var store = GetSimpleDocumentStore(ReIndexDatabaseName, deleteDatabaseOnDispose: false))
             {
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
-                Assert.Equal(1_000_001, stats.CountOfDocuments); // + hilo
+                Assert.Equal(NumberOfCompanies + 1, stats.CountOfDocuments); // + hilo
 
                 var indexingStatus = await store.Maintenance.SendAsync(new GetIndexingStatusOperation());
                 Assert.Equal(IndexRunningStatus.Paused, indexingStatus.Status);
 
-                await store.Maintenance.SendAsync(new StartIndexOperation(new Simple_Map().IndexName));
+                await store.Maintenance.SendAsync(new StartIndexOperation(new Simple_Map_Index().IndexName));
 
-                await WaitForIndexAsync(store, store.Database, new Simple_Map().IndexName, TimeSpan.FromMinutes(10));
+                await WaitForIndexAsync(store, store.Database, new Simple_Map_Index().IndexName, TimeSpan.FromMinutes(10));
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
-                var indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(new Simple_Map().IndexName));
-                Assert.Equal(1_000_000, indexStats.EntriesCount);
+                var indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(new Simple_Map_Index().IndexName));
+                Assert.Equal(NumberOfCompanies, indexStats.EntriesCount);
             }
         }
 
         [Fact]
-        public async Task Simple_MapReduce_1M()
+        public async Task Simple_MapReduce()
         {
-            using (var store = GetSimpleDocumentStore("1M_Companies", deleteDatabaseOnDispose: true))
+            using (var store = GetSimpleDocumentStore(IndexDatabaseName, deleteDatabaseOnDispose: true))
             {
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
-                Assert.Equal(1_000_001, stats.CountOfDocuments); // + hilo
+                Assert.Equal(NumberOfCompanies + 1, stats.CountOfDocuments); // + hilo
 
-                new Simple_MapReduce().Execute(store);
+                new Simple_MapReduce_Index().Execute(store);
 
-                await WaitForIndexAsync(store, store.Database, new Simple_MapReduce().IndexName, TimeSpan.FromMinutes(10));
+                await WaitForIndexAsync(store, store.Database, new Simple_MapReduce_Index().IndexName, TimeSpan.FromMinutes(10));
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
-                var indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(new Simple_MapReduce().IndexName));
-                Assert.Equal(10_000, indexStats.EntriesCount);
+                var indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(new Simple_MapReduce_Index().IndexName));
+                Assert.Equal(CompanyNameModulo, indexStats.EntriesCount);
             }
         }
 
         [Fact]
-        public async Task Simple_MapReduce_1M_ReIndex()
+        public async Task Simple_MapReduce_ReIndex()
         {
-            using (var store = GetSimpleDocumentStore("1M_Companies_ReIndex", deleteDatabaseOnDispose: true))
+            using (var store = GetSimpleDocumentStore(ReIndexDatabaseName, deleteDatabaseOnDispose: true))
             {
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
-                Assert.Equal(1_000_001, stats.CountOfDocuments); // + hilo
+                Assert.Equal(NumberOfCompanies + 1, stats.CountOfDocuments); // + hilo
 
                 var indexingStatus = await store.Maintenance.SendAsync(new GetIndexingStatusOperation());
                 Assert.Equal(IndexRunningStatus.Paused, indexingStatus.Status);
 
-                await store.Maintenance.SendAsync(new StartIndexOperation(new Simple_MapReduce().IndexName));
+                await store.Maintenance.SendAsync(new StartIndexOperation(new Simple_MapReduce_Index().IndexName));
 
-                await WaitForIndexAsync(store, store.Database, new Simple_MapReduce().IndexName, TimeSpan.FromMinutes(10));
+                await WaitForIndexAsync(store, store.Database, new Simple_MapReduce_Index().IndexName, TimeSpan.FromMinutes(10));
 
                 RavenTestHelper.AssertNoIndexErrors(store);
 
-                var indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(new Simple_MapReduce().IndexName));
-                Assert.Equal(10_000, indexStats.EntriesCount);
+                var indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(new Simple_MapReduce_Index().IndexName));
+                Assert.Equal(CompanyNameModulo, indexStats.EntriesCount);
             }
         }
 
-        private class Simple_MapReduce : AbstractIndexCreationTask<Company, Simple_MapReduce.Result>
+        private class Simple_MapReduce_Index : AbstractIndexCreationTask<Company, Simple_MapReduce_Index.Result>
         {
             public class Result
             {
@@ -107,7 +115,7 @@ namespace BenchmarkTests.Indexing
                 public string Name { get; set; }
             }
 
-            public Simple_MapReduce()
+            public Simple_MapReduce_Index()
             {
                 Map = companies => from c in companies
                                    select new
@@ -126,9 +134,9 @@ namespace BenchmarkTests.Indexing
             }
         }
 
-        private class Simple_Map : AbstractIndexCreationTask<Company>
+        private class Simple_Map_Index : AbstractIndexCreationTask<Company>
         {
-            public Simple_Map()
+            public Simple_Map_Index()
             {
                 Map = companies => from c in companies
                                    select new
@@ -141,22 +149,22 @@ namespace BenchmarkTests.Indexing
 
         public override async Task InitAsync(DocumentStore store)
         {
-            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord("1M_Companies")));
-            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord("1M_Companies_ReIndex")));
+            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(IndexDatabaseName)));
+            await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(ReIndexDatabaseName)));
 
-            await new Simple_Map().ExecuteAsync(store, database: "1M_Companies_ReIndex");
-            await new Simple_MapReduce().ExecuteAsync(store, database: "1M_Companies_ReIndex");
+            await new Simple_Map_Index().ExecuteAsync(store, database: ReIndexDatabaseName);
+            await new Simple_MapReduce_Index().ExecuteAsync(store, database: ReIndexDatabaseName);
 
-            using (var bulkInsert1 = store.BulkInsert("1M_Companies"))
-            using (var bulkInsert2 = store.BulkInsert("1M_Companies_ReIndex"))
+            using (var bulkInsert1 = store.BulkInsert(IndexDatabaseName))
+            using (var bulkInsert2 = store.BulkInsert(ReIndexDatabaseName))
             {
-                for (int i = 0; i < 1_000_000; i++)
+                for (int i = 0; i < NumberOfCompanies; i++)
                 {
                     var company1 = EntityFactory.CreateCompanySmall(i);
-                    company1.Name = $"Hibernating Rhinos {i % 10_000}";
+                    company1.Name = $"Hibernating Rhinos {i % CompanyNameModulo}";
 
                     var company2 = EntityFactory.CreateCompanySmall(i);
-                    company2.Name = $"Hibernating Rhinos {i % 10_000}";
+                    company2.Name = $"Hibernating Rhinos {i % CompanyNameModulo}";
 
                     await bulkInsert1.StoreAsync(company1);
 
@@ -164,13 +172,13 @@ namespace BenchmarkTests.Indexing
                 }
             }
 
-            WaitForIndexing(store, "1M_Companies_ReIndex", timeout: TimeSpan.FromMinutes(10));
+            WaitForIndexing(store, ReIndexDatabaseName, timeout: TimeSpan.FromMinutes(10));
 
-            await store.Maintenance.ForDatabase("1M_Companies_ReIndex").SendAsync(new StopIndexingOperation());
+            await store.Maintenance.ForDatabase(ReIndexDatabaseName).SendAsync(new StopIndexingOperation());
 
             var operation = await store
                 .Operations
-                .ForDatabase("1M_Companies_ReIndex")
+                .ForDatabase(ReIndexDatabaseName)
                 .SendAsync(new PatchByQueryOperation("from Companies update { this.Name = this.Name + '_patched'; }"));
 
             await operation.WaitForCompletionAsync();
