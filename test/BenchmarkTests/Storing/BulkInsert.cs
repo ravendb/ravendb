@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using BenchmarkTests.Utils;
 using Raven.Client.Documents;
 using Xunit;
@@ -39,6 +40,9 @@ namespace BenchmarkTests.Storing
                 {
                     for (int i = 0; i < count; i++)
                     {
+                        if (i % 10_000 == 0)
+                            Console.WriteLine($"Inserted {i} documents");
+
                         await bulkInsert.StoreAsync(EntityFactory.CreateCompanySmall(i));
                     }
                 }
@@ -53,6 +57,9 @@ namespace BenchmarkTests.Storing
                 {
                     for (int i = 0; i < count; i++)
                     {
+                        if (i % 10_000 == 0)
+                            Console.WriteLine($"Inserted {i} documents");
+
                         await bulkInsert.StoreAsync(EntityFactory.CreateCompanyLarge(i));
                     }
                 }
