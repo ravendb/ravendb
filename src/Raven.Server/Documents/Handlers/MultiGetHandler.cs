@@ -46,6 +46,8 @@ namespace Raven.Server.Documents.Handlers
                     var responseStream = new MultiGetHttpResponseStream(ResponseBodyStream());
                     features.Set<IHttpResponseFeature>(new MultiGetHttpResponseFeature(responseStream));
                     var httpContext = new DefaultHttpContext(features);
+                    var host = HttpContext.Request.Host;
+                    var scheme = HttpContext.Request.Scheme;
 
                     for (int i = 0; i < requests.Length; i++)
                     {
@@ -87,6 +89,8 @@ namespace Raven.Server.Documents.Handlers
                         httpContext.Response.StatusCode = 0;
                         httpContext.Request.Headers.Clear();
                         httpContext.Response.Headers.Clear();
+                        httpContext.Request.Host = host;
+                        httpContext.Request.Scheme = scheme;
                         httpContext.Request.QueryString = new QueryString(query);
                         if (request.TryGet("Headers", out BlittableJsonReaderObject headers))
                         {

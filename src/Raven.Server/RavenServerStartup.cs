@@ -233,7 +233,7 @@ namespace Raven.Server
                 RequestUri = context.Request.GetEncodedUrl(),
                 AbsoluteUri = $"{context.Request.Scheme}://{context.Request.Host}",
                 DatabaseName = database ?? "N/A",
-                CustomInfo = "",
+                CustomInfo = string.Empty,
                 InnerRequestsCount = 0,
                 QueryTimings = null
             };
