@@ -313,9 +313,9 @@ namespace Raven.Client.Documents.BulkInsert
                 _first = false;
                 try
                 {
-                    _currentWriter.Write("{'Id':'");
-                    _currentWriter.Write(id);
-                    _currentWriter.Write("','Type':'PUT','Document':");
+                    _currentWriter.Write("{\"Id\":\"");
+                    _currentWriter.Write(EscapeId(id));
+                    _currentWriter.Write("\",\"Type\":\"PUT\",\"Document\":");
 
                     if (_customEntitySerializer == null || _customEntitySerializer(entity, metadata, _currentWriter) == false)
                     {
@@ -361,6 +361,11 @@ namespace Raven.Client.Documents.BulkInsert
             finally
             {
                 Interlocked.CompareExchange(ref _concurrentCheck, 0, 1);
+            }
+
+            string EscapeId(string input)
+            {
+                return input.Replace("\"", "\\\"");
             }
         }
 
