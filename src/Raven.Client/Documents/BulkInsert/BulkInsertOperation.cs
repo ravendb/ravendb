@@ -217,15 +217,15 @@ namespace Raven.Client.Documents.BulkInsert
         private async Task ThrowBulkInsertAborted(Exception e, Exception flushEx = null)
         {
             var errors = new List<Exception>(3);
-                            
+
             var error = await GetExceptionFromOperation().ConfigureAwait(false);
-                            
+
             if (error != null)
                 errors.Add(error);
 
             if (flushEx != null)
                 errors.Add(flushEx);
-                            
+
             errors.Add(e);
 
             throw new BulkInsertAbortedException("Failed to execute bulk insert", new AggregateException(errors));
@@ -314,7 +314,7 @@ namespace Raven.Client.Documents.BulkInsert
                 try
                 {
                     _currentWriter.Write("{\"Id\":\"");
-                    _currentWriter.Write(EscapeId(id));
+                    WriteId(_currentWriter, id);
                     _currentWriter.Write("\",\"Type\":\"PUT\",\"Document\":");
 
                     if (_customEntitySerializer == null || _customEntitySerializer(entity, metadata, _currentWriter) == false)
@@ -363,9 +363,19 @@ namespace Raven.Client.Documents.BulkInsert
                 Interlocked.CompareExchange(ref _concurrentCheck, 0, 1);
             }
 
-            string EscapeId(string input)
+            void WriteId(StreamWriter writer, string input)
             {
-                return input.Replace("\"", "\\\"");
+                for (var i = 0; i < input.Length; i++)
+                {
+                    var c = input[i];
+                    if (c == '"')
+                    {
+                        if (i == 0 || input[i - 1] != '\\')
+                            writer.Write("\\");
+                    }
+
+                    writer.Write(c);
+                }
             }
         }
 
