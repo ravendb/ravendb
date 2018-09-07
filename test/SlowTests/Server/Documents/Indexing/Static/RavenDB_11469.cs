@@ -23,7 +23,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
         [Theory]
         [InlineData(5, new[] { "Israel", "Poland" })]
         [InlineData(100, new[] { "Israel", "Poland", "USA" })]
-        public async Task Map_reduce_index_should_produce_multiple_output_docs_even_there_is_hash_collision(int numberOfUsers, string[] locations)
+        public void Map_reduce_index_should_produce_multiple_output_docs_even_there_is_hash_collision(int numberOfUsers, string[] locations)
         {
             var outputToCollectionName = "Locations";
 
@@ -50,16 +50,15 @@ namespace SlowTests.Server.Documents.Indexing.Static
                     var indexStorage = new IndexStorage(index, contextPool, database);
                     var reducer = new ReduceMapResultsOfStaticIndex(index, index._compiled.Reduce, index.Definition, indexStorage, new MetricCounters(), mapReduceContext);
 
-                    await ActualTest(numberOfUsers, locations, index, mapReduceContext, reducer, database, outputToCollectionName);
+                    ActualTest(numberOfUsers, locations, index, mapReduceContext, reducer, database, outputToCollectionName);
                 }
             }
         }
 
-        private static async Task ActualTest(int numberOfUsers, string[] locations, Index index,
+        private static void ActualTest(int numberOfUsers, string[] locations, Index index,
             MapReduceIndexingContext mapReduceContext, IIndexingWork reducer, DocumentDatabase database, string outputToCollectionName)
         {
-            TransactionOperationContext indexContext;
-            using (index._contextPool.AllocateOperationContext(out indexContext))
+            using (index._contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             {
                 ulong hashOfReduceKey = 73493;
 
