@@ -632,6 +632,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                             {
                                 new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id"},
                                 new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId"},
+                                new SqlEtlTable {TableName = "NotUsedInScript", DocumentIdColumn = "OrderId"},
                             },
                             Transforms =
                             {
