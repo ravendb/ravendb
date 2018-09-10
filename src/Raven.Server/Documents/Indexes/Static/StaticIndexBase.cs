@@ -203,6 +203,24 @@ namespace Raven.Server.Documents.Indexes.Static
             return json;
         }
 
+        public dynamic AttachmentsFor(dynamic doc)
+        {
+            var metadata = MetadataFor(doc);
+            var attachments = metadata[Constants.Documents.Metadata.Attachments];
+            return attachments != null
+                ? attachments
+                : new DynamicArray(Enumerable.Empty<object>());
+        }
+
+        public dynamic CounterNamesFor(dynamic doc)
+        {
+            var metadata = MetadataFor(doc);
+            var counters = metadata[Constants.Documents.Metadata.Counters];
+            return counters != null
+                ? counters
+                : new DynamicArray(Enumerable.Empty<object>());
+        }
+
         private struct StaticIndexLuceneDocumentWrapper : ILuceneDocumentWrapper
         {
             private readonly List<AbstractField> _fields;
