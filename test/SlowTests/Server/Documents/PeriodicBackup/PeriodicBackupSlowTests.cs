@@ -671,7 +671,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact, Trait("Category", "Smuggler")]
-        public async Task preorid_backup_should_export_starting_from_last_etag()
+        public async Task periodic_backup_should_export_starting_from_last_etag()
         {
             //http://issues.hibernatingrhinos.com/issue/RavenDB-11395
 
