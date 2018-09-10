@@ -155,11 +155,16 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
                 DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
             }
-
+            
+         
             // ReSharper disable once ForCanBeConvertedToForeach
             for (int i = 0; i < _config.SqlTables.Count; i++)
             {
                 // delete all the rows that might already exist there
+
+                // if we haven't processed this table, we should not try deleting from it
+                if (_tables.ContainsKey(_config.SqlTables[i].TableName) == false)
+                    continue;               
 
                 var sqlTable = _config.SqlTables[i];
 
