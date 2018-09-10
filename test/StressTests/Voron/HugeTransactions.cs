@@ -7,6 +7,7 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
 using FastTests.Voron;
 using Sparrow.Compression;
@@ -187,12 +188,16 @@ namespace StressTests.Voron
 
                         Console.WriteLine("Encoding LZ4 LongBuffer...");
                         // encode inputBuffer into outputBuffer
-                        long compressedLen = LZ4.Encode64LongBuffer(inputBuffer, outputBuffer, inputSize, outputBufferSize);
+                        var compressedLenTask = Task.Factory.StartNew(() => LZ4.Encode64LongBuffer(inputBuffer, outputBuffer, inputSize, outputBufferSize), cts.Token);
+                        compressedLenTask.Wait(cts.Token);
+                        var compressedLen = compressedLenTask.Result;
                         Console.WriteLine("...done");
 
                         Console.WriteLine("Decoding LZ4 LongBuffers...");
                         // decode outputBuffer into checkedBuffer
-                        var totalOutputSize = LZ4.Decode64LongBuffers(outputBuffer, compressedLen, checkedBuffer, inputSize, true);
+                        var totalOutputSizeTask = Task.Factory.StartNew(() => LZ4.Decode64LongBuffers(outputBuffer, compressedLen, checkedBuffer, inputSize, true), cts.Token);
+                        totalOutputSizeTask.Wait(cts.Token);
+                        var totalOutputSize = totalOutputSizeTask.Result;
                         Console.WriteLine("...done");
 
                         Assert.Equal(compressedLen, totalOutputSize);
