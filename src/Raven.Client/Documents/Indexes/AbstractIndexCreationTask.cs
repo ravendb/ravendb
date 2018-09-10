@@ -11,6 +11,7 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Util;
 
@@ -283,6 +284,22 @@ namespace Raven.Client.Documents.Indexes
         /// Allow to get to the metadata of the document
         /// </summary>
         protected JsonObject.Metadata MetadataFor(object doc)
+        {
+            throw new NotSupportedException("This is here as a marker only");
+        }
+
+        /// <summary>
+        /// Allow to get attachments of the document (without binary data)
+        /// </summary>
+        protected IEnumerable<AttachmentName> AttachmentsFor(object doc)
+        {
+            throw new NotSupportedException("This is here as a marker only");
+        }
+
+        /// <summary>
+        /// Allow to get counter names of the document
+        /// </summary>
+        protected IEnumerable<string> CounterNamesFor(object doc)
         {
             throw new NotSupportedException("This is here as a marker only");
         }
