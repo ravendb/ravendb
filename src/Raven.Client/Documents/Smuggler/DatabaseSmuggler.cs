@@ -20,6 +20,9 @@ namespace Raven.Client.Documents.Smuggler
         private readonly string _databaseName;
         private readonly RequestExecutor _requestExecutor;
 
+        private const string LegacyIncrementalBackupExtension = ".ravendb-incremental-dump";
+        private const string LegacyFullBackupExtension = ".ravendb-full-dump";
+
         public DatabaseSmuggler(IDocumentStore store, string databaseName = null)
         {
             _store = store;
@@ -92,13 +95,7 @@ namespace Raven.Client.Documents.Smuggler
         public async Task ImportIncrementalAsync(DatabaseSmugglerImportOptions options, string fromDirectory, CancellationToken cancellationToken = default)
         {
             var files = Directory.GetFiles(fromDirectory)
-                .Where(file =>
-                {
-                    var extension = Path.GetExtension(file);
-                    return
-                        Constants.Documents.PeriodicBackup.IncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                        Constants.Documents.PeriodicBackup.FullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
-                })
+                .Where(BackupUtils.IsBackupFile)
                 .OrderBackups()
                 .ToArray();
 
