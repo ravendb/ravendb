@@ -12,9 +12,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
     public static class RestoreUtils
     {
         private static readonly Regex BackupFolderRegex = new Regex(@".ravendb-(.+)-([A-Za-z]+)-(.+)$", RegexOptions.Compiled);
-        private const string LegacyIncrementalBackupExtension = "ravendb-incremental-dump";
-        private const string LegacyFullBackupExtension = "ravendb-full-dump";
-        
+        private static readonly Regex FileNameRegex = new Regex(@"([0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2})", RegexOptions.Compiled);
+
         public static void FetchRestorePoints(
             string directoryPath,
             SortedList<DateTime, RestorePoint> sortedList,
@@ -42,11 +41,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 })
                 .OrderBackups();
 
-
             var folderDetails = ParseFolderName(directoryPath);
             var filesCount = 0;
             var firstFile = true;
             var snapshotRestore = false;
+            
             foreach (var filePath in files)
             {
                 var extension = Path.GetExtension(filePath);
@@ -76,7 +75,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     Location = directoryPath,
                     FileName = Path.GetFileName(filePath),
                     IsSnapshotRestore = snapshotRestore,
-                    IsIncremental = IsIncremetal(extension),
+                    IsIncremental = BackupUtils.IsIncrementalBackupFile(extension),
                     FilesToRestore = filesCount,
                     DatabaseName = folderDetails.DatabaseName,
                     NodeTag = folderDetails.NodeTag
@@ -88,22 +87,20 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             var extension = Path.GetExtension(filePath);
             return
-                IsBackup(filePath) ||
+                BackupUtils.IsBackupFile(filePath) ||
                 Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
-        }
-
-        public static bool IsBackup(string filePath)
-        {
-            var extension = Path.GetExtension(filePath);
-            return
-                Constants.Documents.PeriodicBackup.IncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                Constants.Documents.PeriodicBackup.FullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                LegacyIncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                LegacyFullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
         }
 
         private static DateTime TryExtractDateFromFileName(string fileName, string filePath)
         {
+            // file name format: 2017-06-01-00-00-00
+            // legacy incremental backup format: 2017-06-01-00-00-00-0
+
+            var match = FileNameRegex.Match(fileName);
+            if (match.Success)
+            {
+                fileName = match.Value;
+            }
             if (DateTime.TryParseExact(
                     fileName,
                     BackupTask.DateTimeFormat,
@@ -115,13 +112,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
 
             return result;
-        }
-
-        private static bool IsIncremetal(string extension)
-        {
-            return
-                Constants.Documents.PeriodicBackup.IncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
-                LegacyIncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
         }
 
         private static (string DatabaseName, string NodeTag) ParseFolderName(string directoryPath)
