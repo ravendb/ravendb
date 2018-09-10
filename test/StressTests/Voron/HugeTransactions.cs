@@ -212,12 +212,22 @@ namespace StressTests.Voron
 
         private static unsafe AbstractPager CreateScratchFile(string scratchName, StorageEnvironment env, long inputSize, out byte* buffer)
         {
+            Console.WriteLine($"Creating Scratch File: {scratchName}");
+
             var filename = Path.Combine(RavenTestHelper.NewDataPath(nameof(HugeTransactions), 0, forceCreateDir: true), $"TestBigCompression-{scratchName}");
+            
             long bufferSize = LZ4.MaximumOutputLength(inputSize);
             int bufferSizeInPages = checked((int)(bufferSize / Constants.Storage.PageSize));
+
+            Console.WriteLine($"CreateScratchPager. Size: {bufferSize}. Pages: {bufferSizeInPages}. Name: {scratchName}");
             var pager = env.Options.CreateScratchPager(filename, (long)bufferSizeInPages * Constants.Storage.PageSize);
+
+            Console.WriteLine($"EnsureContinuous. Pages: {bufferSizeInPages}. Name: {scratchName}");
             pager.EnsureContinuous(0, bufferSizeInPages);
+
+            Console.WriteLine($"AcquirePagePointer. Name: {scratchName}");
             buffer = pager.AcquirePagePointer(null, 0);
+
             return pager;
         }
     }
