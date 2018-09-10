@@ -421,7 +421,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             // the files are already ordered by name
             // take only the files that are relevant for smuggler restore
             _filesToRestore = _filesToRestore
-                .Where(RestoreUtils.IsBackup)
+                .Where(BackupUtils.IsBackupFile)
                 .OrderBackups()
                 .ToList();
 
