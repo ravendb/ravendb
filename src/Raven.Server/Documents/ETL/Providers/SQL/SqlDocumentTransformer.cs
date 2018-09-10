@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
+using System.Linq;
 using Jint.Native;
 using Jint.Runtime;
 using Jint.Runtime.Interop;
@@ -21,22 +22,29 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         private readonly Transformation _transformation;
         private readonly SqlEtlConfiguration _config;
         private readonly Dictionary<string, SqlTableWithRecords> _tables;
+        private readonly List<SqlEtlTable> _tablesForScript;
 
         public SqlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
             : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SqlEtl))
         {
             _transformation = transformation;
             _config = config;
-            _tables = new Dictionary<string, SqlTableWithRecords>(_config.SqlTables.Count);
 
-            var tables = new string[config.SqlTables.Count];
+            var destinationTables = transformation.GetCollectionsFromScript();
 
-            for (var i = 0; i < config.SqlTables.Count; i++)
+            LoadToDestinations = destinationTables;
+
+            _tables = new Dictionary<string, SqlTableWithRecords>(destinationTables.Length);
+            _tablesForScript = new List<SqlEtlTable>(destinationTables.Length);
+
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (var i = 0; i < _config.SqlTables.Count; i++)
             {
-                tables[i] = config.SqlTables[i].TableName;
-            }
+                var table = _config.SqlTables[i];
 
-            LoadToDestinations = tables;
+                if (destinationTables.Contains(table.TableName, StringComparer.OrdinalIgnoreCase))
+                    _tablesForScript.Add(table);
+            }
         }
 
         public override void Initalize()
@@ -142,11 +150,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             }
 
             // ReSharper disable once ForCanBeConvertedToForeach
-            for (int i = 0; i < _config.SqlTables.Count; i++)
+            for (int i = 0; i < _tablesForScript.Count; i++)
             {
                 // delete all the rows that might already exist there
 
-                var sqlTable = _config.SqlTables[i];
+                var sqlTable = _tablesForScript[i];
 
                 if (sqlTable.InsertOnlyMode)
                     continue;
