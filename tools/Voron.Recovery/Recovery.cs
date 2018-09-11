@@ -46,6 +46,7 @@ namespace Voron.Recovery
             _copyOnWrite = !config.DisableCopyOnWriteMode;
             // by default CopyOnWriteMode will be true
             _option.CopyOnWriteMode = _copyOnWrite;
+            _option.ManualFlushing = true;
             _progressIntervalInSec = config.ProgressIntervalInSec;
             _previouslyWrittenDocs = new Dictionary<string, long>();
             LoggingSource.Instance.SetupLogMode(config.LoggingMode, Path.Combine(Path.GetDirectoryName(_output), LogFileName));

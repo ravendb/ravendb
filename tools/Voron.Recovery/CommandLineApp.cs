@@ -152,25 +152,25 @@ namespace Voron.Recovery
                         config.LoggingMode = mode;
                     }
 
-                    var recovery = new Recovery(config);
-                    var cts = new CancellationTokenSource();
-                    Console.WriteLine("Press 'q' to quit the recovery process");
-                    var cancellationTask = Task.Factory.StartNew(() =>
-                    {                
-                        while (Console.Read() != 'q')
+                    using (var recovery = new Recovery(config))
+                    {
+                        var cts = new CancellationTokenSource();
+                        Console.WriteLine("Press 'q' to quit the recovery process");
+                        var cancellationTask = Task.Factory.StartNew(() =>
                         {
-                        }
+                            while (Console.Read() != 'q')
+                            {
+                            }
+
+                            cts.Cancel();
+                            //The reason i do an exit here is because if we are in the middle of journal recovery 
+                            //we can't cancel it and it may take a long time.
+                            //That said i'm still going to give it a while to do a proper exit
+                            Task.Delay(5000).ContinueWith(_ => { Environment.Exit(1); });
+                        }, cts.Token);
+                        recovery.Execute(cts.Token);
                         cts.Cancel();
-                        //The reason i do an exit here is because if we are in the middle of journal recovery 
-                        //we can't cancel it and it may take a long time.
-                        //That said i'm still going to give it a while to do a proper exit
-                        Task.Delay(5000).ContinueWith(_ =>
-                        {
-                            Environment.Exit(1);
-                        });
-                    }, cts.Token);
-                    recovery.Execute(cts.Token);
-                    cts.Cancel();
+                    }
 
                     return 0;
                 });

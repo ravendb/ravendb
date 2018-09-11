@@ -160,7 +160,7 @@ namespace Voron.Impl.Journal
             }
 
             var oldestLogFileStillInUse = logInfo.CurrentJournal - logInfo.JournalFilesCount + 1;
-            if (_env.Options.IncrementalBackupEnabled == false)
+            if (_env.Options.IncrementalBackupEnabled == false && _env.Options.CopyOnWriteMode == false)
             {
                 // we want to check that we cleanup old log files if they aren't needed
                 // this is more just to be safe than anything else, they shouldn't be there.
@@ -247,16 +247,19 @@ namespace Voron.Impl.Journal
 
             _journalIndex = lastSyncedJournal;
 
-            _headerAccessor.Modify(
-                header =>
-                {
-                    header->Journal.CurrentJournal = lastSyncedJournal;
-                    header->Journal.JournalFilesCount = _files.Count;
-                    header->IncrementalBackup.LastCreatedJournal = _journalIndex;
-                });
+            if (_env.Options.CopyOnWriteMode == false)
+            {
+                _headerAccessor.Modify(
+                    header =>
+                    {
+                        header->Journal.CurrentJournal = lastSyncedJournal;
+                        header->Journal.JournalFilesCount = _files.Count;
+                        header->IncrementalBackup.LastCreatedJournal = _journalIndex;
+                    });
 
-            CleanupInvalidJournalFiles(lastSyncedJournal);
-            CleanupUnusedJournalFiles(oldestLogFileStillInUse, lastSyncedJournal);
+                CleanupInvalidJournalFiles(lastSyncedJournal);
+                CleanupUnusedJournalFiles(oldestLogFileStillInUse, lastSyncedJournal);
+            }
 
             if (_files.Count > 0)
             {
