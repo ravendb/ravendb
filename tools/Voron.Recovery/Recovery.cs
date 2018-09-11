@@ -33,7 +33,7 @@ using static Voron.Data.BTrees.Tree;
 
 namespace Voron.Recovery
 {
-    public unsafe class Recovery
+    public unsafe class Recovery : IDisposable
     {
         public Recovery(VoronRecoveryConfiguration config)
         {
@@ -65,6 +65,7 @@ namespace Voron.Recovery
 
         public RecoveryStatus Execute(CancellationToken ct)
         {
+            StorageEnvironment se = null;
             try
             {
                 var sw = new Stopwatch();
@@ -73,7 +74,7 @@ namespace Voron.Recovery
                 if (_copyOnWrite)
                 {
                     Console.WriteLine("Recovering journal files, this may take a while...");
-                    StorageEnvironment se = null;
+                    
                     bool optionOwnsPagers = _option.OwnsPagers;
                     try
                     {
@@ -364,9 +365,9 @@ namespace Voron.Recovery
                     ReportOrphanAttachmentsAndMissingAttachments(documentsWriter, ct);
                     //This will only be the case when we don't have orphan attachments and we wrote the last attachment after we wrote the 
                     //last document
-                    if (_lastWriteIsDocument == false)
+                    if (_lastWriteIsDocument == false && _lastAttachmentInfo.HasValue)
                     {
-                        WriteDummyDocumentForAttachment(documentsWriter, _lastAttachmentInfo.hash, _lastAttachmentInfo.size, _lastAttachmentInfo.tag);
+                        WriteDummyDocumentForAttachment(documentsWriter, _lastAttachmentInfo.Value.hash, _lastAttachmentInfo.Value.size, _lastAttachmentInfo.Value.tag);
                     }
 
                     ReportOrphanCountersAndMissingCounters(documentsWriter, ct);
@@ -396,6 +397,7 @@ namespace Voron.Recovery
             }
             finally
             {
+                se?.Dispose();
                 LoggingSource.Instance.EndLogging();
             }
         }
@@ -1117,7 +1119,7 @@ namespace Voron.Recovery
         private int _dummyDocNumber;
         private int _dummyAttachmentNumber;
         private bool _lastWriteIsDocument;
-        private (string hash, long size, string tag) _lastAttachmentInfo;
+        private (string hash, long size, string tag)? _lastAttachmentInfo;
         private Logger _logger;
 
         public enum RecoveryStatus
@@ -1135,5 +1137,9 @@ namespace Voron.Recovery
             }
         }
 
+        public void Dispose()
+        {
+            _option?.Dispose();
+        }
     }
 }

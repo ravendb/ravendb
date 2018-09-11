@@ -53,6 +53,7 @@
     <ProjectReference Include="..\..\src\Raven.TestDriver\Raven.TestDriver.csproj" />
     <ProjectReference Include="..\..\src\Sparrow\Sparrow.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
+    <ProjectReference Include="..\..\tools\Voron.Recovery\Voron.Recovery.csproj" />
     <ProjectReference Include="..\FastTests\FastTests.csproj" />
     <ProjectReference Include="..\Tests.Infrastructure\Tests.Infrastructure.csproj" />
   </ItemGroup>
