@@ -5,12 +5,12 @@ using System.Linq;
 
 namespace Raven.Client.Documents.Smuggler
 {
-    public static class BackupUtils
+    internal static class BackupUtils
     {
         private const string LegacyIncrementalBackupExtension = ".ravendb-incremental-dump";
         private const string LegacyFullBackupExtension = ".ravendb-full-dump";
 
-        public static bool IsBackupFile(string filePath)
+        internal static bool IsBackupFile(string filePath)
         {
             var extension = Path.GetExtension(filePath);
             return
@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Smuggler
                 LegacyFullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
         }
 
-        public static bool IsIncrementalBackupFile(string extension)
+        internal static bool IsIncrementalBackupFile(string extension)
         {
             return
                 Constants.Documents.PeriodicBackup.IncrementalBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
