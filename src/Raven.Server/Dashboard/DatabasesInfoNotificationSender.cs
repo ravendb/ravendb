@@ -134,12 +134,16 @@ namespace Raven.Server.Dashboard
                             databasesInfo.Items.Add(databaseInfoItem);
                         }
 
+                        var writesPerSecond = (int)database.Metrics.Docs.PutsPerSec.OneSecondRate +
+                                              (int)database.Metrics.Attachments.PutsPerSec.OneSecondRate;
+                        var writeBytesPerSecond = database.Metrics.Docs.BytesPutsPerSec.OneSecondRate +
+                                                  database.Metrics.Attachments.BytesPutsPerSec.OneSecondRate;
                         var trafficWatchItem = new TrafficWatchItem
                         {
                             Database = databaseName,
                             RequestsPerSecond = (int)database.Metrics.Requests.RequestsPerSec.OneSecondRate,
-                            WritesPerSecond = (int)database.Metrics.Docs.PutsPerSec.OneSecondRate,
-                            WriteBytesPerSecond = database.Metrics.Docs.BytesPutsPerSec.OneSecondRate
+                            WritesPerSecond = writesPerSecond,
+                            WriteBytesPerSecond = writeBytesPerSecond
                         };
                         trafficWatch.Items.Add(trafficWatchItem);
 
