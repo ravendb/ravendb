@@ -20,6 +20,8 @@ namespace Raven.Server.Utils
 
         public readonly AttachmentCounters Attachments = new AttachmentCounters();
 
+        public readonly CounterCounters Counters = new CounterCounters();
+
         public readonly MapIndexCounters MapIndexes = new MapIndexCounters();
 
         public readonly MapReduceIndexCounters MapReduceIndexes = new MapReduceIndexCounters();
@@ -48,6 +50,7 @@ namespace Raven.Server.Utils
             SqlReplications.BatchSize = new MeterMetric();
             Attachments.PutsPerSec = new MeterMetric();
             Attachments.BytesPutsPerSec = new MeterMetric();
+            Counters.PutsPerSec = new MeterMetric();
         }
 
         public class RequestCounters
@@ -67,6 +70,11 @@ namespace Raven.Server.Utils
         {
             public MeterMetric PutsPerSec { get; internal set; }
             public MeterMetric BytesPutsPerSec { get; internal set; }
+        }
+
+        public class CounterCounters
+        {
+            public MeterMetric PutsPerSec { get; internal set; }
         }
 
         public class MapIndexCounters
@@ -103,6 +111,10 @@ namespace Raven.Server.Utils
                 {
                     [nameof(Attachments.BytesPutsPerSec)] = Attachments.BytesPutsPerSec.CreateMeterData(),
                     [nameof(Attachments.PutsPerSec)] = Attachments.PutsPerSec.CreateMeterData()
+                },
+                [nameof(Counters)] = new DynamicJsonValue
+                {
+                    [nameof(Counters.PutsPerSec)] = Counters.PutsPerSec.CreateMeterData()
                 },
                 [nameof(MapIndexes)] = new DynamicJsonValue
                 {
