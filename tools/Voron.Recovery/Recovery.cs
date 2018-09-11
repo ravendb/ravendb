@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Extensions;
 using Raven.Client.Json;
+using Raven.Client.Properties;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Smuggler.Documents;
@@ -113,9 +114,11 @@ namespace Voron.Recovery
                 using (var revisionsWriter = new BlittableJsonTextWriter(context, gZipStreamRevisions))
                 using (var conflictsWriter = new BlittableJsonTextWriter(context, gZipStreamConflicts))
                 {
-                    WriteSmugglerHeader(documentsWriter, 40018, "Docs");
-                    WriteSmugglerHeader(revisionsWriter, 40018, nameof(DatabaseItemType.RevisionDocuments));
-                    WriteSmugglerHeader(conflictsWriter, 40018, nameof(DatabaseItemType.Conflicts));
+                    var version = RavenVersionAttribute.Instance.BuildVersion;
+
+                    WriteSmugglerHeader(documentsWriter, version, "Docs");
+                    WriteSmugglerHeader(revisionsWriter, version, nameof(DatabaseItemType.RevisionDocuments));
+                    WriteSmugglerHeader(conflictsWriter, version, nameof(DatabaseItemType.Conflicts));
 
                     while (mem < eof)
                     {
