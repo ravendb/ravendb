@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 try
                 {
-                    var segments = new[] {segment1, segment2};
+                    var segments = new[] { segment1, segment2 };
                     int index = 0;
                     var receiveAsync = webSocket.ReceiveAsync(segments[index].Buffer, Database.DatabaseShutdown);
                     var jsonParserState = new JsonParserState();
@@ -163,13 +163,23 @@ namespace Raven.Server.Documents.Handlers
                     if (Logger.IsInfoEnabled)
                         Logger.Info("Client was disconnected", ex);
                 }
-                catch
+                catch (Exception ex)
                 {
 #pragma warning disable 4014
                     sendTask.IgnoreUnobservedExceptions();
 #pragma warning restore 4014
 
-                    throw;
+                    // if we received close from the client, we want to ignore it and close the websocket (dispose does it)
+                    if (ex is WebSocketException webSocketException
+                        && webSocketException.WebSocketErrorCode == WebSocketError.InvalidState
+                        && webSocket.State == WebSocketState.CloseReceived)
+                    {
+                        // ignore
+                    }
+                    else
+                    {
+                        throw;
+                    }
                 }
                 finally
                 {
