@@ -270,6 +270,8 @@ namespace Raven.Server.Documents
                         table.Set(tvb);
                     }
 
+                    _documentDatabase.Metrics.Counters.PutsPerSec.MarkSingleThreaded(1);
+
                     context.Transaction.AddAfterCommitNotification(new CounterChange
                     {
                         ChangeVector = changeVector,
@@ -359,7 +361,6 @@ namespace Raven.Server.Documents
                 var result = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, etag, string.Empty);
 
                 using (Slice.From(context.Allocator, result.ChangeVector, out var cv))
-
                 using (DocumentIdWorker.GetStringPreserveCase(context, name, out Slice nameSlice))
                 using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                 using (table.Allocate(out TableValueBuilder tvb))
@@ -374,6 +375,8 @@ namespace Raven.Server.Documents
 
                     table.Set(tvb);
                 }
+
+                _documentDatabase.Metrics.Counters.PutsPerSec.MarkSingleThreaded(1);
 
                 context.Transaction.AddAfterCommitNotification(new CounterChange
                 {
