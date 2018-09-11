@@ -20,9 +20,6 @@ namespace Raven.Client.Documents.Smuggler
         private readonly string _databaseName;
         private readonly RequestExecutor _requestExecutor;
 
-        private const string LegacyIncrementalBackupExtension = ".ravendb-incremental-dump";
-        private const string LegacyFullBackupExtension = ".ravendb-full-dump";
-
         public DatabaseSmuggler(IDocumentStore store, string databaseName = null)
         {
             _store = store;
