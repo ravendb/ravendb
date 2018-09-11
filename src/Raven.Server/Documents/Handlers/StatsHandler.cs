@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.Handlers
                     },
                     [nameof(Database.Metrics.Attachments)] = new DynamicJsonValue
                     {
-                        [nameof(Database.Metrics.Attachments.BytesPutsPerSec)] = Database.Metrics.Docs.BytesPutsPerSec.CreateMeterData(true, empty)
+                        [nameof(Database.Metrics.Attachments.BytesPutsPerSec)] = Database.Metrics.Attachments.BytesPutsPerSec.CreateMeterData(true, empty)
                     }
                 });
             }
