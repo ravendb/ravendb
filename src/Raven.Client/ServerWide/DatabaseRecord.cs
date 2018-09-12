@@ -127,14 +127,6 @@ namespace Raven.Client.ServerWide
             AutoIndexes?.Remove(name);
         }
 
-        public void AddPeriodicBackupConfiguration(PeriodicBackupConfiguration configuration)
-        {
-            Debug.Assert(configuration.TaskId != 0);
-
-            DeletePeriodicBackupConfiguration(configuration.TaskId);
-            PeriodicBackups.Add(configuration);
-        }
-
         public void DeletePeriodicBackupConfiguration(long backupTaskId)
         {
             Debug.Assert(backupTaskId != 0);
