@@ -636,8 +636,8 @@ namespace Raven.Server.Documents
             var status = GetPendingOperationsStatus(context, pendingOps.Count == 0);
             if (_log.IsInfoEnabled)
             {
-                var opType = previousOperation == null ? string.Empty : "(async)";
-                _log.Info($"Merged {pendingOps.Count:#,#;;0} operations in {sp.Elapsed} {opType} with {_operations.Count:#,#;;0} operations remaining. Status: {status}");
+                var opType = previousOperation == null ? string.Empty : "(async) ";
+                _log.Info($"Merged {pendingOps.Count:#,#;;0} operations in {sp.Elapsed} {opType}with {_operations.Count:#,#;;0} operations remaining. Status: {status}");
             }
             return status;
         }

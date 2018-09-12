@@ -506,7 +506,7 @@ namespace Raven.Server.Documents.Replication
         private void SendDocumentsBatch(DocumentsOperationContext documentsContext, OutgoingReplicationStatsScope stats)
         {
             if (_log.IsInfoEnabled)
-                _log.Info($"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag}");
+                _log.Info($"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag:#,#;;0}");
 
             var sw = Stopwatch.StartNew();
             var headerJson = new DynamicJsonValue

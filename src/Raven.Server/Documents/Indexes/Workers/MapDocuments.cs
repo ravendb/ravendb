@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing map for '{_index.Name}'. Collection: {collection} LastMappedEtag: {lastMappedEtag}.");
+                        _logger.Info($"Executing map for '{_index.Name}'. Collection: {collection} LastMappedEtag: {lastMappedEtag:#,#;;0}.");
 
                     var inMemoryStats = _index.GetStats(collection);
                     var lastEtag = lastMappedEtag;
@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     collectionStats.RecordMapAttempt();
                                     stats.RecordDocumentSize(current.Data.Size);
                                     if (_logger.IsInfoEnabled && count % 8192 == 0)
-                                        _logger.Info($"Executing map for '{_index.Name}'. Processed count: {count:#,#;;0} etag: {lastEtag}.");
+                                        _logger.Info($"Executing map for '{_index.Name}'. Processed count: {count:#,#;;0} etag: {lastEtag:#,#;;0}.");
 
                                     lastEtag = current.Etag;
                                     inMemoryStats.UpdateLastEtag(lastEtag, isTombsone: false);
