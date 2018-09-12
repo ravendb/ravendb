@@ -80,8 +80,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             if (reader.MaxDoc > 512 * 1024)
             {
-                throw new InvalidOperationException("Refusing to extract all index entries from an index with " + reader.MaxDoc +
-                                                    " entries, because of the probable time / memory costs associated with that." +
+                throw new InvalidOperationException($"Refusing to extract all index entries from an index with: {reader.MaxDoc:#,#;;0} " +
+                                                    "entries, because of the probable time / memory costs associated with that." +
                                                     Environment.NewLine +
                                                     "Viewing index entries are a debug tool, and should not be used on indexes of this size.");
             }
