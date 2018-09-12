@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
@@ -379,7 +380,7 @@ namespace Voron.Impl.Compaction
             var lastSlice = Slices.BeforeAllKeys;
             long lastFixedIndex = 0L;
 
-            Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries}/{inputTable.NumberOfEntries} entries.", treeName);
+            Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{inputTable.NumberOfEntries:#,#;;0} entries.", treeName);
             using (var txw = compactedEnv.WriteTransaction(context))
             {
                 schema.Create(txw, treeName, Math.Max((ushort)inputTable.ActiveDataSmallSection.NumberOfPages, (ushort)((ushort.MaxValue + 1) / Constants.Storage.PageSize)));
@@ -412,6 +413,7 @@ namespace Voron.Impl.Compaction
                             if (lastSlice.Options != Slices.BeforeAllKeys.Options)
                                 skip = 1;
 
+                            var sp = Stopwatch.StartNew();
                             foreach (var tvr in inputTable.SeekForwardFrom(variableSizeIndex, lastSlice, skip))
                             {
                                 // The table will take care of reconstructing indexes automatically
@@ -419,10 +421,8 @@ namespace Voron.Impl.Compaction
                                 copiedEntries++;
                                 transactionSize += tvr.Result.Reader.Size;
 
-                                var reportRate = inputTable.NumberOfEntries / 33 + 1;
-                                if (copiedEntries % reportRate == 0)
-                                    Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries}/{inputTable.NumberOfEntries} entries.", treeName);
-                                
+                                ReportIfNeeded(sp, copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{inputTable.NumberOfEntries:#,#;;0} entries.", treeName);
+
                                 // The transaction has surpassed the allowed
                                 // size before a flush
                                 if (lastSlice.Equals(tvr.Key) == false && transactionSize >= compactedEnv.Options.MaxScratchBufferSize / 2)
@@ -439,19 +439,17 @@ namespace Voron.Impl.Compaction
 
                             if (fixedSizeIndex == null)
                                 throw new InvalidOperationException("Cannot compact table " + inputTable.Name + " because is has no local indexes, only global ones");
-                              
+
+                            var sp = Stopwatch.StartNew();
                             foreach (var entry in inputTable.SeekForwardFrom(fixedSizeIndex, lastFixedIndex, lastFixedIndex > 0 ? 1 : 0))
                             {
-
                                 token.ThrowIfCancellationRequested();
                                 // The table will take care of reconstructing indexes automatically
                                 outputTable.Insert(ref entry.Reader);
                                 copiedEntries++;
                                 transactionSize += entry.Reader.Size;
 
-                                var reportRate = inputTable.NumberOfEntries / 33 + 1;
-                                if (copiedEntries % reportRate == 0)
-                                    Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries}/{inputTable.NumberOfEntries} entries.", treeName);
+                                ReportIfNeeded(sp, copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{inputTable.NumberOfEntries:#,#;;0} entries.", treeName);
 
                                 // The transaction has surpassed the allowed
                                 // size before a flush
@@ -497,6 +495,17 @@ namespace Voron.Impl.Compaction
             }
 
             return copiedTrees;
+        }
+
+        private static void ReportIfNeeded(Stopwatch sp, long globalProgress, long globalTotal, long objectProgress, 
+            long objectTotal, Action<StorageCompactionProgress> progressReport, string message = null, string treeName = null)
+        {
+            const int intervalInMs = 10 * 1000; // 10 seconds
+            if (sp.ElapsedMilliseconds > intervalInMs)
+                return;
+
+            Report(globalProgress, globalTotal, objectProgress, objectTotal, progressReport, message, treeName);
+            sp.Restart();
         }
 
         private static void Report(long globalProgress, long globalTotal, long objectProgress, long objectTotal, Action<StorageCompactionProgress> progressReport, string message = null, string treeName = null)
