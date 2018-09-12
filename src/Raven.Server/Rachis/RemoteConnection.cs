@@ -113,7 +113,7 @@ namespace Raven.Server.Rachis
         {
             if (_log.IsInfoEnabled)
             {
-                _log.Info($"Voting {rvr.VoteGranted} for term {rvr.Term} because: {rvr.Message}");
+                _log.Info($"Voting {rvr.VoteGranted} for term {rvr.Term:#,#;;0} because: {rvr.Message}");
             }
 
             Send(context, new DynamicJsonValue
@@ -130,7 +130,7 @@ namespace Raven.Server.Rachis
         public void Send(JsonOperationContext context, LogLengthNegotiation lln)
         {
             if (_log.IsInfoEnabled)
-                _log.Info($"Log length negotiation request with ({lln.PrevLogIndex} / {lln.PrevLogTerm}), term: {lln.Term}, Truncated: {lln.Truncated}");
+                _log.Info($"Log length negotiation request with ({lln.PrevLogIndex:#,#;;0} / {lln.PrevLogTerm:#,#;;0}), term: {lln.Term:#,#;;0}, Truncated: {lln.Truncated}");
 
             Send(context, new DynamicJsonValue
             {
@@ -146,7 +146,7 @@ namespace Raven.Server.Rachis
         public void Send(JsonOperationContext context, LogLengthNegotiationResponse lln)
         {
             if (_log.IsInfoEnabled)
-                _log.Info($"Log length negotiation response with ({lln.MidpointIndex} / {lln.MidpointTerm}), MinIndex: {lln.MinIndex}, MaxIndex: {lln.MaxIndex}, LastLogIndex: {lln.LastLogIndex}, Status: {lln.Status}, {lln.Message}");
+                _log.Info($"Log length negotiation response with ({lln.MidpointIndex:#,#;;0} / {lln.MidpointTerm:#,#;;0}), MinIndex: {lln.MinIndex:#,#;;0}, MaxIndex: {lln.MaxIndex:#,#;;0}, LastLogIndex: {lln.LastLogIndex:#,#;;0}, Status: {lln.Status}, {lln.Message}");
 
             Send(context, new DynamicJsonValue
             {
@@ -169,7 +169,7 @@ namespace Raven.Server.Rachis
             if (_log.IsInfoEnabled)
             {
                 _log.Info(
-                    $"{rv.Source} requests vote in {rv.Term}, trial: {rv.IsTrialElection}, forced: {rv.IsForcedElection}, result: {rv.ElectionResult} with: ({rv.LastLogIndex} / {rv.LastLogTerm}).");
+                    $"{rv.Source} requests vote in {rv.Term:#,#;;0}, trial: {rv.IsTrialElection}, forced: {rv.IsForcedElection}, result: {rv.ElectionResult} with: ({rv.LastLogIndex:#,#;;0} / {rv.LastLogTerm:#,#;;0}).");
             }
             Send(context, new DynamicJsonValue
             {
@@ -192,7 +192,7 @@ namespace Raven.Server.Rachis
                 if (ae.EntriesCount > 0)
                 {
                     _log.Info(
-                        $"AppendEntries ({ae.EntriesCount}) in {ae.Term}, commit: {ae.LeaderCommit}, leader for: {ae.TimeAsLeader}, ({ae.PrevLogIndex} / {ae.PrevLogTerm}), truncate: {ae.TruncateLogBefore}, force elections: {ae.ForceElections}.");
+                        $"AppendEntries ({ae.EntriesCount:#,#;;0}) in {ae.Term:#,#;;0}, commit: {ae.LeaderCommit:#,#;;0}, leader for: {ae.TimeAsLeader:#,#;;0}, ({ae.PrevLogIndex:#,#;;0} / {ae.PrevLogTerm:#,#;;0}), truncate: {ae.TruncateLogBefore:#,#;;0}, force elections: {ae.ForceElections}.");
                 }
             }
 
@@ -228,7 +228,7 @@ namespace Raven.Server.Rachis
         public void Send(JsonOperationContext context, InstallSnapshot installSnapshot)
         {
             if (_log.IsInfoEnabled)
-                _log.Info($"Install snapshot on: ({installSnapshot.LastIncludedIndex} / {installSnapshot.LastIncludedTerm})");
+                _log.Info($"Install snapshot on: ({installSnapshot.LastIncludedIndex:#,#;;0} / {installSnapshot.LastIncludedTerm:#,#;;0})");
 
             Send(context, new DynamicJsonValue
             {
@@ -242,7 +242,7 @@ namespace Raven.Server.Rachis
         public void Send(JsonOperationContext context, InstallSnapshotResponse installSnapshotResponse)
         {
             if (_log.IsInfoEnabled)
-                _log.Info($"Install snapshot response in {installSnapshotResponse.CurrentTerm}, last log index: {installSnapshotResponse.LastLogIndex}, Done: {installSnapshotResponse.Done}");
+                _log.Info($"Install snapshot response in {installSnapshotResponse.CurrentTerm:#,#;;0}, last log index: {installSnapshotResponse.LastLogIndex:#,#;;0}, Done: {installSnapshotResponse.Done}");
 
             Send(context, new DynamicJsonValue
             {
