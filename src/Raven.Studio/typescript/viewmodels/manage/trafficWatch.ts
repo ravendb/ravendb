@@ -147,7 +147,8 @@ class trafficWatch extends viewModelBase {
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ResponseStatusCode, "Status", "8%", rowHighlightRules),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.DatabaseName, "Database Name", "8%", rowHighlightRules),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ElapsedMilliseconds, "Duration", "8%", rowHighlightRules),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.HttpMethod, "Method", "10%", rowHighlightRules),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.HttpMethod, "Method", "6%", rowHighlightRules),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.CustomInfo, "CustomInfo", "14%", rowHighlightRules),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.RequestUri, "URI", "35%", rowHighlightRules)
             ]
         );
@@ -159,6 +160,8 @@ class trafficWatch extends viewModelBase {
                 onValue(item.RequestUri);
             } else if (column.header === "Timestamp") {
                 onValue(moment.utc(item.TimeStamp), item.TimeStamp); 
+            } else if (column.header === "CustomInfo") {
+                onValue(item.CustomInfo);
             }
         });
 
