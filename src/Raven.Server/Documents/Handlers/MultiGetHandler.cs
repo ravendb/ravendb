@@ -191,6 +191,9 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
             }
+            // set the Request values back, to get a proper function of Traffic Watch 
+            HttpContext.Request.Method = HttpMethod.Post.Method;
+            HttpContext.Request.QueryString = new QueryString("");
         }
 
         private static MemoryStream GetRequestBody(string content)

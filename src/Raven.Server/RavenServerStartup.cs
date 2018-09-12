@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -157,23 +159,47 @@ namespace Raven.Server
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
                 context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
                 context.Response.Headers[Constants.Headers.ServerVersion] = RavenVersionAttribute.Instance.AssemblyVersion;
+                // Check context url AND TW clients
+                var isQueryBool = (IsQuery(context) && TrafficWatchManager.HasRegisteredClients);
+
+                // init new MS to save context.request.body
+                MemoryStream memoryStreamForRequest = new MemoryStream();
+                // copy stream
+                await context.Request.Body.CopyToAsync(memoryStreamForRequest);
+                // put memory stream pointer to start position
+                memoryStreamForRequest.Position = 0;
+                // copy memory stream back to context.request.body
+                context.Request.Body = memoryStreamForRequest;
 
                 var sp = Stopwatch.StartNew();
+                
                 database = await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
-                sp.Stop();
 
                 if (_logger.IsInfoEnabled && SkipHttpLogging == false)
                 {
                     _logger.Info($"{context.Request.Method} {context.Request.Path.Value}?{context.Request.QueryString.Value} - {context.Response.StatusCode} - {sp.ElapsedMilliseconds:#,#;;0} ms");
                 }
-
-                if (TrafficWatchManager.HasRegisteredClients)
-                    LogTrafficWatch(context, sp.ElapsedMilliseconds, database);
+                // if query OR multi-get OR index AND TW has clients
+                if (isQueryBool)
+                {
+                    // put memory stream pointer to start position
+                    memoryStreamForRequest.Position = 0;
+                    // copy memory stream back to context.request.body (because context.request.body used in HandlePath method)
+                    context.Request.Body = memoryStreamForRequest;
+                    LogTrafficWatch(context, sp.ElapsedMilliseconds, database, true);
+                }
+                else
+                {
+                    // check if TW has clients
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        LogTrafficWatch(context, sp.ElapsedMilliseconds, database, false);
+                }
+                sp.Stop();
             }
             catch (Exception e)
             {
                 if (TrafficWatchManager.HasRegisteredClients)
-                    LogTrafficWatch(context, 0, database ?? "N/A");
+                    LogTrafficWatch(context, 0, database ?? "N/A", false);
 
                 if (context.RequestAborted.IsCancellationRequested)
                     return;
@@ -218,11 +244,69 @@ namespace Raven.Server
                 }
             }
         }
+        /// <summary>
+        /// IsQuery method checks if watched URL contains "?query" OR "multi_get" OR "index-fields"
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns>boolean</returns>
+        private static bool IsQuery(HttpContext context)
+        {
+            return (
+                    context.Request.QueryString.Value.StartsWith("?query") 
+                    || context.Request.Path.Value.EndsWith("multi_get") 
+                    || context.Request.Path.Value.EndsWith("index-fields")
+                    // add more options
+                    );
+        }
 
-        private void LogTrafficWatch(HttpContext context, long elapsedMilliseconds, string database)
+        /// <summary>
+        /// LogTrafficWatch
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="elapsedMilliseconds"></param>
+        /// <param name="database"></param>
+        /// <param name="queryOperation"></param>
+
+        private void LogTrafficWatch(HttpContext context, long elapsedMilliseconds, string database, bool queryOperation)
         {
             var requestId = Interlocked.Increment(ref _requestId);
+            
+            string customInfoString;
+            if (context.Request.Method == "GET" && queryOperation)                          // GET method and URL has query <=> query from Raven.Studio
+            {
+                customInfoString = context.Request.QueryString.Value;
+                customInfoString = Uri.UnescapeDataString(customInfoString.Substring(7, context.Request.QueryString.Value.Length - 65));
+            }
+            else if (context.Request.Method == "POST" && queryOperation)                  // POST method AND URL has query <=> Query from Raven.Client
+            {
+                try
+                {
+                    // if there is a ContentType
+                    if (context.Request.ContentType == "application/json; charset=UTF-8")
+                    {
+                        var reader = new StreamReader(context.Request.Body);
+                        customInfoString = reader.ReadToEnd();
+                    }
+                    else if(context.Request.ContentType == null)
+                    {
+                        var reader = new StreamReader(new GZipStream(context.Request.Body, CompressionMode.Decompress, true));
+                        customInfoString = reader.ReadToEnd();
+                    } else
+                    {
+                        customInfoString = "N/A";
+                    }
 
+
+                }
+                catch (IOException)
+                {
+                    customInfoString = "N/A";
+                }
+            }
+            else
+            {
+                customInfoString = "N/A";                                                             // in all other cases set CustomInfo as N/A.
+            }
             var twn = new TrafficWatchChange
             {
                 TimeStamp = DateTime.UtcNow,
@@ -233,7 +317,7 @@ namespace Raven.Server
                 RequestUri = context.Request.GetEncodedUrl(),
                 AbsoluteUri = $"{context.Request.Scheme}://{context.Request.Host}",
                 DatabaseName = database ?? "N/A",
-                CustomInfo = string.Empty,
+                CustomInfo = customInfoString,     // Queries, Multi-Get, Indexes
                 InnerRequestsCount = 0,
                 QueryTimings = null
             };
