@@ -137,7 +137,8 @@ namespace Raven.Server.Dashboard
                                               (int)database.Metrics.Attachments.PutsPerSec.OneSecondRate +
                                               (int)database.Metrics.Counters.PutsPerSec.OneSecondRate;
                         var writeBytesPerSecond = database.Metrics.Docs.BytesPutsPerSec.OneSecondRate +
-                                                  database.Metrics.Attachments.BytesPutsPerSec.OneSecondRate;
+                                                  database.Metrics.Attachments.BytesPutsPerSec.OneSecondRate +
+                                                  database.Metrics.Counters.BytesPutsPerSec.OneSecondRate;
                         var trafficWatchItem = new TrafficWatchItem
                         {
                             Database = databaseName,

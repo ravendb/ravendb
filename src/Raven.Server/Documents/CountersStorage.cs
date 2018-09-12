@@ -271,6 +271,8 @@ namespace Raven.Server.Documents
                     }
 
                     _documentDatabase.Metrics.Counters.PutsPerSec.MarkSingleThreaded(1);
+                    // counter key + name + etag + value + change vector + collection
+                    _documentDatabase.Metrics.Counters.BytesPutsPerSec.MarkSingleThreaded(counterKey.Size + nameSlice.Size + 8 + 8 + changeVector.Length + collectionName.Name.Length);
 
                     context.Transaction.AddAfterCommitNotification(new CounterChange
                     {
@@ -377,6 +379,8 @@ namespace Raven.Server.Documents
                 }
 
                 _documentDatabase.Metrics.Counters.PutsPerSec.MarkSingleThreaded(1);
+                // counter key + name + etag + value + change vector + collection
+                _documentDatabase.Metrics.Counters.BytesPutsPerSec.MarkSingleThreaded(counterKey.Size + name.Length + 16 + result.ChangeVector.Length + collectionName.Name.Length);
 
                 context.Transaction.AddAfterCommitNotification(new CounterChange
                 {

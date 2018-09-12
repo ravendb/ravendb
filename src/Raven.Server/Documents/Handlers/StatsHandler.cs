@@ -174,6 +174,10 @@ namespace Raven.Server.Documents.Handlers
                     [nameof(Database.Metrics.Attachments)] = new DynamicJsonValue
                     {
                         [nameof(Database.Metrics.Attachments.BytesPutsPerSec)] = Database.Metrics.Attachments.BytesPutsPerSec.CreateMeterData(true, empty)
+                    },
+                    [nameof(Database.Metrics.Counters)] = new DynamicJsonValue
+                    {
+                        [nameof(Database.Metrics.Counters.BytesPutsPerSec)] = Database.Metrics.Counters.BytesPutsPerSec.CreateMeterData(true, empty)
                     }
                 });
             }
