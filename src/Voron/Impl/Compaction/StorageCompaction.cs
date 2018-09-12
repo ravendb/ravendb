@@ -490,7 +490,7 @@ namespace Voron.Impl.Compaction
                 if (copiedEntries == inputTable.NumberOfEntries)
                 {
                     copiedTrees++;
-                    Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Finished copying table tree '{treeName}'. Progress: {copiedEntries}/{inputTable.NumberOfEntries} entries.", treeName);
+                    Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Finished copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{inputTable.NumberOfEntries:#,#;;0} entries.", treeName);
                 }
 
                 compactedEnv.FlushLogToDataFile();
