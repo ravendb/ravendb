@@ -51,6 +51,7 @@ namespace Raven.Server.Utils
             Attachments.PutsPerSec = new MeterMetric();
             Attachments.BytesPutsPerSec = new MeterMetric();
             Counters.PutsPerSec = new MeterMetric();
+            Counters.BytesPutsPerSec = new MeterMetric();
         }
 
         public class RequestCounters
@@ -75,6 +76,7 @@ namespace Raven.Server.Utils
         public class CounterCounters
         {
             public MeterMetric PutsPerSec { get; internal set; }
+            public MeterMetric BytesPutsPerSec { get; internal set; }
         }
 
         public class MapIndexCounters
@@ -114,6 +116,7 @@ namespace Raven.Server.Utils
                 },
                 [nameof(Counters)] = new DynamicJsonValue
                 {
+                    [nameof(Counters.BytesPutsPerSec)] = Counters.BytesPutsPerSec.CreateMeterData(),
                     [nameof(Counters.PutsPerSec)] = Counters.PutsPerSec.CreateMeterData()
                 },
                 [nameof(MapIndexes)] = new DynamicJsonValue
