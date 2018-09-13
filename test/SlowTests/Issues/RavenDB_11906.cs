@@ -47,9 +47,11 @@ namespace SlowTests.Issues
                                        })
                                };
 
+                // dynamic fields can inherit settings from default field options (__all_fields)
                 Analyze(Constants.Documents.Indexing.Fields.AllFields, "StandardAnalyzer");
                 Index(Constants.Documents.Indexing.Fields.AllFields, FieldIndexing.Search);
 
+                // default field options can be overriden per field basis
                 Index(x => x.OtherField, FieldIndexing.Default);
             }
         }
