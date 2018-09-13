@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -26,6 +27,21 @@ namespace SlowTests.Issues
                                            TermVector = null
                                        })
                                };
+            }
+        }
+
+        private class Index1_JavaScript : AbstractJavaScriptIndexCreationTask
+        {
+            public Index1_JavaScript()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"map('Items', function (i){
+                                    return {
+                                        _: { $value: i.FieldValue, $name: i.FieldName, $options: { indexing: 'Exact', storage: true, termVector: null }}
+                                    };
+                                })",
+                };
             }
         }
 
@@ -75,6 +91,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 new Index1().Execute(store);
+                new Index1_JavaScript().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -93,6 +110,10 @@ namespace SlowTests.Issues
                 RavenTestHelper.AssertNoIndexErrors(store);
 
                 var terms = store.Maintenance.Send(new GetTermsOperation(new Index1().IndexName, "F1", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Equal("Value1", terms[0]);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(new Index1_JavaScript().IndexName, "F1", null));
                 Assert.Equal(1, terms.Length);
                 Assert.Equal("Value1", terms[0]);
             }

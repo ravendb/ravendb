@@ -665,7 +665,7 @@ namespace FastTests.Client.Indexing
                             @"map('Users', function (u){
                                     return {
                                         Name: u.Name,
-                                        _: {$value: u.Name, $name:'AnalyzedName', $options:{index: true, store: true}}
+                                        _: {$value: u.Name, $name:'AnalyzedName', $options:{indexing: 'Search', storage: true}}
                                     };
                                 })",
                         };
@@ -744,7 +744,7 @@ namespace FastTests.Client.Indexing
             {
                 Maps = new HashSet<string>
                 {
-                    @"map('Locations', function (l){ return { Description: l.Description, _:{$value: createSpatialField(l.Latitude, l.Longitude), $name:'Location', $options:{index: true, store: true}} }})",
+                    @"map('Locations', function (l){ return { Description: l.Description, _:{$value: createSpatialField(l.Latitude, l.Longitude), $name:'Location', $options:{indexing: 'Search', storage: true}} }})",
                 };
             }
         }

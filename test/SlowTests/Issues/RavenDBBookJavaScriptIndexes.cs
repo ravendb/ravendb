@@ -70,12 +70,12 @@ namespace SlowTests.Issues
                     {
                         $value: o[p], 
                         $name: p, 
-                        $options:{index: true, store: true}
+                        $options:{indexing: 'Search', storage: true}
                     })
     }
     return { 
              _: multipleDynamicFields,
-             __:  {$value: e.LastName, $name: e.FirstName, $options: {index: true, store: true} } ,
+             __:  {$value: e.LastName, $name: e.FirstName, $options: {indexing: 'Search', storage: true} } ,
             Name: e.FirstName + ' ' + e.LastName
            };                            
 })",
