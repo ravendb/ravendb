@@ -541,7 +541,7 @@ namespace Raven.Server.Documents.Replication
             sw.Stop();
 
             if (_log.IsInfoEnabled && _orderedReplicaItems.Count > 0)
-                _log.Info($"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count:#,#;;0} attachment streams in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag}");
+                _log.Info($"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count:#,#;;0} attachment streams in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag:#,#;;0}");
 
             var (type, _) = _parent.HandleServerResponse();
             if (type == ReplicationMessageReply.ReplyType.MissingAttachments)
