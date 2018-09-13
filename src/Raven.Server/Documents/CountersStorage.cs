@@ -270,9 +270,7 @@ namespace Raven.Server.Documents
                         table.Set(tvb);
                     }
 
-                    _documentDatabase.Metrics.Counters.PutsPerSec.MarkSingleThreaded(1);
-                    // counter key + name + etag + value + change vector + collection
-                    _documentDatabase.Metrics.Counters.BytesPutsPerSec.MarkSingleThreaded(counterKey.Size + nameSlice.Size + 8 + 8 + changeVector.Length + collectionName.Name.Length);
+                    UpdateMetrics(counterKey, name, changeVector, collection);
 
                     context.Transaction.AddAfterCommitNotification(new CounterChange
                     {
@@ -284,6 +282,18 @@ namespace Raven.Server.Documents
                     });
                 }
             }
+        }
+
+        private void UpdateMetrics(Slice counterKey, string counterName, string changeVector, string collection)
+        {
+            _documentDatabase.Metrics.Counters.PutsPerSec.MarkSingleThreaded(1);
+            var bytesPutsInBytes =
+                counterKey.Size + counterName.Length
+                                + sizeof(long) // etag 
+                                + sizeof(long) // counter value
+                                + changeVector.Length + collection.Length;
+
+            _documentDatabase.Metrics.Counters.BytesPutsPerSec.MarkSingleThreaded(bytesPutsInBytes);
         }
 
         private void RemoveTombstoneIfExists(DocumentsOperationContext context, string documentId, string name)
@@ -378,9 +388,7 @@ namespace Raven.Server.Documents
                     table.Set(tvb);
                 }
 
-                _documentDatabase.Metrics.Counters.PutsPerSec.MarkSingleThreaded(1);
-                // counter key + name + etag + value + change vector + collection
-                _documentDatabase.Metrics.Counters.BytesPutsPerSec.MarkSingleThreaded(counterKey.Size + name.Length + 16 + result.ChangeVector.Length + collectionName.Name.Length);
+                UpdateMetrics(counterKey, name, result.ChangeVector, collection);
 
                 context.Transaction.AddAfterCommitNotification(new CounterChange
                 {
