@@ -8,10 +8,11 @@ namespace SlowTests.Issues
 {
     public class GH_6008 : RavenTestBase
     {
-        public class Item
+        private class Item
         {
 
         }
+
         [Fact]
         public void CanGetIsLoadedTrueForNewValue()
         {

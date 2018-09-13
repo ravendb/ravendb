@@ -63,6 +63,17 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Provide a way to dynamically index values with runtime known values
         /// </summary>
+        protected object CreateField(
+            string name,
+            object value,
+            CreateFieldOptions options)
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
+        /// <summary>
+        /// Provide a way to dynamically index values with runtime known values
+        /// </summary>
         protected object CreateField(string name, object value, bool stored, bool analyzed)
         {
             throw new NotSupportedException("This can only be run on the server side");

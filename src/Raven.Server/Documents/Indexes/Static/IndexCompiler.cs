@@ -32,11 +32,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private const string IndexExtension = ".index";
 
-        private static Lazy<(string Path, AssemblyName AssemblyName, MetadataReference Reference)[]> KnownManagedDlls = new Lazy<(string,AssemblyName,MetadataReference)[]>(DiscoverManagedDlls);
+        private static readonly Lazy<(string Path, AssemblyName AssemblyName, MetadataReference Reference)[]> KnownManagedDlls = new Lazy<(string, AssemblyName, MetadataReference)[]>(DiscoverManagedDlls);
 
         static IndexCompiler()
         {
-            AssemblyLoadContext.Default.Resolving += (AssemblyLoadContext ctx, AssemblyName name) =>
+            AssemblyLoadContext.Default.Resolving += (ctx, name) =>
             {
                 if (KnownManagedDlls.IsValueCreated == false)
                     return null; // this also handles the case of failure
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 AssemblyName name;
                 try
                 {
-                    name= AssemblyLoadContext.GetAssemblyName(dll);
+                    name = AssemblyLoadContext.GetAssemblyName(dll);
                 }
                 catch (Exception)
                 {
@@ -83,6 +83,8 @@ namespace Raven.Server.Documents.Indexes.Static
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Text.RegularExpressions")),
 
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Lucene.Net.Documents")),
+
+            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName(typeof(CreateFieldOptions).Namespace)),
 
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static.Linq")),
@@ -106,7 +108,7 @@ namespace Raven.Server.Documents.Indexes.Static
             MetadataReference.CreateFromFile(typeof(Uri).GetTypeInfo().Assembly.Location)
         };
 
-     
+
         public static StaticIndexBase Compile(IndexDefinition definition)
         {
             var cSharpSafeName = GetCSharpSafeName(definition.Name);
@@ -136,10 +138,10 @@ namespace Raven.Server.Documents.Indexes.Static
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(@namespace))
                 .NormalizeWhitespace();
 
-            SyntaxNode formatedCompilationUnit;
+            SyntaxNode formattedCompilationUnit;
             using (var workspace = new AdhocWorkspace())
             {
-                formatedCompilationUnit = Formatter.Format(compilationUnit, workspace);
+                formattedCompilationUnit = Formatter.Format(compilationUnit, workspace);
             }
 
             string sourceFile = null;
@@ -147,12 +149,12 @@ namespace Raven.Server.Documents.Indexes.Static
             if (EnableDebugging)
             {
                 sourceFile = Path.Combine(Path.GetTempPath(), name + ".cs");
-                File.WriteAllText(sourceFile, formatedCompilationUnit.ToFullString(), Encoding.UTF8);
+                File.WriteAllText(sourceFile, formattedCompilationUnit.ToFullString(), Encoding.UTF8);
             }
 
             var st = EnableDebugging
                 ? SyntaxFactory.ParseSyntaxTree(File.ReadAllText(sourceFile), path: sourceFile, encoding: Encoding.UTF8)
-                : SyntaxFactory.ParseSyntaxTree(formatedCompilationUnit.ToFullString());
+                : SyntaxFactory.ParseSyntaxTree(formattedCompilationUnit.ToFullString());
 
             res.SyntaxTrees.Add(st);
             var syntaxTrees = res.SyntaxTrees;
@@ -165,7 +167,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     .WithOptimizationLevel(EnableDebugging ? OptimizationLevel.Debug : OptimizationLevel.Release)
                 );
 
-            var code = formatedCompilationUnit.SyntaxTree.ToString();
+            var code = formattedCompilationUnit.SyntaxTree.ToString();
 
             var asm = new MemoryStream();
             var pdb = EnableDebugging ? new MemoryStream() : null;
@@ -400,7 +402,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     if (fieldNamesValidator?.Fields.Contains(groupByField) == false)
                     {
-                        throw new InvalidOperationException($"Group by field '{groupByField}' was not found on the list of index fields ({string.Join(", ",fieldNamesValidator.Fields)})");
+                        throw new InvalidOperationException($"Group by field '{groupByField}' was not found on the list of index fields ({string.Join(", ", fieldNamesValidator.Fields)})");
                     }
                 }
 

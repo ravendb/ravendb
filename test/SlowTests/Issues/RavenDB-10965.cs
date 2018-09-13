@@ -9,7 +9,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_10965 : RavenTestBase
     {
-        public class Item
+        private class Item
         {
             public Exception E;
         }
