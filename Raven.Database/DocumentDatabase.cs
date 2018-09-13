@@ -2104,16 +2104,30 @@ namespace Raven.Database
                 {
                     var sp = Stopwatch.StartNew();
                     var result = BatchWithRetriesOnConcurrencyErrorsAndNoTransactionMerging(commands);
-                    log.Debug("Successfully executed {0} patch commands in {1}", commands.Count, sp.Elapsed);
+                    if (log.IsDebugEnabled)
+                        log.Debug("Successfully executed {0} patch commands in {1}", commands.Count, sp.Elapsed);
                     return result;
                 }
 
                 BatchResult[] results = null;
+
+                Stopwatch sp2 = null;
+                if (log.IsDebugEnabled)
+                {
+                    sp2 = Stopwatch.StartNew();
+                }
+
                 TransactionalStorage.Batch(
                     actions =>
                     {
                         results = ProcessBatch(commands);
                     });
+
+                if (log.IsDebugEnabled)
+                {
+                    log.Debug($"Executed {commands.Count:#,#;;0} commands, " +
+                              $"took: {sp2?.ElapsedMilliseconds:#,#;;0}ms");
+                }
 
                 return results;
             }
