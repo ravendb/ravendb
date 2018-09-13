@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     object value;
                     if (actualValue.IsObject() && actualValue.IsArray() == false)
                     {
-                        //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' witht the actual property name 
+                        //In case TryDetectDynamicFieldCreation finds a dynamic field it will populate 'field.Name' with the actual property name 
                         //so we must use field.Name and not property from this point on.
                         var val = TryDetectDynamicFieldCreation(property, actualValue.AsObject(), field);
                         if (val != null)
@@ -129,10 +129,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return newFields;
         }
 
-        private static readonly string[] IndexFieldValues = { "index", "Index" };
-
-        private static readonly string[] StoreFieldValues = { "store", "Store" };
-
         private static JsValue TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject, IndexField field)
         {
             //We have a field creation here _ = {"$value":val, "$name","$options":{...}}
@@ -158,25 +154,54 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
 
                 var optionObj = options.AsObject();
-                foreach (var searchField in IndexFieldValues)
+                foreach (var kvp in optionObj.GetOwnProperties())
                 {
-                    if (optionObj.Get(searchField).IsBoolean())
+                    var optionValue = kvp.Value.Value;
+                    if (optionValue.IsUndefined() || optionValue.IsNull())
+                        continue;
+
+                    var propertyName = kvp.Key;
+                    if (string.Equals(propertyName, nameof(CreateFieldOptions.Indexing), StringComparison.OrdinalIgnoreCase))
                     {
-                        var indexing = optionObj.Get(searchField).AsBoolean();
-                        field.Indexing = indexing ? FieldIndexing.Search : FieldIndexing.No;
+                        field.Indexing = GetEnum<FieldIndexing>(optionValue, propertyName);
+
+                        continue;
                     }
-                }
-                foreach (var storeFieldd in StoreFieldValues)
-                {
-                    if (optionObj.Get(storeFieldd).IsBoolean())
+
+                    if (string.Equals(propertyName, nameof(CreateFieldOptions.Storage), StringComparison.OrdinalIgnoreCase))
                     {
-                        var store = optionObj.Get(storeFieldd).AsBoolean();
-                        field.Storage = store ? FieldStorage.Yes : FieldStorage.No;
+                        if (optionValue.IsBoolean())
+                            field.Storage = optionValue.AsBoolean()
+                                ? FieldStorage.Yes
+                                : FieldStorage.No;
+                        else
+                            field.Storage = GetEnum<FieldStorage>(optionValue, propertyName);
+
+                        continue;
+                    }
+
+                    if (string.Equals(propertyName, nameof(CreateFieldOptions.TermVector), StringComparison.OrdinalIgnoreCase))
+                    {
+                        field.TermVector = GetEnum<FieldTermVector>(optionValue, propertyName);
+
+                        continue;
                     }
                 }
             }
 
             return value;
+
+            TEnum GetEnum<TEnum>(JsValue optionValue, string propertyName)
+            {
+                if (optionValue.IsString() == false)
+                    throw new ArgumentException($"Could not parse dynamic field option property '{propertyName}' value ('{optionValue}') because it is not a string.");
+
+                var optionValueAsString = optionValue.AsString();
+                if (Enum.TryParse(typeof(TEnum), optionValueAsString, true, out var enumValue) == false)
+                    throw new ArgumentException($"Could not parse dynamic field option property '{propertyName}' value ('{optionValueAsString}') into '{typeof(TEnum).Name}' enum.");
+
+                return (TEnum)enumValue;
+            }
         }
 
         private static IEnumerable<JsValue> EnumerateValues(JsValue jv)
