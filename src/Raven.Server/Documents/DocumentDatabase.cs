@@ -746,24 +746,28 @@ namespace Raven.Server.Documents
             return databaseInfo;
         }
 
-        public DatabaseSummary GetDatabaseSummary(DocumentsOperationContext documentsContext)
-        {
-            return new DatabaseSummary
-            {
-                DocumentsCount = DocumentsStorage.GetNumberOfDocuments(),
-                AttachmentsCount = DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(documentsContext).AttachmentCount,
-                RevisionsCount = DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(documentsContext),
-                ConflictsCount = DocumentsStorage.ConflictsStorage.GetNumberOfConflicts(documentsContext),
-                CountersCount = DocumentsStorage.CountersStorage.GetNumberOfCounterEntries(documentsContext)
-            };
-        }
-
         public DatabaseSummary GetDatabaseSummary()
         {
             using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (documentsContext.OpenReadTransaction())
             {
-                return GetDatabaseSummary(documentsContext);
+                return new DatabaseSummary
+                {
+                    DocumentsCount = DocumentsStorage.GetNumberOfDocuments(documentsContext),
+                    AttachmentsCount = DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(documentsContext).AttachmentCount,
+                    RevisionsCount = DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(documentsContext),
+                    ConflictsCount = DocumentsStorage.ConflictsStorage.GetNumberOfConflicts(documentsContext),
+                    CountersCount = DocumentsStorage.CountersStorage.GetNumberOfCounterEntries(documentsContext)
+                };
+            }
+        }
+
+        public long ReadLastEtag()
+        {
+            using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
+            using (var tx = documentsContext.OpenReadTransaction())
+            {
+                return DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
             }
         }
 
@@ -854,78 +858,82 @@ namespace Raven.Server.Documents
 
             using (var file = SafeFileStream.Create(backupPath, FileMode.Create))
             using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
             {
-                var databaseRecord = _serverStore.Cluster.ReadDatabase(context, Name);
-                Debug.Assert(databaseRecord != null);
-
-                var zipArchiveEntry = package.CreateEntry(RestoreSettings.SmugglerValuesFileName, CompressionLevel.Optimal);
-                using (var zipStream = zipArchiveEntry.Open())
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 {
-                    var smugglerSource = new DatabaseSource(this, 0);
-                    using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
+                    var databaseRecord = _serverStore.LoadDatabaseRecord(Name, out _);
+                    Debug.Assert(databaseRecord != null);
+
+                    var zipArchiveEntry = package.CreateEntry(RestoreSettings.SmugglerValuesFileName, CompressionLevel.Optimal);
+                    using (var zipStream = zipArchiveEntry.Open())
                     {
-                        var smugglerDestination = new StreamDestination(zipStream, ctx, smugglerSource);
-                        var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
+                        var smugglerSource = new DatabaseSource(this, 0);
+                        using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
                         {
-                            AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
-                            OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities,
-                            ExecutePendingClusterTransactions = true
-                        };
-                        var smuggler = new DatabaseSmuggler(this,
-                            smugglerSource,
-                            smugglerDestination,
-                            Time,
-                            options: databaseSmugglerOptionsServerSide,
-                            token: cancellationToken);
+                            var smugglerDestination = new StreamDestination(zipStream, documentsContext, smugglerSource);
+                            var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
+                            {
+                                AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
+                                OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities,
+                                ExecutePendingClusterTransactions = true
+                            };
+                            var smuggler = new DatabaseSmuggler(this,
+                                smugglerSource,
+                                smugglerDestination,
+                                Time,
+                                options: databaseSmugglerOptionsServerSide,
+                                token: cancellationToken);
 
-                        smugglerResult = smuggler.Execute();
+                            smugglerResult = smuggler.Execute();
+                        }
                     }
-                }
 
-                infoNotify?.Invoke(("Backed up Database Record", 1));
+                    infoNotify?.Invoke(("Backed up Database Record", 1));
 
-                zipArchiveEntry = package.CreateEntry(RestoreSettings.SettingsFileName, CompressionLevel.Optimal);
-                using (var zipStream = zipArchiveEntry.Open())
-                using (var writer = new BlittableJsonTextWriter(context, zipStream))
-                {
-                    //TODO: encrypt this file using the MasterKey
-                    //http://issues.hibernatingrhinos.com/issue/RavenDB-7546
-
-                    writer.WriteStartObject();
-
-                    // save the database record
-                    writer.WritePropertyName(nameof(RestoreSettings.DatabaseRecord));
-                    var databaseRecordBlittable = EntityToBlittable.ConvertCommandToBlittable(databaseRecord, context);
-                    context.Write(writer, databaseRecordBlittable);
-
-                    // save the database values (subscriptions, periodic backups statuses, etl states...)
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(RestoreSettings.DatabaseValues));
-                    writer.WriteStartObject();
-
-                    var first = true;
-                    var prefix = Helpers.ClusterStateMachineValuesPrefix(Name);
-                    foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, prefix))
+                    zipArchiveEntry = package.CreateEntry(RestoreSettings.SettingsFileName, CompressionLevel.Optimal);
+                    using (var zipStream = zipArchiveEntry.Open())
+                    using (var writer = new BlittableJsonTextWriter(serverContext, zipStream))
                     {
-                        cancellationToken.ThrowIfCancellationRequested();
+                        //TODO: encrypt this file using the MasterKey
+                        //http://issues.hibernatingrhinos.com/issue/RavenDB-7546
 
-                        if (first == false)
-                            writer.WriteComma();
+                        writer.WriteStartObject();
 
-                        first = false;
+                        // save the database record
+                        writer.WritePropertyName(nameof(RestoreSettings.DatabaseRecord));
+                        var databaseRecordBlittable = EntityToBlittable.ConvertCommandToBlittable(databaseRecord, serverContext);
+                        serverContext.Write(writer, databaseRecordBlittable);
 
-                        var key = keyValue.Key.ToString().Substring(prefix.Length);
-                        writer.WritePropertyName(key);
-                        context.Write(writer, keyValue.Value);
+                        // save the database values (subscriptions, periodic backups statuses, etl states...)
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(RestoreSettings.DatabaseValues));
+                        writer.WriteStartObject();
+
+                        var first = true;
+                        var prefix = Helpers.ClusterStateMachineValuesPrefix(Name);
+
+                        using (serverContext.OpenReadTransaction())
+                        {
+                            foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(serverContext, prefix))
+                            {
+                                cancellationToken.ThrowIfCancellationRequested();
+
+                                if (first == false)
+                                    writer.WriteComma();
+
+                                first = false;
+
+                                var key = keyValue.Key.ToString().Substring(prefix.Length);
+                                writer.WritePropertyName(key);
+                                serverContext.Write(writer, keyValue.Value);
+                            }
+                        }
+
+                        writer.WriteEndObject();
+                        // end of values
+
+                        writer.WriteEndObject();
                     }
-
-                    writer.WriteEndObject();
-                    // end of values
-
-                    writer.WriteEndObject();
                 }
 
                 infoNotify?.Invoke(("Backed up database values", 1));

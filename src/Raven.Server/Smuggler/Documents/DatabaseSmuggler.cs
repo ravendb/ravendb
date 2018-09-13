@@ -601,6 +601,8 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     actions.WriteCounter(counterDetail);
+
+                    result.Counters.LastEtag = counterDetail.Etag;
                 }
             }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Raven.Client;
@@ -28,7 +29,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private IDisposable _returnContext;
         private IDisposable _returnServerContext;
-        private IDisposable _disposeTransaction;
+        private DocumentsTransaction _disposeTransaction;
         private IDisposable _disposeServerTransaction;
 
         private int _currentTypeIndex;
@@ -47,6 +48,8 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.None
         };
 
+        public long LastEtag { get; private set; }
+
         public DatabaseSource(DocumentDatabase database, long startDocumentEtag)
         {
             _database = database;
@@ -56,20 +59,33 @@ namespace Raven.Server.Smuggler.Documents
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion)
         {
             _currentTypeIndex = 0;
-            _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
-            _disposeTransaction = _context.OpenReadTransaction();
 
-            _returnServerContext = _database.ServerStore.ContextPool.AllocateOperationContext(out _serverContext);
-            _disposeServerTransaction = _serverContext.OpenReadTransaction();
+            if (options.OperateOnTypes.HasFlag(DatabaseItemType.Documents) ||
+                options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) ||
+                options.OperateOnTypes.HasFlag(DatabaseItemType.Tombstones) ||
+                options.OperateOnTypes.HasFlag(DatabaseItemType.Conflicts) ||
+                options.OperateOnTypes.HasFlag(DatabaseItemType.Counters))
+            {
+                _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
+                _disposeTransaction = _context.OpenReadTransaction();
+                LastEtag = DocumentsStorage.ReadLastEtag(_disposeTransaction.InnerTransaction);
+            }
+
+            if (options.OperateOnTypes.HasFlag(DatabaseItemType.CompareExchange) ||
+                options.OperateOnTypes.HasFlag(DatabaseItemType.Identities))
+            {
+                _returnServerContext = _database.ServerStore.ContextPool.AllocateOperationContext(out _serverContext);
+                _disposeServerTransaction = _serverContext.OpenReadTransaction();
+            }
 
             buildVersion = ServerVersion.Build;
             return new DisposableAction(() =>
             {
-                _disposeServerTransaction.Dispose();
-                _returnServerContext.Dispose();
+                _disposeServerTransaction?.Dispose();
+                _returnServerContext?.Dispose();
 
-                _disposeTransaction.Dispose();
-                _returnContext.Dispose();
+                _disposeTransaction?.Dispose();
+                _returnContext?.Dispose();
             });
         }
 
@@ -85,6 +101,8 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
+            Debug.Assert(_context != null);
+
             var documents = collectionsToExport.Count != 0
                 ? _database.DocumentsStorage.GetDocumentsFrom(_context, collectionsToExport, _startDocumentEtag, int.MaxValue)
                 : _database.DocumentsStorage.GetDocumentsFrom(_context, _startDocumentEtag, 0, int.MaxValue);
@@ -100,6 +118,8 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
+            Debug.Assert(_context != null);
+
             var revisionsStorage = _database.DocumentsStorage.RevisionsStorage;
             if (revisionsStorage.Configuration == null)
                 yield break;
@@ -131,6 +151,8 @@ namespace Raven.Server.Smuggler.Documents
 
         public Stream GetAttachmentStream(LazyStringValue hash, out string tag)
         {
+            Debug.Assert(_context != null);
+
             using (Slice.External(_context.Allocator, hash, out Slice hashSlice))
             {
                 return _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(_context, hashSlice, out tag);
@@ -139,10 +161,12 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<Tombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
         {
+            Debug.Assert(_context != null);
+
             var tombstones = collectionsToExport.Count > 0
                 ? _database.DocumentsStorage.GetTombstonesFrom(_context, collectionsToExport, _startDocumentEtag, int.MaxValue)
                 : _database.DocumentsStorage.GetTombstonesFrom(_context, _startDocumentEtag, 0, int.MaxValue);
-
+            
             foreach (var tombstone in tombstones)
             {
                 yield return tombstone;
@@ -151,6 +175,8 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<DocumentConflict> GetConflicts(List<string> collectionsToExport, INewDocumentActions actions)
         {
+            Debug.Assert(_context != null);
+
             var conflicts = _database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(_context, _startDocumentEtag);
 
             if (collectionsToExport.Count > 0)
@@ -226,16 +252,22 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<(string Prefix, long Value)> GetIdentities()
         {
+            Debug.Assert(_serverContext != null);
+
             return _database.ServerStore.Cluster.ReadIdentities(_serverContext, _database.Name, 0, long.MaxValue);
         }
 
         public IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues()
         {
+            Debug.Assert(_serverContext != null);
+
             return _database.ServerStore.Cluster.GetCompareExchangeValuesStartsWith(_serverContext, _database.Name, CompareExchangeCommandBase.GetActualKey(_database.Name, null), 0, int.MaxValue);
         }
 
         public IEnumerable<CounterDetail> GetCounterValues()
         {
+            Debug.Assert(_context != null);
+
             return _database.DocumentsStorage.CountersStorage.GetCountersFrom(_context, _startDocumentEtag, 0, int.MaxValue);
         }
 
