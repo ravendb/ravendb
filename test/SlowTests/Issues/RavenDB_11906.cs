@@ -50,7 +50,6 @@ namespace SlowTests.Issues
                 Analyze(Constants.Documents.Indexing.Fields.AllFields, "StandardAnalyzer");
                 Index(Constants.Documents.Indexing.Fields.AllFields, FieldIndexing.Search);
 
-                Analyze(x => x.OtherField, "Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.LowerCaseKeywordAnalyzer");
                 Index(x => x.OtherField, FieldIndexing.Default);
             }
         }
