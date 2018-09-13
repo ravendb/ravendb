@@ -25,7 +25,9 @@ namespace Raven.Database.Server.Responders
 {
 	public class DocumentBatch : AbstractRequestResponder
 	{
-		public override string UrlPattern
+	    private readonly static ILog log = LogManager.GetCurrentClassLogger();
+
+        public override string UrlPattern
 		{
 			get { return @"^/bulk_docs(/(.+))?"; }
 		}
@@ -136,11 +138,20 @@ namespace Raven.Database.Server.Responders
             public bool Completed { get; set; }
 	    }
 
-	    private void Batch(IHttpContext context)
+	    private static long numberOfConcurrentBulkPosts = 0;
+
+        private void Batch(IHttpContext context)
 		{
 			RavenJArray jsonCommandArray;
 
-		    try
+		    Stopwatch sp = null;
+		    var isDebugEnabled = log.IsDebugEnabled;
+		    if (isDebugEnabled)
+		    {
+		        sp = Stopwatch.StartNew();
+		    }
+
+            try
 		    {
 			    jsonCommandArray = context.ReadJsonArray();
 		    }
@@ -155,28 +166,51 @@ namespace Raven.Database.Server.Responders
 				return;
 			}
 
+		    if (isDebugEnabled)
+		    {
+                log.Debug($"Read bulk_docs data commands, took: {sp.ElapsedMilliseconds}ms");
+		    }
+
 		    var transactionInformation = GetRequestTransaction(context);
 			var commands = (from RavenJObject jsonCommand in jsonCommandArray
 			                select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation))
 				.ToArray();
 
-			context.Log(log => log.Debug(()=>
-			{
-				if (commands.Length > 15) // this is probably an import method, we will input minimal information, to avoid filling up the log
-				{
-					return "\tExecuted " + string.Join(", ", commands.GroupBy(x => x.Method).Select(x => string.Format("{0:#,#;;0} {1} operations", x.Count(), x.Key)));
-				}
+            if (isDebugEnabled)
+		    {
+		        Interlocked.Increment(ref numberOfConcurrentBulkPosts);
+                log.Debug(() =>
+                {
+                    if (commands.Length > 15) // this is probably an import method, we will input minimal information, to avoid filling up the log
+                    {
+                        return "\tExecuting "
+                               + string.Join(
+                                   ", ", commands.GroupBy(x => x.Method).Select(x => string.Format("{0:#,#;;0} {1} operations", x.Count(), x.Key))) + "" +
+                               $", number of concurrent BulkPost: {Interlocked.Read(ref numberOfConcurrentBulkPosts):#,#;;0}";
+                    }
 
-				var sb = new StringBuilder();
-				foreach (var commandData in commands)
-				{
-					sb.AppendFormat("\t{0} {1}{2}", commandData.Method, commandData.Key, Environment.NewLine);
-				}
-				return sb.ToString();
-			}));
+                    var sb = new StringBuilder();
+                    foreach (var commandData in commands)
+                    {
+                        sb.AppendFormat("\t{0} {1}{2}", commandData.Method, commandData.Key, Environment.NewLine);
+                    }
+
+                    return sb.ToString();
+                });
+
+		        sp.Restart();
+            }
 
 			var batchResult = Database.Batch(commands);
-			context.WriteJson(batchResult);
+
+		    if (isDebugEnabled)
+		    {
+		        log.Debug($"Executed {commands.Length:#,#;;0} operations, " +
+		                  $"took: {sp.ElapsedMilliseconds:#,#;;0}ms, " +
+		                  $"number of concurrent BulkPost: {numberOfConcurrentBulkPosts:#,#;;0}");
+		    }
+
+            context.WriteJson(batchResult);
 		}
 	}
 }
