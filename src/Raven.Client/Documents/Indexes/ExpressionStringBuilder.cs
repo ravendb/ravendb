@@ -759,9 +759,13 @@ namespace Raven.Client.Documents.Indexes
             if (node.Value is Enum)
             {
                 var enumType = node.Value.GetType();
-                if (TypeExistsOnServer(enumType))
+                if (_insideWellKnownType || TypeExistsOnServer(enumType))
                 {
-                    Out(enumType.FullName.Replace("+", "."));
+                    var name = _insideWellKnownType 
+                        ? enumType.Name 
+                        : enumType.FullName;
+
+                    Out(name.Replace("+", "."));
                     Out('.');
                     Out(s);
                     return node;
@@ -952,7 +956,7 @@ namespace Raven.Client.Documents.Indexes
                 return "object";
             }
             const string knownNamespace = "System";
-            if (knownNamespace == type.Namespace)
+            if (_insideWellKnownType || knownNamespace == type.Namespace)
             {
                 isValueTypeOnTheServerSide = type.GetTypeInfo().IsValueType;
                 return type.Name;
@@ -962,6 +966,9 @@ namespace Raven.Client.Documents.Indexes
 
         private bool TypeExistsOnServer(Type type)
         {
+            if (_insideWellKnownType)
+                return true;
+
             if (type.GetTypeInfo().Assembly == typeof(object).GetTypeInfo().Assembly) // mscorlib
                 return true;
 
@@ -1283,7 +1290,7 @@ namespace Raven.Client.Documents.Indexes
             if (constantExpression != null && constantExpression.Value == null)
             {
                 var memberType = GetMemberType(assignment.Member);
-                if (ShouldConvert(memberType))
+                if (_insideWellKnownType || ShouldConvert(memberType))
                 {
                     Visit(Expression.Convert(assignment.Expression, memberType));
                 }
@@ -1306,6 +1313,11 @@ namespace Raven.Client.Documents.Indexes
         /// </returns>
         protected override Expression VisitMemberInit(MemberInitExpression node)
         {
+            var originalInsideWellKnownType = _insideWellKnownType;
+
+            if (node.Type == typeof(CreateFieldOptions))
+                _insideWellKnownType = true;
+
             if ((node.NewExpression.Arguments.Count == 0) && node.NewExpression.Type.Name.Contains("<"))
             {
                 Out("new");
@@ -1333,6 +1345,10 @@ namespace Raven.Client.Documents.Indexes
                 num++;
             }
             Out("}");
+
+            if (node.Type == typeof(CreateFieldOptions))
+                _insideWellKnownType = originalInsideWellKnownType;
+
             return node;
         }
 
@@ -1922,6 +1938,7 @@ namespace Raven.Client.Documents.Indexes
             "while"
         });
 
+        private bool _insideWellKnownType;
         private bool _avoidDuplicatedParameters;
         private bool _isSelectMany;
 
@@ -2194,8 +2211,11 @@ namespace Raven.Client.Documents.Indexes
             return node;
         }
 
-        private static bool ShouldConvert(Type nonNullableType)
+        private bool ShouldConvert(Type nonNullableType)
         {
+            if (_insideWellKnownType)
+                return false;
+
             if (nonNullableType.GetTypeInfo().IsEnum)
                 return true;
 

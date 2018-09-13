@@ -108,29 +108,17 @@ namespace Raven.Server.Documents.Indexes.Static
                 keyOrEnumerable.GetType().FullName + ": " + keyOrEnumerable);
         }
 
-        protected IEnumerable<AbstractField> CreateField(string name, object value, bool stored = false, bool? analyzed = null)
+        protected IEnumerable<AbstractField> CreateField(string name, object value, CreateFieldOptions options)
         {
             // IMPORTANT: Do not delete this method, it is used by the indexes code when using LoadDocument
-            FieldIndexing? index;
 
-            switch (analyzed)
-            {
-                case true:
-                    index = FieldIndexing.Search;
-                    break;
-                case false:
-                    index = FieldIndexing.Exact;
-                    break;
-                default:
-                    index = null;
-                    break;
-            }
+            options = options ?? CreateFieldOptions.Default;
 
             var field = IndexField.Create(name, new IndexFieldOptions
             {
-                Storage = stored ? FieldStorage.Yes : FieldStorage.No,
-                TermVector = FieldTermVector.No,
-                Indexing = index
+                Storage = options.Storage,
+                TermVector = options.TermVector,
+                Indexing = options.Indexing
             }, null);
 
             if (CurrentIndexingScope.Current.CreateFieldConverter == null)
@@ -139,6 +127,33 @@ namespace Raven.Server.Documents.Indexes.Static
             var result = new List<AbstractField>();
             CurrentIndexingScope.Current.CreateFieldConverter.GetRegularFields(new StaticIndexLuceneDocumentWrapper(result), field, value, CurrentIndexingScope.Current.IndexContext);
             return result;
+        }
+
+        protected IEnumerable<AbstractField> CreateField(string name, object value, bool stored = false, bool? analyzed = null)
+        {
+            // IMPORTANT: Do not delete this method, it is used by the indexes code when using LoadDocument
+
+            FieldIndexing? indexing;
+
+            switch (analyzed)
+            {
+                case true:
+                    indexing = FieldIndexing.Search;
+                    break;
+                case false:
+                    indexing = FieldIndexing.Exact;
+                    break;
+                default:
+                    indexing = null;
+                    break;
+            }
+
+            return CreateField(name, value, new CreateFieldOptions
+            {
+                Storage = stored ? FieldStorage.Yes : FieldStorage.No,
+                Indexing = indexing,
+                TermVector = FieldTermVector.No
+            });
         }
 
         public IEnumerable<AbstractField> CreateSpatialField(string name, object lat, object lng)

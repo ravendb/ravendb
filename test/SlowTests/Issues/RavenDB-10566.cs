@@ -11,11 +11,12 @@ namespace SlowTests.Issues
 {
     public class CustomerMetadataAfterSaveChanges : RavenTestBase
     {
-        public class Page
+        private class Page
         {
             public string PageId;
         }
-        public class Item
+
+        private class Item
         {
             public Dictionary<string, Page> Trie = new Dictionary<string, Page>();
             public Dictionary<string, string> Items = new Dictionary<string, string>();
