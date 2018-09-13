@@ -110,28 +110,33 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected IEnumerable<AbstractField> CreateField(string name, object value, CreateFieldOptions options)
         {
-            // IMPORTANT: Do not delete this method, it is used by the indexes code when using LoadDocument
+            // IMPORTANT: Do not delete this method, it is used by the indexes code when using CreateField
 
             options = options ?? CreateFieldOptions.Default;
+
+            IndexFieldOptions allFields = null;
+            var scope = CurrentIndexingScope.Current;
+            if (scope.IndexDefinition is MapIndexDefinition mapIndexDefinition)
+                mapIndexDefinition.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out allFields);
 
             var field = IndexField.Create(name, new IndexFieldOptions
             {
                 Storage = options.Storage,
                 TermVector = options.TermVector,
                 Indexing = options.Indexing
-            }, null);
+            }, allFields);
 
-            if (CurrentIndexingScope.Current.CreateFieldConverter == null)
-                CurrentIndexingScope.Current.CreateFieldConverter = new LuceneDocumentConverter(new IndexField[] { });
+            if (scope.CreateFieldConverter == null)
+                scope.CreateFieldConverter = new LuceneDocumentConverter(new IndexField[] { });
 
             var result = new List<AbstractField>();
-            CurrentIndexingScope.Current.CreateFieldConverter.GetRegularFields(new StaticIndexLuceneDocumentWrapper(result), field, value, CurrentIndexingScope.Current.IndexContext);
+            scope.CreateFieldConverter.GetRegularFields(new StaticIndexLuceneDocumentWrapper(result), field, value, CurrentIndexingScope.Current.IndexContext);
             return result;
         }
 
         protected IEnumerable<AbstractField> CreateField(string name, object value, bool stored = false, bool? analyzed = null)
         {
-            // IMPORTANT: Do not delete this method, it is used by the indexes code when using LoadDocument
+            // IMPORTANT: Do not delete this method, it is used by the indexes code when using CreateField
 
             FieldIndexing? indexing;
 

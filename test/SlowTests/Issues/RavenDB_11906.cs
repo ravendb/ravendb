@@ -1,7 +1,9 @@
 ﻿using System.Linq;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries.Highlighting;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -27,6 +29,32 @@ namespace SlowTests.Issues
             }
         }
 
+        private class Index2 : AbstractIndexCreationTask<Item>
+        {
+            public Index2()
+            {
+                Map = items => from i in items
+                               select new
+                               {
+                                   OtherField = i.OtherField,
+                                   _ = CreateField(
+                                       i.FieldName,
+                                       i.FieldValue, new CreateFieldOptions
+                                       {
+                                           Indexing = FieldIndexing.Search,
+                                           Storage = FieldStorage.Yes,
+                                           TermVector = FieldTermVector.WithPositionsAndOffsets
+                                       })
+                               };
+
+                Analyze(Constants.Documents.Indexing.Fields.AllFields, "StandardAnalyzer");
+                Index(Constants.Documents.Indexing.Fields.AllFields, FieldIndexing.Search);
+
+                Analyze(x => x.OtherField, "Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.LowerCaseKeywordAnalyzer");
+                Index(x => x.OtherField, FieldIndexing.Default);
+            }
+        }
+
         private class Item
         {
             public string Id { get; set; }
@@ -36,6 +64,8 @@ namespace SlowTests.Issues
             public string FieldValue { get; set; }
 
             public bool Stored { get; set; }
+
+            public string OtherField { get; set; }
         }
 
         [Fact]
@@ -64,6 +94,53 @@ namespace SlowTests.Issues
                 var terms = store.Maintenance.Send(new GetTermsOperation(new Index1().IndexName, "F1", null));
                 Assert.Equal(1, terms.Length);
                 Assert.Equal("Value1", terms[0]);
+            }
+        }
+
+        [Fact]
+        public void CheckHighlighting()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Index2().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Item
+                    {
+                        FieldName = "Field",
+                        FieldValue = "Itamar Syn-Hershko: Afraid of Map/Reduce? In this session, core RavenDB developer Itamar Syn-Hershko will walk through the RavenDB indexing process, grok it and much more."
+                    });
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var options = new HighlightingOptions
+                    {
+                        PreTags = new[] { "<span style='background: yellow'>" },
+                        PostTags = new[] { "</span>" }
+                    };
+
+                    var results = session.Advanced
+                        .DocumentQuery<Item, Index2>()
+                        .WaitForNonStaleResults()
+                        .Highlight("Field", 128, 2, options, out Highlightings fieldHighlighting)
+                        .Search("Field", "session")
+                        .ToArray();
+
+                    Assert.Equal(1, results.Length);
+
+                    var fragments = fieldHighlighting.GetFragments("items/1-A");
+
+                    Assert.Equal(1, fragments.Length);
+                    Assert.Contains("<span style='background: yellow'>session</span>", fragments[0]);
+                }
             }
         }
     }
