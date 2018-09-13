@@ -35,16 +35,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _logger = logger;
         }
 
-        protected static RavenPerFieldAnalyzerWrapper CreateAnalyzer(Func<LowerCaseKeywordAnalyzer> createDefaultAnalyzer, IndexDefinitionBase indexDefinition, bool forQuerying = false)
+        protected static RavenPerFieldAnalyzerWrapper CreateAnalyzer(Func<Analyzer> createDefaultAnalyzer, IndexDefinitionBase indexDefinition, bool forQuerying = false)
         {
             if (indexDefinition.IndexFields.ContainsKey(Constants.Documents.Indexing.Fields.AllFields))
                 throw new InvalidOperationException($"Detected '{Constants.Documents.Indexing.Fields.AllFields}'. This field should not be present here, because inheritance is done elsewhere.");
 
             var hasDefaultFieldOptions = false;
-            Analyzer defaultAnalyzer = null;
+            Analyzer defaultAnalyzerToUse = null;
             RavenStandardAnalyzer standardAnalyzer = null;
             KeywordAnalyzer keywordAnalyzer = null;
-            LowerCaseKeywordAnalyzer lowerCaseKeywordAnalyzer = null;
+            Analyzer defaultAnalyzer = null;
             if (indexDefinition is MapIndexDefinition mid)
             {
                 if (mid.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out var value))
@@ -54,13 +54,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     switch (value.Indexing)
                     {
                         case FieldIndexing.Exact:
-                            defaultAnalyzer = keywordAnalyzer = new KeywordAnalyzer();
+                            defaultAnalyzerToUse = keywordAnalyzer = new KeywordAnalyzer();
                             break;
                         case FieldIndexing.Search:
                             if (value.Analyzer != null)
-                                defaultAnalyzer = GetAnalyzer(Constants.Documents.Indexing.Fields.AllFields, value.Analyzer, forQuerying);
-                            if (defaultAnalyzer == null)
-                                defaultAnalyzer = standardAnalyzer = new RavenStandardAnalyzer(Version.LUCENE_29);
+                                defaultAnalyzerToUse = GetAnalyzer(Constants.Documents.Indexing.Fields.AllFields, value.Analyzer, forQuerying);
+                            if (defaultAnalyzerToUse == null)
+                                defaultAnalyzerToUse = standardAnalyzer = new RavenStandardAnalyzer(Version.LUCENE_29);
                             break;
                         default:
                             // explicitly ignore all other values
@@ -69,10 +69,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
 
-            if (defaultAnalyzer == null)
-                defaultAnalyzer = lowerCaseKeywordAnalyzer = createDefaultAnalyzer();
+            if (defaultAnalyzerToUse == null)
+                defaultAnalyzerToUse = defaultAnalyzer = createDefaultAnalyzer();
 
-            var perFieldAnalyzerWrapper = new RavenPerFieldAnalyzerWrapper(defaultAnalyzer);
+            var perFieldAnalyzerWrapper = new RavenPerFieldAnalyzerWrapper(defaultAnalyzerToUse);
             foreach (var field in indexDefinition.IndexFields)
             {
                 var fieldName = field.Value.Name;
@@ -99,10 +99,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         {
                             // if we have default field options then we need to take into account overrides for regular fields
 
-                            if (lowerCaseKeywordAnalyzer == null)
-                                lowerCaseKeywordAnalyzer = createDefaultAnalyzer();
+                            if (defaultAnalyzer == null)
+                                defaultAnalyzer = createDefaultAnalyzer();
 
-                            perFieldAnalyzerWrapper.AddAnalyzer(fieldName, lowerCaseKeywordAnalyzer);
+                            perFieldAnalyzerWrapper.AddAnalyzer(fieldName, defaultAnalyzer);
                             continue;
                         }
                         break;
