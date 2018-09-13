@@ -2112,7 +2112,8 @@ namespace Raven.Database
                 BatchResult[] results = null;
 
                 Stopwatch sp2 = null;
-                if (log.IsDebugEnabled)
+                var isDebugEnabled = log.IsDebugEnabled;
+                if (isDebugEnabled)
                 {
                     sp2 = Stopwatch.StartNew();
                 }
@@ -2123,10 +2124,10 @@ namespace Raven.Database
                         results = ProcessBatch(commands);
                     });
 
-                if (log.IsDebugEnabled)
+                if (isDebugEnabled)
                 {
                     log.Debug(string.Format("Executed {0:#,#;;0} commands, took: {1:#,#;;0}ms", 
-                        commands.Count, sp2?.ElapsedMilliseconds));
+                        commands.Count, sp2.ElapsedMilliseconds));
                 }
 
                 return results;
