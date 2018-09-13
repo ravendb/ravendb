@@ -2125,8 +2125,8 @@ namespace Raven.Database
 
                 if (log.IsDebugEnabled)
                 {
-                    log.Debug($"Executed {commands.Count:#,#;;0} commands, " +
-                              $"took: {sp2?.ElapsedMilliseconds:#,#;;0}ms");
+                    log.Debug(string.Format("Executed {0:#,#;;0} commands, took: {1:#,#;;0}ms", 
+                        commands.Count, sp2?.ElapsedMilliseconds));
                 }
 
                 return results;

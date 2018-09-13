@@ -168,7 +168,7 @@ namespace Raven.Database.Server.Responders
 
 		    if (isDebugEnabled)
 		    {
-                log.Debug($"Read bulk_docs data commands, took: {sp.ElapsedMilliseconds}ms");
+                log.Debug(string.Format("Read bulk_docs data commands, took: {0}ms", sp.ElapsedMilliseconds));
 		    }
 
 		    var transactionInformation = GetRequestTransaction(context);
@@ -186,7 +186,7 @@ namespace Raven.Database.Server.Responders
                         return "\tExecuting "
                                + string.Join(
                                    ", ", commands.GroupBy(x => x.Method).Select(x => string.Format("{0:#,#;;0} {1} operations", x.Count(), x.Key))) + "" +
-                               $", number of concurrent BulkPost: {Interlocked.Read(ref numberOfConcurrentBulkPosts):#,#;;0}";
+                               string.Format(", number of concurrent BulkPost: {0:#,#;;0}", Interlocked.Read(ref numberOfConcurrentBulkPosts));
                     }
 
                     var sb = new StringBuilder();
@@ -205,9 +205,9 @@ namespace Raven.Database.Server.Responders
 
 		    if (isDebugEnabled)
 		    {
-		        log.Debug($"Executed {commands.Length:#,#;;0} operations, " +
-		                  $"took: {sp.ElapsedMilliseconds:#,#;;0}ms, " +
-		                  $"number of concurrent BulkPost: {numberOfConcurrentBulkPosts:#,#;;0}");
+		        log.Debug(string.Format(
+		            "Executed {0:#,#;;0} operations, took: {1:#,#;;0}ms, number of concurrent BulkPost: {2:#,#;;0}",
+		            commands.Length, sp.ElapsedMilliseconds, numberOfConcurrentBulkPosts));
 		    }
 
             context.WriteJson(batchResult);
