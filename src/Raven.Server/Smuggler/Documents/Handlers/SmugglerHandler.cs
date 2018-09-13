@@ -273,8 +273,15 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 finalResult.RevisionDocuments.LastEtag = Math.Max(finalResult.RevisionDocuments.LastEtag, importResult.RevisionDocuments.LastEtag);
                 finalResult.RevisionDocuments.Attachments = importResult.RevisionDocuments.Attachments;
 
+                finalResult.Counters.ReadCount += importResult.Counters.ReadCount;
+                finalResult.Counters.ErroredCount += importResult.Counters.ErroredCount;
+                finalResult.Counters.LastEtag = Math.Max(finalResult.Counters.LastEtag, importResult.Counters.LastEtag);
+
                 finalResult.Identities.ReadCount += importResult.Identities.ReadCount;
                 finalResult.Identities.ErroredCount += importResult.Identities.ErroredCount;
+
+                finalResult.CompareExchange.ReadCount += importResult.CompareExchange.ReadCount;
+                finalResult.CompareExchange.ErroredCount += importResult.CompareExchange.ErroredCount;
 
                 finalResult.Indexes.ReadCount += importResult.Indexes.ReadCount;
                 finalResult.Indexes.ErroredCount += importResult.Indexes.ErroredCount;

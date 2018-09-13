@@ -105,77 +105,73 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             try
             {
-                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (var tx = context.OpenReadTransaction())
+                var now = DateTime.Now.ToString(DateTimeFormat, CultureInfo.InvariantCulture);
+
+                if (runningBackupStatus.LocalBackup == null)
+                    runningBackupStatus.LocalBackup = new LocalBackup();
+
+                if (_logger.IsInfoEnabled)
                 {
-                    var now = DateTime.Now.ToString(DateTimeFormat, CultureInfo.InvariantCulture);
-
-                    if (runningBackupStatus.LocalBackup == null)
-                        runningBackupStatus.LocalBackup = new LocalBackup();
-
-                    if (_logger.IsInfoEnabled)
-                    {
-                        var fullBackupText = "a " + (_configuration.BackupType == BackupType.Backup ? "full backup" : "snapshot");
-                        _logger.Info($"Creating {(_isFullBackup ? fullBackupText : "an incremental backup")}");
-                    }
-
-                    if (_isFullBackup == false)
-                    {
-                        // no-op if nothing has changed
-                        var currentLastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
-                        if (currentLastEtag == _previousBackupStatus.LastEtag)
-                        {
-                            var message = "Skipping incremental backup because " +
-                                          $"last etag ({currentLastEtag:#,#;;0}) hasn't changed since last backup";
-
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info(message);
-
-                            UpdateOperationId(runningBackupStatus);
-                            runningBackupStatus.LastIncrementalBackup = _startTime;
-                            DatabaseSmuggler.EnsureProcessed(_backupResult);
-                            AddInfo(message, onProgress);
-
-                            return _backupResult;
-                        }
-                    }
-
-                    GenerateFolderNameAndBackupDirectory(now, out var folderName, out var backupDirectory);
-                    var startDocumentEtag = _isFullBackup == false ? _previousBackupStatus.LastEtag : null;
-                    var fileName = GetFileName(_isFullBackup, backupDirectory.FullPath, now, _configuration.BackupType, out string backupFilePath);
-                    var lastEtag = CreateLocalBackupOrSnapshot(runningBackupStatus, backupFilePath, startDocumentEtag, context, tx, onProgress);
-
-                    runningBackupStatus.LocalBackup.BackupDirectory = _backupToLocalFolder ? backupDirectory.FullPath : null;
-                    runningBackupStatus.LocalBackup.TempFolderUsed = _backupToLocalFolder == false;
-                    runningBackupStatus.IsFull = _isFullBackup;
-
-                    try
-                    {
-                        await UploadToServer(backupFilePath, folderName, fileName, onProgress);
-                    }
-                    finally
-                    {
-                        runningBackupStatus.UploadToS3 = _backupResult.S3Backup;
-                        runningBackupStatus.UploadToAzure = _backupResult.AzureBackup;
-                        runningBackupStatus.UploadToGlacier = _backupResult.GlacierBackup;
-                        runningBackupStatus.UploadToFtp = _backupResult.FtpBackup;
-
-                        // if user did not specify local folder we delete the temporary file
-                        if (_backupToLocalFolder == false)
-                        {
-                            IOExtensions.DeleteFile(backupFilePath);
-                        }
-                    }
-
-                    UpdateOperationId(runningBackupStatus);
-                    runningBackupStatus.LastEtag = lastEtag;
-                    runningBackupStatus.FolderName = folderName;
-                    if (_isFullBackup)
-                        runningBackupStatus.LastFullBackup = _periodicBackup.StartTime;
-                    else
-                        runningBackupStatus.LastIncrementalBackup = _periodicBackup.StartTime;
+                    var fullBackupText = "a " + (_configuration.BackupType == BackupType.Backup ? "full backup" : "snapshot");
+                    _logger.Info($"Creating {(_isFullBackup ? fullBackupText : "an incremental backup")}");
                 }
-                
+
+                if (_isFullBackup == false)
+                {
+                    // no-op if nothing has changed
+                    var currentLastEtag = _database.ReadLastEtag();
+                    if (currentLastEtag == _previousBackupStatus.LastEtag)
+                    {
+                        var message = "Skipping incremental backup because " +
+                                      $"last etag ({currentLastEtag:#,#;;0}) hasn't changed since last backup";
+
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info(message);
+
+                        UpdateOperationId(runningBackupStatus);
+                        runningBackupStatus.LastIncrementalBackup = _startTime;
+                        DatabaseSmuggler.EnsureProcessed(_backupResult);
+                        AddInfo(message, onProgress);
+
+                        return _backupResult;
+                    }
+                }
+
+                GenerateFolderNameAndBackupDirectory(now, out var folderName, out var backupDirectory);
+                var startDocumentEtag = _isFullBackup == false ? _previousBackupStatus.LastEtag : null;
+                var fileName = GetFileName(_isFullBackup, backupDirectory.FullPath, now, _configuration.BackupType, out string backupFilePath);
+                var lastEtag = CreateLocalBackupOrSnapshot(runningBackupStatus, backupFilePath, startDocumentEtag, onProgress);
+
+                runningBackupStatus.LocalBackup.BackupDirectory = _backupToLocalFolder ? backupDirectory.FullPath : null;
+                runningBackupStatus.LocalBackup.TempFolderUsed = _backupToLocalFolder == false;
+                runningBackupStatus.IsFull = _isFullBackup;
+
+                try
+                {
+                    await UploadToServer(backupFilePath, folderName, fileName, onProgress);
+                }
+                finally
+                {
+                    runningBackupStatus.UploadToS3 = _backupResult.S3Backup;
+                    runningBackupStatus.UploadToAzure = _backupResult.AzureBackup;
+                    runningBackupStatus.UploadToGlacier = _backupResult.GlacierBackup;
+                    runningBackupStatus.UploadToFtp = _backupResult.FtpBackup;
+
+                    // if user did not specify local folder we delete the temporary file
+                    if (_backupToLocalFolder == false)
+                    {
+                        IOExtensions.DeleteFile(backupFilePath);
+                    }
+                }
+
+                UpdateOperationId(runningBackupStatus);
+                runningBackupStatus.LastEtag = lastEtag;
+                runningBackupStatus.FolderName = folderName;
+                if (_isFullBackup)
+                    runningBackupStatus.LastFullBackup = _periodicBackup.StartTime;
+                else
+                    runningBackupStatus.LastIncrementalBackup = _periodicBackup.StartTime;
+
                 totalSw.Stop();
 
                 if (_logger.IsInfoEnabled)
@@ -383,8 +379,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private long CreateLocalBackupOrSnapshot(
             PeriodicBackupStatus status, string backupFilePath,
-            long? startDocumentEtag, DocumentsOperationContext context, 
-            DocumentsTransaction tx, Action<IOperationProgress> onProgress)
+            long? startDocumentEtag, Action<IOperationProgress> onProgress)
         {
             long lastEtag;
             using (status.LocalBackup.UpdateStats(_isFullBackup))
@@ -408,17 +403,17 @@ namespace Raven.Server.Documents.PeriodicBackup
                         if (_isFullBackup == false)
                             options.OperateOnTypes |= DatabaseItemType.Tombstones;
 
-                        CreateBackup(options, tempBackupFilePath, startDocumentEtag, context, onProgress);
-                        lastEtag = _isFullBackup ?
-                            DocumentsStorage.ReadLastEtag(tx.InnerTransaction) :
-                            _backupResult.GetLastEtag();
+                        var lastEtagFromStorage = CreateBackup(options, tempBackupFilePath, startDocumentEtag, onProgress);
+                        Debug.Assert(lastEtagFromStorage != 0);
+                        lastEtag = _isFullBackup ? lastEtagFromStorage : _backupResult.GetLastEtag();
                     }
                     else
                     {
                         // snapshot backup
                         AddInfo("Started a snapshot backup", onProgress);
 
-                        lastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
+                        lastEtag = _database.ReadLastEtag();
+                        var databaseSummary = _database.GetDatabaseSummary();
                         var indexesCount = _database.IndexStore.Count;
 
                         var totalSw = Stopwatch.StartNew();
@@ -437,7 +432,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                                 }
                             }, TaskCancelToken.Token);
 
-                        EnsureSnapshotProcessed(context, smugglerResult, indexesCount);
+                        EnsureSnapshotProcessed(databaseSummary, smugglerResult, indexesCount);
                         
                         AddInfo($"Backed up {_backupResult.SnapshotBackup.ReadCount} files, " +
                                 $"took: {totalSw.ElapsedMilliseconds:#,#;;0}ms", onProgress);
@@ -455,10 +450,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return lastEtag;
         }
 
-        private void EnsureSnapshotProcessed(
-            DocumentsOperationContext context, 
-            SmugglerResult snapshotSmugglerResult, 
-            long indexesCount)
+        private void EnsureSnapshotProcessed(DatabaseSummary databaseSummary, SmugglerResult snapshotSmugglerResult, long indexesCount)
         {
             _backupResult.SnapshotBackup.Processed = true;
             _backupResult.DatabaseRecord.Processed = true;
@@ -467,17 +459,16 @@ namespace Raven.Server.Documents.PeriodicBackup
             _backupResult.Indexes.Processed = true;
             _backupResult.Indexes.ReadCount = indexesCount;
 
-            var summary = _database.GetDatabaseSummary(context);
             _backupResult.Documents.Processed = true;
-            _backupResult.Documents.ReadCount = summary.DocumentsCount;
+            _backupResult.Documents.ReadCount = databaseSummary.DocumentsCount;
             _backupResult.Documents.Attachments.Processed = true;
-            _backupResult.Documents.Attachments.ReadCount = summary.AttachmentsCount;
+            _backupResult.Documents.Attachments.ReadCount = databaseSummary.AttachmentsCount;
             _backupResult.Counters.Processed = true;
-            _backupResult.Counters.ReadCount = summary.CountersCount;
+            _backupResult.Counters.ReadCount = databaseSummary.CountersCount;
             _backupResult.RevisionDocuments.Processed = true;
-            _backupResult.RevisionDocuments.ReadCount = summary.RevisionsCount;
+            _backupResult.RevisionDocuments.ReadCount = databaseSummary.RevisionsCount;
             _backupResult.Conflicts.Processed = true;
-            _backupResult.Conflicts.ReadCount = summary.ConflictsCount;
+            _backupResult.Conflicts.ReadCount = databaseSummary.ConflictsCount;
 
             _backupResult.Identities.Processed = true;
             _backupResult.Identities.ReadCount = snapshotSmugglerResult.Identities.ReadCount;
@@ -491,15 +482,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             onProgress.Invoke(_backupResult.Progress);
         }
         
-        private void CreateBackup(
+        private long CreateBackup(
             DatabaseSmugglerOptionsServerSide options, string backupFilePath,
-            long? startDocumentEtag, DocumentsOperationContext context,
-            Action<IOperationProgress> onProgress)
+            long? startDocumentEtag, Action<IOperationProgress> onProgress)
         {
             // the last etag is already included in the last backup
             startDocumentEtag = startDocumentEtag == null ? 0 : ++startDocumentEtag;
 
             using (var file = File.Open(backupFilePath, FileMode.CreateNew))
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var smugglerSource = new DatabaseSource(_database, startDocumentEtag.Value);
                 var smugglerDestination = new StreamDestination(file, context, smugglerSource);
@@ -514,6 +505,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 smuggler.Execute();
                 file.Flush(flushToDisk: true);
+
+                return smugglerSource.LastEtag;
             }
         }
 
