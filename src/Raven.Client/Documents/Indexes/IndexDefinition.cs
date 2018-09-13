@@ -275,6 +275,10 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public void RemoveDefaultValues()
         {
+            // do not remove default values if we have default field options specified
+            if (Fields.ContainsKey(Constants.Documents.Indexing.Fields.AllFields))
+                return;
+
             var toRemove = new List<string>();
             foreach (var kvp in Fields)
             {
