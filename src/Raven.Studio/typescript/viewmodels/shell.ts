@@ -126,6 +126,12 @@ class shell extends viewModelBase {
         });
 
         activeDatabaseTracker.default.database.subscribe(newDatabase => footer.default.forDatabase(newDatabase));
+
+        studioSettings.default.configureLoaders(() => new getGlobalStudioConfigurationCommand().execute(),
+            (db) => new getStudioConfigurationCommand(db).execute(),
+            settings => new saveGlobalStudioConfigurationCommand(settings).execute(),
+            (settings, db) => new saveStudioConfigurationCommand(settings, db).execute()
+        );
         
         this.detectBrowser();
     }
@@ -150,12 +156,6 @@ class shell extends viewModelBase {
                 license.fetchSupportCoverage();
             }
         });
-        
-        studioSettings.default.configureLoaders(() => new getGlobalStudioConfigurationCommand().execute(),
-            (db) => new getStudioConfigurationCommand(db).execute(),
-            settings => new saveGlobalStudioConfigurationCommand(settings).execute(),
-            (settings, db) => new saveStudioConfigurationCommand(settings, db).execute()
-            );
         
         $.when<any>(licenseTask, topologyTask, clientCertifiateTask)
             .done(([license]: [Raven.Server.Commercial.LicenseStatus], 
