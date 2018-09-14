@@ -65,7 +65,7 @@ namespace Sparrow
         {
             // return the last 4K starting at the last position in the array,
             // and continue to copy from the start of the array till the last position.
-            // however if the buffer wasn't overruning its tail (_firstWindow == true) then
+            // however if the buffer wasn't overrunning its tail (_firstWindow == true) then
             // we copy from the start to last position only. 
             int start,  size;
             if (_firstWindow)
@@ -78,7 +78,7 @@ namespace Sparrow
                 start = _pos;
                 size = BufferWindowSize;
             }
-            // search for the first byte which represent a single UTF charcter
+            // search for the first byte which represent a single UTF character
             // (because 'start' might point to a byte in a middle of set of bytes
             // representing single character, so 0x80 represent start of char in utf8)
             var originalStart = start;

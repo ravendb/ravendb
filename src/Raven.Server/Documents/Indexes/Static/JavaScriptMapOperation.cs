@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var theFuncAst = sfi.GetFunctionAst();
 
-            var res = CheckIfsimpleMapExpression(engine, theFuncAst);
+            var res = CheckIfSimpleMapExpression(engine, theFuncAst);
             if (res != null)
             {
                 MapFunc = res.Value.Function;
@@ -123,8 +123,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     HasDynamicReturns = true;
                     continue;
                 }
-                //If we got here we must validate that all return statments have the same structure.
-                //Having zero fields means its the first return statments we encounter that has a structure.
+                //If we got here we must validate that all return statements have the same structure.
+                //Having zero fields means its the first return statements we encounter that has a structure.
                 if (Fields.Count == 0)
                 {
                     foreach (var prop in oe.Properties)
@@ -138,13 +138,13 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
                 else if(CompareFields(oe) == false)
                 {
-                    throw new InvalidOperationException($"Index {IndexName} contains diffrent return structure from different code paths," +
+                    throw new InvalidOperationException($"Index {IndexName} contains different return structure from different code paths," +
                                                         $" expected properties: {string.Join(", ", Fields)} but also got:{string.Join(", ", oe.Properties.Select(x => x.Key.GetKey()))}");
                 }
             }
         }            
 
-        private (FunctionInstance Function, IFunction FunctionAst)? CheckIfsimpleMapExpression(Engine engine, IFunction function)
+        private (FunctionInstance Function, IFunction FunctionAst)? CheckIfSimpleMapExpression(Engine engine, IFunction function)
         {
             var field = function.TryGetFieldFromSimpleLambdaExpression();
             if (field == null)

@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.ETL
                         etlItemType = EtlItemType.Counter;
                         break;
                     default:
-                        ThrowFilteringTombstonsOfTypeNotSupported(current.Type);
+                        ThrowFilteringTombstonesOfTypeNotSupported(current.Type);
                         break;
                 }
 
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.ETL
             throw new NotSupportedException($"Limiting tombstones to iterate up to max etag isn't supported for tombstones of type: {tombstoneType}");
         }
 
-        private static void ThrowFilteringTombstonsOfTypeNotSupported(Tombstone.TombstoneType tombstoneType)
+        private static void ThrowFilteringTombstonesOfTypeNotSupported(Tombstone.TombstoneType tombstoneType)
         {
             throw new NotSupportedException($"Filtering tombstones of type: {tombstoneType} is not supported");
         }

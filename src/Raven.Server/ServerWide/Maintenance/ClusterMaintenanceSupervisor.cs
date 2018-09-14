@@ -320,7 +320,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 using (var writer = new BlittableJsonTextWriter(ctx, connection))
                 {
-                    var paramaters = new TcpNegotiateParameters
+                    var parameters = new TcpNegotiateParameters
                     {
                         Database = null,
                         Operation = TcpConnectionHeaderMessage.OperationTypes.Heartbeats,
@@ -330,7 +330,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         DestinationNodeTag = ClusterTag
                         
                     };
-                    supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(ctx, connection, paramaters);
+                    supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(ctx, connection, parameters);
 
                     WriteClusterMaintenanceConnectionHeader(writer);
                 }

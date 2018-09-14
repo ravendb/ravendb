@@ -224,8 +224,8 @@ namespace Raven.Server.Documents.Indexes
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Could not update static index {name}", exception);
                     //If we don't have the index in memory this means that it is corrupted when trying to load it
-                    //If we do have the index and it is not faulted this means that this is the replacment index that is faulty
-                    //If we already have a replacment that is faulty don't add a new one
+                    //If we do have the index and it is not faulted this means that this is the replacement index that is faulty
+                    //If we already have a replacement that is faulty don't add a new one
                     if (_indexes.TryGetByName(indexName, out Index i))
                     {
                         if (i is FaultyInMemoryIndex)

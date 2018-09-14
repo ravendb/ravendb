@@ -40,7 +40,7 @@ namespace Raven.Server
         private int _requestId;
         private readonly Logger _logger = LoggingSource.Instance.GetLogger<RavenServerStartup>("Server");
 
-        public void Configure(IApplicationBuilder app, ILoggerFactory loggerfactory)
+        public void Configure(IApplicationBuilder app, ILoggerFactory loggerFactory)
         {
             app.UseWebSockets(new WebSocketOptions
             {

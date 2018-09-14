@@ -763,9 +763,9 @@ namespace Raven.Server.Documents
             ScheduleDatabaseWakeup(databaseName.Value, dueTime);
         }
 
-        private void ScheduleDatabaseWakeup(string name, long milliSeconds)
+        private void ScheduleDatabaseWakeup(string name, long milliseconds)
         {
-            if (milliSeconds == 0)
+            if (milliseconds == 0)
                 return;
 
             _wakeupTimers.TryAdd(name, new Timer(_ =>
@@ -794,7 +794,7 @@ namespace Raven.Server.Documents
                     // we have to swallow any exception here.
                 }
 
-            }, null, milliSeconds, Timeout.Infinite));
+            }, null, milliseconds, Timeout.Infinite));
         }
 
         private bool ShouldContinueDispose(string name, DateTime? wakeup, out int dueTime)

@@ -11,13 +11,13 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         public virtual void VisitProgram(Esprima.Ast.Program program)
         {
-            foreach (var statment in program.Body)
+            foreach (var statement in program.Body)
             {
-                VisitStatment((Statement)statment);
+                VisitStatement((Statement)statement);
             }
         }
 
-        public virtual void VisitStatment(Statement statement)
+        public virtual void VisitStatement(Statement statement)
         {
             if (statement == null)
                 return;
@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private void VisitCatchClause(CatchClause catchClause)
         {            
             VisitIdentifier(catchClause.Param.As<Identifier>());
-            VisitStatment(catchClause.Body);
+            VisitStatement(catchClause.Body);
         }
 
         public virtual void VisitFunctionDeclaration(FunctionDeclaration functionDeclaration)
@@ -117,13 +117,13 @@ namespace Raven.Server.Documents.Indexes.Static
         public virtual void VisitWithStatement(WithStatement withStatement)
         {
             VisitExpression(withStatement.Object);
-            VisitStatment(withStatement.Body);
+            VisitStatement(withStatement.Body);
         }
 
         public virtual void VisitWhileStatement(WhileStatement whileStatement)
         {
             VisitExpression(whileStatement.Test);
-            VisitStatment(whileStatement.Body);
+            VisitStatement(whileStatement.Body);
         }
 
         public virtual void VisitVariableDeclaration(VariableDeclaration variableDeclaration)
@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public virtual void VisitTryStatement(TryStatement tryStatement)
         {
-            VisitStatment(tryStatement.Block);
+            VisitStatement(tryStatement.Block);
             if (tryStatement.Handler != null)
             {
                 VisitCatchClause(tryStatement.Handler);
@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (tryStatement.Finalizer != null)
             {
-                VisitStatment(tryStatement.Finalizer);
+                VisitStatement(tryStatement.Finalizer);
             }
 
 
@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.Indexes.Static
             VisitExpression(switchCase.Test);
             foreach (var s in switchCase.Consequent)
             {
-                VisitStatment(switchCase.Consequent.As<Statement>());
+                VisitStatement(switchCase.Consequent.As<Statement>());
             }
         }
 
@@ -186,14 +186,14 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public virtual void VisitLabeledStatement(LabeledStatement labeledStatement)
         {
-            VisitStatment(labeledStatement.Body);
+            VisitStatement(labeledStatement.Body);
         }
 
         public virtual void VisitIfStatement(IfStatement ifStatement)
         {
             VisitExpression(ifStatement.Test);
-            VisitStatment(ifStatement.Consequent);
-            VisitStatment(ifStatement.Alternate);
+            VisitStatement(ifStatement.Consequent);
+            VisitStatement(ifStatement.Alternate);
         }
 
         public virtual void VisitEmptyStatement(EmptyStatement emptyStatement)
@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 if (forStatement.Init.Type == Nodes.VariableDeclaration)
                 {
-                    VisitStatment(forStatement.Init.As<Statement>());
+                    VisitStatement(forStatement.Init.As<Statement>());
                 }
                 else
                 {
@@ -223,7 +223,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
             }
             VisitExpression(forStatement.Test);
-            VisitStatment(forStatement.Body);
+            VisitStatement(forStatement.Body);
             if (forStatement.Update != null)
             {
                 VisitExpression(forStatement.Update);
@@ -237,12 +237,12 @@ namespace Raven.Server.Documents.Indexes.Static
                 : forInStatement.Left.As<Identifier>();
             VisitExpression(identifier);
             VisitExpression(forInStatement.Right);
-            VisitStatment(forInStatement.Body);
+            VisitStatement(forInStatement.Body);
         }
 
         public virtual void VisitDoWhileStatement(DoWhileStatement doWhileStatement)
         {
-            VisitStatment(doWhileStatement.Body.As<Statement>());
+            VisitStatement(doWhileStatement.Body.As<Statement>());
             VisitExpression(doWhileStatement.Test);
         }
 
@@ -632,7 +632,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
         }
 
-        public virtual void VisitMethodDefinition(MethodDefinition methodDefinitionas)
+        public virtual void VisitMethodDefinition(MethodDefinition methodDefinitions)
         {
         }
 
@@ -640,7 +640,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             VisitExpression(forOfStatement.Right);
             Visit(forOfStatement.Left);
-            VisitStatment(forOfStatement.Body);
+            VisitStatement(forOfStatement.Body);
         }
 
         public virtual void VisitClassDeclaration(ClassDeclaration classDeclaration)
@@ -775,9 +775,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public virtual void VisitBlockStatement(BlockStatement BlockStatement)
         {
-            foreach (var statment in BlockStatement.Body)
+            foreach (var statement in BlockStatement.Body)
             {
-                VisitStatment(statment.As<Statement>());
+                VisitStatement(statement.As<Statement>());
             }
         }
     }

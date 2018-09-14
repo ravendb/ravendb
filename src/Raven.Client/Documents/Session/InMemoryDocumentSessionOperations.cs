@@ -320,7 +320,7 @@ namespace Raven.Client.Documents.Session
 
             AssertNoNonUniqueInstance(instance, id);
 
-            throw new ArgumentException($"Document {id} doesn\'t exist in the session");
+            throw new ArgumentException($"Document {id} doesn't exist in the session");
         }
 
         /// <summary>
@@ -439,7 +439,7 @@ more responsive application.
             {
                 if (string.Equals(info.Id, existing.Id, StringComparison.OrdinalIgnoreCase))
                     return;
-                throw new InvalidOperationException("Attempted to loade an entity with id " + info.Id + ", but the entity instance already exists in the session with id: " + existing.Id);
+                throw new InvalidOperationException("Attempted to load an entity with id " + info.Id + ", but the entity instance already exists in the session with id: " + existing.Id);
             }
             DocumentsByEntity.Add(info.Entity, info);
             DocumentsById.Add(info);

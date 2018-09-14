@@ -73,7 +73,7 @@ namespace Raven.Server.Web.Studio
                     }
                     catch (IndexCompilationException)
                     {
-                        // swallow compilaton exception and return empty array as response
+                        // swallow compilation exception and return empty array as response
 
                         using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                         {

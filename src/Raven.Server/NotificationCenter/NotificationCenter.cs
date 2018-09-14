@@ -144,7 +144,7 @@ namespace Raven.Server.NotificationCenter
         {
             _notificationsStorage.Delete(id);
 
-            // send this notificaton even when notification doesn't exist 
+            // send this notification even when notification doesn't exist 
             // we don't persist all notifications
             Add(NotificationUpdated.Create(id, NotificationUpdateType.Dismissed));
         }

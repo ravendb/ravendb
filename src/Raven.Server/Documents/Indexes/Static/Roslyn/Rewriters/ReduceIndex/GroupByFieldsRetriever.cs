@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                             }
                             else
                             {
-                                throw new InvalidOperationException("Unable to understasnd expression " + initializer);
+                                throw new InvalidOperationException("Unable to understand expression " + initializer);
                             }
                         }
 
@@ -184,7 +184,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                         // explicitly ignore, we don't need to do anything here
                         break;
                     default:
-                        throw new InvalidOperationException("Unable to understasnd expression " + expr);
+                        throw new InvalidOperationException("Unable to understand expression " + expr);
                 }
             }
         }

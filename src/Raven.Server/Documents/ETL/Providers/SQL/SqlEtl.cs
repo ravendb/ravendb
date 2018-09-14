@@ -127,11 +127,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             }
             else
             {
-                var simulatedwriter = new RelationalDatabaseWriterSimulator(Configuration);
+                var simulatedWriter = new RelationalDatabaseWriterSimulator(Configuration);
 
                 foreach (var records in toWrite)
                 {
-                    var commands = simulatedwriter.SimulateExecuteCommandText(records, CancellationToken).Select(x => new TableQuerySummary.CommandData
+                    var commands = simulatedWriter.SimulateExecuteCommandText(records, CancellationToken).Select(x => new TableQuerySummary.CommandData
                     {
                         CommandText = x
                     }).ToArray();

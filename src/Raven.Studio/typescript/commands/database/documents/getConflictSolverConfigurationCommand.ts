@@ -11,7 +11,7 @@ class getConflictSolverConfigurationCommand extends commandBase {
     execute(): JQueryPromise<Raven.Client.ServerWide.ConflictSolver> {
 
         const deferred = $.Deferred<Raven.Client.ServerWide.ConflictSolver>();
-        const url = endpoints.databases.replication.replicatonConflictsSolver;
+        const url = endpoints.databases.replication.replicationConflictsSolver;
         this.query(url, null, this.db)
             .done((expirationConfig: Raven.Client.ServerWide.ConflictSolver) => deferred.resolve(expirationConfig))
             .fail((xhr: JQueryXHR) => {

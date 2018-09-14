@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Handlers
                 using (var ms = new MemoryStream())
                 using (var collector = new LiveIOStatsCollector(Database))
                 {
-                    // 1. Send data to webSocket without making UI wait upon openning webSocket
+                    // 1. Send data to webSocket without making UI wait upon opening webSocket
                     await SendDataOrHeartbeatToWebSocket(receive, webSocket, collector, ms, 100);
 
                     // 2. Send data to webSocket when available

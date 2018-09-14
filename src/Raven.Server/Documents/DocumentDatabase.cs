@@ -1111,7 +1111,7 @@ namespace Raven.Server.Documents
         {
             var whoseTaskIsIt = databaseTopology.WhoseTaskIsIt(
                 ServerStore.Engine.CurrentState, configuration,
-                getLastReponsibleNode:
+                getLastResponsibleNode:
                 () => ServerStore.LicenseManager.GetLastResponsibleNodeForTask(
                     taskStatus,
                     databaseTopology,

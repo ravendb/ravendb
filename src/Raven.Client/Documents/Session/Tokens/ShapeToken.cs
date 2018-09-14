@@ -12,15 +12,15 @@ namespace Raven.Client.Documents.Session.Tokens
             _shape = shape;
         }
 
-        public static ShapeToken Circle(string radiusParameterName, string latituteParameterName, string longitudeParameterName, SpatialUnits? radiusUnits)
+        public static ShapeToken Circle(string radiusParameterName, string latitudeParameterName, string longitudeParameterName, SpatialUnits? radiusUnits)
         {
             if (radiusUnits.HasValue == false)
-                return new ShapeToken($"spatial.circle(${radiusParameterName}, ${latituteParameterName}, ${longitudeParameterName})");
+                return new ShapeToken($"spatial.circle(${radiusParameterName}, ${latitudeParameterName}, ${longitudeParameterName})");
 
             if (radiusUnits == SpatialUnits.Kilometers)
-                return new ShapeToken($"spatial.circle(${radiusParameterName}, ${latituteParameterName}, ${longitudeParameterName}, '{nameof(SpatialUnits.Kilometers)}')");
+                return new ShapeToken($"spatial.circle(${radiusParameterName}, ${latitudeParameterName}, ${longitudeParameterName}, '{nameof(SpatialUnits.Kilometers)}')");
 
-            return new ShapeToken($"spatial.circle(${radiusParameterName}, ${latituteParameterName}, ${longitudeParameterName}, '{nameof(SpatialUnits.Miles)}')");
+            return new ShapeToken($"spatial.circle(${radiusParameterName}, ${latitudeParameterName}, ${longitudeParameterName}, '{nameof(SpatialUnits.Miles)}')");
         }
 
         public static ShapeToken Wkt(string shapeWktParameterName, SpatialUnits? units)

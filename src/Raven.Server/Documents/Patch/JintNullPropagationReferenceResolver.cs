@@ -6,7 +6,7 @@ using Jint.Runtime.References;
 
 namespace Raven.Server.Documents.Patch
 {
-    public abstract class JintNullPropgationReferenceResolver : IReferenceResolver
+    public abstract class JintNullPropagationReferenceResolver : IReferenceResolver
     {
         public virtual bool TryUnresolvableReference(Engine engine, Reference reference, out JsValue value)
         {

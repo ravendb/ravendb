@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Session
     public interface IRevisionsSessionOperations
     {
         /// <summary>
-        /// Returns all previous document revisions for specified document (with paging) ordered by most recent reivions first.
+        /// Returns all previous document revisions for specified document (with paging) ordered by most recent revision first.
         /// </summary>
         List<T> GetFor<T>(string id, int start = 0, int pageSize = 25);
 

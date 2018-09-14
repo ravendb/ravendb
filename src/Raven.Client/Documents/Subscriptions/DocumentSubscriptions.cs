@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// <summary>
         /// Creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options for a given type.
         /// </summary>
-        /// <typeparam name="T">Type of the collection to be proccessed by the subscription</typeparam>
+        /// <typeparam name="T">Type of the collection to be processed by the subscription</typeparam>
         /// <returns>Created subscription</returns>
         public string Create<T>(SubscriptionCreationOptions<T> options, string database = null)
         {
@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// <summary>
         /// Creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options for a given type.
         /// </summary>
-        /// <typeparam name="T">Type of the collection to be proccessed by the subscription</typeparam>
+        /// <typeparam name="T">Type of the collection to be processed by the subscription</typeparam>
         /// <returns>Created subscription</returns>
         public string Create<T>(Expression<Func<T, bool>> predicate = null,
             SubscriptionCreationOptions options = null,
@@ -286,7 +286,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// <summary>
         /// Returns subscription definition and it's current state
         /// </summary>
-        /// <param name="subscriptionName">Sbscription name as received from the server</param>
+        /// <param name="subscriptionName">Subscription name as received from the server</param>
         /// <param name="database">Database where the subscription resides</param>
         /// <returns></returns>
         public SubscriptionState GetSubscriptionState(string subscriptionName, string database = null)
@@ -297,7 +297,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// <summary>
         /// Returns subscription definition and it's current state
         /// </summary>
-        /// <param name="subscriptionName">Sbscription name as received from the server</param>
+        /// <param name="subscriptionName">Subscription name as received from the server</param>
         /// <param name="database">Database where the subscription resides</param>
         /// <returns></returns>
         public async Task<SubscriptionState> GetSubscriptionStateAsync(string subscriptionName, string database = null, CancellationToken token = default)

@@ -230,7 +230,7 @@ namespace Raven.Server.Documents.Operations
                     }
                     catch (Exception)
                     {
-                        // we explictly don't care about this during shutdown
+                        // we explicitly don't care about this during shutdown
                     }
                 });
             }

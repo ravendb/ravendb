@@ -38,7 +38,7 @@ namespace Raven.Client.Http
             None = 0,
             NotFound = 1,
 
-            AggresivelyCached = 16
+            AggressivelyCached = 16
         }
 
         public unsafe class HttpCacheItem : IDisposable
@@ -75,7 +75,7 @@ namespace Raven.Client.Http
                 if (Interlocked.Decrement(ref _usages) > 0)
                     return;
 
-                // Check if someone havent entered here yet. 
+                // Check if someone haven't entered here yet. 
                 if (Interlocked.CompareExchange(ref _usages, -(1000 * 1000), 0) != 0)
                     return;
 
@@ -159,7 +159,7 @@ namespace Raven.Client.Http
 
         public void SetNotFound(string url, bool aggressivelyCached)
         {
-            var flag = aggressivelyCached ? ItemFlags.AggresivelyCached : ItemFlags.None;
+            var flag = aggressivelyCached ? ItemFlags.AggressivelyCached : ItemFlags.None;
             var httpCacheItem = new HttpCacheItem
             {
                 ChangeVector = "404 Response",
@@ -209,8 +209,8 @@ namespace Raven.Client.Http
                 var start = SystemTime.UtcNow;
                 foreach (var item in _items)
                 {
-                    // We are aggresively targetting whatever it is in our hands as 
-                    // long as it havent been touched since we started to free space.
+                    // We are aggressively targeting whatever it is in our hands as 
+                    // long as it haven't been touched since we started to free space.
                     var lastServerUpdate = item.Value.LastServerUpdate;
                     if (lastServerUpdate > start)
                         continue;

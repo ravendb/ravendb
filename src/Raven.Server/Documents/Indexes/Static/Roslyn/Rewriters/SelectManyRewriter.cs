@@ -17,7 +17,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         {
             public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
             {
-                var selectMany = node.Expression.ToString();
                 if (!(node.Expression is MemberAccessExpressionSyntax maes) ||
                     (maes.Name.ToString() != "Select" && maes.Name.ToString() != "SelectMany"))
                 {

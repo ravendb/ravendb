@@ -12,7 +12,7 @@ namespace Raven.Server.Smuggler.Migration.ApiKey
     // * Copyright (c) Microsoft Corporation.  All rights reserved.
     // **************************************************************
 
-    // Simple struct for the (a,b,c,d) which is used to compute the mesage digest.    
+    // Simple struct for the (a,b,c,d) which is used to compute the message digest.    
     struct ABCDStruct
     {
         public uint A;

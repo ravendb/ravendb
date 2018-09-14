@@ -854,8 +854,8 @@ namespace Raven.Server.ServerWide.Maintenance
             foreach (var node in topology.Promotables.Concat(topology.Rehabs))
             {
                 if (TryGetMentorNode(dbName, topology, clusterTopology, node, out var mentorNode) == false ||
-                    current.TryGetValue(mentorNode, out var metorStats) == false ||
-                    metorStats.Report.TryGetValue(dbName, out var dbReport) == false)
+                    current.TryGetValue(mentorNode, out var mentorStats) == false ||
+                    mentorStats.Report.TryGetValue(dbName, out var dbReport) == false)
                 {
                     continue;
                 }
@@ -886,9 +886,9 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private static List<string> GetPendingDeleteNodes(DatabaseRecord record)
         {
-            var alreadInDeletionProgress = new List<string>();
-            alreadInDeletionProgress.AddRange(record.DeletionInProgress?.Keys);
-            return alreadInDeletionProgress;
+            var alreadyInDeletionProgress = new List<string>();
+            alreadyInDeletionProgress.AddRange(record.DeletionInProgress?.Keys);
+            return alreadyInDeletionProgress;
         }
 
         private enum DatabaseHealth

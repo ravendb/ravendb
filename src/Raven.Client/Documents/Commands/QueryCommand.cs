@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Commands
         {
             CanCache = _indexQuery.DisableCaching == false;
 
-            // we won't allow aggresive caching of queries with WaitForNonStaleResults
+            // we won't allow aggressive caching of queries with WaitForNonStaleResults
             CanCacheAggressively = CanCache && _indexQuery.WaitForNonStaleResults == false;
 
             var path = new StringBuilder(node.Url)

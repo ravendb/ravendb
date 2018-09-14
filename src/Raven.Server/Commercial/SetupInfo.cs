@@ -291,7 +291,7 @@ namespace Raven.Server.Commercial
         Agreement,
         Setup,
         Validation,
-        GenarateCertificate,
+        GenerateCertificate,
         Finish
     }
 

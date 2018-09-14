@@ -382,7 +382,7 @@ namespace Raven.Server.Config
                     string createdDirectory = null;
                     try
                     {
-                        // if there is no 'path' directory, we are going to create a directory with a similiar name, in order to avoid deleting a directory in use afterwards,
+                        // if there is no 'path' directory, we are going to create a directory with a similar name, in order to avoid deleting a directory in use afterwards,
                         // and write a sample file inside it, in order to check write permissions.
                         if (Directory.Exists(path) == false)
                         {

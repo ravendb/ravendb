@@ -170,7 +170,7 @@ namespace Raven.Server.Json
 
         private StringSegment GetNextToken(StringSegment path, out int consumed)
         {
-            int SkipQoute(char ch, int i)
+            int SkipQuote(char ch, int i)
             {
                 for (int j = i; j < path.Length; j++)
                 {
@@ -193,7 +193,7 @@ namespace Raven.Server.Json
 
             if (path[0] == '"' || path[0] == '\'')
             {
-                consumed = SkipQoute(path[0], 1);
+                consumed = SkipQuote(path[0], 1);
                 return path.Subsegment(1, consumed - 2);
             }
 

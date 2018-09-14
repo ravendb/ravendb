@@ -29,11 +29,11 @@ namespace Raven.Server.Documents.Indexes.Static
             if (funcs.Count == 1)
             {
                 _resultsOfCurrentDocument =
-                    new TimeCountingEnumerable(funcs[0](new DynamicIteratonOfCurrentDocumentWrapper(this)), mapFuncStats);
+                    new TimeCountingEnumerable(funcs[0](new DynamicIteratorOfCurrentDocumentWrapper(this)), mapFuncStats);
             }
             else
             {
-                _multipleIndexingFunctionsEnumerator = new MultipleIndexingFunctionsEnumerator(funcs, new DynamicIteratonOfCurrentDocumentWrapper(this));
+                _multipleIndexingFunctionsEnumerator = new MultipleIndexingFunctionsEnumerator(funcs, new DynamicIteratorOfCurrentDocumentWrapper(this));
                 _resultsOfCurrentDocument = new TimeCountingEnumerable(_multipleIndexingFunctionsEnumerator, mapFuncStats);
             }
 
@@ -74,12 +74,12 @@ namespace Raven.Server.Documents.Indexes.Static
             Current?.Data?.Dispose();
         }
 
-        protected class DynamicIteratonOfCurrentDocumentWrapper : IEnumerable<DynamicBlittableJson>
+        protected class DynamicIteratorOfCurrentDocumentWrapper : IEnumerable<DynamicBlittableJson>
         {
             private readonly StaticIndexDocsEnumerator _indexingEnumerator;
             private Enumerator _enumerator;
 
-            public DynamicIteratonOfCurrentDocumentWrapper(StaticIndexDocsEnumerator indexingEnumerator)
+            public DynamicIteratorOfCurrentDocumentWrapper(StaticIndexDocsEnumerator indexingEnumerator)
             {
                 _indexingEnumerator = indexingEnumerator;
             }
@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             private readonly Enumerator _enumerator;
 
-            public MultipleIndexingFunctionsEnumerator(List<IndexingFunc> funcs, DynamicIteratonOfCurrentDocumentWrapper iterationOfCurrentDocument)
+            public MultipleIndexingFunctionsEnumerator(List<IndexingFunc> funcs, DynamicIteratorOfCurrentDocumentWrapper iterationOfCurrentDocument)
             {
                 _enumerator = new Enumerator(funcs, iterationOfCurrentDocument.GetEnumerator());
             }

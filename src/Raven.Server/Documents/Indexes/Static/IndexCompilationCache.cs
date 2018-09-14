@@ -25,8 +25,8 @@ namespace Raven.Server.Documents.Indexes.Static
             var type = definition.DetectStaticIndexType();
 
             // we do not want to reuse javascript indexes definitions, because they have the Engine, which can't be reused.
-            // we also need to make sure that the same index is not used in two diffrent databases under the same definitions
-            // todo: when portingt javascript indexes to use ScriptRunner (RavenDB-10918), check if we can generate and/or pool the single runs, allowing to remove this code
+            // we also need to make sure that the same index is not used in two different databases under the same definitions
+            // todo: when porting javascript indexes to use ScriptRunner (RavenDB-10918), check if we can generate and/or pool the single runs, allowing to remove this code
             if (type.IsJavaScript())
             {
                 list.Add(definition.Name);

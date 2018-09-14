@@ -322,17 +322,17 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     {
                         sp.Stop();
 
-                        var elapsedMiliseconds = sp.ElapsedMilliseconds;
+                        var elapsedMilliseconds = sp.ElapsedMilliseconds;
 
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Delete took: {elapsedMiliseconds:#,#;;0}ms, statement: {stmt}");
+                            _logger.Info($"Delete took: {elapsedMilliseconds:#,#;;0}ms, statement: {stmt}");
 
                         var tableMetrics = _etl.SqlMetrics.GetTableMetrics(tableName);
                         tableMetrics.DeleteActionsMeter.Mark(1);
 
-                        if (elapsedMiliseconds > LongStatementWarnThresholdInMs)
+                        if (elapsedMilliseconds > LongStatementWarnThresholdInMs)
                         {
-                            HandleSlowSql(elapsedMiliseconds, stmt);
+                            HandleSlowSql(elapsedMilliseconds, stmt);
                         }
                     }
                 }
@@ -341,15 +341,15 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             return deleted;
         }
 
-        private void HandleSlowSql(long elapsedMiliseconds, string stmt)
+        private void HandleSlowSql(long elapsedMilliseconds, string stmt)
         {
             if (_logger.IsInfoEnabled)
-                _logger.Info($"[{_etl.Name}] Slow SQL detected. Execution took: {elapsedMiliseconds:#,#;;0}ms, statement: {stmt}");
+                _logger.Info($"[{_etl.Name}] Slow SQL detected. Execution took: {elapsedMilliseconds:#,#;;0}ms, statement: {stmt}");
 
             _etl.Statistics.RecordSlowSql(new SlowSqlStatementInfo
             {
                 Date = SystemTime.UtcNow,
-                Duration = elapsedMiliseconds,
+                Duration = elapsedMilliseconds,
                 Statement = stmt
             });
         }

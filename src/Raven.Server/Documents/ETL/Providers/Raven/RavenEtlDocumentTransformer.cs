@@ -40,9 +40,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             LoadToDestinations = _script.HasTransformation ? _script.LoadToCollections : new string[0];
         }
 
-        public override void Initalize(bool debugMode)
+        public override void Initialize(bool debugMode)
         {
-            base.Initalize(debugMode);
+            base.Initialize(debugMode);
 
             if (DocumentScript == null)
                 return;
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 case 2:
                     if (args[0].IsString() == false)
-                        ThrowInvalidSriptMethodCall($"First argument of {Transformation.AddAttachment}(name, attachment) must be string");
+                        ThrowInvalidScriptMethodCall($"First argument of {Transformation.AddAttachment}(name, attachment) must be string");
 
                     name = args[0].AsString();
                     attachmentReference = args[1];
@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     attachmentReference = args[0];
                     break;
                 default:
-                    ThrowInvalidSriptMethodCall($"{Transformation.AddAttachment} must have one or two arguments");
+                    ThrowInvalidScriptMethodCall($"{Transformation.AddAttachment} must have one or two arguments");
                     break;
             }
 
@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 if (attachmentReference.IsString())
                     message += $" (value: '{attachmentReference.AsString()}')";
 
-                ThrowInvalidSriptMethodCall(message);
+                ThrowInvalidScriptMethodCall(message);
             }
 
             _currentRun.AddAttachment(self, name, attachmentReference);
@@ -153,7 +153,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private JsValue AddCounter(JsValue self, JsValue[] args)
         {
             if (args.Length != 1)
-                ThrowInvalidSriptMethodCall($"{Transformation.AddCounter} must have one arguments");
+                ThrowInvalidScriptMethodCall($"{Transformation.AddCounter} must have one arguments");
 
             var counterReference = args[0];
 
@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 if (counterReference.IsString())
                     message += $" (value: '{counterReference.AsString()}')";
 
-                ThrowInvalidSriptMethodCall(message);
+                ThrowInvalidScriptMethodCall(message);
             }
 
             _currentRun.AddCounter(self, counterReference);

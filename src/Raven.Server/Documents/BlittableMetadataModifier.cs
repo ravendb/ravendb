@@ -716,7 +716,7 @@ namespace Raven.Server.Documents
 
         private void ThrowInvalidMetadataProperty(JsonParserState state, IJsonParser reader)
         {
-            throw new InvalidDataException($"Expected property @metadata to be a simpel type, but was {state.CurrentTokenType}. Id: '{Id ?? "N/A"}'. Around {reader.GenerateErrorState()}");
+            throw new InvalidDataException($"Expected property @metadata to be a simple type, but was {state.CurrentTokenType}. Id: '{Id ?? "N/A"}'. Around {reader.GenerateErrorState()}");
         }
 
         private void ThrowExpectedFieldTypeOfString(string field, JsonParserState state, IJsonParser reader)

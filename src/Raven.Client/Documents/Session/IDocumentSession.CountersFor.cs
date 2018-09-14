@@ -8,7 +8,7 @@
 namespace Raven.Client.Documents.Session
 {
     /// <summary>
-    /// Provides an acces to DocumentSessionCounters API.
+    /// Provides an access to DocumentSessionCounters API.
     /// </summary>
     public partial interface IDocumentSession
     {

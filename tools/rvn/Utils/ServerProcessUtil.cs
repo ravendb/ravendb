@@ -31,7 +31,7 @@ namespace rvn.Utils
                 if (availableRavenProcesses.Count == 0)
                 {
                     Console.WriteLine("Couldn't find automatically another Raven.Server process." + Environment.NewLine +
-                                      "Please specify RavenDB Server proccess manually" + Environment.NewLine);
+                                      "Please specify RavenDB Server process manually" + Environment.NewLine);
                     Console.Out.Flush();
                     Environment.Exit(1);
                 }

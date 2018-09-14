@@ -8,7 +8,7 @@ using Jint.Runtime.References;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class JintPreventResolvingTasksReferenceResolver : JintNullPropgationReferenceResolver
+    public class JintPreventResolvingTasksReferenceResolver : JintNullPropagationReferenceResolver
     {
         private JsValue _selfInstance;
         private BlittableObjectInstance _args;

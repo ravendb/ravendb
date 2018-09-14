@@ -253,7 +253,7 @@ namespace Raven.Server.ServerWide
                                         NotificationCenter.Add(topologyNotification);
                                     }
                                 }
-                                delay = await ReconnactionBackoff(delay);
+                                delay = await ReconnectionBackoff(delay);
                             }
                         }
                     }
@@ -267,12 +267,12 @@ namespace Raven.Server.ServerWide
                     {
                         Logger.Info($"Error during receiving topology updates from the leader. Waiting {delay} [ms] before trying again.", e);
                     }
-                    delay = await ReconnactionBackoff(delay);
+                    delay = await ReconnectionBackoff(delay);
                 }
             }
         }
 
-        private async Task<int> ReconnactionBackoff(int delay)
+        private async Task<int> ReconnectionBackoff(int delay)
         {
             await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(delay), ServerShutdown);
             return Math.Min(15_000, delay * 2);

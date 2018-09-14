@@ -125,7 +125,7 @@ namespace Raven.Server.Documents
             return table.GetCountOfMatchesFor(AttachmentsSchema.Indexes[AttachmentsHashSlice], hash);
         }
 
-        public IEnumerable<DynamicJsonValue> GetAttachmentsMetadataForDocumenWithCounts(DocumentsOperationContext context, string lowerDocumentId)
+        public IEnumerable<DynamicJsonValue> GetAttachmentsMetadataForDocumentWithCounts(DocumentsOperationContext context, string lowerDocumentId)
         {
             using (Slice.From(context.Allocator, lowerDocumentId, out Slice lowerDocumentIdSlice))
             using (GetAttachmentPrefix(context, lowerDocumentIdSlice, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))

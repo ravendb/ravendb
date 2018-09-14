@@ -338,7 +338,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 else
                 {
                     ThrowParseException("Unable to get field for " + clause);
-                    return null; // never callsed
+                    return null; // never called
                 }
 
                 if (Alias(aliasAsRequired, out var alias) == false && expr is ValueExpression ve)

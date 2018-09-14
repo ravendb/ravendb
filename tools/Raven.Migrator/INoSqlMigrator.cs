@@ -8,6 +8,6 @@ namespace Raven.Migrator
 
         Task GetCollectionsInfo();
 
-        Task MigrateDatabse();
+        Task MigrateDatabase();
     }
 }

@@ -18,7 +18,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public bool HasHighlyAvailableTasks;
         public DateTime LastTimeServerMadeProgressWithDocuments;
 
-        // for serializtion
+        // for serialization
         private AcknowledgeSubscriptionBatchCommand() : base(null) { }
 
         public AcknowledgeSubscriptionBatchCommand(string databaseName) : base(databaseName)

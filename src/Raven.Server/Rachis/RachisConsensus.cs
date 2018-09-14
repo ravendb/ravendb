@@ -420,7 +420,7 @@ namespace Raven.Server.Rachis
 
                 // if we don't have a topology id, then we are passive
                 // an admin needs to let us know that it is fine, either
-                // by explicit bootstraping or by connecting us to a cluster
+                // by explicit bootstrapping or by connecting us to a cluster
                 if (topology.TopologyId == null ||
                     topology.Members.ContainsKey(_tag) == false)
                 {
@@ -922,7 +922,7 @@ namespace Raven.Server.Rachis
             return topologyJson;
         }
         
-        public void NotifyTopologyChange(bool propogateError = false)
+        public void NotifyTopologyChange(bool propagateError = false)
         {
             try
             {
@@ -937,7 +937,7 @@ namespace Raven.Server.Rachis
             }
             catch (Exception)
             {
-                if (propogateError)
+                if (propagateError)
                     throw;
             }
         }

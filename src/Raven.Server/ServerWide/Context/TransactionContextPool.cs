@@ -16,7 +16,7 @@ namespace Raven.Server.ServerWide.Context
 
         private ThreadLocal<bool> _mostlyThreadDedicatedWork;
 
-        public void SetMostWorkInGoingToHappenonThisThread()
+        public void SetMostWorkInGoingToHappenOnThisThread()
         {
             _mostlyThreadDedicatedWork = new ThreadLocal<bool>();
             _mostlyThreadDedicatedWork.Value = true;

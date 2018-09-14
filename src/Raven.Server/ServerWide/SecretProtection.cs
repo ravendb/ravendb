@@ -590,7 +590,7 @@ namespace Raven.Server.ServerWide
                 var expectedKeySize = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
 
                 // we require that the key will exists (so admin will generate proper permissions)
-                // but if the size is zero, we'll generate a radnom key and save it to the specified
+                // but if the size is zero, we'll generate a random key and save it to the specified
                 // file
 
                 if(key.Length == 0)
@@ -618,7 +618,7 @@ namespace Raven.Server.ServerWide
         {
             if (loadedCertificate.NotAfter < DateTime.UtcNow)
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"The provided certificate {loadedCertificate.FriendlyName} from {source} is expired! Thubprint: {loadedCertificate.Thumbprint}, Expired on: {loadedCertificate.NotAfter}");
+                    Logger.Operations($"The provided certificate {loadedCertificate.FriendlyName} from {source} is expired! Thumbprint: {loadedCertificate.Thumbprint}, Expired on: {loadedCertificate.NotAfter}");
                 
 
             if (serverStore.LicenseManager.GetLicenseStatus().Type == LicenseType.Developer)

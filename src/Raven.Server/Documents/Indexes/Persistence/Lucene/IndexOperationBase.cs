@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 // RavenPerFieldAnalyzerWrapper searchAnalyzer = null;
                 try
                 {
-                    //_persistance._a
+                    //_persistence._a
                     //searchAnalyzer = parent.CreateAnalyzer(new LowerCaseKeywordAnalyzer(), toDispose, true);
                     //searchAnalyzer = parent.AnalyzerGenerators.Aggregate(searchAnalyzer, (currentAnalyzer, generator) =>
                     //{

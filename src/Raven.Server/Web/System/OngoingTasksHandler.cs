@@ -191,7 +191,7 @@ namespace Raven.Server.Web.System
             var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
 
             if (Enum.TryParse(type, out PeriodicBackupTestConnectionType connectionType) == false)
-                throw new ArgumentException($"Unkown backup connection: {type}");
+                throw new ArgumentException($"Unknown backup connection: {type}");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -212,12 +212,12 @@ namespace Raven.Server.Web.System
                             break;
                         case PeriodicBackupTestConnectionType.Glacier:
                             var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
-                            using (var galcierClient = new RavenAwsGlacierClient(
+                            using (var glacierClient = new RavenAwsGlacierClient(
                                 glacierSettings.AwsAccessKey, glacierSettings.AwsSecretKey,
                                 glacierSettings.AwsRegionName, glacierSettings.VaultName,
                                 cancellationToken: ServerStore.ServerShutdown))
                             {
-                                await galcierClient.TestConnection();
+                                await glacierClient.TestConnection();
                             }
                             break;
                         case PeriodicBackupTestConnectionType.Azure:
@@ -599,7 +599,7 @@ namespace Raven.Server.Web.System
                 }
 
                 Dictionary<string, RavenConnectionString> ravenConnectionStrings;
-                Dictionary<string, SqlConnectionString> sqlConnectionstrings;
+                Dictionary<string, SqlConnectionString> sqlConnectionStrings;
                 if (connectionStringName != null)
                 {
                     if (string.IsNullOrWhiteSpace(connectionStringName))
@@ -609,12 +609,12 @@ namespace Raven.Server.Web.System
                     if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
                         throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
 
-                    (ravenConnectionStrings, sqlConnectionstrings) = GetConnectionString(record, connectionStringName, connectionStringType);
+                    (ravenConnectionStrings, sqlConnectionStrings) = GetConnectionString(record, connectionStringName, connectionStringType);
                 }
                 else
                 {
                     ravenConnectionStrings = record.RavenConnectionStrings;
-                    sqlConnectionstrings = record.SqlConnectionStrings;
+                    sqlConnectionStrings = record.SqlConnectionStrings;
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -622,7 +622,7 @@ namespace Raven.Server.Web.System
                     var result = new GetConnectionStringsResult
                     {
                         RavenConnectionStrings = ravenConnectionStrings,
-                        SqlConnectionStrings = sqlConnectionstrings
+                        SqlConnectionStrings = sqlConnectionStrings
                     };
                     context.Write(writer, result.ToJson());
                     writer.Flush();

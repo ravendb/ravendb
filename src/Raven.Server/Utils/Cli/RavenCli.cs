@@ -286,7 +286,7 @@ namespace Raven.Server.Utils.Cli
             }
 
             var url = cli._server.ServerStore.GetNodeHttpServerUrl();
-            WriteText("Openning Studio at: ", TextColor, cli, newLine: false);
+            WriteText("Opening Studio at: ", TextColor, cli, newLine: false);
             WriteText(url, UserInputColor, cli);
 
             BrowserHelper.OpenStudioInBrowser(url, onError: errorMessage => WriteError($"{errorMessage}", cli));
@@ -603,7 +603,7 @@ namespace Raven.Server.Utils.Cli
                 }
                 catch (Exception e)
                 {
-                    WriteError($"Failed to store cerrificate {cert.Thumbprint} in the server." + e, cli);
+                    WriteError($"Failed to store certificate {cert.Thumbprint} in the server." + e, cli);
                     return false;
                 }
 
@@ -676,7 +676,7 @@ namespace Raven.Server.Utils.Cli
                 }
                 catch (Exception e)
                 {
-                    WriteError($"Failed to put cerrificate {cert.Thumbprint} in the server." + e, cli);
+                    WriteError($"Failed to put certificate {cert.Thumbprint} in the server." + e, cli);
                     return false;
                 }
 
@@ -770,7 +770,7 @@ namespace Raven.Server.Utils.Cli
             cli._server.ServerStore.EnsureNotPassive();
 
             // This restriction should be removed when updating to .net core 2.1 when export of collection is fixed.
-            // With export, we'll be able to load the certificate and export it without a password, and propogate it through the cluster.
+            // With export, we'll be able to load the certificate and export it without a password, and propagate it through the cluster.
             if (string.IsNullOrWhiteSpace(password) == false)
                 throw new NotSupportedException("Replacing the cluster certificate with a password protected certificates is currently not supported.");
 
@@ -940,7 +940,7 @@ namespace Raven.Server.Utils.Cli
             var memoryStats = MemoryStatsWithMemoryMappedInfo();
             var msg = new StringBuilder();
             msg.Append($"Working Set: {memoryStats.WorkingSet}");
-            msg.Append($" Unmamanged Memory: {memoryStats.TotalUnmanagedAllocations}");
+            msg.Append($" Unmanaged Memory: {memoryStats.TotalUnmanagedAllocations}");
             msg.Append($" Managed Memory: {memoryStats.ManagedMemory}");
             WriteText(msg.ToString(), ConsoleColor.Cyan, cli);
 
@@ -951,7 +951,7 @@ namespace Raven.Server.Utils.Cli
             WriteText("After sending low mem simulation event, memory stats: ", TextColor, cli, newLine: false);
             msg.Clear();
             msg.Append($"Working Set: {memoryStats.WorkingSet}");
-            msg.Append($" Unmamanged Memory: {memoryStats.TotalUnmanagedAllocations}");
+            msg.Append($" Unmanaged Memory: {memoryStats.TotalUnmanagedAllocations}");
             msg.Append($" Managed Memory: {memoryStats.ManagedMemory}");
             WriteText(msg.ToString(), ConsoleColor.Cyan, cli);
 
@@ -1041,7 +1041,7 @@ namespace Raven.Server.Utils.Cli
                 new[] {"helpPrompt", "Detailed prompt command usage"},
                 new[] {"clear", "Clear screen"},
                 new[] {"stats", "Online server's memory consumption stats, request ratio and documents count"},
-                new[] {"log [http-]<on|off|information/operations> [no-console]", "set log on/off or to specific mode. filter requests using http-on/offlog. no-console to avoid printing in CLI"},
+                new[] {"log [http-]<on|off|information/operations> [no-console]", "set log on/off or to specific mode. filter requests using http-on/off log. no-console to avoid printing in CLI"},
                 new[] {"info", "Print system info and current stats"},
                 new[] {"logo [no-clear]", "Clear screen and print initial logo"},
                 new[] {"gc [gen]", "Collect garbage of specified gen : 0, 1 or default 2"},
@@ -1161,7 +1161,7 @@ namespace Raven.Server.Utils.Cli
             }
             catch (Exception ex)
             {
-                // incase of cli failure - prevent server from going down, and switch to a (very) simple fallback cli
+                // in case of cli failure - prevent server from going down, and switch to a (very) simple fallback cli
                 WriteText("\nERROR in CLI:" + ex, ErrorColor, this, newLine: false);
                 WriteText("\n\nSwitching to simple cli...", ErrorColor, this, newLine: false);
 
@@ -1277,7 +1277,7 @@ namespace Raven.Server.Utils.Cli
                         {
                             if (_experimental == false)
                             {
-                                WriteError($"{parsedCommand.Command} is experimental, and can be executed only if expermintal option set to on", this);
+                                WriteError($"{parsedCommand.Command} is experimental, and can be executed only if experimental option is set to on", this);
                                 lastRc = false;
                                 continue;
                             }

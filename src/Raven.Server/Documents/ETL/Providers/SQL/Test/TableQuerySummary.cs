@@ -32,9 +32,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Test
 
                 foreach (var param in c.Parameters.Cast<DbParameter>())
                 {
-                    var paramterValue = GetParameterValue(param);
+                    var parameterValue = GetParameterValue(param);
 
-                    @params.Add(new KeyValuePair<string, object>(param.ParameterName, paramterValue));
+                    @params.Add(new KeyValuePair<string, object>(param.ParameterName, parameterValue));
                 }
 
                 commandData.Add(new CommandData
@@ -51,22 +51,22 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Test
 
         public static object GetParameterValue(DbParameter param)
         {
-            var paramterValue = param.Value;
+            var parameterValue = param.Value;
 
-            if (paramterValue == DBNull.Value)
+            if (parameterValue == DBNull.Value)
             {
-                paramterValue = "NULL";
+                parameterValue = "NULL";
             }
             else if (param.DbType == DbType.AnsiString || param.DbType == DbType.String)
             {
-                paramterValue = $"'{RelationalDatabaseWriter.SanitizeSqlValue(paramterValue.ToString())}'";
+                parameterValue = $"'{RelationalDatabaseWriter.SanitizeSqlValue(parameterValue.ToString())}'";
             }
             else if (param.DbType == DbType.Binary)
             {
-                paramterValue = "<binary_data>";
+                parameterValue = "<binary_data>";
             }
 
-            return paramterValue;
+            return parameterValue;
         }
     }
 }

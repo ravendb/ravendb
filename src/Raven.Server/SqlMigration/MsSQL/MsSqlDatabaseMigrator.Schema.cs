@@ -23,7 +23,7 @@ namespace Raven.Server.SqlMigration.MsSQL
                                                 "on tc.CONSTRAINT_TYPE = 'PRIMARY KEY' and tc.constraint_name = ku.CONSTRAINT_NAME" +
                                                 " order by ORDINAL_POSITION";
 
-        public const string SelectReferantialConstraints = "select CONSTRAINT_NAME, UNIQUE_CONSTRAINT_NAME " +
+        public const string SelectReferentialConstraints = "select CONSTRAINT_NAME, UNIQUE_CONSTRAINT_NAME " +
                                                            "from information_schema.REFERENTIAL_CONSTRAINTS";
 
         public const string SelectKeyColumnUsage = "select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME" +
@@ -76,7 +76,7 @@ namespace Raven.Server.SqlMigration.MsSQL
             }
         }
 
-        // Please notice it doesn't return PR for tables that doesn't referece PR using FK
+        // Please notice it doesn't return PR for tables that doesn't reference PR using FK
         private void FindPrimaryKeys(DbConnection connection, DatabaseSchema dbSchema)
         {
             using (var cmd = connection.CreateCommand())
@@ -101,7 +101,7 @@ namespace Raven.Server.SqlMigration.MsSQL
 
             using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText = SelectReferantialConstraints;
+                cmd.CommandText = SelectReferentialConstraints;
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())

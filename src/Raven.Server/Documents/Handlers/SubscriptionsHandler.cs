@@ -92,14 +92,14 @@ namespace Raven.Server.Documents.Handlers
                             }
                             else
                             {
-                                var docWithExcepton = new DocumentWithException
+                                var documentWithException = new DocumentWithException
                                 {
                                     Exception = itemDetails.Exception.ToString(),
                                     ChangeVector = itemDetails.Doc.ChangeVector,
                                     Id = itemDetails.Doc.Id,
                                     DocumentData = itemDetails.Doc.Data
                                 };
-                                writer.WriteObject(context.ReadObject(docWithExcepton.ToJson(), ""));
+                                writer.WriteObject(context.ReadObject(documentWithException.ToJson(), ""));
                             }
 
                             first = false;
@@ -348,14 +348,14 @@ namespace Raven.Server.Documents.Handlers
         public Task DropSubscriptionConnection()
         {
             var subscriptionId = GetLongQueryString("id", required: false);
-            var subscripitonName = GetStringQueryString("name", required: false);
+            var subscriptionName = GetStringQueryString("name", required: false);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var subscription = Database
                     .SubscriptionStorage
-                    .GetRunningSubscription(context, subscriptionId, subscripitonName, false);
+                    .GetRunningSubscription(context, subscriptionId, subscriptionName, false);
 
                 if (subscription != null)
                 {

@@ -258,7 +258,7 @@ namespace Raven.Server.Documents.ETL
         {
             using (var transformer = GetTransformer(context))
             {
-                transformer.Initalize(debugMode: _testMode != null);
+                transformer.Initialize(debugMode: _testMode != null);
 
                 foreach (var item in items)
                 {

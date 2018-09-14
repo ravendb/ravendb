@@ -306,7 +306,7 @@ namespace Raven.Client.ServerWide
         public string WhoseTaskIsIt(
             RachisState state, 
             IDatabaseTask task,
-            Func<string> getLastReponsibleNode)
+            Func<string> getLastResponsibleNode)
         {
             if (state == RachisState.Candidate || state == RachisState.Passive)
                 return null;
@@ -318,7 +318,7 @@ namespace Raven.Client.ServerWide
                     return mentorNode;
             }
 
-            var lastResponsibleNode = getLastReponsibleNode?.Invoke();
+            var lastResponsibleNode = getLastResponsibleNode?.Invoke();
             if (lastResponsibleNode != null)
                 return lastResponsibleNode;
 

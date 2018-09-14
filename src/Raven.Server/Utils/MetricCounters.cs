@@ -132,7 +132,7 @@ namespace Raven.Server.Utils
         }
     }
 
-    public static class MetricsExtentions
+    public static class MetricsExtensions
     {
         public static void SetMinimalHumaneMeterData(this MeterMetric self, string name, DynamicJsonValue obj)
         {

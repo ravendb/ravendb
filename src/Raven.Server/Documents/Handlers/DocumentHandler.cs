@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Handlers
                 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-                var documentsizeDetails = new DocumentSizeDetails
+                var documentSizeDetails = new DocumentSizeDetails
                 {
                     DocId = id,
                     ActualSize = document.Value.ActualSize,
@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Handlers
                 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    context.Write(writer, documentsizeDetails.ToJson());
+                    context.Write(writer, documentSizeDetails.ToJson());
                     writer.Flush();
                 }
 
@@ -310,7 +310,7 @@ namespace Raven.Server.Documents.Handlers
                 // We HAVE to read the document in full, trying to parallelize the doc read
                 // and the identity generation needs to take into account that the identity 
                 // generation can fail and will leave the reading task hanging if we abort
-                // easier to just do in syncronously
+                // easier to just do in synchronously
                 var doc = await context.ReadForDiskAsync(RequestBodyStream(), id).ConfigureAwait(false);
 
                 if (id[id.Length - 1] == '|')
@@ -475,7 +475,7 @@ namespace Raven.Server.Documents.Handlers
                     case "csharp":
                         break;
                     default:
-                        throw new NotImplementedException($"Document code generator isn't implemeted for {lang}");
+                        throw new NotImplementedException($"Document code generator isn't implemented for {lang}");
                 }
 
                 using (var writer = new StreamWriter(ResponseBodyStream()))

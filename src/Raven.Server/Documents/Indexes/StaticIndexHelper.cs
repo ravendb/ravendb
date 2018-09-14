@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Indexes
                             if (stalenessReasons == null)
                                 return true;
 
-                            stalenessReasons.Add($"There are still tomstones tombstones to process from collection '{referencedCollection.Name}' with etag range '{lastProcessedTombstoneEtag} - {referenceCutoff.Value}'.");
+                            stalenessReasons.Add($"There are still tombstones to process from collection '{referencedCollection.Name}' with etag range '{lastProcessedTombstoneEtag} - {referenceCutoff.Value}'.");
                         }
                     }
                 }

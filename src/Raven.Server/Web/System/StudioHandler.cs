@@ -623,8 +623,8 @@ namespace Raven.Server.Web.System
                 // The zip entry stream is not seekable, so we have to reopen it
                 using (var entry = zipEntry.Open())
                 {
-                    var cachEntry = BuildForCache(serverRelativeFileName, fileETag, fileInfo, entry);
-                    StaticContentCache.TryAdd(serverRelativeFileName, new Lazy<CachedStaticFile>(cachEntry));
+                    var cacheEntry = BuildForCache(serverRelativeFileName, fileETag, fileInfo, entry);
+                    StaticContentCache.TryAdd(serverRelativeFileName, new Lazy<CachedStaticFile>(cacheEntry));
                 }
             }
 
@@ -677,7 +677,7 @@ namespace Raven.Server.Web.System
             }
             catch (Exception)
             {
-                // Supressing this exception is reasonable: there are many 
+                // Suppressing this exception is reasonable: there are many 
                 // reasons for which the file may not be available right now.
                 // The watcher will let us know whenever we can try again.
             }

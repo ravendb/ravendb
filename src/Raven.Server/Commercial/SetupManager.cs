@@ -378,11 +378,11 @@ namespace Raven.Server.Commercial
             return currentNodeSettingsJson;
         }
 
-        public static async Task<LicenseStatus> GetUpdatedLicenseStatus(ServerStore serverStore, License currentLicnese, Reference<License> updatedLicense = null)
+        public static async Task<LicenseStatus> GetUpdatedLicenseStatus(ServerStore serverStore, License currentLicense, Reference<License> updatedLicense = null)
         {
             var license = 
-                await serverStore.LicenseManager.GetUpdatedLicense(currentLicnese).ConfigureAwait(false)
-                ?? currentLicnese;
+                await serverStore.LicenseManager.GetUpdatedLicense(currentLicense).ConfigureAwait(false)
+                ?? currentLicense;
 
             var licenseStatus = serverStore.LicenseManager.GetLicenseStatus(license);
             if (licenseStatus.Expired)
@@ -544,7 +544,7 @@ namespace Raven.Server.Commercial
             await serverStore.Cluster.WaitForIndexNotification(res.Index);
         }
 
-        private static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(Action onValdiationSuccessful, SetupInfo setupInfo,  LetsEncryptClient client, 
+        private static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(Action onValidationSuccessful, SetupInfo setupInfo,  LetsEncryptClient client, 
             (string Challange, LetsEncryptClient.CachedCertificateResult Cache) challengeResult,  CancellationToken token)
         {
             if (challengeResult.Challange == null && challengeResult.Cache != null)
@@ -561,7 +561,7 @@ namespace Raven.Server.Commercial
                 throw new InvalidOperationException("Failed to Complete Let's Encrypt challenge(s).", e);
             }
 
-            onValdiationSuccessful();
+            onValidationSuccessful();
 
 
             (X509Certificate2 Cert, RSA PrivateKey) result;
@@ -571,7 +571,7 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException("Failed to aquire certificate from Let's Encrypt.", e);
+                throw new InvalidOperationException("Failed to acquire certificate from Let's Encrypt.", e);
             }
 
             try
@@ -816,7 +816,7 @@ namespace Raven.Server.Commercial
                     var existingSubDomain = registrationInfo.SubDomains.FirstOrDefault(x => x.SubDomain.StartsWith(setupInfo.LocalNodeTag + ".", StringComparison.OrdinalIgnoreCase));
                     if (existingSubDomain != null && new HashSet<string>(existingSubDomain.Ips).SetEquals(setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag].Addresses))
                     {
-                        progress.AddInfo("DNS update started successfully, since current node (" + setupInfo.LocalNodeTag + ") DNS record didn't change, not waiting for full DNS propogation."); 
+                        progress.AddInfo("DNS update started successfully, since current node (" + setupInfo.LocalNodeTag + ") DNS record didn't change, not waiting for full DNS propagation."); 
                         return;
                     }
                 }
@@ -1201,7 +1201,7 @@ namespace Raven.Server.Commercial
 
         public static IEnumerable<string> GetCertificateAlternativeNames(X509Certificate2 cert)
         {
-            // If we have alternative names, find the apropriate url using the node tag
+            // If we have alternative names, find the appropriate url using the node tag
             var sanNames = cert.Extensions["2.5.29.17"];
 
             if (sanNames == null)
@@ -1964,7 +1964,7 @@ namespace Raven.Server.Commercial
 
         private static async Task AssertDnsUpdatedSuccessfully(string serverUrl, IPEndPoint[] expectedAddresses, CancellationToken token)
         {
-            // First we'll try to resolve the hostname through googls's public dns api
+            // First we'll try to resolve the hostname through google's public dns api
             using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, cancellationTokenSource.Token))
             {

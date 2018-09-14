@@ -298,11 +298,11 @@ namespace Raven.Server.Documents
 
         private void RemoveTombstoneIfExists(DocumentsOperationContext context, string documentId, string name)
         {
-            using (GetCounterPartialKey(context, documentId, name, out var keyPerfix))
+            using (GetCounterPartialKey(context, documentId, name, out var keyPrefix))
             {
                 var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, CountersTombstonesSlice);
 
-                if (tombstoneTable.ReadByKey(keyPerfix, out var existingTombstone))
+                if (tombstoneTable.ReadByKey(keyPrefix, out var existingTombstone))
                 {
                     tombstoneTable.Delete(existingTombstone.Id);
                 }
@@ -457,9 +457,9 @@ namespace Raven.Server.Documents
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
-            using (GetCounterPartialKey(context, docId, counterName, out var keyPerfix))
+            using (GetCounterPartialKey(context, docId, counterName, out var keyPrefix))
             {
-                foreach (var result in table.SeekByPrimaryKeyPrefix(keyPerfix, Slices.Empty, 0))
+                foreach (var result in table.SeekByPrimaryKeyPrefix(keyPrefix, Slices.Empty, 0))
                 {
                     (string, long) val = ExtractDbIdAndValue(result);
                     yield return val;
@@ -564,9 +564,9 @@ namespace Raven.Server.Documents
             if (table.NumberOfEntries == 0)
                 return;
 
-            using (GetCounterPartialKey(context, documentId, out var keyPerfix))
+            using (GetCounterPartialKey(context, documentId, out var keyPrefix))
             {
-                table.DeleteByPrimaryKeyPrefix(keyPerfix);
+                table.DeleteByPrimaryKeyPrefix(keyPrefix);
             }
         }
 
@@ -578,10 +578,10 @@ namespace Raven.Server.Documents
                 Debug.Assert(false);// never hit
             }
 
-            using (GetCounterPartialKey(context, documentId, counterName, out var keyPerfix))
+            using (GetCounterPartialKey(context, documentId, counterName, out var keyPrefix))
             {
                 var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                return DeleteCounter(context, keyPerfix, collection, lastModifiedTicks,
+                return DeleteCounter(context, keyPrefix, collection, lastModifiedTicks,
                     // let's avoid creating a tombstone for missing counter if writing locally
                     forceTombstone: false);
             }

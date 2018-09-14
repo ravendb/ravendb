@@ -588,7 +588,7 @@ namespace Raven.Server.Documents
             var sp = Stopwatch.StartNew();
             do
             {
-                // RavenDB-7732 - Even if we merged multiple seprate operations into 
+                // RavenDB-7732 - Even if we merged multiple separate operations into 
                 // a single transaction in Voron, we're still going to have a separate
                 // tx marker for them for the purpose of replication, to avoid creating
                 // overly large replication batches.
@@ -622,7 +622,7 @@ namespace Raven.Server.Documents
                     continue;
                 }
 
-                // if I can't close the tx, this means that the previous async operation is stil in progress
+                // if I can't close the tx, this means that the previous async operation is still in progress
                 // and there are incoming requests coming in. We'll accept them, to a certain limit
                 if (modifiedSize < _maxTxSizeInBytes)
                     continue; // we can still process requests at this time, so let's do that...
@@ -828,7 +828,7 @@ namespace Raven.Server.Documents
 
             // make sure that the queue is empty and there are no pending 
             // transactions waiting. 
-            // this is probably a bit more aggresive that what is needed, but it is better 
+            // this is probably a bit more aggressive that what is needed, but it is better 
             // to be cautious and slower on rare dispose than hang
 
             while (done == false)

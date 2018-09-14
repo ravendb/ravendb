@@ -172,13 +172,13 @@ namespace Raven.Server.Documents.Queries
         private class BulkOperationCommand<T> : TransactionOperationsMerger.MergedTransactionCommand where T : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly T _command;
-            private readonly bool _retieveDetails;
+            private readonly bool _retrieveDetails;
             private readonly Func<T, IBulkOperationDetails> _getDetails;
 
-            public BulkOperationCommand(T command, bool retieveDetails, Func<T, IBulkOperationDetails> getDetails)
+            public BulkOperationCommand(T command, bool retrieveDetails, Func<T, IBulkOperationDetails> getDetails)
             {
                 _command = command;
-                _retieveDetails = retieveDetails;
+                _retrieveDetails = retrieveDetails;
                 _getDetails = getDetails;
             }
 
@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.Queries
             {
                 var count = _command.Execute(context);
 
-                if (_retieveDetails)
+                if (_retrieveDetails)
                     AfterExecute?.Invoke(_getDetails(_command));
 
                 return count;

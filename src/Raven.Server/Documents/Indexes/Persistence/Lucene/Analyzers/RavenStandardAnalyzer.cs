@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
             var previousTokenStream = (RavenStandardFilter)PreviousTokenStream;
             if (previousTokenStream == null)
                 return TokenStream(fieldName, reader);
-            // if the inner tokenazier is successfuly reset
+            // if the inner tokenizer is successfully reset
             if (previousTokenStream.Reset(reader))
             {
                 return previousTokenStream;

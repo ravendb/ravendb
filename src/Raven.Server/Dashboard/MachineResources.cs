@@ -18,7 +18,7 @@ namespace Raven.Server.Dashboard
 
         public long SystemCommitLimit { get; set; } // in bytes
 
-        public long CommitedMemory { get; set; } // in bytes
+        public long CommittedMemory { get; set; } // in bytes
 
         public long ProcessMemoryUsage { get; set; } // in bytes
 
@@ -40,7 +40,7 @@ namespace Raven.Server.Dashboard
             json[nameof(AvailableMemory)] = AvailableMemory;
             json[nameof(CalculatedAvailableMemory)] = CalculatedAvailableMemory;
             json[nameof(SystemCommitLimit)] = SystemCommitLimit;
-            json[nameof(CommitedMemory)] = CommitedMemory;
+            json[nameof(CommittedMemory)] = CommittedMemory;
             json[nameof(ProcessMemoryUsage)] = ProcessMemoryUsage;
             json[nameof(IsWindows)] = IsWindows;
             json[nameof(IsLowMemory)] = IsLowMemory;

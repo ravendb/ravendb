@@ -75,7 +75,7 @@ namespace Raven.Server.Https
                         if (b >= 'A' && b <= 'Z')
                         {
                             // this is a good indication that we have been connected using HTTP, instead of HTTPS
-                            // because the first characeter is a valid ASCII value. However, in SSL2, the first bit
+                            // because the first character is a valid ASCII value. However, in SSL2, the first bit
                             // is always on, and in SSL 3 / TLS 1.0 - 1.2 the first byte is 22.
                             // https://stackoverflow.com/questions/3897883/how-to-detect-an-incoming-ssl-https-handshake-ssl-wire-format
                             context.Features.Set<IHttpAuthenticationFeature>(new RavenServer.AuthenticateConnection

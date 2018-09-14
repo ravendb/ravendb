@@ -235,7 +235,7 @@ namespace Voron.Recovery
                                             {
                                                 valid = false;
                                                 if (_logger.IsOperationsEnabled)
-                                                    _logger.Operations($"page #{nextPage->PageNumber} (offset={(long)nextPage}) was suppose to be a stream chunck but isn't marked as Overflow | Stream");
+                                                    _logger.Operations($"page #{nextPage->PageNumber} (offset={(long)nextPage}) was suppose to be a stream chunk but isn't marked as Overflow | Stream");
                                                 break;
                                             }
                                             valid = ValidateOverflowPage(nextPage, eof, (long)nextPage, ref nextPagePtr);
@@ -322,7 +322,7 @@ namespace Voron.Recovery
                                     var message =
                                         $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffset, currMem)}";
                                     mem = PrintErrorAndAdvanceMem(message, mem);
-                                    //we can't retrive entries past the invalid entry
+                                    //we can't retrieve entries past the invalid entry
                                     break;
                                 }
                                 //Allocated size of entry exceed the bound of the page next allocation
@@ -333,7 +333,7 @@ namespace Voron.Recovery
                                         $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffset, currMem)}" +
                                         "the allocated entry exceed the bound of the page next allocation.";
                                     mem = PrintErrorAndAdvanceMem(message, mem);
-                                    //we can't retrive entries past the invalid entry
+                                    //we can't retrieve entries past the invalid entry
                                     break;
                                 }
                                 if (entry->UsedSize > entry->AllocatedSize)
@@ -342,7 +342,7 @@ namespace Voron.Recovery
                                         $"RawDataSmallPage #{rawHeader->PageNumber} has an invalid entry at {GetFilePosition(startOffset, currMem)}" +
                                         "the size of the entry exceed the allocated size";
                                     mem = PrintErrorAndAdvanceMem(message, mem);
-                                    //we can't retrive entries past the invalid entry
+                                    //we can't retrieve entries past the invalid entry
                                     break;
                                 }
                                 pos += entry->AllocatedSize + sizeof(RawDataSection.RawDataEntrySizes);
@@ -527,7 +527,7 @@ namespace Voron.Recovery
                 return;
             }
             _documentsAttachments.Sort((x, y) => Compare(x.hash, y.hash, StringComparison.Ordinal));
-            //We rely on the fact that the attachment hash are unqiue in the _attachmentsHashs list (no duplicated values).
+            //We rely on the fact that the attachment hash are unique in the _attachmentsHashs list (no duplicated values).
             int index = 0;
             foreach (var (hash, docId, size) in _attachmentsHashs)
             {
@@ -550,7 +550,7 @@ namespace Voron.Recovery
                     if (compareResult > 0)
                     {
                         if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Document {_documentsAttachments[index].docId} contians atachment with hash {documentHash} but we were not able to recover such attachment.");
+                            _logger.Operations($"Document {_documentsAttachments[index].docId} contains attachment with hash {documentHash} but we were not able to recover such attachment.");
                         index++;
                         continue;
                     }
@@ -579,9 +579,9 @@ namespace Voron.Recovery
         private void ReportOrphanCountersAndMissingCounters(BlittableJsonTextWriter writer, CancellationToken ct)
         {
             //No need to scare the user if there are no counters in the dump
-            if (_uniqueCountersDicovered.Count == 0 && _documentsCounters.Count == 0)
+            if (_uniqueCountersDiscovered.Count == 0 && _documentsCounters.Count == 0)
                 return;
-            if (_uniqueCountersDicovered.Count == 0)
+            if (_uniqueCountersDiscovered.Count == 0)
             {
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations("No counters were recovered but there are documents pointing to counters.");
@@ -591,7 +591,7 @@ namespace Voron.Recovery
             var orphans = new Dictionary<string, HashSet<string>>();
             if (_documentsCounters.Count == 0)
             {
-                foreach (var (name, docId) in _uniqueCountersDicovered)
+                foreach (var (name, docId) in _uniqueCountersDiscovered)
                 {
                     AddOrphanCounter(orphans, docId, name);
                 }
@@ -606,11 +606,11 @@ namespace Voron.Recovery
             }
             _documentsCounters.Sort((x, y) => Compare(x.docId + SpecialChars.RecordSeparator + x.name,
                 y.docId + SpecialChars.RecordSeparator + y.name, StringComparison.OrdinalIgnoreCase));
-            //We rely on the fact that the counter id+name is unqiue in the _discoverdCounters list (no duplicated values).
+            //We rely on the fact that the counter id+name is unique in the _discoveredCounters list (no duplicated values).
             int index = 0;
-            foreach (var (name, docId) in _uniqueCountersDicovered)
+            foreach (var (name, docId) in _uniqueCountersDiscovered)
             {
-                var discoverdKey = docId + SpecialChars.RecordSeparator + name;
+                var discoveredKey = docId + SpecialChars.RecordSeparator + name;
                 if (ct.IsCancellationRequested)
                 {
                     return;
@@ -619,7 +619,7 @@ namespace Voron.Recovery
                 while (_documentsCounters.Count > index)
                 {
                     var documentsCountersKey = _documentsCounters[index].docId + SpecialChars.RecordSeparator + _documentsCounters[index].name;
-                    var compareResult = Compare(discoverdKey, documentsCountersKey, StringComparison.OrdinalIgnoreCase);
+                    var compareResult = Compare(discoveredKey, documentsCountersKey, StringComparison.OrdinalIgnoreCase);
                     if (compareResult == 0)
                     {
                         index++;
@@ -767,7 +767,7 @@ namespace Voron.Recovery
         {
             ulong checksum;
             var endOfOverflow = (byte*)pageHeader + VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize) * _pageSize;
-            // the endOfOeverFlow can be equal to eof if the last page is overflow
+            // the endOfOverflow can be equal to eof if the last page is overflow
             if (endOfOverflow > eof)
             {
                 var message =
@@ -809,20 +809,20 @@ namespace Voron.Recovery
         }
 
         private bool Write(byte* mem, int sizeInBytes, BlittableJsonTextWriter documentsWriter, BlittableJsonTextWriter revisionsWriter,
-            BlittableJsonTextWriter conflictsWriter, BlittableJsonTextWriter countersWriter, JsonOperationContext context, long startOffest, byte tableType)
+            BlittableJsonTextWriter conflictsWriter, BlittableJsonTextWriter countersWriter, JsonOperationContext context, long startOffset, byte tableType)
         {
             switch ((TableType)tableType)
             {
                 case TableType.None:
                     return false;
                 case TableType.Documents:
-                    return WriteDocument(mem, sizeInBytes, documentsWriter, context, startOffest);
+                    return WriteDocument(mem, sizeInBytes, documentsWriter, context, startOffset);
                 case TableType.Revisions:
-                    return WriteRevision(mem, sizeInBytes, revisionsWriter, context, startOffest);
+                    return WriteRevision(mem, sizeInBytes, revisionsWriter, context, startOffset);
                 case TableType.Conflicts:
-                    return WriteConflict(mem, sizeInBytes, conflictsWriter, context, startOffest);
+                    return WriteConflict(mem, sizeInBytes, conflictsWriter, context, startOffset);
                 case TableType.Counters:
-                    return WriteCounter(mem, sizeInBytes, countersWriter, context, startOffest);
+                    return WriteCounter(mem, sizeInBytes, countersWriter, context, startOffset);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(tableType), tableType, null);
             }
@@ -870,7 +870,7 @@ namespace Voron.Recovery
                     _logger.Info($"Found counter item with document Id={counter.DocumentId} and name={counter.CounterName}");
 
                 _lastRecoveredDocumentKey = counter.DocumentId + SpecialChars.RecordSeparator + counter.CounterName;
-                _uniqueCountersDicovered.Add((counter.CounterName, counter.DocumentId));
+                _uniqueCountersDiscovered.Add((counter.CounterName, counter.DocumentId));
                 _numberOfCountersRetrieved++;
 
                 return true;
@@ -1114,7 +1114,7 @@ namespace Voron.Recovery
         private readonly Dictionary<string, long> _previouslyWrittenDocs;
         private readonly List<(string hash, string docId)> _documentsAttachments = new List<(string hash, string docId)>();
         private readonly List<(string name, string docId)> _documentsCounters = new List<(string name, string docId)>();
-        private readonly SortedSet<(string name, string docId)> _uniqueCountersDicovered = new SortedSet<(string name, string docId)>(new ByDocIdAndCounterName());
+        private readonly SortedSet<(string name, string docId)> _uniqueCountersDiscovered = new SortedSet<(string name, string docId)>(new ByDocIdAndCounterName());
 
         private long _numberOfCountersRetrieved;
         private int _dummyDocNumber;

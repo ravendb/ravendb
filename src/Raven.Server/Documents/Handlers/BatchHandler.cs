@@ -346,7 +346,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
 
-        public abstract class TranscationMergedCommand : TransactionOperationsMerger.MergedTransactionCommand
+        public abstract class TransactionMergedCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             protected readonly DocumentDatabase Database;
             public HashSet<string> ModifiedCollections;
@@ -355,7 +355,7 @@ namespace Raven.Server.Documents.Handlers
 
             public DynamicJsonArray Reply = new DynamicJsonArray();
 
-            protected TranscationMergedCommand(DocumentDatabase database)
+            protected TransactionMergedCommand(DocumentDatabase database)
             {
                 Database = database;
             }
@@ -423,7 +423,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        public class ClusterTransactionMergedCommand : TranscationMergedCommand
+        public class ClusterTransactionMergedCommand : TransactionMergedCommand
         {
             private readonly List<ClusterTransactionCommand.SingleClusterDatabaseCommand> _batch;
             public Dictionary<long, DynamicJsonArray> Replies = new Dictionary<long, DynamicJsonArray>();
@@ -600,7 +600,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        public class MergedBatchCommand : TranscationMergedCommand, IDisposable
+        public class MergedBatchCommand : TransactionMergedCommand, IDisposable
         {
             public ArraySegment<BatchRequestParser.CommandData> ParsedCommands;
             public Queue<AttachmentStream> AttachmentStreams;

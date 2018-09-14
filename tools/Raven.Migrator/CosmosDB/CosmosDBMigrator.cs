@@ -81,7 +81,7 @@ namespace Raven.Migrator.CosmosDB
             }
         }
 
-        public async Task MigrateDatabse()
+        public async Task MigrateDatabase()
         {
             AssertDatabaseName();
 

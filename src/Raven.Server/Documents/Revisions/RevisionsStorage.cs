@@ -1032,7 +1032,7 @@ namespace Raven.Server.Documents.Revisions
             return Slice.External(context.Allocator, mem.Address, size, out slice);
         }
 
-        public IEnumerable<Document> GetResovledDocumentsSince(DocumentsOperationContext context, DateTime since, int take = 1024)
+        public IEnumerable<Document> GetResolvedDocumentsSince(DocumentsOperationContext context, DateTime since, int take = 1024)
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
             using (GetResolvedSlice(context, since, out var slice))

@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Queries.AST
     {
         private readonly StringBuilder _sb;
         private readonly HashSet<string> _knownAliases = new HashSet<string>();
-        private static readonly string[] UnsopportedQueryMethodsInJavascript = {
+        private static readonly string[] UnsupportedQueryMethodsInJavascript = {
             "Search","Boost","Lucene","Exact","Count","Sum","Circle","Wkt","Point","Within","Contains","Disjoint","Intersects","MoreLikeThis"
         };
 
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Queries.AST
             throw new NotSupportedException();
         }
 
-        public override void VisitNegatedExpresson(NegatedExpression expr)
+        public override void VisitNegatedExpression(NegatedExpression expr)
         {
             _sb.Append("!(");
             VisitExpression(expr.Expression);
@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Queries.AST
             {
                 if (expr.Arguments.Count != 2)
                 {
-                    throw new InvalidOperationException("startsWith(text, prefix) must be called with two string paremters");
+                    throw new InvalidOperationException("startsWith(text, prefix) must be called with two string parameters");
                 }
                 _sb.Append("startsWith(");
                 VisitExpression(expr.Arguments[0]);
@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Queries.AST
             {
                 if (expr.Arguments.Count != 2)
                 {
-                    throw new InvalidOperationException("endsWith(text, suffix) must be called with two string paremters");
+                    throw new InvalidOperationException("endsWith(text, suffix) must be called with two string parameters");
                 }
                 _sb.Append("endsWith(");
                 VisitExpression(expr.Arguments[0]);
@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Queries.AST
             {
                 if (expr.Arguments.Count != 2)
                 {
-                    throw new InvalidOperationException("regex(text, regex) must be called with two string paremters");
+                    throw new InvalidOperationException("regex(text, regex) must be called with two string parameters");
                 }
                 _sb.Append("regex(");
                 VisitExpression(expr.Arguments[0]);
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Queries.AST
             {
                 if (expr.Arguments.Count != 1)
                 {
-                    throw new InvalidOperationException("exists(field name) must be called with one string paremter");
+                    throw new InvalidOperationException("exists(field name) must be called with one string parameter");
                 }
                 _sb.Append("(typeof "); 
                 VisitExpression(expr.Arguments[0]);
@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.Queries.AST
                 return;    
             }
             
-            if (UnsopportedQueryMethodsInJavascript.Any(x=>
+            if (UnsupportedQueryMethodsInJavascript.Any(x=>
                 x.Equals(expr.Name.Value, StringComparison.OrdinalIgnoreCase)))
             {
                 throw new NotSupportedException($"'{expr.Name.Value}' query method is not supported by subscriptions");
@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.Queries.AST
             {
                 if (expr.Arguments.Count != 1)
                 {
-                    throw new InvalidOperationException("id(document) must be called with one document paremter");
+                    throw new InvalidOperationException("id(document) must be called with one document parameter");
                 }
                 _sb.Append("this");
             }

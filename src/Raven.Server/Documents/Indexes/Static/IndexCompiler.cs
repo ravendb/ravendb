@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var @class = CreateClass(cSharpSafeName, definition);
 
-            var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, extentions: definition.AdditionalSources);
+            var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, extensions: definition.AdditionalSources);
             var type = compilationResult.Type;
 
             var index = (StaticIndexBase)Activator.CreateInstance(type);
@@ -124,14 +124,14 @@ namespace Raven.Server.Documents.Indexes.Static
             return index;
         }
 
-        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, Dictionary<string, string> extentions = null)
+        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, Dictionary<string, string> extensions = null)
         {
             var name = cSharpSafeName + "." + Guid.NewGuid() + IndexExtension;
 
             var @namespace = RoslynHelper.CreateNamespace(IndexNamespace)
                 .WithMembers(SyntaxFactory.SingletonList(@class));
 
-            var res = GetUsingDirectiveAndSyntaxTreesAndRefrences(extentions);
+            var res = GetUsingDirectiveAndSyntaxTreesAndReferences(extensions);
 
             var compilationUnit = SyntaxFactory.CompilationUnit()
                 .WithUsings(RoslynHelper.CreateUsings(res.UsingDirectiveSyntaxes))
@@ -214,16 +214,16 @@ namespace Raven.Server.Documents.Indexes.Static
             };
         }
 
-        private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) GetUsingDirectiveAndSyntaxTreesAndRefrences(Dictionary<string, string> extentions)
+        private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) GetUsingDirectiveAndSyntaxTreesAndReferences(Dictionary<string, string> extensions)
         {
             var syntaxTrees = new List<SyntaxTree>();
-            if (extentions == null)
+            if (extensions == null)
             {
                 return (Usings, syntaxTrees, References);
             }
             var @using = new HashSet<string>();
 
-            foreach (var ext in extentions)
+            foreach (var ext in extensions)
             {
                 var rewrite = MethodDynamicParametersRewriter.Instance.Visit(SyntaxFactory.ParseSyntaxTree(ext.Value).GetRoot());
                 var tree = SyntaxFactory.SyntaxTree(rewrite);
@@ -234,30 +234,30 @@ namespace Raven.Server.Documents.Indexes.Static
                     @using.Add(ns.Name.ToString());
                 }
             }
-            var refrences = GetRefrences();
+            var references = GetReferences();
             if (@using.Count > 0)
             {
                 //Adding using directive with duplicates to avoid O(n*m) operation and confusing code
                 var newUsing = @using.Select(x => SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(x))).ToList();
                 newUsing.AddRange(Usings);
-                return (newUsing.ToArray(), syntaxTrees, refrences);
+                return (newUsing.ToArray(), syntaxTrees, references);
             }
-            return (Usings, syntaxTrees, refrences);
+            return (Usings, syntaxTrees, references);
         }
 
-        private static MetadataReference[] GetRefrences()
+        private static MetadataReference[] GetReferences()
         {
             var knownManageRefs = KnownManagedDlls.Value;
-            var newRefrences = new MetadataReference[References.Length + knownManageRefs.Length];
+            var newReferences = new MetadataReference[References.Length + knownManageRefs.Length];
             for (var i = 0; i < References.Length; i++)
             {
-                newRefrences[i] = References[i];
+                newReferences[i] = References[i];
             }
             for (int i = 0; i < knownManageRefs.Length; i++)
             {
-                newRefrences[i + References.Length] = knownManageRefs[i].Reference;
+                newReferences[i + References.Length] = knownManageRefs[i].Reference;
             }
-            return newRefrences;
+            return newReferences;
         }
 
         private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition)

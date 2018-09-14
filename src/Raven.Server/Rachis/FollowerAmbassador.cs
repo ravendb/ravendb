@@ -456,7 +456,7 @@ namespace Raven.Server.Rachis
 
         private void NotifyOnException(ref bool hadConnectionFailure, Exception e)
         {
-            // It could be that due to election or leader change, the follower has forcely closed the connection.
+            // It could be that due to election or leader change, the follower has forcefully closed the connection.
             // In any case we don't want to raise a notification due to a one-time connection failure.
             if (hadConnectionFailure || e.InnerException is IOException == false)
             {

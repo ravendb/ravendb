@@ -198,14 +198,14 @@ namespace Raven.Server.Rachis
                     }
                     RemoteConnection connection = null;
                     connections?.TryGetValue(voter.Key, out connection);
-                    var ambasaddor = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value, connection);
-                    _voters[voter.Key] = ambasaddor;
-                    _engine.AppendStateDisposable(this, ambasaddor);
+                    var ambassador = new FollowerAmbassador(_engine, this, _voterResponded, voter.Key, voter.Value, connection);
+                    _voters[voter.Key] = ambassador;
+                    _engine.AppendStateDisposable(this, ambassador);
                     if (_engine.Log.IsInfoEnabled)
                     {
                         _engine.Log.Info($"{ToString()}: starting ambassador for voter {voter.Key} {voter.Value}");
                     }
-                    ambasaddor.Start();
+                    ambassador.Start();
                 }
 
                 foreach (var promotable in clusterTopology.Promotables)
@@ -219,14 +219,14 @@ namespace Raven.Server.Rachis
                     }
                     RemoteConnection connection = null;
                     connections?.TryGetValue(promotable.Key, out connection);
-                    var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value, connection);
-                    _promotables[promotable.Key] = ambasaddor;
-                    _engine.AppendStateDisposable(this, ambasaddor);
+                    var ambassador = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value, connection);
+                    _promotables[promotable.Key] = ambassador;
+                    _engine.AppendStateDisposable(this, ambassador);
                     if (_engine.Log.IsInfoEnabled)
                     {
                         _engine.Log.Info($"{ToString()}: starting ambassador for promotable {promotable.Key} {promotable.Value}");
                     }
-                    ambasaddor.Start();
+                    ambassador.Start();
                 }
 
                 foreach (var nonVoter in clusterTopology.Watchers)
@@ -241,31 +241,31 @@ namespace Raven.Server.Rachis
                     }
                     RemoteConnection connection = null;
                     connections?.TryGetValue(nonVoter.Key, out connection);
-                    var ambasaddor = new FollowerAmbassador(_engine, this, _noop, nonVoter.Key, nonVoter.Value, connection);
-                    _nonVoters[nonVoter.Key] = ambasaddor;
-                    _engine.AppendStateDisposable(this, ambasaddor);
+                    var ambassador = new FollowerAmbassador(_engine, this, _noop, nonVoter.Key, nonVoter.Value, connection);
+                    _nonVoters[nonVoter.Key] = ambassador;
+                    _engine.AppendStateDisposable(this, ambassador);
                     if (_engine.Log.IsInfoEnabled)
                     {
                         _engine.Log.Info($"{ToString()}: starting ambassador for watcher {nonVoter.Key} {nonVoter.Value}");
                     }
-                    ambasaddor.Start();
+                    ambassador.Start();
                 }
                 
                 if (old.Count > 0)
                 {
-                    foreach (var ambasaddor in old)
+                    foreach (var ambassador in old)
                     {
-                        _voters.TryRemove(ambasaddor.Key, out _);
-                        _nonVoters.TryRemove(ambasaddor.Key, out _);
-                        _promotables.TryRemove(ambasaddor.Key, out _);
+                        _voters.TryRemove(ambassador.Key, out _);
+                        _nonVoters.TryRemove(ambassador.Key, out _);
+                        _promotables.TryRemove(ambassador.Key, out _);
                     }
                     Interlocked.Increment(ref _previousPeersWereDisposed);
                     System.Threading.ThreadPool.QueueUserWorkItem(_ =>
                     {
-                        foreach (var ambasaddor in old)
+                        foreach (var ambassador in old)
                         {
                             // it is not used by anything else, so we can close it
-                            ambasaddor.Value.Dispose();
+                            ambassador.Value.Dispose();
                         }
                         Interlocked.Decrement(ref _previousPeersWereDisposed);
                     }, null);
@@ -338,8 +338,8 @@ namespace Raven.Server.Rachis
                     EnsureThatWeHaveLeadership(VotersMajority);
                     _engine.ReportLeaderTime(LeaderShipDuration);
 
-                    // don't trancate if we are disposing an old peer
-                    // otherwise he would not recieve notification that he was 
+                    // don't truncate if we are disposing an old peer
+                    // otherwise he would not receive notification that he was 
                     // kick out of the cluster
                     if(_previousPeersWereDisposed > 0) // Not Interlocked, because the race here is not interesting. 
                         continue;
@@ -531,7 +531,7 @@ namespace Raven.Server.Rachis
         /// In this case, the quorum agrees on 3 as the committed index.
         /// 
         /// Why? Because A has 4 (which implies that it has 3) and B has 3 as well.
-        /// So we have 2 nodes that have 3, so that is the quorom.
+        /// So we have 2 nodes that have 3, so that is the quorum.
         /// </summary>
         private readonly SortedList<long, int> _nodesPerIndex = new SortedList<long, int>();
 
@@ -826,18 +826,18 @@ namespace Raven.Server.Rachis
                         _leaderLongRunningWork.Join(int.MaxValue);
 
                     var ae = new ExceptionAggregator("Could not properly dispose Leader");
-                    foreach (var ambasaddor in _nonVoters)
+                    foreach (var ambassador in _nonVoters)
                     {
-                        ae.Execute(ambasaddor.Value.Dispose);
+                        ae.Execute(ambassador.Value.Dispose);
                     }
 
-                    foreach (var ambasaddor in _promotables)
+                    foreach (var ambassador in _promotables)
                     {
-                        ae.Execute(ambasaddor.Value.Dispose);
+                        ae.Execute(ambassador.Value.Dispose);
                     }
-                    foreach (var ambasaddor in _voters)
+                    foreach (var ambassador in _voters)
                     {
-                        ae.Execute(ambasaddor.Value.Dispose);
+                        ae.Execute(ambassador.Value.Dispose);
                     }
 
 

@@ -1491,7 +1491,7 @@ namespace Raven.Server
                         // and that the client is authorized to do so. 
                         // Otherwise, we'll generate an error, but we'll do that at a higher level then
                         // SSL, because that generate a nicer error for the user to read then just aborted
-                        // connection because SSL negotation failed.
+                        // connection because SSL negotiation failed.
                         true);
 
                 await sslStream.AuthenticateAsServerAsync(Certificate.Certificate, true, SslProtocols.Tls12, false);

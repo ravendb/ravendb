@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private Dictionary<BlittableJsonReaderObject, List<BlittableJsonReaderObject>> _groupedItems;
 
-        private struct GroupBykeyComparer : IEqualityComparer<BlittableJsonReaderObject>
+        private struct GroupByKeyComparer : IEqualityComparer<BlittableJsonReaderObject>
         {
             JavaScriptReduceOperation _parent;
             ReduceKeyProcessor _xKey, _yKey;
@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Indexes.Static
             private BlittableJsonReaderObject _lastUsedBucket;
             private ByteStringContext _allocator;
 
-            public GroupBykeyComparer(JavaScriptReduceOperation parent, UnmanagedBuffersPoolWithLowMemoryHandling buffersPool, ByteStringContext allocator)
+            public GroupByKeyComparer(JavaScriptReduceOperation parent, UnmanagedBuffersPoolWithLowMemoryHandling buffersPool, ByteStringContext allocator)
             {
                 _parent = parent;
                 _allocator = allocator;
@@ -61,10 +61,10 @@ namespace Raven.Server.Documents.Indexes.Static
 
             public unsafe bool Equals(BlittableJsonReaderObject x, BlittableJsonReaderObject y)
             {
-                var xCalCulated = ReferenceEquals(x, _lastUsedBucket);
+                var xCalculated = ReferenceEquals(x, _lastUsedBucket);
                 //Only y is calculated, x is the value in the bucket
                 var yCalculated = ReferenceEquals(y, _lastUsedBlittable);
-                if(xCalCulated == false)
+                if(xCalculated == false)
                     _xKey.Reset();
                 if(yCalculated == false)
                     _yKey.Reset();
@@ -73,17 +73,17 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     bool xHasField = false;
                     object xVal = null;
-                    if (xCalCulated == false)
+                    if (xCalculated == false)
                         xHasField = x.TryGet(field, out xVal);
                     object yVal = null;
-                    if (yCalculated == false && xCalCulated == false)
+                    if (yCalculated == false && xCalculated == false)
                     {
                         var yHasField = y.TryGet(field, out yVal);
                         if (xHasField != yHasField)
                             return false;
                     }
 
-                    if (xCalCulated == false)
+                    if (xCalculated == false)
                         _xKey.Process(_allocator, xVal);
 
                     if (yCalculated == false)
@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     _byteStringContext = CurrentIndexingScope.Current.IndexContext.Allocator;
                 }
 
-                _groupedItems = new Dictionary<BlittableJsonReaderObject, List<BlittableJsonReaderObject>>(new GroupBykeyComparer(this, _bufferPool, _byteStringContext));
+                _groupedItems = new Dictionary<BlittableJsonReaderObject, List<BlittableJsonReaderObject>>(new GroupByKeyComparer(this, _bufferPool, _byteStringContext));
             }
         }
 
@@ -264,7 +264,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (body.Count != 1)
             {
-                throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single return statment got {body.Count}.");
+                throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single return statement got {body.Count}.");
             }
 
             var @params = ast.Params;
@@ -279,21 +279,21 @@ namespace Raven.Server.Documents.Indexes.Static
             }
 
             var actualBody = body[0];
-            if (!(actualBody is ReturnStatement returnStatment))
+            if (!(actualBody is ReturnStatement returnStatement))
             {
-                throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single return statment got a statment of type {actualBody.GetType().Name}.");
+                throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single return statement got a statement of type {actualBody.GetType().Name}.");
             }
 
-            if (!(returnStatment.Argument is ObjectExpression oe))
+            if (!(returnStatement.Argument is ObjectExpression oe))
             {
-                if (returnStatment.Argument is StaticMemberExpression sme && sme.Property is Identifier id)
+                if (returnStatement.Argument is StaticMemberExpression sme && sme.Property is Identifier id)
                 {
                     _groupByFields = new[] { id.Name };
                     _singleField = true;
 
                     return _groupByFields;
                 }
-                throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single return object expression statment got a statment of type {actualBody.GetType().Name}.");
+                throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single return object expression statement got a statement of type {actualBody.GetType().Name}.");
             }
 
             var cur = new HashSet<string>();

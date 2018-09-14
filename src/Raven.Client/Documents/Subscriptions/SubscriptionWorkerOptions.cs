@@ -119,7 +119,7 @@ namespace Raven.Client.Documents.Subscriptions
         public SubscriptionOpeningStrategy Strategy { get; set; }
 
         /// <summary>
-        /// Max amount that the server will try to retriev and send to client. Default: 4096
+        /// Max amount that the server will try to retrieve and send to client. Default: 4096
         /// </summary>
         public int MaxDocsPerBatch { get; set; }
 
@@ -137,7 +137,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         /// <summary>
         /// Will continue the subscription work until the server have no more new documents to send.
-        /// That's a usefull practice for ad-hoc, one-time, persistant data processing. 
+        /// That's a useful practice for ad-hoc, one-time, persistent data processing. 
         /// </summary>
         public bool CloseWhenNoDocsLeft { get; set; }
     }

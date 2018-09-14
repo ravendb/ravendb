@@ -230,7 +230,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public const byte Separator = 30;
 
-        public static unsafe ByteStringContext.InternalScope GetPrefix(TransactionOperationContext contenxt, string database, out Slice prefixSlice, long? index = null)
+        public static unsafe ByteStringContext.InternalScope GetPrefix(TransactionOperationContext context, string database, out Slice prefixSlice, long? index = null)
         {
             var maxSize = database.GetUtf8MaxSize() + sizeof(byte);
             if (index.HasValue)
@@ -239,7 +239,7 @@ namespace Raven.Server.ServerWide.Commands
             var lowerBufferSize = database.Length * sizeof(char);
 
 
-            var scope = contenxt.Allocator.Allocate(maxSize + lowerBufferSize, out var prefixBuffer);
+            var scope = context.Allocator.Allocate(maxSize + lowerBufferSize, out var prefixBuffer);
             try
             {
 

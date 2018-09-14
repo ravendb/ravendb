@@ -119,8 +119,8 @@ namespace rvn
                             if (firstDelimiter == RavenCli.Delimiter.NotFound)
                                 continue;
 
-                            var posAgterFirstDelimiter = firstIndex + RavenCli.GetDelimiterString(firstDelimiter).Length;
-                            restOfString = delimiterString.Substring(posAgterFirstDelimiter);
+                            var posAfterFirstDelimiter = firstIndex + RavenCli.GetDelimiterString(firstDelimiter).Length;
+                            restOfString = delimiterString.Substring(posAfterFirstDelimiter);
 
                             delimiter = firstDelimiter;
                             break;

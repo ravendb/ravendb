@@ -142,10 +142,10 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     var string1State = this;
                     var string2State = other;
 
-                    // if both seqeunces are numbers, compare between them
+                    // if both sequences are numbers, compare between them
                     if (string1State.CurSequenceIsNumber && string2State.CurSequenceIsNumber)
                     {
-                        // if effective numbers are not of the same length, it means that we can tell which is greatedr (in an order of magnitude, actually)
+                        // if effective numbers are not of the same length, it means that we can tell which is greater (in an order of magnitude, actually)
                         if (string1State.NumberLength != string2State.NumberLength)
                         {
                             return string1State.NumberLength.CompareTo(string2State.NumberLength);

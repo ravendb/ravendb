@@ -321,7 +321,7 @@ namespace Raven.Server.Documents.Queries
 
         private void ThrowInvalidMethod(BlittableJsonReaderObject parameters, MethodExpression me)
         {
-            throw new InvalidQueryException("Where clause cannot conatin just an '" + me.Name + "' method", Query.QueryText, parameters);
+            throw new InvalidQueryException("Where clause cannot contain just an '" + me.Name + "' method", Query.QueryText, parameters);
         }
 
         private void HandleQueryInclude(BlittableJsonReaderObject parameters)
@@ -637,7 +637,7 @@ namespace Raven.Server.Documents.Queries
                 }
                 else
                 {
-                    ThrowInvalidWith(load.Expression, "LOAD clause require a field or value refereces", parameters);
+                    ThrowInvalidWith(load.Expression, "LOAD clause require a field or value references", parameters);
                     return; // never hit
                 }
 
@@ -1380,7 +1380,7 @@ namespace Raven.Server.Documents.Queries
 
         private void ThrowInvalidFacetUsingSetupDocument(BlittableJsonReaderObject parameters)
         {
-            throw new InvalidQueryException("facet() specyfying a facet setup document using id() call must not have any additional arguments", QueryText, parameters);
+            throw new InvalidQueryException("facet() specifying a facet setup document using id() call must not have any additional arguments", QueryText, parameters);
         }
 
         private void ThrowInvalidArgumentExpressionInFacetQuery(QueryExpression expression, BlittableJsonReaderObject parameters)
@@ -1487,7 +1487,7 @@ namespace Raven.Server.Documents.Queries
                             VisitFieldToken(leftSide, rightSide, parameters, null);
                             break;
                         default:
-                            throw new ArgumentException($"The method {methodType} on the left side inside the WHERE clausel is not supported.");
+                            throw new ArgumentException($"The method {methodType} on the left side inside the WHERE clause is not supported.");
                     }
                 }
 
@@ -1870,7 +1870,7 @@ namespace Raven.Server.Documents.Queries
         public string GetUpdateBody(BlittableJsonReaderObject parameters)
         {
             if (Query.UpdateBody == null)
-                throw new InvalidQueryException("UPDATE cluase was not specified", QueryText, parameters);
+                throw new InvalidQueryException("UPDATE clause was not specified", QueryText, parameters);
 
             var updateBody = Query.UpdateBody;
 

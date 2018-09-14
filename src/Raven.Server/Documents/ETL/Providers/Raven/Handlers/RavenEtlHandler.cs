@@ -27,11 +27,11 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var defaultCoventions = new DocumentConventions();
+                    var defaultConventions = new DocumentConventions();
 
                     var djv = new DynamicJsonValue()
                     {
-                        [nameof(result.Commands)] = new DynamicJsonArray(result.Commands.Select(x => x.ToJson(defaultCoventions, context))),
+                        [nameof(result.Commands)] = new DynamicJsonArray(result.Commands.Select(x => x.ToJson(defaultConventions, context))),
                         [nameof(result.TransformationErrors)] = new DynamicJsonArray(result.TransformationErrors.Select(x => x.ToJson())),
                         [nameof(result.DebugOutput)] = new DynamicJsonArray(result.DebugOutput)
                     };

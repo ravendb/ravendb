@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Patch
                 documentInstance = UpdateOriginalDocument();
             }
 
-            // we will to acccess this value, and the original document data may be changed by
+            // we will to access this value, and the original document data may be changed by
             // the actions of the script, so we translate (which will create a clone) then use
             // that clone later
             using (var scriptResult = _run.Run(context, context, "execute", _id, new[] { documentInstance, args }))

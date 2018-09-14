@@ -248,7 +248,7 @@ namespace Raven.Server.Documents.Replication
 
                             _stats.Storage.RecordInputAttempt();
 
-                            //Here we add missing attachments in the same batch as the document that contains them without modifying the last etag or transaction boundry
+                            //Here we add missing attachments in the same batch as the document that contains them without modifying the last etag or transaction boundary
                             if (MissingAttachmentsInLastBatch && 
                                 item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
                                 (item.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)

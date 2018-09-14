@@ -619,7 +619,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 if (topology.Watchers.ContainsKey(nodeTag) == false)
                 {
                     throw new InvalidOperationException(
-                        $"Failed to promote node {nodeTag} beacuse {nodeTag} is not a watcher in the cluster topology");
+                        $"Failed to promote node {nodeTag} because {nodeTag} is not a watcher in the cluster topology");
                 }
 
                 var url = topology.GetUrlFromTag(nodeTag);
@@ -650,7 +650,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             if (nodeTag == ServerStore.LeaderTag)
             {
                 throw new InvalidOperationException(
-                    $"Failed to demote node {nodeTag} beacuse {nodeTag} is the current leader in the cluster topology. In order to demote {nodeTag} perform a Step-Down first");
+                    $"Failed to demote node {nodeTag} because {nodeTag} is the current leader in the cluster topology. In order to demote {nodeTag} perform a Step-Down first");
             }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -660,7 +660,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 if (topology.Promotables.ContainsKey(nodeTag) == false && topology.Members.ContainsKey(nodeTag) == false)
                 {
                     throw new InvalidOperationException(
-                        $"Failed to demote node {nodeTag} beacuse {nodeTag} is not a voter in the cluster topology");
+                        $"Failed to demote node {nodeTag} because {nodeTag} is not a voter in the cluster topology");
                 }
 
                 var url = topology.GetUrlFromTag(nodeTag);
@@ -683,7 +683,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             var url = topology.GetUrlFromTag(ServerStore.LeaderTag);
             if (string.Equals(url, ServerStore.GetNodeHttpServerUrl(), StringComparison.OrdinalIgnoreCase))
             {
-                throw new NoLeaderException($"This node is not the leader, but the current toplogy does mark it as the leader. Such confusion is usually an indication of a network or configuration problem.");
+                throw new NoLeaderException($"This node is not the leader, but the current topology does mark it as the leader. Such confusion is usually an indication of a network or configuration problem.");
             }
             var leaderLocation = url + HttpContext.Request.Path + HttpContext.Request.QueryString;
             HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;

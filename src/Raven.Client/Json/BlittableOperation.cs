@@ -92,7 +92,7 @@ namespace Raven.Client.Json
                     case BlittableJsonToken.LazyNumber:
                     case BlittableJsonToken.CompressedString:
                     case BlittableJsonToken.String:
-                        if (newProp.Value.Equals(oldProp.Value) || ComapreValues(oldProp, newProp))
+                        if (newProp.Value.Equals(oldProp.Value) || CompareValues(oldProp, newProp))
                             break;
                         if (changes == null)
                             return true;
@@ -161,7 +161,7 @@ namespace Raven.Client.Json
         private static string FieldPathCombine(string path1, string path2) 
             => string.IsNullOrEmpty(path1) ? path2 : path1 + "." + path2;
 
-        private static bool ComapreValues(BlittableJsonReaderObject.PropertyDetails oldProp, BlittableJsonReaderObject.PropertyDetails newProp)
+        private static bool CompareValues(BlittableJsonReaderObject.PropertyDetails oldProp, BlittableJsonReaderObject.PropertyDetails newProp)
         {
             if (newProp.Token == BlittableJsonToken.Integer && oldProp.Token == BlittableJsonToken.LazyNumber)
             {
