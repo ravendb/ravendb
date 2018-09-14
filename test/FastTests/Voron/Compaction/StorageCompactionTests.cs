@@ -275,7 +275,18 @@ namespace FastTests.Voron.Compaction
             var files = d.GetFiles();
             var size = files
                 .Where(x=>Path.GetFileNameWithoutExtension(x.Name) != StorageEnvironmentOptions.RecyclableJournalFileNamePrefix)
-                .Sum(x => x.Length);
+                .Sum(x =>
+                {
+                    try
+                    {
+                        return x.Length;
+                    }
+                    catch (IOException)
+                    {
+                        // we may have temp files that were removed in the meantime
+                        return 0;
+                    }
+                });
 
             var directories = d.GetDirectories();
             size += directories.Sum(x => GetDirSize(x));
