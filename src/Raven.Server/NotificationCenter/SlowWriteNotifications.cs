@@ -7,6 +7,7 @@ using Raven.Client.Util;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.NotificationCenter
 {
@@ -20,6 +21,7 @@ namespace Raven.Server.NotificationCenter
         private bool _updateNotificationInStorageRequired;
         private readonly object _pagerCreationLock = new object();
         private readonly ConcurrentDictionary<string, SlowWritesDetails.SlowWriteInfo> _slowWrites;
+        private readonly Logger _logger;
 
         public SlowWriteNotifications(NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string database)
         {
@@ -27,6 +29,7 @@ namespace Raven.Server.NotificationCenter
             _notificationsStorage = notificationsStorage;
             _database = database;
             _slowWrites = new ConcurrentDictionary<string, SlowWritesDetails.SlowWriteInfo>();
+            _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
         }
 
         public void Add(string path, double dataSizeInMb, double durationInSec)
@@ -73,19 +76,27 @@ namespace Raven.Server.NotificationCenter
 
         internal void UpdateNotificationInStorage(object state)
         {
-            if (_updateNotificationInStorageRequired == false)
-                return;
-
-            var hint = GetOrCreateSlowWrites(out var details);
-
-            foreach (var info in _slowWrites)
+            try
             {
-                details.Writes[info.Key] = info.Value;
+                if (_updateNotificationInStorageRequired == false)
+                    return;
+
+                var hint = GetOrCreateSlowWrites(out var details);
+
+                foreach (var info in _slowWrites)
+                {
+                    details.Writes[info.Key] = info.Value;
+                }
+
+                _notificationCenter.Add(hint);
+
+                _updateNotificationInStorageRequired = false;
             }
-
-            _notificationCenter.Add(hint);
-
-            _updateNotificationInStorageRequired = false;
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Error a notification center timer", e);
+            }
         }
 
         internal SlowWritesDetails GetSlowWritesDetails()
