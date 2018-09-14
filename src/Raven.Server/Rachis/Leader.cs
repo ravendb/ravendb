@@ -739,7 +739,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private static ConvertResultAction GetConvertResult(CommandBase cmd)
+        internal static ConvertResultAction GetConvertResult(CommandBase cmd)
         {
             switch (cmd)
             {

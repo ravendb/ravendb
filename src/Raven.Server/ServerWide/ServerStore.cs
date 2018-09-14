@@ -1746,10 +1746,11 @@ namespace Raven.Server.ServerWide
             var response = await SendToLeaderAsyncInternal(cmd);
 
 #if DEBUG
-
-            if (response.Result.ContainsBlittableObject())
+            
+            if (Leader.GetConvertResult(cmd) != null && // if cmd specifies a convert, it explicitly handles this
+                response.Result.ContainsBlittableObject())
             {
-                throw new InvalidOperationException($"{nameof(ServerStore)}::{nameof(SendToLeaderAsync)}(CommandBase) should not return command results with blittable json objects. This is not supposed to happen and should be reported.");
+                throw new InvalidOperationException($"{nameof(ServerStore)}::{nameof(SendToLeaderAsync)}({response.Result}) should not return command results with blittable json objects. This is not supposed to happen and should be reported.");
             }
 
 #endif
