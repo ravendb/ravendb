@@ -54,4 +54,7 @@
     <Rule Id="RDB0004" Action="None" />
     <Rule Id="RDB0005" Action="None" />
   </Rules>
+  <Rules AnalyzerId="Microsoft.CodeAnalysis.CSharp.Analyzers" RuleNamespace="Microsoft.CodeAnalysis.CSharp.Analyzers">
+    <Rule Id="RS1022" Action="None" /> <!-- https://github.com/dotnet/roslyn-analyzers/issues/1803 -->
+  </Rules>
 </RuleSet>
