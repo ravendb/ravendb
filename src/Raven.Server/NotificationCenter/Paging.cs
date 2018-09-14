@@ -7,6 +7,7 @@ using Raven.Client.Util;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.NotificationCenter
 {
@@ -24,12 +25,14 @@ namespace Raven.Server.NotificationCenter
         private readonly ConcurrentQueue<(PagingOperationType Type, string Action, string Details, int NumberOfResults, int PageSize, long Duration, DateTime Occurrence)> _pagingQueue = new ConcurrentQueue<(PagingOperationType Type, string Action, string Details, int NumberOfResults, int PageSize, long Duration, DateTime Occurrence)>();
         private readonly DateTime[] _pagingUpdates = new DateTime[Enum.GetNames(typeof(PagingOperationType)).Length];
         private Timer _pagingTimer;
+        private readonly Logger _logger;
 
         public Paging(NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string database)
         {
             _notificationCenter = notificationCenter;
             _notificationsStorage = notificationsStorage;
             _database = database;
+            _logger = LoggingSource.Instance.GetLogger(database, GetType().FullName);
         }
 
         public void Add(PagingOperationType operation, string action, string details, int numberOfResults, int pageSize, long duration)
@@ -60,48 +63,60 @@ namespace Raven.Server.NotificationCenter
 
         internal void UpdatePaging(object state)
         {
-            if (_pagingQueue.IsEmpty)
-                return;
-
-            PerformanceHint documents = null, queries = null, revisions = null;
-
-            while (_pagingQueue.TryDequeue(out (PagingOperationType Type, string Action, string Details, int NumberOfResults, int PageSize, long Duration, DateTime Occurrence) tuple))
+            try
             {
-                switch (tuple.Type)
+                if (_pagingQueue.IsEmpty)
+                    return;
+
+                PerformanceHint documents = null, queries = null, revisions = null;
+
+                while (_pagingQueue.TryDequeue(
+                    out (PagingOperationType Type, string Action, string Details, int NumberOfResults, int PageSize, long Duration, DateTime Occurrence) tuple))
                 {
-                    case PagingOperationType.Documents:
-                        if (documents == null)
-                            documents = GetPagingPerformanceHint(PagingDocumentsId, tuple.Type);
+                    switch (tuple.Type)
+                    {
+                        case PagingOperationType.Documents:
+                            if (documents == null)
+                                documents = GetPagingPerformanceHint(PagingDocumentsId, tuple.Type);
 
-                        ((PagingPerformanceDetails)documents.Details).Update(tuple.Action, tuple.Details, tuple.NumberOfResults, tuple.PageSize, tuple.Duration, tuple.Occurrence);
+                            ((PagingPerformanceDetails)documents.Details).Update(tuple.Action, tuple.Details, tuple.NumberOfResults, tuple.PageSize, tuple.Duration,
+                                tuple.Occurrence);
 
-                        break;
-                    case PagingOperationType.Queries:
-                        if (queries == null)
-                            queries = GetPagingPerformanceHint(PagingQueriesId, tuple.Type);
+                            break;
+                        case PagingOperationType.Queries:
+                            if (queries == null)
+                                queries = GetPagingPerformanceHint(PagingQueriesId, tuple.Type);
 
-                        ((PagingPerformanceDetails)queries.Details).Update(tuple.Action, tuple.Details, tuple.NumberOfResults, tuple.PageSize, tuple.Duration, tuple.Occurrence);
+                            ((PagingPerformanceDetails)queries.Details).Update(tuple.Action, tuple.Details, tuple.NumberOfResults, tuple.PageSize, tuple.Duration,
+                                tuple.Occurrence);
 
-                        break;
-                    case PagingOperationType.Revisions:
-                        if (revisions == null)
-                            revisions = GetPagingPerformanceHint(PagingRevisionsId, tuple.Type);
+                            break;
+                        case PagingOperationType.Revisions:
+                            if (revisions == null)
+                                revisions = GetPagingPerformanceHint(PagingRevisionsId, tuple.Type);
 
-                        ((PagingPerformanceDetails)revisions.Details).Update(tuple.Action, tuple.Details, tuple.NumberOfResults, tuple.PageSize, tuple.Duration, tuple.Occurrence);
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
+                            ((PagingPerformanceDetails)revisions.Details).Update(tuple.Action, tuple.Details, tuple.NumberOfResults, tuple.PageSize, tuple.Duration,
+                                tuple.Occurrence);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
                 }
+
+                if (documents != null)
+                    _notificationCenter.Add(documents);
+
+                if (queries != null)
+                    _notificationCenter.Add(queries);
+
+                if (revisions != null)
+                    _notificationCenter.Add(revisions);
             }
-
-            if (documents != null)
-                _notificationCenter.Add(documents);
-
-            if (queries != null)
-                _notificationCenter.Add(queries);
-
-            if (revisions != null)
-                _notificationCenter.Add(revisions);
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info("Error a notification center timer", e);
+            }
         }
 
         private PerformanceHint GetPagingPerformanceHint(string id, PagingOperationType type)
