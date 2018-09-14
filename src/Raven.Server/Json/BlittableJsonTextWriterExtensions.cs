@@ -1457,7 +1457,7 @@ namespace Raven.Server.Json
             WriteMetadata(writer, document, metadata);
         }
 
-        public static void WriteDocumentPropertiesWithoutMetdata(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
+        public static void WriteDocumentPropertiesWithoutMetadata(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
         {
             if (_buffers == null)
                 _buffers = new BlittableJsonReaderObject.PropertiesInsertionBuffer();

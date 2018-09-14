@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Session.Tokens
                 {
                     if (CollectionName.IndexOf('"') != -1)
                     {
-                        ThrowInvalidcollectionName();
+                        ThrowInvalidCollectionName();
                     }
                     writer.Append('"').Append(CollectionName).Append('"');
                 }
@@ -63,7 +63,7 @@ namespace Raven.Client.Documents.Session.Tokens
             }
         }
 
-        private void ThrowInvalidcollectionName()
+        private void ThrowInvalidCollectionName()
         {
             throw new ArgumentException("Collection name cannot contain a quote, but was: " + CollectionName);
         }

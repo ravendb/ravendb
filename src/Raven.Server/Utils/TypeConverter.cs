@@ -103,9 +103,9 @@ namespace Raven.Server.Utils
                 if (ShouldTreatAsEnumerable(enumerable))
                 {
                     var objectEnumerable = value as IEnumerable<object>;
-                    var supporetedEnumerable = objectEnumerable?.Select(IsSupportedType) ?? enumerable.Cast<object>().Select(IsSupportedType);
+                    var supportedEnumerable = objectEnumerable?.Select(IsSupportedType) ?? enumerable.Cast<object>().Select(IsSupportedType);
 
-                    return supporetedEnumerable.All(v => v);
+                    return supportedEnumerable.All(v => v);
                 }
             }
 
@@ -284,7 +284,7 @@ namespace Raven.Server.Utils
         private static void NestingLevelTooDeep(object value)
         {
             throw new SerializationNestedLevelTooDeepException(
-                                $"Reached nesting level of {MaxAllowedRecursiveLevelForType} for type {value.GetType().Name}, reccursive types that exceed the allowed nesting level are not supported.");
+                                $"Reached nesting level of {MaxAllowedRecursiveLevelForType} for type {value.GetType().Name}, recursive types that exceed the allowed nesting level are not supported.");
         }
 
         public static int MaxAllowedRecursiveLevelForType { get; } = 100;

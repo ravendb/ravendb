@@ -36,13 +36,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                 }
             }
 
-            foreach (var insertQuery in GenerteInsertItemCommandText(records.TableName, records.DocumentIdColumn, records.Inserts, token))
+            foreach (var insertQuery in GenerateInsertItemCommandText(records.TableName, records.DocumentIdColumn, records.Inserts, token))
             {
                 yield return insertQuery;
             }
         }
 
-        private IEnumerable<string> GenerteInsertItemCommandText(string tableName, string pkName, List<ToSqlItem> dataForTable, CancellationToken token)
+        private IEnumerable<string> GenerateInsertItemCommandText(string tableName, string pkName, List<ToSqlItem> dataForTable, CancellationToken token)
         {
             foreach (var itemToReplicate in dataForTable)
             {

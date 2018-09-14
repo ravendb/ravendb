@@ -74,10 +74,10 @@ namespace Raven.Server.Documents
              PK of the conflicts table will be 'Change Vector' field, because when dealing with conflicts,
               the change vectors will always be different, hence the uniqueness of the ID. (inserts/updates will not overwrite)
 
-            Additional indice is set to have composite ID of 'Conflicted Doc Id' and 'Change Vector' so we will be able to iterate
+            Additional index is set to have composite ID of 'Conflicted Doc Id' and 'Change Vector' so we will be able to iterate
             on conflicts by conflicted doc id (using 'starts with')
 
-            We need a separator in order to delete all conflicts all "users/1" without deleting "users/11" conflics.
+            We need a separator in order to delete all conflicts all "users/1" without deleting "users/11" conflicts.
              */
 
             ConflictsSchema.DefineKey(new TableSchema.SchemaIndexDef
@@ -763,7 +763,7 @@ namespace Raven.Server.Documents
 
             if (HasHigherChangeVector(context, lowerId, expectedChangeVector))
             {
-                throw new ConcurrencyException($"Failed to resolve document conflict with change vector = {expectedChangeVector}, beacuse we have a newer change vector.");
+                throw new ConcurrencyException($"Failed to resolve document conflict with change vector = {expectedChangeVector}, because we have a newer change vector.");
             }
         }
 

@@ -52,7 +52,7 @@ namespace Sparrow.Platform
 
                 if (ver != null)
                 {
-                    // remove second occurance of '.' (win 10 might be 10.123.456)
+                    // remove second occurence of '.' (win 10 might be 10.123.456)
                     var index = ver.IndexOf('.', ver.IndexOf('.') + 1);
                     ver = string.Concat(ver.Substring(0, index), ver.Substring(index + 1));
 

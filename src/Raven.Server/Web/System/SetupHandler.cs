@@ -452,7 +452,7 @@ namespace Raven.Server.Web.System
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidOperationException($"Failed to load the uploaded certificate. Did you accidently upload a client certificate?", e);
+                    throw new InvalidOperationException($"Failed to load the uploaded certificate. Did you accidentally upload a client certificate?", e);
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

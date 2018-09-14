@@ -69,10 +69,10 @@ namespace Raven.Server.Documents.Indexes
                 switch (mode)
                 {
                     case Mode.X64:
-                        filter = new BloomFilter64(i, tree, writeable: false, allocator: indexContext.Allocator);
+                        filter = new BloomFilter64(i, tree, writable: false, allocator: indexContext.Allocator);
                         break;
                     case Mode.X86:
-                        filter = new BloomFilter32(i, tree, writeable: false, allocator: indexContext.Allocator);
+                        filter = new BloomFilter32(i, tree, writable: false, allocator: indexContext.Allocator);
                         break;
                 }
 
@@ -119,14 +119,14 @@ namespace Raven.Server.Documents.Indexes
 
                 Debug.Assert(_tree.ShouldGoToOverflowPage(BloomFilter64.PtrSize));
 
-                return new BloomFilter64(number, _tree, writeable: true, allocator: _context.Allocator);
+                return new BloomFilter64(number, _tree, writable: true, allocator: _context.Allocator);
             }
 
             _tree.Increment(Count32Slice, 1);
 
             Debug.Assert(_tree.ShouldGoToOverflowPage(BloomFilter32.PtrSize));
 
-            return new BloomFilter32(number, _tree, writeable: true, allocator: _context.Allocator);
+            return new BloomFilter32(number, _tree, writable: true, allocator: _context.Allocator);
         }
 
         internal void AddFilter(BloomFilter filter)
@@ -211,8 +211,8 @@ namespace Raven.Server.Documents.Indexes
 
             private const ulong M = PtrSize * PtrBitVector.BitsPerByte;
 
-            public BloomFilter32(int key, Tree tree, bool writeable, ByteStringContext allocator)
-                : base(key, tree, writeable, M, PtrSize, MaxCapacity, allocator)
+            public BloomFilter32(int key, Tree tree, bool writable, ByteStringContext allocator)
+                : base(key, tree, writable, M, PtrSize, MaxCapacity, allocator)
             {
             }
         }
@@ -224,8 +224,8 @@ namespace Raven.Server.Documents.Indexes
 
             private const ulong M = PtrSize * PtrBitVector.BitsPerByte;
 
-            public BloomFilter64(int key, Tree tree, bool writeable, ByteStringContext allocator)
-                : base(key, tree, writeable, M, PtrSize, MaxCapacity, allocator)
+            public BloomFilter64(int key, Tree tree, bool writable, ByteStringContext allocator)
+                : base(key, tree, writable, M, PtrSize, MaxCapacity, allocator)
             {
             }
         }
@@ -248,11 +248,11 @@ namespace Raven.Server.Documents.Indexes
 
             public bool ReadOnly { get; private set; }
 
-            public bool Writeable { get; private set; }
+            public bool Writable { get; private set; }
 
             public readonly int Capacity;
 
-            protected BloomFilter(int key, Tree tree, bool writeable, ulong m, int ptrSize, int capacity, ByteStringContext allocator)
+            protected BloomFilter(int key, Tree tree, bool writable, ulong m, int ptrSize, int capacity, ByteStringContext allocator)
             {
                 _key = key;
                 _tree = tree;
@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.Indexes
                 _partitionCount = (uint)Math.Ceiling(_ptrSize / (double)Partition.PartitionSize);
                 Capacity = capacity;
                 _allocator = allocator;
-                Writeable = writeable;
+                Writable = writable;
 
                 Slice.From(_allocator, $"{_key:D5}", out _keySlice);
                 Count = _initialCount = ReadCount();
@@ -297,8 +297,8 @@ namespace Raven.Server.Documents.Indexes
                     if (bitValue)
                         continue;
 
-                    if (partition.Writeable == false)
-                        MakeWriteable(partition);
+                    if (partition.Writable == false)
+                        MakeWritable(partition);
 
                     SetBitToTrue(partition, partitionPtrPosition, bitPosition);
                     newItem = true;
@@ -359,7 +359,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     return _partitions[number] = new Partition
                     {
-                        Writeable = false,
+                        Writable = false,
                         Ptr = read.Reader.Base,
                         Key = partitionKey
                     };
@@ -372,9 +372,9 @@ namespace Raven.Server.Documents.Indexes
                 };
             }
 
-            private void MakeWriteable(Partition partition)
+            private void MakeWritable(Partition partition)
             {
-                if (partition.Writeable)
+                if (partition.Writable)
                     return;
 
                 // we can safely pass the raw pointer here and dispose DirectAdd scope immediately because 
@@ -387,12 +387,12 @@ namespace Raven.Server.Documents.Indexes
                     if (partition.IsEmpty == false)
                         UnmanagedMemory.Copy(ptr, partition.Ptr, Partition.PartitionSize);
 
-                    partition.Writeable = true;
+                    partition.Writable = true;
                     partition.IsEmpty = false;
                     partition.Ptr = ptr;
                 }
 
-                Writeable = true;
+                Writable = true;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -443,7 +443,7 @@ namespace Raven.Server.Documents.Indexes
 
                 public byte* Ptr;
 
-                public bool Writeable;
+                public bool Writable;
 
                 public bool IsEmpty;
             }

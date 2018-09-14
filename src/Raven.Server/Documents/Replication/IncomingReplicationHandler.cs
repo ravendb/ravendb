@@ -604,7 +604,7 @@ namespace Raven.Server.Documents.Replication
             {
                 // we need to get both of them in a transaction, the other side will check if its known change vector
                 // is the same or higher then ours, and if so, we'll update the change vector on the sibling to reflect
-                // our own latest etag. This allows us to have effective syncronzation points, since each change will
+                // our own latest etag. This allows us to have effective synchronization points, since each change will
                 // be able to tell (roughly) where it is at on the entire cluster. 
                 databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
                 currentLastEtagMatchingChangeVector = DocumentsStorage.ReadLastEtag(documentsContext.Transaction.InnerTransaction);
@@ -956,7 +956,7 @@ namespace Raven.Server.Documents.Replication
                     }
                     catch (ThreadStateException)
                     {
-                        // expected if the thread hsan't been started yet
+                        // expected if the thread hasn't been started yet
                     }
                 }
 
@@ -1289,7 +1289,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     if (_incoming._database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, hash) == false)
                     {
-                        var msg = $"Document '{id}' has attachment '{hash?.ToString() ?? "uknown"}' " +
+                        var msg = $"Document '{id}' has attachment '{hash?.ToString() ?? "unknown"}' " +
                                   $"listed as one of his attachments but it doesn't exist in the attachment storage";
                         throw new MissingAttachmentException(msg);
                     }

@@ -324,7 +324,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (bucketPermission != "FULL_CONTROL" && bucketPermission != "WRITE")
             {
                 throw new InvalidOperationException(
-                    $"Can't create an objcet in bucket '{_bucketName}', " +
+                    $"Can't create an object in bucket '{_bucketName}', " +
                     $"when permission is set to '{bucketPermission}'");
             }
         }

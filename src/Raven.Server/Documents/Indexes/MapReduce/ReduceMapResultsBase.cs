@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         internal static readonly Slice PageNumberSlice;
         internal static readonly string PageNumberToReduceResultTableName = "PageNumberToReduceResult";
         private readonly Logger _logger;
-        private readonly AggegationBatch _aggregationBatch = new AggegationBatch();
+        private readonly AggregationBatch _aggregationBatch = new AggregationBatch();
         private readonly Index _index;
         protected readonly T _indexDefinition;
         private readonly IndexStorage _indexStorage;
@@ -523,7 +523,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private bool TryAggregateChildPageOrThrow(long pageNumber, Table table, TransactionOperationContext indexContext,
             HashSet<long> remainingBranchesToAggregate,
             HashSet<long> compressedEmptyLeafs,
-            Dictionary<long, Exception> failedAggregatatedLeafs,
+            Dictionary<long, Exception> failedAggregatedLeafs,
             Tree tree,
             CancellationToken token)
         {
@@ -538,7 +538,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     var unaggregatedBranch = new TreePage(page.Pointer, Constants.Storage.PageSize);
 
                     using (var result = AggregateBranchPage(unaggregatedBranch, table, indexContext, remainingBranchesToAggregate, compressedEmptyLeafs,
-                        failedAggregatatedLeafs, tree, token))
+                        failedAggregatedLeafs, tree, token))
                     {
                         StoreAggregationResult(unaggregatedBranch, table, result);
                     }
@@ -588,7 +588,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             message += $"Tree state: {tree.State}. ";
 
-            if (failedAggregatatedLeafs != null && failedAggregatatedLeafs.TryGetValue(pageNumber, out var exception))
+            if (failedAggregatedLeafs != null && failedAggregatedLeafs.TryGetValue(pageNumber, out var exception))
             {
                 message += $"The aggregation of this leaf (#{pageNumber}) has failed so the relevant result doesn't exist. " +
                            "Check the inner exception for leaf aggregation error details";
@@ -693,7 +693,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        private class AggegationBatch : IDisposable
+        private class AggregationBatch : IDisposable
         {
             public readonly List<BlittableJsonReaderObject> Items = new List<BlittableJsonReaderObject>();
 

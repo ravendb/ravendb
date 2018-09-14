@@ -345,13 +345,13 @@ namespace Raven.Server.ServerWide
 
         private List<string> ExecuteClusterTransaction(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
-            var clusterTansaction = (ClusterTransactionCommand)JsonDeserializationCluster.Commands[nameof(ClusterTransactionCommand)](cmd);
+            var clusterTransaction = (ClusterTransactionCommand)JsonDeserializationCluster.Commands[nameof(ClusterTransactionCommand)](cmd);
             var compareExchangeItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
-            var error = clusterTansaction.ExecuteCompareExchangeCommands(context, index, compareExchangeItems);
+            var error = clusterTransaction.ExecuteCompareExchangeCommands(context, index, compareExchangeItems);
             if (error == null)
             {
-                clusterTansaction.SaveCommandsBatch(context, index);
-                NotifyDatabaseAboutChanged(context, clusterTansaction.Database, index, nameof(ClusterTransactionCommand),
+                clusterTransaction.SaveCommandsBatch(context, index);
+                NotifyDatabaseAboutChanged(context, clusterTransaction.Database, index, nameof(ClusterTransactionCommand),
                     DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions);
                 return null;
             }
@@ -429,7 +429,7 @@ namespace Raven.Server.ServerWide
                 cmd.TryGet(nameof(InstallUpdatedServerCertificateCommand.ReplaceImmediately), out bool replaceImmediately);
 
                 var x509Certificate = new X509Certificate2(Convert.FromBase64String(cert), (string)null, X509KeyStorageFlags.MachineKeySet);
-                // we assume that this is valid, and we don't check dates, since that would introduce external factor to the state machine, which is not alllowed
+                // we assume that this is valid, and we don't check dates, since that would introduce external factor to the state machine, which is not allowed
                 using (Slice.From(context.Allocator, CertificateReplacement.CertificateReplacementDoc, out var key))
                 {
                     var djv = new DynamicJsonValue
@@ -1627,7 +1627,7 @@ namespace Raven.Server.ServerWide
                 tcpClient = await TcpUtils.ConnectAsync(info.Url, _parent.TcpConnectionTimeout).ConfigureAwait(false);
                 stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate, _parent.TcpConnectionTimeout);
 
-                var paramaters = new TcpNegotiateParameters
+                var parameters = new TcpNegotiateParameters
                 {
                     Database = null,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Cluster,
@@ -1640,7 +1640,7 @@ namespace Raven.Server.ServerWide
                 TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures;
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(context, stream, paramaters);
+                    supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(context, stream, parameters);
 
                     if (supportedFeatures.ProtocolVersion <= 0)
                     {

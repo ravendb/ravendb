@@ -316,7 +316,7 @@ namespace Raven.Server.Documents
                     string nodeTag = _documentDatabase.ServerStore.NodeTag;
 
                     // PERF: we are creating an string and mutating it for performance reasons.
-                    //       while nasty this shouldnt have any side effects because value didn't
+                    //       while nasty this shouldn't have any side effects because value didn't
                     //       escape yet the function, so while not pretty it works (and it's safe).      
                     string value = new string('0', id.Length + 1 + 19 + nodeTag.Length);
                     fixed (char* valuePtr = value)
@@ -419,7 +419,7 @@ namespace Raven.Server.Documents
                 {
                     // Make sure the user did not changed the value of @attachments in the @metadata
                     // In most cases it won't be changed so we can use this value 
-                    // instead of recreating the document's blitable from scratch
+                    // instead of recreating the document's blittable from scratch
                     if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
                         metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false ||
                         attachments.Equals(oldAttachments) == false)

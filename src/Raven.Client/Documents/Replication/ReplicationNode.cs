@@ -39,7 +39,7 @@ namespace Raven.Client.Documents.Replication
         public string Database;
 
         /// <summary>
-        /// Used to indicated whteher external replication is disabled.
+        /// Used to indicate whether external replication is disabled.
         /// </summary>
         public bool Disabled;
 

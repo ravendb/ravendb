@@ -30,7 +30,7 @@ namespace Raven.Server.Documents
                     return DocumentCompareResult.Equal;
             }
 
-            // Performance improvemnt: We compare the metadata first 
+            // Performance improvement: We compare the metadata first 
             // because that most of the time the metadata itself won't be the equal, so no need to compare all values
 
             var result = IsMetadataEqualTo(original, modified, tryMergeMetadataConflicts);
@@ -83,8 +83,8 @@ namespace Raven.Server.Documents
         private static DocumentCompareResult ComparePropertiesExceptStartingWithAt(BlittableJsonReaderObject current, BlittableJsonReaderObject modified, 
             bool isMetadata = false, bool tryMergeMetadataConflicts = false)
         {
-            var resolvedAttachmetConflict = false;
-            var resolvedCountesConflict = false;
+            var resolvedAttachmentConflict = false;
+            var resolvedCountersConflict = false;
 
             var properties = new HashSet<string>(current.GetPropertyNames());
             foreach (var propertyName in modified.GetPropertyNames())
@@ -106,12 +106,12 @@ namespace Raven.Server.Documents
                                     modified.TryGetMember(property, out object _) == false)
                                 {
                                     // Resolve when just 1 document have attachments
-                                    resolvedAttachmetConflict = true;
+                                    resolvedAttachmentConflict = true;
                                     continue;
                                 }
 
-                                resolvedAttachmetConflict = ShouldResolveAttachmentsConflict(current, modified);
-                                if (resolvedAttachmetConflict)
+                                resolvedAttachmentConflict = ShouldResolveAttachmentsConflict(current, modified);
+                                if (resolvedAttachmentConflict)
                                     continue;
 
                                 return DocumentCompareResult.NotEqual;
@@ -125,11 +125,11 @@ namespace Raven.Server.Documents
                                     modified.TryGetMember(property, out object _) == false)
                                 {
                                     // Resolve when just 1 document have counters
-                                    resolvedCountesConflict = true;
+                                    resolvedCountersConflict = true;
                                     continue;
                                 }
 
-                                resolvedCountesConflict = ShouldResolveCountersConflict(current, modified);
+                                resolvedCountersConflict = ShouldResolveCountersConflict(current, modified);
                                 continue;
                             }
                         }
@@ -143,19 +143,19 @@ namespace Raven.Server.Documents
                 }
 
                 if (current.TryGetMember(property, out object currentProperty) == false ||
-                    modified.TryGetMember(property, out object modifiedPropery) == false)
+                    modified.TryGetMember(property, out object modifiedProperty) == false)
                 {
                     return DocumentCompareResult.NotEqual;
                 }
 
-                if (Equals(currentProperty, modifiedPropery) == false)
+                if (Equals(currentProperty, modifiedProperty) == false)
                 {
                     return DocumentCompareResult.NotEqual;
                 }
             }
 
-            var shouldRecreateAttachment = resolvedAttachmetConflict ? DocumentCompareResult.AttachmentsNotEqual : DocumentCompareResult.None;
-            var shouldRecreateCounters = resolvedCountesConflict ? DocumentCompareResult.CountersNotEqual : DocumentCompareResult.None;
+            var shouldRecreateAttachment = resolvedAttachmentConflict ? DocumentCompareResult.AttachmentsNotEqual : DocumentCompareResult.None;
+            var shouldRecreateCounters = resolvedCountersConflict ? DocumentCompareResult.CountersNotEqual : DocumentCompareResult.None;
             
             return DocumentCompareResult.Equal | shouldRecreateAttachment | shouldRecreateCounters;
         }

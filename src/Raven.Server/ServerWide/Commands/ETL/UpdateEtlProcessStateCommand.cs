@@ -28,14 +28,14 @@ namespace Raven.Server.ServerWide.Commands.ETL
         }
 
         public UpdateEtlProcessStateCommand(string databaseName, string configurationName, string transformationName, long lastProcessedEtag, string changeVector,
-            string nodeTag, bool hasHighlyAvalilableTasks) : base(databaseName)
+            string nodeTag, bool hasHighlyAvailableTasks) : base(databaseName)
         {
             ConfigurationName = configurationName;
             TransformationName = transformationName;
             LastProcessedEtag = lastProcessedEtag;
             ChangeVector = changeVector;
             NodeTag = nodeTag;
-            HasHighlyAvailableTasks = hasHighlyAvalilableTasks;
+            HasHighlyAvailableTasks = hasHighlyAvailableTasks;
         }
 
         public override string GetItemId()

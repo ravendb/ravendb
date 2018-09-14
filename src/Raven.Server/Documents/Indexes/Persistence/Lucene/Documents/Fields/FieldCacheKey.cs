@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
             if (_multipleItemsSameField.Length != multipleItemsSameField.Length)
                 return false;
 
-            // PERF: In this case we dont cache the length to allow the JIT to figure out it can evict the bound checks.
+            // PERF: In this case we don't cache the length to allow the JIT to figure out it can evict the bound checks.
             bool result = true;
             for (int i = 0; i < _multipleItemsSameField.Length; i++)
             {

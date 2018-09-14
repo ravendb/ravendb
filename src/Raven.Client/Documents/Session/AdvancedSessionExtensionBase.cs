@@ -6,9 +6,9 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
-    public class AdvancedSessionExtentionBase
+    public abstract class AdvancedSessionExtensionBase
     {
-        protected AdvancedSessionExtentionBase(InMemoryDocumentSessionOperations session)
+        protected AdvancedSessionExtensionBase(InMemoryDocumentSessionOperations session)
         {
             Session = session;
             DocumentsByEntity = Session.DocumentsByEntity;

@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
                 }
 
-                var t = CleanupSupercededAutoIndexes(index, map, token)
+                var t = CleanupSupersededAutoIndexes(index, map, token)
                     .ContinueWith(task =>
                     {
                         if (task.Exception != null)
@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                             if (_indexStore.Logger.IsInfoEnabled)
                             {
-                                _indexStore.Logger.Info("Failed to delete superceded indexes for index " + index.Name);
+                                _indexStore.Logger.Info("Failed to delete superseded indexes for index " + index.Name);
                             }
                         }
                     });
@@ -137,12 +137,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return index;
         }
 
-        private async Task CleanupSupercededAutoIndexes(Index index, DynamicQueryMapping map, CancellationToken token)
+        private async Task CleanupSupersededAutoIndexes(Index index, DynamicQueryMapping map, CancellationToken token)
         {
             if (map.SupersededIndexes == null || map.SupersededIndexes.Count == 0)
                 return;
 
-            // this is meant to remove superceded indexes immediately when they are of no use
+            // this is meant to remove superseded indexes immediately when they are of no use
             // however, they'll also be cleaned by the idle timer, so we don't worry too much
             // about this being in memory only operation
 
@@ -158,17 +158,17 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     break;
                 }
 
-                var maxSupercededEtag = 0L;
-                foreach (var supercededIndex in map.SupersededIndexes)
+                var maxSupersededEtag = 0L;
+                foreach (var supersededIndex in map.SupersededIndexes)
                 {
                     try
                     {
-                        var etag = supercededIndex.GetLastMappedEtagFor(map.ForCollection);
-                        maxSupercededEtag = Math.Max(etag, maxSupercededEtag);
+                        var etag = supersededIndex.GetLastMappedEtagFor(map.ForCollection);
+                        maxSupersededEtag = Math.Max(etag, maxSupersededEtag);
                     }
                     catch (OperationCanceledException)
                     {
-                        // the superceded index was already deleted
+                        // the superseded index was already deleted
                     }
                 }
 
@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     // the index was already disposed by something else
                     break;
                 }
-                if (currentEtag >= maxSupercededEtag)
+                if (currentEtag >= maxSupersededEtag)
                 {
                     // we'll give it a few seconds to drain any pending queries,
                     // and because it make it easier to demonstrate how we auto
@@ -195,11 +195,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         ).ConfigureAwait(false);
                     }
 
-                    foreach (var supercededIndex in map.SupersededIndexes)
+                    foreach (var supersededIndex in map.SupersededIndexes)
                     {
                         try
                         {
-                            await _indexStore.DeleteIndex(supercededIndex.Name);
+                            await _indexStore.DeleteIndex(supersededIndex.Name);
                         }
                         catch (IndexDoesNotExistException)
                         {

@@ -11,7 +11,7 @@ namespace Raven.Server
 {
     public class RedirectServerStartup
     {
-        public void Configure(IApplicationBuilder app, ILoggerFactory loggerfactory)
+        public void Configure(IApplicationBuilder app, ILoggerFactory loggerFactory)
         {
             app.Use(_ => RedirectRequestHandler);
         }

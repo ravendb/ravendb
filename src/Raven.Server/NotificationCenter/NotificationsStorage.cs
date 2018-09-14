@@ -327,7 +327,7 @@ namespace Raven.Server.NotificationCenter
                 Memory.Copy(itemCopy.Address, item.Json.BasePointer, item.Json.Size);
 
                 Store(context.GetLazyString(id), item.CreatedAt, postponeUntil,
-                    //we create a copy because we can't update directy from mutated memory
+                    //we create a copy because we can't update directly from mutated memory
                     new BlittableJsonReaderObject(itemCopy.Address, item.Json.Size, context)
                     , tx);
 

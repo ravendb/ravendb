@@ -449,18 +449,18 @@ namespace Raven.Server.Documents.Replication
                 newDestinations = new List<ExternalReplication>();
 
             var addedDestinations = new List<ExternalReplication>();
-            var removedDestiantions = current.ToList();
+            var removedDestinations = current.ToList();
             foreach (var newDestination in newDestinations.ToArray())
             {
                 if (newDestination.Disabled)
                     continue;
 
-                removedDestiantions.Remove(newDestination);
+                removedDestinations.Remove(newDestination);
                 if (current.Contains(newDestination) == false)
                     addedDestinations.Add(newDestination);
             }
 
-            return (addedDestinations, removedDestiantions);
+            return (addedDestinations, removedDestinations);
         }
 
         private void HandleExternalReplication(DatabaseRecord newRecord, List<OutgoingReplicationHandler> instancesToDispose)
@@ -719,7 +719,7 @@ namespace Raven.Server.Documents.Replication
                     using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     {
                         var database = exNode.ConnectionString.Database;
-                        var cmd = new GetTcpInfoCommand("extrenal-replication", database);
+                        var cmd = new GetTcpInfoCommand("external-replication", database);
                         requestExecutor.Execute(cmd, ctx);
                         node.Database = database;
                         node.Url = requestExecutor.Url;

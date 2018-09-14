@@ -108,7 +108,7 @@ namespace Raven.Migrator.MongoDB
             }
         }
 
-        public async Task MigrateDatabse()
+        public async Task MigrateDatabase()
         {
             AssertDatabaseName();
 
@@ -196,7 +196,7 @@ namespace Raven.Migrator.MongoDB
 
                         using (var stream = new MemoryStream())
                         {
-                            //can't OpenDownloadStreamAsync because it's not a seeakble stream
+                            //can't OpenDownloadStreamAsync because it's not a seekable stream
                             await bucket.DownloadToStreamAsync(fileInfo.Id, stream);
                             stream.Position = 0;
 

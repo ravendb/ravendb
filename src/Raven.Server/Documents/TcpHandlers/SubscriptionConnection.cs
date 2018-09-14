@@ -650,7 +650,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             if (result.Doc.Data.Modifications != null)
                             {
-                                result.Doc.Data = docsContext.ReadObject(result.Doc.Data, "subsDocAferModifications");
+                                result.Doc.Data = docsContext.ReadObject(result.Doc.Data, "subsDocAfterModifications");
                             }
 
                             var metadata = result.Doc.Data[Client.Constants.Documents.Metadata.Key];

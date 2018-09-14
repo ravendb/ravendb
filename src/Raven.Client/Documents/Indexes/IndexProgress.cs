@@ -30,9 +30,9 @@ namespace Raven.Client.Documents.Indexes
 
             public long TotalNumberOfTombstones { get; set; }
 
-            internal void UpdateLastEtag(long lastEtag, bool isTombsone)
+            internal void UpdateLastEtag(long lastEtag, bool isTombstone)
             {
-                if (isTombsone)
+                if (isTombstone)
                 {
                     LastProcessedTombstoneEtag = lastEtag;
                 }

@@ -77,7 +77,7 @@ namespace Raven.Server.TrafficWatch
                 TrafficWatchManager.Disconnect(this);
                 try
                 {
-                    await _websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "NORNAL_CLOSE", _cancellationTokenSource?.Token ?? CancellationToken.None);
+                    await _websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "NORMAL_CLOSE", _cancellationTokenSource?.Token ?? CancellationToken.None);
                 }
                 catch
                 {
@@ -120,7 +120,7 @@ namespace Raven.Server.TrafficWatch
             await _websocket.SendAsync(message, WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
         }
 
-        public void EnqueMsg(TrafficWatchChange msg)
+        public void EnqueueMsg(TrafficWatchChange msg)
         {
             _msgs.Enqueue(msg);
             _manualResetEvent.Set();

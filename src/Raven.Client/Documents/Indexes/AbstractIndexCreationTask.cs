@@ -324,7 +324,7 @@ namespace Raven.Client.Documents.Indexes
         }
 
         /// <summary>
-        /// Add additional sources to be copiled with the index on the server.
+        /// Add additional sources to be compiled with the index on the server.
         /// </summary>
         public Dictionary<string, string> AdditionalSources { get; set; }
     }

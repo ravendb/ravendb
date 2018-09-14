@@ -125,7 +125,7 @@ namespace Raven.Server.Smuggler.Documents
                     catch (Exception e)
                     {
                         if (_log.IsInfoEnabled)
-                            _log.Info("Wasn't able to import the reivions configuration from smuggler file. Skiping.", e);
+                            _log.Info("Wasn't able to import the revisions configuration from smuggler file. Skipping.", e);
                     }
                 }
 
@@ -139,7 +139,7 @@ namespace Raven.Server.Smuggler.Documents
                     catch (Exception e)
                     {
                         if (_log.IsInfoEnabled)
-                            _log.Info("Wasn't able to import the expiration configuration from smuggler file. Skiping.", e);
+                            _log.Info("Wasn't able to import the expiration configuration from smuggler file. Skipping.", e);
                     }
                 }
 
@@ -153,7 +153,7 @@ namespace Raven.Server.Smuggler.Documents
                             if (ravenConnectionStrings.TryGet(connectionName, out BlittableJsonReaderObject connection) == false)
                             {
                                 if (_log.IsInfoEnabled)
-                                    _log.Info($"Wasn't able to import the RavenDB connection string {connectionName} from smuggler file. Skiping.");
+                                    _log.Info($"Wasn't able to import the RavenDB connection string {connectionName} from smuggler file. Skipping.");
 
                                 continue;
                             }
@@ -166,7 +166,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         databaseRecord.RavenConnectionStrings.Clear();
                         if (_log.IsInfoEnabled)
-                            _log.Info("Wasn't able to import the RavenDB connection strings from smuggler file. Skiping.", e);
+                            _log.Info("Wasn't able to import the RavenDB connection strings from smuggler file. Skipping.", e);
                     }
                 }
 
@@ -180,7 +180,7 @@ namespace Raven.Server.Smuggler.Documents
                             if (ravenConnectionStrings.TryGet(connectionName, out BlittableJsonReaderObject connection) == false)
                             {
                                 if (_log.IsInfoEnabled)
-                                    _log.Info($"Wasn't able to import the SQL connection string {connectionName} from smuggler file. Skiping.");
+                                    _log.Info($"Wasn't able to import the SQL connection string {connectionName} from smuggler file. Skipping.");
 
                                 continue;
                             }
@@ -193,7 +193,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         databaseRecord.SqlConnectionStrings.Clear();
                         if (_log.IsInfoEnabled)
-                            _log.Info("Wasn't able to import the SQL connection strings from smuggler file. Skiping.", e);
+                            _log.Info("Wasn't able to import the SQL connection strings from smuggler file. Skipping.", e);
                     }
                 }
 
@@ -207,7 +207,7 @@ namespace Raven.Server.Smuggler.Documents
                     catch (Exception e)
                     {
                         if (_log.IsInfoEnabled)
-                            _log.Info("Wasn't able to import the client configuration from smuggler file. Skiping.", e);
+                            _log.Info("Wasn't able to import the client configuration from smuggler file. Skipping.", e);
                     }
                 }
             });
@@ -678,12 +678,12 @@ namespace Raven.Server.Smuggler.Documents
                 ["ContentType"] = string.Empty,
                 ["Size"] = details.Size,
             };
-            var attachmets = new DynamicJsonArray();
-            attachmets.Add(attachment);
+            var attachments = new DynamicJsonArray();
+            attachments.Add(attachment);
             var metadata = new DynamicJsonValue
             {
                 [Constants.Documents.Metadata.Collection] = "@files",
-                [Constants.Documents.Metadata.Attachments] = attachmets,
+                [Constants.Documents.Metadata.Attachments] = attachments,
                 [Constants.Documents.Metadata.LegacyAttachmentsMetadata] = details.Metadata
             };
             var djv = new DynamicJsonValue
@@ -869,7 +869,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     else
                     {
-                        var msg = "Ignoring an invalied tombstone which you try to import. " + data;
+                        var msg = "Ignoring an invalid tombstone which you try to import. " + data;
                         if (_log.IsOperationsEnabled)
                             _log.Operations(msg);
 
@@ -939,7 +939,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     else
                     {
-                        var msg = "Ignoring an invalied conflict which you try to import. " + data;
+                        var msg = "Ignoring an invalid conflict which you try to import. " + data;
                         if (_log.IsOperationsEnabled)
                             _log.Operations(msg);
 
@@ -1010,7 +1010,7 @@ namespace Raven.Server.Smuggler.Documents
             attachment.Stream.Flush();
             var lazyHash = context.GetLazyString(hash);
             attachment.Base64HashDispose = Slice.External(context.Allocator, lazyHash, out attachment.Base64Hash);
-            var tag = $"{DummyDocumentPrefix}{key}{RecordSeperator}d{RecordSeperator}{key}{RecordSeperator}{hash}{RecordSeperator}";
+            var tag = $"{DummyDocumentPrefix}{key}{RecordSeparator}d{RecordSeparator}{key}{RecordSeparator}{hash}{RecordSeparator}";
             var lazyTag = context.GetLazyString(tag);
             attachment.TagDispose = Slice.External(context.Allocator, lazyTag, out attachment.Tag);
             var id = GetLegacyAttachmentId(key);
@@ -1038,7 +1038,7 @@ namespace Raven.Server.Smuggler.Documents
             public BlittableJsonReaderObject Metadata;
         }
 
-        private const char RecordSeperator = (char)SpecialChars.RecordSeparator;
+        private const char RecordSeparator = (char)SpecialChars.RecordSeparator;
         private const string DummyDocumentPrefix = "files/";
 
         public unsafe void ProcessAttachmentStream(DocumentsOperationContext context, BlittableJsonReaderObject data, ref DocumentItem.AttachmentStream attachment)

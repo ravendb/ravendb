@@ -371,7 +371,7 @@ namespace Raven.Client.Util
                                 .First();
                         var count = Expression.Call(typeof(Enumerable), "Count", new Type[] { typeArguments }, methodCallExpression.Arguments[0]);
                         
-                        // When doing the devide, make sure count matches the sum type
+                        // When doing the divide, make sure count matches the sum type
                         context.Visitor.Visit(
                             Expression.Divide(
                                 sum, 
@@ -965,7 +965,7 @@ namespace Raven.Client.Util
                 _projectionParameters = projectionParameters;
             }
 
-            private static bool IsWrapedConstatntExpression(Expression expression)
+            private static bool IsWrappedConstantExpression(Expression expression)
             {
                 while (expression is MemberExpression memberExpression)
                 {
@@ -978,7 +978,7 @@ namespace Raven.Client.Util
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 if (!(context.Node is MemberExpression memberExpression) ||
-                    IsWrapedConstatntExpression(memberExpression) == false)
+                    IsWrappedConstantExpression(memberExpression) == false)
                     return;
 
                 LinqPathProvider.GetValueFromExpressionWithoutConversion(memberExpression, out var value);
@@ -1434,7 +1434,7 @@ namespace Raven.Client.Util
                 _conventions = conventions;
             }
 
-            private static bool IsWrapedConstatntExpression(Expression expression)
+            private static bool IsWrappedConstantExpression(Expression expression)
             {
                 while (expression is MemberExpression memberExpression)
                 {
@@ -1447,7 +1447,7 @@ namespace Raven.Client.Util
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 if (!(context.Node is MemberExpression memberExpression) ||
-                    IsWrapedConstatntExpression(memberExpression) == false)
+                    IsWrappedConstantExpression(memberExpression) == false)
                     return;
 
                 LinqPathProvider.GetValueFromExpressionWithoutConversion(memberExpression, out var value);
@@ -1525,7 +1525,7 @@ namespace Raven.Client.Util
 
                     context.PreventDefault();
 
-                    // if we have a number, write the value without quatation
+                    // if we have a number, write the value without quotation
                     if (_numericTypes.Contains(valueType) || _numericTypes.Contains(Nullable.GetUnderlyingType(valueType)))
                     {
                         writer.Write(value.ToInvariantString());

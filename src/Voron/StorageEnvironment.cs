@@ -275,7 +275,7 @@ namespace Voron
 
             Options.AddToInitLog?.Invoke("Starting Recovery");
             hadIntegrityIssues = _journal.RecoverDatabase(header, Options.AddToInitLog);
-            var successString = hadIntegrityIssues ? "(successfully)" : "(with intergrity issues)";
+            var successString = hadIntegrityIssues ? "(successfully)" : "(with integrity issues)";
             Options.AddToInitLog?.Invoke($"Recovery Ended {successString}");
 
             if (hadIntegrityIssues)
@@ -411,16 +411,16 @@ namespace Voron
                 ". " + message);
         }
 
-        public unsafe void FillBase64Id(Guid databseGuidId)
+        public unsafe void FillBase64Id(Guid databaseGuidId)
         {
-            DbId = databseGuidId;
+            DbId = databaseGuidId;
             fixed (char* pChars = Base64Id)
             {
-                var result = Base64.ConvertToBase64ArrayUnpadded(pChars, (byte*)&databseGuidId, 0, 16);
+                var result = Base64.ConvertToBase64ArrayUnpadded(pChars, (byte*)&databaseGuidId, 0, 16);
                 Debug.Assert(result == 22);
             }
 
-            _options.SetEnvironmentId(databseGuidId);
+            _options.SetEnvironmentId(databaseGuidId);
         }
 
         public string Base64Id { get; } = new string(' ', 22);

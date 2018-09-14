@@ -480,7 +480,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
         
-        [RavenAction("/databases/*/replicaton/conflicts/solver", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/replication/conflicts/solver", "GET", AuthorizationStatus.ValidUser)]
         public Task GetRevisionsConfig()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         _logger.Info($"Executing map for '{_index.Name}'. Processed count: {count:#,#;;0} etag: {lastEtag:#,#;;0}.");
 
                                     lastEtag = current.Etag;
-                                    inMemoryStats.UpdateLastEtag(lastEtag, isTombsone: false);
+                                    inMemoryStats.UpdateLastEtag(lastEtag, isTombstone: false);
 
                                     try
                                     {
@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 }
 
                                 if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Done executing map for '{_index.Name}'. Proccessed count: {count:#,#;;0} LastEtag {lastEtag}.");
+                                    _logger.Info($"Done executing map for '{_index.Name}'. Processed count: {count:#,#;;0} LastEtag {lastEtag}.");
                             }
                         }
                     }

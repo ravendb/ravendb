@@ -31,11 +31,11 @@ namespace Raven.Server.Documents.Indexes
             // so this should be called if user is using a reasonable number
             // of regex queries.
             if (_count > _halfCapacity)
-                Updatetimestamp(result);
+                UpdateTimestamp(result);
             return result.RegexLazy.Value; 
         }
 
-        private static void Updatetimestamp(ConcurrentLruRegexCacheNode result)
+        private static void UpdateTimestamp(ConcurrentLruRegexCacheNode result)
         {
             var timestamp = Stopwatch.GetTimestamp();
 

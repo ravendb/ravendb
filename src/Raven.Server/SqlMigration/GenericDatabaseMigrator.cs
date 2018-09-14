@@ -62,7 +62,7 @@ namespace Raven.Server.SqlMigration
 
                             FillDocumentFields(doc.Object, doc.SpecialColumnsValues, references, "", doc.Attachments);
 
-                            return (patcher.Patch(doc.ToBllitable(context)), id);
+                            return (patcher.Patch(doc.ToBlittable(context)), id);
                         }
                     } 
                     catch (JavaScriptException e)
@@ -140,7 +140,7 @@ namespace Raven.Server.SqlMigration
 
                                     FillDocumentFields(doc.Object, doc.SpecialColumnsValues, references, "", doc.Attachments);
 
-                                    var docBlittable = patcher.Patch(doc.ToBllitable(context));
+                                    var docBlittable = patcher.Patch(doc.ToBlittable(context));
 
                                     await writer.InsertDocument(docBlittable, id, doc.Attachments);
                                 }
@@ -477,7 +477,7 @@ namespace Raven.Server.SqlMigration
             if (primaryKeyColumns.Count != primaryKeyValues.Length)
             {
                 queryParameters = null;
-                throw new InvalidOperationException("Invalid paramaters count. Primary key has " + primaryKeyColumns.Count + " columns, but " + primaryKeyValues.Length + " values were provided.");
+                throw new InvalidOperationException("Invalid parameters count. Primary key has " + primaryKeyColumns.Count + " columns, but " + primaryKeyValues.Length + " values were provided.");
             }
             
             var parameters = new Dictionary<string, object>();

@@ -45,14 +45,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
             else if (type == ACRONYM_TYPE)
             {
                 // remove dots
-                int upto = 0;
+                int upTo = 0;
                 for (int i = 0; i < bufferLength; i++)
                 {
                     char c = buffer[i];
                     if (c != '.')
-                        buffer[upto++] = ToLower(c);
+                        buffer[upTo++] = ToLower(c);
                 }
-                _termAtt.SetTermLength(upto);
+                _termAtt.SetTermLength(upTo);
             }
             else
             {

@@ -87,13 +87,13 @@ namespace Raven.Server.Documents.Indexes
                 .NormalizeWhitespace()
                 .AddMembers(c);
 
-            SyntaxNode formatedCompilationUnit;
+            SyntaxNode formattedCompilationUnit;
             using (var workspace = new AdhocWorkspace())
             {
-                formatedCompilationUnit = Formatter.Format(cu, workspace);
+                formattedCompilationUnit = Formatter.Format(cu, workspace);
             }
 
-            return formatedCompilationUnit.ToFullString();
+            return formattedCompilationUnit.ToFullString();
         }
 
         private static IEnumerable<SyntaxNodeOrToken> ParsingIndexDefinitionFields(IndexDefinition indexDefinition)

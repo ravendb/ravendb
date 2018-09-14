@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 else
                 {
-                    throw new InvalidOperationException("Unknonw type: " + js.Type);
+                    throw new InvalidOperationException("Unknown type: " + js.Type);
                 }
                 return;
             }

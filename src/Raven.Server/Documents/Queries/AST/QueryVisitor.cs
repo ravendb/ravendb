@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Queries.AST
             
         }
 
-        public virtual void VisitNegatedExpresson(NegatedExpression expr)
+        public virtual void VisitNegatedExpression(NegatedExpression expr)
         {
             VisitExpression(expr.Expression);
         }
@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Queries.AST
                     VisitTrue();
                     break;
                 case ExpressionType.Negated:
-                    VisitNegatedExpresson((NegatedExpression)expr);
+                    VisitNegatedExpression((NegatedExpression)expr);
                     break;
                 default:
                     GetValueThrowInvalidExprType(expr);

@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             if (disposing == false)
                 return;
 
-            // the caller is reponsible for disposing the base stream
+            // the caller is responsible for disposing the base stream
             _baseStream = null;
         }
 

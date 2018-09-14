@@ -86,7 +86,7 @@ namespace Raven.Server.Web.System
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartObject();
-                        writer.WriteDocumentPropertiesWithoutMetdata(context, new Document
+                        writer.WriteDocumentPropertiesWithoutMetadata(context, new Document
                         {
                             Data = dbDoc
                         });
@@ -171,7 +171,7 @@ namespace Raven.Server.Web.System
                     if (databaseRecord.Topology.RelevantFor(mentor) == false)
                         throw new ArgumentException($"The node {mentor} is not part of the database group");
                     if (databaseRecord.Topology.Members.Contains(mentor) == false)
-                        throw new ArgumentException($"The node {mentor} is not vaild for the operation because it is not a member");
+                        throw new ArgumentException($"The node {mentor} is not valid for the operation because it is not a member");
                     databaseRecord.Topology.PredefinedMentors.Add(node, mentor);
                 }
 
@@ -912,7 +912,7 @@ namespace Raven.Server.Web.System
 
                 else
                 {
-                    throw new InvalidOperationException("'database' query string parmater not found, and 'serverScript' query string is not found. Don't know what to apply this script on");
+                    throw new InvalidOperationException("'database' query string parameter not found, and 'serverScript' query string is not found. Don't know what to apply this script on");
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;

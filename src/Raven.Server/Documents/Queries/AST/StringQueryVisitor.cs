@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Queries.AST
             _sb.AppendLine();
         }
 
-        public override void VisitNegatedExpresson(NegatedExpression expr)
+        public override void VisitNegatedExpression(NegatedExpression expr)
         {
             _sb.Append("NOT (");
             VisitExpression(expr.Expression);

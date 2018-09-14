@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Implements Unit of Work for accessing the RavenDB server
     /// </summary>
-    public class DocumentSessionRevisionsAsync : AdvancedSessionExtentionBase, IRevisionsSessionOperationsAsync
+    public class DocumentSessionRevisionsAsync : AdvancedSessionExtensionBase, IRevisionsSessionOperationsAsync
     {
         public DocumentSessionRevisionsAsync(InMemoryDocumentSessionOperations session) : base(session)
         {

@@ -59,7 +59,7 @@ namespace Raven.Client.Documents.Linq
         private DeclareToken _declareToken;
         private List<LoadToken> _loadTokens;
         private HashSet<string> _loadAliases;
-        private readonly HashSet<string> _loadAliasesMovedToOutputFuction;
+        private readonly HashSet<string> _loadAliasesMovedToOutputFunction;
         private int _insideLet = 0;
         private string _loadAlias;
         private bool _selectLoad;
@@ -130,7 +130,7 @@ namespace Raven.Client.Documents.Linq
             _conventions = conventions;
             _linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
             _jsProjectionNames = new List<string>();
-            _loadAliasesMovedToOutputFuction = new HashSet<string>();
+            _loadAliasesMovedToOutputFunction = new HashSet<string>();
         }
 
         /// <summary>
@@ -529,7 +529,7 @@ namespace Raven.Client.Documents.Linq
         /// <returns></returns>
         protected virtual ExpressionInfo GetMember(Expression expression)
         {
-            var parameterExpression = GetParameterExpressionIncludingConvertions(expression);
+            var parameterExpression = GetParameterExpressionIncludingConversions(expression);
             if (parameterExpression != null)
             {
                 if (_currentPath.EndsWith("[]."))
@@ -597,7 +597,7 @@ namespace Raven.Client.Documents.Linq
             return prop;
         }
 
-        private static ParameterExpression GetParameterExpressionIncludingConvertions(Expression expression)
+        private static ParameterExpression GetParameterExpressionIncludingConversions(Expression expression)
         {
             var paramExpr = expression as ParameterExpression;
             if (paramExpr != null)
@@ -606,7 +606,7 @@ namespace Raven.Client.Documents.Linq
             {
                 case ExpressionType.Convert:
                 case ExpressionType.ConvertChecked:
-                    return GetParameterExpressionIncludingConvertions(((UnaryExpression)expression).Operand);
+                    return GetParameterExpressionIncludingConversions(((UnaryExpression)expression).Operand);
             }
             return null;
         }
@@ -1928,7 +1928,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                                         AddCompositeGroupByKey((NewExpression)lambda.Body, parts);
                                         return;
                                     default:
-                                        throw new NotSupportedException($"Unsupported body node type of lamda expression: {lambda.Body.NodeType}");
+                                        throw new NotSupportedException($"Unsupported body node type of lambda expression: {lambda.Body.NodeType}");
                                 }
                                 break;
                             default:
@@ -2069,7 +2069,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     if (_declareBuilder != null)
                     {
-                        AddReturnStatmentToOutputFunction(newExpression);
+                        AddReturnStatementToOutputFunction(newExpression);
                         break;
                     }
 
@@ -2119,7 +2119,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     if (_declareBuilder != null)
                     {
-                        AddReturnStatmentToOutputFunction(memberInitExpression);
+                        AddReturnStatementToOutputFunction(memberInitExpression);
                         break;
                     }
 
@@ -2251,7 +2251,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             return value.ToString();
         }
 
-        private void AddReturnStatmentToOutputFunction(Expression expression)
+        private void AddReturnStatementToOutputFunction(Expression expression)
         {
             var js = TranslateSelectBodyToJs(expression);
             _declareBuilder.Append("\t").Append("return ").Append(js).Append(";");
@@ -2400,7 +2400,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (indexOf != -1)
             {
                 var loadFrom = arg.Substring(0, indexOf);
-                if (_loadAliasesMovedToOutputFuction.Contains(loadFrom))
+                if (_loadAliasesMovedToOutputFunction.Contains(loadFrom))
                 {
                     //edge case: earlier we had 'Load(x.SomeId).member as alias1'                   
                     //so we did : load x.SomeId as _doc_i (LoadToken)
@@ -2413,7 +2413,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     //var alias2 = load(alias1.SomeId2); (JS load() method)
 
                     AppendLineToOutputFunction(name, ToJs(expression.Arguments[1]));
-                    _loadAliasesMovedToOutputFuction.Add(name);
+                    _loadAliasesMovedToOutputFunction.Add(name);
                     return;
                 }
             }
@@ -2448,7 +2448,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             AddLoadToken(arg, alias);
 
             //add name to the list of aliases that were moved to the output function
-            _loadAliasesMovedToOutputFuction.Add(name);
+            _loadAliasesMovedToOutputFunction.Add(name);
 
             if (js.StartsWith(".") == false && js.StartsWith("[") == false)
             {

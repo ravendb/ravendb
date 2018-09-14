@@ -356,7 +356,7 @@ namespace Raven.Client.Documents.Indexes
 
             if (firstMap.StartsWith("from") || firstMap.StartsWith("docs"))
             {
-                // C# indexes must start with "from" for query synatx or
+                // C# indexes must start with "from" for query syntax or
                 // "docs" for method syntax
                 if (string.IsNullOrWhiteSpace(Reduce))
                     return IndexType.Map;

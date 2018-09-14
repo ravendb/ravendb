@@ -87,7 +87,7 @@ namespace Raven.Server.Rachis
                                 Term = _engine.CurrentTerm,
                                 VoteGranted = false,
                                 // we only report to the node asking for our vote if we are the leader, this gives
-                                // the oust node a authorotative confirmation that they were removed from the cluster
+                                // the oust node a authoritative confirmation that they were removed from the cluster
                                 NotInTopology = _engine.CurrentState == RachisState.Leader,
                                 Message = $"Node {rv.Source} is not in my topology, cannot vote for it"
                             });

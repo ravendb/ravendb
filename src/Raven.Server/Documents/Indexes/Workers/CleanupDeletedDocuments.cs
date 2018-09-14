@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 count++;
                                 batchCount++;
                                 lastEtag = tombstone.Etag;
-                                inMemoryStats.UpdateLastEtag(lastEtag, isTombsone: true);
+                                inMemoryStats.UpdateLastEtag(lastEtag, isTombstone: true);
 
                                 if (_logger.IsInfoEnabled && count % 2048 == 0)
                                     _logger.Info($"Executing cleanup for '{_index.Name}'. Processed count: {count:#,#;;0} etag: {lastEtag}.");

@@ -779,7 +779,7 @@ namespace Raven.Server.Documents.Indexes
                                    $"The last document etag in that collection is '{lastDocEtag:#,#;;0}' " +
                                    $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
                                    $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}'), " +
-                                   $"but last commited document etag for that collection is '{lastProcessedDocEtag:#,#;;0}'";
+                                   $"but last committed document etag for that collection is '{lastProcessedDocEtag:#,#;;0}'";
                         if (stats != null)
                             message += $" (last processed etag is: '{stats.LastProcessedDocumentEtag:#,#;;0}')";
 
@@ -799,7 +799,7 @@ namespace Raven.Server.Documents.Indexes
                                    $"The last tombstone etag in that collection is '{lastTombstoneEtag:#,#;;0}' " +
                                    $"({Constants.Documents.Metadata.Id}: '{lastTombstone.LowerId}', " +
                                    $"{Constants.Documents.Metadata.LastModified}: '{lastTombstone.LastModified}'), " +
-                                   $"but last commited tombstone etag for that collection is '{lastProcessedTombstoneEtag:#,#;;0}'.";
+                                   $"but last committed tombstone etag for that collection is '{lastProcessedTombstoneEtag:#,#;;0}'.";
                         if (stats != null)
                             message += $" (last processed etag is: '{stats.LastProcessedTombstoneEtag:#,#;;0}')";
 
@@ -821,7 +821,7 @@ namespace Raven.Server.Documents.Indexes
                                    $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
                                    $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') " +
                                    $"with cutoff set to '{cutoff.Value}', " +
-                                   $"but last commited document etag for that collection is '{lastProcessedDocEtag:#,#;;0}'.";
+                                   $"but last committed document etag for that collection is '{lastProcessedDocEtag:#,#;;0}'.";
                         if (stats != null)
                             message += $" (last processed etag is: '{stats.LastProcessedDocumentEtag:#,#;;0}')";
 
@@ -892,7 +892,7 @@ namespace Raven.Server.Documents.Indexes
                     return; // can be null if we disposed immediately
                 try
                 {
-                    _contextPool.SetMostWorkInGoingToHappenonThisThread();
+                    _contextPool.SetMostWorkInGoingToHappenOnThisThread();
 
                     DocumentDatabase.Changes.OnDocumentChange += HandleDocumentChange;
                     storageEnvironment.OnLogsApplied += HandleLogsApplied;
@@ -2431,7 +2431,7 @@ namespace Raven.Server.Documents.Indexes
                 ThrowCompactionInProgress();
 
             if (_initialized == false)
-                ThrowNotIntialized();
+                ThrowNotInitialized();
 
             if (_disposeOne.Disposed)
                 ThrowWasDisposed();
@@ -2480,7 +2480,7 @@ namespace Raven.Server.Documents.Indexes
         private void ThrowErrored()
         {
             throw new InvalidOperationException(
-                $"Index '{Name}' is marked as errored. Please check index errors avaiable at '/databases/{DocumentDatabase.Name}/indexes/errors?name={Name}'.");
+                $"Index '{Name}' is marked as errored. Please check index errors available at '/databases/{DocumentDatabase.Name}/indexes/errors?name={Name}'.");
         }
 
         private void ThrowMarkedAsError(string errorStateReason)
@@ -2493,7 +2493,7 @@ namespace Raven.Server.Documents.Indexes
             throw new ObjectDisposedException($"Index '{Name}' was already disposed.");
         }
 
-        private void ThrowNotIntialized()
+        private void ThrowNotInitialized()
         {
             throw new InvalidOperationException($"Index '{Name}' was not initialized.");
         }
@@ -3065,7 +3065,7 @@ namespace Raven.Server.Documents.Indexes
 
             // here we ensure that we aren't currently running any indexing,
             // because we'll shut down the environment for this index, reads
-            // are handled using the DrainRunningQueries porition
+            // are handled using the DrainRunningQueries portion
             GetWaitForIndexingThreadToExit(disableIndex: false)?.Join(Timeout.Infinite);
             _environment.Dispose();
 

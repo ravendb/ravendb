@@ -112,7 +112,7 @@ namespace Raven.Server.Utils
             private string _name;
             private readonly PoolOfThreads _parent;
             private LongRunningWork _workIsDone;
-            private ulong _currentUnmangedThreadId;
+            private ulong _currentUnmanagedThreadId;
             private ProcessThread _currentProcessThread;
             private Process _currentProcess;
 
@@ -272,7 +272,7 @@ namespace Raven.Server.Utils
                     return;
                 }
 
-                _currentUnmangedThreadId = PlatformDetails.GetCurrentThreadId();
+                _currentUnmanagedThreadId = PlatformDetails.GetCurrentThreadId();
                 _currentProcess = Process.GetCurrentProcess();
 
                 if (PlatformDetails.RunningOnLinux)
@@ -284,7 +284,7 @@ namespace Raven.Server.Utils
 
                 foreach (ProcessThread pt in _currentProcess.Threads)
                 {
-                    if (pt.Id == (uint)_currentUnmangedThreadId)
+                    if (pt.Id == (uint)_currentUnmanagedThreadId)
                     {
                         _currentProcessThread = pt;
                         break;
@@ -292,7 +292,7 @@ namespace Raven.Server.Utils
                 }
 
                 if (_currentProcessThread == null)
-                    throw new InvalidOperationException("Unable to get the current process thread: " + _currentUnmangedThreadId + ", this should not be possible");
+                    throw new InvalidOperationException("Unable to get the current process thread: " + _currentUnmanagedThreadId + ", this should not be possible");
             }
 
 
@@ -384,10 +384,10 @@ namespace Raven.Server.Utils
             private void SetLinuxThreadAffinity(long affinity)
             {
                 var ulongAffinity = (ulong)affinity;
-                var result = Syscall.sched_setaffinity((int)_currentUnmangedThreadId, new IntPtr(sizeof(ulong)), ref ulongAffinity);
+                var result = Syscall.sched_setaffinity((int)_currentUnmanagedThreadId, new IntPtr(sizeof(ulong)), ref ulongAffinity);
                 if (result != 0)
                     throw new InvalidOperationException(
-                        $"Failed to set affinity for thread: {_currentUnmangedThreadId}, " +
+                        $"Failed to set affinity for thread: {_currentUnmanagedThreadId}, " +
                         $"affinity: {affinity}, result: {result}, error: {Marshal.GetLastWin32Error()}");
             }
         }

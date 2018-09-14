@@ -93,7 +93,7 @@ class machineResources {
         this.usedMemory(dto.TotalMemory - dto.AvailableMemory);
         this.processMemoryUsage(dto.ProcessMemoryUsage);
         this.systemCommitLimit(dto.SystemCommitLimit);
-        this.commitedMemory(dto.CommitedMemory);
+        this.commitedMemory(dto.CommittedMemory);
         this.isWindows(dto.IsWindows);
         this.isLowMemory(dto.IsLowMemory);
         this.lowMemoryThreshold(dto.LowMemoryThreshold);

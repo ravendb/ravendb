@@ -228,7 +228,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
-                var revisions = Database.DocumentsStorage.RevisionsStorage.GetResovledDocumentsSince(context, date, take);
+                var revisions = Database.DocumentsStorage.RevisionsStorage.GetResolvedDocumentsSince(context, date, take);
                 writer.WriteDocuments(context, revisions, false, out _);
                 writer.WriteEndObject();
             }

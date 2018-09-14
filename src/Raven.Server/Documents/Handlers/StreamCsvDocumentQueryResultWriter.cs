@@ -107,17 +107,17 @@ namespace Raven.Server.Documents.Handlers
             {
                 yield return (Constants.Documents.Metadata.Id, Constants.Documents.Metadata.Id);
             }
-            foreach (var propery in obj.GetPropertyNames())
+            foreach (var p in obj.GetPropertyNames())
             {
                 //skip properties starting with '@' unless we are in the metadata and we need to export @metadata.@collection
-                if (inMetadata && propery.Equals(Constants.Documents.Metadata.Collection) == false)
+                if (inMetadata && p.Equals(Constants.Documents.Metadata.Collection) == false)
                     continue;                
-                if(propery.StartsWith('@') && propery.Equals(Constants.Documents.Metadata.Key) == false && propertyTuple.ParentPath.Equals(Constants.Documents.Metadata.Key) == false)
+                if(p.StartsWith('@') && p.Equals(Constants.Documents.Metadata.Key) == false && propertyTuple.ParentPath.Equals(Constants.Documents.Metadata.Key) == false)
                     continue; 
-                var path = IsNullOrEmpty(propertyTuple.ParentPath) ? BlittablePath.EscapeString(propery) : $"{propertyTuple.ParentPath}.{BlittablePath.EscapeString(propery)}";
-                var property = IsNullOrEmpty(propertyTuple.ParentPath) ? propery : $"{propertyTuple.ParentPath}.{propery}";
+                var path = IsNullOrEmpty(propertyTuple.ParentPath) ? BlittablePath.EscapeString(p) : $"{propertyTuple.ParentPath}.{BlittablePath.EscapeString(p)}";
+                var property = IsNullOrEmpty(propertyTuple.ParentPath) ? p : $"{propertyTuple.ParentPath}.{p}";
                 object res;
-                if (obj.TryGetMember(propery, out res) && res is BlittableJsonReaderObject)
+                if (obj.TryGetMember(p, out res) && res is BlittableJsonReaderObject)
                 {
                     foreach (var nested in GetPropertiesRecursive((property, path), res as BlittableJsonReaderObject, addId:false))
                     {

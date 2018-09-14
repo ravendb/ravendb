@@ -123,14 +123,14 @@ namespace Raven.Server.Web.Studio
                     if (result.ToString().IndexOf("Could not format:", StringComparison.Ordinal) > -1)
                         throw new BadRequestException();
 
-                    var formatedExpression = new FormatedExpression
+                    var formattedExpression = new FormattedExpression
                     {
                         Expression = result.ToString()
                     };
 
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        context.Write(writer, formatedExpression.ToJson());
+                        context.Write(writer, formattedExpression.ToJson());
                     }
                 }
             }
@@ -138,7 +138,7 @@ namespace Raven.Server.Web.Studio
             return Task.CompletedTask;
         }
 
-        public class FormatedExpression : IDynamicJson
+        public class FormattedExpression : IDynamicJson
         {
             public string Expression { get; set; }
 

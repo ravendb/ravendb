@@ -21,7 +21,7 @@ namespace Raven.Server.SqlMigration.MySQL
                                                 "where TABLE_SCHEMA = @schema and CONSTRAINT_NAME = 'PRIMARY' " +
                                                 "order by ORDINAL_POSITION";
 
-        public const string SelectReferantialConstraints = "select UNIQUE_CONSTRAINT_SCHEMA, CONSTRAINT_NAME, REFERENCED_TABLE_NAME " +
+        public const string SelectReferentialConstraints = "select UNIQUE_CONSTRAINT_SCHEMA, CONSTRAINT_NAME, REFERENCED_TABLE_NAME " +
                                                            "from information_schema.REFERENTIAL_CONSTRAINTS " +
                                                            "where UNIQUE_CONSTRAINT_SCHEMA = @schema ";
 
@@ -80,7 +80,7 @@ namespace Raven.Server.SqlMigration.MySQL
             }
         }
 
-        // Please notice it doesn't return PR for tables that doesn't referece PR using FK
+        // Please notice it doesn't return PR for tables that doesn't reference PR using FK
         private void FindPrimaryKeys(DbConnection connection, DatabaseSchema dbSchema)
         {
             using (var cmd = connection.CreateCommand())
@@ -109,7 +109,7 @@ namespace Raven.Server.SqlMigration.MySQL
 
             using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText = SelectReferantialConstraints;
+                cmd.CommandText = SelectReferentialConstraints;
                 DbParameter schemaParameter = cmd.CreateParameter();
                 schemaParameter.ParameterName = "schema";
                 schemaParameter.Value = connection.Database;

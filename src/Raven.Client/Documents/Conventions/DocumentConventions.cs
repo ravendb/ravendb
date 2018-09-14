@@ -135,7 +135,7 @@ namespace Raven.Client.Documents.Conventions
                 else if (usableMemory <= 6)
                     httpCacheSizeInMb = 128; // Used if we are in mid memory conditions
                 else
-                    httpCacheSizeInMb = 512; // We have enough memory to be aggresive.
+                    httpCacheSizeInMb = 512; // We have enough memory to be aggressive.
             }
 
             MaxHttpCacheSize = new Size(httpCacheSizeInMb, SizeUnit.Megabytes);
@@ -659,7 +659,7 @@ namespace Raven.Client.Documents.Conventions
                 }
                 catch (RuntimeBinderException)
                 {
-                    // if we can't find it, we'll just assume the the propery
+                    // if we can't find it, we'll just assume that the property
                     // isn't there
                 }
             }

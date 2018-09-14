@@ -103,8 +103,8 @@ namespace Raven.Server.Smuggler.Migration
 
                 while (true)
                 {
-                    var attatchmentsArray = await GetAttachmentsList(lastEtag, transactionOperationContext);
-                    if (attatchmentsArray.Length == 0)
+                    var attachmentsArray = await GetAttachmentsList(lastEtag, transactionOperationContext);
+                    if (attachmentsArray.Length == 0)
                     {
                         var count = Result.Documents.Attachments.ReadCount;
                         if (count > 0)
@@ -117,11 +117,11 @@ namespace Raven.Server.Smuggler.Migration
                         return;
                     }
 
-                    foreach (var attachmentObject in attatchmentsArray)
+                    foreach (var attachmentObject in attachmentsArray)
                     {
                         var blittable = attachmentObject as BlittableJsonReaderObject;
                         if (blittable == null)
-                            throw new InvalidDataException("attchmentObject isn't a BlittableJsonReaderObject");
+                            throw new InvalidDataException("attachmentObject isn't a BlittableJsonReaderObject");
 
                         if (blittable.TryGet("Key", out string key) == false)
                             throw new InvalidDataException("Key doesn't exist");
@@ -150,7 +150,7 @@ namespace Raven.Server.Smuggler.Migration
                         }
                     }
 
-                    var lastAttachment = attatchmentsArray.Last() as BlittableJsonReaderObject;
+                    var lastAttachment = attachmentsArray.Last() as BlittableJsonReaderObject;
                     Debug.Assert(lastAttachment != null, "lastAttachment != null");
                     if (lastAttachment.TryGet("Etag", out string etag))
                         lastEtag = Result.LegacyLastAttachmentEtag = etag;

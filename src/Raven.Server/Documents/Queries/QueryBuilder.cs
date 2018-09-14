@@ -773,8 +773,8 @@ namespace Raven.Server.Documents.Queries
             var radius = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[0]);
             AssertValueIsNumber(fieldName, radius.Type);
 
-            var latitute = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
-            AssertValueIsNumber(fieldName, latitute.Type);
+            var latitude = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
+            AssertValueIsNumber(fieldName, latitude.Type);
 
             var longitude = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[2]);
             AssertValueIsNumber(fieldName, longitude.Type);
@@ -783,7 +783,7 @@ namespace Raven.Server.Documents.Queries
             if (expression.Arguments.Count == 4)
                 spatialUnits = GetSpatialUnits(query, expression.Arguments[3] as ValueExpression, metadata, parameters, fieldName);
 
-            return spatialField.ReadCircle(Convert.ToDouble(radius.Value), Convert.ToDouble(latitute.Value), Convert.ToDouble(longitude.Value), spatialUnits);
+            return spatialField.ReadCircle(Convert.ToDouble(radius.Value), Convert.ToDouble(latitude.Value), Convert.ToDouble(longitude.Value), spatialUnits);
         }
 
         private static SpatialUnits? GetSpatialUnits(Query query, ValueExpression value, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName)
@@ -825,8 +825,8 @@ namespace Raven.Server.Documents.Queries
                 if (array != null)
                 {
                     ValueTokenType? expectedValueType = null;
-                    var unwrapedArray = UnwrapArray(array, metadata.QueryText, parameters);
-                    foreach (var item in unwrapedArray)
+                    var unwrappedArray = UnwrapArray(array, metadata.QueryText, parameters);
+                    foreach (var item in unwrappedArray)
                     {
                         if (expectedValueType == null)
                             expectedValueType = item.Type;

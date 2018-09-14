@@ -884,9 +884,9 @@ namespace Raven.Server.Documents.Replication
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void OnChangeInternal(bool triggeredByReplicatiionThread)
+        private void OnChangeInternal(bool triggeredByReplicationThread)
         {
-            if (triggeredByReplicatiionThread)
+            if (triggeredByReplicationThread)
                 return;
             _waitForChanges.Set();
         }

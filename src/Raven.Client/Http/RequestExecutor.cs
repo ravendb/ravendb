@@ -623,9 +623,9 @@ namespace Raven.Client.Http
                     {
                         if ((cachedItem.Item.Flags & HttpCache.ItemFlags.NotFound) != HttpCache.ItemFlags.None)
                         {
-                            // if this is a cached delete, we only respect it if it _came_ from an aggresively cached
+                            // if this is a cached delete, we only respect it if it _came_ from an aggressively cached
                             // block, otherwise, we'll run the request again
-                            if ((cachedItem.Item.Flags & HttpCache.ItemFlags.AggresivelyCached) == HttpCache.ItemFlags.AggresivelyCached)
+                            if ((cachedItem.Item.Flags & HttpCache.ItemFlags.AggressivelyCached) == HttpCache.ItemFlags.AggressivelyCached)
                             {
                                 command.SetResponse(context, cachedValue, fromCache: true);
                                 return;
@@ -952,7 +952,7 @@ namespace Raven.Client.Http
                 _nodeSelector.RecordFastest(index, nodes[index]);
                 return;
             }
-            // we can reach here if the number of failed task equal to the nuber
+            // we can reach here if the number of failed task equal to the number
             // of the nodes, in which case we have nothing to do
         }
 

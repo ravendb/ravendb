@@ -42,7 +42,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 }
             }
 
-            // Update tombstones's collection value
+            // Update tombstones collection value
             using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 foreach (var collection in step.DocumentsStorage.GetTombstoneCollections(step.ReadTx))

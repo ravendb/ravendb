@@ -267,7 +267,7 @@ namespace Raven.Server.Commercial
                     continue;
 
                 if (challengeResponse.Status != "pending")
-                    throw new InvalidOperationException("Expected autorization status 'pending', but got: " + order.Status +
+                    throw new InvalidOperationException("Expected authorization status 'pending', but got: " + order.Status +
                         Environment.NewLine + responseText);
             }
 

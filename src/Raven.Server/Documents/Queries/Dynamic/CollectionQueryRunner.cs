@@ -157,7 +157,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var buffer = stackalloc long[3];
 
             // If the query has include or load, it's too difficult to check the etags for just the included collections, 
-            // it's easier to just show etag for all docs isntead.
+            // it's easier to just show etag for all docs instead.
             if (collection == Constants.Documents.Collections.AllDocumentsCollection ||
                 query.HasIncludeOrLoad)
             {

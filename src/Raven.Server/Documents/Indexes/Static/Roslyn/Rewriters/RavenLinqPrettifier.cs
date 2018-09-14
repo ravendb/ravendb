@@ -10,11 +10,11 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
     {
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
-            var memeberAccess = node.Expression as MemberAccessExpressionSyntax;
-            if (memeberAccess == null || node.ArgumentList.Arguments.Count < 1 || !AllParentsAreMethods(node))
+            var memberAccess = node.Expression as MemberAccessExpressionSyntax;
+            if (memberAccess == null || node.ArgumentList.Arguments.Count < 1 || !AllParentsAreMethods(node))
                 return base.VisitInvocationExpression(node);
 
-            switch (memeberAccess.Name.Identifier.ValueText)
+            switch (memberAccess.Name.Identifier.ValueText)
             {
                 case "SelectMany":
                     var sourceExp = GetSimpleLambdaExpressionSyntax(node);
@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                         }));
 
                     var sourceExpBody = GetBodyAndRemoveCastingIfNeeded(sourceExp);
-                    var selectManyInvocExp = memeberAccess.Expression as InvocationExpressionSyntax;
+                    var selectManyInvocExp = memberAccess.Expression as InvocationExpressionSyntax;
                     MemberAccessExpressionSyntax selectManyInnerMemberAccess = null;
                     if (selectManyInvocExp != null)
                         selectManyInnerMemberAccess = selectManyInvocExp.Expression as MemberAccessExpressionSyntax;
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                         return SyntaxFactory.QueryExpression(
                             SyntaxFactory.FromClause(
                                 SyntaxFactory.Identifier(sourceExp.Parameter.Identifier.ValueText),
-                                (ExpressionSyntax)Visit(memeberAccess.Expression)),
+                                (ExpressionSyntax)Visit(memberAccess.Expression)),
                             SyntaxFactory.QueryBody(
                                     SyntaxFactory.SelectClause((ExpressionSyntax)selectorExp.Body))
                                 .WithClauses(
@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     if (expressionSyntax == null)
                         return base.VisitInvocationExpression(node);
 
-                    var invocExp = memeberAccess.Expression as InvocationExpressionSyntax;
+                    var invocExp = memberAccess.Expression as InvocationExpressionSyntax;
                     MemberAccessExpressionSyntax innerMemberAccess = null;
                     if (invocExp != null)
                         innerMemberAccess = invocExp.Expression as MemberAccessExpressionSyntax;
@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                         return SyntaxFactory.QueryExpression(
                             SyntaxFactory.FromClause(
                                 expressionSyntax.Parameter.Identifier,
-                                RavenLinqOptimizer.MaybeParenthesizedExpression((ExpressionSyntax)Visit(memeberAccess.Expression))
+                                RavenLinqOptimizer.MaybeParenthesizedExpression((ExpressionSyntax)Visit(memberAccess.Expression))
                             ),
                             SyntaxFactory.QueryBody(SyntaxFactory.SelectClause((ExpressionSyntax)Visit(expressionSyntax.Body))));
 

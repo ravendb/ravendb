@@ -20,9 +20,9 @@ namespace Raven.Server.Documents.Patch
             if (Log.IsOperationsEnabled)
             {
                 if (database != null)
-                    Log.Operations($"AdminJSConsole : Prepering to execute database script for \"{database.Name}\"");
+                    Log.Operations($"AdminJSConsole : Preparing to execute database script for \"{database.Name}\"");
                 else
-                    Log.Operations("AdminJSConsole : Prepering to execute server script");
+                    Log.Operations("AdminJSConsole : Preparing to execute server script");
 
             }
         }

@@ -189,9 +189,9 @@ namespace Raven.Server.Smuggler.Migration
             }
         }
 
-        public async Task<List<string>> GetFileSystemNames(MajorVersion builMajorVersion)
+        public async Task<List<string>> GetFileSystemNames(MajorVersion buildMajorVersion)
         {
-            if (builMajorVersion != MajorVersion.V30 && builMajorVersion != MajorVersion.V35)
+            if (buildMajorVersion != MajorVersion.V30 && buildMajorVersion != MajorVersion.V35)
                 return new List<string>();
 
             try
@@ -204,15 +204,15 @@ namespace Raven.Server.Smuggler.Migration
             }
         }
 
-        public async Task<List<string>> GetDatabaseNames(MajorVersion builMajorVersion, Reference<bool> authorized, Reference<bool> isLegacyOAuthToken = null)
+        public async Task<List<string>> GetDatabaseNames(MajorVersion buildMajorVersion, Reference<bool> authorized, Reference<bool> isLegacyOAuthToken = null)
         {
             authorized.Value = true;
-            if (builMajorVersion == MajorVersion.Unknown)
+            if (buildMajorVersion == MajorVersion.Unknown)
                 return new List<string>();
 
             try
             {
-                return builMajorVersion == MajorVersion.V4
+                return buildMajorVersion == MajorVersion.V4
                     ? await Importer.GetDatabasesToMigrate(_serverUrl, _httpClient, _serverStore.ServerShutdown)
                     : await AbstractLegacyMigrator.GetResourcesToMigrate(_serverUrl, _httpClient, false, _apiKey, _enableBasicAuthenticationOverUnsecuredHttp, isLegacyOAuthToken, _serverStore.ServerShutdown);
             }

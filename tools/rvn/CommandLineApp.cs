@@ -93,7 +93,7 @@ namespace rvn
         {
             _app.Command("admin-channel", cmd =>
             {
-                cmd.ExtendedHelpText = cmd.Description = "Open RavenDB CLI session on local machine (using piped name connection). If PID ommited - will try auto pid discovery.";
+                cmd.ExtendedHelpText = cmd.Description = "Open RavenDB CLI session on local machine (using piped name connection). If PID omitted - will try auto pid discovery.";
                 cmd.HelpOption(HelpOptionString);
                 var pidArg = cmd.Argument("ProcessID", "RavenDB Server process ID");
                 cmd.OnExecute(() =>

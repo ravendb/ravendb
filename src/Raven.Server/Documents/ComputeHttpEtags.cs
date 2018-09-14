@@ -128,7 +128,7 @@ namespace Raven.Server.Documents
 
         private static void ThrowFailedToUpdateHash()
         {
-            throw new InvalidOperationException("Failed to udpate generic hash");
+            throw new InvalidOperationException("Failed to update generic hash");
         }
     }
 }

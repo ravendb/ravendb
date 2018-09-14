@@ -1673,7 +1673,7 @@ namespace Raven.Server.Documents
 
                 // Add to cache ONLY if the transaction was committed. 
                 // this would prevent NREs next time a PUT is run,since if a transaction
-                // is not commited, DocsSchema and TombstonesSchema will not be actually created..
+                // is not committed, DocsSchema and TombstonesSchema will not be actually created..
                 // has to happen after the commit, but while we are holding the write tx lock
                 context.Transaction.InnerTransaction.LowLevelTransaction.BeforeCommitFinalization += _ =>
                 {

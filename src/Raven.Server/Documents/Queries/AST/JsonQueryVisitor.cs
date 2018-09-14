@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Queries.AST
             _writer = writer;
         }
 
-        public override void VisitNegatedExpresson(NegatedExpression expr)
+        public override void VisitNegatedExpression(NegatedExpression expr)
         {
             _writer.WriteStartObject();
             _writer.WritePropertyName("Type");

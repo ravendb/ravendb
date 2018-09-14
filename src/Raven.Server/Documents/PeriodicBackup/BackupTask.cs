@@ -732,7 +732,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             string folderName,
             string fileName,
             Progress progress,
-            string archiveDecription)
+            string archiveDescription)
         {
             using (var client = new RavenAzureClient(settings.AccountName, settings.AccountKey,
                 settings.StorageContainer, progress, TaskCancelToken.Token))
@@ -740,7 +740,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
                 await client.PutBlob(key, stream, new Dictionary<string, string>
                 {
-                    {"Description", archiveDecription}
+                    {"Description", archiveDescription}
                 });
 
                 if (_logger.IsInfoEnabled)

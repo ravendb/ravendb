@@ -28,7 +28,7 @@ namespace Raven.Server.SqlMigration.Model
             Collection = collectionName;
         }
 
-        public BlittableJsonReaderObject ToBllitable(JsonOperationContext context)
+        public BlittableJsonReaderObject ToBlittable(JsonOperationContext context)
         {
             try
             {

@@ -26,12 +26,12 @@ namespace Raven.Server.Documents.Queries.AST
                 if (Compound.Count == 1)
                     return Compound[0];
                 if (_field == null)
-                    _field = JoinCompoundFragements(0);
+                    _field = JoinCompoundFragments(0);
                 return _field;
             }
         }
 
-        private string JoinCompoundFragements(int start)
+        private string JoinCompoundFragments(int start)
         {
             var sb = new StringBuilder();
             for (int i = start; i < Compound.Count; i++)
@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Queries.AST
             get
             {
                 if (_fieldWithoutAlias == null)
-                    _fieldWithoutAlias = JoinCompoundFragements(1);
+                    _fieldWithoutAlias = JoinCompoundFragments(1);
                 return _fieldWithoutAlias;
             }
         }
