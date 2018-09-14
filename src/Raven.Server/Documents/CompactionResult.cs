@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
@@ -9,7 +10,7 @@ namespace Raven.Server.Documents
     {
         public long SizeBeforeCompactionInMb { get; set; }
         public long SizeAfterCompactionInMb { get; set; }
-        private readonly List<string> _messages;
+        private readonly ConcurrentQueue<string> _messages;
 
         public CompactionResult() : this(string.Empty)
         {
@@ -19,7 +20,7 @@ namespace Raven.Server.Documents
         public CompactionResult(string name)
         {
             Name = string.IsNullOrEmpty(name) ? string.Empty : name;
-            _messages = new List<string>();
+            _messages = new ConcurrentQueue<string>();
             Progress = new CompactionProgress(this);
         }
 
@@ -29,7 +30,7 @@ namespace Raven.Server.Documents
 
         public string Name { get; }
 
-        public IReadOnlyList<string> Messages => _messages;
+        public IEnumerable<string> Messages => _messages;
 
         public void AddWarning(string message)
         {
@@ -49,13 +50,13 @@ namespace Raven.Server.Documents
         internal void AddMessage(string message)
         {
             Message = message;
-            _messages.Add(Message);
+            _messages.Enqueue(Message);
         }
 
         private void AddMessage(string type, string message)
         {
             Message = $"[{SystemTime.UtcNow:T} {type}] {message}";
-            _messages.Add(Message);
+            _messages.Enqueue(Message);
         }
 
         public override DynamicJsonValue ToJson()
