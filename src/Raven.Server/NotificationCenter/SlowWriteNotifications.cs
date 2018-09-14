@@ -95,7 +95,7 @@ namespace Raven.Server.NotificationCenter
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
-                    _logger.Info("Error a notification center timer", e);
+                    _logger.Info("Error in a notification center timer", e);
             }
         }
 
