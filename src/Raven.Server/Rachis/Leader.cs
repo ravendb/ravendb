@@ -653,7 +653,7 @@ namespace Raven.Server.Rachis
             return await myCommand.TaskCompletionSource.Task;
         }
 
-        private static ConvertResultAction GetConvertResult(CommandBase cmd)
+        internal static ConvertResultAction GetConvertResult(CommandBase cmd)
         {
             switch (cmd)
             {
