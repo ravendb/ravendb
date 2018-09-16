@@ -104,6 +104,8 @@ namespace Raven.Server.Documents.Handlers
                     );
 
                 await Database.TxMerger.Enqueue(command);
+
+                NoContentStatus();
             }
         }
 
