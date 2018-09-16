@@ -1381,7 +1381,7 @@ namespace Raven.Server
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
             {
                 var tcpClient = tcp.TcpClient.Client;
-                ServerStore.ClusterAcceptNewConnection(tcp.Stream, () => tcpClient.Disconnect(false), tcpClient.RemoteEndPoint);
+                ServerStore.ClusterAcceptNewConnection(tcp, header,() => tcpClient.Disconnect(false), tcpClient.RemoteEndPoint);
                 return true;
             }
 
