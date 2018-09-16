@@ -729,8 +729,8 @@ namespace Raven.Server.Rachis
                 var llr = _connection.Read<LogLengthNegotiationResponse>(context);
 
                 FollowerCommandsVersion = GetFollowerVersion(llr);
-                _engine.CurrentLeader.PeersVersion[_tag] = FollowerCommandsVersion;
-                var minimalVersion = ClusterCommandsVersionManager.GetClusterMinimalVersion(_engine.CurrentLeader.PeersVersion.Values.ToList(), _engine.MaximalVersion);
+                _leader.PeersVersion[_tag] = FollowerCommandsVersion;
+                var minimalVersion = ClusterCommandsVersionManager.GetClusterMinimalVersion(_leader.PeersVersion.Values.ToList(), _engine.MaximalVersion);
                 ClusterCommandsVersionManager.SetClusterVersion(minimalVersion);
 
                 if (_engine.Log.IsInfoEnabled)

@@ -28,11 +28,13 @@ using Raven.Client.Json;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Dashboard;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
@@ -2085,16 +2087,37 @@ namespace Raven.Server.ServerWide
             return _engine.WaitForState(rachisState, cts);
         }
 
-        public void ClusterAcceptNewConnection(Stream client, Action disconnect, EndPoint remoteEndpoint)
+        public void ClusterAcceptNewConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, Action disconnect, EndPoint remoteEndpoint)
         {
             try
             {
-                _engine.AcceptNewConnection(client, disconnect, remoteEndpoint);
+                if (_engine == null)
+                {
+                    // on startup, the tcp listeners are initialized prior to the engine, so there could be a race.
+                    disconnect();
+                    return;
+                }
+
+                _engine.AcceptNewConnection(tcp.Stream, disconnect, remoteEndpoint);
+            }
+            catch (IOException e)
+            {
+                // expected exception on network failures. 
+                if (Logger.IsInfoEnabled)
+                {
+                    Logger.Info($"Failed to accept new RAFT connection via TCP from node {header.SourceNodeTag} ({remoteEndpoint}).", e);
+                }
             }
             catch (Exception e)
             {
-                NotificationCenter.Add(AlertRaised.Create(Notification.ServerWide, "Failed to accept RAFT connection", "Exception during accepting new TCP connection",
-                    AlertType.ClusterTopologyWarning, NotificationSeverity.Error, key: e.Message, details: new ExceptionDetails(e)));
+                var msg = $"Failed to accept new RAFT connection via TCP from {header.SourceNodeTag} ({remoteEndpoint}).";
+                if (Logger.IsInfoEnabled)
+                {
+                    Logger.Info(msg, e);
+                }
+
+                NotificationCenter.Add(AlertRaised.Create(Notification.ServerWide, "RAFT connection error", msg,
+                    AlertType.ClusterTopologyWarning, NotificationSeverity.Error, key: remoteEndpoint.ToString(), details: new ExceptionDetails(e)));
             }
         }
 

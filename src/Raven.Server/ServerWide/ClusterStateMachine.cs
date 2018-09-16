@@ -1634,7 +1634,8 @@ namespace Raven.Server.ServerWide
                     Version = TcpConnectionHeaderMessage.ClusterTcpVersion,
                     ReadResponseAndGetVersionCallback = ClusterReadResponseAndGetVersion,
                     DestinationUrl = info.Url,
-                    DestinationNodeTag = tag
+                    DestinationNodeTag = tag,
+                    SourceNodeTag = _parent.Tag
                 };
 
                 TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures;
