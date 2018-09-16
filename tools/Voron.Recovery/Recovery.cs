@@ -64,7 +64,7 @@ namespace Voron.Recovery
             return (long)position - offset;
         }
 
-        public RecoveryStatus Execute(CancellationToken ct)
+        public RecoveryStatus Execute(TextWriter writer, CancellationToken ct)
         {
             StorageEnvironment se = null;
             try
@@ -74,7 +74,7 @@ namespace Voron.Recovery
                 byte* mem = null;
                 if (_copyOnWrite)
                 {
-                    Console.WriteLine("Recovering journal files, this may take a while...");
+                    writer.WriteLine("Recovering journal files, this may take a while...");
                     
                     bool optionOwnsPagers = _option.OwnsPagers;
                     try
@@ -82,13 +82,13 @@ namespace Voron.Recovery
                         _option.OwnsPagers = false;
                         se = new StorageEnvironment(_option);
                         mem = se.Options.DataPager.AcquirePagePointer(null, 0);
-                        Console.WriteLine(
+                        writer.WriteLine(
                             $"Journal recovery has completed successfully within {sw.Elapsed.TotalSeconds:N1} seconds");
                     }
                     catch (Exception e)
                     {
                         se?.Dispose();
-                        Console.WriteLine($"Journal recovery failed, reason:{Environment.NewLine}{e}");
+                        writer.WriteLine($"Journal recovery failed, reason:{Environment.NewLine}{e}");
                     }
                     finally
                     {
@@ -140,13 +140,12 @@ namespace Voron.Recovery
                             {
                                 if (lastProgressReport != DateTime.MinValue)
                                 {
-                                    Console.Clear();
-                                    Console.WriteLine("Press 'q' to quit the recovery process");
+                                    writer.WriteLine("Press 'q' to quit the recovery process");
                                 }
                                 lastProgressReport = now;
                                 var currPos = GetFilePosition(startOffset, mem);
                                 var eofPos = GetFilePosition(startOffset, eof);
-                                Console.WriteLine(
+                                writer.WriteLine(
                                     $"{now:hh:MM:ss}: Recovering page at position {currPos:#,#;;0}/{eofPos:#,#;;0} ({(double)currPos / eofPos:p}) - Last recovered doc is {_lastRecoveredDocumentKey}");
                             }
 
@@ -363,7 +362,7 @@ namespace Voron.Recovery
                         }
                     }
 
-                    ReportOrphanAttachmentsAndMissingAttachments(documentsWriter, ct);
+                    ReportOrphanAttachmentsAndMissingAttachments(writer, documentsWriter, ct);
                     //This will only be the case when we don't have orphan attachments and we wrote the last attachment after we wrote the 
                     //last document
                     if (_lastWriteIsDocument == false && _lastAttachmentInfo.HasValue)
@@ -371,7 +370,7 @@ namespace Voron.Recovery
                         WriteDummyDocumentForAttachment(documentsWriter, _lastAttachmentInfo.Value.hash, _lastAttachmentInfo.Value.size, _lastAttachmentInfo.Value.tag);
                     }
 
-                    ReportOrphanCountersAndMissingCounters(documentsWriter, ct);
+                    ReportOrphanCountersAndMissingCounters(writer, documentsWriter, ct);
 
                     documentsWriter.WriteEndArray();
                     conflictsWriter.WriteEndArray();
@@ -497,7 +496,7 @@ namespace Voron.Recovery
             writer.WriteInteger(size);
         }
 
-        private void ReportOrphanAttachmentsAndMissingAttachments(BlittableJsonTextWriter writer, CancellationToken ct)
+        private void ReportOrphanAttachmentsAndMissingAttachments(TextWriter writer, BlittableJsonTextWriter documentsWriter, CancellationToken ct)
         {
             //No need to scare the user if there are no attachments in the dump
             if (_attachmentsHashs.Count == 0 && _documentsAttachments.Count == 0)
@@ -512,11 +511,11 @@ namespace Voron.Recovery
             {
                 foreach (var (hash, tag, size) in _attachmentsHashs)
                 {
-                    ReportOrphanAttachmentDocumentId(hash, size, tag, writer);
+                    ReportOrphanAttachmentDocumentId(hash, size, tag, documentsWriter);
                 }
                 return;
             }
-            Console.WriteLine("Starting to compute orphan and missing attachments this may take a while.");
+            writer.WriteLine("Starting to compute orphan and missing attachments this may take a while.");
             if (ct.IsCancellationRequested)
             {
                 return;
@@ -558,7 +557,7 @@ namespace Voron.Recovery
                 }
                 if (foundEqual == false)
                 {
-                    ReportOrphanAttachmentDocumentId(hash, size, docId, writer);
+                    ReportOrphanAttachmentDocumentId(hash, size, docId, documentsWriter);
                 }
 
             }
@@ -576,7 +575,7 @@ namespace Voron.Recovery
             WriteDummyDocumentForAttachment(writer, hash, size, tag);
         }
 
-        private void ReportOrphanCountersAndMissingCounters(BlittableJsonTextWriter writer, CancellationToken ct)
+        private void ReportOrphanCountersAndMissingCounters(TextWriter writer, BlittableJsonTextWriter documentWriter, CancellationToken ct)
         {
             //No need to scare the user if there are no counters in the dump
             if (_uniqueCountersDiscovered.Count == 0 && _documentsCounters.Count == 0)
@@ -596,10 +595,10 @@ namespace Voron.Recovery
                     AddOrphanCounter(orphans, docId, name);
                 }
 
-                ReportOrphanCountersDocumentIds(orphans, writer);
+                ReportOrphanCountersDocumentIds(orphans, documentWriter);
                 return;
             }
-            Console.WriteLine("Starting to compute orphan and missing counters. this may take a while.");
+            writer.WriteLine("Starting to compute orphan and missing counters. this may take a while.");
             if (ct.IsCancellationRequested)
             {
                 return;
@@ -644,7 +643,7 @@ namespace Voron.Recovery
 
             if (orphans.Count > 0)
             {
-                ReportOrphanCountersDocumentIds(orphans, writer);
+                ReportOrphanCountersDocumentIds(orphans, documentWriter);
             }
 
         }
