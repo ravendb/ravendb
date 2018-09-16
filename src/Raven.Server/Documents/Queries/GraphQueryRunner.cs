@@ -35,8 +35,6 @@ namespace Raven.Server.Documents.Queries
         {
             var q = query.Metadata.Query;
 
-            Console.WriteLine(q);
-
             using (var timingScope = new QueryTimingsScope())
             {
                 var ir = new IntermediateResults();

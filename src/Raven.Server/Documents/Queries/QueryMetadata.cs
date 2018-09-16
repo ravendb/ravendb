@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Queries
 
             IsGraph = Query.GraphQuery != null;
             IsDistinct = Query.IsDistinct;
-
+            IsGroupBy = Query.GroupBy != null;
 
             if (IsGraph == false)
             {
@@ -84,7 +84,6 @@ namespace Raven.Server.Documents.Queries
                 IsCollectionQuery = false;
             }
 
-            IsGroupBy = Query.GroupBy != null;
 
             if (IsGroupBy && IsDynamic == false)
                 throw new ArgumentException("Can't use 'group by' when querying on an Index. 'group by' can be used only when querying on collections.");

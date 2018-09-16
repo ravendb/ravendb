@@ -43,7 +43,7 @@ WITH {
     FROM Movies
 } AS m
 WITH EDGES(Rated) AS r
-MATCH (u)<-[r]-(m)")]
+MATCH (m)-[r]->(u)")]
         [InlineData(@"
 with { from Movies where Genre = $genre } as m
 match (u:Users)<-[r:Rated]-(m) and (actor:Actors)-[:ActedOn]->(m) and (u)-[:Likes]->(actor)", @"WITH {
@@ -58,7 +58,7 @@ WITH {
 WITH EDGES(Rated) AS r
 WITH EDGES(ActedOn) AS __alias1
 WITH EDGES(Likes) AS __alias2
-MATCH ((u)<-[r]-(m) AND ((actor)-[__alias1]->(m) AND (u)-[__alias2]->(actor)))")]
+MATCH ((m)-[r]->(u) AND ((actor)-[__alias1]->(m) AND (u)-[__alias2]->(actor)))")]
         [InlineData(@"
 with { from Movies where Genre = $genre } as m
 match ((u:Users)<-[r:Rated]-(m) and not (actor:Actors)-[:ActedOn]->(m)) or (u)-[:Likes]->(actor)", @"WITH {
@@ -73,7 +73,7 @@ WITH {
 WITH EDGES(Rated) AS r
 WITH EDGES(ActedOn) AS __alias1
 WITH EDGES(Likes) AS __alias2
-MATCH (((u)<-[r]-(m) AND NOT ((actor)-[__alias1]->(m))) OR (u)-[__alias2]->(actor))")]
+MATCH (((m)-[r]->(u) AND NOT ((actor)-[__alias1]->(m))) OR (u)-[__alias2]->(actor))")]
         [InlineData(@"with { from Movies where Genre = $genre } as m
 match (u:Users)<-[r:Rated]-(m)", @"WITH {
     FROM Movies WHERE Genre = $genre
@@ -101,11 +101,9 @@ MATCH ((m)-[r]->(u) AND (m)->(a))")]
             queryParser.Init(q);
             var query = queryParser.Parse();
             var result = query.ToString();
-            System.Console.WriteLine(result);
+            //System.Console.WriteLine(result);
             Assert.Equal(expected.NormalizeLineEnding(), result.NormalizeLineEnding());
-
         }
-
 
         [Fact]
         public void CanParseSimpleGraph()
@@ -145,8 +143,9 @@ match (src)-[r1:Rated]->(m:Movie)<-[r2:Rated]-(dst:Users) and (dst:Users)-[a:Pai
             if (query.GraphQuery.MatchClause is BinaryExpression be)
             {
                 Assert.Equal(OperatorType.And, be.Operator);
-                var left = (PatternMatchElementExpression)be.Left;
-                Assert.Equal(5, left.Path.Length);
+                var left = (BinaryExpression)be.Left;
+                Assert.Equal(3, ((PatternMatchElementExpression)left.Left).Path.Length);
+                Assert.Equal(3, ((PatternMatchElementExpression)left.Right).Path.Length);
                 var right = (PatternMatchElementExpression)be.Right;
                 Assert.Equal(3, right.Path.Length);
             }
@@ -203,12 +202,12 @@ match (m)<-[r]-(u)
             if (query.GraphQuery.MatchClause is PatternMatchElementExpression p)
             {
                 Assert.Equal(3, p.Path.Length);
-                Assert.Equal("m", p.Path[0].Alias);
-                Assert.Equal(EdgeType.Left, p.Path[0].EdgeType);
+                Assert.Equal("u", p.Path[0].Alias);
+                Assert.Equal(EdgeType.Right, p.Path[0].EdgeType);
                 Assert.Equal("r", p.Path[1].Alias);
-                Assert.Equal(EdgeType.Left, p.Path[1].EdgeType);
-                Assert.Equal("u", p.Path[2].Alias);
-                Assert.Equal(EdgeType.Left, p.Path[2].EdgeType);
+                Assert.Equal(EdgeType.Right, p.Path[1].EdgeType);
+                Assert.Equal("m", p.Path[2].Alias);
+                Assert.Equal(EdgeType.Right, p.Path[2].EdgeType);
             }
             else
             {
@@ -230,12 +229,12 @@ match (m:Movies)<-[r:Rated]-( u:Users(City='Hadera') )
             if (query.GraphQuery.MatchClause is PatternMatchElementExpression p)
             {
                 Assert.Equal(3, p.Path.Length);
-                Assert.Equal("m", p.Path[0].Alias);
-                Assert.Equal(EdgeType.Left, p.Path[0].EdgeType);
+                Assert.Equal("u", p.Path[0].Alias);
+                Assert.Equal(EdgeType.Right, p.Path[0].EdgeType);
                 Assert.Equal("r", p.Path[1].Alias);
-                Assert.Equal(EdgeType.Left, p.Path[1].EdgeType);
-                Assert.Equal("u", p.Path[2].Alias);
-                Assert.Equal(EdgeType.Left, p.Path[2].EdgeType);
+                Assert.Equal(EdgeType.Right, p.Path[1].EdgeType);
+                Assert.Equal("m", p.Path[2].Alias);
+                Assert.Equal(EdgeType.Right, p.Path[2].EdgeType);
 
                 Assert.Equal("FROM Users WHERE City = 'Hadera'", query.GraphQuery.WithDocumentQueries["u"].ToString().Trim());
                 Assert.Equal("FROM Movies", query.GraphQuery.WithDocumentQueries["m"].ToString().Trim());
