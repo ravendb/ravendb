@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Queries
 
             IsGraph = Query.GraphQuery != null;
             IsDistinct = Query.IsDistinct;
-
+            IsGroupBy = Query.GroupBy != null;
 
             if (IsGraph == false)
             {
@@ -84,7 +84,6 @@ namespace Raven.Server.Documents.Queries
                 IsCollectionQuery = false;
             }
 
-            IsGroupBy = Query.GroupBy != null;
 
             DeclaredFunctions = Query.DeclaredFunctions;
 
