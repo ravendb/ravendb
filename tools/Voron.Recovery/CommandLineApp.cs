@@ -168,7 +168,7 @@ namespace Voron.Recovery
                             //That said i'm still going to give it a while to do a proper exit
                             Task.Delay(5000).ContinueWith(_ => { Environment.Exit(1); });
                         }, cts.Token);
-                        recovery.Execute(cts.Token);
+                        recovery.Execute(Console.Out, cts.Token);
                         cts.Cancel();
                     }
 

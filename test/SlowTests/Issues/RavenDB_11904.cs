@@ -34,7 +34,7 @@ namespace SlowTests.Issues
             }
 
             var journals = new DirectoryInfo(Path.Combine(dbPath, "Journals")).GetFiles();
-            
+
             // run recovery
             using (var recovery = new Recovery(new VoronRecoveryConfiguration()
             {
@@ -43,7 +43,7 @@ namespace SlowTests.Issues
                 OutputFileName = Path.Combine(recoveryExportPath, "recovery.ravendump"),
             }))
             {
-                recovery.Execute(CancellationToken.None);
+                recovery.Execute(TextWriter.Null, CancellationToken.None);
             }
 
             // make sure no journal file was lost during the process - by default we use copy on write mode
