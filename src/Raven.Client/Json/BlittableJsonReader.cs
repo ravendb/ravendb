@@ -254,11 +254,19 @@ namespace Raven.Client.Json
         }               
 
         public override byte[] ReadAsBytes()
-        {            
-            var str = ReadAsString();            
-            if (str == null)
+        {
+            if (!Read())
+            {
+                SetToken(JsonToken.None);
                 return null;
-            return Convert.FromBase64String(str);
+            }
+            if (TokenType == JsonToken.StartObject || 
+                TokenType == JsonToken.None || 
+                TokenType == JsonToken.Null ||
+                TokenType == JsonToken.Undefined)
+                return null;
+
+            return Convert.FromBase64String(Value.ToString());
         }
 
         public override decimal? ReadAsDecimal()
