@@ -26,7 +26,7 @@ namespace Raven.Client.Json
         private readonly Action<JsonReader, State> _setState = ExpressionHelper.CreateFieldSetter<JsonReader, State>("_currentState");
         private readonly Action<JsonReader, JsonToken> _setToken = ExpressionHelper.CreateFieldSetter<JsonReader, JsonToken>("_tokenType");
 
-        public JsonOperationContext Context { get; }
+        public readonly JsonOperationContext Context;
 
         public BlittableJsonReader()
         {
