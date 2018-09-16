@@ -33,7 +33,7 @@ namespace SlowTests.Issues
                 OutputFileName = Path.Combine(recoveryExportPath, "recovery.ravendump"),
             }))
             {
-                recovery.Execute(CancellationToken.None);
+                recovery.Execute(TextWriter.Null, CancellationToken.None);
             }
             
             using (var store = GetDocumentStore())
