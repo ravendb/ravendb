@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Exceptions;
 using Raven.Server.Routing;
+using Raven.Server.TrafficWatch;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -48,7 +49,6 @@ namespace Raven.Server.Documents.Handlers
                     var httpContext = new DefaultHttpContext(features);
                     var host = HttpContext.Request.Host;
                     var scheme = HttpContext.Request.Scheme;
-
                     for (int i = 0; i < requests.Length; i++)
                     {
                         var request = (BlittableJsonReaderObject)requests[i];
@@ -105,8 +105,9 @@ namespace Raven.Server.Documents.Handlers
                                 httpContext.Request.Headers.Add(header, value);
                             }
                         }
-
-                        if (method == HttpMethod.Post.Method && request.TryGet("Content", out object content))
+                        // initiated to use it at the end of for
+                        object content = null;
+                        if (method == HttpMethod.Post.Method && request.TryGet("Content", out content))
                         {
                             if (content is LazyStringValue)
                             {
@@ -184,16 +185,17 @@ namespace Raven.Server.Documents.Handlers
                             }
                         }
                         writer.WriteEndObject();
-
                         writer.WriteEndObject();
+                        // have to be at the end of the for
+                        if (TrafficWatchManager.HasRegisteredClients)
+                        {
+                            HttpContext.Items["TrafficWatch"] = (string)HttpContext.Items["TrafficWatch"] + content.ToString() + "\n";
+                        }
                     }
                     writer.WriteEndArray();
                     writer.WriteEndObject();
                 }
             }
-            // set the Request values back, to get a proper function of Traffic Watch 
-            HttpContext.Request.Method = HttpMethod.Post.Method;
-            HttpContext.Request.QueryString = new QueryString("");
         }
 
         private static MemoryStream GetRequestBody(string content)

@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Operations.Counters;
@@ -17,6 +18,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Exceptions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
@@ -279,6 +281,13 @@ namespace Raven.Server.Documents.Handlers
                 var countersBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "counters");
 
                 var counterBatch = JsonDeserializationClient.CounterBatch(countersBlittable);
+
+                if (TrafficWatchManager.HasRegisteredClients)
+                {
+                    var sb = new StringBuilder();
+                    sb.Append(/*"Counter:\n"+ */countersBlittable);
+                    HttpContext.Items["TrafficWatch"] = sb.ToString();
+                }
 
                 var cmd = new ExecuteCounterBatchCommand(Database, counterBatch);
 

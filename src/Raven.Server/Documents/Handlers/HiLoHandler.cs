@@ -8,11 +8,13 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.TrafficWatch;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -80,6 +82,12 @@ namespace Raven.Server.Documents.Handlers
                         ["ServerTag"] = ServerStore.NodeTag,
                         ["LastRangeAt"] = DateTime.UtcNow.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite)
                     });
+                    if (TrafficWatchManager.HasRegisteredClients)
+                    {
+                        var sb = new StringBuilder();
+                        sb.Append(/*"HiLo:\n"+ */writer);
+                        HttpContext.Items["TrafficWatch"] = sb.ToString();
+                    }
                 }
             }
         }

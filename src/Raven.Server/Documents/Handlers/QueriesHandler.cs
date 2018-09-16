@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
@@ -18,6 +18,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
@@ -83,6 +84,8 @@ namespace Raven.Server.Documents.Handlers
         {
             var indexQuery = await GetIndexQuery(context, method);
             tracker.Query = indexQuery.Query;
+            if (TrafficWatchManager.HasRegisteredClients)
+                TrafficWatchQuery(indexQuery);
 
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
@@ -318,6 +321,9 @@ namespace Raven.Server.Documents.Handlers
 
                 var query = IndexQueryServerSide.Create(queryJson, Database.QueryMetadataCache, QueryType.Update);
 
+                if (TrafficWatchManager.HasRegisteredClients)
+                    TrafficWatchQuery(query);
+
                 var patch = new PatchRequest(query.Metadata.GetUpdateBody(query.QueryParameters), PatchRequestType.Patch, query.Metadata.DeclaredFunctions);
 
                 ExecuteQueryOperation(query,
@@ -332,6 +338,21 @@ namespace Raven.Server.Documents.Handlers
                 returnContextToPool.Dispose();
                 throw;
             }
+        }
+        /// <summary>
+        /// TrafficWatchQuery writes query data to httpContext
+        /// </summary>
+        /// <param name="indexQuery"></param>
+        private void TrafficWatchQuery(IndexQueryServerSide indexQuery)
+        {
+            var sb = new StringBuilder();
+            // append stringBuilder with the query
+            sb.Append(/*"Query:\n"+ */indexQuery.Query);
+            // if query got parameters append with parameters
+            if (indexQuery.QueryParameters != null && indexQuery.QueryParameters.Count > 0)
+                sb.Append("\n" + indexQuery.QueryParameters);
+            // put in httpContext items
+            HttpContext.Items["TrafficWatch"] = sb.ToString();
         }
 
         private void ExecuteQueryOperation(IndexQueryServerSide query,
