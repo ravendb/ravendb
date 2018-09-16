@@ -1747,7 +1747,7 @@ namespace Raven.Server.ServerWide
 
 #if DEBUG
             
-            if (Leader.GetConvertResult(cmd) != null && // if cmd specifies a convert, it explicitly handles this
+            if (Leader.GetConvertResult(cmd) == null && // if cmd specifies a convert, it explicitly handles this
                 response.Result.ContainsBlittableObject())
             {
                 throw new InvalidOperationException($"{nameof(ServerStore)}::{nameof(SendToLeaderAsync)}({response.Result}) should not return command results with blittable json objects. This is not supposed to happen and should be reported.");
