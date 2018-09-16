@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -24,10 +23,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Json;
 using Raven.Server.Json;
 using Raven.Client.Documents.Operations.Counters;
-using Raven.Server.Documents.Replication;
-using System.Runtime.ExceptionServices;
-using Newtonsoft.Json;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Config.Categories;
@@ -36,9 +31,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
 using Voron;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
