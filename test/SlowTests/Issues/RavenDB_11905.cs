@@ -17,13 +17,13 @@ namespace SlowTests.Issues
         {
             var dbPath = NewDataPath();
             var recoveryExportPath = NewDataPath();
-            
+
             using (GetDocumentStore(new Options()
             {
                 Path = dbPath
             }))
             {
-                
+
             }
 
             using (var recovery = new Recovery(new VoronRecoveryConfiguration()
@@ -33,9 +33,9 @@ namespace SlowTests.Issues
                 OutputFileName = Path.Combine(recoveryExportPath, "recovery.ravendump"),
             }))
             {
-                recovery.Execute(CancellationToken.None);
+                recovery.Execute(TextWriter.Null, CancellationToken.None);
             }
-            
+
             using (var store = GetDocumentStore())
             {
                 var op = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
