@@ -7,7 +7,8 @@ namespace Raven.Server.Documents.Queries.AST
 {
     public class StringQueryVisitor : QueryVisitor
     {
-        private readonly StringBuilder _sb;
+        protected readonly StringBuilder _sb;
+        private int _indent;
 
         public StringQueryVisitor(StringBuilder sb)
         {
@@ -234,12 +235,14 @@ namespace Raven.Server.Documents.Queries.AST
 
         private void EnsureLine()
         {
-            if (_sb.Length == 0)
-                return;
-            if (_sb[_sb.Length - 1] == '\n')
-                return;
-            
-            _sb.AppendLine();
+            if (_sb.Length != 0 && _sb[_sb.Length - 1] != '\n')
+            {
+                _sb.AppendLine();
+            }
+            for (int i = 0; i < _indent; i++)
+            {
+                _sb.Append("    ");
+            }
         }
 
         public override void VisitField(FieldExpression field)
@@ -346,6 +349,55 @@ namespace Raven.Server.Documents.Queries.AST
                 
                 _sb.Append(")");
             }
+        }
+
+        public override void VisitWithClauses(Dictionary<StringSegment, Query> expression)
+        {
+            foreach (var withClause in expression)
+            {
+                EnsureLine();
+                _sb.Append("WITH {");
+                _indent++;
+                Visit(withClause.Value);
+                _indent--;
+                EnsureLine();
+                _sb.Append("} AS ").Append(withClause.Key);
+            }
+        }
+
+        public override void VisitWithEdgePredicates(Dictionary<StringSegment, WithEdgesExpression> expression)
+        {
+            foreach (var withEdgesClause in expression)
+            {
+                EnsureLine();
+                _sb.Append("WITH EDGES(").Append(withEdgesClause.Value.EdgeType).Append(")");
+                if (withEdgesClause.Value.Where == null && 
+                    (withEdgesClause.Value.OrderBy == null || withEdgesClause.Value.OrderBy.Count == 0))
+                {
+                    _sb.Append(" AS ").Append(withEdgesClause.Key);
+                    continue;
+                }
+                _sb.Append(" {");
+                _indent++;
+                EnsureLine();
+                VisitWithEdgesExpression(withEdgesClause.Value);
+                _indent--;
+                _sb.Append("} AS ").Append(withEdgesClause.Key);
+            }
+        }
+
+        public override void VisitPatternMatchElementExpression(PatternMatchElementExpression elementExpression)
+        {
+            EnsureSpace();
+            _sb.Append(elementExpression.GetText());
+        }
+
+        public override void VisitMatchExpression(QueryExpression expr)
+        {
+            EnsureLine();
+            _sb.Append("MATCH ");
+
+            base.VisitMatchExpression(expr);
         }
     }
 }

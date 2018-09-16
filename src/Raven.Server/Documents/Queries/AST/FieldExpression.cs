@@ -67,5 +67,17 @@ namespace Raven.Server.Documents.Queries.AST
                 ? FieldValue 
                 : FieldValueWithoutAlias;
         }
+
+        public override bool Equals(QueryExpression other)
+        {
+            if (!(other is FieldExpression of))
+                return false;
+
+
+            return string.IsNullOrEmpty(FieldValueWithoutAlias) ?
+                FieldValue == of.FieldValue :
+                FieldValueWithoutAlias == of.FieldValueWithoutAlias;
+
+        }
     }
 }

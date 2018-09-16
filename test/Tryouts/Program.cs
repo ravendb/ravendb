@@ -1,87 +1,50 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using FastTests;
-using FastTests.Server.Documents.Queries.Parser;
-using FastTests.Voron.Backups;
-using FastTests.Voron.Compaction;
-using RachisTests.DatabaseCluster;
-using Raven.Client.Documents.Queries;
-using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Authentication;
-using SlowTests.Bugs.MapRedue;
-using SlowTests.Client;
-using SlowTests.Client.Attachments;
-using SlowTests.Issues;
-using SlowTests.MailingList;
-using Sparrow.Logging;
-using StressTests.Client.Attachments;
-using Xunit;
+using FastTests.Graph;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Parser;
+using Sparrow;
+using Xunit.Sdk;
 
 namespace Tryouts
 {
-
-    public class SubscriptionsIncludeTest : RavenTestBase
-    {
-        [Fact]
-        public void DoStuff()
-        {
-            using (var store = GetDocumentStore())
-            {
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Address
-                    {
-                        City = "Kiryat Shmona"
-                    }, "addresses/1");
-                    User entity = new User
-                    {
-                        Name = "foobar",
-                        AddressId = "addresses/1"
-                    };
-                    session.Store(entity);
-                    session.SaveChanges();
-                    session.CountersFor(entity).Increment("Modifications");
-                    session.SaveChanges();
-                    
-                }
-                var subsId = store.Subscriptions.Create<User>(new Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions<User>()
-                {
-                    Projection = x => new
-                    {
-                        Foo = RavenQuery.Counter(x, "Modifications"),
-                        x.AddressId
-                    }
-                });
-
-                var subsWorker = store.Subscriptions.GetSubscriptionWorker(new Raven.Client.Documents.Subscriptions.SubscriptionWorkerOptions(subsId)
-                {
-                    CloseWhenNoDocsLeft = true
-                });
-                subsWorker.Run(x =>
-                {
-                    Console.WriteLine(x.Items[0].RawResult["Foo"].ToString());
-                }).Wait();
-            }
-        }
-    }
     public static class Program
     {
         public static async Task Main(string[] args)
         {
-            try
+            /*
+                The AST for 
+
+                with { from Movies where Name = “Star Wars Episode 1” } as lovedMovie
+                with { from Movies } as recommendedMovie
+                with edges(HasGenre) { order by Weight desc limit 1 } as dominantGenre
+                match (lovedMovie)-[dominantGenre]->(Genre)<-[HasGenre(Weight > 0.8)]-(recommendedMovie)<-(u)
+                select recommendedMovie           
+                
+             */
+
+            //Console.WriteLine(graphQuery.ToString());
+
+            using(var parsing = new FastTests.Graph.Parsing())
             {
-                using (var test = new ReplicationTests())
-                {
-                    await test.AddGlobalChangeVectorToNewDocument(true);
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
+                 parsing.CanRoundTripQueries(@"with { from Movies where Genre = $genre } as m
+match (u:Users)<-[r:Rated]-(m)->(a:Actor)", @"WITH {
+    FROM Movies WHERE Genre = $genre
+} AS m
+WITH {
+    FROM Users
+} AS u
+WITH {
+    FROM Actor
+} AS a
+WITH EDGES(Rated) AS r
+MATCH ((m)-[r]->(u) AND (m)->(a))");
             }
 
-            
         }
+
+        
     }
 }

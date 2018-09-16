@@ -113,6 +113,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="instance">The instance.</param>
         IMetadataDictionary GetMetadataFor<T>(T instance);
 
+
         /// <summary>
         ///     Gets change vector for the specified entity.
         ///     If the entity is transient, it will load the metadata from the store
