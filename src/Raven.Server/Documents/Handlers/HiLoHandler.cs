@@ -83,11 +83,7 @@ namespace Raven.Server.Documents.Handlers
                         ["LastRangeAt"] = DateTime.UtcNow.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite)
                     });
                     if (TrafficWatchManager.HasRegisteredClients)
-                    {
-                        var sb = new StringBuilder();
-                        sb.Append(/*"HiLo:\n"+ */writer);
-                        HttpContext.Items["TrafficWatch"] = sb.ToString();
-                    }
+                        AddStringToHttpContext(writer.ToString());
                 }
             }
         }

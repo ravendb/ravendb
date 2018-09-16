@@ -92,6 +92,14 @@ namespace Raven.Server.Documents
                 }
             }
         }
+        /// <summary>
+        /// puts given string in TrafficWatch property of HttpContext.Items
+        /// </summary>
+        /// <param name="str"></param>
+        public void AddStringToHttpContext(string str)
+        {
+            HttpContext.Items["TrafficWatch"] = str;
+        }
 
         protected OperationCancelToken CreateTimeLimitedOperationToken()
         {

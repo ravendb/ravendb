@@ -283,12 +283,7 @@ namespace Raven.Server.Documents.Handlers
                 var counterBatch = JsonDeserializationClient.CounterBatch(countersBlittable);
 
                 if (TrafficWatchManager.HasRegisteredClients)
-                {
-                    var sb = new StringBuilder();
-                    sb.Append(/*"Counter:\n"+ */countersBlittable);
-                    HttpContext.Items["TrafficWatch"] = sb.ToString();
-                }
-
+                    AddStringToHttpContext(countersBlittable.ToString());
                 var cmd = new ExecuteCounterBatchCommand(Database, counterBatch);
 
                 if (cmd.HasWrites)

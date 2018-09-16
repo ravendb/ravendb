@@ -347,12 +347,11 @@ namespace Raven.Server.Documents.Handlers
         {
             var sb = new StringBuilder();
             // append stringBuilder with the query
-            sb.Append(/*"Query:\n"+ */indexQuery.Query);
+            sb.Append(indexQuery.Query);
             // if query got parameters append with parameters
             if (indexQuery.QueryParameters != null && indexQuery.QueryParameters.Count > 0)
                 sb.Append("\n" + indexQuery.QueryParameters);
-            // put in httpContext items
-            HttpContext.Items["TrafficWatch"] = sb.ToString();
+            AddStringToHttpContext(sb.ToString());
         }
 
         private void ExecuteQueryOperation(IndexQueryServerSide query,
