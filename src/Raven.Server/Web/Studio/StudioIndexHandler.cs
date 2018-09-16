@@ -84,11 +84,7 @@ namespace Raven.Server.Web.Studio
                     }
                     // add TW customData to httpContext
                     if (TrafficWatchManager.HasRegisteredClients)
-                    {
-                        var sb = new StringBuilder();
-                        sb.Append(/*"Map:\n"+ */map);
-                        HttpContext.Items["TrafficWatch"] = sb.ToString();
-                    }
+                        AddStringToHttpContext(map);
                 }
 
             }
