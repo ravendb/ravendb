@@ -66,7 +66,7 @@ loadToOrders(orderData);
                     Name = "MyExternalReplication"
                 };
 
-                addWatcherRes = await AddWatcherToReplicationTopology((DocumentStore)store, watcher, new[] { "http://127.0.0.1:9090" });
+                addWatcherRes = await AddWatcherToReplicationTopology((DocumentStore)store, watcher, new []{ leader.WebUrl });
 
                 var backupConfig = new PeriodicBackupConfiguration
                 {
