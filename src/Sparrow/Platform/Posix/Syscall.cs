@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
+using System.Threading;
 using Voron.Platform.Posix;
 
 namespace Sparrow.Platform.Posix
@@ -275,12 +276,34 @@ namespace Sparrow.Platform.Posix
                         // fallocate is not supported, we'll use lseek instead
                         usingWrite = true;
                         byte b = 0;
-                        if (pwrite(fd, &b, 1, size - 1) != 1L)
+                        int cifsRetry = 3;
+                        while (true)
                         {
-                            var err = Marshal.GetLastWin32Error();
-                            ThrowLastError(err, "Failed to pwrite in order to fallocate where fallocate is not supported for " + file);
+                            if (pwrite(fd, &b, 1, size - 1) != 1L)
+                            {
+                                var err = Marshal.GetLastWin32Error();
+                                if (err == (int)Errno.EINVAL)
+                                {
+                                    // cifs mount can sometimes fail on EINVAL after file creation
+                                    // lets give it few retries with short pauses between them - RavenDB-11954
+                                    if (CheckSyncDirectoryAllowed(file) == false) // cifs/nfs
+                                    {
+                                        if (cifsRetry-- <= 0)
+                                        {
+                                            ThrowLastError(err,
+                                                "Failed to pwrite WITH retries (on cifs/nfs mount) in order to fallocate where fallocate is not supported for " + file);
+                                        }
+
+                                        Thread.Sleep(200);
+                                        continue;
+                                    }
+                                }
+
+                                ThrowLastError(err, "Failed to pwrite in order to fallocate where fallocate is not supported for " + file);
+                            }
+                            return 0;
                         }
-                        return 0;
+
                 }
 
                 if (result != (int)Errno.EINTR)
