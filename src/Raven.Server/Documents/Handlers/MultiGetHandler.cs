@@ -49,7 +49,9 @@ namespace Raven.Server.Documents.Handlers
                     var httpContext = new DefaultHttpContext(features);
                     var host = HttpContext.Request.Host;
                     var scheme = HttpContext.Request.Scheme;
-                    var sb = new StringBuilder();
+                    StringBuilder sb = null;
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        sb = new StringBuilder();
                     for (int i = 0; i < requests.Length; i++)
                     {
                         var request = (BlittableJsonReaderObject)requests[i];
@@ -188,7 +190,7 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteEndObject();
                         writer.WriteEndObject();
                         if (TrafficWatchManager.HasRegisteredClients)
-                            sb.Append(content.ToString() + "\n");
+                            sb.Append(content.ToString()).AppendLine();
                     }
                     if (TrafficWatchManager.HasRegisteredClients)
                         AddStringToHttpContext(sb.ToString());

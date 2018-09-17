@@ -24,6 +24,7 @@ using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.TrafficWatch;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -131,7 +132,14 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 context.OpenReadTransaction();
-                await GetDocumentsByIdAsync(context, new StringValues(ids), metadataOnly);
+
+                // init here so it can be passed to TW
+                var idsStringValues = new StringValues(ids);
+
+                if (TrafficWatchManager.HasRegisteredClients)
+                    AddStringToHttpContext(idsStringValues.ToString());
+
+                await GetDocumentsByIdAsync(context, idsStringValues, metadataOnly);
             }
         }
 
