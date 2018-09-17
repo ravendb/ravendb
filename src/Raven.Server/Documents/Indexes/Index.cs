@@ -1338,7 +1338,7 @@ namespace Raven.Server.Documents.Indexes
                    $"Mapped temp: {new Size(stats.MappedTemp, SizeUnit.Bytes)}, " +
                    $"Working set: {new Size(stats.TotalUnmanagedAllocations, SizeUnit.Bytes)}, " +
                    $"Available memory: {memoryInfo.AvailableMemory}, " +
-                   $"Calculated Available memory: {memoryInfo.CalculatedAvailableMemory}, " +
+                   $"Calculated Available memory: {memoryInfo.AvailableWithoutTotalCleanMemory}, " +
                    $"Total memory: {memoryInfo.TotalPhysicalMemory} {Environment.NewLine}" +
                    $"Error: {oome}";
         }

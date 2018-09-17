@@ -225,7 +225,7 @@ namespace Sparrow.LowMemory
             LowMemoryState = !LowMemoryState;
 
             var memInfoForLog = MemoryInformation.GetMemInfoUsingOneTimeSmapsReader();
-            var availableMemForLog = memInfoForLog.CalculatedAvailableMemory.GetValue(SizeUnit.Bytes);
+            var availableMemForLog = memInfoForLog.AvailableWithoutTotalCleanMemory.GetValue(SizeUnit.Bytes);
 
             AddLowMemEvent(LowMemoryState ? LowMemReason.LowMemStateSimulation : LowMemReason.BackToNormalSimulation,
                 availableMemForLog,
@@ -335,7 +335,7 @@ namespace Sparrow.LowMemory
             // the commited memory size if larger than our pyhsical memory.
             // This is to ensure that from one hand we don't hit the disk to do page faults and from the other hand
             // we don't want to stay in low memory due to retained memory.
-            var isLowMemory = memInfo.CalculatedAvailableMemory< _lowMemoryThreshold;
+            var isLowMemory = memInfo.AvailableWithoutTotalCleanMemory< _lowMemoryThreshold;
 
             if (PlatformDetails.RunningOnPosix == false)
             {
