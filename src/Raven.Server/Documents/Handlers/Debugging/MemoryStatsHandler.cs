@@ -313,7 +313,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     [nameof(MemoryInfo.ManagedAllocations)] = managedMemory,
                     [nameof(MemoryInfo.TotalMemoryMapped)] = totalMapping,
                     [nameof(MemoryInfo.PhysicalMem)] = Size.Humane(memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes)),
-                    [nameof(MemoryInfo.FreeMem)] = Size.Humane(memInfo.CalculatedAvailableMemory.GetValue(SizeUnit.Bytes)),
+                    [nameof(MemoryInfo.FreeMem)] = Size.Humane(memInfo.AvailableWithoutTotalCleanMemory.GetValue(SizeUnit.Bytes)),
                     [nameof(MemoryInfo.HighMemLastOneMinute)] = Size.Humane(memInfo.MemoryUsageRecords.High.LastOneMinute.GetValue(SizeUnit.Bytes)),
                     [nameof(MemoryInfo.LowMemLastOneMinute)] = Size.Humane(memInfo.MemoryUsageRecords.Low.LastOneMinute.GetValue(SizeUnit.Bytes)),
                     [nameof(MemoryInfo.HighMemLastFiveMinute)] = Size.Humane(memInfo.MemoryUsageRecords.High.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
