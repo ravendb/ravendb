@@ -19,69 +19,18 @@ using Xunit;
 
 namespace Tryouts
 {
-
-    public class SubscriptionsIncludeTest : RavenTestBase
-    {
-        [Fact]
-        public void DoStuff()
-        {
-            using (var store = GetDocumentStore())
-            {
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Address
-                    {
-                        City = "Kiryat Shmona"
-                    }, "addresses/1");
-                    User entity = new User
-                    {
-                        Name = "foobar",
-                        AddressId = "addresses/1"
-                    };
-                    session.Store(entity);
-                    session.SaveChanges();
-                    session.CountersFor(entity).Increment("Modifications");
-                    session.SaveChanges();
-                    
-                }
-                var subsId = store.Subscriptions.Create<User>(new Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions<User>()
-                {
-                    Projection = x => new
-                    {
-                        Foo = RavenQuery.Counter(x, "Modifications"),
-                        x.AddressId
-                    }
-                });
-
-                var subsWorker = store.Subscriptions.GetSubscriptionWorker(new Raven.Client.Documents.Subscriptions.SubscriptionWorkerOptions(subsId)
-                {
-                    CloseWhenNoDocsLeft = true
-                });
-                subsWorker.Run(x =>
-                {
-                    Console.WriteLine(x.Items[0].RawResult["Foo"].ToString());
-                }).Wait();
-            }
-        }
-    }
     public static class Program
     {
-        public static async Task Main(string[] args)
+        public static void Main(string[] args)
         {
-            try
+            for (int i = 0; i < 1000; i++)
             {
-                using (var test = new ReplicationTests())
+                Console.WriteLine(i);
+                using (var test = new RavenDB_7043())
                 {
-                    await test.AddGlobalChangeVectorToNewDocument(true);
-                }
+                    test.Should_mark_index_as_errored_and_throw_on_querying_it_even_its_very_small_and_everything_fails();
+                }               
             }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-
-            
         }
     }
 }

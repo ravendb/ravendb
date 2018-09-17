@@ -74,10 +74,10 @@ namespace SlowTests.Issues
                     }
 
                     session.SaveChanges();
-                }
+                }                               
 
-                WaitForIndexing(store);
-
+                //we wait until the index is corrupted or 15 seconds pass
+                //-> no need to WaitForIndexing() because either the index is corrupted or not, 15 seconds for 10 docs is A LOT
                 SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexStatisticsOperation(failingIndex.IndexName)).State == IndexState.Error, TimeSpan.FromSeconds(15));
 
                 Assert.True(store.Maintenance.Send(new GetIndexStatisticsOperation(failingIndex.IndexName)).IsInvalidIndex);
