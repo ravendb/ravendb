@@ -280,13 +280,14 @@ namespace Raven.Client.Json
                 SetToken(JsonToken.None);
                 return null;
             }
-            if (TokenType == JsonToken.StartObject || 
-                TokenType == JsonToken.None || 
-                TokenType == JsonToken.Null ||
-                TokenType == JsonToken.Undefined)
+            if (TokenType == JsonToken.StartObject)
                 return null;
 
-            return Convert.FromBase64String(Value.ToString());
+            var val = Value;
+            if (val == null)
+                return null;
+
+            return Convert.FromBase64String(val.ToString());
         }
 
         public override decimal? ReadAsDecimal()
