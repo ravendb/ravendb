@@ -283,7 +283,7 @@ namespace SlowTests.Authentication
         [Fact]
         public void CannotContactServerWhenNotUsingHttps()
         {
-            var serverCertPath = SetupServerAuthentication(serverUrl: "http://" + Environment.MachineName + ":8080");
+            var serverCertPath = SetupServerAuthentication(serverUrl: $"http://{Environment.MachineName}:0");
             Assert.Throws<System.InvalidOperationException>(() =>
             {
                 AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
