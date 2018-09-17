@@ -50,12 +50,13 @@ namespace Raven.Storage.Esent.StorageActions
 			}
 
 			Etag newETag = uuidGenerator.CreateSequentialUuid(UuidType.Attachments);
-			using (var update = new Update(session, Files, isUpdate ? JET_prep.Replace : JET_prep.Insert))
+		    long written = 0;
+            using (var update = new Update(session, Files, isUpdate ? JET_prep.Replace : JET_prep.Insert))
 			{
 				Api.SetColumn(session, Files, tableColumnsCache.FilesColumns["name"], key, Encoding.Unicode);
 				if (data != null)
 				{
-					long written;
+					
 					using (var columnStream = new ColumnStream(session, Files, tableColumnsCache.FilesColumns["data"]))
 					{
 						if (isUpdate)
@@ -78,7 +79,9 @@ namespace Raven.Storage.Esent.StorageActions
 
 				update.Save();
 			}
-			logger.Debug("Adding attachment {0}", key);
+
+            if (logger.IsDebugEnabled)
+			    logger.Debug(string.Format("Adding attachment {0}, size: {1:#,#;;0} bytes", key, written));
 
 			return newETag;
 		}
