@@ -55,7 +55,14 @@ namespace Raven.Bundles.Replication.Responders
 				context.SetStatusToBadRequest();
 				return;
 			}
-			var array = context.ReadJsonArray();
+
+		    long bytesRead;
+            var array = context.ReadJsonArray(out bytesRead);
+		    if (log.IsDebugEnabled)
+		    {
+                log.Debug(string.Format("Read {0} documents and {1} bytes for replication batch", array.Length, bytesRead));
+		    }
+
 			if (ReplicationTask != null)
 				ReplicationTask.HandleHeartbeat(src);
 

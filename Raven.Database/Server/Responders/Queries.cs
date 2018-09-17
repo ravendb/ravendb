@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Logging;
 using Raven.Database.Extensions;
 using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
@@ -15,7 +16,9 @@ namespace Raven.Database.Server.Responders
 {
 	public class Queries : AbstractRequestResponder
 	{
-		public override string UrlPattern
+	    private readonly static ILog log = LogManager.GetCurrentClassLogger();
+
+        public override string UrlPattern
 		{
 			get { return "^/queries/?$"; }
 		}
@@ -28,10 +31,20 @@ namespace Raven.Database.Server.Responders
 		public override void Respond(IHttpContext context)
 		{
 			RavenJArray itemsToLoad;
-			if(context.Request.HttpMethod == "POST")
-				itemsToLoad = context.ReadJsonArray();
-			else
-				itemsToLoad = new RavenJArray(context.Request.QueryString.GetValues("id"));
+		    if (context.Request.HttpMethod == "POST")
+		    {
+                long bytesRead;
+		        itemsToLoad = context.ReadJsonArray(out bytesRead);
+		        if (log.IsDebugEnabled)
+		        {
+                    log.Debug(string.Format("Loading {0:#,#;;0} ids, array size: {1:#,#;;0} bytes", itemsToLoad.Length, bytesRead));
+		        }
+            }
+		    else
+		    {
+		        itemsToLoad = new RavenJArray(context.Request.QueryString.GetValues("id"));
+            }
+
 			var result = new MultiLoadResult();
 			var loadedIds = new HashSet<string>();
 			var includes = context.Request.QueryString.GetValues("include") ?? new string[0];

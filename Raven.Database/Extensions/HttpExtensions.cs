@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Reflection;
 using System.Security.Principal;
 using System.Text;
@@ -25,6 +26,7 @@ using Raven.Abstractions.Exceptions;
 using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
 using System.Linq;
+using Raven.Abstractions.Connection;
 
 namespace Raven.Database.Extensions
 {
@@ -70,12 +72,31 @@ namespace Raven.Database.Extensions
 			}
 		}
 
-		public static RavenJArray ReadJsonArray(this IHttpContext context)
+		public static RavenJArray ReadJsonArray(this IHttpContext context, out long bytesRead)
 		{
-			using (var streamReader = new StreamReader(context.Request.InputStream, GetRequestEncoding(context)))
-			using (var jsonReader = new RavenJsonTextReader(streamReader))
-				return RavenJArray.Load(jsonReader);
+            using (var stream = context.Request.GetBufferLessInputStream())
+            using (var countingStream = new CountingStream(stream))
+            using (var actualStream = GetRequestStream(countingStream, context))
+            using (var streamReader = new StreamReader(actualStream, GetRequestEncoding(context)))
+            using (var jsonReader = new RavenJsonTextReader(streamReader))
+            {
+                var loadedJson = RavenJArray.Load(jsonReader);
+                bytesRead = countingStream.Position;
+                return loadedJson;
+            }
 		}
+
+	    private static Stream GetRequestStream(Stream stream, IHttpContext context)
+	    {
+	        var contentEncoding = context.Request.Headers["Content-Encoding"];
+	        if (contentEncoding == null ||
+	            contentEncoding.Equals("gzip", StringComparison.OrdinalIgnoreCase) == false)
+	        {
+	            return stream;
+	        }
+
+	        return new GZipStream(stream, CompressionMode.Decompress);
+	    }
 
 		public static RavenJArray ReadBsonArray(this IHttpContext context)
 		{

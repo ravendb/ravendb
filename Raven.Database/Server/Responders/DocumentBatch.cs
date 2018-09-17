@@ -4,20 +4,17 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage.Queue.Protocol;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
 using Raven.Database.Data;
 using Raven.Database.Extensions;
 using Raven.Database.Impl;
-using Raven.Database.Json;
 using Raven.Database.Server.Abstractions;
 using Raven.Json.Linq;
 
@@ -57,7 +54,8 @@ namespace Raven.Database.Server.Responders
 						RavenJArray patchRequestJson;
 						try
 						{
-							patchRequestJson = context.ReadJsonArray();
+						    long _;
+                            patchRequestJson = context.ReadJsonArray(out _);
 						}
 						catch (InvalidOperationException e)
 						{
@@ -142,75 +140,94 @@ namespace Raven.Database.Server.Responders
 
         private void Batch(IHttpContext context)
 		{
-			RavenJArray jsonCommandArray;
-
-		    Stopwatch sp = null;
 		    var isDebugEnabled = log.IsDebugEnabled;
-		    if (isDebugEnabled)
+
+		    try
 		    {
-		        sp = Stopwatch.StartNew();
+		        RavenJArray jsonCommandArray;
+
+		        Stopwatch sp = null;
+		        if (isDebugEnabled)
+		        {
+		            Interlocked.Increment(ref numberOfConcurrentBulkPosts);
+		            sp = Stopwatch.StartNew();
+		        }
+
+		        long jsonCommandsSize;
+		        try
+		        {
+		            jsonCommandArray = context.ReadJsonArray(out jsonCommandsSize);
+
+		            if (isDebugEnabled)
+		            {
+		                sp.Stop();
+		            }
+		        }
+		        catch (InvalidOperationException e)
+		        {
+		            context.SetSerializationException(e);
+		            return;
+		        }
+		        catch (InvalidDataException e)
+		        {
+		            context.SetSerializationException(e);
+		            return;
+		        }
+
+		        var transactionInformation = GetRequestTransaction(context);
+		        var commands = (from RavenJObject jsonCommand in jsonCommandArray
+		                select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation))
+		            .ToArray();
+
+		        if (isDebugEnabled)
+		        {
+		            log.Debug(() =>
+		            {
+		                var baseMessage = string.Format(
+		                    "\tRead bulk_docs data, {0:#,#;;0} commands, size: {1:#,#;;0} bytes, took: {2:#,#;;0}ms",
+		                    commands.Length, jsonCommandsSize, sp.ElapsedMilliseconds);
+
+		                if (commands.Length > 15
+		                ) // this is probably an import method, we will input minimal information, to avoid filling up the log
+		                {
+		                    return baseMessage + Environment.NewLine + "\tExecuting "
+		                           + string.Join(
+		                               ", ",
+		                               commands.GroupBy(x => x.Method).Select(x =>
+		                                   string.Format("{0:#,#;;0} {1} operations", x.Count(), x.Key))) + "" +
+		                           string.Format(", number of concurrent BulkPost: {0:#,#;;0}",
+		                               Interlocked.Read(ref numberOfConcurrentBulkPosts));
+		                }
+
+		                var sb = new StringBuilder();
+		                sb.AppendFormat("{0}", baseMessage);
+		                foreach (var commandData in commands)
+		                {
+		                    sb.AppendFormat("\t{0} {1}{2}", commandData.Method, commandData.Key, Environment.NewLine);
+		                }
+
+		                return sb.ToString();
+		            });
+
+		            sp.Restart();
+		        }
+
+		        var batchResult = Database.Batch(commands);
+
+		        if (isDebugEnabled)
+		        {
+		            log.Debug(string.Format(
+		                "Executed {0:#,#;;0} operations, took: {1:#,#;;0}ms, number of concurrent BulkPost: {2:#,#;;0}",
+		                commands.Length, sp.ElapsedMilliseconds, numberOfConcurrentBulkPosts));
+		        }
+
+		        context.WriteJson(batchResult);
 		    }
-
-            try
-		    {
-			    jsonCommandArray = context.ReadJsonArray();
-		    }
-		    catch (InvalidOperationException e)
-		    {
-				context.SetSerializationException(e);
-				return;			    
-		    }
-			catch (InvalidDataException e)
-			{
-				context.SetSerializationException(e);
-				return;
-			}
-
-		    if (isDebugEnabled)
-		    {
-                log.Debug(string.Format("Read bulk_docs data commands, took: {0}ms", sp.ElapsedMilliseconds));
-		    }
-
-		    var transactionInformation = GetRequestTransaction(context);
-			var commands = (from RavenJObject jsonCommand in jsonCommandArray
-			                select CommandDataFactory.CreateCommand(jsonCommand, transactionInformation))
-				.ToArray();
-
-            if (isDebugEnabled)
-		    {
-		        Interlocked.Increment(ref numberOfConcurrentBulkPosts);
-                log.Debug(() =>
-                {
-                    if (commands.Length > 15) // this is probably an import method, we will input minimal information, to avoid filling up the log
-                    {
-                        return "\tExecuting "
-                               + string.Join(
-                                   ", ", commands.GroupBy(x => x.Method).Select(x => string.Format("{0:#,#;;0} {1} operations", x.Count(), x.Key))) + "" +
-                               string.Format(", number of concurrent BulkPost: {0:#,#;;0}", Interlocked.Read(ref numberOfConcurrentBulkPosts));
-                    }
-
-                    var sb = new StringBuilder();
-                    foreach (var commandData in commands)
-                    {
-                        sb.AppendFormat("\t{0} {1}{2}", commandData.Method, commandData.Key, Environment.NewLine);
-                    }
-
-                    return sb.ToString();
-                });
-
-		        sp.Restart();
+		    finally
+            {
+                if (isDebugEnabled)
+                    Interlocked.Decrement(ref numberOfConcurrentBulkPosts);
             }
-
-			var batchResult = Database.Batch(commands);
-
-		    if (isDebugEnabled)
-		    {
-		        log.Debug(string.Format(
-		            "Executed {0:#,#;;0} operations, took: {1:#,#;;0}ms, number of concurrent BulkPost: {2:#,#;;0}",
-		            commands.Length, sp.ElapsedMilliseconds, numberOfConcurrentBulkPosts));
-		    }
-
-            context.WriteJson(batchResult);
 		}
 	}
 }
