@@ -64,6 +64,28 @@ namespace Raven.Server.Documents.Handlers
                 }
                 else
                     ThrowNotSupportedType(contentType);
+                if (TrafficWatchManager.HasRegisteredClients)
+                {
+                    var sb = new StringBuilder();
+                    for (var i = 0; i < command.ParsedCommands.Count; i++)
+                    {
+                        // watching only patch commands
+                        if (command.ParsedCommands.Array[i].Patch != null)
+                        {
+                            // reconstruct in json format
+                            sb.Append("{\"").Append(command.ParsedCommands.Array[i].Type).Append("\":{");
+                            sb.Append("\"Script\":\"").Append(command.ParsedCommands.Array[i].Patch.Script).Append("\"");
+                            if (command.ParsedCommands.Array[i].PatchArgs != null)
+                            {
+                                sb.Append(",\"Values\":").Append(command.ParsedCommands.Array[i].PatchArgs);
+                            }
+                            sb.Append("}}").AppendLine();
+                        }
+                    }
+                    // add sb to httpContext only if we had a patch type item in array
+                    if (sb.Length > 0)
+                        AddStringToHttpContext(sb.ToString());
+                }
 
                 var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
                 var waitForIndexThrow = GetBoolValueQueryString("waitForIndexThrow", required: false) ?? true;

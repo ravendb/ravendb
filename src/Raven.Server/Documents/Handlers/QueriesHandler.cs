@@ -204,6 +204,9 @@ namespace Raven.Server.Documents.Handlers
 
                     tracker.Query = query.Query;
 
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        TrafficWatchQuery(query);
+
                     ExecuteQueryOperation(query,
                         (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, context, onProgress, token),
                         context, returnContextToPool, Operations.Operations.OperationType.DeleteByQuery);
@@ -230,6 +233,9 @@ namespace Raven.Server.Documents.Handlers
                     throw new BadRequestException("Missing 'Query' property.");
 
                 var query = IndexQueryServerSide.Create(queryJson, Database.QueryMetadataCache, QueryType.Update);
+
+                if (TrafficWatchManager.HasRegisteredClients)
+                    TrafficWatchQuery(query);
 
                 var patch = new PatchRequest(query.Metadata.GetUpdateBody(query.QueryParameters), PatchRequestType.Patch, query.Metadata.DeclaredFunctions);
 
@@ -350,7 +356,7 @@ namespace Raven.Server.Documents.Handlers
             sb.Append(indexQuery.Query);
             // if query got parameters append with parameters
             if (indexQuery.QueryParameters != null && indexQuery.QueryParameters.Count > 0)
-                sb.Append("\n" + indexQuery.QueryParameters);
+                sb.AppendLine().Append(indexQuery.QueryParameters);
             AddStringToHttpContext(sb.ToString());
         }
 

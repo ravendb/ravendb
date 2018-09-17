@@ -12,6 +12,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -125,6 +126,9 @@ namespace Raven.Server.Documents.Handlers
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
                 var options = JsonDeserializationServer.SubscriptionCreationParams(json);
+
+                if (TrafficWatchManager.HasRegisteredClients)
+                    AddStringToHttpContext(json.ToString());
 
                 var sub = SubscriptionConnection.ParseSubscriptionQuery(options.Query);
 
