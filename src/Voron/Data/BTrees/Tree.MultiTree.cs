@@ -337,7 +337,7 @@ namespace Voron.Data.BTrees
             {
                 var tree = OpenMultiValueTree(key, node);
 
-                return tree.Iterate(false);
+                return tree.Iterate(true);
             }
 
             var ptr = DirectAccessFromHeader(node);

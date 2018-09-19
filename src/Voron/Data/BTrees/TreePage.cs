@@ -722,16 +722,17 @@ namespace Voron.Data.BTrees
                 throw new InvalidOperationException("Could not ensure that we have enough space, this is probably a bug");
         }
 
-        public List<long> GetAllOverflowPages()
+        public long[] GetPagesReferencedBy()
         {
-            var results = new List<long>(NumberOfEntries);
+            var results = new long[NumberOfEntries];
             for (int i = 0; i < NumberOfEntries; i++)
             {
                 var nodeOffset = KeysOffsets[i];
                 var nodeHeader = (TreeNodeHeader*)(Base + nodeOffset);
-
-                if (nodeHeader->Flags == TreeNodeFlags.PageRef)
-                    results.Add(nodeHeader->PageNumber);
+                
+                // We use HasFlag instead because equality may fail if it comes with NewOnly applied.
+                if (nodeHeader->Flags.HasFlag(TreeNodeFlags.PageRef))
+                    results[i] = nodeHeader->PageNumber;
             }
 
             return results;

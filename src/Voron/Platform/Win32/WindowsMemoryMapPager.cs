@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Win32;
@@ -22,9 +23,9 @@ using Voron.Util.Settings;
 using static Voron.Platform.Win32.Win32NativeMethods;
 
 namespace Voron.Platform.Win32
-{
+{    
     public unsafe class WindowsMemoryMapPager : AbstractPager
-    {
+    {        
         public const int AllocationGranularity = 64 * Constants.Size.Kilobyte;
         private long _totalAllocationSize;
         private readonly FileInfo _fileInfo;
@@ -50,6 +51,21 @@ namespace Voron.Platform.Win32
             public uint High;
         }
 
+        private const byte EvenPrefetchCountMask = 0x70;
+        private const byte EvenPrefetchMaskShift = 4;
+        private const byte OddPrefetchCountMask = 0x07;
+        private const byte AlreadyPrefetch = 7;
+
+        private const int PrefetchSegmentSize = Constants.Size.Megabyte;
+
+        // PERF: This is effectively 8Gb per file, we should probably get this number from either configuration and/or available memory. 
+        private const int PrefetchResetThreshold = 8000; 
+
+        private readonly int _segmentShift;
+        private int _refreshCounter = 0;
+        private byte[] _prefetchTable;
+
+
         public WindowsMemoryMapPager(StorageEnvironmentOptions options, VoronPathSetting file,
             long? initialFileSize = null,
             Win32NativeFileAttributes fileAttributes = Win32NativeFileAttributes.Normal,
@@ -57,6 +73,10 @@ namespace Voron.Platform.Win32
             bool usePageProtection = false)
             : base(options, usePageProtection)
         {
+            this._segmentShift = Bits.MostSignificantBit(PrefetchSegmentSize);
+            Debug.Assert((PrefetchSegmentSize - 1) >> this._segmentShift == 0);
+            Debug.Assert(PrefetchSegmentSize >> this._segmentShift == 1);
+
             SYSTEM_INFO systemInfo;
             GetSystemInfo(out systemInfo);
             FileName = file;
@@ -132,8 +152,47 @@ namespace Voron.Platform.Win32
             }
 
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
+            long numberOfAllocatedSegments = (_totalAllocationSize / PrefetchSegmentSize) + 1;
+            this._prefetchTable = new byte[(numberOfAllocatedSegments / 2) + 1];
 
             SetPagerState(CreatePagerState());
+        }
+
+        public override byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
+        {
+            // We need to decide what pager we are going to use right now or risk inconsistencies when performing prefetches from disk.
+            var state = pagerState ?? _pagerState;
+
+            if (PlatformDetails.CanPrefetch)
+            {
+                long segmentNumber = (pageNumber * Constants.Storage.PageSize) >> this._segmentShift;                
+
+                int segmentState = GetSegmentState(segmentNumber);
+                if (segmentState < AlreadyPrefetch)
+                {
+                    // We update the current segment counter
+                    segmentState++;
+
+                    int previousSegmentState = GetSegmentState(segmentNumber - 1);
+                    if (previousSegmentState == AlreadyPrefetch)
+                    {
+                        segmentState = AlreadyPrefetch;
+                    }
+
+                    SetSegmentState(segmentNumber, segmentState);
+
+                    if (segmentState == AlreadyPrefetch)
+                    {
+                        MaybePrefetchSegment(state.MapBase, segmentNumber);
+                        _refreshCounter++;
+
+                        if (_refreshCounter > PrefetchResetThreshold)
+                            ResetPrefetchTable();
+                    }                        
+                }
+            }
+           
+            return base.AcquirePagePointer(tx, pageNumber, state);
         }
 
         public static uint GetPhysicalDriveId(string drive)
@@ -214,6 +273,13 @@ namespace Voron.Platform.Win32
 
             _totalAllocationSize += allocationSize;
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
+
+            long numberOfAllocatedSegments = (_totalAllocationSize / PrefetchSegmentSize) + 1;
+
+            var oldPrefetchTable = this._prefetchTable;
+            this._prefetchTable = new byte[(numberOfAllocatedSegments / 2) + 1];
+            Array.Copy(oldPrefetchTable, this._prefetchTable, oldPrefetchTable.Length);
+
             return newPagerState;
         }
 
@@ -224,7 +290,6 @@ namespace Voron.Platform.Win32
             Debug.Assert(PagerState.Files != null && PagerState.Files.Any());
 
             var allocationInfo = RemapViewOfFileAtAddress(allocationSize, (ulong)_totalAllocationSize, PagerState.MapBase + _totalAllocationSize);
-
             if (allocationInfo == null)
                 return false;
 
@@ -410,26 +475,124 @@ namespace Voron.Platform.Win32
             NativeMemory.UnregisterFileMapping(_fileInfo.FullName, new IntPtr(baseAddress), size);
         }
 
-        public override void MaybePrefetchMemory(List<long> pagesToPrefetch)
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int GetSegmentState(long segment)
+        {
+            if (segment < 0)
+                return AlreadyPrefetch;
+
+            byte value = this._prefetchTable[segment / 2];
+            if (segment % 2 == 0)
+            {
+                // The actual value is in the high byte.
+                value = (byte)(value >> EvenPrefetchMaskShift);
+            }
+            else
+            {
+                value = (byte)(value & OddPrefetchCountMask);
+            }
+
+            return value;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SetSegmentState(long segment, int state)
+        {
+            byte value = this._prefetchTable[segment / 2];
+            if (segment % 2 == 0)
+            {
+                // The actual value is in the high byte.
+                value = (byte)((value & OddPrefetchCountMask) | (state << EvenPrefetchMaskShift));
+            }
+            else
+            {
+                value = (byte)((value & EvenPrefetchCountMask) | state);
+            }
+
+            this._prefetchTable[segment / 2] = value;
+        }
+
+        private void ResetPrefetchTable()
+        {
+            this._refreshCounter = 0;
+
+            // We will zero out the whole table to reset the prefetching behavior. 
+            for (int i = 0; i < this._prefetchTable.Length; i++)
+                this._prefetchTable[i] = 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void MaybePrefetchSegment(byte* baseAddress, long segment)
+        {
+            Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY entry;
+            entry.NumberOfBytes = (IntPtr)PrefetchSegmentSize;
+            entry.VirtualAddress = baseAddress + segment * PrefetchSegmentSize;
+
+            Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess, (UIntPtr)1, &entry, 0);
+        }
+
+        public override void MaybePrefetchMemory(Span<long> pagesToPrefetch)
         {
             if (PlatformDetails.CanPrefetch == false)
                 return; // not supported
 
-            if (pagesToPrefetch.Count == 0)
+            if (pagesToPrefetch.Length == 0)
                 return;
 
-            var entries = new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[pagesToPrefetch.Count];
-            for (int i = 0; i < entries.Length; i++)
+            // PERF: We dont acquire pointer here to avoid all the overhead of doing so; instead we calculate the proper place based on 
+            //       base address from the pager.
+            byte* baseAddress = this._pagerState.MapBase;
+
+            const int StackSpace = 16;
+
+            int prefetchIdx = 0;
+            Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* toPrefetch = stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[StackSpace];
+            
+            foreach ( long pageNumber in pagesToPrefetch)
             {
-                entries[i].NumberOfBytes = (IntPtr)(4 * Constants.Storage.PageSize);
-                entries[i].VirtualAddress = AcquirePagePointer(null, pagesToPrefetch[i]);
+                long segmentNumber = (pageNumber * Constants.Storage.PageSize) >> this._segmentShift;
+
+                int segmentState = GetSegmentState(segmentNumber);
+                if (segmentState < AlreadyPrefetch)
+                {
+                    // We update the current segment counter
+                    segmentState++;
+
+                    int previousSegmentState = GetSegmentState(segmentNumber - 1);
+                    if (previousSegmentState == AlreadyPrefetch)
+                    {
+                        segmentState = AlreadyPrefetch;
+                    }
+
+                    SetSegmentState(segmentNumber, segmentState);
+
+                    if (segmentState == AlreadyPrefetch)
+                    {
+                        // Prepare the segment information. 
+                        toPrefetch[prefetchIdx].NumberOfBytes = (IntPtr)PrefetchSegmentSize;
+                        toPrefetch[prefetchIdx].VirtualAddress = baseAddress + segmentNumber * PrefetchSegmentSize;
+                        prefetchIdx++;
+                        _refreshCounter++;
+
+                        if (prefetchIdx >= StackSpace)
+                        {
+                            // We dont have enough space, so we send the batch to the kernel
+                            Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess, (UIntPtr)StackSpace, toPrefetch, 0);
+                            prefetchIdx = 0;
+                        }
+                    }
+                }
             }
 
-            fixed (Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* entriesPtr = entries)
+            if (prefetchIdx != 0)
             {
-                Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess,
-                    (UIntPtr)PagerState.AllocationInfos.Length, entriesPtr, 0);
+                // We dont have enough space, so we send the batch to the kernel
+                Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess, (UIntPtr)prefetchIdx, toPrefetch, 0);
             }
+
+            if (_refreshCounter > PrefetchResetThreshold)
+                ResetPrefetchTable();
         }
 
         public override int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState)

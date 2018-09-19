@@ -280,21 +280,26 @@ namespace Voron.Data.Tables
         public static void MaybePrefetchSections(Tree parentTree, LowLevelTransaction llt)
         {
             var fst = parentTree.FixedTreeFor(AllocationStorage, valSize: BitmapSize);
+            if (fst.NumberOfEntries > 4)
+                return; // PERF: We will avoid to over-prefetch, specially when we are doing so adaptively.
+
             using (var it = fst.Iterate())
             {
                 if (it.Seek(long.MinValue) == false)
                     return;
 
-                var list = new List<long>((int)(fst.NumberOfEntries * NumberOfPagesInSection));
+                var list = new long[(int)(fst.NumberOfEntries * NumberOfPagesInSection)];
 
+                int idx = 0;
                 do
                 {
                     for (int i = 0; i < NumberOfPagesInSection; i++)
                     {
-                        list.Add(i + it.CurrentKey);
-                    }
-                    
-                } while (it.MoveNext());
+                        list[idx] = i + it.CurrentKey;
+                        idx++;
+                    }                    
+                }
+                while (it.MoveNext());
 
                 llt.Environment.Options.DataPager.MaybePrefetchMemory(list);
             }

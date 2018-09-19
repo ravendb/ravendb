@@ -505,7 +505,7 @@ namespace Voron.Platform.Posix
             // we never want to do this, we'll rely on the OS to do it for us
         }
 
-        public override void MaybePrefetchMemory(List<long> pagesToPrefetch)
+        public override void MaybePrefetchMemory(Span<long> pagesToPrefetch)
         {
             // we never want to do this here
         }

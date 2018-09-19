@@ -63,20 +63,20 @@ namespace Voron.Platform.Posix
             PrefetchRanges(range);
         }
 
-        public override unsafe void MaybePrefetchMemory(List<long> pagesToPrefetch)
+        public override unsafe void MaybePrefetchMemory(Span<long> pagesToPrefetch)
         {
             if (PlatformDetails.CanPrefetch == false)
                 return; // not supported
 
-            if (pagesToPrefetch.Count == 0)
+            if (pagesToPrefetch.Length == 0)
                 return;
 
             long sizeToPrefetch = 4 * Constants.Storage.PageSize;
 
             long size = 0;
             void* baseAddress = null;
-            var range = new List<Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY>(pagesToPrefetch.Count);
-            for (int i = 0; i < pagesToPrefetch.Count; i++)
+            var range = new List<Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY>(pagesToPrefetch.Length);
+            for (int i = 0; i < pagesToPrefetch.Length; i++)
             {
                 var addressToPrefetch = pagesToPrefetch[i];
                 size += sizeToPrefetch;
@@ -84,8 +84,7 @@ namespace Voron.Platform.Posix
                 if (baseAddress == null)
                     baseAddress = (void*)addressToPrefetch;
 
-                if (i != pagesToPrefetch.Count - 1 &&
-                    pagesToPrefetch[i + 1] == addressToPrefetch + sizeToPrefetch)
+                if (i != pagesToPrefetch.Length - 1 && pagesToPrefetch[i + 1] == addressToPrefetch + sizeToPrefetch)
                 {
                     continue; // if adjacent ranges make one syscall
                 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -453,7 +453,7 @@ namespace Voron.Impl.Paging
         }
 
         public abstract void TryPrefetchingWholeFile();
-        public abstract void MaybePrefetchMemory(List<long> pagesToPrefetch);
+        public abstract void MaybePrefetchMemory(Span<long> pagesToPrefetch);
 
         public virtual bool EnsureMapped(IPagerLevelTransactionState tx, long page, int numberOfPages)
         {

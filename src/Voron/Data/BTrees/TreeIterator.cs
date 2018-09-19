@@ -50,7 +50,6 @@ namespace Voron.Data.BTrees
             TreeNodeHeader* node;
             TreeCursorConstructor constructor;
             _currentPage = _tree.FindPageFor(key, node: out node, cursor: out constructor, allowCompressed: _tree.IsLeafCompressionSupported);
-
             if (_currentPage.IsCompressed)
             {
                 DecompressedCurrentPage();
@@ -126,6 +125,10 @@ namespace Voron.Data.BTrees
                     // run out of entries, need to select the next page...
                     while (_currentPage.IsBranch)
                     {
+                        // In here we will also have the 'current' page (even if we are traversing a compressed node).
+                        if (_prefetch)
+                            MaybePrefetchPagesReferencedBy(_currentPage);
+
                         _cursor.Push(_currentPage);
                         var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
                         _currentPage = _tree.GetReadOnlyTreePage(node->PageNumber);
@@ -134,10 +137,12 @@ namespace Voron.Data.BTrees
                             DecompressedCurrentPage();
 
                         _currentPage.LastSearchPosition = _currentPage.NumberOfEntries - 1;
-
-                        if (_prefetch && _currentPage.IsLeaf)
-                            MaybePrefetchOverflowPages(_currentPage);
                     }
+
+                    // We should be prefetching data pages down here.
+                    if (_prefetch)
+                        MaybePrefetchPagesReferencedBy(_currentPage);
+
                     var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
 
                     if (DoRequireValidation && this.ValidateCurrentKey(_tx, current) == false)
@@ -157,11 +162,11 @@ namespace Voron.Data.BTrees
             return false;
         }
 
-        private void MaybePrefetchOverflowPages(TreePage page)
+        private void MaybePrefetchPagesReferencedBy(TreePage page)
         {
             if (PlatformDetails.CanPrefetch)
             {
-                _tx.DataPager.MaybePrefetchMemory(page.GetAllOverflowPages());
+                _tx.DataPager.MaybePrefetchMemory(page.GetPagesReferencedBy());
             }
         }
 
@@ -178,6 +183,10 @@ namespace Voron.Data.BTrees
                     // run out of entries, need to select the next page...
                     while (_currentPage.IsBranch)
                     {
+                        // In here we will also have the 'current' page (even if we are traversing a compressed node).
+                        if (_prefetch)
+                            MaybePrefetchPagesReferencedBy(_currentPage);
+
                         _cursor.Push(_currentPage);
                         var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
                         _currentPage = _tree.GetReadOnlyTreePage(node->PageNumber);
@@ -187,9 +196,16 @@ namespace Voron.Data.BTrees
 
                         _currentPage.LastSearchPosition = 0;
                     }
+
+                    // We should be prefetching data pages down here.
+                    if (_prefetch)
+                        MaybePrefetchPagesReferencedBy(_currentPage);
+
                     var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
+
                     if (DoRequireValidation && this.ValidateCurrentKey(_tx, current) == false)
                         return false;
+
                     _prevKeyScope.Dispose();
                     _prevKeyScope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, current, out _currentInternalKey);
                     _currentKey = _currentInternalKey;
