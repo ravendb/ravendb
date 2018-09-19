@@ -84,7 +84,7 @@ namespace Voron.Impl.Paging
             Inner.TryPrefetchingWholeFile();
         }
 
-        public override void MaybePrefetchMemory(List<long> pagesToPrefetch)
+        public override void MaybePrefetchMemory(Span<long> pagesToPrefetch)
         {
             Inner.MaybePrefetchMemory(pagesToPrefetch);
         }

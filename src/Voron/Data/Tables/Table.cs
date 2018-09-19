@@ -863,7 +863,7 @@ namespace Voron.Data.Tables
         public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.SchemaIndexDef index, Slice value, int skip, bool startsWith = false)
         {
             var tree = GetTree(index);
-            using (var it = tree.Iterate(false))
+            using (var it = tree.Iterate(true))
             {
                 if (startsWith)
                     it.SetRequiredPrefix(value);
@@ -894,7 +894,7 @@ namespace Voron.Data.Tables
         public TableValueHolder SeekOneForwardFromPrefix(TableSchema.SchemaIndexDef index, Slice value)
         {
             var tree = GetTree(index);
-            using (var it = tree.Iterate(false))
+            using (var it = tree.Iterate(true))
             {
                 it.SetRequiredPrefix(value);
 
@@ -919,7 +919,7 @@ namespace Voron.Data.Tables
             if (tree == null || tree.State.NumberOfEntries == 0)
                 yield break;
 
-            using (var it = tree.Iterate(false))
+            using (var it = tree.Iterate(true))
             {
                 if (it.Seek(last) == false && it.Seek(Slices.AfterAllKeys) == false)
                     yield break;
@@ -958,7 +958,7 @@ namespace Voron.Data.Tables
                 tree.State.NumberOfEntries == 0)
                 yield break;
 
-            using (var it = tree.Iterate(false))
+            using (var it = tree.Iterate(true))
             {
                 if (it.Seek(last) == false && it.Seek(Slices.AfterAllKeys) == false)
                     yield break;
@@ -991,7 +991,7 @@ namespace Voron.Data.Tables
                 tree.State.NumberOfEntries == 0)
                 yield break;
 
-            using (var it = tree.Iterate(false))
+            using (var it = tree.Iterate(true))
             {
                 if (it.Seek(last) == false && it.Seek(Slices.AfterAllKeys) == false)
                     yield break;
@@ -1016,7 +1016,7 @@ namespace Voron.Data.Tables
             if (tree.State.NumberOfEntries == 0)
                 return null;
 
-            using (var it = tree.Iterate(false))
+            using (var it = tree.Iterate(true))
             {
                 if (it.Seek(last) == false && it.Seek(Slices.AfterAllKeys) == false)
                     return null;
@@ -1055,7 +1055,7 @@ namespace Voron.Data.Tables
 
             var pk = _schema.Key;
             var tree = GetTree(pk);
-            using (var it = tree.Iterate(false))
+            using (var it = tree.Iterate(true))
             {
                 it.SetRequiredPrefix(requiredPrefix);
 
@@ -1083,7 +1083,7 @@ namespace Voron.Data.Tables
         {
             var pk = _schema.Key;
             var tree = GetTree(pk);
-            using (var it = tree.Iterate(false))
+            using (var it = tree.Iterate(true))
             {
                 if (it.Seek(value) == false)
                     yield break;
@@ -1113,7 +1113,7 @@ namespace Voron.Data.Tables
             {
                 while (true)
                 {
-                    using (var it = tree.Iterate(false))
+                    using (var it = tree.Iterate(true))
                     {
                         if (it.Seek(value) == false)
                             return;
@@ -1360,7 +1360,7 @@ namespace Voron.Data.Tables
             TableValueHolder tableValueHolder = null;
             while (true)
             {
-                using (var it = tree.Iterate(false))
+                using (var it = tree.Iterate(true))
                 {
                     it.SetRequiredPrefix(startSlice);
                     if (it.Seek(it.RequiredPrefix) == false)
@@ -1403,7 +1403,7 @@ namespace Voron.Data.Tables
             {
                 // deleting from a table can shift things around, so we delete 
                 // them one at a time
-                using (var it = tree.Iterate(false))
+                using (var it = tree.Iterate(true))
                 {
                     if (startsWith)
                         it.SetRequiredPrefix(value);
@@ -1452,7 +1452,7 @@ namespace Voron.Data.Tables
             {
                 // deleting from a table can shift things around, so we delete 
                 // them one at a time
-                using (var it = tree.Iterate(false))
+                using (var it = tree.Iterate(true))
                 {
                     if (startsWith)
                         it.SetRequiredPrefix(value);
