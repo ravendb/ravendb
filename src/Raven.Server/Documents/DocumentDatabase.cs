@@ -138,9 +138,9 @@ namespace Raven.Server.Documents
                 Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes);
                 DatabaseInfoCache = serverStore.DatabaseInfoCache;
                 RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
-                CatastrophicFailureNotification = new CatastrophicFailureNotification((environmentId, e) =>
+                CatastrophicFailureNotification = new CatastrophicFailureNotification((environmentId, environmentPath, e) =>
                 {
-                    serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId);
+                    serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId, environmentPath);
                 });
             }
             catch (Exception)
