@@ -141,24 +141,27 @@ namespace Raven.Server.Documents.Handlers
             public DynamicJsonArray Array;
         }
 
-
         private void BatchTrafficWatch(ArraySegment<BatchRequestParser.CommandData> parsedCommands)
         {
             var sb = new StringBuilder();
             for (var i = parsedCommands.Offset; i < (parsedCommands.Offset + parsedCommands.Count); i++)
             {
-                // watching only patch commands
-                if (parsedCommands.Array[i].Patch != null)
+                // log script and args if type is patch
+                if (parsedCommands.Array[i].Type == CommandType.PATCH)
                 {
-                    sb.Append("Type: ").Append(parsedCommands.Array[i].Type).AppendLine();
-                    sb.Append("Id: ").Append(parsedCommands.Array[i].Id).AppendLine();
-                    sb.Append("Script: ").Append(parsedCommands.Array[i].Patch.Script).AppendLine();
-                    sb.Append("Values: ").Append(parsedCommands.Array[i].PatchArgs).AppendLine();
+                    sb.Append(parsedCommands.Array[i].Type).Append("    ")
+                        .Append(parsedCommands.Array[i].Id).Append("    ")
+                        .Append(parsedCommands.Array[i].Patch.Script).Append("    ")
+                        .Append(parsedCommands.Array[i].PatchArgs).AppendLine();
+                }
+                else 
+                {
+                    sb.Append(parsedCommands.Array[i].Type).Append("    ")
+                        .Append(parsedCommands.Array[i].Id).AppendLine();
                 }
             }
-            // add sb to httpContext only if we had a patch type item in array
-            if (sb.Length > 0)
-                AddStringToHttpContext(sb.ToString(), TrafficWatchChangeType.Patch);
+            // add sb to httpContext
+            AddStringToHttpContext(sb.ToString(), TrafficWatchChangeType.BulkDocs);
         }
 
 

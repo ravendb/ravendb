@@ -252,7 +252,7 @@ namespace Raven.Client.Documents.Changes
         Queries,
         Operations,
         MultiGet,
-        Patch,
+        BulkDocs,
         Index,
         Counters,
         Hilo,

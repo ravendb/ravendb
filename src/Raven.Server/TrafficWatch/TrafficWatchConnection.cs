@@ -99,6 +99,7 @@ namespace Raven.Server.TrafficWatch
                 [nameof(change.AbsoluteUri)] = change.AbsoluteUri,
                 [nameof(change.DatabaseName)] = change.DatabaseName,
                 [nameof(change.CustomInfo)] = change.CustomInfo,
+                [nameof(change.Type)] = change.Type,
                 [nameof(change.InnerRequestsCount)] = change.InnerRequestsCount
                 //[nameof(change.QueryTimings)] = notification.QueryTimings
             };
