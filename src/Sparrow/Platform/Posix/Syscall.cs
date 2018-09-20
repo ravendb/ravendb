@@ -257,7 +257,7 @@ namespace Sparrow.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int mprotect(IntPtr start, ulong size, ProtFlag protFlag);
 
-        public static void RetryPwriteOrThrow(int fd, byte *buffer, ulong count, long offset, string file, string debug)
+        public static void PwriteOrThrow(int fd, byte *buffer, ulong count, long offset, string file, string debug)
         {
             Errno err = Errno.NONE;
             bool cifsRetryOccured = false;
@@ -314,7 +314,7 @@ namespace Sparrow.Platform.Posix
                         // fallocate is not supported, we'll use lseek instead
                         usingWrite = true;
                         byte b = 0;
-                        RetryPwriteOrThrow(fd, &b, 1L, size - 1, file, "pwrite in order to fallocate where fallocate is not supported");                        
+                        PwriteOrThrow(fd, &b, 1L, size - 1, file, "pwrite in order to fallocate where fallocate is not supported");                        
                         return 0;                        
                 }
 
