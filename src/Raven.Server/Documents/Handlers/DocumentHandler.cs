@@ -13,6 +13,7 @@ using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
@@ -137,7 +138,7 @@ namespace Raven.Server.Documents.Handlers
                 var idsStringValues = new StringValues(ids);
 
                 if (TrafficWatchManager.HasRegisteredClients)
-                    AddStringToHttpContext(idsStringValues.ToString());
+                    AddStringToHttpContext(idsStringValues.ToString(), TrafficWatchChangeType.Documents);
 
                 await GetDocumentsByIdAsync(context, idsStringValues, metadataOnly);
             }

@@ -2,6 +2,7 @@
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Changes;
 using Raven.Server.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -95,8 +96,9 @@ namespace Raven.Server.Web.Operations
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, state.ToJson());
+                    // writes Patch response
                     if (TrafficWatchManager.HasRegisteredClients)
-                        AddStringToHttpContext(writer.ToString());
+                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Operations);
                 }
             }
 

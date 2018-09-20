@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
@@ -357,7 +358,7 @@ namespace Raven.Server.Documents.Handlers
             // if query got parameters append with parameters
             if (indexQuery.QueryParameters != null && indexQuery.QueryParameters.Count > 0)
                 sb.AppendLine().Append(indexQuery.QueryParameters);
-            AddStringToHttpContext(sb.ToString());
+            AddStringToHttpContext(sb.ToString(), TrafficWatchChangeType.Queries);
         }
 
         private void ExecuteQueryOperation(IndexQueryServerSide query,

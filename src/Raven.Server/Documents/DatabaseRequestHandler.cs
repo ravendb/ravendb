@@ -6,6 +6,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -93,12 +94,15 @@ namespace Raven.Server.Documents
             }
         }
         /// <summary>
-        /// puts given string in TrafficWatch property of HttpContext.Items
+        /// puts the given string in TrafficWatch property of HttpContext.Items
+        /// puts the given type in TrafficWatchChangeType property of HttpContext.Items
         /// </summary>
         /// <param name="str"></param>
-        public void AddStringToHttpContext(string str)
+        /// <param name="type"></param>
+        public void AddStringToHttpContext(string str, TrafficWatchChangeType type)
         {
             HttpContext.Items["TrafficWatch"] = str;
+            HttpContext.Items["TrafficWatchChangeType"] = type;
         }
 
         protected OperationCancelToken CreateTimeLimitedOperationToken()

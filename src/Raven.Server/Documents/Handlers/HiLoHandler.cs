@@ -11,6 +11,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -83,7 +84,7 @@ namespace Raven.Server.Documents.Handlers
                         ["LastRangeAt"] = DateTime.UtcNow.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite)
                     });
                     if (TrafficWatchManager.HasRegisteredClients)
-                        AddStringToHttpContext(writer.ToString());
+                        AddStringToHttpContext(writer.ToString(), TrafficWatchChangeType.Hilo);
                 }
             }
         }

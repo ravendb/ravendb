@@ -242,6 +242,7 @@ namespace Raven.Server
                 AbsoluteUri = $"{context.Request.Scheme}://{context.Request.Host}",
                 DatabaseName = database ?? "N/A",
                 CustomInfo = (string)context.Items["TrafficWatch"] ?? "N/A",
+                Type = (TrafficWatchChangeType?)context.Items["TrafficWatchChangeType"] ?? TrafficWatchChangeType.None,
                 InnerRequestsCount = 0,
                 QueryTimings = null
             };
