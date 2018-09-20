@@ -4,7 +4,7 @@
     {
         // errors & their values liberally copied from
         // FC2 /usr/include/asm/errno.h
-
+        NONE = 0,
         EPERM = 1, // Operation not permitted 
         ENOENT = 2, // No such file or directory 
         ESRCH = 3, // No such process 
@@ -159,7 +159,7 @@
         ESHLIBVERS = 1087,  // Shared library version mismatch
         EBADMACHO = 1088,   // Malformed Macho file
         ENOATTR = 1093, // Attribute not found
-        ENOPOLICY = 1103,   // No such policy registered
+        ENOPOLICY = 1103,   // No such policy registered        
     }
 
 }
