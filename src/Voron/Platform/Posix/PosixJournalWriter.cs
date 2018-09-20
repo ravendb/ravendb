@@ -148,34 +148,9 @@ namespace Voron.Platform.Posix
                 return; // nothing to do
 
             var nNumberOfBytesToWrite = (ulong)numberOf4Kb * (4 * Constants.Size.Kilobyte);
-            long actuallyWritten = 0;
-            long result;
             using (_options.IoMetrics.MeterIoRate(_filename.FullPath, IoMetrics.MeterType.JournalWrite, (long)nNumberOfBytesToWrite))
             {
-                do
-                {
-                    result = Syscall.pwrite(_fd, p, nNumberOfBytesToWrite - (ulong)actuallyWritten,
-                        position * 4 * Constants.Size.Kilobyte);
-                    if (result < 1)
-                        break;
-                    actuallyWritten += result;
-                    p += actuallyWritten;
-                } while ((ulong)actuallyWritten < nNumberOfBytesToWrite);
-            }
-            if (result == -1)
-            {
-                var err = Marshal.GetLastWin32Error();
-                Syscall.ThrowLastError(err, "when writing to " + _filename);
-            }
-            else if (result == 0)
-            {
-                var err = Marshal.GetLastWin32Error();
-                throw new IOException($"pwrite reported zero bytes written, after write of {actuallyWritten} bytes out of {nNumberOfBytesToWrite}. lastErrNo={err} on {_filename}");
-            }
-            else if ((ulong)actuallyWritten != nNumberOfBytesToWrite)
-            {
-                var err = Marshal.GetLastWin32Error();
-                throw new IOException($"pwrite couln't write {nNumberOfBytesToWrite} to file. only {actuallyWritten} written. lastErrNo={err} on {_filename}");
+                Syscall.RetryPwriteOrThrow(_fd, p, nNumberOfBytesToWrite, position * 4 * Constants.Size.Kilobyte, _filename.FullPath, "pwrite journal WriteFile");
             }
         }
 
