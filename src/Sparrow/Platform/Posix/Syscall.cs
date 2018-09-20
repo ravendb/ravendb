@@ -257,6 +257,35 @@ namespace Sparrow.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int mprotect(IntPtr start, ulong size, ProtFlag protFlag);
 
+        private static int RetryPwriteOrThrow(int fd, long size, string file)
+        {
+            byte b = 0;
+            Errno err = Errno.NONE;
+            for (int cifsRetries = 0; cifsRetries < 3; cifsRetries++)
+            {
+                if (pwrite(fd, &b, 1, size - 1) != 1L)
+                {
+                    err = (Errno)Marshal.GetLastWin32Error();
+                    if (err == Errno.EINVAL)
+                    {
+                        // cifs mount can sometimes fail on EINVAL after file creation
+                        // lets give it few retries with short pauses between them - RavenDB-11954
+                        if (CheckSyncDirectoryAllowed(file) == false) // cifs/nfs
+                        {
+                            Thread.Sleep(10 * ((cifsRetries+1) ^ 3)); // wait upto 3 time in intervals of : 10mSec, 80mSec, 270mSec
+                        }
+                    }
+                }
+                else
+                {
+                    return (int)Errno.NONE;
+                }
+            }
+            ThrowLastError((int)err,
+                "Failed to pwrite WITH retries (on cifs/nfs mount) in order to fallocate where fallocate is not supported for " + file);
+            return (int)err;
+        }
+
         public static int AllocateFileSpace(int fd, long size, string file, out bool usingWrite)
         {
             usingWrite = false;
@@ -275,43 +304,17 @@ namespace Sparrow.Platform.Posix
                     case (int)Errno.EFBIG: // can occure on >4GB allocation on fs such as ntfs-3g, W95 FAT32, etc.
                         // fallocate is not supported, we'll use lseek instead
                         usingWrite = true;
-                        byte b = 0;
-                        int cifsRetry = 3;
-                        while (true)
-                        {
-                            if (pwrite(fd, &b, 1, size - 1) != 1L)
-                            {
-                                var err = Marshal.GetLastWin32Error();
-                                if (err == (int)Errno.EINVAL)
-                                {
-                                    // cifs mount can sometimes fail on EINVAL after file creation
-                                    // lets give it few retries with short pauses between them - RavenDB-11954
-                                    if (CheckSyncDirectoryAllowed(file) == false) // cifs/nfs
-                                    {
-                                        if (cifsRetry-- <= 0)
-                                        {
-                                            ThrowLastError(err,
-                                                "Failed to pwrite WITH retries (on cifs/nfs mount) in order to fallocate where fallocate is not supported for " + file);
-                                        }
-
-                                        Thread.Sleep(200);
-                                        continue;
-                                    }
-                                }
-
-                                ThrowLastError(err, "Failed to pwrite in order to fallocate where fallocate is not supported for " + file);
-                            }
-                            return 0;
-                        }
-
+                        var err = RetryPwriteOrThrow(fd, size, file);
+                        if (err != (int)Errno.NONE)
+                            ThrowLastError(err, "Failed to pwrite in order to fallocate where fallocate is not supported for " + file);
+                        return 0;                        
                 }
 
                 if (result != (int)Errno.EINTR)
                     break;
-                if (retries-- > 0)
+                if (retries-- < 0)
                     throw new IOException($"Tried too many times to call posix_fallocate {file}, but always got EINTR, cannot retry again");
             }
-
             return result;
         }
 
