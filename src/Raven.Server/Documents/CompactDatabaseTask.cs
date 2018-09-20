@@ -50,7 +50,7 @@ namespace Raven.Server.Documents
 
                 using (await _serverStore.DatabasesLandlord.UnloadAndLockDatabase(_database, "it is being compacted"))
                 using (var src = DocumentsStorage.GetStorageEnvironmentOptionsFromConfiguration(configuration, new IoChangesNotifications(),
-                new CatastrophicFailureNotification((endId, exception) => throw new InvalidOperationException($"Failed to compact database {_database}", exception))))
+                new CatastrophicFailureNotification((endId, path, exception) => throw new InvalidOperationException($"Failed to compact database {_database} ({path})", exception))))
                 {
                     InitializeOptions(src, configuration, documentDatabase);
 
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents
                     IOExtensions.DeleteDirectory(tmpDirectory);
                     configuration.Core.DataDirectory = new PathSetting(compactDirectory);
                     using (var dst = DocumentsStorage.GetStorageEnvironmentOptionsFromConfiguration(configuration, new IoChangesNotifications(),
-                        new CatastrophicFailureNotification((envId, exception) => throw new InvalidOperationException($"Failed to compact database {_database}", exception))))
+                        new CatastrophicFailureNotification((envId, path, exception) => throw new InvalidOperationException($"Failed to compact database {_database} ({path})", exception))))
                     {
                         InitializeOptions(dst, configuration, documentDatabase);
 

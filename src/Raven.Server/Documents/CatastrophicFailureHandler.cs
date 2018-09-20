@@ -35,7 +35,7 @@ namespace Raven.Server.Documents
             return false;
         }
 
-        public void Execute(string databaseName, Exception e, Guid environmentId)
+        public void Execute(string databaseName, Exception e, Guid environmentId, string path)
         {
             var stats = _errorsPerEnvironment.GetOrAdd(environmentId, x => FailureStats.Create(MaxDatabaseUnloads));
 
@@ -56,8 +56,8 @@ namespace Raven.Server.Documents
 
             stats.DatabaseUnloadTask = Task.Run(async () =>
             {
-                var title = $"Critical error in '{databaseName}'";
-                const string message = "Database is about to be unloaded due to an encountered error";
+                var title = $"Critical error in '{databaseName}' database";
+                var message = $"Database is about to be unloaded due to an encountered error in the following environment: {path}";
 
                 try
                 {

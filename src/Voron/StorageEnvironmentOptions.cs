@@ -207,7 +207,7 @@ namespace Voron
 
             _log = LoggingSource.Instance.GetLogger<StorageEnvironmentOptions>(tempPath.FullPath);
 
-            _catastrophicFailureNotification = catastrophicFailureNotification ?? new CatastrophicFailureNotification((id, e) =>
+            _catastrophicFailureNotification = catastrophicFailureNotification ?? new CatastrophicFailureNotification((id, path, e) =>
             {
                 if (_log.IsOperationsEnabled)
                     _log.Operations($"Catastrophic failure in {this}", e);
@@ -223,7 +223,7 @@ namespace Voron
         public void SetCatastrophicFailure(ExceptionDispatchInfo exception)
         {
             _catastrophicFailure = exception;
-            _catastrophicFailureNotification.RaiseNotificationOnce(_environmentId, exception.SourceException);
+            _catastrophicFailureNotification.RaiseNotificationOnce(_environmentId, ToString(), exception.SourceException);
         }
 
         public bool IsCatastrophicFailureSet => _catastrophicFailure != null;
