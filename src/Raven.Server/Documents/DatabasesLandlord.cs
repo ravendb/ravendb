@@ -133,11 +133,13 @@ namespace Raven.Server.Documents
                     case ClusterDatabaseChangeType.PendingClusterTransactions:
                         if (task.IsCompleted)
                         {
+                            task.Result.DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
                             NotifyPendingClusterTransaction(databaseName, task);
                             return;
                         }
                         task.ContinueWith(done =>
                         {
+                            done.Result.DatabaseGroupId = record.Topology.DatabaseTopologyIdBase64;
                             NotifyPendingClusterTransaction(databaseName, done);
                         });
 
