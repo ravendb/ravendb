@@ -257,33 +257,42 @@ namespace Sparrow.Platform.Posix
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int mprotect(IntPtr start, ulong size, ProtFlag protFlag);
 
-        private static int RetryPwriteOrThrow(int fd, long size, string file)
+        public static void RetryPwriteOrThrow(int fd, byte *buffer, ulong count, long offset, string file, string debug)
         {
-            byte b = 0;
             Errno err = Errno.NONE;
-            for (int cifsRetries = 0; cifsRetries < 3; cifsRetries++)
+            bool cifsRetryOccured = false;
+            var actuallyWritten = 0L;
+            do
             {
-                if (pwrite(fd, &b, 1, size - 1) != 1L)
+                for (var cifsRetries = 0; cifsRetries < 3; cifsRetries++)
                 {
-                    err = (Errno)Marshal.GetLastWin32Error();
-                    if (err == Errno.EINVAL)
+                    var result = pwrite(fd, buffer, count - (ulong)actuallyWritten, offset + actuallyWritten);
+                    if (result < 0) // we assume zero cannot be returned at any case as defined in POSIX
                     {
-                        // cifs mount can sometimes fail on EINVAL after file creation
-                        // lets give it few retries with short pauses between them - RavenDB-11954
-                        if (CheckSyncDirectoryAllowed(file) == false) // cifs/nfs
+                        err = (Errno)Marshal.GetLastWin32Error();
+                        if (err == Errno.EINVAL && CheckSyncDirectoryAllowed(file) == false)
                         {
-                            Thread.Sleep(10 * ((cifsRetries+1) ^ 3)); // wait upto 3 time in intervals of : 10mSec, 80mSec, 270mSec
+                            // cifs/nfs mount can sometimes fail on EINVAL after file creation
+                            // lets give it few retries with short pauses between them - RavenDB-11954
+                            Thread.Sleep(10 * ((cifsRetries + 1) ^ 3)); // wait upto 3 time in intervals of : 10mSec, 80mSec, 270mSec
+                            cifsRetryOccured = true; // for exception message purpose
+                            continue; // retry                            
                         }
+
+                        ThrowLastError((int)err,
+                            $"Failed to ${debug} {file} with count={count}, offset={offset}, actuallyWritten={actuallyWritten} (regular mount, not a cifs/nfs mount)");
                     }
-                }
-                else
-                {
-                    return (int)Errno.NONE;
-                }
+
+                    actuallyWritten += result;
+                    break; // successfully written
+                }                
+            } while (actuallyWritten < (long)count);
+
+            if (actuallyWritten != (long)count)
+            {
+                ThrowLastError((int)err,
+                    $"Failed to pwrite {file} with count={count}, offset={offset}, actuallyWritten={actuallyWritten}" + (cifsRetryOccured ? " (in cifs/nfs mount)" : ""));
             }
-            ThrowLastError((int)err,
-                "Failed to pwrite WITH retries (on cifs/nfs mount) in order to fallocate where fallocate is not supported for " + file);
-            return (int)err;
         }
 
         public static int AllocateFileSpace(int fd, long size, string file, out bool usingWrite)
@@ -304,9 +313,8 @@ namespace Sparrow.Platform.Posix
                     case (int)Errno.EFBIG: // can occure on >4GB allocation on fs such as ntfs-3g, W95 FAT32, etc.
                         // fallocate is not supported, we'll use lseek instead
                         usingWrite = true;
-                        var err = RetryPwriteOrThrow(fd, size, file);
-                        if (err != (int)Errno.NONE)
-                            ThrowLastError(err, "Failed to pwrite in order to fallocate where fallocate is not supported for " + file);
+                        byte b = 0;
+                        RetryPwriteOrThrow(fd, &b, 1L, size - 1, file, "pwrite in order to fallocate where fallocate is not supported");                        
                         return 0;                        
                 }
 
