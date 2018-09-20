@@ -150,7 +150,7 @@ namespace Voron.Platform.Posix
             var nNumberOfBytesToWrite = (ulong)numberOf4Kb * (4 * Constants.Size.Kilobyte);
             using (_options.IoMetrics.MeterIoRate(_filename.FullPath, IoMetrics.MeterType.JournalWrite, (long)nNumberOfBytesToWrite))
             {
-                Syscall.RetryPwriteOrThrow(_fd, p, nNumberOfBytesToWrite, position * 4 * Constants.Size.Kilobyte, _filename.FullPath, "pwrite journal WriteFile");
+                Syscall.PwriteOrThrow(_fd, p, nNumberOfBytesToWrite, position * 4 * Constants.Size.Kilobyte, _filename.FullPath, "pwrite journal WriteFile");
             }
         }
 
