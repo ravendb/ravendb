@@ -215,31 +215,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> QuerySortOnly(
             IndexQueryServerSide query, IQueryResultRetriever retriever, int start, int pageSize, Reference<int> totalResults, CancellationToken token)
         {
-            int FindDocument(bool isAsc, int i, (Reference<int> Index, HashSet<int> Seen, StringIndex Item, IndexReader IndexReader)[] items)
-            {
-                var innerDoc = -1;
-                var tpl = items[i];
-                var index = tpl.Index.Value;
-                while (index < tpl.Item.reverseOrder.Length)
-                {
-                    if (isAsc == false)
-                        index = tpl.Item.reverseOrder.Length - index - 1;
-
-                    innerDoc = tpl.Item.reverseOrder[index];
-                    if (tpl.IndexReader.HasDeletions && (tpl.IndexReader.IsDeleted(innerDoc) || tpl.Seen.Add(innerDoc) == false))
-                    {
-                        innerDoc = -1;
-                        index = ++tpl.Index.Value;
-                        continue;
-                    }
-
-                    break;
-                }
-
-                return innerDoc;
-            }
-
+        
             totalResults.Value = _searcher.IndexReader.NumDocs();
+            var subReaders = _searcher.IndexReader.GetSequentialSubReaders();
 
             var returnedResults = 0;
 
@@ -247,7 +225,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var isAscending = order.Ascending;
             var fieldName = order.Name;
 
-            var subReaders = _searcher.IndexReader.GetSequentialSubReaders();
             var indexes = new(Reference<int> Index, HashSet<int> Seen, StringIndex Item, IndexReader IndexReader)[subReaders.Length];
             for (var i = 0; i < subReaders.Length; i++)
             {
@@ -268,7 +245,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     var tpl = indexes[i];
 
-                    var innerDoc = FindDocument(isAscending, i, indexes);
+                    var innerDoc = FindDocument(isAscending, i);
 
                     if (innerDoc == -1)
                         continue;
@@ -287,9 +264,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     var compare = string.Compare(docTerm, term, StringComparison.Ordinal);
                     if (isAscending && compare > 0 || isAscending == false && compare < 0)
                     {
+                        indexes[idx].Seen.Remove(doc);
                         idx = i;
                         docTerm = term;
                         doc = innerDoc;
+                    }
+                    else
+                    {
+                        indexes[i].Seen.Remove(innerDoc);
                     }
                 }
 
@@ -311,6 +293,34 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (returnedResults == pageSize)
                     yield break;
             }
+
+            int FindDocument(bool isAsc, int i)
+            {
+                var innerDoc = -1;
+                var tpl = indexes[i];
+                var index = tpl.Index.Value;
+                while (index < tpl.Item.reverseOrder.Length)
+                {
+                    if (isAsc == false)
+                        index = tpl.Item.reverseOrder.Length - index - 1;
+
+                    innerDoc = tpl.Item.reverseOrder[index];
+
+                    if (innerDoc == -1 || 
+                        (tpl.IndexReader.HasDeletions && tpl.IndexReader.IsDeleted(innerDoc))
+                        || tpl.Seen.Add(innerDoc) == false)
+                    {
+                        innerDoc = -1;
+                        index = ++tpl.Index.Value;
+                        continue;
+                    }
+
+                    break;
+                }
+
+                return innerDoc;
+            }
+
         }
 
         private ExplanationResult GetQueryExplanations(ExplanationOptions options, Query luceneQuery, IndexSearcher searcher, ScoreDoc scoreDoc, Document document, global::Lucene.Net.Documents.Document luceneDocument)
