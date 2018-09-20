@@ -37,7 +37,7 @@ class editPeriodicBackupTask extends viewModelBase {
                 new getPeriodicBackupConfigurationCommand(this.activeDatabase(), args.taskId)
                     .execute()
                     .done((configuration: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration) => {
-                        if (configuration.LocalSettings.FolderPath && configuration.LocalSettings.FolderPath.startsWith(this.serverConfiguration().LocalRootPath)) {
+                        if (this.serverConfiguration().LocalRootPath && configuration.LocalSettings.FolderPath && configuration.LocalSettings.FolderPath.startsWith(this.serverConfiguration().LocalRootPath)) {
                             configuration.LocalSettings.FolderPath = configuration.LocalSettings.FolderPath.substr(this.serverConfiguration().LocalRootPath.length);
                         }
                         
@@ -198,7 +198,10 @@ class editPeriodicBackupTask extends viewModelBase {
         }
 
         const dto = this.configuration().toDto();
-        dto.LocalSettings.FolderPath = (this.serverConfiguration().LocalRootPath || "") + dto.LocalSettings.FolderPath;
+        
+        if (this.serverConfiguration().LocalRootPath) {
+            dto.LocalSettings.FolderPath = this.serverConfiguration().LocalRootPath + dto.LocalSettings.FolderPath;
+        }
 
         eventsCollector.default.reportEvent("periodic-backup", "save");
         
