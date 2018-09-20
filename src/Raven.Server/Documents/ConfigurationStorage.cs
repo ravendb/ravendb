@@ -45,7 +45,10 @@ namespace Raven.Server.Documents
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = db.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
             if (db.Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = db.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
-            
+            options.PrefetchSegmentSize = db.Configuration.Storage.IOPrefetchBatchSize.GetValue(SizeUnit.Bytes);
+            options.PrefetchResetThreshold = db.Configuration.Storage.IOPrefetchResetThreshold.GetValue(SizeUnit.Bytes);
+
+
             NotificationsStorage = new NotificationsStorage(db.Name);
 
             OperationsStorage = new OperationsStorage();

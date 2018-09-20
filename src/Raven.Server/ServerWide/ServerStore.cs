@@ -497,6 +497,8 @@ namespace Raven.Server.ServerWide
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
             if (Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
+            options.PrefetchSegmentSize = Configuration.Storage.IOPrefetchBatchSize.GetValue(SizeUnit.Bytes);
+            options.PrefetchResetThreshold = Configuration.Storage.IOPrefetchResetThreshold.GetValue(SizeUnit.Bytes);
             try
             {
                 StorageEnvironment.MaxConcurrentFlushes = Configuration.Storage.MaxConcurrentFlushes;

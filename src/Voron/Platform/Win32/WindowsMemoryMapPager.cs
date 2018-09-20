@@ -56,10 +56,8 @@ namespace Voron.Platform.Win32
         private const byte OddPrefetchCountMask = 0x07;
         private const byte AlreadyPrefetch = 7;
 
-        private const int PrefetchSegmentSize = Constants.Size.Megabyte;
-
-        // PERF: This is effectively 8Gb per file, we should probably get this number from either configuration and/or available memory. 
-        private const int PrefetchResetThreshold = 8000; 
+        private readonly int _prefetchSegmentSize;       
+        private readonly int _prefetchResetThreshold; 
 
         private readonly int _segmentShift;
         private int _refreshCounter = 0;
@@ -72,10 +70,14 @@ namespace Voron.Platform.Win32
             Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite,
             bool usePageProtection = false)
             : base(options, usePageProtection)
-        {
-            this._segmentShift = Bits.MostSignificantBit(PrefetchSegmentSize);
-            Debug.Assert((PrefetchSegmentSize - 1) >> this._segmentShift == 0);
-            Debug.Assert(PrefetchSegmentSize >> this._segmentShift == 1);
+        {                        
+            this._segmentShift = Bits.MostSignificantBit(options.PrefetchSegmentSize);            
+
+            this._prefetchSegmentSize = 1 << this._segmentShift;
+            this._prefetchResetThreshold = (int)((float)options.PrefetchResetThreshold / this._prefetchSegmentSize);
+
+            Debug.Assert((_prefetchSegmentSize - 1) >> this._segmentShift == 0);
+            Debug.Assert(_prefetchSegmentSize >> this._segmentShift == 1);
 
             SYSTEM_INFO systemInfo;
             GetSystemInfo(out systemInfo);
@@ -152,7 +154,7 @@ namespace Voron.Platform.Win32
             }
 
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
-            long numberOfAllocatedSegments = (_totalAllocationSize / PrefetchSegmentSize) + 1;
+            long numberOfAllocatedSegments = (_totalAllocationSize / _prefetchSegmentSize) + 1;
             this._prefetchTable = new byte[(numberOfAllocatedSegments / 2) + 1];
 
             SetPagerState(CreatePagerState());
@@ -186,7 +188,7 @@ namespace Voron.Platform.Win32
                         MaybePrefetchSegment(state.MapBase, segmentNumber);
                         _refreshCounter++;
 
-                        if (_refreshCounter > PrefetchResetThreshold)
+                        if (_refreshCounter > _prefetchResetThreshold)
                             ResetPrefetchTable();
                     }                        
                 }
@@ -274,7 +276,7 @@ namespace Voron.Platform.Win32
             _totalAllocationSize += allocationSize;
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
 
-            long numberOfAllocatedSegments = (_totalAllocationSize / PrefetchSegmentSize) + 1;
+            long numberOfAllocatedSegments = (_totalAllocationSize / _prefetchSegmentSize) + 1;
 
             var oldPrefetchTable = this._prefetchTable;
             this._prefetchTable = new byte[(numberOfAllocatedSegments / 2) + 1];
@@ -516,18 +518,17 @@ namespace Voron.Platform.Win32
         private void ResetPrefetchTable()
         {
             this._refreshCounter = 0;
-
+            
             // We will zero out the whole table to reset the prefetching behavior. 
-            for (int i = 0; i < this._prefetchTable.Length; i++)
-                this._prefetchTable[i] = 0;
+            Array.Clear(this._prefetchTable, 0, this._prefetchTable.Length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void MaybePrefetchSegment(byte* baseAddress, long segment)
         {
             Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY entry;
-            entry.NumberOfBytes = (IntPtr)PrefetchSegmentSize;
-            entry.VirtualAddress = baseAddress + segment * PrefetchSegmentSize;
+            entry.NumberOfBytes = (IntPtr)_prefetchSegmentSize;
+            entry.VirtualAddress = baseAddress + segment * _prefetchSegmentSize;
 
             Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess, (UIntPtr)1, &entry, 0);
         }
@@ -570,8 +571,8 @@ namespace Voron.Platform.Win32
                     if (segmentState == AlreadyPrefetch)
                     {
                         // Prepare the segment information. 
-                        toPrefetch[prefetchIdx].NumberOfBytes = (IntPtr)PrefetchSegmentSize;
-                        toPrefetch[prefetchIdx].VirtualAddress = baseAddress + segmentNumber * PrefetchSegmentSize;
+                        toPrefetch[prefetchIdx].NumberOfBytes = (IntPtr)_prefetchSegmentSize;
+                        toPrefetch[prefetchIdx].VirtualAddress = baseAddress + segmentNumber * _prefetchSegmentSize;
                         prefetchIdx++;
                         _refreshCounter++;
 
@@ -591,7 +592,7 @@ namespace Voron.Platform.Win32
                 Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess, (UIntPtr)prefetchIdx, toPrefetch, 0);
             }
 
-            if (_refreshCounter > PrefetchResetThreshold)
+            if (_refreshCounter > _prefetchResetThreshold)
                 ResetPrefetchTable();
         }
 
