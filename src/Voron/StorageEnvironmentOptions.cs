@@ -1107,6 +1107,9 @@ namespace Voron
             set => _timeToSyncAfterFlashInSec = value;
         }
 
+        public long PrefetchSegmentSize { get; set; }
+        public long PrefetchResetThreshold { get; set; }
+
         public byte[] MasterKey;
 
         public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;

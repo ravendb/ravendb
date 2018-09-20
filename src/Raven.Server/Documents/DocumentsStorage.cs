@@ -234,6 +234,9 @@ namespace Raven.Server.Documents
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = DocumentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
             if (DocumentDatabase.Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = DocumentDatabase.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
+            options.PrefetchSegmentSize = DocumentDatabase.Configuration.Storage.IOPrefetchBatchSize.GetValue(SizeUnit.Bytes);
+            options.PrefetchResetThreshold = DocumentDatabase.Configuration.Storage.IOPrefetchResetThreshold.GetValue(SizeUnit.Bytes);
+
             try
             {
                 Initialize(options);
