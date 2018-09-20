@@ -346,17 +346,36 @@ namespace Raven.Server.ServerWide
         private List<string> ExecuteClusterTransaction(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
             var clusterTransaction = (ClusterTransactionCommand)JsonDeserializationCluster.Commands[nameof(ClusterTransactionCommand)](cmd);
+            UpdateDatabaseRecordId(context, index, clusterTransaction);
+
             var compareExchangeItems = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
             var error = clusterTransaction.ExecuteCompareExchangeCommands(context, index, compareExchangeItems);
             if (error == null)
             {
                 clusterTransaction.SaveCommandsBatch(context, index);
-                NotifyDatabaseAboutChanged(context, clusterTransaction.Database, index, nameof(ClusterTransactionCommand),
+                NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand),
                     DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions);
                 return null;
             }
             OnTransactionDispose(context, index);
             return error;
+        }
+
+        private void UpdateDatabaseRecordId(TransactionOperationContext context, long index, ClusterTransactionCommand clusterTransaction)
+        {
+            var record = ReadDatabase(context, clusterTransaction.DatabaseName);
+            if (record.Topology.DatabaseTopologyIdBase64 == null)
+            {
+                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+                record.Topology.DatabaseTopologyIdBase64 = clusterTransaction.DatabaseRecordId;
+                var dbKey = "db/" + clusterTransaction.DatabaseName;
+                using (Slice.From(context.Allocator, dbKey, out var valueName))
+                using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out var valueNameLowered))
+                {
+                    var updatedDatabaseBlittable = EntityToBlittable.ConvertCommandToBlittable(record, context);
+                    UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
+                }
+            }
         }
 
         private void ConfirmReceiptServerCertificate(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)

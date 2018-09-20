@@ -18,7 +18,10 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class ClusterTransactionCommand : CommandBase
     {
-        public string Database;
+        public string DatabaseName;
+
+        public string DatabaseRecordId;
+
         public long DatabaseCommandsCount;
 
         public class ClusterTransactionDataCommand
@@ -96,9 +99,11 @@ namespace Raven.Server.ServerWide.Commands
 
         public ClusterTransactionCommand() { }
 
-        public ClusterTransactionCommand(string database, ArraySegment<BatchRequestParser.CommandData> commandParsedCommands, ClusterTransactionOptions options)
+        public ClusterTransactionCommand(string databaseName, string recordId, ArraySegment<BatchRequestParser.CommandData> commandParsedCommands,
+            ClusterTransactionOptions options)
         {
-            Database = database;
+            DatabaseName = databaseName;
+            DatabaseRecordId = recordId ?? Guid.NewGuid().ToBase64Unpadded();
             Options = options;
 
             foreach (var commandData in commandParsedCommands)
@@ -145,7 +150,7 @@ namespace Raven.Server.ServerWide.Commands
                 switch (clusterCommand.Type)
                 {
                     case CommandType.CompareExchangePUT:
-                        var put = new AddOrUpdateCompareExchangeCommand(Database, clusterCommand.Id, clusterCommand.Document, clusterCommand.Index, context);
+                        var put = new AddOrUpdateCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Document, clusterCommand.Index, context);
                         if (put.Validate(context, items, clusterCommand.Index, out current) == false)
                         {
                             errors.Add(
@@ -155,7 +160,7 @@ namespace Raven.Server.ServerWide.Commands
                         toExecute.Add(put);
                         break;
                     case CommandType.CompareExchangeDELETE:
-                        var delete = new RemoveCompareExchangeCommand(Database, clusterCommand.Id, clusterCommand.Index, context);
+                        var delete = new RemoveCompareExchangeCommand(DatabaseName, clusterCommand.Id, clusterCommand.Index, context);
                         if (delete.Validate(context, items, clusterCommand.Index, out current) == false)
                         {
                             errors.Add($"Concurrency check failed for deleting the key '{clusterCommand.Id}'. Requested index: {clusterCommand.Index}, actual index: {current}");
@@ -192,10 +197,10 @@ namespace Raven.Server.ServerWide.Commands
             var commandsCountPerDatabase = context.Transaction.InnerTransaction.ReadTree(ClusterStateMachine.TransactionCommandsCountPerDatabase);
             var commands = SerializedDatabaseCommands.Clone(context);
 
-            using (GetPrefix(context, Database, out var databaseSlice))
+            using (GetPrefix(context, DatabaseName, out var databaseSlice))
             {
                 var count = commandsCountPerDatabase.ReadLong(databaseSlice) ?? 0;
-                using (GetPrefix(context, Database, out var prefixSlice, count))
+                using (GetPrefix(context, DatabaseName, out var prefixSlice, count))
                 using (items.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(prefixSlice.Content.Ptr, prefixSlice.Size);
@@ -399,7 +404,8 @@ namespace Raven.Server.ServerWide.Commands
                 };
                 djv[nameof(SerializedDatabaseCommands)] = context.ReadObject(databaseCommands, "read database commands");
             }
-            djv[nameof(Database)] = Database;
+            djv[nameof(DatabaseName)] = DatabaseName;
+            djv[nameof(DatabaseRecordId)] = DatabaseRecordId;
             djv[nameof(DatabaseCommandsCount)] = DatabaseCommandsCount;
 
             return djv;
