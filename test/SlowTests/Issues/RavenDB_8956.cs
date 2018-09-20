@@ -93,7 +93,7 @@ namespace SlowTests.Issues
                         .OrderBy(x => x.Name)
                         .Select(x => x.Name)
                         .ToList();
-
+                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(allCompanies.OrderBy(x => x), companies);
                     Assert.Equal(allStatistics.TotalResults, stats.TotalResults);
 

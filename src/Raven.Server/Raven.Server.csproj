@@ -64,8 +64,8 @@
     </PackageReference>
     <PackageReference Include="Jint" Version="3.0.15-ravendb" />
     <PackageReference Include="Lextm.SharpSnmpLib" Version="10.0.11" />
-    <PackageReference Include="Lucene.Net" Version="3.0.16" />
-    <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.13" />
+    <PackageReference Include="Lucene.Net" Version="3.0.17" />
+    <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.17" />
     <PackageReference Include="Microsoft.AspNetCore.ResponseCompression" Version="2.1.1" />
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel" Version="2.1.3" />
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv" Version="2.1.3" />
