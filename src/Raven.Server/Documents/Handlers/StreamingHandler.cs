@@ -5,6 +5,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Queries;
@@ -131,7 +132,7 @@ namespace Raven.Server.Documents.Handlers
                     // if query got parameters append with parameters
                     if (query.QueryParameters != null && query.QueryParameters.Count > 0)
                         sb.AppendLine().Append(query.QueryParameters);
-                    AddStringToHttpContext(sb.ToString());
+                    AddStringToHttpContext(sb.ToString(), TrafficWatchChangeType.Streams);
                 }
 
                 var format = GetStringQueryString("format", false);

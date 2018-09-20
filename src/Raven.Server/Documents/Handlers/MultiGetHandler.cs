@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Exceptions;
 using Raven.Server.Routing;
@@ -189,11 +190,10 @@ namespace Raven.Server.Documents.Handlers
                         }
                         writer.WriteEndObject();
                         writer.WriteEndObject();
-                        if (TrafficWatchManager.HasRegisteredClients)
-                            sb.Append(content.ToString()).AppendLine();
+                        sb?.Append(content).AppendLine();
                     }
-                    if (TrafficWatchManager.HasRegisteredClients)
-                        AddStringToHttpContext(sb.ToString());
+                    if (sb != null)
+                        AddStringToHttpContext(sb.ToString(), TrafficWatchChangeType.MultiGet);
                     writer.WriteEndArray();
                     writer.WriteEndObject();
                 }

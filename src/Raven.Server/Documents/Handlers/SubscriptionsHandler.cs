@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Includes;
@@ -128,7 +129,7 @@ namespace Raven.Server.Documents.Handlers
                 var options = JsonDeserializationServer.SubscriptionCreationParams(json);
 
                 if (TrafficWatchManager.HasRegisteredClients)
-                    AddStringToHttpContext(json.ToString());
+                    AddStringToHttpContext(json.ToString(), TrafficWatchChangeType.Subscriptions);
 
                 var sub = SubscriptionConnection.ParseSubscriptionQuery(options.Query);
 

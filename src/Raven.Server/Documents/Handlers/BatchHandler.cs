@@ -20,6 +20,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Runtime.ExceptionServices;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Json;
 using Raven.Server.Json;
@@ -66,25 +67,7 @@ namespace Raven.Server.Documents.Handlers
                     ThrowNotSupportedType(contentType);
                 if (TrafficWatchManager.HasRegisteredClients)
                 {
-                    var sb = new StringBuilder();
-                    for (var i = 0; i < command.ParsedCommands.Count; i++)
-                    {
-                        // watching only patch commands
-                        if (command.ParsedCommands.Array[i].Patch != null)
-                        {
-                            // reconstruct in json format
-                            sb.Append("{\"").Append(command.ParsedCommands.Array[i].Type).Append("\":{");
-                            sb.Append("\"Script\":\"").Append(command.ParsedCommands.Array[i].Patch.Script).Append("\"");
-                            if (command.ParsedCommands.Array[i].PatchArgs != null)
-                            {
-                                sb.Append(",\"Values\":").Append(command.ParsedCommands.Array[i].PatchArgs);
-                            }
-                            sb.Append("}}").AppendLine();
-                        }
-                    }
-                    // add sb to httpContext only if we had a patch type item in array
-                    if (sb.Length > 0)
-                        AddStringToHttpContext(sb.ToString());
+                    BatchTrafficWatch(command.ParsedCommands);
                 }
 
                 var waitForIndexesTimeout = GetTimeSpanQueryString("waitForIndexesTimeout", required: false);
@@ -157,6 +140,27 @@ namespace Raven.Server.Documents.Handlers
             public Task IndexTask;
             public DynamicJsonArray Array;
         }
+
+
+        private void BatchTrafficWatch(ArraySegment<BatchRequestParser.CommandData> parsedCommands)
+        {
+            var sb = new StringBuilder();
+            for (var i = parsedCommands.Offset; i < (parsedCommands.Offset + parsedCommands.Count); i++)
+            {
+                // watching only patch commands
+                if (parsedCommands.Array[i].Patch != null)
+                {
+                    sb.Append("Type: ").Append(parsedCommands.Array[i].Type).AppendLine();
+                    sb.Append("Id: ").Append(parsedCommands.Array[i].Id).AppendLine();
+                    sb.Append("Script: ").Append(parsedCommands.Array[i].Patch.Script).AppendLine();
+                    sb.Append("Values: ").Append(parsedCommands.Array[i].PatchArgs).AppendLine();
+                }
+            }
+            // add sb to httpContext only if we had a patch type item in array
+            if (sb.Length > 0)
+                AddStringToHttpContext(sb.ToString(), TrafficWatchChangeType.Patch);
+        }
+
 
         private async Task HandleClusterTransaction(DocumentsOperationContext context, MergedBatchCommand command, ClusterTransactionCommand.ClusterTransactionOptions options)
         {

@@ -9,7 +9,6 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.TrafficWatch;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio
@@ -82,9 +81,6 @@ namespace Raven.Server.Web.Studio
                             writer.WriteEndArray();
                         }
                     }
-                    // add TW customData to httpContext
-                    if (TrafficWatchManager.HasRegisteredClients)
-                        AddStringToHttpContext(map);
                 }
 
             }
