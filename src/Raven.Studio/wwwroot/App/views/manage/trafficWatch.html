@@ -41,6 +41,37 @@
     </div>
     <div class="flex-horizontal flex-noshrink">
         <div class="flex-separator"></div>
+    <div class="btn-group dropdown-right">
+        <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
+                title="Choose visible columns">
+            <i class="icon-table"></i><span>Display</span>
+            <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu colselect-dropdown slidein-style" role="menu" data-bind="dropdownPanel: true">
+            <div class="columns-list-container flex-vertical">
+                <div class="flex-header">
+                    <div class="checkbox">
+                        <input type="checkbox" id="select_all" class="styled" data-bind="checked: isSelectAllChecked, event: { change: toggleSelectAll }">
+                        <label for="select_all">
+                            Select All
+                        </label>
+                    </div>
+                </div>
+                <div class="flex-grow">
+                    <ul class="column-list scroll" data-bind="foreach: { data: filteredTypeData, as: 'item' }">
+                        <li>
+                            <div class="column-name">
+                                <div class="checkbox">
+                                    <input class="styled" type="checkbox" data-bind="checked: isChecked(), attr: { id: 'id' + item.propertyName }, event: { change: $parent.filterOnClick.bind($parent, $data) }">
+                                    <label data-bind="text: propertyName, attr: { for: 'id' + item.propertyName }"></label>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </ul>
+    </div>
         <div class="btn-group">
             <button class="btn btn-sm btn-info btn-checkable" data-bind="click: toggleTail, css: { active: tailEnabled }">
                 <i class="icon-logs"></i> <span>Monitoring (tail -f)</span>

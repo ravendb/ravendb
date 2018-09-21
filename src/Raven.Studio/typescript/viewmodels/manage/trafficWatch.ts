@@ -8,6 +8,14 @@ import trafficWatchWebSocketClient = require("common/trafficWatchWebSocketClient
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import generalUtils = require("common/generalUtils");
 
+class typeData {
+    constructor(propertyName: Raven.Client.Documents.Changes.TrafficWatchChangeType) {
+        this.propertyName = propertyName;
+    }
+    isChecked = ko.observable<boolean>(true);
+    propertyName: Raven.Client.Documents.Changes.TrafficWatchChangeType;
+}
+
 class trafficWatch extends viewModelBase {
     
     static maxBufferSize = 200000;
@@ -15,9 +23,14 @@ class trafficWatch extends viewModelBase {
     private liveClient = ko.observable<trafficWatchWebSocketClient>();
     private allData = [] as Raven.Client.Documents.Changes.TrafficWatchChange[];
     private filteredData = [] as Raven.Client.Documents.Changes.TrafficWatchChange[];
+
     private gridController = ko.observable<virtualGridController<Raven.Client.Documents.Changes.TrafficWatchChange>>();
     private columnPreview = new columnPreviewPlugin<Raven.Client.Documents.Changes.TrafficWatchChange>();
-    
+
+    private readonly allTypeData: Raven.Client.Documents.Changes.TrafficWatchChangeType[] =
+        ["BulkDocs", "Counters", "Documents", "Hilo", "Index", "MultiGet", "None", "Operations", 'Queries', "Streams", "Subscriptions"];
+    private filteredTypeData = [] as typeData[];
+
     stats = {
         count: ko.observable<string>(),
         min: ko.observable<string>(),
@@ -26,16 +39,22 @@ class trafficWatch extends viewModelBase {
     };
     
     filter = ko.observable<string>();
-
-    private appendElementsTask: number;
     
+    private appendElementsTask: number;
+
+    // make select_all checkbox observable
+    isSelectAllChecked = ko.observable<boolean>(true);
     isBufferFull = ko.observable<boolean>();
     tailEnabled = ko.observable<boolean>(true);
     private duringManualScrollEvent = false;
     
     constructor() {
         super();
-        
+
+        this.allTypeData.forEach((propertyName: Raven.Client.Documents.Changes.TrafficWatchChangeType)  => {
+            this.filteredTypeData.push(new typeData(propertyName));
+        });
+
         this.filter.throttle(500).subscribe(() => this.filterEntries());
     }
     
@@ -61,9 +80,8 @@ class trafficWatch extends viewModelBase {
         if (filter) {
             this.filteredData = this.allData.filter(item => this.matchesFilter(item));
         } else {
-            this.filteredData = this.allData.slice();
+            this.filteredData = this.allData.filter(item => this.matchFilteredTypeData(item));
         }
-
         this.updateStats();
         
         this.gridController().reset(true);
@@ -72,13 +90,42 @@ class trafficWatch extends viewModelBase {
     private matchesFilter(item: Raven.Client.Documents.Changes.TrafficWatchChange) {
         const filter = this.filter();
         if (!filter) {
-            return true;
+            return this.matchFilteredTypeData(item);
         }
         const filterLowered = filter.toLocaleLowerCase();
         const uri = item.RequestUri.toLocaleLowerCase();
-        return uri.includes(filterLowered);
+        return uri.includes(filterLowered) && this.matchFilteredTypeData(item);
     }
-    
+
+    private matchFilteredTypeData(item: Raven.Client.Documents.Changes.TrafficWatchChange) {
+        return this.filteredTypeData.find(x => x.propertyName === item.Type && x.isChecked());
+    }
+
+    filterOnClick(data: typeData):  void {
+        if (data.isChecked() === false) {
+            data.isChecked(true);
+            if (this.filteredTypeData.filter(x => x.isChecked()).length === this.filteredTypeData.length)
+                this.isSelectAllChecked(true);
+        } else {
+            this.isSelectAllChecked(false);
+            data.isChecked(false);
+        }
+        this.filterEntries();
+    }
+
+    toggleSelectAll(): void {
+        const selectedCount = this.filteredTypeData.filter(x => x.isChecked()).length;
+        if (selectedCount === this.filteredTypeData.length) {
+            this.filteredTypeData.forEach(x => x.isChecked(false));
+            this.isSelectAllChecked(false);
+            this.filterEntries();
+        } else {
+            this.filteredTypeData.forEach(x => x.isChecked(true));
+            this.isSelectAllChecked(true);
+            this.filterEntries();
+        }
+    }
+
     private updateStats() {
         if (!this.filteredData.length) {
             this.stats.avg("n/a");
@@ -111,15 +158,26 @@ class trafficWatch extends viewModelBase {
                 sum += item.ElapsedMilliseconds;
             }
             
-            this.stats.min(min.toLocaleString() + " ms");
-            this.stats.max(max.toLocaleString() + " ms");
+            this.stats.min(this.formatMs(min));
+            this.stats.max(this.formatMs(max));
             this.stats.count(this.filteredData.length.toLocaleString());
-            
-            const avg = countForAvg ? generalUtils.formatNumberToStringFixed(sum * 1.0 / countForAvg, 2) + " ms" : "n/a"; 
+
+            const avg = countForAvg ? this.formatMs((sum * 1.0 / countForAvg)) : "n/a"; 
             this.stats.avg(avg);
         }
     }
-    
+
+    private formatMs(num: number): string {
+        let str:string;
+        if (num > 1000) {
+            num = num/1000;
+            str = num.toLocaleString() + "sec";
+        } else {
+            str = num.toLocaleString() + "ms";
+        }
+        return str;
+    }
+
     compositionComplete() {
         super.compositionComplete();
 
@@ -148,7 +206,8 @@ class trafficWatch extends viewModelBase {
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.DatabaseName, "Database Name", "8%", rowHighlightRules),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ElapsedMilliseconds, "Duration", "8%", rowHighlightRules),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.HttpMethod, "Method", "6%", rowHighlightRules),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.CustomInfo, "CustomInfo", "14%", rowHighlightRules),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.CustomInfo, "CustomInfo", "9%", rowHighlightRules),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.Type, "Type", "5%", rowHighlightRules),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.RequestUri, "URI", "35%", rowHighlightRules)
             ]
         );
@@ -189,7 +248,7 @@ class trafficWatch extends viewModelBase {
         const ws = new trafficWatchWebSocketClient(data => this.onData(data));
         this.liveClient(ws);
     }
-    
+
     private onData(data: Raven.Client.Documents.Changes.TrafficWatchChange) {
         if (this.allData.length === trafficWatch.maxBufferSize) {
             this.isBufferFull(true);
@@ -268,7 +327,6 @@ class trafficWatch extends viewModelBase {
 
         this.gridController().scrollDown();
     }
-
 }
 
 export = trafficWatch;
