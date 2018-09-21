@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Operations
         {
             if (_queryToDelete == DummyQuery)
             {
-                using (var session = store.OpenSession(store.Database ?? "DummyDatabase"))
+                using (var session = store.OpenSession(string.IsNullOrWhiteSpace(store.Database) ? "DummyDatabase" : store.Database))
                 {
                     var query = session
                         .Query<TEntity>(_indexName)
