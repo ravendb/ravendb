@@ -246,6 +246,7 @@ namespace Raven.Client.Documents.Changes
         public object QueryTimings { get; set; }
     }
 
+    [Flags]
     public enum TrafficWatchChangeType
     {
         None,
