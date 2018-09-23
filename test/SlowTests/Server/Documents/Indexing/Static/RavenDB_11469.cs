@@ -28,22 +28,21 @@ namespace SlowTests.Server.Documents.Indexing.Static
             var outputToCollectionName = "Locations";
 
             using (var database = CreateDocumentDatabase())
+            using (var index = MapReduceIndex.CreateNew(new IndexDefinition()
             {
-                var index = MapReduceIndex.CreateNew(new IndexDefinition()
+                Name = "Users_ByCount_GroupByLocation",
+                Maps = { "from user in docs.Users select new { user.Location, Count = 1 }" },
+                Reduce =
+                    "from result in results group result by result.Location into g select new { Location = g.Key, Count = g.Sum(x => x.Count) }",
+                Type = IndexType.MapReduce,
+                Fields =
                 {
-                    Name = "Users_ByCount_GroupByLocation",
-                    Maps = { "from user in docs.Users select new { user.Location, Count = 1 }" },
-                    Reduce =
-                        "from result in results group result by result.Location into g select new { Location = g.Key, Count = g.Sum(x => x.Count) }",
-                    Type = IndexType.MapReduce,
-                    Fields =
-                    {
-                        {"Location", new IndexFieldOptions {Storage = FieldStorage.Yes}},
-                        {"Count", new IndexFieldOptions {Storage = FieldStorage.Yes}}
-                    },
-                    OutputReduceToCollection = outputToCollectionName
-                }, database);
-
+                    {"Location", new IndexFieldOptions {Storage = FieldStorage.Yes}},
+                    {"Count", new IndexFieldOptions {Storage = FieldStorage.Yes}}
+                },
+                OutputReduceToCollection = outputToCollectionName
+            }, database))
+            {
                 var mapReduceContext = new MapReduceIndexingContext();
                 using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))
                 {
