@@ -273,14 +273,23 @@ namespace Raven.Server.Web.Authentication
             var first = true;
             var collectionPrimaryKey = string.Empty;
 
+            // we don't want to import items up the chain (signing keys)
+            var issuers = new HashSet<string>();
+
             foreach (var x509Certificate in collection)
             {
                 if (serverStore.Server.Certificate.Certificate?.Thumbprint != null && serverStore.Server.Certificate.Certificate.Thumbprint.Equals(x509Certificate.Thumbprint))
                     throw new InvalidOperationException($"You are trying to import the same server certificate ({x509Certificate.Thumbprint}) as the one which is already loaded. This is not supported.");
+
+                if (x509Certificate.Issuer != x509Certificate.Subject)
+                    issuers.Add(x509Certificate.Issuer);
             }
 
             foreach (var x509Certificate in collection)
             {
+                if (issuers.Contains(x509Certificate.Subject))
+                    continue;
+
                 var currentCertDef = new CertificateDefinition
                 {
                     Name = certDef.Name,
@@ -311,6 +320,9 @@ namespace Raven.Server.Web.Authentication
 
                     foreach (var cert in collection)
                     {
+                        if (issuers.Contains(cert.Subject))
+                            continue;
+
                         if (Constants.Certificates.Prefix + cert.Thumbprint != firstKey)
                             currentCertDef.CollectionSecondaryKeys.Add(Constants.Certificates.Prefix + cert.Thumbprint);
                     }
