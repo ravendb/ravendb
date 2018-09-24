@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -322,12 +324,16 @@ namespace Raven.Server.Documents.ETL
                     mySqlEtl.Add(config);
                 }
             }
+            
+            var toRemove = _processes.GroupBy(x => x.ConfigurationName).ToDictionary(x => x.Key, x => x.ToList());
 
-            var toRemove = new List<EtlProcess>(_processes);
-
-            foreach (var etlProcess in _processes)
+            foreach (var processesPerConfig in _processes.GroupBy(x => x.ConfigurationName))
             {
-                if (etlProcess is RavenEtl ravenEtl)
+                var process = processesPerConfig.First();
+
+                Debug.Assert(processesPerConfig.All(x => x.GetType() == process.GetType()));
+
+                if (process is RavenEtl ravenEtl)
                 {
                     RavenEtlConfiguration existing = null;
                     foreach (var config in myRavenEtl)
@@ -340,12 +346,11 @@ namespace Raven.Server.Documents.ETL
                     }
                     if (existing != null)
                     {
-                        toRemove.Remove(etlProcess);
+                        toRemove.Remove(processesPerConfig.Key);
                         myRavenEtl.Remove(existing);
                     }
                 }
-
-                if (etlProcess is SqlEtl sqlEtl)
+                else if (process is SqlEtl sqlEtl)
                 {
                     SqlEtlConfiguration existing = null;
                     foreach (var config in mySqlEtl)
@@ -358,43 +363,55 @@ namespace Raven.Server.Documents.ETL
                     }
                     if (existing != null)
                     {
-                        toRemove.Remove(etlProcess);
+                        toRemove.Remove(processesPerConfig.Key);
                         mySqlEtl.Remove(existing);
                     }
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Unknown ETL process type: {process.GetType()}");
                 }
             }
 
             Parallel.ForEach(toRemove, x =>
             {
-                try
+                foreach (var process in x.Value)
                 {
-                    x.Stop();
-                }
-                catch (Exception e)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Failed to stop ETL process {x.Name} on the database record change", e);
+                    try
+                    {
+
+                        process.Stop();
+                    }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Failed to stop ETL process {process.Name} on the database record change", e);
+                    }
                 }
             });
 
-            LoadProcesses(record, myRavenEtl, mySqlEtl, toRemove);
+            LoadProcesses(record, myRavenEtl, mySqlEtl, toRemove.SelectMany(x => x.Value).ToList());
 
             // unsubscribe old etls _after_ we start new processes to ensure the tombstone cleaner 
             // constantly keeps track of tombstones processed by ETLs so it won't delete them during etl processes reloading
 
-            foreach (var process in toRemove)
+            foreach (var processesPerConfig in toRemove)
+            foreach (var process in processesPerConfig.Value)
                 _database.TombstoneCleaner.Unsubscribe(process);
 
             Parallel.ForEach(toRemove, x =>
             {
-                try
+                foreach (var process in x.Value)
                 {
-                    x.Dispose();
-                }
-                catch (Exception e)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Failed to dispose ETL process {x.Name} on the database record change", e);
+                    try
+                    {
+                        process.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Failed to dispose ETL process {process.Name} on the database record change", e);
+                    }
                 }
             });
         }
