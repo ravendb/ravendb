@@ -533,12 +533,12 @@ namespace Voron.Platform.Win32
             Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess, (UIntPtr)1, &entry, 0);
         }
 
-        public override void MaybePrefetchMemory(Span<long> pagesToPrefetch)
+        public override void MaybePrefetchMemory<T>(T pagesToPrefetch)
         {
             if (PlatformDetails.CanPrefetch == false)
                 return; // not supported
 
-            if (pagesToPrefetch.Length == 0)
+            if (pagesToPrefetch.MoveNext() == false)
                 return;
 
             // PERF: We dont acquire pointer here to avoid all the overhead of doing so; instead we calculate the proper place based on 
@@ -549,9 +549,11 @@ namespace Voron.Platform.Win32
 
             int prefetchIdx = 0;
             Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* toPrefetch = stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[StackSpace];
-            
-            foreach ( long pageNumber in pagesToPrefetch)
+
+            do
             {
+                long pageNumber = pagesToPrefetch.Current;
+
                 long segmentNumber = (pageNumber * Constants.Storage.PageSize) >> this._segmentShift;
 
                 int segmentState = GetSegmentState(segmentNumber);
@@ -585,6 +587,7 @@ namespace Voron.Platform.Win32
                     }
                 }
             }
+            while (pagesToPrefetch.MoveNext());
 
             if (prefetchIdx != 0)
             {

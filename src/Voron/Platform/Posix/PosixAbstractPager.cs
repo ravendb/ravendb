@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Voron.Data.BTrees;
@@ -12,9 +14,27 @@ namespace Voron.Platform.Posix
 {
     public abstract class PosixAbstractPager : AbstractPager
     {
+        private const byte EvenPrefetchCountMask = 0x70;
+        private const byte EvenPrefetchMaskShift = 4;
+        private const byte OddPrefetchCountMask = 0x07;
+        private const byte AlreadyPrefetch = 7;
+
+        private readonly int _prefetchSegmentSize;
+        private readonly int _prefetchResetThreshold;
+
+        private readonly int _segmentShift;
+        private int _refreshCounter = 0;
+        private byte[] _prefetchTable;
+
         public override int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState)
         {
             return CopyPageImpl(destwI4KbBatchWrites, p, pagerState);
+        }
+
+        private unsafe void PrefetchRanges(Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* list, int count)
+        {
+            for (int i = 0; i < count; i++)
+                Syscall.madvise(new IntPtr(list[i].VirtualAddress), (UIntPtr)list[i].NumberOfBytes.ToPointer(), MAdvFlags.MADV_WILLNEED);
         }
 
         private unsafe void PrefetchRanges(List<Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY> ranges)
@@ -26,7 +46,7 @@ namespace Voron.Platform.Posix
                     // ignore this error.
                 }
             }
-        }
+        }        
 
         public override unsafe void TryPrefetchingWholeFile()
         {
@@ -63,46 +83,171 @@ namespace Voron.Platform.Posix
             PrefetchRanges(range);
         }
 
-        public override unsafe void MaybePrefetchMemory(Span<long> pagesToPrefetch)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int GetSegmentState(long segment)
+        {
+            if (segment < 0)
+                return AlreadyPrefetch;
+
+            byte value = this._prefetchTable[segment / 2];
+            if (segment % 2 == 0)
+            {
+                // The actual value is in the high byte.
+                value = (byte)(value >> EvenPrefetchMaskShift);
+            }
+            else
+            {
+                value = (byte)(value & OddPrefetchCountMask);
+            }
+
+            return value;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SetSegmentState(long segment, int state)
+        {
+            byte value = this._prefetchTable[segment / 2];
+            if (segment % 2 == 0)
+            {
+                // The actual value is in the high byte.
+                value = (byte)((value & OddPrefetchCountMask) | (state << EvenPrefetchMaskShift));
+            }
+            else
+            {
+                value = (byte)((value & EvenPrefetchCountMask) | state);
+            }
+
+            this._prefetchTable[segment / 2] = value;
+        }
+
+        private void ResetPrefetchTable()
+        {
+            this._refreshCounter = 0;
+
+            // We will zero out the whole table to reset the prefetching behavior. 
+            Array.Clear(this._prefetchTable, 0, this._prefetchTable.Length);
+        }
+
+        protected void InitializePrefetchTable(long totalAllocationSize)
+        {
+            long numberOfAllocatedSegments = (totalAllocationSize / _prefetchSegmentSize) + 1;
+            long expectedTableSize = (numberOfAllocatedSegments / 2) + 1;
+
+            if ( this._prefetchTable == null || numberOfAllocatedSegments != expectedTableSize)
+                this._prefetchTable = new byte[expectedTableSize];
+        }
+
+        public override unsafe void MaybePrefetchMemory<T>(T pagesToPrefetch)
         {
             if (PlatformDetails.CanPrefetch == false)
                 return; // not supported
 
-            if (pagesToPrefetch.Length == 0)
+
+            if (pagesToPrefetch.MoveNext() == false)
                 return;
 
-            long sizeToPrefetch = 4 * Constants.Storage.PageSize;
+            // PERF: We dont acquire pointer here to avoid all the overhead of doing so; instead we calculate the proper place based on 
+            //       base address from the pager.
+            byte* baseAddress = this._pagerState.MapBase;
 
-            long size = 0;
-            void* baseAddress = null;
-            var range = new List<Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY>(pagesToPrefetch.Length);
-            for (int i = 0; i < pagesToPrefetch.Length; i++)
+            const int StackSpace = 16;
+
+            int prefetchIdx = 0;
+            Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* toPrefetch = stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[StackSpace];
+
+            do
             {
-                var addressToPrefetch = pagesToPrefetch[i];
-                size += sizeToPrefetch;
+                long pageNumber = pagesToPrefetch.Current;
 
-                if (baseAddress == null)
-                    baseAddress = (void*)addressToPrefetch;
+                long segmentNumber = (pageNumber * Constants.Storage.PageSize) >> this._segmentShift;
 
-                if (i != pagesToPrefetch.Length - 1 && pagesToPrefetch[i + 1] == addressToPrefetch + sizeToPrefetch)
+                int segmentState = GetSegmentState(segmentNumber);
+                if (segmentState < AlreadyPrefetch)
                 {
-                    continue; // if adjacent ranges make one syscall
+                    // We update the current segment counter
+                    segmentState++;
+
+                    int previousSegmentState = GetSegmentState(segmentNumber - 1);
+                    if (previousSegmentState == AlreadyPrefetch)
+                    {
+                        segmentState = AlreadyPrefetch;
+                    }
+
+                    SetSegmentState(segmentNumber, segmentState);
+
+                    if (segmentState == AlreadyPrefetch)
+                    {
+                        // Prepare the segment information. 
+                        toPrefetch[prefetchIdx].NumberOfBytes = (IntPtr)_prefetchSegmentSize;
+                        toPrefetch[prefetchIdx].VirtualAddress = baseAddress + segmentNumber * _prefetchSegmentSize;
+                        prefetchIdx++;
+                        _refreshCounter++;
+
+                        if (prefetchIdx >= StackSpace)
+                        {
+                            // We dont have enough space, so we send the batch to the kernel
+                            PrefetchRanges(toPrefetch, StackSpace);
+                            prefetchIdx = 0;
+                        }
+                    }
                 }
-
-                range.Add(new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
-                {
-                    VirtualAddress = baseAddress,
-                    NumberOfBytes = new IntPtr(size)
-                });
-
-                size = 0;
-                baseAddress = null;
             }
-            PrefetchRanges(range);
+            while (pagesToPrefetch.MoveNext());
+
+            if (prefetchIdx != 0)
+            {
+                // We dont have enough space, so we send the batch to the kernel       
+                PrefetchRanges(toPrefetch, prefetchIdx);
+            }
+
+            if (_refreshCounter > _prefetchResetThreshold)
+                ResetPrefetchTable();
+        }
+
+        public override unsafe byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
+        {
+            // We need to decide what pager we are going to use right now or risk inconsistencies when performing prefetches from disk.
+            var state = pagerState ?? _pagerState;
+
+            if (PlatformDetails.CanPrefetch)
+            {
+                long segmentNumber = (pageNumber * Constants.Storage.PageSize) >> this._segmentShift;
+
+                int segmentState = GetSegmentState(segmentNumber);
+                if (segmentState < AlreadyPrefetch)
+                {
+                    // We update the current segment counter
+                    segmentState++;
+
+                    int previousSegmentState = GetSegmentState(segmentNumber - 1);
+                    if (previousSegmentState == AlreadyPrefetch)
+                    {
+                        segmentState = AlreadyPrefetch;
+                    }
+
+                    SetSegmentState(segmentNumber, segmentState);
+
+                    if (segmentState == AlreadyPrefetch)
+                    {
+                        Syscall.madvise(new IntPtr(state.MapBase), (UIntPtr)_prefetchSegmentSize, MAdvFlags.MADV_WILLNEED);
+                        _refreshCounter++;
+
+                        if (_refreshCounter > _prefetchResetThreshold)
+                            ResetPrefetchTable();
+                    }
+                }
+            }
+
+            return base.AcquirePagePointer(tx, pageNumber, state);
         }
 
         protected PosixAbstractPager(StorageEnvironmentOptions options, bool usePageProtection = false) : base(options, usePageProtection: usePageProtection)
         {
+            this._prefetchSegmentSize = 1 << this._segmentShift;
+            this._prefetchResetThreshold = (int)((float)options.PrefetchResetThreshold / this._prefetchSegmentSize);
+
+            Debug.Assert((_prefetchSegmentSize - 1) >> this._segmentShift == 0);
+            Debug.Assert(_prefetchSegmentSize >> this._segmentShift == 1);
         }
     }
 }
