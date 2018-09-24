@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -722,20 +723,57 @@ namespace Voron.Data.BTrees
                 throw new InvalidOperationException("Could not ensure that we have enough space, this is probably a bug");
         }
 
-        public long[] GetPagesReferencedBy()
+        public struct PagesReferencedEnumerator : IEnumerator<long>
         {
-            var results = new long[NumberOfEntries];
-            for (int i = 0; i < NumberOfEntries; i++)
+            private readonly TreePage _page;
+            private int _index;
+
+            public PagesReferencedEnumerator(TreePage treePage)
             {
-                var nodeOffset = KeysOffsets[i];
-                var nodeHeader = (TreeNodeHeader*)(Base + nodeOffset);
-                
-                // We use HasFlag instead because equality may fail if it comes with NewOnly applied.
-                if (nodeHeader->Flags.HasFlag(TreeNodeFlags.PageRef))
-                    results[i] = nodeHeader->PageNumber;
+                this._page = treePage;
+                this._index = 0;
+                this.Current = -1;
             }
 
-            return results;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool MoveNext()
+            {
+                // If the index is out of bounds, we are done. 
+                while (this._index < _page.NumberOfEntries)
+                {
+                    var nodeOffset = _page.KeysOffsets[this._index];
+                    var nodeHeader = (TreeNodeHeader*)(_page.Base + nodeOffset);
+
+                    // We increment the index
+                    this._index++;
+
+                    // We use HasFlag instead because equality may fail if it comes with NewOnly applied.
+                    if (nodeHeader->Flags.HasFlag(TreeNodeFlags.PageRef))
+                    {
+                        Current = nodeHeader->PageNumber;
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            public void Reset()
+            {
+                this._index = 0;
+            }
+
+            public long Current
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get;
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                private set;
+            }
+
+            object IEnumerator.Current => Current;
+
+            public void Dispose() {}
         }
     }
 }

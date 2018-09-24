@@ -453,7 +453,7 @@ namespace Voron.Impl.Paging
         }
 
         public abstract void TryPrefetchingWholeFile();
-        public abstract void MaybePrefetchMemory(Span<long> pagesToPrefetch);
+        public abstract void MaybePrefetchMemory<T>(T pagesToPrefetch) where T : struct, IEnumerator<long>;
 
         public virtual bool EnsureMapped(IPagerLevelTransactionState tx, long page, int numberOfPages)
         {

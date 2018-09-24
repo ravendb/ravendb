@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Binary;
 using Voron.Data.BTrees;
@@ -277,6 +279,58 @@ namespace Voron.Data.Tables
                                                 " but there are no values in the allocator section, invalid state.");
         }
 
+        private struct SectionsIterator : IEnumerator<long>
+        {
+            private readonly FixedSizeTree.IFixedSizeIterator _iterator;
+            private int _index;
+            private bool _isDone;
+
+            public SectionsIterator(FixedSizeTree.IFixedSizeIterator iterator)
+            {
+                this._iterator = iterator;
+                this._index = 0;
+                this._isDone = false;
+
+                this.Current = -1;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public bool MoveNext()
+            {
+                if (this._index >= NumberOfPagesInSection)
+                {
+                    this._isDone = !_iterator.MoveNext();
+                    if (_isDone)
+                        return false;
+
+                    this._index = 0;
+                    this.Current = _iterator.CurrentKey;
+                }
+                else
+                {
+                    this.Current = this._index + _iterator.CurrentKey;
+                    this._index++;                 
+                }
+                return true;
+            }
+
+            public void Reset()
+            {
+                throw new NotSupportedException($"{nameof(SectionsIterator)} does not support reset operations.");
+            }
+
+            public long Current
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get;
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                private set;
+            }
+
+            object IEnumerator.Current => Current;
+            public void Dispose() {}
+        }
+
         public static void MaybePrefetchSections(Tree parentTree, LowLevelTransaction llt)
         {
             var fst = parentTree.FixedTreeFor(AllocationStorage, valSize: BitmapSize);
@@ -288,20 +342,7 @@ namespace Voron.Data.Tables
                 if (it.Seek(long.MinValue) == false)
                     return;
 
-                var list = new long[(int)(fst.NumberOfEntries * NumberOfPagesInSection)];
-
-                int idx = 0;
-                do
-                {
-                    for (int i = 0; i < NumberOfPagesInSection; i++)
-                    {
-                        list[idx] = i + it.CurrentKey;
-                        idx++;
-                    }                    
-                }
-                while (it.MoveNext());
-
-                llt.Environment.Options.DataPager.MaybePrefetchMemory(list);
+                llt.Environment.Options.DataPager.MaybePrefetchMemory(new SectionsIterator(it));
             }
         }
 

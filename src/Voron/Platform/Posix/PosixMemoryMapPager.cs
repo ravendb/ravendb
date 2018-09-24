@@ -68,9 +68,10 @@ namespace Voron.Platform.Posix
 
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
 
+            InitializePrefetchTable(_totalAllocationSize);
+
             SetPagerState(CreatePagerState());
         }
-
 
         private long NearestSizeToPageSize(long size)
         {
@@ -132,6 +133,8 @@ namespace Voron.Platform.Posix
 
             _totalAllocationSize += allocationSize;
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
+
+            InitializePrefetchTable(_totalAllocationSize);
 
             return newPagerState;
         }

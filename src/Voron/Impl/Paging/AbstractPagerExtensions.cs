@@ -5,7 +5,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using Voron.Data;
 using Voron.Global;
-using Voron.Data.BTrees;
 
 namespace Voron.Impl.Paging
 {
