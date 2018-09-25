@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             // if script isn't empty and we have addAttachment() calls there we send DELETE doc command before sending transformation results (docs and attachments)
 
-            return string.IsNullOrEmpty(Transformation.Script);
+            return Transformation.IsEmptyScript;
         }
 
         protected override bool ShouldTrackCounters()
@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             // when load counter behavior functions are defined, otherwise counters are send on document updates
             // when addCounter() is called during transformation
 
-            return string.IsNullOrEmpty(Transformation.Script) || Transformation.CollectionToLoadCounterBehaviorFunction != null;
+            return Transformation.IsEmptyScript || Transformation.CollectionToLoadCounterBehaviorFunction != null;
         }
 
         protected override EtlTransformer<RavenEtlItem, ICommandData> GetTransformer(DocumentsOperationContext context)
@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         protected override bool ShouldFilterOutHiLoDocument()
         {
             // if we transfer all documents to the same collections (no script specified) then don't exclude HiLo docs
-            return string.IsNullOrEmpty(Transformation.Script) == false;
+            return Transformation.IsEmptyScript == false;
         }
 
         private static void ThrowTimeoutException(int numberOfCommands, Exception e)
