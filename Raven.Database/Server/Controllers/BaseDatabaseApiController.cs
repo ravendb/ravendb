@@ -565,7 +565,8 @@ namespace Raven.Database.Server.Controllers
                     Remark = "Using windows auth",
                     User = windowsPrincipal.Identity.Name,
                     IsAdminGlobal = windowsPrincipal.IsAdministrator("<system>") ||
-                                    windowsPrincipal.IsAdministrator(anonymousUserAccessMode)
+                                    windowsPrincipal.IsAdministrator(anonymousUserAccessMode),
+                    IsBackupOperator = windowsPrincipal.IsBackupOperator(anonymousUserAccessMode)
                 };
 
                 windowsUser.IsAdminCurrentDb = windowsUser.IsAdminGlobal || windowsPrincipal.IsAdministrator(Resource);
@@ -596,7 +597,8 @@ namespace Raven.Database.Server.Controllers
 
                     AdminDatabases = principalWithDatabaseAccess.AdminDatabases,
                     ReadOnlyDatabases = principalWithDatabaseAccess.ReadOnlyDatabases,
-                    ReadWriteDatabases = principalWithDatabaseAccess.ReadWriteDatabases
+                    ReadWriteDatabases = principalWithDatabaseAccess.ReadWriteDatabases,
+                    IsBackupOperator = principalWithDatabaseAccess.IsBackupOperator(anonymousUserAccessMode)
                 };
 
                 windowsUserWithDatabase.IsAdminCurrentDb = windowsUserWithDatabase.IsAdminGlobal || principalWithDatabaseAccess.IsAdministrator(Resource);
@@ -627,7 +629,8 @@ namespace Raven.Database.Server.Controllers
 
                     AdminDatabases = oAuthPrincipal.AdminDatabases,
                     ReadOnlyDatabases = oAuthPrincipal.ReadOnlyDatabases,
-                    ReadWriteDatabases = oAuthPrincipal.ReadWriteDatabases
+                    ReadWriteDatabases = oAuthPrincipal.ReadWriteDatabases,
+                    IsBackupOperator = oAuthPrincipal.IsBackupOperator(anonymousUserAccessMode)
                 };
 
                 return oAuth;
