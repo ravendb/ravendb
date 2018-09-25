@@ -101,16 +101,19 @@ class trafficWatch extends viewModelBase {
         return this.filteredTypeData.find(x => x.propertyName === item.Type && x.isChecked());
     }
 
-    filterOnClick(data: typeData):  void {
-        if (data.isChecked() === false) {
+    filterOnClick(data: typeData): void {
+        if (data.isChecked()) {
+            this.isSelectAllChecked(false);
+            data.isChecked(false);
+        } else {
             data.isChecked(true);
             if (this.filteredTypeData.filter(x => x.isChecked()).length === this.filteredTypeData.length)
                 this.isSelectAllChecked(true);
-        } else {
-            this.isSelectAllChecked(false);
-            data.isChecked(false);
         }
         this.filterEntries();
+        if (this.tailEnabled()) {
+            this.scrollDown();
+        }
     }
 
     toggleSelectAll(): void {
@@ -123,6 +126,9 @@ class trafficWatch extends viewModelBase {
             this.filteredTypeData.forEach(x => x.isChecked(true));
             this.isSelectAllChecked(true);
             this.filterEntries();
+        }
+        if (this.tailEnabled()) {
+            this.scrollDown();
         }
     }
 
@@ -157,25 +163,13 @@ class trafficWatch extends viewModelBase {
                 countForAvg++;
                 sum += item.ElapsedMilliseconds;
             }
-            
-            this.stats.min(this.formatMs(min));
-            this.stats.max(this.formatMs(max));
+            this.stats.min(generalUtils.formatTimeSpan(min, false));
+            this.stats.max(generalUtils.formatTimeSpan(max, false));
             this.stats.count(this.filteredData.length.toLocaleString());
 
-            const avg = countForAvg ? this.formatMs((sum * 1.0 / countForAvg)) : "n/a"; 
+            const avg = countForAvg ? generalUtils.formatTimeSpan((sum * 1.0 / countForAvg), false) : "n/a"; 
             this.stats.avg(avg);
         }
-    }
-
-    private formatMs(num: number): string {
-        let str:string;
-        if (num > 1000) {
-            num = num/1000;
-            str = num.toLocaleString() + "sec";
-        } else {
-            str = num.toLocaleString() + "ms";
-        }
-        return str;
     }
 
     compositionComplete() {
@@ -206,8 +200,8 @@ class trafficWatch extends viewModelBase {
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.DatabaseName, "Database Name", "8%", rowHighlightRules),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ElapsedMilliseconds, "Duration", "8%", rowHighlightRules),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.HttpMethod, "Method", "6%", rowHighlightRules),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.CustomInfo, "CustomInfo", "9%", rowHighlightRules),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.Type, "Type", "5%", rowHighlightRules),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.CustomInfo, "CustomInfo", "8%", rowHighlightRules),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.Type, "Type", "6%", rowHighlightRules),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.RequestUri, "URI", "35%", rowHighlightRules)
             ]
         );
