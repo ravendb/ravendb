@@ -43,11 +43,11 @@
         <div class="flex-separator"></div>
     <div class="btn-group dropdown-right">
         <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                title="Choose visible columns">
+                title="Choose visible types">
             <i class="icon-table"></i><span>Display</span>
             <span class="caret"></span>
         </button>
-        <ul class="dropdown-menu colselect-dropdown slidein-style" role="menu" data-bind="dropdownPanel: true">
+        <ul class="dropdown-menu slidein-style" role="menu" data-bind="dropdownPanel: true">
             <div class="columns-list-container flex-vertical">
                 <div class="flex-header">
                     <div class="checkbox">
@@ -58,12 +58,12 @@
                     </div>
                 </div>
                 <div class="flex-grow">
-                    <ul class="column-list scroll" data-bind="foreach: { data: filteredTypeData, as: 'item' }">
+                    <ul class="column-list scroll" data-bind="foreach: filteredTypeData">
                         <li>
                             <div class="column-name">
                                 <div class="checkbox">
-                                    <input class="styled" type="checkbox" data-bind="checked: isChecked(), attr: { id: 'id' + item.propertyName }, event: { change: $parent.filterOnClick.bind($parent, $data) }">
-                                    <label data-bind="text: propertyName, attr: { for: 'id' + item.propertyName }"></label>
+                                    <input class="styled" type="checkbox" data-bind="checked: isChecked(), attr: { id: 'typeId_' + propertyName }, event: { change: $parent.filterOnClick.bind($parent, $data) }">
+                                    <label data-bind="text: propertyName, attr: { for: 'typeId_' + propertyName }"></label>
                                 </div>
                             </div>
                         </li>
