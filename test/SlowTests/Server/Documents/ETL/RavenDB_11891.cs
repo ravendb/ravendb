@@ -1,34 +1,45 @@
 ﻿using System;
+using System.IO;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
-namespace SlowTests.Server.Documents.ETL.Raven
+namespace SlowTests.Server.Documents.ETL
 {
-    public class RavenDB_11515_Raven : EtlTestBase
+    public class RavenDB_11891 : EtlTestBase
     {
         [Fact]
-        public void Can_filter_out_deletions_of_documents()
+        public void Should_filter_out_deletions_using_generic_delete_behavior()
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", script:
-@"
-    loadToUsers(this);
-
-    function deleteDocumentsOfUsersBehavior(docId) {
-        return false;
+                AddEtl(src, dest, collections: new string[0], script:
+                    @"
+    
+    function deleteDocumentsBehavior(docId, collection) {
+        return 'Users' != collection; // false
     }
-");
+", applyToAllDocuments: true);
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
                 using (var session = src.OpenSession())
                 {
-                    session.Store(new User()
+                    var entity = new User()
                     {
                         Name = "Joe"
-                    }, "users/1");
+                    };
+                    session.Store(entity, "users/1");
+
+                    session.Advanced.Attachments.Store(entity, "photo", new MemoryStream(new byte[] { 1, 2, 3 }));
+
+                    session.CountersFor(entity).Increment("likes");
+
+                    session.Store(new Employee()
+                    {
+                        LastName = "Joe"
+                    }, "employees/1");
+
 
                     session.SaveChanges();
                 }
@@ -38,6 +49,40 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 using (var session = dest.OpenSession())
                 {
                     Assert.NotNull(session.Load<User>("users/1"));
+
+                    Assert.NotNull(session.Load<Employee>("employees/1"));
+                }
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.Advanced.Attachments.Delete("users/1", "photo");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromSeconds(30));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.True(session.Advanced.Attachments.Exists("users/1", "photo"));
+                }
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.CountersFor("users/1").Delete("likes");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromSeconds(30));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.Equal(1, session.CountersFor("users/1").Get("likes"));
                 }
 
                 etlDone.Reset();
@@ -45,34 +90,40 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 using (var session = src.OpenSession())
                 {
                     session.Delete("users/1");
+                    session.Delete("employees/1");
+
                     session.SaveChanges();
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                etlDone.Wait(TimeSpan.FromSeconds(30));
 
                 using (var session = dest.OpenSession())
                 {
                     Assert.NotNull(session.Load<User>("users/1"));
+                    Assert.True(session.Advanced.Attachments.Exists("users/1", "photo"));
+
+                    Assert.NotNull(session.Load<User>("employees/1"));
                 }
             }
         }
 
         [Fact]
-        public void Can_define_multiple_delete_behavior_functions()
+        public void Should_choose_more_specific_delete_behavior_function()
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, collections: new []{ "Users", "Employees"}, script:
+                AddEtl(src, dest, collections: new[] { "Users", "Employees" }, script:
                     @"
     loadToUsers(this);
 
-    function deleteDocumentsOfUsersBehavior(docId) {
+    function deleteDocumentsBehavior(docId, collection) {
+        
         return false;
     }
 
-function deleteDocumentsOfEmployeesBehavior(docId) {
-        return false;
+    function deleteDocumentsOfEmployeesBehavior(docId) {
+        return true;
     }
 ");
 
@@ -116,7 +167,7 @@ function deleteDocumentsOfEmployeesBehavior(docId) {
                 using (var session = dest.OpenSession())
                 {
                     Assert.NotNull(session.Load<User>("users/1"));
-                    Assert.NotEmpty(session.Advanced.LoadStartingWith<User>("employees/1"));
+                    Assert.Empty(session.Advanced.LoadStartingWith<User>("employees/1"));
                 }
             }
         }
