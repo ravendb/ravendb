@@ -207,12 +207,17 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                             if (_script.HasLoadCounterBehaviors && _script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out var function))
                             {
-                                foreach (var counter in GetCountersFor(Current))
+                                var counters = GetCountersFor(Current);
+
+                                if (counters != null && counters.Count > 0)
                                 {
-                                    using (var result = BehaviorsScript.Run(Context, Context, function, new object[] { item.DocumentId, counter.Name }))
+                                    foreach (var counter in counters)
                                     {
-                                        if (result.BooleanValue == true)
-                                            _currentRun.AddCounter(item.DocumentId, counter.Name, counter.Value);
+                                        using (var result = BehaviorsScript.Run(Context, Context, function, new object[] { item.DocumentId, counter.Name }))
+                                        {
+                                            if (result.BooleanValue == true)
+                                                _currentRun.AddCounter(item.DocumentId, counter.Name, counter.Value);
+                                        }
                                     }
                                 }
                             }
@@ -326,9 +331,17 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                             collection = Database.DocumentsStorage.ExtractCollectionName(Context, document.Data).Name;
                         }
 
-                        if (_script.TryGetDeleteDocumentBehaviorFunctionFor(collection, out var function))
+                        if (_script.TryGetDeleteDocumentBehaviorFunctionFor(collection, out var function) ||
+                            _script.TryGetDeleteDocumentBehaviorFunctionFor(Transformation.GenericDeleteDocumentsBehaviorFunctionKey, out function))
                         {
-                            using (var result = BehaviorsScript.Run(Context, Context, function, new object[] { documentId }))
+                            object[] parameters;
+
+                            if (Transformation.GenericDeleteDocumentsBehaviorFunctionName.Equals(function, StringComparison.OrdinalIgnoreCase))
+                                parameters = new object[] { documentId, collection };
+                            else
+                                parameters = new object[] { documentId };
+
+                            using (var result = BehaviorsScript.Run(Context, Context, function, parameters))
                             {
                                 if (result.BooleanValue == null || result.BooleanValue == false)
                                     return true;

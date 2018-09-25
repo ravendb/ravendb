@@ -22,6 +22,10 @@ namespace Raven.Client.Documents.Operations.ETL
 
         internal const string CounterMarker = "$counter/";
 
+        internal const string GenericDeleteDocumentsBehaviorFunctionKey = "$deleteDocumentsBehavior<>";
+        
+        internal const string GenericDeleteDocumentsBehaviorFunctionName = "deleteDocumentsBehavior";
+
         private static readonly Regex LoadToMethodRegex = new Regex($@"{LoadTo}(\w+)", RegexOptions.Compiled);
 
         private static readonly Regex LoadAttachmentMethodRegex = new Regex(LoadAttachment, RegexOptions.Compiled);
@@ -30,11 +34,13 @@ namespace Raven.Client.Documents.Operations.ETL
         private static readonly Regex LoadCounterMethodRegex = new Regex(LoadCounter, RegexOptions.Compiled);
         private static readonly Regex AddCounterMethodRegex = new Regex(AddCounter, RegexOptions.Compiled);
 
-        internal static readonly Regex LoadCountersBehaviorMethodRegex = new Regex(@"function\s+loadCountersOf(\w+)Behavior\s*\(.+\}", RegexOptions.Singleline);
+        internal static readonly Regex LoadCountersBehaviorMethodRegex = new Regex(@"function\s+loadCountersOf(\w+)Behavior\s*\(.+?\}", RegexOptions.Singleline);
         internal static readonly Regex LoadCountersBehaviorMethodNameRegex = new Regex(@"loadCountersOf(\w+)Behavior", RegexOptions.Singleline);
 
-        internal static readonly Regex DeleteDocumentsBehaviorMethodRegex = new Regex(@"function\s+deleteDocumentsOf(\w+)Behavior\s*\(.+\}", RegexOptions.Singleline);
+        internal static readonly Regex DeleteDocumentsBehaviorMethodRegex = new Regex(@"function\s+deleteDocumentsOf(\w+)Behavior\s*\(.+?\}", RegexOptions.Singleline);
         internal static readonly Regex DeleteDocumentsBehaviorMethodNameRegex = new Regex(@"deleteDocumentsOf(\w+)Behavior", RegexOptions.Singleline);
+
+        internal static readonly Regex GenericDeleteDocumentsBehaviorMethodRegex = new Regex(@"function\s+" + GenericDeleteDocumentsBehaviorFunctionName + @"\(.+?\}", RegexOptions.Singleline);
 
         private static readonly Regex Legacy_ReplicateToMethodRegex = new Regex(@"replicateTo(\w+)", RegexOptions.Compiled);
 
@@ -185,6 +191,28 @@ namespace Raven.Client.Documents.Operations.ETL
                     }
                 }
 
+                var genericDeleteBehavior = GenericDeleteDocumentsBehaviorMethodRegex.Matches(Script);
+
+                if (genericDeleteBehavior.Count > 0)
+                {
+                    if (type == EtlType.Sql)
+                    {
+                        errors.Add("Delete documents behavior functions aren't supported by SQL ETL");
+                    }
+                    else
+                    {
+                        if (genericDeleteBehavior.Count > 1)
+                            errors.Add("Generic delete behavior function can be defined just once in the script");
+                        else
+                        {
+                            if (CollectionToDeleteDocumentsBehaviorFunction == null)
+                                CollectionToDeleteDocumentsBehaviorFunction = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                            CollectionToDeleteDocumentsBehaviorFunction[GenericDeleteDocumentsBehaviorFunctionKey] = GenericDeleteDocumentsBehaviorFunctionName;
+                        }
+                    }
+                }
+
                 var collections = GetCollectionsFromScript();
 
                 if (collections == null || collections.Length == 0)
@@ -199,6 +227,11 @@ namespace Raven.Client.Documents.Operations.ETL
                         {
                             actualScript = actualScript.Replace(deleteBehaviors[i].Value, string.Empty);
                         }
+                    }
+
+                    if (genericDeleteBehavior.Count == 1)
+                    {
+                        actualScript = actualScript.Replace(genericDeleteBehavior[0].Value, string.Empty);
                     }
 
                     if (string.IsNullOrWhiteSpace(actualScript) == false)

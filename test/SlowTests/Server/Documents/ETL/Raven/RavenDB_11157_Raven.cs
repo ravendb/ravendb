@@ -1059,5 +1059,81 @@ function loadCountersOfUsersBehavior(docId, counter)
                 }
             }
         }
+
+        [Fact]
+        public void Can_define_multiple_load_counter_behavior_functions()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                AddEtl(src, dest, collections: new[] { "Users", "Employees" }, script:
+                    @"
+
+    var collection = this['@metadata']['@collection'];
+
+    if (collection == 'Users')
+        loadToUsers(this);
+    else if (collection == 'Employees')
+        loadToEmployees(this);
+
+    function loadCountersOfUsersBehavior(doc, counter)
+    {
+        return true;
+    }
+
+    function loadCountersOfEmployeesBehavior(doc, counter)
+    {
+        return true;
+    }
+");
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        LastName = "Joe"
+                    }, "users/1");
+
+                    session.CountersFor("users/1").Increment("likes");
+
+                    session.Store(new Employee()
+                    {
+                        LastName = "Joe"
+                    }, "employees/1");
+
+                    session.CountersFor("employees/1").Increment("likes");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.Equal(1, session.CountersFor("users/1").Get("likes"));
+                    Assert.Equal(1, session.CountersFor("employees/1").Get("likes"));
+                }
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.CountersFor("users/1").Increment("likes");
+                    session.CountersFor("employees/1").Increment("likes");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.Equal(2, session.CountersFor("users/1").Get("likes"));
+                    Assert.Equal(2, session.CountersFor("employees/1").Get("likes"));
+                }
+            }
+        }
     }
 }
