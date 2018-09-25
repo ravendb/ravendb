@@ -39,6 +39,8 @@ namespace Raven.Abstractions.Data
         /// Return the access token body.
         /// </summary>
         public AccessTokenBody AccessTokenBody { get; set; }
+
+        public bool IsBackupOperator { get; set; }
     }
 
     public class DatabaseInfo
