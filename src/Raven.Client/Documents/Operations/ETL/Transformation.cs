@@ -50,6 +50,8 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public string Script { get; set; }
 
+        internal bool IsEmptyScript { get; set; }
+
         internal Dictionary<string, string> CollectionToLoadCounterBehaviorFunction { get; private set; }
 
         internal Dictionary<string, string> CollectionToDeleteDocumentsBehaviorFunction { get; private set; }
@@ -79,29 +81,8 @@ namespace Raven.Client.Documents.Operations.ETL
                     errors.Add($"{nameof(Collections)} need be specified or {nameof(ApplyToAllDocuments)} has to be set. Script name: '{Name}'");
             }
 
-            if (string.IsNullOrEmpty(Script) == false)
+            if (string.IsNullOrWhiteSpace(Script) == false)
             {
-                var collections = GetCollectionsFromScript();
-
-                if (collections == null || collections.Length == 0)
-                {
-                    string targetName;
-                    switch (type)
-                    {
-                        case EtlType.Raven:
-                            targetName = "Collection";
-                            break;
-                        case EtlType.Sql:
-                            targetName = "Table";
-                            break;
-                        default:
-                            throw new ArgumentException($"Unknown ETL type: {type}");
-
-                    }
-
-                    errors.Add($"No `loadTo<{targetName}Name>()` method call found in '{Name}' script");
-                }
-
                 if (Legacy_ReplicateToMethodRegex.Matches(Script).Count > 0)
                 {
                     errors.Add($"Found `replicateTo<TableName>()` method in '{Name}' script which is not supported. " +
@@ -203,6 +184,50 @@ namespace Raven.Client.Documents.Operations.ETL
                         }
                     }
                 }
+
+                var collections = GetCollectionsFromScript();
+
+                if (collections == null || collections.Length == 0)
+                {
+                    var actualScript = Script;
+
+                    if (deleteBehaviors.Count > 0)
+                    {
+                        // let's skip all delete behavior functions to check if we have empty transformation
+
+                        for (int i = 0; i < deleteBehaviors.Count; i++)
+                        {
+                            actualScript = actualScript.Replace(deleteBehaviors[i].Value, string.Empty);
+                        }
+                    }
+
+                    if (string.IsNullOrWhiteSpace(actualScript) == false)
+                    {
+                        string targetName;
+                        switch (type)
+                        {
+                            case EtlType.Raven:
+                                targetName = "Collection";
+                                break;
+                            case EtlType.Sql:
+                                targetName = "Table";
+                                break;
+                            default:
+                                throw new ArgumentException($"Unknown ETL type: {type}");
+
+                        }
+
+                        errors.Add($"No `loadTo<{targetName}Name>()` method call found in '{Name}' script");
+                    }
+                    else
+                    {
+                        IsEmptyScript = true;
+                    }
+                }
+            }
+            else
+            {
+                IsEmptyScript = true;
             }
 
             return errors.Count == 0;

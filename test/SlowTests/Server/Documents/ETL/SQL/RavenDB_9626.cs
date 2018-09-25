@@ -38,9 +38,9 @@ namespace SlowTests.Server.Documents.ETL.SQL
 
             Assert.Equal(2, errors.Count);
 
-            Assert.Equal("No `loadTo<TableName>()` method call found in 'test' script", errors[0]);
+            Assert.Equal("No `loadTo<TableName>()` method call found in 'test' script", errors[1]);
             Assert.Equal("Found `replicateTo<TableName>()` method in 'test' script which is not supported. " +
-                         "If you are using the SQL replication script from RavenDB 3.x version then please use `loadTo<TableName>()` instead.", errors[1]);
+                         "If you are using the SQL replication script from RavenDB 3.x version then please use `loadTo<TableName>()` instead.", errors[0]);
 
         }
     }

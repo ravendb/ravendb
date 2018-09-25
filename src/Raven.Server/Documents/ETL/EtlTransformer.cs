@@ -38,6 +38,9 @@ namespace Raven.Server.Documents.ETL
 
         public virtual void Initialize(bool debugMode)
         {
+            if (_behaviorFunctions != null)
+                _behaviorFunctionsRun = Database.Scripts.GetScriptRunner(_behaviorFunctions, true, out BehaviorsScript);
+
             _returnMainRun = Database.Scripts.GetScriptRunner(_mainScript, true, out DocumentScript);
             if (DocumentScript == null)
                 return;
@@ -65,9 +68,6 @@ namespace Raven.Server.Documents.ETL
             DocumentScript.ScriptEngine.SetValue("getCounters", new ClrFunctionInstance(DocumentScript.ScriptEngine, GetCounters));
 
             DocumentScript.ScriptEngine.SetValue("hasCounter", new ClrFunctionInstance(DocumentScript.ScriptEngine, HasCounter));
-
-            if (_behaviorFunctions != null)
-                _behaviorFunctionsRun = Database.Scripts.GetScriptRunner(_behaviorFunctions, true, out BehaviorsScript);
         }
 
         private JsValue LoadToFunctionTranslator(JsValue self, JsValue[] args)
