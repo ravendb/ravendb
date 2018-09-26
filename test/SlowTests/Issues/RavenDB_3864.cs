@@ -49,7 +49,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void can_use_conventions_with_create_indexes_async()
+        public async Task can_use_conventions_with_create_indexes_async()
         {
             using (var store = CreateDocumentStore())
             {
@@ -59,7 +59,7 @@ namespace SlowTests.Issues
                     new CustomIdWithNameInIndexCreationTask()
                 };
 
-                store.ExecuteIndexesAsync(list);
+                await store.ExecuteIndexesAsync(list);
                 Assert.True(TestFailed.Value == false);
             }
         }
