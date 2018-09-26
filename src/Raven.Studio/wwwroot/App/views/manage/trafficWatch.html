@@ -14,6 +14,10 @@
         <div>
             <input class="form-control" placeholder="Filter" data-bind="textInput: filter">
         </div>
+        <div class="btn-group">
+            <select id="visibleIndexesSelector" size="5" multiple="multiple"
+                    data-bind="options: filteredTypeData, selectedOptions: selectedTypeNames, optionsText: 'propertyName', optionsValue: 'propertyName'"></select>
+        </div>
         <div class="flex-end text-muted">
             <div class="text-center"><small>Requests:</small></div>
             <div class="text-center">
@@ -41,37 +45,6 @@
     </div>
     <div class="flex-horizontal flex-noshrink">
         <div class="flex-separator"></div>
-    <div class="btn-group dropdown-right">
-        <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                title="Choose visible types">
-            <i class="icon-table"></i><span>Display</span>
-            <span class="caret"></span>
-        </button>
-        <ul class="dropdown-menu slidein-style" role="menu" data-bind="dropdownPanel: true">
-            <div class="columns-list-container flex-vertical">
-                <div class="flex-header">
-                    <div class="checkbox">
-                        <input type="checkbox" id="select_all" class="styled" data-bind="checked: isSelectAllChecked, event: { change: toggleSelectAll }">
-                        <label for="select_all">
-                            Select All
-                        </label>
-                    </div>
-                </div>
-                <div class="flex-grow">
-                    <ul class="column-list scroll" data-bind="foreach: filteredTypeData">
-                        <li>
-                            <div class="column-name">
-                                <div class="checkbox">
-                                    <input class="styled" type="checkbox" data-bind="checked: isChecked(), attr: { id: 'typeId_' + propertyName }, event: { change: $parent.filterOnClick.bind($parent, $data) }">
-                                    <label data-bind="text: propertyName, attr: { for: 'typeId_' + propertyName }"></label>
-                                </div>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </ul>
-    </div>
         <div class="btn-group">
             <button class="btn btn-sm btn-info btn-checkable" data-bind="click: toggleTail, css: { active: tailEnabled }">
                 <i class="icon-logs"></i> <span>Monitoring (tail -f)</span>
@@ -82,7 +55,6 @@
             </button>
         </div>
     </div>
-
     <div class="flex-grow">
         <div class="has-error results-error" data-bind="visible: isBufferFull">
             <div class="help-block">

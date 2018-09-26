@@ -111,7 +111,8 @@ namespace Raven.Server.Documents.Handlers
                 else
                     await GetDocumentsAsync(context, metadataOnly);
 
-
+                if (TrafficWatchManager.HasRegisteredClients)
+                    AddStringToHttpContext(ids.ToString(), TrafficWatchChangeType.Documents);
             }
         }
 
