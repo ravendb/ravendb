@@ -200,6 +200,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         : MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
 
                 var memInfo = MemoryInformation.GetMemInfoUsingOneTimeSmapsReader();
+                var memoryUsageRecords = MemoryInformation.GetMemoryUsageRecords();
 
                 long totalMapping = 0;
                 var fileMappingByDir = new Dictionary<string, Dictionary<string, ConcurrentDictionary<IntPtr, long>>>();
@@ -213,8 +214,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         value = new Dictionary<string, ConcurrentDictionary<IntPtr, long>>();
                         fileMappingByDir[dir] = value;
                     }
-                    value[mapping.Key] = mapping.Value;
-                    foreach (var singleMapping in mapping.Value)
+                    value[mapping.Key] = mapping.Value.Value.Info;
+                    foreach (var singleMapping in mapping.Value.Value.Info)
                     {
                         fileMappingSizesByDir.TryGetValue(dir, out long prevSize);
                         fileMappingSizesByDir[dir] = prevSize + singleMapping.Value;
@@ -306,6 +307,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     threads.Add(groupStats);
                 }
                 var managedMemory = GC.GetTotalMemory(false);
+
                 var djv = new DynamicJsonValue
                 {
                     [nameof(MemoryInfo.WorkingSet)] = workingSet,
@@ -314,12 +316,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     [nameof(MemoryInfo.TotalMemoryMapped)] = totalMapping,
                     [nameof(MemoryInfo.PhysicalMem)] = Size.Humane(memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes)),
                     [nameof(MemoryInfo.FreeMem)] = Size.Humane(memInfo.AvailableWithoutTotalCleanMemory.GetValue(SizeUnit.Bytes)),
-                    [nameof(MemoryInfo.HighMemLastOneMinute)] = Size.Humane(memInfo.MemoryUsageRecords.High.LastOneMinute.GetValue(SizeUnit.Bytes)),
-                    [nameof(MemoryInfo.LowMemLastOneMinute)] = Size.Humane(memInfo.MemoryUsageRecords.Low.LastOneMinute.GetValue(SizeUnit.Bytes)),
-                    [nameof(MemoryInfo.HighMemLastFiveMinute)] = Size.Humane(memInfo.MemoryUsageRecords.High.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
-                    [nameof(MemoryInfo.LowMemLastFiveMinute)] = Size.Humane(memInfo.MemoryUsageRecords.Low.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
-                    [nameof(MemoryInfo.HighMemSinceStartup)] = Size.Humane(memInfo.MemoryUsageRecords.High.SinceStartup.GetValue(SizeUnit.Bytes)),
-                    [nameof(MemoryInfo.LowMemSinceStartup)] = Size.Humane(memInfo.MemoryUsageRecords.Low.SinceStartup.GetValue(SizeUnit.Bytes)),
+                    [nameof(MemoryInfo.HighMemLastOneMinute)] = Size.Humane(memoryUsageRecords.High.LastOneMinute.GetValue(SizeUnit.Bytes)),
+                    [nameof(MemoryInfo.LowMemLastOneMinute)] = Size.Humane(memoryUsageRecords.Low.LastOneMinute.GetValue(SizeUnit.Bytes)),
+                    [nameof(MemoryInfo.HighMemLastFiveMinute)] = Size.Humane(memoryUsageRecords.High.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
+                    [nameof(MemoryInfo.LowMemLastFiveMinute)] = Size.Humane(memoryUsageRecords.Low.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
+                    [nameof(MemoryInfo.HighMemSinceStartup)] = Size.Humane(memoryUsageRecords.High.SinceStartup.GetValue(SizeUnit.Bytes)),
+                    [nameof(MemoryInfo.LowMemSinceStartup)] = Size.Humane(memoryUsageRecords.Low.SinceStartup.GetValue(SizeUnit.Bytes)),
 
                     [nameof(MemoryInfo.Humane)] = new DynamicJsonValue
                     {
