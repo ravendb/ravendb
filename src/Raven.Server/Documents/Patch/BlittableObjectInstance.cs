@@ -126,9 +126,15 @@ namespace Raven.Server.Documents.Patch
                         }
                         else if (values.Length == 1)
                         {
-                            _value = fieldType.IsJson
-                                ? new JsonParser(_parent.Engine).Parse(values[0])
-                                : values[0];
+                            if (fieldType.IsJson)
+                            {
+                                BlittableJsonReaderObject valueAsBlittable = parent.Blittable._context.ReadForMemory(values[0], property);
+                                _value = TranslateToJs(_parent, property, BlittableJsonToken.StartObject, valueAsBlittable);
+                            }
+                            else
+                            {
+                                _value = values[0];
+                            }                            
                         }
                         else
                         {
