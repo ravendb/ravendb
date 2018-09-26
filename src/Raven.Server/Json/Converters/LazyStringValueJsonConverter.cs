@@ -1,9 +1,9 @@
-﻿using System;
-using System.Runtime.Serialization;
+﻿using System.Runtime.Serialization;
 using Newtonsoft.Json;
+using Raven.Client.Json;
 using Sparrow.Json;
 
-namespace Raven.Client.Json.Converters
+namespace Raven.Server.Json.Converters
 {
     internal sealed class LazyStringValueJsonConverter : RavenTypeJsonConverter<LazyStringValue>
     {
@@ -21,7 +21,7 @@ namespace Raven.Client.Json.Converters
             //Todo It will be better to change the reader to set the value as LazyStringValue 
             if (!(reader.Value is string strValue))
             {
-                throw new SerializationException($"Try to read {nameof(LazyStringValue)} from {reader.Value.GetType()}. Should be string here");
+                throw new SerializationException($"Try to read {nameof(LazyStringValue)} from {reader.Value?.GetType()}. Should be string here");
             }
 
             return reader.Context.GetLazyString(strValue);

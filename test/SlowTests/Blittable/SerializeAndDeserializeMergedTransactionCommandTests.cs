@@ -8,7 +8,7 @@ using FastTests.Voron.Util;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
+using Raven.Server.Json.Converters;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Patch;

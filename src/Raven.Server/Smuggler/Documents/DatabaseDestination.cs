@@ -665,7 +665,10 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     IsRevision = IsRevision
                 };
-                Documents.ForEach(d => command.Add(d));
+                foreach (var document in Documents)
+                {
+                    command.Add(document);
+                }
 
                 return command;
             }

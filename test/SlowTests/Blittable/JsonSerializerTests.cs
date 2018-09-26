@@ -7,8 +7,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
-using Raven.Server.Documents.Handlers;
+using Raven.Server.Json.Converters;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -173,37 +172,6 @@ namespace SlowTests.Blittable
                 }
 
                 Assert.Equal(expected, actual);
-            }
-        }
-
-        [Fact]
-        public void JsonDeserialize_WhenHasPrivateReadOnlyField_ShouldResultInCommandWithTheField()
-        {
-            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                Command actual;
-                const int expected = 32;
-                using (var writer = new BlittableJsonWriter(context))
-                {
-                    var jsonSerializer = new JsonSerializer
-                    {
-                        ContractResolver = new DefaultRavenContractResolver(),
-                    };
-
-                    var command = new Command(id: expected);
-                    jsonSerializer.Serialize(writer, command);
-                    writer.FinalizeDocument();
-
-                    var toDeseialize = writer.CreateReader();
-
-                    using (var reader = new BlittableJsonReader(context))
-                    {
-                        reader.Init(toDeseialize);
-                        actual = jsonSerializer.Deserialize<Command>(reader);
-                    }
-                }
-
-                Assert.Equal(expected, actual.GetId());
             }
         }
 
