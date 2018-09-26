@@ -1000,16 +1000,17 @@ namespace Raven.Server.Documents.Handlers
                     continue;
                 }
 
-                ParsedCommands[i].PatchCommand = new PatchDocumentCommand(context, 
-                    ParsedCommands[i].Id, 
-                    ParsedCommands[i].ChangeVector,
-                    false,
-                    (ParsedCommands[i].Patch, ParsedCommands[i].PatchArgs),
-                    (ParsedCommands[i].PatchIfMissing, ParsedCommands[i].PatchIfMissingArgs),
-                    database,
-                    false,
-                    false,
-                    true
+                ParsedCommands[i].PatchCommand = new PatchDocumentCommand(
+                    context: context, 
+                    id: ParsedCommands[i].Id, 
+                    expectedChangeVector: ParsedCommands[i].ChangeVector,
+                    skipPatchIfChangeVectorMismatch: false,
+                    patch: (ParsedCommands[i].Patch, ParsedCommands[i].PatchArgs),
+                    patchIfMissing: (ParsedCommands[i].PatchIfMissing, ParsedCommands[i].PatchIfMissingArgs),
+                    database: database,
+                    isTest: false,
+                    debugMode: false,
+                    collectResultsNeeded: true
                 );
             }
 

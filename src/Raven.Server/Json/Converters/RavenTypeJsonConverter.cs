@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
+using Raven.Client.Json;
+using Raven.Client.Json.Converters;
 
-namespace Raven.Client.Json.Converters
+namespace Raven.Server.Json.Converters
 {
     internal abstract class RavenTypeJsonConverter<T> : RavenJsonConverter
     {
@@ -16,7 +18,7 @@ namespace Raven.Client.Json.Converters
 
             if (!(value is T tValue))
             {
-                throw new SerializationException($"Try to write {value.GetType()} with {GetType().Name}. The converter should be used only for {nameof(T)}");
+                throw new SerializationException($"Try to write {value?.GetType()} with {GetType().Name}. The converter should be used only for {nameof(T)}");
             }
 
             WriteJson(blittableJsonWriter, tValue, serializer);

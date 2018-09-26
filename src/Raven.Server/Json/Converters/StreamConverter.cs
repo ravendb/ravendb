@@ -1,12 +1,11 @@
 ﻿using System;
 using System.IO;
-using System.Reflection;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Raven.Client.Extensions.Streams;
-using Sparrow.Json;
+using Raven.Client.Json;
 
-namespace Raven.Client.Json.Converters
+namespace Raven.Server.Json.Converters
 {
     internal sealed class StreamConverter : RavenTypeJsonConverter<Stream>
     {
@@ -32,7 +31,7 @@ namespace Raven.Client.Json.Converters
         {
             if (!(blittableReader.Value is string strValue))
             {
-                throw new SerializationException($"Try to read {nameof(Stream)} from {blittableReader.Value.GetType()}. Should be string here");
+                throw new SerializationException($"Try to read {nameof(Stream)} from {blittableReader.Value?.GetType()}. Should be string here");
             }
 
             var buffer = Convert.FromBase64String(strValue);

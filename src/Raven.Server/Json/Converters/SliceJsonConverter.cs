@@ -31,7 +31,7 @@ namespace Raven.Server.Json.Converters
         {
             if (!(reader.Value is string strValue))
             {
-                throw new SerializationException($"Try to read {nameof(Slice)} from {reader.Value.GetType()}. Should be string here");
+                throw new SerializationException($"Try to read {nameof(Slice)} from {reader.Value?.GetType()}. Should be string here");
             }
 
             if (!(reader.Context is DocumentsOperationContext context))

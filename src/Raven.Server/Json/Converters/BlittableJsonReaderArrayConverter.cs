@@ -1,9 +1,9 @@
-﻿using System;
-using System.Runtime.Serialization;
+﻿using System.Runtime.Serialization;
 using Newtonsoft.Json;
+using Raven.Client.Json;
 using Sparrow.Json;
 
-namespace Raven.Client.Json.Converters
+namespace Raven.Server.Json.Converters
 {
     internal sealed class BlittableJsonReaderArrayConverter : RavenTypeJsonConverter<BlittableJsonReaderArray>
     {
@@ -26,10 +26,11 @@ namespace Raven.Client.Json.Converters
             if (!(blittableReader.Value is BlittableJsonReaderArray blittableArrayValue))
             {
                 throw new SerializationException(
-                    $"Can't convert {blittableReader.Value.GetType()} type to {nameof(BlittableJsonReaderArray)}. The value must to be an array");
+                    $"Can't convert {blittableReader.Value?.GetType()} type to {nameof(BlittableJsonReaderArray)}. The value must to be an array");
             }
-            
-            //Skip in order to prevent unnecessary movement inside the blittable array
+
+            //Because the value that return is the blittable array as a whole
+            //we skip the reading inside this blittable array
             blittableReader.SkipBlittableArrayInside();
 
             return

@@ -131,14 +131,9 @@ namespace Raven.Client.Documents.Conventions
         {
             if (info is EventInfo)
                 return true;
-            if (info is FieldInfo fieldInfo)
-            {
-                if (false == fieldInfo.IsPublic &&
-                    false == fieldInfo.CustomAttributes.Any(a => a.AttributeType == typeof(JsonPropertyAttribute)))
-                {
-                    return true;
-                }
-            }
+            var fieldInfo = info as FieldInfo;
+            if (fieldInfo != null && !fieldInfo.IsPublic)
+                return true;
             return info.GetCustomAttributes(typeof(CompilerGeneratedAttribute), true).Any();
         }
     }
