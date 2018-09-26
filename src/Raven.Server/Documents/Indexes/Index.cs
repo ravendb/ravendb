@@ -1942,7 +1942,7 @@ namespace Raven.Server.Documents.Indexes
 
                 if (isIndexPath || isTempPath)
                 {
-                    foreach (var singleMapping in mapping.Value)
+                    foreach (var singleMapping in mapping.Value.Value.Info)
                         totalSize += singleMapping.Value;
                 }
             }
