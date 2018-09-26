@@ -9,6 +9,7 @@ using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Lucene.Net.Store;
 using Raven.Server.Documents.Queries.Results;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
@@ -94,7 +95,33 @@ namespace Raven.Server.Documents.Patch
                         var values = _parent.LuceneDocument.GetValues(property, _parent.LuceneState);
                         if (fieldType.IsArray)
                         {
-                            _value = JsValue.FromObject(_parent.Engine, values);
+                            // here we need to perform a manipulation in order to generate the object from the
+                            // data
+                            if (fieldType.IsJson)
+                            {                             
+                                Lucene.Net.Documents.Field[] propertyFields = _parent.LuceneDocument.GetFields(property);
+
+                                JsValue[] arrayItems = 
+                                    new JsValue[propertyFields.Length];
+
+                                for (int i = 0; i < propertyFields.Length; i++)
+                                {
+                                    var field = propertyFields[i];
+                                    var stringValue = field.StringValue(parent.LuceneState);
+                                    
+                                    var maxByteSize = Encodings.Utf8.GetByteCount(stringValue);
+                                    var itemAsBlittable = parent.Blittable._context.ReadForMemory(stringValue, field.Name);
+
+                                    arrayItems[i] = TranslateToJs(_parent, field.Name, BlittableJsonToken.StartObject, itemAsBlittable);
+                                }
+
+                                _value = JsValue.FromObject(_parent.Engine, arrayItems);
+                            }
+                            else
+                            {
+                                _value = JsValue.FromObject(_parent.Engine, values);
+                            }
+
                         }
                         else if (values.Length == 1)
                         {
