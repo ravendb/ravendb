@@ -321,10 +321,8 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (fieldType.IsJson == false)
                 return stringValue;
-
-            var bytes = Encodings.Utf8.GetBytes(stringValue);
-            var ms = new MemoryStream(bytes);
-            return context.ReadForMemory(ms, field.Name);
+            
+            return context.ReadForMemory(stringValue, field.Name);
         }
 
         private static void ThrowBinaryValuesNotSupported()
