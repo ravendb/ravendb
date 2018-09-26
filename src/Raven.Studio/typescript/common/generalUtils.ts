@@ -78,8 +78,13 @@ class genUtils {
             timeTokens.length = desiredAccuracy;
         }
 
-        if (timeTokens.length === 0 && skipSecondsAndMilliseconds) {
-            timeTokens.push("less than a minute");
+        if (timeTokens.length === 0) {
+            if (skipSecondsAndMilliseconds) {
+                timeTokens.push("less than a minute");    
+            } else {
+                timeTokens.push("0 ms");
+            }
+            
         }
 
         return timeTokens.join(" ");
@@ -228,7 +233,7 @@ class genUtils {
             return (document as any).selection.createRange().text;
         }
         return '';
-    }​
+    }
     
     /***  String Methods ***/
 
