@@ -48,23 +48,7 @@ namespace Sparrow.LowMemory
             TotalPhysicalMemory = new Size(256, SizeUnit.Megabytes),
             TotalCommittableMemory = new Size(384, SizeUnit.Megabytes),// also include "page file"
             CurrentCommitCharge = new Size(256, SizeUnit.Megabytes),
-            InstalledMemory = new Size(256, SizeUnit.Megabytes),
-            MemoryUsageRecords =
-            new MemoryInfoResult.MemoryUsageLowHigh
-            {
-                High = new MemoryInfoResult.MemoryUsageIntervals
-                {
-                    LastFiveMinutes = new Size(0, SizeUnit.Bytes),
-                    LastOneMinute = new Size(0, SizeUnit.Bytes),
-                    SinceStartup = new Size(0, SizeUnit.Bytes)
-                },
-                Low = new MemoryInfoResult.MemoryUsageIntervals
-                {
-                    LastFiveMinutes = new Size(0, SizeUnit.Bytes),
-                    LastOneMinute = new Size(0, SizeUnit.Bytes),
-                    SinceStartup = new Size(0, SizeUnit.Bytes)
-                }
-            }
+            InstalledMemory = new Size(256, SizeUnit.Megabytes)
         };
 
         [StructLayout(LayoutKind.Sequential)]
@@ -326,22 +310,7 @@ namespace Sparrow.LowMemory
                 AvailableWithoutTotalCleanMemory = availableWithoutTotalCleanMemory,
                 SharedCleanMemory = sharedCleanMemory,
                 TotalPhysicalMemory = totalPhysicalMemory,
-                InstalledMemory = totalPhysicalMemory,
-                MemoryUsageRecords = new MemoryInfoResult.MemoryUsageLowHigh
-                {
-                    High = new MemoryInfoResult.MemoryUsageIntervals
-                    {
-                        LastOneMinute = new Size(HighLastOneMinute, SizeUnit.Bytes),
-                        LastFiveMinutes = new Size(HighLastFiveMinutes, SizeUnit.Bytes),
-                        SinceStartup = new Size(HighSinceStartup, SizeUnit.Bytes)
-                    },
-                    Low = new MemoryInfoResult.MemoryUsageIntervals
-                    {
-                        LastOneMinute = new Size(LowLastOneMinute, SizeUnit.Bytes),
-                        LastFiveMinutes = new Size(LowLastFiveMinutes, SizeUnit.Bytes),
-                        SinceStartup = new Size(LowSinceStartup, SizeUnit.Bytes)
-                    }
-                }
+                InstalledMemory = totalPhysicalMemory
             };
         }
 
@@ -438,20 +407,24 @@ namespace Sparrow.LowMemory
                 InstalledMemory = fetchedInstalledMemory ?
                     new Size(installedMemoryInKb, SizeUnit.Kilobytes) :
                     new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
-                MemoryUsageRecords = new MemoryInfoResult.MemoryUsageLowHigh
+            };
+        }
+
+        public static MemoryInfoResult.MemoryUsageLowHigh GetMemoryUsageRecords()
+        {
+            return new MemoryInfoResult.MemoryUsageLowHigh
+            {
+                High = new MemoryInfoResult.MemoryUsageIntervals
                 {
-                    High = new MemoryInfoResult.MemoryUsageIntervals
-                    {
-                        LastOneMinute = new Size(HighLastOneMinute, SizeUnit.Bytes),
-                        LastFiveMinutes = new Size(HighLastFiveMinutes, SizeUnit.Bytes),
-                        SinceStartup = new Size(HighSinceStartup, SizeUnit.Bytes)
-                    },
-                    Low = new MemoryInfoResult.MemoryUsageIntervals
-                    {
-                        LastOneMinute = new Size(LowLastOneMinute, SizeUnit.Bytes),
-                        LastFiveMinutes = new Size(LowLastFiveMinutes, SizeUnit.Bytes),
-                        SinceStartup = new Size(LowSinceStartup, SizeUnit.Bytes)
-                    }
+                    LastOneMinute = new Size(HighLastOneMinute, SizeUnit.Bytes),
+                    LastFiveMinutes = new Size(HighLastFiveMinutes, SizeUnit.Bytes),
+                    SinceStartup = new Size(HighSinceStartup, SizeUnit.Bytes)
+                },
+                Low = new MemoryInfoResult.MemoryUsageIntervals
+                {
+                    LastOneMinute = new Size(LowLastOneMinute, SizeUnit.Bytes),
+                    LastFiveMinutes = new Size(LowLastFiveMinutes, SizeUnit.Bytes),
+                    SinceStartup = new Size(LowSinceStartup, SizeUnit.Bytes)
                 }
             };
         }
@@ -475,14 +448,15 @@ namespace Sparrow.LowMemory
                 var totalMappedTemp = 0L;
                 foreach (var mapping in NativeMemory.FileMapping)
                 {
-                    if (mapping.Key == null)
+                    var fileType = mapping.Value.Value.FileType;
+                    if (fileType == NativeMemory.FileType.Data)
+                    {
+                        // we care only about the temp buffers
                         continue;
-
-                    if (mapping.Key.EndsWith(".buffers", StringComparison.OrdinalIgnoreCase) == false)
-                        continue;
+                    }
 
                     var maxMapped = 0L;
-                    foreach (var singleMapping in mapping.Value)
+                    foreach (var singleMapping in mapping.Value.Value.Info)
                     {
                         maxMapped = Math.Max(maxMapped, singleMapping.Value);
                     }
@@ -576,7 +550,6 @@ namespace Sparrow.LowMemory
         public Size AvailableMemory;
         public Size AvailableWithoutTotalCleanMemory;
         public Size SharedCleanMemory;
-        public MemoryUsageLowHigh MemoryUsageRecords;
     }
 
 

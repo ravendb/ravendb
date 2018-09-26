@@ -970,7 +970,7 @@ namespace Raven.Server.Utils.Cli
             foreach (var mapping in NativeMemory.FileMapping)
             {
                 var maxMapped = 0L;
-                foreach (var singleMapping in mapping.Value)
+                foreach (var singleMapping in mapping.Value.Value.Info)
                 {
                     maxMapped = Math.Max(maxMapped, singleMapping.Value);
                 }
