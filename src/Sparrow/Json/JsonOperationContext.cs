@@ -561,6 +561,32 @@ namespace Sparrow.Json
             return ParseToMemory(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
         }
 
+        public unsafe BlittableJsonReaderObject ReadForMemory(string jsonString, string documentId)
+        {
+            // todo: maybe use ManagedPinnedBuffer here
+            var maxByteSize = Encodings.Utf8.GetByteCount(jsonString);
+
+            fixed (char* val = jsonString)
+            {
+                var buffer = ArrayPool<byte>.Shared.Rent(maxByteSize);
+                try
+                {
+                    fixed (byte* buf = buffer)
+                    {
+                        Encodings.Utf8.GetBytes(val, jsonString.Length, buf, maxByteSize);
+                        using (var ms = new MemoryStream(buffer))
+                        {
+                            return ReadForMemory(ms, documentId);
+                        }
+                    }
+                }
+                finally
+                {
+                    ArrayPool<byte>.Shared.Return(buffer);
+                }
+            }
+        }
+
         public BlittableJsonReaderObject ReadObject(DynamicJsonValue builder, string documentId,
             BlittableJsonDocumentBuilder.UsageMode mode = BlittableJsonDocumentBuilder.UsageMode.None, IBlittableDocumentModifier modifier = null)
         {
