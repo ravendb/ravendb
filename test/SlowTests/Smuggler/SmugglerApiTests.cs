@@ -10,9 +10,12 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Issues;
 using Sparrow;
 using Xunit;
 
@@ -572,6 +575,70 @@ namespace SlowTests.Smuggler
                 await store.Maintenance.SendAsync(new ConfigureExpirationOperation(config));
                 await session.SaveChangesAsync();
             }
+        }
+
+        // Smuggler Export and Import need to work with ForDatabase method when store database name is null
+        [Fact]
+        public async Task Smuggler_Export_And_Import_Should_Work_With_ForDatabase()
+        {
+
+            using (var server = GetNewServer())
+            {
+                using (var store = new DocumentStore
+                {
+                    Urls = new[] { server.WebUrl }
+                }.Initialize())
+                {
+                    var createSrcDatabase = new CreateDatabaseOperation(new DatabaseRecord("SrcDatabase"));
+                    await store.Maintenance.Server.SendAsync(createSrcDatabase);
+
+                    var createDestDatabase = new CreateDatabaseOperation(new DatabaseRecord("DestDatabase"));
+                    await store.Maintenance.Server.SendAsync(createDestDatabase);
+
+                    const int documentCount = 10000;
+                    using (var session = store.OpenAsyncSession("SrcDatabase"))
+                    {
+                        for (var i = 0; i < documentCount; i++)
+                        {
+                            var user = new User { Name = $"User {i}" };
+                            await session.StoreAsync(user);
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var exportOptions = new DatabaseSmugglerExportOptions
+                    {
+                        OperateOnTypes = DatabaseItemType.Documents
+                    };
+                    var destination = store.Smuggler.ForDatabase("DestDatabase");
+                    var operation = await store.Smuggler.ForDatabase("SrcDatabase").ExportAsync(exportOptions, destination);
+                    await operation.WaitForCompletionAsync();
+
+
+                    var stats = await store.Maintenance.ForDatabase("DestDatabase").SendAsync(new GetStatisticsOperation());
+                    Assert.True(stats.CountOfDocuments >= documentCount);
+
+                    await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord("ImportDest")));
+
+                    using (var stream = GetDump("RavenDB_11664.1.ravendbdump"))
+                    {
+                        await store.Smuggler.ForDatabase("ImportDest").ImportAsync(new DatabaseSmugglerImportOptions(), stream);
+                    }
+
+                    using (var session = store.OpenAsyncSession("ImportDest"))
+                    {
+                        var employee = await session.LoadAsync<Employee>("employees/9-A");
+                        Assert.NotNull(employee);
+                    }
+                }
+            }
+        }
+
+        private static Stream GetDump(string name)
+        {
+            var assembly = typeof(RavenDB_9912).Assembly;
+            return assembly.GetManifestResourceStream("SlowTests.Data." + name);
         }
     }
 }
