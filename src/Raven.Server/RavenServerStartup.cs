@@ -231,6 +231,10 @@ namespace Raven.Server
         private void LogTrafficWatch(HttpContext context, long elapsedMilliseconds, string database)
         {
             var requestId = Interlocked.Increment(ref _requestId);
+            var contextItem = context.Items["TrafficWatch"];
+            (string CustomInfo, TrafficWatchChangeType Type) twTuple =
+                ((string, TrafficWatchChangeType)?)contextItem ?? ("N/A", TrafficWatchChangeType.None);
+
             var twn = new TrafficWatchChange
             {
                 TimeStamp = DateTime.UtcNow,
@@ -241,8 +245,8 @@ namespace Raven.Server
                 RequestUri = context.Request.GetEncodedUrl(),
                 AbsoluteUri = $"{context.Request.Scheme}://{context.Request.Host}",
                 DatabaseName = database ?? "N/A",
-                CustomInfo = (string)context.Items["TrafficWatch"] ?? "N/A",
-                Type = (TrafficWatchChangeType?)context.Items["TrafficWatchChangeType"] ?? TrafficWatchChangeType.None,
+                CustomInfo = twTuple.CustomInfo,
+                Type = twTuple.Type,
                 InnerRequestsCount = 0,
                 QueryTimings = null
             };
