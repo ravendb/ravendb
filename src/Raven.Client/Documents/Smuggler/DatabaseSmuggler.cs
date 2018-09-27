@@ -70,7 +70,7 @@ namespace Raven.Client.Documents.Smuggler
                 var command = new ExportCommand(_requestExecutor.Conventions, context, options, handleStreamResponse, operationId);
                 await _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
 
-                return new Operation(_requestExecutor, () => _store.Changes(), _requestExecutor.Conventions, operationId);
+                return new Operation(_requestExecutor, () => _store.Changes(_databaseName), _requestExecutor.Conventions, operationId);
             }
         }
 
@@ -156,7 +156,7 @@ namespace Raven.Client.Documents.Smuggler
                 var command = new ImportCommand(_requestExecutor.Conventions, context, options, stream, operationId);
                 await _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
 
-                return new Operation(_requestExecutor, () => _store.Changes(), _requestExecutor.Conventions, operationId);
+                return new Operation(_requestExecutor, () => _store.Changes(_databaseName), _requestExecutor.Conventions, operationId);
             }
         }
 
