@@ -49,15 +49,17 @@ namespace Voron.Recovery
             _option.ManualFlushing = true;
             _progressIntervalInSec = config.ProgressIntervalInSec;
             _previouslyWrittenDocs = new Dictionary<string, long>();
-            LoggingSource.Instance.SetupLogMode(config.LoggingMode, Path.Combine(Path.GetDirectoryName(_output), LogFileName));
+            if(config.LoggingMode != LogMode.None)
+                LoggingSource.Instance.SetupLogMode(config.LoggingMode, Path.Combine(Path.GetDirectoryName(_output), LogFileName));
             _logger = LoggingSource.Instance.GetLogger<Recovery>("Voron Recovery");
+            _config = config;
         }
 
 
         private readonly byte[] _streamHashState = new byte[(int)Sodium.crypto_generichash_statebytes()];
         private readonly byte[] _streamHashResult = new byte[(int)Sodium.crypto_generichash_bytes()];
         private readonly List<(IntPtr Ptr, int Size)> _attachmentChunks = new List<(IntPtr Ptr, int Size)>();
-
+        private readonly VoronRecoveryConfiguration _config;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private long GetFilePosition(long offset, byte* position)
         {
@@ -105,6 +107,10 @@ namespace Voron.Recovery
                 //making sure eof is page aligned
                 var eof = mem + (fileSize / _pageSize) * _pageSize;
                 DateTime lastProgressReport = DateTime.MinValue;
+
+                if (Directory.Exists(Path.GetDirectoryName(_output)) == false)
+                    Directory.CreateDirectory(Path.GetDirectoryName(_output));
+
                 using (var destinationStreamDocuments = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-2-Documents" + Path.GetExtension(_output))))
                 using (var destinationStreamRevisions = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-3-Revisions" + Path.GetExtension(_output))))
                 using (var destinationStreamConflicts = File.OpenWrite(Path.Combine(Path.GetDirectoryName(_output), Path.GetFileNameWithoutExtension(_output) + "-4-Conflicts" + Path.GetExtension(_output))))
@@ -398,7 +404,8 @@ namespace Voron.Recovery
             finally
             {
                 se?.Dispose();
-                LoggingSource.Instance.EndLogging();
+                if(_config.LoggingMode != LogMode.None)
+                    LoggingSource.Instance.EndLogging();
             }
         }
 
