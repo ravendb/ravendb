@@ -1019,7 +1019,6 @@ namespace Raven.Server
         {
             try
             {
-                _tcpAuditLog = LoggingSource.AuditLog.IsInfoEnabled ? LoggingSource.AuditLog.GetLogger("TcpConnections", "Audit") : null;
                 bool successfullyBoundToAtLeastOne = false;
                 var errors = new List<Exception>();
 
@@ -1126,9 +1125,11 @@ namespace Raven.Server
             Task.Run(async () =>
             {
                 TcpClient tcpClient;
+                Logger tcpAuditLog = null;
                 try
                 {
                     tcpClient = await listener.AcceptTcpClientAsync();
+                    tcpAuditLog = LoggingSource.AuditLog.IsInfoEnabled ? LoggingSource.AuditLog.GetLogger("TcpConnections", "Audit") : null;
                 }
                 catch (ObjectDisposedException)
                 {
@@ -1206,8 +1207,8 @@ namespace Raven.Server
                                         //In the case where we have mismatched version but the other side doesn't know how to handle it.
                                         if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Drop)
                                         {
-                                            if (_tcpAuditLog != null)
-                                                _tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Dropping connection because: {header.Info}");
+                                            if (tcpAuditLog != null)
+                                                tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Dropping connection because: {header.Info}");
 
                                             if (Logger.IsInfoEnabled)
                                             {
@@ -1225,8 +1226,8 @@ namespace Raven.Server
                                     if (status == TcpConnectionHeaderMessage.SupportedStatus.OutOfRange)
                                     {
                                         var msg = $"Protocol '{header.OperationVersion}' for '{header.Operation}' was not found.";
-                                        if (_tcpAuditLog != null)
-                                            _tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. {msg}");
+                                        if (tcpAuditLog != null)
+                                            tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. {msg}");
 
                                         if (Logger.IsInfoEnabled)
                                         {
@@ -1257,8 +1258,8 @@ namespace Raven.Server
 
                                 if (authSuccessful == false)
                                 {
-                                    if (_tcpAuditLog != null)
-                                        _tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Rejecting connection because {err} for {header.Operation} on {header.DatabaseName}.");
+                                    if (tcpAuditLog != null)
+                                        tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Rejecting connection because {err} for {header.Operation} on {header.DatabaseName}.");
 
                                     if (Logger.IsInfoEnabled)
                                     {
@@ -1277,8 +1278,8 @@ namespace Raven.Server
                                 }
                             }
 
-                            if (_tcpAuditLog != null)
-                                _tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName}.");
+                            if (tcpAuditLog != null)
+                                tcpAuditLog.Info($"Got connection from {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'. Accepted for {header.Operation} on {header.DatabaseName}.");
 
                             if (await DispatchServerWideTcpConnection(tcp, header, buffer))
                             {
@@ -1294,6 +1295,12 @@ namespace Raven.Server
                                 _tcpLogger.Info("Failed to process TCP connection run", e);
 
                             SendErrorIfPossible(tcp, e);
+                        }
+                        finally
+                        {
+                            if (tcpAuditLog != null)
+                                tcpAuditLog.Info($"Closed TCP connection {tcpClient.Client.RemoteEndPoint} with certificate '{cert?.Subject} ({cert?.Thumbprint})'.");
+
                         }
                     }
                 }
@@ -1360,7 +1367,6 @@ namespace Raven.Server
         public SnmpWatcher SnmpWatcher;
         private Timer _refreshClusterCertificate;
         private HttpsConnectionAdapter _httpsConnectionAdapter;
-        private Logger _tcpAuditLog;
 
         public (IPAddress[] Addresses, int Port) ListenEndpoints { get; private set; }
 

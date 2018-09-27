@@ -7,10 +7,10 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Raven.Server.Documents;
 using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Connections.Features;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
@@ -18,6 +18,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Routing;
 using Raven.Client.Properties;
 using Raven.Client.Util;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Raven.Server.Web;
@@ -32,7 +33,6 @@ namespace Raven.Server.Routing
         private readonly Trie<RouteInformation> _trie;
         private readonly RavenServer _ravenServer;
         private readonly MetricCounters _serverMetrics;
-        private readonly Logger _auditLog;
         public List<RouteInformation> AllRoutes;
 
         public RequestRouter(Dictionary<string, RouteInformation> routes, RavenServer ravenServer)
@@ -41,7 +41,6 @@ namespace Raven.Server.Routing
             _ravenServer = ravenServer;
             _serverMetrics = ravenServer.Metrics;
             AllRoutes = new List<RouteInformation>(routes.Values);
-            _auditLog = LoggingSource.AuditLog.IsInfoEnabled ? LoggingSource.AuditLog.GetLogger("RequestRouter", "Audit") : null;
         }
 
 
@@ -83,9 +82,11 @@ namespace Raven.Server.Routing
 
                 if (handler == null)
                 {
-                    if (_auditLog != null)
+                    var auditLog = LoggingSource.AuditLog.IsInfoEnabled ? LoggingSource.AuditLog.GetLogger("RequestRouter", "Audit") : null;
+
+                    if (auditLog != null)
                     {
-                        _auditLog.Info($"Invalid request {context.Request.Method} {context.Request.Path} by " +
+                        auditLog.Info($"Invalid request {context.Request.Method} {context.Request.Path} by " +
                             $"(Cert: {context.Connection.ClientCertificate?.Subject} ({context.Connection.ClientCertificate?.Thumbprint}) {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort})");
                     }
 
@@ -159,9 +160,11 @@ namespace Raven.Server.Routing
         {
             var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
 
-            if (_auditLog != null)
+            if (feature.WrittenToAuditLog == 0) // intentionally racy, we'll check it again later
             {
-                if (feature.WrittenToAuditLog == 0) // intentionally racy, we'll check it again later
+                var auditLog = LoggingSource.AuditLog.IsInfoEnabled ? LoggingSource.AuditLog.GetLogger("RequestRouter", "Audit") : null;
+
+                if (auditLog != null)
                 {
                     // only one thread will win it, technically, there can't really be threading
                     // here, because there is a single connection, but better to be safe
@@ -169,14 +172,28 @@ namespace Raven.Server.Routing
                     {
                         if (feature.WrongProtocolMessage != null)
                         {
-                            _auditLog.Info($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
+                            auditLog.Info($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
                                 $"used the wrong protocol and will be rejected. {feature.WrongProtocolMessage}");
                         }
                         else
                         {
-                            _auditLog.Info($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
+                            auditLog.Info($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
                                 $"with certificate '{feature.Certificate?.Subject} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
                                 $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]");
+
+                            var conLifetime = context.Features.Get<IConnectionLifetimeFeature>();
+                            if(conLifetime != null)
+                            {
+                                var msg = $"Connection {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} closed. Was used with: " +
+                                 $"with certificate '{feature.Certificate?.Subject} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
+                                 $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]";
+
+                                conLifetime.ConnectionClosed.Register(() =>
+                                {
+                                    auditLog.Info(msg);
+                                });
+                            }
+
                         }
                     }
                 }
@@ -248,13 +265,13 @@ namespace Raven.Server.Routing
             throw new ArgumentOutOfRangeException("Unknown route auth status: " + route.AuthorizationStatus);
         }
 
-        public void UnlikelyFailAuthorization(HttpContext context, string database, 
+        public void UnlikelyFailAuthorization(HttpContext context, string database,
             RavenServer.AuthenticateConnection feature,
             AuthorizationStatus authorizationStatus)
         {
             string message;
-            if (feature == null || 
-                feature.Status == RavenServer.AuthenticationStatus.None || 
+            if (feature == null ||
+                feature.Status == RavenServer.AuthenticationStatus.None ||
                 feature.Status == RavenServer.AuthenticationStatus.NoCertificateProvided)
             {
                 message = "This server requires client certificate for authentication, but none was provided by the client.";
