@@ -101,8 +101,7 @@ namespace Raven.Server.Documents
         /// <param name="type"></param>
         public void AddStringToHttpContext(string str, TrafficWatchChangeType type)
         {
-            HttpContext.Items["TrafficWatch"] = str;
-            HttpContext.Items["TrafficWatchChangeType"] = type;
+            HttpContext.Items["TrafficWatch"] = (str, type);
         }
 
         protected OperationCancelToken CreateTimeLimitedOperationToken()

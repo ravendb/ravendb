@@ -129,6 +129,9 @@ namespace Raven.Server.Documents.Handlers
                                 httpContext.Request.Body = requestBody;
                                 httpContext.Request.Body.Position = 0;
                             }
+                        } else if (method == HttpMethod.Get.Method)
+                        {
+                            content = request.ToString();
                         }
 
                         var bytesWrittenBeforeRequest = responseStream.BytesWritten;
