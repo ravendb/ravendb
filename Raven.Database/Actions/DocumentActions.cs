@@ -180,7 +180,7 @@ namespace Raven.Database.Actions
                                 break;
                         }
 
-                        actualStart += pageSize;
+                        actualStart += docCount;
                     } while (docCount > 0 && addedDocs < pageSize && actualStart > 0 && actualStart < int.MaxValue);
                 });
 
