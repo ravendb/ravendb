@@ -50,9 +50,9 @@ namespace Raven.Server.Documents.Handlers
                     var httpContext = new DefaultHttpContext(features);
                     var host = HttpContext.Request.Host;
                     var scheme = HttpContext.Request.Scheme;
-                    StringBuilder sb = null;
+                    StringBuilder trafficWatchStringBuilder = null;
                     if (TrafficWatchManager.HasRegisteredClients)
-                        sb = new StringBuilder();
+                        trafficWatchStringBuilder = new StringBuilder();
                     for (int i = 0; i < requests.Length; i++)
                     {
                         var request = (BlittableJsonReaderObject)requests[i];
@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Handlers
                                 httpContext.Request.Body = requestBody;
                                 httpContext.Request.Body.Position = 0;
                             }
-                        } else if (method == HttpMethod.Get.Method)
+                        } else if (method == HttpMethod.Get.Method && trafficWatchStringBuilder != null)
                         {
                             content = request.ToString();
                         }
@@ -193,10 +193,10 @@ namespace Raven.Server.Documents.Handlers
                         }
                         writer.WriteEndObject();
                         writer.WriteEndObject();
-                        sb?.Append(content).AppendLine();
+                        trafficWatchStringBuilder?.Append(content).AppendLine();
                     }
-                    if (sb != null)
-                        AddStringToHttpContext(sb.ToString(), TrafficWatchChangeType.MultiGet);
+                    if (trafficWatchStringBuilder != null)
+                        AddStringToHttpContext(trafficWatchStringBuilder.ToString(), TrafficWatchChangeType.MultiGet);
                     writer.WriteEndArray();
                     writer.WriteEndObject();
                 }
