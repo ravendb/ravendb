@@ -9,6 +9,8 @@ namespace Raven.Client
 {
     public class RavenPagingInformation
     {
+        private int previousNextPageStart;
+
         public int Start { get; private set; }
 
         public int PageSize { get; private set; }
@@ -25,6 +27,7 @@ namespace Raven.Client
 
             Start = start;
             PageSize = pageSize;
+            previousNextPageStart = NextPageStart;
             NextPageStart = nextPageStart;
         }
 
@@ -38,7 +41,7 @@ namespace Raven.Client
 
         public bool IsLastPage()
         {
-            return Start == NextPageStart;
+            return previousNextPageStart == NextPageStart;
         }
     }
 }

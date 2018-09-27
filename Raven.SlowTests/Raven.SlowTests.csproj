@@ -120,6 +120,7 @@
     <Compile Include="Issues\RavenDB-5584.cs" />
     <Compile Include="Issues\RavenDB-6363.cs" />
     <Compile Include="Issues\RavenDB_1033.cs" />
+    <Compile Include="Issues\RavenDB_11764.cs" />
     <Compile Include="Issues\RavenDB_1280.cs" />
     <Compile Include="Issues\RavenDB_1280_ReOpen.cs" />
     <Compile Include="Issues\RavenDB_1359 .cs" />
