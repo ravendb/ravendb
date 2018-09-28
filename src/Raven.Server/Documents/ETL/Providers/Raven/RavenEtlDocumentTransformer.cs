@@ -313,23 +313,26 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 {
                     if (_script.HasDeleteDocumentsBehaviors)
                     {
-                        var collection = item.Collection;
+                        var collection = item.Collection ?? item.CollectionFromMetadata;
                         var documentId = item.DocumentId;
 
                         if (item.IsAttachmentTombstone)
-                            documentId = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(Context, item.AttachmentTombstoneId).DocId;
-                        else if (item.Type == EtlItemType.Counter)
-                            documentId = CountersStorage.ExtractDocIdAndCounterNameFromTombstone(Context, item.CounterTombstoneId).DocId;
-
-                        if (collection == null)
                         {
+                            documentId = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(Context, item.AttachmentTombstoneId).DocId;
+
+                            Debug.Assert(collection == null);
+
                             var document = Database.DocumentsStorage.Get(Context, documentId);
 
                             if (document == null)
-                                return true; // document was deleted, no need to send DELETE of tombstone
+                                return true; // document was deleted, no need to send DELETE of attachment tombstone
 
                             collection = Database.DocumentsStorage.ExtractCollectionName(Context, document.Data).Name;
                         }
+                        else if (item.Type == EtlItemType.Counter)
+                            documentId = CountersStorage.ExtractDocIdAndCounterNameFromTombstone(Context, item.CounterTombstoneId).DocId;
+
+                        Debug.Assert(collection != null);
 
                         if (_script.TryGetDeleteDocumentBehaviorFunctionFor(collection, out var function) ||
                             _script.TryGetDeleteDocumentBehaviorFunctionFor(Transformation.GenericDeleteDocumentsBehaviorFunctionKey, out function))
