@@ -107,14 +107,8 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
-        public void Should_choose_more_specific_delete_behavior_function()
-        {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
-            {
-                AddEtl(src, dest, collections: new[] { "Users", "Employees" }, script:
-                    @"
+        [Theory]
+        [InlineData(@"
     loadToUsers(this);
 
     function deleteDocumentsBehavior(docId, collection) {
@@ -125,7 +119,30 @@ namespace SlowTests.Server.Documents.ETL
     function deleteDocumentsOfEmployeesBehavior(docId) {
         return true;
     }
-");
+")]
+        [InlineData(@"
+    loadToUsers(this);
+
+    function deleteDocumentsBehavior(docId, collection) {
+        
+       if (true)
+       {   
+          return false;
+       }
+
+       return true;
+    }
+
+    function deleteDocumentsOfEmployeesBehavior(docId) {
+        return true;
+    }
+")]
+        public void Should_choose_more_specific_delete_behavior_function(string script)
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                AddEtl(src, dest, collections: new[] { "Users", "Employees" }, script: script);
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 

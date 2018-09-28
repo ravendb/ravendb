@@ -9,19 +9,30 @@ namespace SlowTests.Server.Documents.ETL
 {
     public class RavenDB_11897 : EtlTestBase
     {
-        [Fact]
-        public void Should_handle_as_empty_script_but_filter_out_deletions()
-        {
-            using (var src = GetDocumentStore())
-            using (var dest = GetDocumentStore())
-            {
-                AddEtl(src, dest, "Users", script:
-                    @"
+        [Theory]
+        [InlineData(@"
     
     function deleteDocumentsOfUsersBehavior(docId) {
         return false;
     }
-");
+")]
+        [InlineData(@"
+    
+    function deleteDocumentsOfUsersBehavior(docId) {
+      if (true)
+      {
+         return false;
+      }
+
+      return true;
+    }
+")]
+        public void Should_handle_as_empty_script_but_filter_out_deletions(string script)
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                AddEtl(src, dest, "Users", script: script);
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
