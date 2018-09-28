@@ -17,7 +17,7 @@ namespace SlowTests.Server.Documents.ETL
                     @"
     
     function deleteDocumentsBehavior(docId, collection) {
-        return 'Users' != collection; // false
+        return 'Users' != collection;
     }
 ", applyToAllDocuments: true);
 
@@ -102,6 +102,127 @@ namespace SlowTests.Server.Documents.ETL
                     Assert.NotNull(session.Load<User>("users/1"));
                     Assert.True(session.Advanced.Attachments.Exists("users/1", "photo"));
 
+                    Assert.Null(session.Load<User>("employees/1"));
+                }
+            }
+        }
+
+        [Fact]
+        public void Should_filter_out_deletions_using_generic_delete_behavior_function_and_marker_document()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                AddEtl(src, dest, collections: new string[0], script:
+                    @"
+function deleteDocumentsBehavior(docId, collection) {    
+    var deletionCheck = load('DeletionLocalOnly/' + docId);
+    if(deletionCheck){
+        return false;
+    }
+    return true;
+}
+", applyToAllDocuments: true);
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "Joe"
+                    }, "users/1");
+                    
+                    session.Store(new Employee()
+                    {
+                        FirstName = "Doe"
+                    }, "employees/1");
+                    
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.NotNull(session.Load<User>("users/1"));
+                    Assert.NotNull(session.Load<Employee>("employees/1"));
+                }
+
+                etlDone.Reset();
+                
+                using (var session = src.OpenSession())
+                {
+                    session.Delete("users/1");
+                    session.Delete("employees/1");
+
+                    session.Store(new object(), "DeletionLocalOnly/employees/1");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromSeconds(30));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.Null(session.Load<User>("users/1"));
+                    Assert.NotNull(session.Load<User>("employees/1"));
+                }
+            }
+        }
+
+        [Fact]
+        public void Should_filter_out_deletions_using_delete_behavior_function_and_marker_document()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                AddEtl(src, dest, collections: new []{"Employees"}, script:
+                    @"
+function deleteDocumentsOfEmployeesBehavior(docId) {    
+    var deletionCheck = load('DeletionLocalOnly/' + docId);
+    if(deletionCheck){
+        return false;
+    }
+    return true;
+}
+
+");
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
+
+                using (var session = src.OpenSession())
+                {
+                    session.Store(new Employee()
+                    {
+                        FirstName = "Doe"
+                    }, "employees/1");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromMinutes(1));
+
+                using (var session = dest.OpenSession())
+                {
+                    Assert.NotNull(session.Load<Employee>("employees/1"));
+                }
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.Delete("employees/1");
+
+                    session.Store(new object(), "DeletionLocalOnly/employees/1");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromSeconds(30));
+
+                using (var session = dest.OpenSession())
+                {
                     Assert.NotNull(session.Load<User>("employees/1"));
                 }
             }
