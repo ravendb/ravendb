@@ -425,7 +425,7 @@ namespace Raven.Server.Documents.Indexes
             var indexTempPath = configuration.TempPath?.Combine(name);
 
             var options = configuration.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath.FullPath, indexTempPath?.FullPath,
+                ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath.FullPath, indexTempPath?.FullPath ?? Path.Combine(indexPath.FullPath, "Temp"),
                     documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification)
                 : StorageEnvironmentOptions.ForPath(indexPath.FullPath, indexTempPath?.FullPath, null,
                     documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification);
