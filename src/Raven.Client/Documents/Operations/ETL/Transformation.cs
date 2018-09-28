@@ -34,13 +34,15 @@ namespace Raven.Client.Documents.Operations.ETL
         private static readonly Regex LoadCounterMethodRegex = new Regex(LoadCounter, RegexOptions.Compiled);
         private static readonly Regex AddCounterMethodRegex = new Regex(AddCounter, RegexOptions.Compiled);
 
-        internal static readonly Regex LoadCountersBehaviorMethodRegex = new Regex(@"function\s+loadCountersOf(\w+)Behavior\s*\(.+?\}", RegexOptions.Singleline);
-        internal static readonly Regex LoadCountersBehaviorMethodNameRegex = new Regex(@"loadCountersOf(\w+)Behavior", RegexOptions.Singleline);
+        internal static readonly Regex LoadCountersBehaviorMethodRegex = new Regex(@"function\s+loadCountersOf(\w+)Behavior\s*\(.+\)", RegexOptions.Compiled);
+        internal static readonly Regex LoadCountersBehaviorMethodNameRegex = new Regex(@"loadCountersOf(\w+)Behavior", RegexOptions.Compiled);
 
-        internal static readonly Regex DeleteDocumentsBehaviorMethodRegex = new Regex(@"function\s+deleteDocumentsOf(\w+)Behavior\s*\(.+?\}", RegexOptions.Singleline);
-        internal static readonly Regex DeleteDocumentsBehaviorMethodNameRegex = new Regex(@"deleteDocumentsOf(\w+)Behavior", RegexOptions.Singleline);
+        private const string ParametersAndFunctionBodyRegex = @"\s*\((?:[^)(]+|\((?:[^)(]+|\([^)(]*\))*\))*\)\s*\{(?:[^}{]+|\{(?:[^}{]+|\{[^}{]*\})*\})*\}"; // https://stackoverflow.com/questions/4204136/does-anyone-have-regular-expression-match-javascript-function
 
-        internal static readonly Regex GenericDeleteDocumentsBehaviorMethodRegex = new Regex(@"function\s+" + GenericDeleteDocumentsBehaviorFunctionName + @"\(.+?\}", RegexOptions.Singleline);
+        internal static readonly Regex DeleteDocumentsBehaviorMethodRegex = new Regex(@"function\s+deleteDocumentsOf(\w+)Behavior" + ParametersAndFunctionBodyRegex, RegexOptions.Singleline);
+        internal static readonly Regex DeleteDocumentsBehaviorMethodNameRegex = new Regex(@"deleteDocumentsOf(\w+)Behavior", RegexOptions.Compiled);
+        
+        internal static readonly Regex GenericDeleteDocumentsBehaviorMethodRegex = new Regex(@"function\s+" + GenericDeleteDocumentsBehaviorFunctionName + ParametersAndFunctionBodyRegex, RegexOptions.Singleline);
 
         private static readonly Regex Legacy_ReplicateToMethodRegex = new Regex(@"replicateTo(\w+)", RegexOptions.Compiled);
 
@@ -126,10 +128,10 @@ namespace Raven.Client.Documents.Operations.ETL
                                     "loadCountersOf<CollectionName>Behavior(docId, counterName) and return 'true' if counter should be loaded to a destination");
                             }
 
-                            var function = counterBehaviorFunction.Groups[0].Value;
+                            var functionSignature = counterBehaviorFunction.Groups[0].Value;
                             var collection = counterBehaviorFunction.Groups[1].Value;
 
-                            var functionName = LoadCountersBehaviorMethodNameRegex.Match(function);
+                            var functionName = LoadCountersBehaviorMethodNameRegex.Match(functionSignature);
 
                             if (Collections.Contains(collection) == false)
                             {
