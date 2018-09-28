@@ -564,7 +564,7 @@ namespace Sparrow.Json
         public unsafe BlittableJsonReaderObject ReadForMemory(string jsonString, string documentId)
         {
             // todo: maybe use ManagedPinnedBuffer here
-            var maxByteSize = Encodings.Utf8.GetByteCount(jsonString);
+            var maxByteSize = Encodings.Utf8.GetMaxByteCount(jsonString.Length);
 
             fixed (char* val = jsonString)
             {
