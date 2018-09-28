@@ -266,7 +266,7 @@ namespace Raven.Server.NotificationCenter
                 foreach (var action in ReadActionsByCreatedAtIndex(context))
                 {
                     if (action.Json.TryGetMember(nameof(Notification.Type), out object type) == false)
-                        throw new InvalidOperationException($"Could not find notification type. Notification: {action}");
+                        throw new InvalidOperationException($"Could not find notification type. Notification: {action.Json}, created at: {action.CreatedAt}, postponed until: {action.PostponedUntil}");
 
                     var typeLsv = (LazyStringValue)type;
 
