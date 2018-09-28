@@ -576,7 +576,9 @@ namespace Raven.Server.Documents.ETL
                                             transformations.AddRange(transformed);
                                     }
 
-                                    Load(transformations, context, stats);
+                                    if (transformations.Count > 0)
+                                        Load(transformations, context, stats);
+
                                     var lastProcessed = Math.Max(stats.LastLoadedEtag, stats.LastFilteredOutEtags.Values.Max());
 
                                     if (lastProcessed > Statistics.LastProcessedEtag)

@@ -142,11 +142,21 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         {
             if (_tables.TryGetValue(tableName, out SqlTableWithRecords table) == false)
             {
+                var sqlEtlTable = _config.SqlTables.Find(x => x.TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase));
+
+                if (sqlEtlTable == null)
+                    ThrowTableNotDefinedInConfig(tableName);
+
                 _tables[tableName] =
-                    table = new SqlTableWithRecords(_config.SqlTables.Find(x => x.TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase)));
+                    table = new SqlTableWithRecords(sqlEtlTable);
             }
 
             return table;
+        }
+
+        private static void ThrowTableNotDefinedInConfig(string tableName)
+        {
+            throw new InvalidOperationException($"Table '{tableName}' was not defined in the configuration of SQL ETL task");
         }
 
         public override List<SqlTableWithRecords> GetTransformedResults()
