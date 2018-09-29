@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Tests.Core.Utils.Entities;
@@ -36,21 +37,23 @@ namespace SlowTests.Issues
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                WaitForValue(() =>
+                var value = WaitForValue(() =>
                 {
                     var status = store.Maintenance.Send(operation).Status;
                     return status?.LastEtag;
                 }, 1);
+                Assert.Equal(1, value);
 
-                var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
                     await session.SaveChangesAsync();
                 }
 
+                var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
                 await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, etagForBackups);
+                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
+                Assert.Equal(lastEtag, value);
             }
 
             using (var store = GetDocumentStore(new Options
