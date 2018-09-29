@@ -3,7 +3,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Raven.Client.Util;
 using Raven.Server.Dashboard;
+using Sparrow.Binary;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
@@ -46,24 +48,43 @@ namespace Raven.Server.Utils
             // safe by just holding a lock.
             lock (Locker)
             {
+                (double MachineCpuUsage, double ProcessCpuUsage) cpuInfo;
                 if (PlatformDetails.RunningOnPosix == false)
                 {
-                    var windowsCpuInfo = CalculateWindowsCpuUsage();
-                    _lastCpuInfo = windowsCpuInfo;
-                    return windowsCpuInfo;
+                    cpuInfo = CalculateWindowsCpuUsage();
                 }
-
-                if (PlatformDetails.RunningOnMacOsx)
+                else if (PlatformDetails.RunningOnMacOsx)
                 {
-                    var macCpuInfo = CalculateMacOsCpuUsage();
-                    _lastCpuInfo = macCpuInfo;
-                    return macCpuInfo;
+                    cpuInfo = CalculateMacOsCpuUsage();
+                }
+                else
+                {
+                    cpuInfo = CalculateLinuxCpuUsage();
                 }
 
-                var linuxCpuInfo = CalculateLinuxCpuUsage();
-                _lastCpuInfo = linuxCpuInfo;
-                return linuxCpuInfo;
+                _lastCpuInfo = cpuInfo;
+                return _lastCpuInfo.Value;
             }
+        }
+
+        private static double CalculateProcessCpuUsage(ProcessInfo currentInfo, ProcessInfo previousInfo, double machineCpuUsage)
+        {
+            var processorTimeDiff = currentInfo.TotalProcessorTimeTicks - previousInfo.TotalProcessorTimeTicks;
+            var timeDiff = currentInfo.TimeTicks - previousInfo.TimeTicks;
+            if (timeDiff <= 0)
+            {
+                //overflow
+                return _lastCpuInfo?.ProcessCpuUsage ?? 0;
+            }
+
+            var processCpuUsage = (processorTimeDiff * 100.0) / timeDiff / currentInfo.ActiveCores;
+            if (currentInfo.ActiveCores == ProcessorInfo.ProcessorCount)
+            {
+                // min as sometimes +-1% due to time sampling
+                processCpuUsage = Math.Min(processCpuUsage, machineCpuUsage);
+            }
+
+            return Math.Min(100, processCpuUsage);
         }
 
         private static (double MachineCpuUsage, double ProcessCpuUsage) CalculateWindowsCpuUsage()
@@ -81,17 +102,12 @@ namespace Raven.Server.Utils
             var sysTotal = systemKernelDiff + systemUserDiff;
 
             double machineCpuUsage = 0;
-            double processCpuUsage = 0;
             if (sysTotal > 0)
             {
                 machineCpuUsage = (sysTotal - systemIdleDiff) * 100.00 / sysTotal;
-
-                var processTotal =
-                    windowsInfo.ProcessProcessorTime.Ticks -
-                    _previousWindowsInfo.ProcessProcessorTime.Ticks;
-                processCpuUsage = (processTotal * 100.0) / sysTotal;
-                processCpuUsage = Math.Min(100, processCpuUsage);
             }
+
+            var processCpuUsage = CalculateProcessCpuUsage(windowsInfo, _previousWindowsInfo, machineCpuUsage);
 
             _previousWindowsInfo = windowsInfo;
             return (machineCpuUsage, processCpuUsage);
@@ -129,24 +145,9 @@ namespace Raven.Server.Utils
                 machineCpuUsage = _lastCpuInfo.Value.MachineCpuUsage;
             }
 
-            double processCpuUsage = 0;
-            if (linuxInfo.Time > _previousLinuxInfo.Time &&
-                linuxInfo.LastSystemCpu >= _previousLinuxInfo.LastSystemCpu &&
-                linuxInfo.LastUserCpu >= _previousLinuxInfo.LastUserCpu)
-            {
-                var lastSystemCpuDiff = linuxInfo.LastSystemCpu - _previousLinuxInfo.LastSystemCpu;
-                var lastUserCpuDiff = linuxInfo.LastUserCpu - _previousLinuxInfo.LastUserCpu;
-                var totalCpuTime = lastSystemCpuDiff + lastUserCpuDiff;
-                processCpuUsage = (totalCpuTime * 100.0 / (linuxInfo.Time - _previousLinuxInfo.Time)) / ProcessorInfo.ProcessorCount;
-            }
-            else if (_lastCpuInfo != null)
-            {
-                // overflow
-                processCpuUsage = _lastCpuInfo.Value.ProcessCpuUsage;
-            }
+            var processCpuUsage = CalculateProcessCpuUsage(linuxInfo, _previousLinuxInfo, machineCpuUsage);
 
             _previousLinuxInfo = linuxInfo;
-            
             return (machineCpuUsage, processCpuUsage);
         }
 
@@ -167,16 +168,9 @@ namespace Raven.Server.Utils
                 machineCpuUsage = (1.0d - (double)idleTicksSinceLastTime / totalTicksSinceLastTime) * 100;
             }
 
-            var systemTimeDelta = macInfo.TaskTime - _previousMacInfo.TaskTime;
-            var timeDelta = macInfo.DateTimeNanoTicks - _previousMacInfo.DateTimeNanoTicks;
-            var processCpuUsage = 0d;
-            if (timeDelta > 0)
-            {
-                processCpuUsage = (systemTimeDelta * 100.0) / timeDelta / ProcessorInfo.ProcessorCount;
-            }
+            var processCpuUsage = CalculateProcessCpuUsage(macInfo, _previousMacInfo, machineCpuUsage);
 
             _previousMacInfo = macInfo;
-
             return (machineCpuUsage, processCpuUsage);
         }
 
@@ -192,18 +186,12 @@ namespace Raven.Server.Utils
                 return null;
             }
 
-            using (var process = Process.GetCurrentProcess())
+            return new WindowsInfo
             {
-                var processTime = process.TotalProcessorTime;
-
-                return new WindowsInfo
-                {
-                    SystemIdleTime = GetTime(systemIdleTime),
-                    SystemKernelTime = GetTime(systemKernelTime),
-                    SystemUserTime = GetTime(systemUserTime),
-                    ProcessProcessorTime = processTime
-                };
-            }
+                SystemIdleTime = GetTime(systemIdleTime),
+                SystemKernelTime = GetTime(systemKernelTime),
+                SystemUserTime = GetTime(systemUserTime)
+            };
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -231,31 +219,6 @@ namespace Raven.Server.Utils
                 if (items.Length == 0 || items.Length < 9)
                     continue;
 
-                long time = 0;
-                long tmsStime = 0;
-                long tmsUtime = 0;
-                    
-                if (PlatformDetails.Is32Bits == false)
-                {
-                    var timeSample = new TimeSample();
-                    time = Syscall.times(ref timeSample);
-                    tmsStime = timeSample.tms_stime;
-                    tmsUtime = timeSample.tms_utime;
-                }
-                else
-                {
-                    var timeSample = new TimeSample_32bit();
-                    time = Syscall.times(ref timeSample);
-                    tmsStime = timeSample.tms_stime;
-                    tmsUtime = timeSample.tms_utime;
-                }
-                if (time == -1)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info("Got overflow time using the times system call " + Marshal.GetLastWin32Error());
-                    return null;
-                }
-
                 return new LinuxInfo
                 {
                     TotalUserTime = ulong.Parse(items[1]),
@@ -265,11 +228,7 @@ namespace Raven.Server.Utils
                     TotalIOTime = ulong.Parse(items[5]),
                     TotalIRQTime = ulong.Parse(items[6]),
                     TotalSoftIRQTime = ulong.Parse(items[7]),
-                    TotalStealTime = ulong.Parse(items[8]),
-
-                    Time = time,
-                    LastSystemCpu = tmsStime,
-                    LastUserCpu = tmsUtime,
+                    TotalStealTime = ulong.Parse(items[8])
                 };
             }
 
@@ -292,34 +251,13 @@ namespace Raven.Server.Utils
             for (var i = 0; i < (int)CpuState.CPU_STATE_MAX; i++)
                 totalTicks += hostCpuLoadInfo.cpu_ticks[i];
 
-            var size = ProcTaskAllInfoSize;
-            var info = new proc_taskallinfo();
-            
-            var processId = 0;
-            using (var currentProcess = Process.GetCurrentProcess())
-                processId = currentProcess.Id;
-            
-            var result = macSyscall.proc_pidinfo(processId, (int)ProcessInfo.PROC_PIDTASKALLINFO, 0, &info, size);
-            ulong dateTimeNanoTicks = 0;
-            ulong userTime = 0;
-            ulong systemTime = 0;
-            if (result == size)
-            {
-                dateTimeNanoTicks = (ulong)DateTime.UtcNow.Ticks * 100;
-                userTime = info.ptinfo.pti_total_user;
-                systemTime = info.ptinfo.pti_total_system;
-            }
-
             return new MacInfo
             {
                 TotalTicks = totalTicks,
-                IdleTicks = hostCpuLoadInfo.cpu_ticks[(int)CpuState.CPU_STATE_IDLE],
-                DateTimeNanoTicks = dateTimeNanoTicks,
-                TaskTime = systemTime + userTime
+                IdleTicks = hostCpuLoadInfo.cpu_ticks[(int)CpuState.CPU_STATE_IDLE]
             };
         }
 
-        private static readonly unsafe int ProcTaskAllInfoSize = sizeof(proc_taskallinfo);
         private static readonly unsafe int HostCpuLoadInfoSize = sizeof(host_cpu_load_info) / sizeof(uint);
 
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -329,62 +267,154 @@ namespace Raven.Server.Utils
             ref FileTime lpKernelTime,
             ref FileTime lpUserTime);
 
-        private class WindowsInfo
+        private static long GetNumberOfActiveCores(Process process)
+        {
+            try
+            {
+                return Bits.NumberOfSetBits(process.ProcessorAffinity.ToInt64());
+            }
+            catch (NotSupportedException)
+            {
+                return ProcessorInfo.ProcessorCount;
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failure to get the number of active cores, error: {e.Message}", e);
+
+                return ProcessorInfo.ProcessorCount;
+            }
+        }
+
+        private static (long TotalProcessorTimeTicks, long TimeTicks) GetProcessTimes(Process process)
+        {
+            try
+            {
+                var timeTicks = SystemTime.UtcNow.Ticks;
+                var totalProcessorTime = process.TotalProcessorTime.Ticks;
+                return (TotalProcessorTimeTicks: totalProcessorTime, TimeTicks: timeTicks);
+            }
+            catch (PlatformNotSupportedException)
+            {
+                return TryGetProcessTimesForLinux();
+            }
+            catch (NotSupportedException)
+            {
+                return TryGetProcessTimesForLinux();
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failure to get process times, error: {e.Message}", e);
+
+                return (0, 0);
+            }
+        }
+
+        private static (long TotalProcessorTimeTicks, long TimeTicks) TryGetProcessTimesForLinux()
+        {
+            if (PlatformDetails.RunningOnLinux == false)
+                return (0, 0);
+
+            try
+            {
+                long timeTicks;
+                long tmsStime;
+                long tmsUtime;
+
+                if (PlatformDetails.Is32Bits == false)
+                {
+                    var timeSample = new TimeSample();
+                    timeTicks = Syscall.times(ref timeSample);
+                    tmsStime = timeSample.tms_stime;
+                    tmsUtime = timeSample.tms_utime;
+                }
+                else
+                {
+                    var timeSample = new TimeSample_32bit();
+                    timeTicks = Syscall.times(ref timeSample);
+                    tmsStime = timeSample.tms_stime;
+                    tmsUtime = timeSample.tms_utime;
+                }
+
+                if (timeTicks == -1)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Got overflow time using the times system call " + Marshal.GetLastWin32Error());
+
+                    return (0, 0);
+                }
+
+                return (TotalProcessorTimeTicks: tmsUtime + tmsStime, TimeTicks: timeTicks);
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failure to get process times for linux, error: {e.Message}", e);
+
+                return (0, 0);
+            }
+        }
+
+        private class ProcessInfo
+        {
+            protected ProcessInfo()
+            {
+                using (var process = Process.GetCurrentProcess())
+                {
+                    var processTimes = GetProcessTimes(process);
+                    TotalProcessorTimeTicks = processTimes.TotalProcessorTimeTicks;
+                    TimeTicks = processTimes.TimeTicks;
+
+                    ActiveCores = GetNumberOfActiveCores(process);
+                }
+            }
+
+            public long TotalProcessorTimeTicks { get; }
+
+            public long TimeTicks { get; }
+
+            public long ActiveCores { get; }
+        }
+
+        private class WindowsInfo : ProcessInfo
         {
             public ulong SystemIdleTime { get; set; }
 
             public ulong SystemKernelTime { get; set; }
 
             public ulong SystemUserTime { get; set; }
-
-            public TimeSpan ProcessProcessorTime { get; set; }
         }
 
-
-        private class LinuxInfo
+        private class LinuxInfo : ProcessInfo
         {
-            public ulong TotalUserTime { get; set; }
+            public ulong TotalUserTime { private get; set; }
 
-            public ulong TotalUserLowTime { get; set; }
+            public ulong TotalUserLowTime { private get; set; }
 
-            public ulong TotalSystemTime { get; set; }
+            public ulong TotalSystemTime { private get; set; }
 
-            public ulong TotalIdleTime { get; set; }
+            public ulong TotalIdleTime { private get; set; }
 
-            public long Time { get; set; }
+            public ulong TotalIOTime { private get; set; }
 
-            public long LastSystemCpu { get; set; }
+            public ulong TotalIRQTime { private get; set; }
 
-            public long LastUserCpu { get; set; }
+            public ulong TotalSoftIRQTime { private get; set; }
 
-            public ulong TotalIOTime { get; internal set; }
-            public ulong TotalIRQTime { get; internal set; }
-            public ulong TotalSoftIRQTime { get; internal set; }
-            public ulong TotalStealTime { get; internal set; }
+            public ulong TotalStealTime { private get; set; }
 
-            public ulong TotalWorkTime
-            {
-                get
-                {
-                    return TotalUserTime + TotalUserLowTime + TotalSystemTime + TotalIRQTime + TotalSoftIRQTime + TotalStealTime;
-                }
-            }
+            public ulong TotalWorkTime => TotalUserTime + TotalUserLowTime + TotalSystemTime + 
+                                          TotalIRQTime + TotalSoftIRQTime + TotalStealTime;
 
-            public ulong TotalIdle
-            {
-                get { return TotalIdleTime + TotalIOTime; }
-            }
+            public ulong TotalIdle => TotalIdleTime + TotalIOTime;
         }
 
-        private class MacInfo
+        private class MacInfo : ProcessInfo
         {
             public ulong TotalTicks { get; set; }
 
             public ulong IdleTicks { get; set; }
-
-            public ulong DateTimeNanoTicks { get; set; }
-
-            public ulong TaskTime { get; set; }
         }
     }
 }
