@@ -176,6 +176,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                                        $"files during snapshot restore, took: {sw.ElapsedMilliseconds:#,#;;0}ms");
                         onProgress.Invoke(result.Progress);
                     }
+
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         SmugglerRestore(_restoreConfiguration.BackupLocation, database, context, databaseRecord, onProgress, result);
@@ -462,6 +463,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, destination, options,
                 onIndexAction: indexAndType =>
                 {
+                    if (_restoreConfiguration.SkipIndexesImport)
+                        return;
+
                     switch (indexAndType.Type)
                     {
                         case IndexType.AutoMap:

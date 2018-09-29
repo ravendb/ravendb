@@ -244,6 +244,11 @@
             <label for="disable-ongoing-tasks">Disable ongoing tasks after restore</label>
         </div>
 
+        <div class="toggle">
+            <input class="styled" type="checkbox" id="skip-indexes-import" data-bind="checked: skipIndexesImport, disable: !canSkipIndexesImport()">
+            <label for="skip-indexes-import">Skip indexes import</label>
+        </div>
+
         <div class="form-group row" data-bind="validationOptions: { insertMessages: false }, validationElement: selectedRestorePoint">
             <div class="col-md-4">
                 <label class="control-label">Restore point</label>
@@ -295,7 +300,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div data-bind="with: selectedRestorePoint">
             <div class="panel panel-info padding flex-horizontal" data-bind="visible: isSnapshotRestore && isEncrypted">
                 <i class="icon-info"></i>
@@ -307,7 +312,7 @@
                 <div class="margin-left">Selected restore point is not encrypted. 'Encyption' tab was disabled.</div>
             </div>
         </div>
-        
+
     </div>
 </script>
 
