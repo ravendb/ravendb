@@ -323,6 +323,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             result.Identities.Processed = true;
             result.CompareExchange.Processed = true;
+            onProgress.Invoke(result.Progress);
         }
 
         private void ValidateArguments(out bool restoringToDefaultDataDirectory)
@@ -445,6 +446,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var destination = new DatabaseDestination(database);
             for (var i = 0; i < _filesToRestore.Count - 1; i++)
             {
+                result.AddInfo($"Restoring file {(i+1):#,#;;0}/{_filesToRestore.Count:#,#;;0}");
+                onProgress.Invoke(result.Progress);
+
                 var filePath = Path.Combine(backupDirectory, _filesToRestore[i]);
                 ImportSingleBackupFile(database, onProgress, result, filePath, context, destination, options,
                     onDatabaseRecordAction: smugglerDatabaseRecord =>
@@ -456,6 +460,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             options.OperateOnTypes = oldOperateOnTypes;
             var lastFilePath = Path.Combine(backupDirectory, _filesToRestore.Last());
+
+            result.AddInfo($"Restoring file {_filesToRestore.Count:#,#;;0}/{_filesToRestore.Count:#,#;;0}");
+
+            onProgress.Invoke(result.Progress);
 
             ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, destination, options,
                 onIndexAction: indexAndType =>
