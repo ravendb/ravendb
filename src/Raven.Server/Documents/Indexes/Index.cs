@@ -1074,6 +1074,12 @@ namespace Raven.Server.Documents.Indexes
 
                         try
                         {
+                            if (_lowMemoryFlag.IsRaised())
+                            {
+                                // we can reduce the sizes of the mapped temp files
+                                storageEnvironment.Cleanup();
+                            }
+
                             // the logic here is that unless we hit the memory limit on the system, we want to retain our
                             // allocated memory as long as we still have work to do (since we will reuse it on the next batch)
                             // and it is probably better to avoid alloc/free jitter.
