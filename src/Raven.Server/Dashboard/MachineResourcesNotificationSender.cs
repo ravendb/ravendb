@@ -87,7 +87,7 @@ namespace Raven.Server.Dashboard
                 LowMemoryThreshold = LowMemoryNotification.Instance.LowMemoryThreshold.GetValue(SizeUnit.Bytes),
                 CommitChargeThreshold = LowMemoryNotification.Instance.GetCommitChargeThreshold(memInfo).GetValue(SizeUnit.Bytes),
                 MachineCpuUsage = cpuInfo.MachineCpuUsage,
-                ProcessCpuUsage = Math.Min(cpuInfo.MachineCpuUsage, cpuInfo.ProcessCpuUsage) // min as sometimes +-1% due to time sampling
+                ProcessCpuUsage = cpuInfo.ProcessCpuUsage
             };
 
             return machineResources;
