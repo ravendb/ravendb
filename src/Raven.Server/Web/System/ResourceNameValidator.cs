@@ -51,7 +51,7 @@ namespace Raven.Server.Web.System
             }
             if (NameUtils.IsValidResourceName(name) == false)
             {
-                errorMessage = string.Format($"The name '{name}' is not permitted. Only letters, digits and characters ('_', '.', '-') are allowed.");
+                errorMessage = $"The name '{name}' is not permitted. Only letters, digits and characters ('_', '.', '-') are allowed.";
                 return false;
             }
             if (name.Length > Constants.Documents.MaxDatabaseNameLength)
@@ -66,7 +66,7 @@ namespace Raven.Server.Web.System
             }
             if (WindowsReservedFileNames.Any(x => string.Equals(x, name, StringComparison.OrdinalIgnoreCase)))
             {
-                errorMessage = string.Format($"The name '{name}' is forbidden for use!");
+                errorMessage = $"The name '{name}' is forbidden for use!";
                 return false;
             }
 
