@@ -90,6 +90,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         onProgress,
                         result);
 
+                    if (restoreSettings != null && _restoreConfiguration.SkipIndexesImport)
+                        InitializeIndexes(restoreSettings.DatabaseRecord);
+
                     // removing the snapshot from the list of files
                     _filesToRestore.RemoveAt(0);
                 }
@@ -247,6 +250,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             {
                 _operationCancelToken.Dispose();
             }
+        }
+
+        private static void InitializeIndexes(DatabaseRecord databaseRecord)
+        {
+            databaseRecord.AutoIndexes = new Dictionary<string, AutoIndexDefinition>();
+            databaseRecord.Indexes = new Dictionary<string, IndexDefinition>();
         }
 
         private void DisableOngoingTasksIfNeeded(DatabaseRecord databaseRecord)
@@ -430,8 +439,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 return;
 
             // we do have at least one smuggler backup
-            databaseRecord.AutoIndexes = new Dictionary<string, AutoIndexDefinition>();
-            databaseRecord.Indexes = new Dictionary<string, IndexDefinition>();
+            InitializeIndexes(databaseRecord);
 
             // restore the smuggler backup
             var options = new DatabaseSmugglerOptionsServerSide

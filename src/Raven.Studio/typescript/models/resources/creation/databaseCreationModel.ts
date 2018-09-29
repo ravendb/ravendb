@@ -78,14 +78,6 @@ class databaseCreationModel {
         restorePointsCount: ko.observable<number>(0),
         disableOngoingTasks: ko.observable<boolean>(false),
         skipIndexesImport: ko.observable<boolean>(false),
-        canSkipIndexesImport: ko.pureComputed<boolean>(() => {
-            const restorePoint: restorePoint = this.restore.selectedRestorePoint();
-            if (!restorePoint) {
-                return true;
-            }
-
-            return !restorePoint.isSnapshotRestore;
-        }),
         requiresEncryption: undefined as KnockoutComputed<boolean>
     };
     
@@ -503,7 +495,7 @@ class databaseCreationModel {
             DatabaseName: this.name(),
             BackupLocation: this.restore.selectedRestorePoint().location,
             DisableOngoingTasks: this.restore.disableOngoingTasks(),
-            SkipIndexesImport: this.restore.canSkipIndexesImport() ? this.restore.skipIndexesImport() : false,
+            SkipIndexesImport: this.restore.skipIndexesImport(),
             LastFileNameToRestore: this.restore.selectedRestorePoint().fileName,
             DataDirectory: dataDirectory,
             EncryptionKey: this.getEncryptionConfigSection().enabled() ? this.encryption.key() : null
