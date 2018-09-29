@@ -110,18 +110,20 @@ namespace Raven.Server.Documents.Handlers.Debugging
             if (PlatformDetails.RunningOnLinux == false)
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (var process = Process.GetCurrentProcess())
                 {
+                    var sharedClean = MemoryInformation.GetSharedCleanInBytes(process);
                     var rc = Win32MemoryQueryMethods.GetMaps();
                     var djv = new DynamicJsonValue
                     {
                         ["Totals"] = new DynamicJsonValue
                         {
-                            ["WorkingSet"] = rc.WorkingSet,
-                            ["SharedClean"] = "N/A",
+                            ["WorkingSet"] = process.WorkingSet64,
+                            ["SharedClean"] = Sizes.Humane(sharedClean),
                             ["PrivateClean"] = "N/A",
                             ["TotalClean"] = rc.ProcessClean,
-                            ["RssHumanly"] = Sizes.Humane(rc.WorkingSet),
-                            ["SharedCleanHumanly"] = "N/A",
+                            ["RssHumanly"] = Sizes.Humane(process.WorkingSet64),
+                            ["SharedCleanHumanly"] = Sizes.Humane(sharedClean),
                             ["PrivateCleanHumanly"] = "N/A",
                             ["TotalCleanHumanly"] = Sizes.Humane(rc.ProcessClean)
                         },
@@ -193,150 +195,148 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
         private static DynamicJsonValue MemoryStatsInternal()
         {
-            using (var currentProcess = Process.GetCurrentProcess())
+            var memInfo = MemoryInformation.GetMemInfoUsingOneTimeSmapsReader();
+            var memoryUsageRecords = MemoryInformation.GetMemoryUsageRecords();
+
+            long totalMapping = 0;
+            var fileMappingByDir = new Dictionary<string, Dictionary<string, ConcurrentDictionary<IntPtr, long>>>();
+            var fileMappingSizesByDir = new Dictionary<string, long>();
+            foreach (var mapping in NativeMemory.FileMapping)
             {
-                var workingSet = PlatformDetails.RunningOnLinux == false
-                        ? currentProcess.WorkingSet64
-                        : MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
+                var dir = Path.GetDirectoryName(mapping.Key);
 
-                var memInfo = MemoryInformation.GetMemInfoUsingOneTimeSmapsReader();
-                var memoryUsageRecords = MemoryInformation.GetMemoryUsageRecords();
-
-                long totalMapping = 0;
-                var fileMappingByDir = new Dictionary<string, Dictionary<string, ConcurrentDictionary<IntPtr, long>>>();
-                var fileMappingSizesByDir = new Dictionary<string, long>();
-                foreach (var mapping in NativeMemory.FileMapping)
+                if (fileMappingByDir.TryGetValue(dir, out Dictionary<string, ConcurrentDictionary<IntPtr, long>> value) == false)
                 {
-                    var dir = Path.GetDirectoryName(mapping.Key);
-
-                    if (fileMappingByDir.TryGetValue(dir, out Dictionary<string, ConcurrentDictionary<IntPtr, long>> value) == false)
-                    {
-                        value = new Dictionary<string, ConcurrentDictionary<IntPtr, long>>();
-                        fileMappingByDir[dir] = value;
-                    }
-                    value[mapping.Key] = mapping.Value.Value.Info;
-                    foreach (var singleMapping in mapping.Value.Value.Info)
-                    {
-                        fileMappingSizesByDir.TryGetValue(dir, out long prevSize);
-                        fileMappingSizesByDir[dir] = prevSize + singleMapping.Value;
-                        totalMapping += singleMapping.Value;
-                    }
+                    value = new Dictionary<string, ConcurrentDictionary<IntPtr, long>>();
+                    fileMappingByDir[dir] = value;
                 }
 
-                var prefixLength = LongestCommonPrefixLength(new List<string>(fileMappingSizesByDir.Keys));
-
-                var fileMappings = new DynamicJsonArray();
-                foreach (var sizes in fileMappingSizesByDir.OrderByDescending(x => x.Value))
+                value[mapping.Key] = mapping.Value.Value.Info;
+                foreach (var singleMapping in mapping.Value.Value.Info)
                 {
-                    if (fileMappingByDir.TryGetValue(sizes.Key, out Dictionary<string, ConcurrentDictionary<IntPtr, long>> value))
-                    {
-                        var details = new DynamicJsonValue();
-                        
-                        var dir = new DynamicJsonValue
-                        {
-                            [nameof(MemoryInfoMappingItem.Directory)] = sizes.Key.Substring(prefixLength),
-                            [nameof(MemoryInfoMappingItem.TotalDirectorySize)] = sizes.Value,
-                            [nameof(MemoryInfoMappingItem.HumaneTotalDirectorySize)] = Size.Humane(sizes.Value),
-                            [nameof(MemoryInfoMappingItem.Details)] = details
-                        };
-                        foreach (var file in value.OrderBy(x => x.Key))
-                        {
-                            long totalMapped = 0;
-                            var dja = new DynamicJsonArray();
-                            var dic = new Dictionary<long, long>();
-                            foreach (var mapping in file.Value)
-                            {
-                                totalMapped += mapping.Value;
-                                dic.TryGetValue(mapping.Value, out long prev);
-                                dic[mapping.Value] = prev + 1;
-                            }
-                            foreach (var maps in dic)
-                            {
-                                dja.Add(new DynamicJsonValue
-                                {
-                                    [nameof(MemoryInfoMappingDetails.Size)] = maps.Key,
-                                    [nameof(MemoryInfoMappingDetails.Count)] = maps.Value
-                                });
-                            }
-                            var fileSize = GetFileSize(file.Key);
-                            details[Path.GetFileName(file.Key)] = new DynamicJsonValue
-                            {
-                                [nameof(MemoryInfoMappingFileInfo.FileSize)] = fileSize,
-                                [nameof(MemoryInfoMappingFileInfo.HumaneFileSize)] = Size.Humane(fileSize),
-                                [nameof(MemoryInfoMappingFileInfo.TotalMapped)] = totalMapped,
-                                [nameof(MemoryInfoMappingFileInfo.HumaneTotalMapped)] = Size.Humane(totalMapped),
-                                [nameof(MemoryInfoMappingFileInfo.Mappings)] = dja
-                            };
-                        }
-                        fileMappings.Add(dir);
-                    }
+                    fileMappingSizesByDir.TryGetValue(dir, out long prevSize);
+                    fileMappingSizesByDir[dir] = prevSize + singleMapping.Value;
+                    totalMapping += singleMapping.Value;
                 }
-
-                long totalUnmanagedAllocations = 0;
-                var threads = new DynamicJsonArray();
-                foreach (var stats in NativeMemory.AllThreadStats
-                    .Where(x => x.IsThreadAlive())
-                    .GroupBy(x => x.Name)
-                    .OrderByDescending(x => x.Sum(y => y.TotalAllocated)))
-                {
-                    var unmanagedAllocations = stats.Sum(x => x.TotalAllocated);
-                    totalUnmanagedAllocations += unmanagedAllocations;
-                    var ids = new DynamicJsonArray(stats.OrderByDescending(x => x.TotalAllocated).Select(x => new DynamicJsonValue
-                    {
-                        ["Id"] = x.UnmanagedThreadId,
-                        ["ManagedThreadId"] = x.Id,
-                        ["Allocations"] = x.TotalAllocated,
-                        ["HumaneAllocations"] = Size.Humane(x.TotalAllocated)
-                    }));
-                    var groupStats = new DynamicJsonValue
-                    {
-                        ["Name"] = stats.Key,
-                        ["Allocations"] = unmanagedAllocations,
-                        ["HumaneAllocations"] = Size.Humane(unmanagedAllocations)
-                    };
-                    if (ids.Count == 1)
-                    {
-                        var threadStats = stats.First();
-                        groupStats["Id"] = threadStats.UnmanagedThreadId;
-                        groupStats["ManagedThreadId"] = threadStats.Id;
-                    }
-                    else
-                    {
-                        groupStats["Ids"] = ids;
-                    }
-                    threads.Add(groupStats);
-                }
-                var managedMemory = GC.GetTotalMemory(false);
-
-                var djv = new DynamicJsonValue
-                {
-                    [nameof(MemoryInfo.WorkingSet)] = workingSet,
-                    [nameof(MemoryInfo.TotalUnmanagedAllocations)] = totalUnmanagedAllocations,
-                    [nameof(MemoryInfo.ManagedAllocations)] = managedMemory,
-                    [nameof(MemoryInfo.TotalMemoryMapped)] = totalMapping,
-                    [nameof(MemoryInfo.PhysicalMem)] = Size.Humane(memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes)),
-                    [nameof(MemoryInfo.FreeMem)] = Size.Humane(memInfo.AvailableWithoutTotalCleanMemory.GetValue(SizeUnit.Bytes)),
-                    [nameof(MemoryInfo.HighMemLastOneMinute)] = Size.Humane(memoryUsageRecords.High.LastOneMinute.GetValue(SizeUnit.Bytes)),
-                    [nameof(MemoryInfo.LowMemLastOneMinute)] = Size.Humane(memoryUsageRecords.Low.LastOneMinute.GetValue(SizeUnit.Bytes)),
-                    [nameof(MemoryInfo.HighMemLastFiveMinute)] = Size.Humane(memoryUsageRecords.High.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
-                    [nameof(MemoryInfo.LowMemLastFiveMinute)] = Size.Humane(memoryUsageRecords.Low.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
-                    [nameof(MemoryInfo.HighMemSinceStartup)] = Size.Humane(memoryUsageRecords.High.SinceStartup.GetValue(SizeUnit.Bytes)),
-                    [nameof(MemoryInfo.LowMemSinceStartup)] = Size.Humane(memoryUsageRecords.Low.SinceStartup.GetValue(SizeUnit.Bytes)),
-
-                    [nameof(MemoryInfo.Humane)] = new DynamicJsonValue
-                    {
-                        [nameof(MemoryInfoHumane.WorkingSet)] = Size.Humane(workingSet),
-                        [nameof(MemoryInfoHumane.TotalUnmanagedAllocations)] = Size.Humane(totalUnmanagedAllocations),
-                        [nameof(MemoryInfoHumane.ManagedAllocations)] = Size.Humane(managedMemory),
-                        [nameof(MemoryInfoHumane.TotalMemoryMapped)] = Size.Humane(totalMapping)
-                    },
-
-                    ["Threads"] = threads,
-
-                    [nameof(MemoryInfo.Mappings)] = fileMappings
-                };
-                return djv;
             }
+
+            var prefixLength = LongestCommonPrefixLength(new List<string>(fileMappingSizesByDir.Keys));
+
+            var fileMappings = new DynamicJsonArray();
+            foreach (var sizes in fileMappingSizesByDir.OrderByDescending(x => x.Value))
+            {
+                if (fileMappingByDir.TryGetValue(sizes.Key, out Dictionary<string, ConcurrentDictionary<IntPtr, long>> value))
+                {
+                    var details = new DynamicJsonValue();
+
+                    var dir = new DynamicJsonValue
+                    {
+                        [nameof(MemoryInfoMappingItem.Directory)] = sizes.Key.Substring(prefixLength),
+                        [nameof(MemoryInfoMappingItem.TotalDirectorySize)] = sizes.Value,
+                        [nameof(MemoryInfoMappingItem.HumaneTotalDirectorySize)] = Size.Humane(sizes.Value),
+                        [nameof(MemoryInfoMappingItem.Details)] = details
+                    };
+                    foreach (var file in value.OrderBy(x => x.Key))
+                    {
+                        long totalMapped = 0;
+                        var dja = new DynamicJsonArray();
+                        var dic = new Dictionary<long, long>();
+                        foreach (var mapping in file.Value)
+                        {
+                            totalMapped += mapping.Value;
+                            dic.TryGetValue(mapping.Value, out long prev);
+                            dic[mapping.Value] = prev + 1;
+                        }
+
+                        foreach (var maps in dic)
+                        {
+                            dja.Add(new DynamicJsonValue
+                            {
+                                [nameof(MemoryInfoMappingDetails.Size)] = maps.Key,
+                                [nameof(MemoryInfoMappingDetails.Count)] = maps.Value
+                            });
+                        }
+
+                        var fileSize = GetFileSize(file.Key);
+                        details[Path.GetFileName(file.Key)] = new DynamicJsonValue
+                        {
+                            [nameof(MemoryInfoMappingFileInfo.FileSize)] = fileSize,
+                            [nameof(MemoryInfoMappingFileInfo.HumaneFileSize)] = Size.Humane(fileSize),
+                            [nameof(MemoryInfoMappingFileInfo.TotalMapped)] = totalMapped,
+                            [nameof(MemoryInfoMappingFileInfo.HumaneTotalMapped)] = Size.Humane(totalMapped),
+                            [nameof(MemoryInfoMappingFileInfo.Mappings)] = dja
+                        };
+                    }
+
+                    fileMappings.Add(dir);
+                }
+            }
+
+            long totalUnmanagedAllocations = 0;
+            var threads = new DynamicJsonArray();
+            foreach (var stats in NativeMemory.AllThreadStats
+                .Where(x => x.IsThreadAlive())
+                .GroupBy(x => x.Name)
+                .OrderByDescending(x => x.Sum(y => y.TotalAllocated)))
+            {
+                var unmanagedAllocations = stats.Sum(x => x.TotalAllocated);
+                totalUnmanagedAllocations += unmanagedAllocations;
+                var ids = new DynamicJsonArray(stats.OrderByDescending(x => x.TotalAllocated).Select(x => new DynamicJsonValue
+                {
+                    ["Id"] = x.UnmanagedThreadId,
+                    ["ManagedThreadId"] = x.Id,
+                    ["Allocations"] = x.TotalAllocated,
+                    ["HumaneAllocations"] = Size.Humane(x.TotalAllocated)
+                }));
+                var groupStats = new DynamicJsonValue
+                {
+                    ["Name"] = stats.Key,
+                    ["Allocations"] = unmanagedAllocations,
+                    ["HumaneAllocations"] = Size.Humane(unmanagedAllocations)
+                };
+                if (ids.Count == 1)
+                {
+                    var threadStats = stats.First();
+                    groupStats["Id"] = threadStats.UnmanagedThreadId;
+                    groupStats["ManagedThreadId"] = threadStats.Id;
+                }
+                else
+                {
+                    groupStats["Ids"] = ids;
+                }
+
+                threads.Add(groupStats);
+            }
+
+            long managedMemoryInBytes = MemoryInformation.GetManagedMemoryInBytes();
+            var djv = new DynamicJsonValue
+            {
+                [nameof(MemoryInfo.WorkingSet)] = memInfo.WorkingSet,
+                [nameof(MemoryInfo.TotalUnmanagedAllocations)] = totalUnmanagedAllocations,
+                [nameof(MemoryInfo.ManagedAllocations)] = managedMemoryInBytes,
+                [nameof(MemoryInfo.TotalMemoryMapped)] = totalMapping,
+                [nameof(MemoryInfo.PhysicalMem)] = Size.Humane(memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes)),
+                [nameof(MemoryInfo.FreeMem)] = Size.Humane(memInfo.AvailableWithoutTotalCleanMemory.GetValue(SizeUnit.Bytes)),
+                [nameof(MemoryInfo.HighMemLastOneMinute)] = Size.Humane(memoryUsageRecords.High.LastOneMinute.GetValue(SizeUnit.Bytes)),
+                [nameof(MemoryInfo.LowMemLastOneMinute)] = Size.Humane(memoryUsageRecords.Low.LastOneMinute.GetValue(SizeUnit.Bytes)),
+                [nameof(MemoryInfo.HighMemLastFiveMinute)] = Size.Humane(memoryUsageRecords.High.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
+                [nameof(MemoryInfo.LowMemLastFiveMinute)] = Size.Humane(memoryUsageRecords.Low.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
+                [nameof(MemoryInfo.HighMemSinceStartup)] = Size.Humane(memoryUsageRecords.High.SinceStartup.GetValue(SizeUnit.Bytes)),
+                [nameof(MemoryInfo.LowMemSinceStartup)] = Size.Humane(memoryUsageRecords.Low.SinceStartup.GetValue(SizeUnit.Bytes)),
+
+                [nameof(MemoryInfo.Humane)] = new DynamicJsonValue
+                {
+                    [nameof(MemoryInfoHumane.WorkingSet)] = Size.Humane(memInfo.WorkingSet.GetValue(SizeUnit.Bytes)),
+                    [nameof(MemoryInfoHumane.TotalUnmanagedAllocations)] = Size.Humane(totalUnmanagedAllocations),
+                    [nameof(MemoryInfoHumane.ManagedAllocations)] = Size.Humane(managedMemoryInBytes),
+                    [nameof(MemoryInfoHumane.TotalMemoryMapped)] = Size.Humane(totalMapping)
+                },
+
+                ["Threads"] = threads,
+
+                [nameof(MemoryInfo.Mappings)] = fileMappings
+            };
+            return djv;
         }
 
         private static long GetFileSize(string file)

@@ -258,7 +258,7 @@ namespace Voron.Platform.Posix
                         $"Unable to map {size/Constants.Size.Kilobyte:#,#0} kb starting at {startPage} on {FileName}");
                 }
 
-                NativeMemory.RegisterFileMapping(FileName.FullPath, startingBaseAddressPtr, size);
+                NativeMemory.RegisterFileMapping(FileName.FullPath, startingBaseAddressPtr, size, GetAllocatedInBytes);
 
                 Interlocked.Add(ref _totalMapped, size);
                 var mappedAddresses = new MappedAddresses

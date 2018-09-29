@@ -134,7 +134,7 @@ namespace Sparrow.Platform.Win32
             }
         }
 
-        public static (long WorkingSet, long ProcessClean, DynamicJsonArray Json) GetMaps()
+        public static (long ProcessClean, DynamicJsonArray Json) GetMaps()
         {
             long processClean = 0;
 
@@ -214,11 +214,7 @@ namespace Sparrow.Platform.Win32
                 dja.Add(djv);
             }
 
-            using (var currentProcess = Process.GetCurrentProcess())
-            {
-                var workingSet = currentProcess.WorkingSet64;
-                return (workingSet, processClean, dja);
-            }
+            return (processClean, dja);
         }
 
         public static bool WillCauseHardPageFault(byte* address, long length)

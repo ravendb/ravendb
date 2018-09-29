@@ -125,7 +125,7 @@ namespace Voron.Platform.Posix
                 var err = Marshal.GetLastWin32Error();
                 Syscall.ThrowLastError(err, "mmap on " + FileName);
             }
-            NativeMemory.RegisterFileMapping(FileName.FullPath, startingBaseAddressPtr, _totalAllocationSize);
+            NativeMemory.RegisterFileMapping(FileName.FullPath, startingBaseAddressPtr, _totalAllocationSize, GetAllocatedInBytes);
             var allocationInfo = new PagerState.AllocationInfo
             {
                 BaseAddress = (byte*)startingBaseAddressPtr.ToPointer(),
