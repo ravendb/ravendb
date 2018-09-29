@@ -17,6 +17,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
@@ -28,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public abstract unsafe class ReduceMapResultsBase<T> : IIndexingWork where T : IndexDefinitionBase
     {
-        private static readonly TimeSpan MinReduceDurationToCalculateProcessMemoryUsage = TimeSpan.FromSeconds(1);
+        private static readonly TimeSpan MinReduceDurationToCalculateProcessMemoryUsage = TimeSpan.FromSeconds(3);
         internal static readonly Slice PageNumberSlice;
         internal static readonly string PageNumberToReduceResultTableName = "PageNumberToReduceResult";
         private readonly Logger _logger;
@@ -124,12 +125,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 }
             }
 
-            if (stats.Duration >= MinReduceDurationToCalculateProcessMemoryUsage) 
+            if (stats.Duration >= MinReduceDurationToCalculateProcessMemoryUsage)
             {
-                using (MemoryUsageGuard.GetProcessMemoryUsage(out var memoryUsage, out _))
-                {
-                    stats.RecordReduceMemoryStats(memoryUsage.WorkingSet, memoryUsage.PrivateMemory);
-                }
+                var workingSet = MemoryInformation.GetWorkingSetInBytes();
+                var privateMemory = MemoryInformation.GetManagedMemoryInBytes() + MemoryInformation.GetUnManagedAllocationsInBytes();
+                stats.RecordReduceMemoryStats(workingSet, privateMemory);
             }
 
             WriteLastEtags(indexContext);

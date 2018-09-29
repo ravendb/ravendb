@@ -5,7 +5,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.LowMemory;
@@ -32,26 +31,6 @@ namespace Sparrow.Utils
         public static IEnumerable<ThreadStats> AllThreadStats => ThreadAllocations.Values.Where(x => x != null);
 
         public static ConcurrentDictionary<string, Lazy<FileMappingInfo>> FileMapping = new ConcurrentDictionary<string, Lazy<FileMappingInfo>>();
-
-        public class FileMappingInfo
-        {
-            public FileMappingInfo()
-            {
-                Info = new ConcurrentDictionary<IntPtr, long>();
-            }
-
-            public ConcurrentDictionary<IntPtr, long> Info { get; set; }
-
-            public FileType FileType { get; set; }
-        }
-
-        public enum FileType
-        {
-            Data,
-            ScratchBuffer,
-            CompressionBuffer,
-            DecompressionBuffer
-        }
 
         public static void SetMinimumFreeCommittedMemory(float min)
         {
@@ -161,7 +140,7 @@ namespace Sparrow.Utils
             }
         }
 
-        public static void RegisterFileMapping(string fullPath, IntPtr start, long size)
+        public static void RegisterFileMapping(string fullPath, IntPtr start, long size, Func<long> getAllocatedSize)
         {
             var lazyMapping = FileMapping.GetOrAdd(fullPath, _ =>
             {
@@ -175,6 +154,7 @@ namespace Sparrow.Utils
                 });
             });
 
+            lazyMapping.Value.GetAllocatedSizeFunc = getAllocatedSize;
             lazyMapping.Value.Info.TryAdd(start, size);
         }
 
@@ -213,7 +193,6 @@ namespace Sparrow.Utils
             if (FileMapping.TryGetValue(name, out var mapping) == false)
                 return;
 
-            long _;
             var info = mapping.Value.Info;
             info.TryRemove(start, out _);
             if (info.Count > 0)
@@ -293,6 +272,28 @@ namespace Sparrow.Utils
         public static void EnsureRegistered()
         {
             GC.KeepAlive(ThreadAllocations.Value); // side affecty
+        }
+
+        public class FileMappingInfo
+        {
+            public FileMappingInfo()
+            {
+                Info = new ConcurrentDictionary<IntPtr, long>();
+            }
+
+            public ConcurrentDictionary<IntPtr, long> Info { get; set; }
+
+            public Func<long> GetAllocatedSizeFunc { get; set; }
+
+            public FileType FileType { get; set; }
+        }
+
+        public enum FileType
+        {
+            Data,
+            ScratchBuffer,
+            CompressionBuffer,
+            DecompressionBuffer
         }
     }
 }
