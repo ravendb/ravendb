@@ -404,7 +404,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                             options.OperateOnTypes |= DatabaseItemType.Tombstones;
 
                         var lastEtagFromStorage = CreateBackup(options, tempBackupFilePath, startDocumentEtag, onProgress);
-                        Debug.Assert(lastEtagFromStorage != 0);
                         lastEtag = _isFullBackup ? lastEtagFromStorage : _backupResult.GetLastEtag();
                     }
                     else
