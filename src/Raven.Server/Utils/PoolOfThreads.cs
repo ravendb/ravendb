@@ -42,6 +42,26 @@ namespace Raven.Server.Utils
             _minimumFreeCommittedMemory = min;
         }
 
+        public void SetThreadsAffinityIfNeeded()
+        {
+            foreach (var pooledThread in _pool)
+            {
+                try
+                {
+                    var numberOfCoresToReduce = pooledThread.NumberOfCoresToReduce;
+                    if (numberOfCoresToReduce == null)
+                        continue;
+
+                    pooledThread.SetThreadAffinity(numberOfCoresToReduce.Value, pooledThread.ThreadMask);
+                }
+                catch (Exception e)
+                {
+                    if (_log.IsOperationsEnabled)
+                        _log.Operations("Failed to set thread affinity", e);
+                }
+            }
+        }
+
         private readonly ConcurrentQueue<PooledThread> _pool = new ConcurrentQueue<PooledThread>();
         private bool _disposed;
 
@@ -116,6 +136,9 @@ namespace Raven.Server.Utils
             private ulong _currentUnmangedThreadId;
             private ProcessThread _currentProcessThread;
             private Process _currentProcess;
+
+            public int? NumberOfCoresToReduce { get; private set; }
+            public long? ThreadMask { get; private set; }
 
             public DateTime StartedAt { get; internal set; }
 
@@ -233,6 +256,9 @@ namespace Raven.Server.Utils
                 if (PlatformDetails.RunningOnMacOsx)
                     return true;
 
+                NumberOfCoresToReduce = null;
+                ThreadMask = null;
+
                 try
                 {
                     _currentProcess.Refresh();
@@ -324,6 +350,9 @@ namespace Raven.Server.Utils
             {
                 if (PlatformDetails.RunningOnMacOsx)
                     return;
+
+                NumberOfCoresToReduce = numberOfCoresToReduce;
+                ThreadMask = threadMask;
 
                 if (numberOfCoresToReduce <= 0 && threadMask == null)
                     return;

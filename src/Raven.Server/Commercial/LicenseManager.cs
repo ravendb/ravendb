@@ -28,6 +28,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -1019,6 +1020,10 @@ namespace Raven.Server.Commercial
 
                 process.ProcessorAffinity = new IntPtr(bitMask);
 
+                // changing the process affinity resets the thread affinity
+                // we need to change the threads affinity as well
+                PoolOfThreads.GlobalRavenThreadPool.SetThreadsAffinityIfNeeded();
+
                 if (addPerformanceHint &&
                     ProcessorInfo.ProcessorCount > cores)
                 {
@@ -1038,12 +1043,15 @@ namespace Raven.Server.Commercial
             {
                 // nothing to do
             }
+            catch (NotSupportedException)
+            {
+                // nothing to do
+            }
             catch (Exception e)
             {
                 Logger.Info($"Failed to set affinity for {cores} cores, error code: {Marshal.GetLastWin32Error()}", e);
             }
         }
-
        
         private static void SetMaxWorkingSet(Process process, double ramInGb)
         {
