@@ -604,6 +604,7 @@ namespace Raven.Server.Documents
                 IndexStore?.RunIdleOperations();
                 Operations?.CleanupOperations();
                 PeriodicBackupRunner?.RemoveInactiveCompletedTasks();
+                DocumentsStorage.Environment.Journal.TryReduceSizeOfCompressionBufferIfNeeded();
                 DocumentsStorage.Environment.ScratchBufferPool.Cleanup();
             }
             finally
