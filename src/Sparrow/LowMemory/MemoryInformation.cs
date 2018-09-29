@@ -39,6 +39,13 @@ namespace Sparrow.LowMemory
         public static long HighSinceStartup;
         public static long LowSinceStartup = long.MaxValue;
 
+        private static readonly int ProcessId;
+
+        static MemoryInformation()
+        {
+            using (var process = Process.GetCurrentProcess())
+                ProcessId = process.Id;
+        }
 
         private static bool _failedToGetAvailablePhysicalMemory;
         private static readonly MemoryInfoResult FailedResult = new MemoryInfoResult
@@ -129,9 +136,9 @@ namespace Sparrow.LowMemory
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool GetPhysicallyInstalledSystemMemory(out long totalMemoryInKb);
 
-        public static long GetRssMemoryUsage(int processId)
+        private static long GetRssMemoryUsage()
         {
-            var path = $"/proc/{processId}/status";
+            var path = $"/proc/{ProcessId}/status";
 
             try
             {
@@ -163,7 +170,8 @@ namespace Sparrow.LowMemory
                     buffers = new[] {buffer1, buffer2};
                     smapsReader = new SmapsReader(new[] {buffer1, buffer2});
                 }
-                return GetMemoryInfo(smapsReader);
+
+                return GetMemoryInfo(smapsReader, extendedInfo: true);
             }
             finally
             {
@@ -234,7 +242,7 @@ namespace Sparrow.LowMemory
             return (installedMemoryInGb, usableMemoryInGb);
         }
 
-        public static MemoryInfoResult GetMemoryInfo(SmapsReader smapsReader = null)
+        public static MemoryInfoResult GetMemoryInfo(SmapsReader smapsReader = null, bool extendedInfo = false)
         {
             if (_failedToGetAvailablePhysicalMemory)
             {
@@ -245,13 +253,18 @@ namespace Sparrow.LowMemory
 
             try
             {
-                if (PlatformDetails.RunningOnPosix == false)
-                    return GetMemoryInfoWindows();
+                extendedInfo &= PlatformDetails.RunningOnLinux == false;
 
-                if (PlatformDetails.RunningOnMacOsx)
-                    return GetMemoryInfoMacOs();
+                using (var process = extendedInfo ? Process.GetCurrentProcess() : null)
+                {
+                    if (PlatformDetails.RunningOnPosix == false)
+                        return GetMemoryInfoWindows(process);
 
-                return GetMemoryInfoLinux(smapsReader);
+                    if (PlatformDetails.RunningOnMacOsx)
+                        return GetMemoryInfoMacOs(process);
+
+                    return GetMemoryInfoLinux(smapsReader);
+                }
             }
             catch (Exception e)
             {
@@ -287,17 +300,27 @@ namespace Sparrow.LowMemory
                 fromProcMemInfo.CommitLimit.Set(Math.Max(maxMemoryUsage, commitedMemoryInBytes), SizeUnit.Bytes);
             }
 
+            var workingSet = new Size(0, SizeUnit.Bytes);
+            if (smapsReader != null)
+            {
+                // extended info is needed
+                workingSet.Set(GetRssMemoryUsage(), SizeUnit.Bytes);
+            }
+
             return BuildPosixMemoryInfoResult(
                 fromProcMemInfo.MemAvailable,
                 fromProcMemInfo.TotalMemory,
                 fromProcMemInfo.Commited,
                 fromProcMemInfo.CommitLimit,
                 fromProcMemInfo.AvailableWithoutTotalCleanMemory,
-                fromProcMemInfo.SharedCleanMemory
-                );
+                fromProcMemInfo.SharedCleanMemory,
+                workingSet);
         }
 
-        private static MemoryInfoResult BuildPosixMemoryInfoResult(Size availableRam, Size totalPhysicalMemory, Size commitedMemory, Size commitLimit, Size availableWithoutTotalCleanMemory, Size sharedCleanMemory)
+        private static MemoryInfoResult BuildPosixMemoryInfoResult(
+            Size availableRam, Size totalPhysicalMemory, Size commitedMemory, 
+            Size commitLimit, Size availableWithoutTotalCleanMemory, 
+            Size sharedCleanMemory, Size workingSet)
         {
             SetMemoryRecords(availableRam.GetValue(SizeUnit.Bytes));
 
@@ -310,11 +333,12 @@ namespace Sparrow.LowMemory
                 AvailableWithoutTotalCleanMemory = availableWithoutTotalCleanMemory,
                 SharedCleanMemory = sharedCleanMemory,
                 TotalPhysicalMemory = totalPhysicalMemory,
-                InstalledMemory = totalPhysicalMemory
+                InstalledMemory = totalPhysicalMemory,
+                WorkingSet = workingSet
             };
         }
 
-        private static unsafe MemoryInfoResult GetMemoryInfoMacOs()
+        private static unsafe MemoryInfoResult GetMemoryInfoMacOs(Process process = null)
         {
             var mib = new[] { (int)TopLevelIdentifiers.CTL_HW, (int)CtkHwIdentifiers.HW_MEMSIZE };
             ulong physicalMemory = 0;
@@ -369,11 +393,12 @@ namespace Sparrow.LowMemory
             var commitLimit = new Size((long)(physicalMemory + swapu.xsu_total), SizeUnit.Bytes);
 
             var availableWithoutTotalCleanMemory = availableRamInBytes; // mac (unlike other linux distros) does calculate accurate available memory
+            var workingSet = new Size(process?.WorkingSet64 ?? 0, SizeUnit.Bytes);
 
-            return BuildPosixMemoryInfoResult(availableRamInBytes, totalPhysicalMemory, commitedMemory, commitLimit, availableWithoutTotalCleanMemory, Size.Zero);
+            return BuildPosixMemoryInfoResult(availableRamInBytes, totalPhysicalMemory, commitedMemory, commitLimit, availableWithoutTotalCleanMemory, Size.Zero, workingSet);
         }
 
-        private static unsafe MemoryInfoResult GetMemoryInfoWindows()
+        private static unsafe MemoryInfoResult GetMemoryInfoWindows(Process process = null)
         {
             // windows
             var memoryStatus = new MemoryStatusEx
@@ -394,20 +419,91 @@ namespace Sparrow.LowMemory
             // Malformed SMBIOS data may indicate a problem with the user's computer.
             var fetchedInstalledMemory = GetPhysicallyInstalledSystemMemory(out var installedMemoryInKb);
 
+            var sharedClean = GetSharedCleanInBytes(process);
             SetMemoryRecords((long)memoryStatus.ullAvailPhys);
-
+            
             return new MemoryInfoResult
             {
                 TotalCommittableMemory = new Size((long)memoryStatus.ullTotalPageFile, SizeUnit.Bytes),
                 CurrentCommitCharge = new Size((long)(memoryStatus.ullTotalPageFile - memoryStatus.ullAvailPageFile), SizeUnit.Bytes),
                 AvailableMemory = new Size((long)memoryStatus.ullAvailPhys, SizeUnit.Bytes),
-                AvailableWithoutTotalCleanMemory = new Size((long)memoryStatus.ullAvailPhys, SizeUnit.Bytes),
-                SharedCleanMemory = Size.Zero,
+                AvailableWithoutTotalCleanMemory = new Size((long)memoryStatus.ullAvailPhys + sharedClean, SizeUnit.Bytes),
+                SharedCleanMemory = new Size(sharedClean, SizeUnit.Bytes),
                 TotalPhysicalMemory = new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
                 InstalledMemory = fetchedInstalledMemory ?
                     new Size(installedMemoryInKb, SizeUnit.Kilobytes) :
                     new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
+                WorkingSet = new Size(process?.WorkingSet64 ?? 0, SizeUnit.Bytes)
             };
+        }
+
+        public static long GetSharedCleanInBytes(Process process)
+        {
+            if (process == null)
+                return 0;
+            
+            var mappedDirty = 0L;
+            foreach (var mapping in NativeMemory.FileMapping)
+            {
+                var fileMappingInfo = mapping.Value.Value;
+                var fileType = fileMappingInfo.FileType;
+                if (fileType == NativeMemory.FileType.Data)
+                    continue;
+
+                var totalMapped = GetTotalMapped(fileMappingInfo);
+                if (fileType == NativeMemory.FileType.ScratchBuffer)
+                {
+                    // for scratch buffers we have the allocated size
+                    var allocated = fileMappingInfo.GetAllocatedSizeFunc?.Invoke() ?? 0;
+                    if (allocated < totalMapped / 2)
+                    {
+                        // using less than half of the size of the scratch buffer
+                        mappedDirty += allocated;
+                        continue;
+                    }
+                }
+
+                // we are counting the total mapped size of all the other buffers
+                mappedDirty += totalMapped;
+            }
+
+            var sharedClean = process.WorkingSet64 - GetUnManagedAllocationsInBytes() - GetManagedMemoryInBytes() - mappedDirty;
+
+            // the shared dirty can be larger than the size of the working set
+            // this can happen when some of the buffers were paged out
+            return Math.Max(0, sharedClean);
+        }
+
+        private static long GetTotalMapped(NativeMemory.FileMappingInfo fileMappingInfo)
+        {
+            var totalMapped = 0L;
+
+            foreach (var singleMapping in fileMappingInfo.Info)
+            {
+                totalMapped += singleMapping.Value;
+            }
+
+            return totalMapped;
+        }
+
+        public static long GetUnManagedAllocationsInBytes()
+        {
+            long totalUnmanagedAllocations = 0;
+
+            foreach (var stats in NativeMemory.AllThreadStats)
+            {
+                if (stats.IsThreadAlive() == false)
+                    continue;
+
+                totalUnmanagedAllocations += stats.TotalAllocated;
+            }
+
+            return totalUnmanagedAllocations;
+        }
+
+        public static long GetManagedMemoryInBytes()
+        {
+            return GC.GetTotalMemory(false);
         }
 
         public static MemoryInfoResult.MemoryUsageLowHigh GetMemoryUsageRecords()
@@ -429,43 +525,14 @@ namespace Sparrow.LowMemory
             };
         }
 
-        public static (long WorkingSet, long TotalUnmanagedAllocations, long ManagedMemory, long MappedTemp) MemoryStats()
+        public static long GetWorkingSetInBytes()
         {
+            if (PlatformDetails.RunningOnLinux)
+                return GetRssMemoryUsage();
+
             using (var currentProcess = Process.GetCurrentProcess())
             {
-                var workingSet = PlatformDetails.RunningOnLinux == false
-                        ? currentProcess.WorkingSet64
-                        : GetRssMemoryUsage(currentProcess.Id);
-
-                long totalUnmanagedAllocations = 0;
-                foreach (var stats in NativeMemory.AllThreadStats)
-                {
-                    if (stats.IsThreadAlive())
-                        totalUnmanagedAllocations += stats.TotalAllocated;
-                }
-
-                // scratch buffers, compression buffers
-                var totalMappedTemp = 0L;
-                foreach (var mapping in NativeMemory.FileMapping)
-                {
-                    var fileType = mapping.Value.Value.FileType;
-                    if (fileType == NativeMemory.FileType.Data)
-                    {
-                        // we care only about the temp buffers
-                        continue;
-                    }
-
-                    var maxMapped = 0L;
-                    foreach (var singleMapping in mapping.Value.Value.Info)
-                    {
-                        maxMapped = Math.Max(maxMapped, singleMapping.Value);
-                    }
-
-                    totalMappedTemp += maxMapped;
-                }
-
-                var managedMemory = GC.GetTotalMemory(false);
-                return (workingSet, totalUnmanagedAllocations, managedMemory, totalMappedTemp);
+                return currentProcess.WorkingSet64;
             }
         }
 
@@ -547,11 +614,11 @@ namespace Sparrow.LowMemory
 
         public Size TotalPhysicalMemory;
         public Size InstalledMemory;
+        public Size WorkingSet;
         public Size AvailableMemory;
         public Size AvailableWithoutTotalCleanMemory;
         public Size SharedCleanMemory;
     }
-
 
     public class EarlyOutOfMemoryException : Exception
     {

@@ -37,6 +37,13 @@ namespace Voron.Impl.Paging
 
         public Action<PagerState> PagerStateChanged;
 
+        public Func<long> AllocatedInBytesFunc;
+
+        public long GetAllocatedInBytes()
+        {
+            return AllocatedInBytesFunc?.Invoke() ?? 0;
+        }
+
         public void SetPagerState(PagerState newState)
         {
             if (DisposeOnceRunner.Disposed)

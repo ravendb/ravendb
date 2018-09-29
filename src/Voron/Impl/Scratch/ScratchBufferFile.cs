@@ -42,6 +42,8 @@ namespace Voron.Impl.Scratch
             _scratchPager = scratchPager;
             _scratchNumber = scratchNumber;
             _allocatedPagesCount = 0;
+
+            scratchPager.AllocatedInBytesFunc = () => AllocatedPagesCount * Constants.Storage.PageSize;
         }
 
         public void Reset()
