@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.Binary;
@@ -154,61 +155,77 @@ namespace Raven.Server.Utils
                     while (true)
                     {
                         _waitForWork.WaitOne();
-                        _workIsDone.ManagedThreadId = Thread.CurrentThread.ManagedThreadId;
-                        if (_action == null)
-                            return; // should only happen when we shutdown
 
-                        ResetCurrentThreadName();
-                        Thread.CurrentThread.Name = _name;
-
-                        try
-                        {
-                            LongRunningWork.Current = _workIsDone;
-                            _action(_state);
-                        }
-                        catch(Exception e)
-                        {
-                            if (_log.IsOperationsEnabled)
-                            {
-                                _log.Operations($"An uncaught exception occurred in '{_name}' and killed the process", e);
-                            }
-
-                            throw;
-                        }
-                        finally
-                        {
-                            _workIsDone.Set();
-                            LongRunningWork.Current = null;
-                        }
-                        _action = null;
-                        _state = null;
-                        _workIsDone = null;
-
-                        ThreadLocalCleanup.Run();
-
-                        ResetCurrentThreadName();
-                        Thread.CurrentThread.Name = "Available Pool Thread";
-
-                        if (ResetThreadPriority() == false)
+                        if (DoWork() == false)
                             return;
-
-                        if (ResetThreadAffinity() == false)
-                            return;
-
-                        _waitForWork.Reset();
-                        lock (_parent)
-                        {
-                            if (_parent._disposed)
-                                return;
-
-                            _parent._pool.Enqueue(this);
-                        }
                     }
                 }
                 finally
                 {
                     NativeMemory.NotifyCurrentThreadAboutToClose();
                 }
+            }
+
+            //https://github.com/dotnet/coreclr/issues/20156
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            private bool DoWork()
+            {
+                _workIsDone.ManagedThreadId = Thread.CurrentThread.ManagedThreadId;
+
+                if (_action == null)
+                {
+                    // should only happen when we shutdown
+                    return false;
+                }
+
+                ResetCurrentThreadName();
+                Thread.CurrentThread.Name = _name;
+
+                try
+                {
+                    LongRunningWork.Current = _workIsDone;
+                    _action(_state);
+                }
+                catch (Exception e)
+                {
+                    if (_log.IsOperationsEnabled)
+                    {
+                        _log.Operations($"An uncaught exception occurred in '{_name}' and killed the process", e);
+                    }
+
+                    throw;
+                }
+                finally
+                {
+                    _workIsDone.Set();
+                    LongRunningWork.Current = null;
+                }
+
+                _action = null;
+                _state = null;
+                _workIsDone = null;
+
+                ThreadLocalCleanup.Run();
+
+                ResetCurrentThreadName();
+                Thread.CurrentThread.Name = "Available Pool Thread";
+
+                if (ResetThreadPriority() == false)
+                    return false;
+
+                if (ResetThreadAffinity() == false)
+                    return false;
+
+                _waitForWork.Reset();
+                lock (_parent)
+                {
+                    if (_parent._disposed)
+                        return false;
+
+                    _parent._pool.Enqueue(this);
+                }
+
+                return true;
             }
 
             private bool ResetThreadAffinity()
