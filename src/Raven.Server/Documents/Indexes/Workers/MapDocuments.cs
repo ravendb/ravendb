@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing map for '{_index.Name}'. Collection: {collection} LastMappedEtag: {lastMappedEtag}.");
+                        _logger.Info($"Executing map for '{_index.Name}'. Collection: {collection} LastMappedEtag: {lastMappedEtag:#,#;;0}.");
 
                     var inMemoryStats = _index.GetStats(collection);
                     var lastEtag = lastMappedEtag;
