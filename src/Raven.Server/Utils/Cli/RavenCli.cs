@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -26,7 +25,6 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
-using Sparrow.Platform.Posix;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
 using SizeClient = Raven.Client.Util.Size;
@@ -72,8 +70,9 @@ namespace Raven.Server.Utils.Cli
                         break;
                     case "%M":
                         {
+                            var workingSetText = PlatformDetails.RunningOnPosix == false ? "WS" : "RSS";
                             var memoryStats = MemoryStatsWithMemoryMappedInfo();
-                            msg.Append($"WS:{memoryStats.WorkingSet}");
+                            msg.Append($"{workingSetText}:{memoryStats.WorkingSet}");
                             msg.Append($"|UM:{memoryStats.TotalUnmanagedAllocations}");
                             msg.Append($"|M:{memoryStats.ManagedMemory}");
                             msg.Append($"|MP:{memoryStats.TotalMemoryMapped}");
@@ -367,7 +366,7 @@ namespace Raven.Server.Utils.Cli
             var genNum = args == null || args.Count == 0 ? 2 : Convert.ToInt32(args.First());
 
             WriteText("Before collecting, managed memory used: ", TextColor, cli, newLine: false);
-            WriteText(new Size(GC.GetTotalMemory(false), SizeUnit.Bytes).ToString(), ConsoleColor.Cyan, cli);
+            WriteText(new Size(MemoryInformation.GetManagedMemoryInBytes(), SizeUnit.Bytes).ToString(), ConsoleColor.Cyan, cli);
             var startTime = DateTime.UtcNow;
             WriteText("Garbage Collecting... ", TextColor, cli, newLine: false);
 
@@ -392,7 +391,7 @@ namespace Raven.Server.Utils.Cli
 
             WriteText("Collected.", ConsoleColor.Green, cli);
             WriteText("After collecting, managed memory used:  ", TextColor, cli, newLine: false);
-            WriteText(new Size(GC.GetTotalMemory(false), SizeUnit.Bytes).ToString(), ConsoleColor.Cyan, cli, newLine: false);
+            WriteText(new Size(MemoryInformation.GetManagedMemoryInBytes(), SizeUnit.Bytes).ToString(), ConsoleColor.Cyan, cli, newLine: false);
             WriteText(" at ", TextColor, cli, newLine: false);
             WriteText(actionTime.TotalSeconds + " Seconds", ConsoleColor.Cyan, cli);
             return true;
@@ -937,9 +936,10 @@ namespace Raven.Server.Utils.Cli
         {
             WriteText("Before simulating low-mem, memory stats: ", TextColor, cli, newLine: false);
 
+            var workingSetText = PlatformDetails.RunningOnPosix == false ? "Working Set" : "RSS";
             var memoryStats = MemoryStatsWithMemoryMappedInfo();
             var msg = new StringBuilder();
-            msg.Append($"Working Set: {memoryStats.WorkingSet}");
+            msg.Append($"{workingSetText}: {memoryStats.WorkingSet}");
             msg.Append($" Unmamanged Memory: {memoryStats.TotalUnmanagedAllocations}");
             msg.Append($" Managed Memory: {memoryStats.ManagedMemory}");
             WriteText(msg.ToString(), ConsoleColor.Cyan, cli);
@@ -964,24 +964,19 @@ namespace Raven.Server.Utils.Cli
             string ManagedMemory,
             string TotalMemoryMapped) MemoryStatsWithMemoryMappedInfo()
         {
-            var stats = MemoryInformation.MemoryStats();
-
             long totalMemoryMapped = 0;
             foreach (var mapping in NativeMemory.FileMapping)
             {
-                var maxMapped = 0L;
                 foreach (var singleMapping in mapping.Value.Value.Info)
                 {
-                    maxMapped = Math.Max(maxMapped, singleMapping.Value);
+                    totalMemoryMapped += singleMapping.Value;
                 }
-
-                totalMemoryMapped += maxMapped;
             }
 
             return (
-                SizeClient.Humane(stats.WorkingSet),
-                SizeClient.Humane(stats.TotalUnmanagedAllocations),
-                SizeClient.Humane(stats.ManagedMemory),
+                SizeClient.Humane(MemoryInformation.GetWorkingSetInBytes()),
+                SizeClient.Humane(MemoryInformation.GetUnManagedAllocationsInBytes()),
+                SizeClient.Humane(MemoryInformation.GetManagedMemoryInBytes()),
                 SizeClient.Humane(totalMemoryMapped));
         }
 

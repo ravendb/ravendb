@@ -1194,7 +1194,6 @@ namespace Raven.Server.Documents.Indexes
             IndexPersistence.Clean();
             _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
-
             var afterFree = NativeMemory.CurrentThreadStats.TotalAllocated;
             if (_logger.IsInfoEnabled)
                 _logger.Info($"After cleanup, using {afterFree / 1024:#,#0} kb by '{Name}'.");
@@ -1324,14 +1323,12 @@ namespace Raven.Server.Documents.Indexes
 
         private static string OutOfMemoryDetails(OutOfMemoryException oome)
         {
-            var stats = MemoryInformation.MemoryStats();
-
             var memoryInfo = MemoryInformation.GetMemInfoUsingOneTimeSmapsReader();
 
-            return $"Managed memory: {new Size(stats.ManagedMemory, SizeUnit.Bytes)}, " +
-                   $"Unmanaged allocations: {new Size(stats.TotalUnmanagedAllocations, SizeUnit.Bytes)}, " +
-                   $"Mapped temp: {new Size(stats.MappedTemp, SizeUnit.Bytes)}, " +
-                   $"Working set: {new Size(stats.TotalUnmanagedAllocations, SizeUnit.Bytes)}, " +
+            return $"Managed memory: {new Size(MemoryInformation.GetManagedMemoryInBytes(), SizeUnit.Bytes)}, " +
+                   $"Unmanaged allocations: {new Size(MemoryInformation.GetUnManagedAllocationsInBytes(), SizeUnit.Bytes)}, " +
+                   $"Shared clean: {memoryInfo.SharedCleanMemory}, " +
+                   $"Working set: {memoryInfo.WorkingSet}, " +
                    $"Available memory: {memoryInfo.AvailableMemory}, " +
                    $"Calculated Available memory: {memoryInfo.AvailableWithoutTotalCleanMemory}, " +
                    $"Total memory: {memoryInfo.TotalPhysicalMemory} {Environment.NewLine}" +

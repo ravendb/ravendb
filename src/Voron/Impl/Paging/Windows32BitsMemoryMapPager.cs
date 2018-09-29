@@ -310,7 +310,7 @@ namespace Voron.Impl.Paging
                         new Win32Exception(lastWin32Error));
                 }
 
-                NativeMemory.RegisterFileMapping(_fileInfo.FullName, new IntPtr(result), size);
+                NativeMemory.RegisterFileMapping(_fileInfo.FullName, new IntPtr(result), size, GetAllocatedInBytes);
                 Interlocked.Add(ref _totalMapped, size);
                 var mappedAddresses = new MappedAddresses
                 {

@@ -150,22 +150,6 @@ namespace Sparrow.LowMemory
             thread.Start();
         }
 
-        public static Size GetCurrentProcessMemoryMappedShared()
-        {
-            // because we are usually using memory mapped files, we don't want
-            // to account for memory that was loaded into our own working set
-            // but that the OS can discard with no cost (because it can load
-            // the data from disk without needing to write it)
-
-            var stats = MemoryInformation.MemoryStats();
-
-            var sharedMemory = stats.WorkingSet - stats.TotalUnmanagedAllocations - stats.ManagedMemory - stats.MappedTemp;
-
-            // if this is negative, we'll just ignore this
-            var mappedShared = new Size(Math.Max(0, sharedMemory), SizeUnit.Bytes);
-            return mappedShared;
-        }
-
         private void MonitorMemoryUsage()
         {
             SmapsReader smapsReader = PlatformDetails.RunningOnLinux ? new SmapsReader(new[] {new byte[SmapsReader.BufferSize], new byte[SmapsReader.BufferSize]}) : null;
@@ -246,7 +230,8 @@ namespace Sparrow.LowMemory
             (Size AvailableMemory, Size TotalPhysicalMemory, Size CurrentCommitCharge) stats;
             try
             {
-                isLowMemory = GetLowMemory(out totalUnmanagedAllocations, out stats, smapsReader);
+                totalUnmanagedAllocations = MemoryInformation.GetUnManagedAllocationsInBytes();
+                isLowMemory = GetLowMemory(out stats, smapsReader);
             }
             catch (OutOfMemoryException)
             {
@@ -302,23 +287,14 @@ namespace Sparrow.LowMemory
             return timeout;
         }
 
-        private bool GetLowMemory(out long totalUnmanagedAllocations,
+        private bool GetLowMemory(
             out (Size AvailableMemory, Size TotalPhysicalMemory, Size CurrentCommitCharge) memStats,
             SmapsReader smapsReader)
         {
-            totalUnmanagedAllocations = 0;
             if (++_clearInactiveHandlersCounter > 60) // 5 minutes == WaitAny 5 Secs * 60
             {
                 _clearInactiveHandlersCounter = 0;
                 ClearInactiveHandlers();
-            }
-
-            foreach (var stats in NativeMemory.AllThreadStats)
-            {
-                if (stats.IsThreadAlive() == false)
-                    continue;
-
-                totalUnmanagedAllocations += stats.TotalAllocated;
             }
 
             var memInfo = MemoryInformation.GetMemoryInfo(smapsReader);
@@ -331,20 +307,33 @@ namespace Sparrow.LowMemory
 
         public bool IsLowMemory(MemoryInfoResult memInfo)
         {
-            // We consider low memory only if we don't have enough free pyhsical memory or
-            // the commited memory size if larger than our pyhsical memory.
+            // We consider low memory only if we don't have enough free physical memory or
+            // the commited memory size if larger than our physical memory.
             // This is to ensure that from one hand we don't hit the disk to do page faults and from the other hand
             // we don't want to stay in low memory due to retained memory.
-            var isLowMemory = memInfo.AvailableWithoutTotalCleanMemory< _lowMemoryThreshold;
+            var isLowMemory = IsAvailableMemoryBelowThreshold(memInfo);
 
             if (PlatformDetails.RunningOnPosix == false)
             {
+                if (isLowMemory)
+                {
+                    // getting extendedInfo might be expensive (Process.GetCurrentProcess)
+                    // we'll do it if we detect low memory
+                    memInfo = MemoryInformation.GetMemoryInfo(extendedInfo: true);
+                    isLowMemory = IsAvailableMemoryBelowThreshold(memInfo);
+                }
+
                 // this is relevant only on Windows
                 var commitChargePlusMinSizeToKeepFree = memInfo.CurrentCommitCharge + GetCommitChargeThreshold(memInfo);
                 isLowMemory |= memInfo.TotalCommittableMemory <= commitChargePlusMinSizeToKeepFree;
             }
 
             return isLowMemory;
+        }
+
+        private bool IsAvailableMemoryBelowThreshold(MemoryInfoResult memInfo)
+        {
+            return memInfo.AvailableWithoutTotalCleanMemory < _lowMemoryThreshold;
         }
 
         public Size LowMemoryThreshold => _lowMemoryThreshold;
