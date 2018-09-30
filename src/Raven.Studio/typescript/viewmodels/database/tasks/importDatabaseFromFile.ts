@@ -170,22 +170,6 @@ class importDatabaseFromFile extends viewModelBase {
 
     createPostboxSubscriptions(): Array<KnockoutSubscription> {
         return [
-            ko.postbox.subscribe("UploadProgress", (percentComplete: number) => {
-                const db = this.activeDatabase();
-                if (!db) {
-                    return;
-                }
-
-                if (!this.isUploading()) {
-                    return;
-                }
-
-                if (percentComplete === 100) {
-                    setTimeout(() => this.isUploading(false), 700);
-                }
-
-                this.uploadStatus(percentComplete);
-            }),
             ko.postbox.subscribe(EVENTS.ChangesApi.Reconnected, (db: database) => {
                 this.isUploading(false);
             })
@@ -232,7 +216,7 @@ class importDatabaseFromFile extends viewModelBase {
     
                     this.checkIfRevisionsWasEnabled(db, operationId);
                     
-                    new importDatabaseCommand(db, operationId, fileInput.files[0], this.model)
+                    new importDatabaseCommand(db, operationId, fileInput.files[0], this.model, this.isUploading, this.uploadStatus)
                         .execute()
                         .always(() => this.isUploading(false));
                 });                
@@ -247,16 +231,16 @@ class importDatabaseFromFile extends viewModelBase {
         if (!db.hasRevisionsConfiguration()) {
             notificationCenter.instance.databaseOperationsWatch.monitorOperation(operationId)
             .done(() => {
-                new getDatabaseCommand(db.name)
-                    .execute()
-                    .done(dbInfo => {
-                        if (dbInfo.HasRevisionsConfiguration) {
-                            db.hasRevisionsConfiguration(true);
-                            
-                            collectionsTracker.default.configureRevisions(db);
-                        }
-                    })
-            });    
+                    new getDatabaseCommand(db.name)
+                        .execute()
+                        .done(dbInfo => {
+                            if (dbInfo.HasRevisionsConfiguration) {
+                                db.hasRevisionsConfiguration(true);
+
+                                collectionsTracker.default.configureRevisions(db);
+                            }
+                        });
+                });    
         }
     }
 
