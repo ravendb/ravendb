@@ -105,19 +105,13 @@ class commandBase {
         const url = baseUrl ? baseUrl + appUrl.forDatabaseQuery(db) + relativeUrl : appUrl.forDatabaseQuery(db) + relativeUrl;
 
         const xhrConfiguration = (xhr: XMLHttpRequest) => {
-            const isUploadingFile = url.includes("smuggler/import");
             xhr.upload.addEventListener("progress", (evt: ProgressEvent) => {
-                if (!isUploadingFile || !evt.lengthComputable) {
-                    return;
+                if (evt.lengthComputable) {
+                    const percentComplete = (evt.loaded / evt.total) * 100;
+                    if (percentComplete < 100) {
+                        requestExecution.markProgress();
+                    }
                 }
-
-                const percentComplete = (evt.loaded / evt.total) * 100;
-                if (percentComplete < 100) {
-                    requestExecution.markProgress();
-                }
-
-                //TODO: use event
-                ko.postbox.publish("UploadProgress", percentComplete);
             }, false);
         };
         
@@ -187,6 +181,34 @@ class commandBase {
 
     reportWarning(title: string, details?: string, httpStatusText?: string) {
         messagePublisher.reportWarning(title, details, httpStatusText);
+    }
+
+    static getOptionsForImport(isUploading: KnockoutObservable<boolean>, uploadStatus: KnockoutObservable<number>) : JQueryAjaxSettings {
+        const options: JQueryAjaxSettings = {
+            processData: false, // Prevents JQuery from automatically transforming the data into a query string. http://api.jquery.com/jQuery.ajax/
+            contentType: false,
+            cache: false,
+            dataType: "",
+            xhr: () => {
+                const xhr = new XMLHttpRequest();
+                xhr.upload.addEventListener("progress", (event: ProgressEvent) => {
+                    if (!isUploading() || !event.lengthComputable) {
+                        return;
+                    }
+
+                    const percentComplete = (event.loaded / event.total) * 100;
+                    if (percentComplete === 100) {
+                        setTimeout(() => isUploading(false), 700);
+                    }
+
+                    uploadStatus(percentComplete);
+                }, false);
+
+                return xhr;
+            }
+        };
+
+        return options;
     }
 }
 
