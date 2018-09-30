@@ -114,15 +114,19 @@ class commandBase {
             headers: <any>undefined,
             xhr: () => {
                 const xhr = new XMLHttpRequest();
+                const isUploadingFile = url.includes("smuggler/import");
                 xhr.upload.addEventListener("progress", (evt: ProgressEvent) => {
-                    if (evt.lengthComputable) {
-                        const percentComplete = (evt.loaded / evt.total) * 100;
-                        if (percentComplete < 100) {
-                            requestExecution.markProgress();
-                        }
-                        //TODO: use event
-                        ko.postbox.publish("UploadProgress", percentComplete);
+                    if (!isUploadingFile || !evt.lengthComputable) {
+                        return;
                     }
+
+                    const percentComplete = (evt.loaded / evt.total) * 100;
+                    if (percentComplete < 100) {
+                        requestExecution.markProgress();
+                    }
+
+                    //TODO: use event
+                    ko.postbox.publish("UploadProgress", percentComplete);
                 }, false);
 
                 return xhr;
