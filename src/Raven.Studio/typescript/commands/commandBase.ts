@@ -105,13 +105,19 @@ class commandBase {
         const url = baseUrl ? baseUrl + appUrl.forDatabaseQuery(db) + relativeUrl : appUrl.forDatabaseQuery(db) + relativeUrl;
 
         const xhrConfiguration = (xhr: XMLHttpRequest) => {
+            const isUploadingFile = url.includes("smuggler/import");
             xhr.upload.addEventListener("progress", (evt: ProgressEvent) => {
-                if (evt.lengthComputable) {
-                    const percentComplete = (evt.loaded / evt.total) * 100;
-                    if (percentComplete < 100) {
-                        requestExecution.markProgress();
-                    }
+                if (!isUploadingFile || !evt.lengthComputable) {
+                    return;
                 }
+
+                const percentComplete = (evt.loaded / evt.total) * 100;
+                if (percentComplete < 100) {
+                    requestExecution.markProgress();
+                }
+
+                //TODO: use event
+                ko.postbox.publish("UploadProgress", percentComplete);
             }, false);
         };
         
