@@ -13,7 +13,7 @@ namespace SlowTests.Bugs
     public class EntityWithStack : RavenTestBase
     {
 
-        public class Order
+        private class Order
         {
             public Order()
             {
