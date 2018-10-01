@@ -374,11 +374,11 @@ class editIndex extends viewModelBase {
                 } else {
                     // Regular Index
                     this.editedIndex(new indexDefinition(result));
+                    this.updateIndexFields();
                 }
 
                 this.originalIndexName = this.editedIndex().name();
                 this.editedIndex().hasReduce(!!this.editedIndex().reduce());
-                this.updateIndexFields();
             });
     }
 
