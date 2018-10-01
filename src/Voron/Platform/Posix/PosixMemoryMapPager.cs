@@ -68,8 +68,6 @@ namespace Voron.Platform.Posix
 
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
 
-            InitializePrefetchTable(_totalAllocationSize);
-
             SetPagerState(CreatePagerState());
         }
 
@@ -129,12 +127,11 @@ namespace Voron.Platform.Posix
 
             newPagerState.DebugVerify(newLengthAfterAdjustment);
 
+            newPagerState.CopyPrefetchState(this._pagerState);
             SetPagerState(newPagerState);
 
             _totalAllocationSize += allocationSize;
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
-
-            InitializePrefetchTable(_totalAllocationSize);
 
             return newPagerState;
         }
@@ -164,14 +161,7 @@ namespace Voron.Platform.Posix
                 MappedFile = null
             };
 
-            var newPager = new PagerState(this)
-            {
-                Files = null, // unused
-                MapBase = allocationInfo.BaseAddress,
-                AllocationInfos = new[] { allocationInfo }
-            };
-
-            return newPager;
+            return new PagerState(this, Options.PrefetchSegmentSize, Options.PrefetchResetThreshold, allocationInfo);
         }
 
         public override void Sync(long totalUnsynced)

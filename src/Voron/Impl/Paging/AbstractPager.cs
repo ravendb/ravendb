@@ -207,7 +207,6 @@ namespace Voron.Impl.Paging
             UsePageProtection = usePageProtection;
             Debug.Assert((Constants.Storage.PageSize - Constants.Tree.PageHeaderSize) / Constants.Tree.MinKeysInPage >= 1024);
 
-
             NodeMaxSize = PageMaxSpace / 2 - 1;
 
             // MaxNodeSize is usually persisted as an unsigned short. Therefore, we must ensure it is not possible to have an overflow.
@@ -216,7 +215,7 @@ namespace Voron.Impl.Paging
             _increaseSize = MinIncreaseSize;
             PageMinSpace = (int)(PageMaxSpace * 0.33);
 
-            SetPagerState(new PagerState(this));
+            SetPagerState(new PagerState(this, options.PrefetchSegmentSize, options.PrefetchResetThreshold));
 
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }

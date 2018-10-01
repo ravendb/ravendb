@@ -218,6 +218,9 @@ namespace Voron
             bool result;
             if (bool.TryParse(shouldForceEnvVar, out result))
                 ForceUsing32BitsPager = result;
+
+            PrefetchSegmentSize = 4 * Constants.Size.Megabyte;
+            PrefetchResetThreshold = 8 * (long)Constants.Size.Gigabyte;
         }
 
         public void SetCatastrophicFailure(ExceptionDispatchInfo exception)
