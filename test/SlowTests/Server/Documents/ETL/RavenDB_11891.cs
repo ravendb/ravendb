@@ -106,14 +106,16 @@ namespace SlowTests.Server.Documents.ETL
                 }
             }
         }
-
-        [Fact]
-        public void Should_filter_out_deletions_using_generic_delete_behavior_function_and_marker_document()
+        
+        [Theory]
+        [InlineData(new string[0], true)]
+        [InlineData(new[] { "Users", "Employees" }, false)]
+        public void Should_filter_out_deletions_using_generic_delete_behavior_function_and_marker_document(string[] collections, bool applyToAllDocuments)
         {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, collections: new string[0], script:
+                AddEtl(src, dest, collections: collections, script:
                     @"
 function deleteDocumentsBehavior(docId, collection) {    
     var deletionCheck = load('DeletionLocalOnly/' + docId);
@@ -122,7 +124,7 @@ function deleteDocumentsBehavior(docId, collection) {
     }
     return true;
 }
-", applyToAllDocuments: true);
+", applyToAllDocuments: applyToAllDocuments);
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
