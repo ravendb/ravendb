@@ -132,14 +132,8 @@ namespace Voron.Platform.Posix
                 Size = _totalAllocationSize,
                 MappedFile = null
             };
-
-            var newPager = new PagerState(this)
-            {
-                Files = null, // unused
-                MapBase = allocationInfo.BaseAddress,
-                AllocationInfos = new[] { allocationInfo }
-            };
-            return newPager;
+            
+            return new PagerState(this, Options.PrefetchSegmentSize, Options.PrefetchResetThreshold, allocationInfo);
         }
 
         public override void Sync(long totalUnsynced)

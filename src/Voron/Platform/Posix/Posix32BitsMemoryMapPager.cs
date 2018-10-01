@@ -79,12 +79,7 @@ namespace Voron.Platform.Posix
 
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
 
-            SetPagerState(new PagerState(this)
-            {
-                Files = null,
-                MapBase = null,
-                AllocationInfos = new PagerState.AllocationInfo[0]
-            });
+            SetPagerState(new PagerState(this, Options.PrefetchSegmentSize, Options.PrefetchResetThreshold));
         }
 
         private static void ThrowNotSupportedOption(string file)

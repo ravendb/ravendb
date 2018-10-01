@@ -384,12 +384,15 @@ namespace Voron.Impl.Paging
                _memoryMappedFileAccess,
                 HandleInheritability.None, true);
 
-            var newPager = new PagerState(this)
+            var allocation = new PagerState.AllocationInfo
             {
-                Files = new[] { mmf },
-                MapBase = null,
-                AllocationInfos = new PagerState.AllocationInfo[0]
+                MappedFile = mmf,
+                BaseAddress = null,
+                Size = 0
             };
+
+            var newPager = new PagerState(this, Options.PrefetchSegmentSize, Options.PrefetchResetThreshold, allocation);
+
             _hFileMappingObject = mmf.SafeMemoryMappedFileHandle.DangerousGetHandle();
             return newPager;
         }
