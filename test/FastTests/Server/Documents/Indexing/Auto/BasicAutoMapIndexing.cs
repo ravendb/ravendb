@@ -169,7 +169,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             await database.IndexStore.DeleteIndex(index1.Name);
 
-            Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path1) == false, TimeSpan.FromSeconds(5)));
+            if (index1.Configuration.RunInMemory == false)
+                Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path1) == false, TimeSpan.FromSeconds(5)));
 
             var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
 
@@ -177,7 +178,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             await database.IndexStore.DeleteIndex(index2.Name);
 
-            Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path2) == false, TimeSpan.FromSeconds(5)));
+            if (index1.Configuration.RunInMemory == false)
+                Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path2) == false, TimeSpan.FromSeconds(5)));
 
             indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
 
