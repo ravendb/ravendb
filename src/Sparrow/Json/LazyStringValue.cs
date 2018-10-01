@@ -576,7 +576,7 @@ namespace Sparrow.Json
 
         public int LastIndexOf(char value)
         {
-            return LastIndexOf(value, Length, Length);
+            return LastIndexOf(value, Length - 1, Length);
         }
 
         public int LastIndexOf(char value, int startIndex)
@@ -592,7 +592,7 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.LastIndexOf(value, startIndex, count);
 
-            ValidateIndexes(Length - startIndex, count);
+            ValidateIndexes(Length - startIndex - 1, count);
 
             if (_lazyStringTempBuffer == null || _lazyStringTempBuffer.Length < Length)
                 _lazyStringTempBuffer = new char[Bits.NextPowerOf2(Length)];
@@ -600,7 +600,7 @@ namespace Sparrow.Json
             fixed (char* pChars = _lazyStringTempBuffer)
                 Encodings.Utf8.GetChars(Buffer, Size, pChars, Length);
 
-            for (int i = startIndex; i > startIndex - count; i++)
+            for (int i = startIndex; i > startIndex - count; i--)
             {
                 if (_lazyStringTempBuffer[i] == value)
                     return i;
@@ -644,7 +644,7 @@ namespace Sparrow.Json
 
         public int LastIndexOfAny(char[] anyOf)
         {
-            return LastIndexOfAny(anyOf, Length, Length);
+            return LastIndexOfAny(anyOf, Length - 1, Length);
         }
 
         public int LastIndexOfAny(char[] anyOf, int startIndex)
@@ -656,10 +656,11 @@ namespace Sparrow.Json
         {
             if (IsDisposed)
                 ThrowAlreadyDisposed();
+
             if (_string != null)
                 return _string.LastIndexOfAny(anyOf, startIndex, count);
 
-            ValidateIndexes(Length - startIndex, count);
+            ValidateIndexes(Length - startIndex - 1, count);
 
             if (_lazyStringTempBuffer == null || _lazyStringTempBuffer.Length < Length)
                 _lazyStringTempBuffer = new char[Bits.NextPowerOf2(Length)];
@@ -667,7 +668,7 @@ namespace Sparrow.Json
             fixed (char* pChars = _lazyStringTempBuffer)
                 Encodings.Utf8.GetChars(Buffer, Size, pChars, Length);
 
-            for (int i = startIndex; i > startIndex - count; i++)
+            for (int i = startIndex; i > startIndex - count; i--)
             {
                 if (anyOf.Contains(_lazyStringTempBuffer[i]))
                     return i;
