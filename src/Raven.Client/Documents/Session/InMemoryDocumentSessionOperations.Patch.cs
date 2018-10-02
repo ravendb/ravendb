@@ -10,7 +10,6 @@ using System.Linq.Expressions;
 using Lambda2Js;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Session
@@ -22,10 +21,10 @@ namespace Raven.Client.Documents.Session
     {
         private int _valsCount;
         private int _customCount;
-        private readonly JavascriptCompilationOptions _javascriptCompilationOptions;            
+        private readonly JavascriptCompilationOptions _javascriptCompilationOptions;
 
         public void Increment<T, U>(T entity, Expression<Func<T, U>> path, U valToAdd)
-        {            
+        {
             var metadata = GetMetadataFor(entity);
             var id = metadata.GetString(Constants.Documents.Metadata.Id);
             Increment(id, path, valToAdd);
@@ -35,9 +34,12 @@ namespace Raven.Client.Documents.Session
         {
             var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
 
+            var variable = $"this.{pathScript}";
+            var value = $"args.val_{_valsCount}";
+
             var patchRequest = new PatchRequest
             {
-                Script = $"this.{pathScript} += args.val_{_valsCount};",
+                Script = $"{variable} = {variable} ? {variable} + {value} : {value};",
                 Values = { [$"val_{_valsCount}"] = valToAdd }
             };
 
@@ -88,7 +90,7 @@ namespace Raven.Client.Documents.Session
             var extension = new JavascriptConversionExtensions.CustomMethods
             {
                 Suffix = _customCount++
-            };            
+            };
             var pathScript = path.CompileToJavascript(_javascriptCompilationOptions);
             var adderScript = arrayAdder.CompileToJavascript(
                 new JavascriptCompilationOptions(
