@@ -22,7 +22,7 @@ namespace Raven.Tests.Issues
 {
     public class RavenDB_2129 : ReplicationBase
     {
-        [Fact]
+        [Fact(Skip = "Flaky test")]
         public async Task ShouldReadFromSecondaryServerWhenPrimaryIsDown()
         {
             using (var store1 = CreateStore(configureStore: store => store.Conventions.FailoverBehavior = FailoverBehavior.AllowReadsFromSecondaries))

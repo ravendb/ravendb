@@ -198,6 +198,10 @@
       <Project>{46152256-7443-426c-a20d-b2f354b51810}</Project>
       <Name>Raven.SlowTests</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Tests.Bundles\Raven.Tests.Bundles.csproj">
+      <Project>{83AB5B46-5502-40DD-BA5F-83499F19B953}</Project>
+      <Name>Raven.Tests.Bundles</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Raven.Tests.Common\Raven.Tests.Common.csproj">
       <Project>{381234CC-8AA7-41FF-8CAD-22330E15F993}</Project>
       <Name>Raven.Tests.Common</Name>

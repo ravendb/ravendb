@@ -23,7 +23,7 @@ namespace Raven.Tests.Issues
             config.Storage.Voron.AllowIncrementalBackups = true;
         }
 
-        [Theory]
+        [Theory(Skip = "Flaky test")]
         [PropertyData("Storages")]
         public async Task Restore_incremental_backup_works_propertly(string storage)
         {
