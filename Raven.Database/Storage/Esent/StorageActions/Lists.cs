@@ -94,16 +94,21 @@ namespace Raven.Storage.Esent.StorageActions
 	            using (Stream stream = new BufferedStream(new ColumnStream(session, Lists, tableColumnsCache.ListsColumns["data"])))
 	            {
 	                var data = stream.ToJObject();
-	                RavenJToken lastModified;
-	                if (data.TryGetValue("Last-Modified", out lastModified) == false)
+
+	                const string lastModifiedKey = "Last-Modified";
+
+	                if (data.ContainsKey(lastModifiedKey) == false)
 	                {
 	                    Api.JetDelete(session, Lists);
 	                    MaybePulseTransaction(); //If we have alot of those in a raw
-                        continue;
+	                    continue;
 	                }
-	                if (lastModified.Value<DateTime>("Last-Modified") > time)
+
+	                var lastModified = data.Value<DateTime>(lastModifiedKey);
+
+	                if (lastModified > time)
 	                    break;
-	            }
+                }
                 Api.JetDelete(session, Lists);
 
 	            MaybePulseTransaction();

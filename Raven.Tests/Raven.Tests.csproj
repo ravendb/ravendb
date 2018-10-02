@@ -257,6 +257,7 @@
     <Compile Include="Issues\RavenDB_2909.cs" />
     <Compile Include="Issues\RavenDB_3106.cs" />
     <Compile Include="Issues\RavenDB_3276.cs" />
+    <Compile Include="Issues\RavenDB_9628.cs" />
     <Compile Include="Issues\WaitForStaleOnAbandonedIndexShouldWork.cs" />
     <Compile Include="Issues\RavenDB_1761.cs" />
     <Compile Include="Issues\RavenDb-1934.cs" />
