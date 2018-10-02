@@ -9,16 +9,13 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
 using Sparrow;
-using Sparrow.Binary;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Win32;
 using Sparrow.Utils;
-using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
-using Voron.Util;
 using Voron.Util.Settings;
 using static Voron.Platform.Win32.Win32NativeMethods;
 
@@ -36,6 +33,7 @@ namespace Voron.Platform.Win32
         private readonly MemoryMappedFileAccess _memoryMappedFileAccess;
         private readonly bool _copyOnWriteMode;
         private readonly Logger _logger;
+        private readonly bool _canPrefetchAhead;
         public override long TotalAllocationSize => _totalAllocationSize;
 
         [StructLayout(LayoutKind.Explicit)]
@@ -51,9 +49,6 @@ namespace Voron.Platform.Win32
             public uint High;
         }
 
-
-
-
         public WindowsMemoryMapPager(StorageEnvironmentOptions options, VoronPathSetting file,
             long? initialFileSize = null,
             Win32NativeFileAttributes fileAttributes = Win32NativeFileAttributes.Normal,
@@ -65,6 +60,8 @@ namespace Voron.Platform.Win32
             GetSystemInfo(out systemInfo);
             FileName = file;
             _logger = LoggingSource.Instance.GetLogger<StorageEnvironment>($"Pager-{file}");
+
+            _canPrefetchAhead = !fileAttributes.HasFlag(Win32NativeFileAttributes.Temporary);
 
             _access = access;
             _copyOnWriteMode = Options.CopyOnWriteMode && FileName.FullPath.EndsWith(Constants.DatabaseFilename);
@@ -258,9 +255,7 @@ namespace Voron.Platform.Win32
             {
                 var innerException = new Win32Exception(Marshal.GetLastWin32Error(), "Failed to MapView of file " + FileName);
 
-                var errorMessage = string.Format(
-                    "Unable to allocate more pages - unsuccessfully tried to allocate continuous block of virtual memory with size = {0:##,###;;0} bytes",
-                    (_fileStream.Length));
+                var errorMessage = $"Unable to allocate more pages - unsuccessfully tried to allocate continuous block of virtual memory with size = {(_fileStream.Length):##,###;;0} bytes";
 
                 throw new OutOfMemoryException(errorMessage, innerException);
             }
@@ -355,7 +350,7 @@ namespace Voron.Platform.Win32
 
         public override void MaybePrefetchMemory<T>(T pagesToPrefetch)
         {
-            if (PlatformDetails.CanPrefetch == false)
+            if (PlatformDetails.CanPrefetch == false || _canPrefetchAhead == false)
                 return; // not supported
 
             if (pagesToPrefetch.MoveNext() == false)
