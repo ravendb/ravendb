@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Revisions;
-using Lextm.SharpSnmpLib.Security;
+using FastTests.Utils;
 using Orders;
-using Raven.Client.Util;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -19,7 +15,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var id = "users/1";
-                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, 
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database,
                     modifyConfiguration: conf => conf.Default.MinimumRevisionsToKeep = 1000);
                 using (var session = store.OpenAsyncSession())
                 {

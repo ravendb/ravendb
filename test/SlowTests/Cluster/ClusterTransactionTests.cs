@@ -4,8 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
+using FastTests.Utils;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
@@ -865,10 +865,10 @@ namespace SlowTests.Cluster
             public UserByName()
             {
                 Map = users => from user in users
-                    select new
-                    {
-                        user.Name
-                    };
+                               select new
+                               {
+                                   user.Name
+                               };
             }
         }
     }
