@@ -10,6 +10,7 @@ using FastTests.Server.Replication;
 using Sparrow;
 using Xunit;
 using System.Threading;
+using FastTests.Utils;
 
 namespace SlowTests.Server.Documents.Revisions
 {

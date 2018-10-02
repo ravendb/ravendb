@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Revisions;
+using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -427,7 +427,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        private static async Task SetupExpiration(DocumentStore store)
+        private async Task SetupExpiration(DocumentStore store)
         {
             using (var session = store.OpenAsyncSession())
             {
@@ -436,7 +436,9 @@ namespace SlowTests.Smuggler
                     Disabled = false,
                     DeleteFrequencyInSec = 100,
                 };
-                await store.Maintenance.SendAsync(new ConfigureExpirationOperation(config));
+
+                await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
+
                 await session.SaveChangesAsync();
             }
         }
