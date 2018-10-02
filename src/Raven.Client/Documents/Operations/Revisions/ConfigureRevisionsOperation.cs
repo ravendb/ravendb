@@ -19,17 +19,15 @@ namespace Raven.Client.Documents.Operations.Revisions
 
         public RavenCommand<ConfigureRevisionsOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new ConfigureRevisionsCommand(conventions, _configuration);
+            return new ConfigureRevisionsCommand(_configuration);
         }
 
         private class ConfigureRevisionsCommand : RavenCommand<ConfigureRevisionsOperationResult>
         {
-            private readonly DocumentConventions _conventions;
             private readonly RevisionsConfiguration _configuration;
 
-            public ConfigureRevisionsCommand(DocumentConventions conventions, RevisionsConfiguration configuration)
+            public ConfigureRevisionsCommand(RevisionsConfiguration configuration)
             {
-                _conventions = conventions;
                 _configuration = configuration;
             }
 
