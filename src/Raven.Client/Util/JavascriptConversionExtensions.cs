@@ -318,10 +318,9 @@ namespace Raven.Client.Util
                             var writer = context.GetWriter();
                             using (writer.Operation(methodCallExpression))
                             {
-                                {
-                                    writer.Write(".length > 0");
-                                    return;
-                                }
+                                
+                                writer.Write(".length > 0");
+                                return;                           
                             }
                         }
                     case "All":
@@ -342,9 +341,11 @@ namespace Raven.Client.Util
                     case "Cast":
                     case "ToList":
                     case "ToArray":
+                    {
                         context.PreventDefault();
                         context.Visitor.Visit(methodCallExpression.Arguments[0]);
                         return;
+                    }
 
                     case "Concat":
                         newName = "concat";
@@ -356,29 +357,35 @@ namespace Raven.Client.Util
                         // -- Rewrite expression to Sum() (using second (if available) argument Types) / Count() (using last argument Type)
 
                         var sum = Expression.Call(
-                            typeof(Enumerable), 
+                            typeof(Enumerable),
                             "Sum",
                             methodCallExpression.Arguments.Count > 1 ?
-                                    new Type[] { methodCallExpression.Arguments[1].Type.GenericTypeArguments.First() } :
-                                    new Type[] { }, 
+                                new Type[] { methodCallExpression.Arguments[1].Type.GenericTypeArguments.First() } :
+                                new Type[] { },
                             methodCallExpression.Arguments.ToArray());
 
                         // Get resulting type by interface of IEnumerable<>
                         var typeArguments = methodCallExpression.Arguments[0].Type.GetInterfaces()
-                                .Concat(new[] { methodCallExpression.Arguments[0].Type })
-                                .First(a => a.GetTypeInfo().IsGenericType && a.GetGenericTypeDefinition() == typeof(IEnumerable<>))
-                                .GetGenericArguments()
-                                .First();
+                            .Concat(new[] { methodCallExpression.Arguments[0].Type })
+                            .First(a => a.GetTypeInfo().IsGenericType && a.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+                            .GetGenericArguments()
+                            .First();
                         var count = Expression.Call(typeof(Enumerable), "Count", new Type[] { typeArguments }, methodCallExpression.Arguments[0]);
-                        
+
                         // When doing the divide, make sure count matches the sum type
-                        context.Visitor.Visit(
-                            Expression.Divide(
-                                sum, 
-                                Expression.Convert(count, sum.Type)
-                            )
-                        );
-                        return;
+
+                        context.Visitor.Visit(sum);
+
+                        var writer = context.GetWriter();
+                        using (writer.Operation(methodCallExpression))
+                        {
+                            writer.Write("/(");
+                            context.Visitor.Visit(Expression.Convert(count, sum.Type));
+
+                            // Avoid division by 0                            
+                            writer.Write("||1)");
+                            return;
+                        }
                     }
                     case "ToDictionary":
                         {
@@ -473,37 +480,13 @@ namespace Raven.Client.Util
                         }
                     case "Max":
                         {
-                            context.PreventDefault();
-                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                            var writer = context.GetWriter();
-                            using (writer.Operation(methodCallExpression))
-                            {
-                                if (methodCallExpression.Arguments.Count > 1)
-                                {
-                                    writer.Write(".map");
-                                    context.Visitor.Visit(methodCallExpression.Arguments[1]);
-                                }
-                                writer.Write(".reduce(function(a, b) { return Raven_Max(a, b);})");
-                                return;
-
-                            }
+                            HandleMaxOrMin(context, methodCallExpression, true);
+                            return;
                         }
                     case "Min":
                         {
-                            context.PreventDefault();
-                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                            var writer = context.GetWriter();
-                            using (writer.Operation(methodCallExpression))
-                            {
-                                if (methodCallExpression.Arguments.Count > 1)
-                                {
-                                    writer.Write(".map");
-                                    context.Visitor.Visit(methodCallExpression.Arguments[1]);
-                                }
-                                writer.Write(".reduce(function(a, b) { return Raven_Min(a, b);})");
-                                return;
-
-                            }
+                            HandleMaxOrMin(context, methodCallExpression);
+                            return;
                         }
                     case "Skip":
                         {
@@ -573,7 +556,7 @@ namespace Raven.Client.Util
                             {
                                 writer.Write($"(function(arr){{return arr.length > 0 ? arr : [{defaultVal ?? "null"}]}})(");
                                 context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                                writer.Write($")");
+                                writer.Write(")");
                                 return;
                             }
                         }
@@ -670,6 +653,33 @@ namespace Raven.Client.Util
                 if (methodName == "Contains")
                 {
                     javascriptWriter.Write(">=0");
+                }
+            }
+
+            private static void HandleMaxOrMin(JavascriptConversionContext context, MethodCallExpression methodCallExpression, bool max = false)
+            {
+                context.PreventDefault();
+                context.Visitor.Visit(methodCallExpression.Arguments[0]);
+
+                var maxOrMin = max ? "Raven_Max" : "Raven_Min";
+                var writer = context.GetWriter();
+                using (writer.Operation(methodCallExpression))
+                {
+                    if (methodCallExpression.Arguments.Count > 1)
+                    {
+                        writer.Write(".map");
+                        context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                    }
+
+                    writer.Write($".reduce(function(a, b) {{ return {maxOrMin}(a, b);}}");
+
+                    var defaultVal = GetDefault(methodCallExpression.Type);
+                    if (defaultVal != null)
+                    {
+                        writer.Write($", {defaultVal}");
+                    }
+                    writer.Write(")");
+
                 }
             }
 
