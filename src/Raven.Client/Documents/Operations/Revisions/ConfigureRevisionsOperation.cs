@@ -64,6 +64,6 @@ namespace Raven.Client.Documents.Operations.Revisions
 
     public class ConfigureRevisionsOperationResult
     {
-        public long? ETag { get; set; }
+        public long? RaftCommandIndex { get; set; }
     }
 }
