@@ -1649,8 +1649,8 @@ namespace Voron.Impl.Journal
 
             if (_maxNumberOfPagesRequiredForCompressionBuffer < _compressionPager.NumberOfAllocatedPages / 2)
             {
-                // while we are above the limit, we still recently used at least half of it, no point
-                // in reducing size yet, we'll be called again
+                // we recently used at least half of the compression buffer,
+                // no point in reducing size yet, we'll try to do it again next time
                 return true;
             }
 

@@ -41,7 +41,7 @@ namespace Voron.Impl.Paging
 
         public long GetAllocatedInBytes()
         {
-            return AllocatedInBytesFunc?.Invoke() ?? 0;
+            return AllocatedInBytesFunc?.Invoke() ?? NumberOfAllocatedPages * Constants.Storage.PageSize;
         }
 
         public void SetPagerState(PagerState newState)
