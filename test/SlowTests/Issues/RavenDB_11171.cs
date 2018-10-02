@@ -2,6 +2,7 @@
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Utils;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Revisions;
@@ -36,10 +37,10 @@ namespace SlowTests.Issues
 
                 using (var store2 = GetDocumentStore())
                 {
-                    await store2.Maintenance.SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration
+                    await RevisionsHelper.SetupRevisions(store2, Server.ServerStore, new RevisionsConfiguration
                     {
                         Default = new RevisionsCollectionConfiguration()
-                    }));
+                    });
 
                     await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), store2.Smuggler);
 
@@ -49,10 +50,10 @@ namespace SlowTests.Issues
 
                     using (var store3 = GetDocumentStore())
                     {
-                        await store3.Maintenance.SendAsync(new ConfigureRevisionsOperation(new RevisionsConfiguration
+                        await RevisionsHelper.SetupRevisions(store3, Server.ServerStore, new RevisionsConfiguration
                         {
                             Default = new RevisionsCollectionConfiguration()
-                        }));
+                        });
 
                         await store2.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), store3.Smuggler);
 

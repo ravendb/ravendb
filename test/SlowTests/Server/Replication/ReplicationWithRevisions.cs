@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
+using FastTests.Utils;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
