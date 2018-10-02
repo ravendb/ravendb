@@ -364,6 +364,8 @@ namespace rvn
 
         private static void ValidateRavenSystemDir(CommandArgument systemDirArg)
         {
+            var fullPath = systemDirArg.Value.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                           + Path.DirectorySeparatorChar;
             if (string.IsNullOrEmpty(systemDirArg.Value))
             {
                 throw new InvalidOperationException("RavenDB system directory argument is mandatory.");
@@ -372,6 +374,17 @@ namespace rvn
             if (Directory.Exists(systemDirArg.Value) == false)
             {
                 throw new InvalidOperationException($"Directory does not exist: { systemDirArg.Value }.");
+            }
+
+            if (fullPath.EndsWith("System\\"))
+            {
+                if (File.Exists(fullPath + "Raven.voron") == false)
+                    throw new InvalidOperationException("Please provide a valid System directory.");
+            }
+            else
+            {
+                if (Directory.Exists(fullPath + "Journals") == false)
+                    throw new InvalidOperationException("Please provide a valid System/Database directory.");
             }
         }
 
