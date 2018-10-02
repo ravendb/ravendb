@@ -77,6 +77,15 @@ namespace Raven.Server.Utils
                 return _lastCpuInfo?.ProcessCpuUsage ?? 0;
             }
 
+            if (currentInfo.ActiveCores == 0)
+            {
+                // shouldn't happen
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"ActiveCores == 0, OS: {RuntimeInformation.OSDescription}");
+
+                return _lastCpuInfo?.ProcessCpuUsage ?? 0;
+            }
+
             var processCpuUsage = (processorTimeDiff * 100.0) / timeDiff / currentInfo.ActiveCores;
             if (currentInfo.ActiveCores == ProcessorInfo.ProcessorCount)
             {
@@ -280,7 +289,7 @@ namespace Raven.Server.Utils
             catch (Exception e)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failure to get the number of active cores, error: {e.Message}", e);
+                    Logger.Info("Failure to get the number of active cores", e);
 
                 return ProcessorInfo.ProcessorCount;
             }
