@@ -90,8 +90,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         onProgress,
                         result);
 
-                    if (restoreSettings != null && _restoreConfiguration.SkipIndexesImport)
-                        InitializeIndexes(restoreSettings.DatabaseRecord);
+                    if (restoreSettings != null && _restoreConfiguration.SkipIndexes)
+                    {
+                        // remove all indexes from the database record
+                        restoreSettings.DatabaseRecord.AutoIndexes = null;
+                        restoreSettings.DatabaseRecord.Indexes = null;
+                    }
 
                     // removing the snapshot from the list of files
                     _filesToRestore.RemoveAt(0);
@@ -250,12 +254,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             {
                 _operationCancelToken.Dispose();
             }
-        }
-
-        private static void InitializeIndexes(DatabaseRecord databaseRecord)
-        {
-            databaseRecord.AutoIndexes = new Dictionary<string, AutoIndexDefinition>();
-            databaseRecord.Indexes = new Dictionary<string, IndexDefinition>();
         }
 
         private void DisableOngoingTasksIfNeeded(DatabaseRecord databaseRecord)
@@ -439,8 +437,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             if (_filesToRestore.Count == 0)
                 return;
 
-            // we do have at least one smuggler backup
-            InitializeIndexes(databaseRecord);
+            // we do have at least one smuggler backup, we'll take the indexes from the last file
+            databaseRecord.AutoIndexes = new Dictionary<string, AutoIndexDefinition>();
+            databaseRecord.Indexes = new Dictionary<string, IndexDefinition>();
 
             // restore the smuggler backup
             var options = new DatabaseSmugglerOptionsServerSide
@@ -479,7 +478,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, destination, options,
                 onIndexAction: indexAndType =>
                 {
-                    if (_restoreConfiguration.SkipIndexesImport)
+                    if (_restoreConfiguration.SkipIndexes)
                         return;
 
                     switch (indexAndType.Type)
