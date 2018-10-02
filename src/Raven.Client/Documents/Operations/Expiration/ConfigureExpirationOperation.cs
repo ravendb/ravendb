@@ -19,17 +19,15 @@ namespace Raven.Client.Documents.Operations.Expiration
 
         public RavenCommand<ConfigureExpirationOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new ConfigureExpirationCommand(conventions, _configuration);
+            return new ConfigureExpirationCommand(_configuration);
         }
 
         private class ConfigureExpirationCommand : RavenCommand<ConfigureExpirationOperationResult>
         {
-            private readonly DocumentConventions _conventions;
             private readonly ExpirationConfiguration _configuration;
 
-            public ConfigureExpirationCommand(DocumentConventions conventions, ExpirationConfiguration configuration)
+            public ConfigureExpirationCommand(ExpirationConfiguration configuration)
             {
-                _conventions = conventions;
                 _configuration = configuration;
             }
 
