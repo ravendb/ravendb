@@ -362,28 +362,29 @@ namespace rvn
             return cmd.Option("--server-dir", "RavenDB Server directory", CommandOptionType.SingleValue);
         }
 
-        private static void ValidateRavenSystemDir(CommandArgument systemDirArg)
+        private static void ValidateRavenDirectory(CommandArgument argument)
         {
-            var fullPath = systemDirArg.Value.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                           + Path.DirectorySeparatorChar;
-            if (string.IsNullOrEmpty(systemDirArg.Value))
+            if (string.IsNullOrWhiteSpace(argument.Value))
             {
                 throw new InvalidOperationException("RavenDB system directory argument is mandatory.");
             }
 
-            if (Directory.Exists(systemDirArg.Value) == false)
+            var trimmedFullPath = argument.Value.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var directory = new DirectoryInfo(trimmedFullPath);
+
+            if (directory.Exists == false)
             {
-                throw new InvalidOperationException($"Directory does not exist: { systemDirArg.Value }.");
+                throw new InvalidOperationException($"Directory does not exist: { argument.Value }.");
             }
 
-            if (fullPath.EndsWith("System\\"))
+            if (directory.Name.Equals("System"))
             {
-                if (File.Exists(fullPath + "Raven.voron") == false)
+                if (File.Exists(Path.Combine(directory.FullName, Voron.Global.Constants.DatabaseFilename)) == false)
                     throw new InvalidOperationException("Please provide a valid System directory.");
             }
             else
             {
-                if (Directory.Exists(fullPath + "Journals") == false)
+                if (Directory.Exists(Path.Combine(directory.FullName, "Journals")) == false)
                     throw new InvalidOperationException("Please provide a valid System/Database directory.");
             }
         }
@@ -392,7 +393,7 @@ namespace rvn
         {
             try
             {
-                ValidateRavenSystemDir(systemDirArg);
+                ValidateRavenDirectory(systemDirArg);
                 var result = offlineOperation();
                 cmd.Out.WriteLine(result);
                 return 0;
