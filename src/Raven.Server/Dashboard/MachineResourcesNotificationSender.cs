@@ -19,7 +19,7 @@ namespace Raven.Server.Dashboard
         private readonly TimeSpan _notificationsThrottle;
 
         private DateTime _lastSentNotification = DateTime.MinValue;
-        private static byte[][] _buffers;
+        private readonly byte[][] _buffers;
         private readonly SmapsReader _smapsReader;
 
         public MachineResourcesNotificationSender(string resourceName,

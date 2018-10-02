@@ -454,7 +454,7 @@ namespace Sparrow.LowMemory
                 if (fileType == NativeMemory.FileType.ScratchBuffer)
                 {
                     // for scratch buffers we have the allocated size
-                    var allocated = fileMappingInfo.GetAllocatedSizeFunc?.Invoke() ?? 0;
+                    var allocated = fileMappingInfo.GetAllocatedSizeFunc?.Invoke() ?? totalMapped;
                     if (allocated < totalMapped / 2)
                     {
                         // using less than half of the size of the scratch buffer
