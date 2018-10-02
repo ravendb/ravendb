@@ -76,7 +76,14 @@ namespace Raven.Tests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForReplication(store2, session => session.Load<Shipper>("shippers/1").Name == "test");
+                WaitForReplication(store2, session =>
+                {
+                    var shipper = session.Load<Shipper>("shippers/1");
+                    if (shipper == null)
+                        return false;
+
+                    return shipper.Name == "test";
+                });
             }
         }
     }

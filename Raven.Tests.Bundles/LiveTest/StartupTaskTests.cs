@@ -29,7 +29,7 @@ namespace Raven.Tests.Bundles.LiveTest
             configuration.Catalog.Catalogs.Add(new AssemblyCatalog(typeof(LiveTestDatabaseDocumentPutTrigger).Assembly));
         }
 
-        [Fact]
+        [Fact(Skip = "Flaky test")]
         public void CleanerStartupTaskShouldRemoveDatabasesAfterIdleTimeout()
         {
             using (var store = NewDocumentStore())
@@ -108,7 +108,7 @@ namespace Raven.Tests.Bundles.LiveTest
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Flaky test")]
         public async Task CleanerStartupTaskShouldRemoveFileSystemsAfterIdleTimeout()
         {
             using (var server = GetNewServer())

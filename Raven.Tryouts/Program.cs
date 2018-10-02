@@ -23,6 +23,7 @@ using Order = Raven.Tests.Common.Dto.Faceted.Order;
 using Raven.Tests.Raft;
 using Raven.Tests.Faceted;
 using Raven.Abstractions.Replication;
+using Raven.Tests.Bundles.LiveTest;
 #if !DNXCORE50
 using Raven.Tests.Sorting;
 using Raven.SlowTests.RavenThreadPool;
@@ -34,7 +35,7 @@ using Raven.Tests.FileSystem.ClientApi;
 #endif
 
 namespace Raven.Tryouts
-{  
+{
     public class Order
     {
         public string Id { get; set; }
@@ -77,9 +78,9 @@ namespace Raven.Tryouts
                 try
                 {
                     Console.WriteLine(i);
-                    using (var test = new RavenDB_2556())
+                    using (var test = new RavenDB_3109())
                     {
-                        test.FailoverBehaviorShouldBeReadFromServer();
+                        test.ShouldWork();
                     }
                 }
                 catch (Exception e)
@@ -88,8 +89,8 @@ namespace Raven.Tryouts
                     Console.Read();
                 }
             }
-           
-            
+
+
         }
 
         private static void InitDBAndDoSomeWork(int i)
@@ -126,7 +127,7 @@ namespace Raven.Tryouts
 
         public static async Task AsyncMain()
         {
-           
+
 
             var sp = Stopwatch.StartNew();
             try
