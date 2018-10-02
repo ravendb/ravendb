@@ -95,16 +95,14 @@ namespace Raven.Storage.Esent.StorageActions
 	            {
 	                var data = stream.ToJObject();
 
-	                const string lastModifiedKey = "Last-Modified";
-
-	                if (data.ContainsKey(lastModifiedKey) == false)
+	                if (data.ContainsKey(Constants.LastModified) == false)
 	                {
 	                    Api.JetDelete(session, Lists);
 	                    MaybePulseTransaction(); //If we have alot of those in a raw
 	                    continue;
 	                }
 
-	                var lastModified = data.Value<DateTime>(lastModifiedKey);
+	                var lastModified = data.Value<DateTime>(Constants.LastModified);
 
 	                if (lastModified > time)
 	                    break;
