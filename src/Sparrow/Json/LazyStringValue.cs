@@ -88,8 +88,15 @@ namespace Sparrow.Json
             }
         }
 
+        // todo: use span here
         [ThreadStatic]
-        private static char[] _lazyStringTempBuffer;
+        private static string _lazyStringTempBuffer;
+
+        [ThreadStatic]
+        private static LazyStringValue _lastLSV;
+
+        [ThreadStatic]
+        private static char[] _lazyCharArrayStringBuffer;
 
         [ThreadStatic]
         private static byte[] _lazyStringTempComparisonBuffer;
@@ -120,12 +127,26 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int TranslateIndexFromLSVToTempBuffer(int index)
+        {
+            return _lazyStringTempBuffer.Length - Length + index;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int TranslateIndexFromTempBufferToLSV(int index)
+        {
+            var res = index - (_lazyStringTempBuffer.Length - Length);
+
+            if (res < 0)
+                return -1;
+            return res;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(string other)
         {
-#if DEBUG
             if (IsDisposed)
                 ThrowAlreadyDisposed();
-#endif
 
             if (_string != null)
                 return string.Equals(_string, other, StringComparison.Ordinal);
@@ -136,8 +157,9 @@ namespace Sparrow.Json
                 _lazyStringTempComparisonBuffer = new byte[Bits.NextPowerOf2(sizeInBytes)];
 
             fixed (char* pOther = other)
-            fixed (byte* pBuffer = _lazyStringTempComparisonBuffer)
+            fixed (byte* pBufferPtr = _lazyStringTempComparisonBuffer)
             {
+                var pBuffer = pBufferPtr + _lazyStringTempComparisonBuffer.Length - Length;
                 var tmpSize = Encodings.Utf8.GetBytes(pOther, other.Length, pBuffer, sizeInBytes);
                 if (Size != tmpSize)
                     return false;
@@ -149,10 +171,8 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(LazyStringValue other)
         {
-#if DEBUG
             if (IsDisposed)
                 ThrowAlreadyDisposed();
-#endif
 
             int size = Size;
             if (other.Size != size)
@@ -190,10 +210,8 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Compare(byte* other, int otherSize)
         {
-#if DEBUG
             if (IsDisposed)
                 ThrowAlreadyDisposed();
-#endif
             int size = Size;
             var result = Memory.CompareInline(Buffer, other, Math.Min(size, otherSize));
             return result == 0 ? size - otherSize : result;
@@ -238,10 +256,10 @@ namespace Sparrow.Json
         {
             if (self == null)
                 return null;
-#if DEBUG
+
             if (self.IsDisposed)
                 self.ThrowAlreadyDisposed();
-#endif
+
             return self._string ??
                 (self._string = Encodings.Utf8.GetString(self._buffer, self._size));
         }
@@ -273,10 +291,9 @@ namespace Sparrow.Json
 
         public override bool Equals(object obj)
         {
-#if DEBUG
             if (IsDisposed)
                 ThrowAlreadyDisposed();
-#endif
+
             if (ReferenceEquals(obj, null))
                 return false;
 
@@ -292,10 +309,9 @@ namespace Sparrow.Json
 
         public override int GetHashCode()
         {
-#if DEBUG
             if (IsDisposed)
                 ThrowAlreadyDisposed();
-#endif
+
             if (IntPtr.Size == 4)
                 return (int)Hashing.XXHash32.CalculateInline(Buffer, Size);
             else
@@ -355,7 +371,10 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.Contains(value);
 
-            return ToString().Contains(value);
+
+            InitTempBufferFromPtr(Buffer, Length);
+
+            return _lazyStringTempBuffer.IndexOf(value, TranslateIndexFromLSVToTempBuffer(0), Length) >= 0;
         }
 
 #if NETCOREAPP
@@ -379,7 +398,9 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.Contains(value);
 
-            return ToString().Contains(value);
+            InitTempBufferFromPtr(Buffer, Length);
+
+            return _lazyStringTempBuffer.IndexOf(value, TranslateIndexFromLSVToTempBuffer(0), Length) >= 0;
         }
 
 #if NETCOREAPP
@@ -428,19 +449,35 @@ namespace Sparrow.Json
 
         public bool EndsWith(string value, StringComparison comparisonType)
         {
-            return ToString().EndsWith(value, comparisonType);
+            InitTempBufferFromPtr(Buffer, Length);
+
+            ValidateIndexesForBackwardScan(Length - 1, value.Length);
+
+            if (value.Length > Length)
+                return false;
+
+            return _lazyStringTempBuffer.EndsWith(value, comparisonType);
         }
 
 #if !NETSTANDARD1_3
         public bool EndsWith(string value, bool ignoreCase, CultureInfo culture)
         {
-            return ToString().EndsWith(value, ignoreCase, culture);
+            InitTempBufferFromPtr(Buffer, Length);
+
+            ValidateIndexesForBackwardScan(Length - 1, value.Length);
+
+            if (value.Length > Length)
+                return false;
+
+            return _lazyStringTempBuffer.EndsWith(value, ignoreCase, culture);
         }
 #endif
 
         public bool EndsWith(char value)
         {
-            return EndsWith(value.ToString());
+            InitTempBufferFromPtr(Buffer, Length);
+
+            return _lazyStringTempBuffer[_lazyStringTempBuffer.Length - 1] == value;
         }
 
         public int IndexOf(char value)
@@ -466,19 +503,6 @@ namespace Sparrow.Json
             return IndexOf(value, startIndex, Length - startIndex);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ValidateIndexes(int startIndex, int count)
-        {
-            if (startIndex < 0 || count < 0)
-                throw new ArgumentOutOfRangeException("count or startIndex is negative.");
-
-            if (startIndex > Length)
-                throw new ArgumentOutOfRangeException(nameof(startIndex), "startIndex is greater than the length of this string.");
-
-            if (count > Length - startIndex)
-                throw new ArgumentOutOfRangeException(nameof(count), "count is greater than the length of this string minus startIndex.");
-        }
-
         public int IndexOf(char value, int startIndex, int count)
         {
             if (IsDisposed)
@@ -487,52 +511,51 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.IndexOf(value, startIndex, count);
 
-            ValidateIndexes(startIndex, count);
+            ValidateIndexesForForwardScan(startIndex, count);
 
-            if (_lazyStringTempBuffer == null || _lazyStringTempBuffer.Length < Length)
-                _lazyStringTempBuffer = new char[Bits.NextPowerOf2(Length)];
+            InitTempBufferFromPtr(Buffer, Length);
 
-            fixed (char* pChars = _lazyStringTempBuffer)
-                Encodings.Utf8.GetChars(Buffer, Size, pChars, Length);
-
-            for (int i = startIndex; i < startIndex + count; i++)
-            {
-                if (_lazyStringTempBuffer[i] == value)
-                    return i;
-            }
-
-            return -1;
+            return TranslateIndexFromTempBufferToLSV(
+                _lazyStringTempBuffer.IndexOf(value, TranslateIndexFromLSVToTempBuffer(startIndex), count));
         }
 
         public int IndexOf(string value)
         {
-            return ToString().IndexOf(value, StringComparison.Ordinal);
+            return IndexOf(value, 0, Length, StringComparison.CurrentCulture);
         }
 
         public int IndexOf(string value, int startIndex)
         {
-            return ToString().IndexOf(value, startIndex);
+            return IndexOf(value, startIndex, Length - startIndex, StringComparison.CurrentCulture);
         }
 
         public int IndexOf(string value, int startIndex, int count)
         {
-            return ToString().IndexOf(value, startIndex, count);
+            return IndexOf(value, startIndex, count, StringComparison.CurrentCulture);
         }
 
         public int IndexOf(string value, int startIndex, StringComparison comparisonType)
         {
-            return ToString().IndexOf(value, startIndex, comparisonType);
-        }
-
-        public int IndexOf(string value, int startIndex, int count, StringComparison comparisonType)
-        {
-            return ToString().IndexOf(value, startIndex, count, comparisonType);
+            return IndexOf(value, startIndex, Length - startIndex, comparisonType);
         }
 
         public int IndexOf(string value, StringComparison comparisonType)
         {
-            return ToString().IndexOf(value, comparisonType);
+            return IndexOf(value, 0, Length, comparisonType);
         }
+
+        public int IndexOf(string value, int startIndex, int count, StringComparison comparisonType)
+        {
+            if (_string != null)
+                return _string.IndexOf(value, startIndex, count, comparisonType);
+
+            ValidateIndexesForForwardScan(startIndex, count);
+
+            InitTempBufferFromPtr(Buffer, Length);
+
+            return TranslateIndexFromTempBufferToLSV(
+                _lazyStringTempBuffer.IndexOf(value, TranslateIndexFromLSVToTempBuffer(startIndex), count, comparisonType));
+        }       
 
         public int IndexOfAny(char[] anyOf)
         {
@@ -552,36 +575,22 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.IndexOfAny(anyOf, startIndex, count);
 
-            ValidateIndexes(startIndex, count);
+            ValidateIndexesForForwardScan(startIndex, count);
 
-            if (_lazyStringTempBuffer == null || _lazyStringTempBuffer.Length < Length)
-                _lazyStringTempBuffer = new char[Bits.NextPowerOf2(Length)];
+            InitTempBufferFromPtr(Buffer, Length);
 
-            fixed (char* pChars = _lazyStringTempBuffer)
-                Encodings.Utf8.GetChars(Buffer, Size, pChars, Length);
-
-            for (int i = startIndex; i < startIndex + count; i++)
-            {
-                if (anyOf.Contains(_lazyStringTempBuffer[i]))
-                    return i;
-            }
-
-            return -1;
-        }
-
-        public string Insert(int startIndex, string value)
-        {
-            return ToString().Insert(startIndex, value);
-        }
+            return TranslateIndexFromTempBufferToLSV(
+                _lazyStringTempBuffer.IndexOfAny(anyOf, TranslateIndexFromLSVToTempBuffer(startIndex), count));
+        }        
 
         public int LastIndexOf(char value)
         {
-            return LastIndexOf(value, Length, Length);
+            return LastIndexOf(value, Length - 1, Length);
         }
 
         public int LastIndexOf(char value, int startIndex)
         {
-            return LastIndexOf(value, startIndex, startIndex);
+            return LastIndexOf(value, startIndex, startIndex + 1);
         }
 
         public int LastIndexOf(char value, int startIndex, int count)
@@ -592,64 +601,62 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.LastIndexOf(value, startIndex, count);
 
-            ValidateIndexes(Length - startIndex, count);
+            ValidateIndexesForBackwardScan(startIndex, count);
 
-            if (_lazyStringTempBuffer == null || _lazyStringTempBuffer.Length < Length)
-                _lazyStringTempBuffer = new char[Bits.NextPowerOf2(Length)];
+            InitTempBufferFromPtr(Buffer, Length);
 
-            fixed (char* pChars = _lazyStringTempBuffer)
-                Encodings.Utf8.GetChars(Buffer, Size, pChars, Length);
-
-            for (int i = startIndex; i > startIndex - count; i++)
-            {
-                if (_lazyStringTempBuffer[i] == value)
-                    return i;
-            }
-
-            return -1;
+            return TranslateIndexFromTempBufferToLSV(
+                _lazyStringTempBuffer.LastIndexOf(value, TranslateIndexFromLSVToTempBuffer(startIndex), count));
         }
 
         public int LastIndexOf(string value)
         {
-            if (_string != null)
-                return _string.LastIndexOf(value, StringComparison.Ordinal);
-
-            return ToString().LastIndexOf(value, StringComparison.Ordinal);
+            return LastIndexOf(value, Length - 1, Length,StringComparison.CurrentCulture);            
         }
 
         public int LastIndexOf(string value, StringComparison comparisonType)
         {
-            return ToString().LastIndexOf(value, comparisonType);
+            return LastIndexOf(value, Length - 1, Length, comparisonType);
         }
 
         public int LastIndexOf(string value, int startIndex)
         {
-            return ToString().LastIndexOf(value, startIndex);
+            return LastIndexOf(value, startIndex, Length - 1, StringComparison.CurrentCulture);
         }
 
         public int LastIndexOf(string value, int startIndex, int count)
         {
-            return ToString().LastIndexOf(value, startIndex, count);
+            return LastIndexOf(value, startIndex, count, StringComparison.CurrentCulture);
         }
 
         public int LastIndexOf(string value, int startIndex, StringComparison comparisonType)
         {
-            return ToString().LastIndexOf(value, startIndex, comparisonType);
+            return LastIndexOf(value, startIndex, Length, comparisonType);
         }
 
         public int LastIndexOf(string value, int startIndex, int count, StringComparison comparisonType)
         {
-            return ToString().LastIndexOf(value, startIndex, count, comparisonType);
+            ValidateIndexesForBackwardScan(startIndex, count);
+
+            if (value.Length > Length || 
+                startIndex + 1 - value.Length < 0 || 
+                count < value.Length)
+                return -1;
+                       
+            InitTempBufferFromPtr(Buffer, Length);
+
+            return TranslateIndexFromTempBufferToLSV(
+                _lazyStringTempBuffer.LastIndexOf(value, TranslateIndexFromLSVToTempBuffer(startIndex), count, comparisonType));           
         }
 
         public int LastIndexOfAny(char[] anyOf)
         {
-            return LastIndexOfAny(anyOf, Length, Length);
+            return LastIndexOfAny(anyOf, Length - 1, Length);
         }
 
         public int LastIndexOfAny(char[] anyOf, int startIndex)
         {
-            return LastIndexOfAny(anyOf, startIndex, startIndex);
+            return LastIndexOfAny(anyOf, startIndex, startIndex + 1);
         }
 
         public int LastIndexOfAny(char[] anyOf, int startIndex, int count)
@@ -659,21 +666,90 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.LastIndexOfAny(anyOf, startIndex, count);
 
-            ValidateIndexes(Length - startIndex, count);
+            InitTempBufferFromPtr(Buffer, Length);
 
-            if (_lazyStringTempBuffer == null || _lazyStringTempBuffer.Length < Length)
-                _lazyStringTempBuffer = new char[Bits.NextPowerOf2(Length)];
+            return TranslateIndexFromTempBufferToLSV(
+                _lazyStringTempBuffer.LastIndexOfAny(anyOf, TranslateIndexFromLSVToTempBuffer(startIndex), count));
+        }
 
-            fixed (char* pChars = _lazyStringTempBuffer)
-                Encodings.Utf8.GetChars(Buffer, Size, pChars, Length);
+        public bool StartsWith(string value)
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
 
-            for (int i = startIndex; i > startIndex - count; i++)
-            {
-                if (anyOf.Contains(_lazyStringTempBuffer[i]))
-                    return i;
-            }
+            if (_string != null)
+                return _string.StartsWith(value);
 
-            return -1;
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+            // Every UTF8 character uses at least 1 byte
+            if (value.Length > Size)
+                return false;
+            if (value.Length == 0)
+                return true;
+
+            // We are assuming these values are going to be relatively constant throughout the object lifespan
+            LazyStringValue converted = _context.GetLazyStringForFieldWithCaching(value);
+            return StartsWith(converted);
+        }
+
+        public bool StartsWith(LazyStringValue value)
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
+            if (value.Size > Size)
+                return false;
+
+            return Memory.Compare(Buffer, value.Buffer, value.Size) == 0;
+        }
+
+        public bool StartsWith(string value, StringComparison comparisionType)
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
+            if (value.Length > Size)
+                return false;
+
+            if (_string != null)
+                return _string.StartsWith(value, comparisionType);
+
+            InitTempBufferFromPtr(Buffer, Length);
+
+            return TranslateIndexFromTempBufferToLSV(
+                _lazyStringTempBuffer.IndexOf(value, TranslateIndexFromLSVToTempBuffer(0), 1, comparisionType)) == 0;
+        }
+
+#if !NETSTANDARD1_3
+        public bool StartsWith(string value, bool ignoreCase, CultureInfo culture)
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
+            if (value.Length > Size)
+                return false;
+
+            // yes, here we'll use the "expensive" version, maybe we'll want to 
+            // have another buffer for this operation, but it seems rare enough
+            // right now
+            return ToString().StartsWith(value, ignoreCase, culture);
+        }
+#endif
+
+        public bool StartsWith(char value)
+        {
+            if (_string != null)
+                return _string.IndexOf(value) == 0;
+
+            InitTempBufferFromPtr(Buffer, Length);
+
+            return _lazyStringTempBuffer.IndexOf(value, TranslateIndexFromLSVToTempBuffer(0), 1) == 0;
+        }
+
+        public string Insert(int startIndex, string value)
+        {
+            return ToString().Insert(startIndex, value);
         }
 
         public string PadLeft(int totalWidth)
@@ -784,68 +860,7 @@ namespace Sparrow.Json
         public string[] Split(string[] separator, int count, StringSplitOptions options = StringSplitOptions.None)
         {
             return ToString().Split(separator, count, options);
-        }
-
-        public bool StartsWith(string value)
-        {
-            if (IsDisposed)
-                ThrowAlreadyDisposed();
-
-            if (_string != null)
-                return _string.StartsWith(value);
-
-            if (value == null)
-                throw new ArgumentNullException(nameof(value));
-            // Every UTF8 character uses at least 1 byte
-            if (value.Length > Size)
-                return false;
-            if (value.Length == 0)
-                return true;
-
-            // We are assuming these values are going to be relatively constant throughout the object lifespan
-            LazyStringValue converted = _context.GetLazyStringForFieldWithCaching(value);
-            return StartsWith(converted);
-        }
-
-        public bool StartsWith(LazyStringValue value)
-        {
-            if (IsDisposed)
-                ThrowAlreadyDisposed();
-
-            if (value.Size > Size)
-                return false;
-
-            return Memory.Compare(Buffer, value.Buffer, value.Size) == 0;
-        }
-
-        public bool StartsWith(string value, StringComparison comparisionType)
-        {
-            if (IsDisposed)
-                ThrowAlreadyDisposed();
-
-            if (value.Length > Size)
-                return false;
-
-            return ToString().StartsWith(value, comparisionType);
-        }
-
-#if !NETSTANDARD1_3
-        public bool StartsWith(string value, bool ignoreCase, CultureInfo culture)
-        {
-            if (IsDisposed)
-                ThrowAlreadyDisposed();
-
-            if (value.Length > Size)
-                return false;
-
-            return ToString().StartsWith(value, ignoreCase, culture);
-        }
-#endif
-
-        public bool StartsWith(char value)
-        {
-            return StartsWith(value.ToString());
-        }
+        }        
 
         public char[] ToCharArray()
         {
@@ -941,10 +956,6 @@ namespace Sparrow.Json
             if (IsDisposed)
                 ThrowAlreadyDisposed();
 
-            var maxCharCount = Encodings.Utf8.GetMaxCharCount(Length);
-            if (_lazyStringTempBuffer == null || _lazyStringTempBuffer.Length < maxCharCount)
-                _lazyStringTempBuffer = new char[Bits.NextPowerOf2(maxCharCount)];
-
             var buffer = _buffer;
 
             // in case we received a string, with no _buffer
@@ -962,11 +973,22 @@ namespace Sparrow.Json
 
         private string GetReversedStringFromBuffer(byte* buffer)
         {
-            fixed (char* pChars = _lazyStringTempBuffer)
+
+            // todo: improve this befoe PR!! we don't really need the buffer
+            var maxCharCount = Encodings.Utf8.GetMaxCharCount(Length);
+
+            if (_lazyCharArrayStringBuffer == null ||
+                _lazyCharArrayStringBuffer.Length < maxCharCount)
             {
-                var chars = Encodings.Utf8.GetChars(buffer, Length, pChars, _lazyStringTempBuffer.Length);
-                Array.Reverse(_lazyStringTempBuffer, 0, chars);
-                return new string(_lazyStringTempBuffer, 0, chars);
+                _lazyCharArrayStringBuffer = new char[Bits.NextPowerOf2(maxCharCount)];
+            }
+
+            fixed (char* pCharsFromArray = _lazyCharArrayStringBuffer)
+            {
+                var chars = Encodings.Utf8.GetChars(buffer, Length, pCharsFromArray, _lazyCharArrayStringBuffer.Length);
+
+                Array.Reverse(_lazyCharArrayStringBuffer, 0, chars);
+                return new string(_lazyCharArrayStringBuffer, 0, chars);
             }
         }
 
@@ -993,6 +1015,64 @@ namespace Sparrow.Json
             return b < 32 || (b >= 127 && b <= 159);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ValidateIndexesForBackwardScan(int startIndex, int count)
+        {
+            if (startIndex < 0 || count < 0)
+                ThrowArgumentOutOfRangeException("count or startIndex is negative.");
 
+            if (startIndex >= Length || count > Length)
+                ThrowArgumentOutOfRangeException("count or startIndex is bigger then string size.");
+           
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ValidateIndexesForForwardScan(int startIndex, int count)
+        {
+            if (startIndex < 0 || count < 0)
+                ThrowArgumentOutOfRangeException("count or startIndex is negative.");
+
+            if (startIndex >= Length)
+                ThrowArgumentOutOfRangeException(nameof(startIndex), "startIndex is greater than the length of this string.");
+            
+        }
+
+        public void ThrowArgumentOutOfRangeException(string message)
+        {
+            throw new ArgumentOutOfRangeException(message);
+        }
+        public void ThrowArgumentOutOfRangeException(string field, string message)
+        {
+            throw new ArgumentOutOfRangeException(field, message);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void InitTempBufferFromPtr(byte* ptr, int length, bool alignToStart = false)
+        {
+            // we've already initalized the buffer with the neede values
+            if (_lastLSV == this && _lazyStringTempBuffer != null)
+                return;
+
+            _lastLSV = this;
+
+            // resize buffer if needed
+            if (_lazyStringTempBuffer == null || _lazyStringTempBuffer.Length < length)
+                _lazyStringTempBuffer = new string('\0', Bits.NextPowerOf2(length));
+
+            // we want to copy to the end of the buffer, so all the "end" oriented functions
+            // will be supported, the satrt oriented functions has support for "startsWith"
+            // anyway
+            fixed (char* pChars = _lazyStringTempBuffer)
+            {
+                if (alignToStart)
+                {
+                    Encodings.Utf8.GetChars(ptr, Size, pChars, length);
+                }
+                else
+                {
+                    Encodings.Utf8.GetChars(ptr, Size, pChars + _lazyStringTempBuffer.Length - length, length);
+                }
+            }
+        }
     }
 }
