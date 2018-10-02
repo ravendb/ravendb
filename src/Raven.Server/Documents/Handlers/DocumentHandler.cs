@@ -40,6 +40,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "HEAD", AuthorizationStatus.ValidUser)]
         public Task Head()
         {
+            // some change
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
             var changeVector = GetStringFromHeaders("If-None-Match");
 
