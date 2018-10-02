@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
+using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
@@ -13,7 +14,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -230,14 +230,15 @@ namespace SlowTests.Issues
             }
         }
 
-        private static async Task SetupExpiration(DocumentStore store)
+        private async Task SetupExpiration(DocumentStore store)
         {
             var config = new ExpirationConfiguration
             {
                 Disabled = false,
                 DeleteFrequencyInSec = 100,
             };
-            await store.Maintenance.SendAsync(new ConfigureExpirationOperation(config));
+
+            await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
         }
 
         private static void WaitForConflict(IDocumentStore store, string id)
