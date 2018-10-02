@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Utils;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
@@ -22,14 +23,15 @@ namespace SlowTests.Server.Documents.Expiration
 {
     public class ExpirationTests : RavenTestBase
     {
-        private static async Task SetupExpiration(DocumentStore store)
+        private async Task SetupExpiration(DocumentStore store)
         {
             var config = new ExpirationConfiguration
             {
                 Disabled = false,
                 DeleteFrequencyInSec = 100,
             };
-            await store.Maintenance.SendAsync(new ConfigureExpirationOperation(config));
+
+            await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
         }
 
         [Fact]
