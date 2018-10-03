@@ -13,7 +13,8 @@ namespace Raven.Server.ServerWide.Maintenance
         Loading = 2,
         Faulted = 4,
         Unloaded = 8,
-        Shutdown = 16
+        Shutdown = 16,
+        NoChange = 32
     }
 
     public class DatabaseStatusReport : IDynamicJson
@@ -33,6 +34,7 @@ namespace Raven.Server.ServerWide.Maintenance
             public TimeSpan? LastQueried;
             public bool IsStale;
             public IndexState State;
+            public long LastTransactionId; // this is local, so we don't serialize it
         }
 
         public long LastEtag;
@@ -44,6 +46,9 @@ namespace Raven.Server.ServerWide.Maintenance
         public DatabaseStatus Status;
         public string Error;
         public TimeSpan? UpTime;
+
+        public long LastTransactionId; // this is local, so we don't serialize it
+        public long EnvironmentsHash; // this is local, so we don't serialize it
 
         public DynamicJsonValue ToJson()
         {

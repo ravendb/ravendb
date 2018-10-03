@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Client;
-using Raven.Client.Extensions;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.ServerWide.Commands;
+using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -27,6 +29,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public readonly TimeSpan WorkerSamplePeriod;
         private PoolOfThreads.LongRunningWork _collectingTask;
+        public readonly TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures;
 
         public ClusterMaintenanceWorker(TcpConnectionOptions tcp, CancellationToken externalToken, ServerStore serverStore, string leader, long term)
         {
@@ -39,6 +42,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             WorkerSamplePeriod = _server.Configuration.Cluster.WorkerSamplePeriod.AsTimeSpan;
             CurrentTerm = term;
+            SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Maintenance, _tcp.ProtocolVersion);
         }
 
         public void Start()
@@ -71,25 +75,25 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public void CollectDatabasesStatusReport()
         {
+            var lastNodeReport = new Dictionary<string, DatabaseStatusReport>();
             while (_token.IsCancellationRequested == false)
             {
                 try
                 {
                     using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
                     {
-                        var dbs = CollectDatabaseInformation(ctx);
-                        var djv = new DynamicJsonValue();
-
-                        foreach (var tuple in dbs)
+                        Dictionary<string, DatabaseStatusReport> nodeReport;
+                        using (ctx.OpenReadTransaction())
                         {
-                            djv[tuple.name] = tuple.report;
+                            nodeReport = CollectDatabaseInformation(ctx, lastNodeReport);
                         }
+                        lastNodeReport = nodeReport;
+
                         using (var writer = new BlittableJsonTextWriter(ctx, _tcp.Stream))
                         {
-                            ctx.Write(writer, djv);
-                        }
-                    }
+                            ctx.Write(writer, DynamicJsonValue.Convert(nodeReport));
+                         }
+                     }
                 }
                 catch (Exception e)
                 {
@@ -113,12 +117,13 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        private IEnumerable<(string name, DatabaseStatusReport report)> CollectDatabaseInformation(TransactionOperationContext ctx)
+        private Dictionary<string, DatabaseStatusReport> CollectDatabaseInformation(TransactionOperationContext ctx, Dictionary<string, DatabaseStatusReport> prevReport)
         {
+            var result = new Dictionary<string, DatabaseStatusReport>();
             foreach (var dbName in _server.Cluster.GetDatabaseNames(ctx))
             {
                 if (_token.IsCancellationRequested)
-                    yield break;
+                    return result;
 
                 var report = new DatabaseStatusReport
                 {
@@ -128,14 +133,24 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var dbTask) == false)
                 {
-
-                    var record = _server.Cluster.ReadDatabase(ctx, dbName);
-                    if (record == null || record.Topology.RelevantFor(_server.NodeTag) == false)
+                    var record = _server.Cluster.Read(ctx, dbName);
+                    if (record == null)
                     {
                         continue; // Database does not exists in this server
                     }
+
+                    if (record.TryGet(nameof(DatabaseRecord.Topology), out DatabaseTopology topology) == false || topology == null)
+                    {
+                        continue;
+                    }
+
+                    if (topology.RelevantFor(_server.NodeTag) == false)
+                    {
+                        continue;
+                    }
+
                     report.Status = DatabaseStatus.Unloaded;
-                    yield return (dbName, report);
+                    result[dbName] = report;
                     continue;
                 }
 
@@ -145,35 +160,37 @@ namespace Raven.Server.ServerWide.Maintenance
                     if (Equals(extractSingleInnerException.Data[DatabasesLandlord.DoNotRemove], true))
                     {
                         report.Status = DatabaseStatus.Unloaded;
-                        yield return (dbName, report);
+                        result[dbName] = report;
                         continue;
                     }
                 }
-
 
                 if (dbTask.IsCanceled || dbTask.IsFaulted)
                 {
                     report.Status = DatabaseStatus.Faulted;
                     report.Error = dbTask.Exception.ToString();
-                    yield return (dbName, report);
+                    result[dbName] = report;
                     continue;
                 }
 
                 if (dbTask.IsCompleted == false)
                 {
                     report.Status = DatabaseStatus.Loading;
-                    yield return (dbName, report);
+                    result[dbName] = report;
                     continue;
                 }
 
                 var dbInstance = dbTask.Result;
+                var currentHash = dbInstance.GetEnvironmentsHash();
+                report.EnvironmentsHash = currentHash;
+
                 var documentsStorage = dbInstance.DocumentsStorage;
                 var indexStorage = dbInstance.IndexStore;
 
                 if (dbInstance.DatabaseShutdown.IsCancellationRequested)
                 {
                     report.Status = DatabaseStatus.Shutdown;
-                    yield return (dbName, report);
+                    result[dbName] = report;
                     continue;
                 }
 
@@ -181,46 +198,39 @@ namespace Raven.Server.ServerWide.Maintenance
                 try
                 {
                     var now = dbInstance.Time.GetUtcNow();
+                    report.UpTime = now - dbInstance.StartTime;
+                    
+                    FillReplicationInfo(dbInstance, report);
+
+                    prevReport.TryGetValue(dbName, out var prevDatabaseReport);
+                    if (SupportedFeatures.Maintenance.SendChangesOnly && 
+                        prevDatabaseReport != null && prevDatabaseReport.EnvironmentsHash == currentHash)
+                    {
+                        report.Status = DatabaseStatus.NoChange;
+                        result[dbName] = report;
+                        continue;
+                    }
 
                     using (documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (var tx = context.OpenReadTransaction())
                     {
-                        report.LastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
-                        report.LastTombstoneEtag = DocumentsStorage.ReadLastTombstoneEtag(tx.InnerTransaction);
-                        report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
-                        report.NumberOfDocuments = documentsStorage.GetNumberOfDocuments(context);
-                        report.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
-                        report.LastCompletedClusterTransaction = dbInstance.LastCompletedClusterTransaction;
-                        report.UpTime = now - dbInstance.StartTime;
-
-                        foreach (var outgoing in dbInstance.ReplicationLoader.OutgoingHandlers)
-                        {
-                            var node = outgoing.GetNode();
-                            if (node != null)
-                            {
-                                report.LastSentEtag.Add(node, outgoing._lastSentDocumentEtag);
-                            }
-                        }
+                        FillDocumentsInfo(prevDatabaseReport, dbInstance, report, context, documentsStorage);
+                        FillClusterTransactionInfo(report, dbInstance);
 
                         if (indexStorage != null)
                         {
                             foreach (var index in indexStorage.GetIndexes())
                             {
-                                var stats = index.GetIndexStats(context);
-                                TimeSpan? lastQueried = null;
-                                var lastQueryingTime = index.GetLastQueryingTime();
-                                if (lastQueryingTime.HasValue)
-                                    lastQueried = now - lastQueryingTime;
-
-                                //We might have old version of this index with the same name
-                                report.LastIndexStats[index.Name] = new DatabaseStatusReport.ObservedIndexStatus
+                                DatabaseStatusReport.ObservedIndexStatus stat = null;
+                                if (prevDatabaseReport?.LastIndexStats.TryGetValue(index.Name, out stat) == true && stat?.LastTransactionId == index.LastTransactionId)
                                 {
-                                    LastIndexedEtag = stats.LastProcessedEtag,
-                                    LastQueried = lastQueried,
-                                    IsSideBySide = index.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase),
-                                    IsStale = stats.IsStale,
-                                    State = index.State
-                                };
+                                    report.LastIndexStats[index.Name] = stat;
+                                    continue;
+                                }
+
+                                using (context.OpenReadTransaction())
+                                {
+                                    FillIndexInfo(index, context, now, report);
+                                }
                             }
                         }
                     }
@@ -230,7 +240,77 @@ namespace Raven.Server.ServerWide.Maintenance
                     report.Error = e.ToString();
                 }
 
-                yield return (dbName, report);
+                result[dbName] = report;
+            }
+
+            return result;
+        }
+
+        private static void FillClusterTransactionInfo(DatabaseStatusReport report, DocumentDatabase dbInstance)
+        {
+            report.LastTransactionId = dbInstance.LastTransactionId;
+            report.LastCompletedClusterTransaction = dbInstance.LastCompletedClusterTransaction;
+        }
+
+        private static void FillIndexInfo(Index index, DocumentsOperationContext context, DateTime now, DatabaseStatusReport report)
+        {
+            var stats = index.GetIndexStats(context);
+            var lastQueried = GetLastQueryInfo(index, now);
+
+            //We might have old version of this index with the same name
+            report.LastIndexStats[index.Name] = new DatabaseStatusReport.ObservedIndexStatus
+            {
+                LastIndexedEtag = stats.LastProcessedEtag,
+                LastQueried = lastQueried,
+                IsSideBySide = index.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix, StringComparison.OrdinalIgnoreCase),
+                IsStale = stats.IsStale,
+                State = index.State,
+                LastTransactionId = index.LastTransactionId
+            };
+        }
+
+        private static TimeSpan? GetLastQueryInfo(Index index, DateTime now)
+        {
+            TimeSpan? lastQueried = null;
+            var lastQueryingTime = index.GetLastQueryingTime();
+            if (lastQueryingTime.HasValue)
+                lastQueried = now - lastQueryingTime;
+            return lastQueried;
+        }
+
+        private static void FillDocumentsInfo(DatabaseStatusReport prevDatabaseReport, DocumentDatabase dbInstance, DatabaseStatusReport report,
+            DocumentsOperationContext context, DocumentsStorage documentsStorage)
+        {
+            if (prevDatabaseReport?.LastTransactionId != null && prevDatabaseReport.LastTransactionId == dbInstance.LastTransactionId)
+            {
+                report.LastEtag = prevDatabaseReport.LastEtag;
+                report.LastTombstoneEtag = prevDatabaseReport.LastTombstoneEtag;
+                report.NumberOfConflicts = prevDatabaseReport.NumberOfConflicts;
+                report.NumberOfDocuments = prevDatabaseReport.NumberOfDocuments;
+                report.DatabaseChangeVector = prevDatabaseReport.DatabaseChangeVector;
+            }
+            else
+            {
+                using (var tx = context.OpenReadTransaction())
+                {
+                    report.LastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
+                    report.LastTombstoneEtag = DocumentsStorage.ReadLastTombstoneEtag(tx.InnerTransaction);
+                    report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
+                    report.NumberOfDocuments = documentsStorage.GetNumberOfDocuments(context);
+                    report.DatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                }
+            }
+        }
+
+        private static void FillReplicationInfo(DocumentDatabase dbInstance, DatabaseStatusReport report)
+        {
+            foreach (var outgoing in dbInstance.ReplicationLoader.OutgoingHandlers)
+            {
+                var node = outgoing.GetNode();
+                if (node != null)
+                {
+                    report.LastSentEtag.Add(node, outgoing._lastSentDocumentEtag);
+                }
             }
         }
 
@@ -256,7 +336,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 _cts.Dispose();
             }
         }
-
     }
 }
 
