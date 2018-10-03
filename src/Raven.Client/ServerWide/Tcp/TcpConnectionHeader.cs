@@ -13,7 +13,7 @@ namespace Raven.Client.ServerWide.Tcp
             Subscription,
             Replication,
             Cluster,
-            Heartbeats,
+            Maintenance,
             Ping,
             TestConnection
         }
@@ -32,7 +32,8 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int NoneBaseLine = -1;
         public static readonly int DropBaseLine = -2;
         public static readonly int ClusterBaseLine = 10;
-        public static readonly int HeartbeatsBaseLine = 20;
+        public static readonly int MaintenanceBaseLine = 20;
+        public static readonly int Maintenance41200 = 41_200;
         public static readonly int ReplicationBaseLine = 31;
         public static readonly int ReplicationAttachmentMissing = 40_300;
         public static readonly int ReplicationAttachmentMissingVersion41 = 41_300;
@@ -40,7 +41,7 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int TestConnectionBaseLine = 50;
 
         public static readonly int ClusterTcpVersion = ClusterBaseLine;
-        public static readonly int HeartbeatsTcpVersion = HeartbeatsBaseLine;
+        public static readonly int MaintenanceTcpVersion = Maintenance41200;
         public static readonly int ReplicationTcpVersion = ReplicationAttachmentMissingVersion41;
         public static readonly int SubscriptionTcpVersion = SubscriptionBaseLine;
         public static readonly int TestConnectionTcpVersion = TestConnectionBaseLine;
@@ -52,7 +53,7 @@ namespace Raven.Client.ServerWide.Tcp
             {
                 OperationTypes.Cluster,
                 OperationTypes.Drop,
-                OperationTypes.Heartbeats,
+                OperationTypes.Maintenance,
                 OperationTypes.None,
                 OperationTypes.Ping,
                 OperationTypes.Replication,
@@ -102,10 +103,10 @@ namespace Raven.Client.ServerWide.Tcp
                         if (features[ClusterTcpVersion] == null)
                             throw new ArgumentException();
                         break;
-                    case OperationTypes.Heartbeats:
-                        if (version != HeartbeatsTcpVersion)
+                    case OperationTypes.Maintenance:
+                        if (version != MaintenanceTcpVersion)
                             throw new ArgumentException();
-                        if (features[HeartbeatsTcpVersion] == null)
+                        if (features[MaintenanceTcpVersion] == null)
                             throw new ArgumentException();
                         break;
                     case OperationTypes.Ping:
@@ -140,7 +141,7 @@ namespace Raven.Client.ServerWide.Tcp
             public DropFeatures Drop { get; set; }
             public SubscriptionFeatures Subscription { get; set; }
             public ClusterFeatures Cluster { get; set; }
-            public HeartbeatsFeatures Heartbeats { get; set; }
+            public MaintenanceFeatures Maintenance { get; set; }
             public TestConnectionFeatures TestConnection { get; set; }
             public ReplicationFeatures Replication { get; set; }
 
@@ -164,9 +165,10 @@ namespace Raven.Client.ServerWide.Tcp
             {
                 public bool BaseLine = true;
             }
-            public class HeartbeatsFeatures
+            public class MaintenanceFeatures
             {
                 public bool BaseLine = true;
+                public bool SendChangesOnly;
             }
             public class TestConnectionFeatures
             {
@@ -210,9 +212,10 @@ namespace Raven.Client.ServerWide.Tcp
                 {
                     ClusterBaseLine
                 },
-                [OperationTypes.Heartbeats] = new List<int>
+                [OperationTypes.Maintenance] = new List<int>
                 {
-                    HeartbeatsBaseLine
+                    Maintenance41200,
+                    MaintenanceBaseLine
                 },
                 [OperationTypes.TestConnection] = new List<int>
                 {
@@ -282,11 +285,18 @@ namespace Raven.Client.ServerWide.Tcp
                         Cluster = new SupportedFeatures.ClusterFeatures()
                     }
                 },
-                [OperationTypes.Heartbeats] = new Dictionary<int, SupportedFeatures>
+                [OperationTypes.Maintenance] = new Dictionary<int, SupportedFeatures>
                 {
-                    [HeartbeatsBaseLine] = new SupportedFeatures(HeartbeatsBaseLine)
+                    [Maintenance41200] = new SupportedFeatures(Maintenance41200)
                     {
-                        Heartbeats = new SupportedFeatures.HeartbeatsFeatures()
+                        Maintenance = new SupportedFeatures.MaintenanceFeatures
+                        {
+                            SendChangesOnly = true
+                        }
+                    },
+                    [MaintenanceBaseLine] = new SupportedFeatures(MaintenanceBaseLine)
+                    {
+                        Maintenance = new SupportedFeatures.MaintenanceFeatures()
                     }
                 },
                 [OperationTypes.TestConnection] = new Dictionary<int, SupportedFeatures>
@@ -341,7 +351,7 @@ namespace Raven.Client.ServerWide.Tcp
                 case OperationTypes.Subscription:
                 case OperationTypes.Replication:
                 case OperationTypes.Cluster:
-                case OperationTypes.Heartbeats:
+                case OperationTypes.Maintenance:
                 case OperationTypes.TestConnection:
                     return OperationsToSupportedProtocolVersions[operationType][index];
                 default:
