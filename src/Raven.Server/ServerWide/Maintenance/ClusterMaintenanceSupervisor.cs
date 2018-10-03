@@ -217,6 +217,8 @@ namespace Raven.Server.ServerWide.Maintenance
                         using (var timeoutEvent = new TimeoutEvent(receiveFromWorkerTimeout, $"Timeout event for: {_name}", singleShot: false))
                         {
                             timeoutEvent.Start(OnTimeout);
+                            var unchangedReports = new List<DatabaseStatusReport>();
+
                             while (_token.IsCancellationRequested == false)
                             {
                                 BlittableJsonReaderObject rawReport;
@@ -247,19 +249,13 @@ namespace Raven.Server.ServerWide.Maintenance
                                     break;
                                 }
 
-                                var report = BuildReport(rawReport);
+                                var nodeReport = BuildReport(rawReport);
                                 timeoutEvent.Defer(_parent._leaderClusterTag);
-                                foreach (var name in report.Report.Keys.ToList())
-                                {
-                                    var dbReport = report.Report[name];
-                                    if (dbReport.Status == DatabaseStatus.NoChange)
-                                    {
-                                        report.Report[name] = _lastSuccessfulReceivedReport.Report[name];
-                                        report.Report[name].UpTime = dbReport.UpTime;
-                                    }
-                                }
-                                
-                                ReceivedReport = _lastSuccessfulReceivedReport = report;
+
+                                unchangedReports.Clear();
+                                UpdateNodeReportIfNeeded(nodeReport, unchangedReports);
+
+                                ReceivedReport = _lastSuccessfulReceivedReport = nodeReport;
                             }
                         }
                     }
@@ -276,6 +272,28 @@ namespace Raven.Server.ServerWide.Maintenance
                             DateTime.UtcNow,
                             _lastSuccessfulReceivedReport);
                     }
+                }
+            }
+
+            private void UpdateNodeReportIfNeeded(ClusterNodeStatusReport nodeReport, List<DatabaseStatusReport> unchangedReports)
+            {
+                foreach (var dbReport in nodeReport.Report)
+                {
+                    if (dbReport.Value.Status == DatabaseStatus.NoChange)
+                    {
+                        unchangedReports.Add(dbReport.Value);
+                    }
+                }
+
+                if (unchangedReports.Count == 0)
+                    return;
+
+                foreach (var dbReport in unchangedReports)
+                {
+                    var dbName = dbReport.Name;
+                    nodeReport.Report[dbName] = _lastSuccessfulReceivedReport.Report[dbName];
+                    nodeReport.Report[dbName].LastSentEtag = dbReport.LastSentEtag;
+                    nodeReport.Report[dbName].UpTime = dbReport.UpTime;
                 }
             }
 
