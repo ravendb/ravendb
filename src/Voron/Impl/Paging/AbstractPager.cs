@@ -15,6 +15,7 @@ using Sparrow.Utils;
 using Voron.Data;
 using Voron.Exceptions;
 using Voron.Global;
+using Voron.Platform.Win32;
 using Voron.Util.Settings;
 
 namespace Voron.Impl.Paging
@@ -34,6 +35,7 @@ namespace Voron.Impl.Paging
         private readonly object _pagerStateModificationLocker = new object();
         public bool UsePageProtection { get; } = false;
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
+        private readonly bool _canPrefetchAhead;
 
         public Action<PagerState> PagerStateChanged;
 
@@ -184,7 +186,7 @@ namespace Voron.Impl.Paging
 
         public VoronPathSetting FileName { get; protected set; }
 
-        protected AbstractPager(StorageEnvironmentOptions options, bool usePageProtection = false)
+        protected AbstractPager(StorageEnvironmentOptions options, bool canPrefetchAhead, bool usePageProtection = false)
         {
             DisposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
             {
@@ -204,6 +206,7 @@ namespace Voron.Impl.Paging
             });
 
             _options = options;
+            _canPrefetchAhead = canPrefetchAhead;
             UsePageProtection = usePageProtection;
             Debug.Assert((Constants.Storage.PageSize - Constants.Tree.PageHeaderSize) / Constants.Tree.MinKeysInPage >= 1024);
 
@@ -451,8 +454,89 @@ namespace Voron.Impl.Paging
             return true;
         }
 
-        public abstract void TryPrefetchingWholeFile();
-        public abstract void MaybePrefetchMemory<T>(T pagesToPrefetch) where T : struct, IEnumerator<long>;
+        protected internal abstract unsafe void PrefetchRanges(Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* list, int count);
+
+        public void MaybePrefetchMemory<T>(T pagesToPrefetch) where T : struct, IEnumerator<long>
+        {
+            if (PlatformDetails.CanPrefetch == false || _canPrefetchAhead == false)
+                return; // not supported
+
+            if (pagesToPrefetch.MoveNext() == false)
+                return;
+
+            // the CLR has to zero the stack space, and WIN32_MEMORY_RANGE_ENTRY is 16 bytes on 64 bits
+            // therefor, we want to avoid having too large a value here. We are already zeroing 256 bytes
+            // and with the default behavior can get 16MB prefetched per sys call, so that is quite enough.
+            // We expect that we'll only rarely need to do more than 16 at a go, anyway
+            const int StackSpace = 16;
+
+            int prefetchIdx = 0;
+            var toPrefetch = stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[StackSpace];
+            do
+            {
+                long pageNumber = pagesToPrefetch.Current;
+                if (this._pagerState.ShouldPrefetchSegment(pageNumber, out void* virtualAddress, out long bytes))
+                {
+                    // Prepare the segment information. 
+                    toPrefetch[prefetchIdx].NumberOfBytes = (IntPtr)bytes; // _prefetchSegmentSize;
+                    toPrefetch[prefetchIdx].VirtualAddress = virtualAddress; // baseAddress + segmentNumber * _prefetchSegmentSize;
+                    prefetchIdx++;
+
+                    if (prefetchIdx >= StackSpace)
+                    {
+                        // We dont have enough space, so we send the batch to the kernel
+                        PrefetchRanges(toPrefetch, StackSpace);
+                        prefetchIdx = 0;
+                    }
+                }
+            }
+            while (pagesToPrefetch.MoveNext());
+
+            if (prefetchIdx != 0)
+            {
+                PrefetchRanges(toPrefetch, prefetchIdx);
+            }
+
+            this._pagerState.CheckResetPrefetchTable();
+        }
+
+        public unsafe void TryPrefetchingWholeFile()
+        {
+            if (PlatformDetails.CanPrefetch == false || _canPrefetchAhead == false)
+                return; // not supported
+
+            long size = 0;
+            void* baseAddress = null;
+            var pagerState = PagerState;
+            Debug.Assert(pagerState.AllocationInfos.Length == 1);
+            // we will change the array into a single value in next version
+            var ranges = stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[pagerState.AllocationInfos.Length];
+            for (int i = 0; i < pagerState.AllocationInfos.Length; i++)
+            {
+                var allocInfo = pagerState.AllocationInfos[i];
+                size += allocInfo.Size;
+
+                if (baseAddress == null)
+                    baseAddress = allocInfo.BaseAddress;
+
+                if (i != pagerState.AllocationInfos.Length - 1 &&
+                    pagerState.AllocationInfos[i + 1].BaseAddress == allocInfo.BaseAddress + allocInfo.Size)
+                {
+                    continue; // if adjacent ranges make one syscall
+                }
+
+                ranges[i] = new Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY
+                {
+                    VirtualAddress = baseAddress,
+                    NumberOfBytes = new IntPtr(size)
+                };
+
+                size = 0;
+                baseAddress = null;
+            }
+            PrefetchRanges(ranges, pagerState.AllocationInfos.Length);
+        }
+
 
         public virtual bool EnsureMapped(IPagerLevelTransactionState tx, long page, int numberOfPages)
         {
