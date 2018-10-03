@@ -76,6 +76,15 @@ namespace Voron.Impl
         private readonly int _prefetchResetThreshold;
 
         private readonly int _segmentShift;
+
+        // this state is accessed by multiple threads
+        // concurrently in an unsafe manner, we do so
+        // explicitly with the intention of dealing with
+        // dirty reads and writes. The only impact that this
+        // can have is a spurious call to the OS's 
+        // madvice() / PrefetchVirtualMemory
+        // Thread safety is based on the OS's own thread safety
+        // for concurrent calls to these methods. 
         private int _refreshCounter;
         private readonly byte[] _prefetchTable;
 
@@ -187,10 +196,10 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int GetSegmentState(long segment)
         {
-            if (segment < 0)
+            if (segment < 0 || segment > _prefetchTable.Length)
                 return AlreadyPrefetch;
 
-            byte value = this._prefetchTable[segment / 2];
+            byte value = _prefetchTable[segment / 2];
             if (segment % 2 == 0)
             {
                 // The actual value is in the high byte.
@@ -231,10 +240,21 @@ namespace Voron.Impl
                 // We update the current segment counter
                 segmentState++;
 
+                // if the previous or next segments were loaded, eagerly
+                // load this one, probably a sequential scan of one type or
+                // another
                 int previousSegmentState = GetSegmentState(segmentNumber - 1);
                 if (previousSegmentState == AlreadyPrefetch)
                 {
                     segmentState = AlreadyPrefetch;
+                }
+                else
+                {
+                    int nextSegmentState = GetSegmentState(segmentNumber + 1);
+                    if (nextSegmentState == AlreadyPrefetch)
+                    {
+                        segmentState = AlreadyPrefetch;
+                    }
                 }
 
                 SetSegmentState(segmentNumber, segmentState);
@@ -266,9 +286,11 @@ namespace Voron.Impl
             }
         }
 
-        public void CopyPrefetchState(PagerState pagerState)
+        public void CopyPrefetchState(PagerState olderInstance)
         {
-            Array.Copy(pagerState._prefetchTable, this._prefetchTable, pagerState._prefetchTable.Length);
+            // this is called from AllocateMorePages and is used to copy the current state of the
+            // prefetch state of the file. Our own size will be larger than the previous one. 
+            Array.Copy(olderInstance._prefetchTable, this._prefetchTable, olderInstance._prefetchTable.Length);
         }
     }
 }

@@ -382,7 +382,6 @@ namespace Voron.Platform.Win32
 
             if (prefetchIdx != 0)
             {
-                // We dont have enough space, so we send the batch to the kernel
                 Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess, (UIntPtr)prefetchIdx, toPrefetch, 0);
             }
 
