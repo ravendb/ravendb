@@ -291,7 +291,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 foreach (var dbReport in unchangedReports)
                 {
                     var dbName = dbReport.Name;
-                    if(_lastSuccessfulReceivedReport.TryGetValue(name, out var previous) == false)
+                    if(_lastSuccessfulReceivedReport.Report.TryGetValue(dbName, out var previous) == false)
                     {
                         // new db, shouldn't really be the case, but not much we can do, we'll
                         // show it to the user as is
