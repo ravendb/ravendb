@@ -13,6 +13,7 @@ using Voron.Data;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
+using Voron.Platform.Win32;
 using Voron.Util.Settings;
 
 namespace Voron.Platform.Posix
@@ -35,7 +36,7 @@ namespace Voron.Platform.Posix
         public override long TotalAllocationSize => _totalAllocationSize;
 
         public Posix32BitsMemoryMapPager(StorageEnvironmentOptions options, VoronPathSetting file, long? initialFileSize = null,
-            bool usePageProtection = false) : base(options, usePageProtection)
+            bool usePageProtection = false) : base(options, canPrefetchAhead: false, usePageProtection: usePageProtection)
         {
             _options = options;
             FileName = file;
@@ -494,13 +495,7 @@ namespace Voron.Platform.Posix
             return FileName.FullPath;
         }
 
-
-        public override void TryPrefetchingWholeFile()
-        {
-            // we never want to do this, we'll rely on the OS to do it for us
-        }
-
-        public override void MaybePrefetchMemory<T>(T pagesToPrefetch)
+        protected internal override unsafe void PrefetchRanges(Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* list, int count)
         {
             // we never want to do this here
         }

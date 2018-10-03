@@ -71,7 +71,7 @@ namespace Voron.Impl.Paging
             Win32NativeFileAttributes fileAttributes = Win32NativeFileAttributes.Normal,
             Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite,
             bool usePageProtection = false)
-            : base(options, usePageProtection)
+            : base(options, canPrefetchAhead: false, usePageProtection: usePageProtection)
         {
             _memoryMappedFileAccess = access == Win32NativeFileAccess.GenericRead
               ? MemoryMappedFileAccess.Read
@@ -573,15 +573,9 @@ namespace Voron.Impl.Paging
             return _fileInfo.Name;
         }
 
-
-        public override void TryPrefetchingWholeFile()
+        protected internal override unsafe void PrefetchRanges(WIN32_MEMORY_RANGE_ENTRY* list, int count)
         {
-            // we never want to do this, we'll rely on the OS to do it for us
-        }
-
-        public override void MaybePrefetchMemory<T>(T pagesToPrefetch)
-        {
-            // we never want to do this here
+            // explicitly do nothing here
         }
 
         protected override void DisposeInternal()

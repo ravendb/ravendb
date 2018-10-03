@@ -33,7 +33,6 @@ namespace Voron.Platform.Win32
         private readonly MemoryMappedFileAccess _memoryMappedFileAccess;
         private readonly bool _copyOnWriteMode;
         private readonly Logger _logger;
-        private readonly bool _canPrefetchAhead;
         public override long TotalAllocationSize => _totalAllocationSize;
 
         [StructLayout(LayoutKind.Explicit)]
@@ -54,14 +53,12 @@ namespace Voron.Platform.Win32
             Win32NativeFileAttributes fileAttributes = Win32NativeFileAttributes.Normal,
             Win32NativeFileAccess access = Win32NativeFileAccess.GenericRead | Win32NativeFileAccess.GenericWrite,
             bool usePageProtection = false)
-            : base(options, usePageProtection)
+            : base(options, !fileAttributes.HasFlag(Win32NativeFileAttributes.Temporary), usePageProtection)
         {                        
             SYSTEM_INFO systemInfo;
             GetSystemInfo(out systemInfo);
             FileName = file;
             _logger = LoggingSource.Instance.GetLogger<StorageEnvironment>($"Pager-{file}");
-
-            _canPrefetchAhead = !fileAttributes.HasFlag(Win32NativeFileAttributes.Temporary);
 
             _access = access;
             _copyOnWriteMode = Options.CopyOnWriteMode && FileName.FullPath.EndsWith(Constants.DatabaseFilename);
@@ -348,70 +345,15 @@ namespace Voron.Platform.Win32
             NativeMemory.UnregisterFileMapping(_fileInfo.FullName, new IntPtr(baseAddress), size);
         }
 
-        public override void MaybePrefetchMemory<T>(T pagesToPrefetch)
-        {
-            if (PlatformDetails.CanPrefetch == false || _canPrefetchAhead == false)
-                return; // not supported
-
-            if (pagesToPrefetch.MoveNext() == false)
-                return;
-
-            const int StackSpace = 16;
-
-            int prefetchIdx = 0;
-            Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* toPrefetch = stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[StackSpace];
-            do
-            {
-                long pageNumber = pagesToPrefetch.Current;
-                if (this._pagerState.ShouldPrefetchSegment(pageNumber, out void* virtualAddress, out long bytes))
-                {                    
-                    // Prepare the segment information. 
-                    toPrefetch[prefetchIdx].NumberOfBytes = (IntPtr)bytes; // _prefetchSegmentSize;
-                    toPrefetch[prefetchIdx].VirtualAddress = virtualAddress; // baseAddress + segmentNumber * _prefetchSegmentSize;
-                    prefetchIdx++;
-
-                    if (prefetchIdx >= StackSpace)
-                    {
-                        // We dont have enough space, so we send the batch to the kernel
-                        Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess, (UIntPtr)StackSpace, toPrefetch, 0);
-                        prefetchIdx = 0;
-                    }
-                }                
-            }
-            while (pagesToPrefetch.MoveNext());
-
-            if (prefetchIdx != 0)
-            {
-                Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess, (UIntPtr)prefetchIdx, toPrefetch, 0);
-            }
-
-            this._pagerState.CheckResetPrefetchTable();
-        }
-
         public override int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState)
         {
             return CopyPageImpl(destwI4KbBatchWrites, p, pagerState);
         }
 
-        public override void TryPrefetchingWholeFile()
+        protected internal override unsafe void PrefetchRanges(Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* list, int count)
         {
-            if (PlatformDetails.CanPrefetch == false)
-                return; // not supported
-
-            var pagerState = PagerState;
-            var entries = stackalloc Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY[pagerState.AllocationInfos.Length];
-
-            for (var i = 0; i < pagerState.AllocationInfos.Length; i++)
-            {
-                entries[i].VirtualAddress = pagerState.AllocationInfos[i].BaseAddress;
-                entries[i].NumberOfBytes = (IntPtr)pagerState.AllocationInfos[i].Size;
-            }
-
-            if (Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess,
-                (UIntPtr)pagerState.AllocationInfos.Length, entries, 0) == false)
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to Prefetch Vitrual Memory of file " + FileName);
+            Win32MemoryMapNativeMethods.PrefetchVirtualMemory(Win32Helper.CurrentProcess, (UIntPtr)count, list, 0);
         }
-
 
         internal override void ProtectPageRange(byte* start, ulong size, bool force = false)
         {

@@ -21,7 +21,7 @@ namespace Voron.Platform.Posix
         private readonly bool _copyOnWriteMode;
         public override long TotalAllocationSize => _totalAllocationSize;
         public PosixMemoryMapPager(StorageEnvironmentOptions options, VoronPathSetting file, long? initialFileSize = null,
-            bool usePageProtection = false) : base(options, usePageProtection)
+            bool usePageProtection = false) : base(options, canPrefetchAhead: true, usePageProtection: usePageProtection)
         {
             _options = options;
             FileName = file;
