@@ -106,7 +106,6 @@ namespace Voron.Platform.Posix
 
             if (prefetchIdx != 0)
             {
-                // We dont have enough space, so we send the batch to the kernel       
                 PrefetchRanges(toPrefetch, prefetchIdx);
             }
 
