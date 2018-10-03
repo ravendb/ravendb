@@ -276,7 +276,7 @@ namespace Raven.Server.Utils
             ref FileTime lpKernelTime,
             ref FileTime lpUserTime);
 
-        private static long GetNumberOfActiveCores(Process process)
+        public static long GetNumberOfActiveCores(Process process)
         {
             try
             {
@@ -295,7 +295,7 @@ namespace Raven.Server.Utils
             }
         }
 
-        private static (long TotalProcessorTimeTicks, long TimeTicks) GetProcessTimes(Process process)
+        public static (long TotalProcessorTimeTicks, long TimeTicks) GetProcessTimes(Process process)
         {
             try
             {

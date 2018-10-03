@@ -686,6 +686,9 @@ class serverDashboard extends viewModelBase {
             case "IndexingSpeed":
                 this.indexingSpeedSection.onData(data as Raven.Server.Dashboard.IndexingSpeed);
                 break;
+            case "ThreadsInfo":
+                //TODO: 
+                break;
             default:
                 throw new Error("Unhandled notification type: " + data.Type);
         }
