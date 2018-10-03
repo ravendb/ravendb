@@ -251,9 +251,9 @@ namespace Raven.Server.ServerWide.Maintenance
 
                                 var nodeReport = BuildReport(rawReport);
                                 timeoutEvent.Defer(_parent._leaderClusterTag);
-
-                                unchangedReports.Clear();
+                                
                                 UpdateNodeReportIfNeeded(nodeReport, unchangedReports);
+                                unchangedReports.Clear();
 
                                 ReceivedReport = _lastSuccessfulReceivedReport = nodeReport;
                             }
@@ -291,9 +291,16 @@ namespace Raven.Server.ServerWide.Maintenance
                 foreach (var dbReport in unchangedReports)
                 {
                     var dbName = dbReport.Name;
-                    nodeReport.Report[dbName] = _lastSuccessfulReceivedReport.Report[dbName];
-                    nodeReport.Report[dbName].LastSentEtag = dbReport.LastSentEtag;
-                    nodeReport.Report[dbName].UpTime = dbReport.UpTime;
+                    if(_lastSuccessfulReceivedReport.TryGetValue(name, out var previous) == false)
+                    {
+                        // new db, shouldn't really be the case, but not much we can do, we'll
+                        // show it to the user as is
+                        continue;
+                    }
+                    previous.LastSentEtag = dbReport.LastSentEtag;
+                    previous.UpTime = dbReport.UpTime;
+                    
+                    nodeReport.Report[dbName] = previous;
                 }
             }
 
