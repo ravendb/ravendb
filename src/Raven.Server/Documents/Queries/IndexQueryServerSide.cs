@@ -112,8 +112,6 @@ namespace Raven.Server.Documents.Queries
             }
 
             result.Metadata = new QueryMetadata(result.Query, null, 0);
-            if (result.Metadata.IndexName != null && result.Metadata.IsGroupBy)
-                throw new ArgumentException("Can't use 'group by' when querying on an Index. 'group by' can be used only when querying on collections.");
 
             if (result.Metadata.HasTimings)
                 result.Timings = new QueryTimingsScope(start: false);
