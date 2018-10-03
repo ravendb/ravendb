@@ -124,7 +124,7 @@ namespace Raven.Tests.Issues
             Assert.NotNull(store2.DatabaseCommands.Get("Replicated/1"));
         }
 
-        [Theory]
+        [Theory(Skip = "Flaky test")]
         [PropertyData("Storages")]
         public async Task ShouldThrowTimeoutException(string storageName)
         {
