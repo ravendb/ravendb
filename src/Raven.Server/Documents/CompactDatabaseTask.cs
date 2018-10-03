@@ -138,8 +138,8 @@ namespace Raven.Server.Documents
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
             if (configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
-            options.PrefetchSegmentSize = configuration.Storage.IOPrefetchBatchSize.GetValue(SizeUnit.Bytes);
-            options.PrefetchResetThreshold = configuration.Storage.IOPrefetchResetThreshold.GetValue(SizeUnit.Bytes);
+            options.PrefetchSegmentSize = configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
+            options.PrefetchResetThreshold = configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
         }
 
         private static void SwitchDatabaseDirectories(string basePath, string backupDirectory, string compactDirectory)

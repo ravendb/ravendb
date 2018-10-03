@@ -55,14 +55,14 @@ namespace Raven.Server.Config.Categories
         [Description("Size of the batch that will be requested to the OS from disk when prefetching (value in powers of 2). Some OSs may not honor certain values. Experts only.")]
         [DefaultValue(1024)]
         [SizeUnit(SizeUnit.Kilobytes)]
-        [ConfigurationEntry("Storage.IOPrefetchBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public Size IOPrefetchBatchSize { get; set; }
+        [ConfigurationEntry("Storage.PrefetchBatchSizeInKb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size PrefetchBatchSize { get; set; }
 
         [Description("How many gigabytes of memory should be prefetched before restarting the prefetch tracker table. Experts only.")]
         [DefaultValue(8)]
         [SizeUnit(SizeUnit.Gigabytes)]
-        [ConfigurationEntry("Storage.IOPrefetchResetThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public Size IOPrefetchResetThreshold { get; set; }
+        [ConfigurationEntry("Storage.PrefetchResetThresholdInGb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size PrefetchResetThreshold { get; set; }
 
     }
 }

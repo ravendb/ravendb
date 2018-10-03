@@ -447,8 +447,8 @@ namespace Raven.Server.Documents.Indexes
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
             if (documentDatabase.Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = documentDatabase.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
-            options.PrefetchSegmentSize = documentDatabase.Configuration.Storage.IOPrefetchBatchSize.GetValue(SizeUnit.Bytes);
-            options.PrefetchResetThreshold = documentDatabase.Configuration.Storage.IOPrefetchResetThreshold.GetValue(SizeUnit.Bytes);
+            options.PrefetchSegmentSize = documentDatabase.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
+            options.PrefetchResetThreshold = documentDatabase.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
 
             if (schemaUpgrader)
             {
