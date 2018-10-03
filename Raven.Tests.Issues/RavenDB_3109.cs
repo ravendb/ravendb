@@ -25,7 +25,7 @@ namespace Raven.Tests.Issues
             public string Phone { get; set; }
         }
 
-        [Fact]
+        [Fact(Skip = "Flaky test")]
         public void ShouldWork()
         {
             using (var store1 = CreateStore(requestedStorageType: "esent"))
