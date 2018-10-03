@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Queries
             if (IsDynamic == false || IsGroupBy)
                 IsCollectionQuery = false;
 
-            if (IsGroupBy && IsCollectionQuery == false)
+            if (IsGroupBy && IsDynamic == false)
                 throw new ArgumentException("Can't use 'group by' when querying on an Index. 'group by' can be used only when querying on collections.");
 
             DeclaredFunctions = Query.DeclaredFunctions;
