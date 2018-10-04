@@ -103,19 +103,6 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        public void AddAfterTransactionCommit(Notification notification, RavenTransaction tx)
-        {
-            var llt = tx.InnerTransaction.LowLevelTransaction;
-
-            llt.OnDispose += _ =>
-            {
-                if (llt.Committed == false)
-                    return;
-
-                Add(notification);
-            };
-        }
-
         public IDisposable GetStored(out IEnumerable<NotificationTableValue> actions, bool postponed = true)
         {
             var scope = _notificationsStorage.ReadActionsOrderedByCreationDate(out actions);

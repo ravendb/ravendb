@@ -251,7 +251,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                                 var nodeReport = BuildReport(rawReport);
                                 timeoutEvent.Defer(_parent._leaderClusterTag);
-                                
+
                                 UpdateNodeReportIfNeeded(nodeReport, unchangedReports);
                                 unchangedReports.Clear();
 
@@ -277,6 +277,14 @@ namespace Raven.Server.ServerWide.Maintenance
 
             private void UpdateNodeReportIfNeeded(ClusterNodeStatusReport nodeReport, List<DatabaseStatusReport> unchangedReports)
             {
+                // we take the last received and not the last successful.
+                // we don't want to reuse by miskate a successful report when we recieve an 'unchanged' error.
+                var lastReport = ReceivedReport;
+                if (lastReport.Status != ClusterNodeStatusReport.ReportStatus.Ok)
+                {
+                    return;
+                }
+
                 foreach (var dbReport in nodeReport.Report)
                 {
                     if (dbReport.Value.Status == DatabaseStatus.NoChange)
@@ -291,7 +299,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 foreach (var dbReport in unchangedReports)
                 {
                     var dbName = dbReport.Name;
-                    if(_lastSuccessfulReceivedReport.Report.TryGetValue(dbName, out var previous) == false)
+                    if (lastReport.Report.TryGetValue(dbName, out var previous) == false)
                     {
                         // new db, shouldn't really be the case, but not much we can do, we'll
                         // show it to the user as is
@@ -299,7 +307,6 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
                     previous.LastSentEtag = dbReport.LastSentEtag;
                     previous.UpTime = dbReport.UpTime;
-                    
                     nodeReport.Report[dbName] = previous;
                 }
             }
