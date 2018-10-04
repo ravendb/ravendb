@@ -116,20 +116,25 @@ namespace SlowTests.Server.Replication
                 Assert.Equal("John Dow", replicated1.Name);
                 Assert.Equal(30, replicated1.Age);
 
+                var db1 = await GetDocumentDatabaseInstanceFor(store1);
+                var db2 = await GetDocumentDatabaseInstanceFor(store2);
+                var replicationConnection = db1.ReplicationLoader.OutgoingHandlers.First();
+
                 var external = new ExternalReplication(store1.Database, $"ConnectionString-{store2.Identifier}")
                 {
                     TaskId = externalList.First().TaskId,
                     Disabled = true
                 };
-                var db1 = await GetDocumentDatabaseInstanceFor(store1);
-                var db2 = await GetDocumentDatabaseInstanceFor(store2);
+
                 var res = await store1.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external));
+                Assert.Equal(externalList.First().TaskId, res.TaskId);
 
                 //make sure the command is processed
                 await db1.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                 await db2.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
 
-                Assert.Equal(externalList.First().TaskId, res.TaskId);
+                var connectionDropped = await WaitForValueAsync(() => replicationConnection.IsConnectionDisposed, true);
+                Assert.True(connectionDropped);
                 
                 using (var session = store1.OpenSession())
                 {

@@ -56,6 +56,7 @@ namespace Raven.Server.Documents.Replication
         private TcpClient _tcpClient;
 
         private readonly AsyncManualResetEvent _connectionDisposed = new AsyncManualResetEvent();
+        public bool IsConnectionDisposed => _connectionDisposed.IsSet;
         private JsonOperationContext.ManagedPinnedBuffer _buffer;
 
         internal CancellationToken CancellationToken => _cts.Token;
