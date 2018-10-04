@@ -274,9 +274,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
             {
-                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, out Field[] groupByFields));
+                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, out CompiledIndexField[] groupByFields));
 
-                var groupByFieldsArray = GetArrayCreationExpression<Field>(
+                var groupByFieldsArray = GetArrayCreationExpression<CompiledIndexField>(
                     groupByFields,
                     (builder, field) => field.WriteTo(builder));
 
@@ -308,7 +308,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 .WithMembers(members.Add(ctor));
         }
 
-        private static List<Field> GetIndexedFields(IndexDefinition definition, FieldNamesValidator fieldNamesValidator)
+        private static List<CompiledIndexField> GetIndexedFields(IndexDefinition definition, FieldNamesValidator fieldNamesValidator)
         {
             var fields = fieldNamesValidator.Fields.ToList();
 
@@ -362,7 +362,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, out Field[] groupByFields)
+        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, out CompiledIndexField[] groupByFields)
         {
             try
             {
@@ -486,7 +486,7 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
         private static StatementSyntax HandleSyntaxInReduce(ReduceFunctionProcessor reduceFunctionProcessor, MethodsInGroupByValidator methodsInGroupByValidator,
-            ExpressionSyntax expression, out Field[] groupByFields)
+            ExpressionSyntax expression, out CompiledIndexField[] groupByFields)
         {
 
             var rewrittenExpression = (CSharpSyntaxNode)reduceFunctionProcessor.Visit(expression);
@@ -503,7 +503,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return RoslynHelper.This(nameof(StaticIndexBase.Reduce)).Assign(reducingFunction).AsExpressionStatement();
         }
 
-        private static ArrayCreationExpressionSyntax GetArrayCreationExpression<T>(IEnumerable<Field> items, Action<StringBuilder, Field> write)
+        private static ArrayCreationExpressionSyntax GetArrayCreationExpression<T>(IEnumerable<CompiledIndexField> items, Action<StringBuilder, CompiledIndexField> write)
         {
             var sb = new StringBuilder();
             sb.Append("new ");

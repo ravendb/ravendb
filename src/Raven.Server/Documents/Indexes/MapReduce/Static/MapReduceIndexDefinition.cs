@@ -8,14 +8,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
     public class MapReduceIndexDefinition : MapIndexDefinition
     {
         public MapReduceIndexDefinition(IndexDefinition definition, HashSet<string> collections, string[] outputFields,
-            Field[] groupByFields, bool hasDynamicFields)
+            CompiledIndexField[] groupByFields, bool hasDynamicFields)
             : base(definition, collections, outputFields, hasDynamicFields)
         {
-            GroupByFields = new HashSet<Field>(groupByFields);
+            GroupByFields = new HashSet<CompiledIndexField>(groupByFields);
             OutputReduceToCollection = definition.OutputReduceToCollection;
         }
 
-        public HashSet<Field> GroupByFields { get; }
+        public HashSet<CompiledIndexField> GroupByFields { get; }
         public string OutputReduceToCollection { get; }
     }
 }
