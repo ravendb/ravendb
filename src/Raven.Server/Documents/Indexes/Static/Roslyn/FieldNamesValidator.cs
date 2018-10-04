@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
     {
         private readonly CaptureSelectNewFieldNamesVisitor _visitor = new CaptureSelectNewFieldNamesVisitor();
 
-        private HashSet<Field> _baseFields;
+        private HashSet<CompiledIndexField> _baseFields;
 
         private string _baseFunction;
 
@@ -38,9 +38,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
 Baseline function		: {_baseFunction}
 Non matching function	: {indexingFunction}
 
-Common fields			: {string.Join(", ", _baseFields.Intersect(_visitor.Fields))}
-Missing fields			: {string.Join(", ", _baseFields.Except(_visitor.Fields))}
-Additional fields		: {string.Join(", ", _visitor.Fields.Except(_baseFields))}";
+Common fields			: {string.Join(", ", _baseFields.Intersect(_visitor.Fields).Select(x => x.Name))}
+Missing fields			: {string.Join(", ", _baseFields.Except(_visitor.Fields).Select(x => x.Name))}
+Additional fields		: {string.Join(", ", _visitor.Fields.Except(_baseFields).Select(x => x.Name))}";
 
                 throw new InvalidOperationException(message);
             }
@@ -48,8 +48,8 @@ Additional fields		: {string.Join(", ", _visitor.Fields.Except(_baseFields))}";
             return false;
         }
 
-        public Field[] Fields => _baseFields.ToArray();
+        public CompiledIndexField[] Fields => _baseFields.ToArray();
 
-        public Field[] ExtractedFields => _visitor.Fields.ToArray();
+        public CompiledIndexField[] ExtractedFields => _visitor.Fields.ToArray();
     }
 }

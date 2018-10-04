@@ -250,12 +250,12 @@ namespace Raven.Server.Documents.Indexes.Static
         public ScriptFunctionInstance Key { get; }
         public string ReduceString { get; internal set; }
 
-        private Field[] _groupByFields;
+        private CompiledIndexField[] _groupByFields;
         private bool _singleField;
         private UnmanagedBuffersPoolWithLowMemoryHandling _bufferPool;
         private ByteStringContext _byteStringContext;
 
-        internal Field[] GetReduceFieldsNames()
+        internal CompiledIndexField[] GetReduceFieldsNames()
         {
             if (_groupByFields != null)
                 return _groupByFields;
@@ -297,7 +297,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single return object expression statement got a statement of type {actualBody.GetType().Name}.");
             }
 
-            var cur = new HashSet<Field>();
+            var cur = new HashSet<CompiledIndexField>();
             foreach (var prop in oe.Properties)
             {
                 var fieldName = prop.Key.GetKey();

@@ -10,9 +10,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
     public static class RewritersHelper
     {
-        public static HashSet<Field> ExtractFields(AnonymousObjectCreationExpressionSyntax anonymousObjectCreationExpressionSyntax, bool retrieveOriginal = false)
+        public static HashSet<CompiledIndexField> ExtractFields(AnonymousObjectCreationExpressionSyntax anonymousObjectCreationExpressionSyntax, bool retrieveOriginal = false, bool nestFields = false)
         {
-            var fields = new HashSet<Field>();
+            var fields = new HashSet<CompiledIndexField>();
             for (var i = 0; i < anonymousObjectCreationExpressionSyntax.Initializers.Count; i++)
             {
                 var initializer = anonymousObjectCreationExpressionSyntax.Initializers[i];
@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 {
                     if (initializer.Expression is MemberAccessExpressionSyntax memberAccessExpressionSyntax)
                     {
-                        fields.Add(ExtractField(memberAccessExpressionSyntax));
+                        fields.Add(ExtractField(memberAccessExpressionSyntax, nestFields));
                         continue;
                     }
 
@@ -43,10 +43,13 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return fields;
         }
 
-        public static Field ExtractField(MemberAccessExpressionSyntax expression)
+        public static CompiledIndexField ExtractField(MemberAccessExpressionSyntax expression, bool nestFields = true)
         {
             var name = expression.Name.Identifier.Text;
-            var path = ExtractPath(expression);
+
+            string[] path = null;
+            if (nestFields)
+                path = ExtractPath(expression);
 
             if (path == null || path.Length <= 1)
                 return new SimpleField(name);
@@ -64,9 +67,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         }
     }
 
-    public abstract class Field
+    public abstract class CompiledIndexField
     {
-        protected Field(string name)
+        protected CompiledIndexField(string name)
         {
             if (name == null)
                 throw new ArgumentNullException(nameof(name));
@@ -76,7 +79,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         public readonly string Name;
 
-        protected bool Equals(Field other)
+        protected bool Equals(CompiledIndexField other)
         {
             return string.Equals(Name, other.Name);
         }
@@ -87,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 return false;
             if (ReferenceEquals(this, obj))
                 return true;
-            if (obj is Field objField)
+            if (obj is CompiledIndexField objField)
                 return Equals(objField);
             return false;
         }
@@ -107,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         public abstract object GetValue(object value, object blittableValue);
     }
 
-    public class SimpleField : Field
+    public class SimpleField : CompiledIndexField
     {
         public SimpleField(string name)
             : base(name)
@@ -130,13 +133,13 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         }
     }
 
-    public class NestedField : Field
+    public class NestedField : CompiledIndexField
     {
         private IPropertyAccessor _accessor;
 
         private readonly string[] _path;
 
-        private readonly Field _field;
+        private readonly CompiledIndexField _field;
 
         public NestedField(string name, string[] path)
             : base(name)
