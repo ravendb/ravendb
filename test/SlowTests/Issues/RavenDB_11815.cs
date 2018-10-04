@@ -58,27 +58,83 @@ namespace SlowTests.Issues
             public MapReduceIndexWithNestedField2()
             {
                 Map = orders => from order in orders
-                    select new
-                    {
-                        Total = new
-                        {
-                            Amount = order.Amount,
-                            Currency = order.Currency
-                        },
-                        Count = 1,
-                    };
+                                select new
+                                {
+                                    Total = new
+                                    {
+                                        Amount = order.Amount,
+                                        Currency = order.Currency
+                                    },
+                                    Count = 1,
+                                };
 
                 Reduce = results => from result in results
-                    group result by result.Total.Currency into g
-                    select new
-                    {
-                        Total = new
-                        {
-                            Amount = g.Sum(x => x.Total.Amount),
-                            Currency = g.Key
-                        },
-                        Count = g.Sum(x => x.Count)
-                    };
+                                    group result by result.Total.Currency into g
+                                    select new
+                                    {
+                                        Total = new
+                                        {
+                                            Amount = g.Sum(x => x.Total.Amount),
+                                            Currency = g.Key
+                                        },
+                                        Count = g.Sum(x => x.Count)
+                                    };
+            }
+        }
+
+        private class MapReduceIndexWithNestedFieldJs : AbstractJavaScriptIndexCreationTask
+        {
+            public MapReduceIndexWithNestedFieldJs()
+            {
+                Maps.Add(@"
+map('Orders', function(o) {
+    return {
+        Total : {
+            Amount : o.Amount,
+            Currency : o.Currency 
+        }, 
+        Count : 1 
+    } 
+})");
+                Reduce = @"
+groupBy(x => ({ Currency : x.Total.Currency }))
+    .aggregate(g => { 
+        return { 
+            Total : { 
+                Amount : g.values.reduce((amt, val) => val.Total.Amount + amt, 0),
+                Currency : g.key.Currency
+            },
+            Count: g.values.reduce((count, val) => val.Count + count, 0)
+        }
+    })";
+            }
+        }
+
+        private class MapReduceIndexWithNestedFieldJs2 : AbstractJavaScriptIndexCreationTask
+        {
+            public MapReduceIndexWithNestedFieldJs2()
+            {
+                Maps.Add(@"
+map('Orders', function(o) {
+    return {
+        Total : {
+            Amount : o.Amount,
+            Currency : o.Currency 
+        }, 
+        Count : 1 
+    } 
+})");
+                Reduce = @"
+groupBy(x => x.Total.Currency)
+    .aggregate(g => { 
+        return { 
+            Total : { 
+                Amount : g.values.reduce((amt, val) => val.Total.Amount + amt, 0),
+                Currency : g.key.Currency
+            },
+            Count: g.values.reduce((count, val) => val.Count + count, 0)
+        }
+    })";
             }
         }
 
@@ -105,6 +161,8 @@ namespace SlowTests.Issues
             {
                 new MapReduceIndexWithNestedField().Execute(store);
                 new MapReduceIndexWithNestedField2().Execute(store);
+                new MapReduceIndexWithNestedFieldJs().Execute(store);
+                new MapReduceIndexWithNestedFieldJs2().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -116,7 +174,19 @@ namespace SlowTests.Issues
 
                     session.Store(new Order
                     {
+                        Amount = 2,
+                        Currency = "USD"
+                    });
+
+                    session.Store(new Order
+                    {
                         Amount = 50,
+                        Currency = "PLN"
+                    });
+
+                    session.Store(new Order
+                    {
+                        Amount = 3,
                         Currency = "PLN"
                     });
 
@@ -140,6 +210,20 @@ namespace SlowTests.Issues
                     Assert.Equal(2, results2.Count);
                     Assert.True(results2.Any(x => x.Total.Currency == "PLN"));
                     Assert.True(results2.Any(x => x.Total.Currency == "USD"));
+
+                    var results3 = session.Query<MapReduceIndexWithNestedField2.Result, MapReduceIndexWithNestedFieldJs>()
+                        .ToList();
+
+                    Assert.Equal(2, results3.Count);
+                    Assert.True(results3.Any(x => x.Total.Currency == "PLN"));
+                    Assert.True(results3.Any(x => x.Total.Currency == "USD"));
+
+                    var results4 = session.Query<MapReduceIndexWithNestedField2.Result, MapReduceIndexWithNestedFieldJs2>()
+                        .ToList();
+
+                    Assert.Equal(2, results4.Count);
+                    Assert.True(results4.Any(x => x.Total.Currency == "PLN"));
+                    Assert.True(results4.Any(x => x.Total.Currency == "USD"));
                 }
             }
         }
