@@ -38,8 +38,6 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 }
             }, database))
             {
-                index._threadAllocations = NativeMemory.CurrentThreadStats;
-
                 var mapReduceContext = new MapReduceIndexingContext();
                 using (var contextPool = new TransactionContextPool(database.DocumentsStorage.Environment))
                 {
