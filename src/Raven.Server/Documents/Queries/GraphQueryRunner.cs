@@ -9,7 +9,6 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Client;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Diagnostics;
@@ -19,10 +18,11 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class GraphQueryRunner : AbstractQueryRunner
+    public partial class GraphQueryRunner : AbstractQueryRunner
     {
         public GraphQueryRunner(DocumentDatabase database) : base(database)
         {
@@ -83,7 +83,6 @@ namespace Raven.Server.Documents.Queries
                         match.Populate(json, query.Metadata.AliasesInGraphSelect, q.GraphQuery);
 
                         var doc = documentsContext.ReadObject(json, "graph/projection");
-
                         var projectedDoc = resultRetriever.Get(new Document
                         {
                             Data = doc
@@ -102,13 +101,15 @@ namespace Raven.Server.Documents.Queries
         {
             foreach (var match in matchResults)
             {
-                var result = new DynamicJsonValue();
-                match.PopulateVertices(result);
+                var resultAsJson = new DynamicJsonValue();
+                match.PopulateVertices(resultAsJson);
 
-                final.AddResult(new Document
+                var result = new Document
                 {
-                    Data = documentsContext.ReadObject(result, "graph/result"),
-                });
+                    Data = documentsContext.ReadObject(resultAsJson, "graph/result"),
+                };
+
+                final.AddResult(result);
             }
         }
 
@@ -140,119 +141,6 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException("You cannot patch based on graph query");
         }
 
-        public struct Match // using struct because we have a single field 
-        {
-            private Dictionary<string, Document> _inner;
-
-            public object Key => _inner;
-
-            public IEnumerable<string> Aliases => _inner.Keys;
-
-            public Document Get(string alias)
-            {
-                Document result = null;
-                _inner?.TryGetValue(alias, out result);
-                return result;
-            }           
-
-            public bool TryGetKey(string alias, out string key)
-            {
-                key = null;
-                var hasKey = _inner.TryGetValue(alias, out var doc);
-
-                if (hasKey)
-                    key = doc.Id;
-
-                return hasKey;
-            }
-
-            public void Set(StringSegment alias, Document val)
-            {
-                if (_inner == null)
-                    _inner = new Dictionary<string, Document>();
-
-                _inner.Add(alias, val);
-            }            
-
-            public void Populate(DynamicJsonValue j, string[] aliases, GraphQuery gq)
-            {
-                if (_inner == null)
-                    return;
-
-                var edgeAliases = aliases.Except(_inner.Keys).ToArray();
-                foreach (var item in _inner)
-                {
-                    item.Value.EnsureMetadata();
-                    j[item.Key] = item.Value.Data;
-
-                    foreach (var alias in edgeAliases)
-                    {
-                        if (gq.WithEdgePredicates.TryGetValue(alias, out var edge) && 
-                            edge.FromAlias.GetValueOrDefault() == item.Key &&
-                            item.Value.Data.TryGet(edge.EdgeType, out object property))
-                        {
-                            j[alias] = property;
-                        }
-                    }
-                }
-            }
-
-            public void PopulateVertices(DynamicJsonValue j)
-            {
-                if (_inner == null)
-                    return;
-
-                foreach (var item in _inner)
-                {
-                    item.Value.EnsureMetadata();
-                    j[item.Key] = item.Value.Data;                    
-                }
-            }
-
-            public void PopulateVertices(ref IntermediateResults i)
-            {
-                if (_inner == null)
-                    return;
-
-                foreach (var item in _inner)
-                {
-                    i.Add(item.Key, this, item.Value);
-                }
-            }
-        }
-
-        public struct IntermediateResults// using struct because we have a single field 
-        {
-            private Dictionary<string, Dictionary<string, Match>> _matchesByAlias;
-            private Dictionary<string, Dictionary<string, Match>> MatchesByAlias => 
-                _matchesByAlias ??( _matchesByAlias = new Dictionary<string, Dictionary<string, Match>>());
-
-            public void Add(Match match)
-            {
-                foreach (var alias in match.Aliases)
-                {
-                    Add(alias, match, match.Get(alias));
-                }
-            }
-
-            public void Add(string alias, Match match, Document instance)
-            {
-                //TODO: need to handle map/reduce results?
-                MatchesByAlias[alias][instance.Id] = match;
-            }
-
-            public bool TryGetByAlias(string alias, out Dictionary<string,Match> value)
-            {
-                return MatchesByAlias.TryGetValue(alias, out value);
-            }
-
-            public void EnsureExists(string alias)
-            {
-                if (MatchesByAlias.TryGetValue(alias, out _) == false)
-                    MatchesByAlias[alias] =  new Dictionary<string, Match>();
-            }
-        }
-
         private class GraphExecuteVisitor : QueryVisitor
         {
             private readonly IntermediateResults _source;
@@ -281,6 +169,8 @@ namespace Raven.Server.Documents.Queries
                     match.Set(ee.Path[0].Alias, item.Value.Get(ee.Path[0].Alias));
                     currentResults.Add(match);
                 }
+                
+                Output = new List<Match>();
 
                 // TODO: for now, we require node->edge->node->edge syntax
                 for (int pathIndex = 1; pathIndex < ee.Path.Length-1; pathIndex+=2)
@@ -293,26 +183,92 @@ namespace Raven.Server.Documents.Queries
                     var edge = _gq.WithEdgePredicates[ee.Path[pathIndex].Alias].EdgeType.Value;
                     _gq.WithEdgePredicates[ee.Path[pathIndex].Alias].FromAlias = prevNodeAlias;
 
-                    _source.TryGetByAlias(nextNodeAlias, out var edgeResults);
+                    if(!_source.TryGetByAlias(nextNodeAlias, out var edgeResults))
+                        throw new InvalidOperationException("Could not fetch destination nod edge data. This should not happen and is likely a bug.");
 
                     for (int resultIndex = 0; resultIndex < currentResults.Count; resultIndex++)
                     {
-                        var item = currentResults[resultIndex];
-
-                        var prev = item.Get(prevNodeAlias);
-                        if (TryGetRelatedMatch(edge, nextNodeAlias, edgeResults, prev, out var relatedMatch) == false)
+                        var edgeResult = currentResults[resultIndex];
+                        var prev = edgeResult.Get(prevNodeAlias);
+                        //for cases when there are mulitple possible edges for one vertex
+                        //something like { RelatedProducts : ["products/1", "products/3"]
+                        Document related;
+                        if (TryGetMultipleRelatedMatches(edge, nextNodeAlias, edgeResults, prev, out var multipleRelatedMatches))
                         {
+                            foreach (var match in multipleRelatedMatches)
+                            {
+                                related = match.Get(nextNodeAlias);
+                                if (edgeResult.TryGetKey(nextNodeAlias,out _) == false)
+                                {
+                                    edgeResult.Set(nextNodeAlias,related); 
+                                    //no need to add to Output here, since item is part of currentResults and they will get added later
+                                }
+                                else
+                                {
+                                    var multipleEdgeResult = new Match();
+                                    
+                                    multipleEdgeResult.Set(prevNodeAlias, prev);
+                                    multipleEdgeResult.Set(nextNodeAlias, related);
+                                    Output.Add(multipleEdgeResult);
+                                }
+                            }
+                            continue;
+                        }
+
+                        if (!TryGetRelatedMatch(edge, nextNodeAlias, edgeResults, prev, out var relatedMatch))
+                        {
+                            //if didn't find multiple AND single edges, then it has no place in query results...
                             currentResults.RemoveAt(resultIndex);
                             resultIndex--;
                             continue;
                         }
 
-                        var related = relatedMatch.Get(nextNodeAlias);
-                        item.Set(nextNodeAlias, related);
+                        related = relatedMatch.Get(nextNodeAlias);
+                        edgeResult.Set(nextNodeAlias, related);
                     }
                 }
 
-                Output = currentResults;
+                Output.AddRange(currentResults);
+            }
+
+            private bool TryGetMultipleRelatedMatches(string edge, string alias, Dictionary<string, Match> edgeResults, Document prev, out IEnumerable<Match> relatedMatches)
+            {
+                var nextIds = new HashSet<string>();
+                IncludeUtil.GetDocIdFromInclude(prev.Data,edge,nextIds);
+                relatedMatches = Enumerable.Empty<Match>();
+                if (prev.Data.TryGet(edge, out string[] nextIds) == false || nextIds == null)
+                    return false;
+
+                IEnumerable<Match> GetResultsFromEdges()
+                {
+                    foreach (var id in nextIds)
+                    {
+                  
+                        if(!edgeResults.TryGetValue(id,out var m))
+                            continue;
+                        yield return m;
+                    }
+                }
+
+                IEnumerable<Match> GetResultsFromStorage()
+                {
+                    foreach (var id in nextIds)
+                    {
+
+                        var doc = _ctx.DocumentDatabase.DocumentsStorage.Get(_ctx, id, false);
+                        if (doc == null)
+                            continue;
+
+                        var m = new Match();
+                        m.Set(alias, doc);
+
+                        yield return m;
+                    }
+                }
+
+                relatedMatches = edgeResults != null ? GetResultsFromEdges() : GetResultsFromStorage();
+
+                return true;
             }
 
             private bool TryGetRelatedMatch(string edge, string alias, Dictionary<string, Match> edgeResults, Document prev, out Match relatedMatch)

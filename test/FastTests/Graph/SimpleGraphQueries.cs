@@ -33,19 +33,23 @@ namespace FastTests.Graph
         {
             using (var session = store.OpenSession())
             {
-                var arava = new Dog { Name = "Arava" };
-                var oscar = new Dog { Name = "Oscar" };
-                var pheobe = new Dog { Name = "Pheobe" };
+                var arava = new Dog { Name = "Arava" }; //dogs/1
+                var oscar = new Dog { Name = "Oscar" }; //dogs/2
+                var pheobe = new Dog { Name = "Pheobe" }; //dogs/3
 
                 session.Store(arava);
                 session.Store(oscar);
                 session.Store(pheobe);
 
+                //dogs/1 => dogs/2
                 arava.Likes = new[] { oscar.Id };
                 arava.Dislikes = new[] { pheobe.Id };
 
+                //dogs/2 => dogs/1,dogs/3 (cycle!)
                 oscar.Likes = new[] { oscar.Id, pheobe.Id };
+                oscar.Dislikes = new string[0];
 
+                //dogs/3 => dogs/2
                 pheobe.Likes = new[] { oscar.Id };
                 pheobe.Dislikes = new[] { arava.Id };
 
@@ -227,7 +231,47 @@ namespace FastTests.Graph
             }
         }
 
-        [Fact(Skip = "Currently is not supposed to work. See RavenDB-11704")]
+        [Fact]
+        public void FindTwoFriendliesWhoPointToTheSameVertex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var arava = new Dog { Name = "Arava" }; //dogs/1
+                    var oscar = new Dog { Name = "Oscar" }; //dogs/2
+                    var pheobe = new Dog { Name = "Pheobe" }; //dogs/3
+
+                    session.Store(arava);
+                    session.Store(oscar);
+                    session.Store(pheobe);
+
+                    //dogs/1 => dogs/3
+                    arava.Likes = new[] { pheobe.Id };
+
+                    //dogs/2 => dogs/3
+                    oscar.Likes = new[] { pheobe.Id };
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {                   
+                    var friends = session.Advanced.RawQuery<JObject>(@"match (fst:Dogs)-[:Likes]->(snd:Dogs)")
+                        .ToList();
+
+                    var resultPairs = friends.Select(x => new
+                    {
+                        From = x["fst"],
+                        To = x["snd"]
+                    }).ToArray();
+
+                    Assert.Equal(2,resultPairs.Length);
+                }
+            }
+        }
+
+        [Fact]
         public void FindFriendlies()
         {
             using (var store = GetDocumentStore())
@@ -238,10 +282,13 @@ namespace FastTests.Graph
                     var friends = session.Advanced.RawQuery<JObject>(@"match (fst:Dogs)-[:Likes]->(snd:Dogs)")
                                                   .ToList();
 
-                    Assert.Contains(friends, result => result["fst"].Value<string>("Id") == "dogs/1-A" && result["snd"].Value<string>("Id") == "dogs/2-A");
-                    Assert.Contains(friends, result => result["fst"].Value<string>("Id") == "dogs/2-A" && result["snd"].Value<string>("Id") == "dogs/2-A");
-                    Assert.Contains(friends, result => result["fst"].Value<string>("Id") == "dogs/2-A" && result["snd"].Value<string>("Id") == "dogs/3-A");
-                    Assert.Contains(friends, result => result["fst"].Value<string>("Id") == "dogs/3-A" && result["snd"].Value<string>("Id") == "dogs/2-A");
+                    var resultPairs = friends.Select(x => new
+                    {
+                        From = x["fst"],
+                        To = x["snd"]
+                    }).ToArray();
+
+                    Assert.Equal(4,resultPairs.Length);
                 }
             }
         }
