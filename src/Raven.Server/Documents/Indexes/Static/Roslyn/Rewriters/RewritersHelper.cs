@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
     public class NestedField : Field
     {
-        private PropertyAccessor _accessor;
+        private IPropertyAccessor _accessor;
 
         private readonly string[] _path;
 

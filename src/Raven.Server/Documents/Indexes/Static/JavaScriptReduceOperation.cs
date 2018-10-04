@@ -17,6 +17,7 @@ using Sparrow;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.ServerWide;
 using System.Runtime.CompilerServices;
+using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -64,9 +65,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 var xCalculated = ReferenceEquals(x, _lastUsedBucket);
                 //Only y is calculated, x is the value in the bucket
                 var yCalculated = ReferenceEquals(y, _lastUsedBlittable);
-                if(xCalculated == false)
+                if (xCalculated == false)
                     _xKey.Reset();
-                if(yCalculated == false)
+                if (yCalculated == false)
                     _yKey.Reset();
 
                 foreach (var field in _parent._groupByFields)
@@ -74,11 +75,11 @@ namespace Raven.Server.Documents.Indexes.Static
                     bool xHasField = false;
                     object xVal = null;
                     if (xCalculated == false)
-                        xHasField = x.TryGet(field, out xVal);
+                        xHasField = x.TryGet(field.Name, out xVal);
                     object yVal = null;
                     if (yCalculated == false && xCalculated == false)
                     {
-                        var yHasField = y.TryGet(field, out yVal);
+                        var yHasField = y.TryGet(field.Name, out yVal);
                         if (xHasField != yHasField)
                             return false;
                     }
@@ -108,14 +109,14 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 return Memory.Compare(xBuffer.Address, yBuffer.Address, xBuffer.Size) == 0;
 
-            }            
+            }
 
             public int GetHashCode(BlittableJsonReaderObject obj)
-            {                
+            {
                 _yKey.Reset();
                 foreach (var field in _parent._groupByFields)
                 {
-                    var xHasField = obj.TryGet(field, out object xVal);
+                    var xHasField = obj.TryGet(field.Name, out object xVal);
                     _yKey.Process(_allocator, xVal);
                 }
 
@@ -194,7 +195,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private JsValue ConstructValues(List<BlittableJsonReaderObject> values)
         {
-            var items  = new PropertyDescriptor[values.Count];
+            var items = new PropertyDescriptor[values.Count];
             for (int j = 0; j < values.Count; j++)
             {
                 var val = values[j];
@@ -214,7 +215,7 @@ namespace Raven.Server.Documents.Indexes.Static
             result.Put("values", jsArray, false);
             if (_singleField)
             {
-                var index = values[0].GetPropertyIndex(_groupByFields[0]);
+                var index = values[0].GetPropertyIndex(_groupByFields[0].Name);
                 if (index != -1)
                 {
                     BlittableJsonReaderObject.PropertyDetails prop = default;
@@ -231,12 +232,12 @@ namespace Raven.Server.Documents.Indexes.Static
                 result.Put("key", key, false);
                 for (int i = 0; i < _groupByFields.Length; i++)
                 {
-                    var index = values[0].GetPropertyIndex(_groupByFields[i]);
+                    var index = values[0].GetPropertyIndex(_groupByFields[i].Name);
                     if (index != -1)
                     {
                         BlittableJsonReaderObject.PropertyDetails prop = default;
                         values[0].GetPropertyByIndex(index, ref prop, addObjectToCache: false);
-                        key.Put(_groupByFields[i], JsValue.FromObject(Engine, prop.Value), false);
+                        key.Put(_groupByFields[i].Name, JsValue.FromObject(Engine, prop.Value), false);
                     }
                 }
             }
@@ -249,12 +250,12 @@ namespace Raven.Server.Documents.Indexes.Static
         public ScriptFunctionInstance Key { get; }
         public string ReduceString { get; internal set; }
 
-        private string[] _groupByFields;
+        private Field[] _groupByFields;
         private bool _singleField;
         private UnmanagedBuffersPoolWithLowMemoryHandling _bufferPool;
         private ByteStringContext _byteStringContext;
 
-        internal string[] GetReduceFieldsNames()
+        internal Field[] GetReduceFieldsNames()
         {
             if (_groupByFields != null)
                 return _groupByFields;
@@ -288,7 +289,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 if (returnStatement.Argument is StaticMemberExpression sme && sme.Property is Identifier id)
                 {
-                    _groupByFields = new[] { id.Name };
+                    _groupByFields = new[] { new SimpleField(id.Name) };
                     _singleField = true;
 
                     return _groupByFields;
@@ -296,11 +297,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single return object expression statement got a statement of type {actualBody.GetType().Name}.");
             }
 
-            var cur = new HashSet<string>();
+            var cur = new HashSet<Field>();
             foreach (var prop in oe.Properties)
             {
                 var fieldName = prop.Key.GetKey();
-                cur.Add(fieldName);
+                cur.Add(new SimpleField(fieldName));
             }
             _groupByFields = cur.ToArray();
 

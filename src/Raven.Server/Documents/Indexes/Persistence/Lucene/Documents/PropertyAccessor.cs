@@ -22,11 +22,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private readonly List<KeyValuePair<string, Accessor>> _propertiesInOrder =
             new List<KeyValuePair<string, Accessor>>();
 
-        public IEnumerable<(string Key, object Value, bool IsGroupByField)> GetPropertiesInOrder(object target)
+        public IEnumerable<(string Key, object Value, Field GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
         {
             foreach ((var key, var value) in _propertiesInOrder)
             {
-                yield return (key, value.GetValue(target), value.IsGroupByField);
+                yield return (key, value.GetValue(target), value.GroupByField, value.IsGroupByField);
             }
         }
 
@@ -164,20 +164,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
     internal class JintPropertyAccessor : IPropertyAccessor
     {
-        private HashSet<string> _groupByFields;
+        private HashSet<Field> _groupByFields;
 
-        public JintPropertyAccessor(HashSet<string> groupByFields)
+        public JintPropertyAccessor(HashSet<Field> groupByFields)
         {
             _groupByFields = groupByFields;
         }
 
-        public IEnumerable<(string Key, object Value, bool IsGroupByField)> GetPropertiesInOrder(object target)
+        public IEnumerable<(string Key, object Value, Field GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
         {
             if (!(target is ObjectInstance oi))
                 throw new ArgumentException($"JintPropertyAccessor.GetPropertiesInOrder is expecting a target of type ObjectInstance but got one of type {target.GetType().Name}.");
             foreach (var property in oi.GetOwnProperties())
             {
-                yield return (property.Key, GetValue(property.Value.Value), _groupByFields?.Contains(property.Key) ?? false);
+                Field field = null;
+                var isGroupByField = _groupByFields?.TryGetValue(new SimpleField(property.Key), out field) ?? false;
+
+                yield return (property.Key, GetValue(property.Value.Value), field, isGroupByField);
             }
         }
 

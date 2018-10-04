@@ -43,11 +43,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return new DictionaryAccessor(instance, groupByFields);
         }
 
-        public IEnumerable<(string Key, object Value, bool IsGroupByField)> GetPropertiesInOrder(object target)
+        public IEnumerable<(string Key, object Value, Field GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
         {
             foreach ((var key, var value) in _propertiesInOrder)
             {
-                yield return (key, value.GetValue(target), value.IsGroupByField);
+                yield return (key, value.GetValue(target), value.GroupByField, value.IsGroupByField);
             }
         }
 
