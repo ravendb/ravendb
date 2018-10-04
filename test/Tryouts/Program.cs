@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Running;
 using FastTests.Graph;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Queries.AST;
@@ -10,10 +13,17 @@ using Xunit.Sdk;
 
 namespace Tryouts
 {
+   
     public static class Program
     {
-        public static async Task Main(string[] args)
+       
+        public static void Main(string[] args)
         {
+            using (var test = new SimpleGraphQueries())
+            {
+                test.FindTwoFriendliesWhoPointToTheSameVertex();
+            }
+            return;
             /*
                 The AST for 
 
@@ -22,7 +32,6 @@ namespace Tryouts
                 with edges(HasGenre) { order by Weight desc limit 1 } as dominantGenre
                 match (lovedMovie)-[dominantGenre]->(Genre)<-[HasGenre(Weight > 0.8)]-(recommendedMovie)<-(u)
                 select recommendedMovie           
-                
              */
 
             //Console.WriteLine(graphQuery.ToString());
