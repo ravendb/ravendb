@@ -23,7 +23,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Json;
@@ -46,7 +45,6 @@ using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow;
-using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
@@ -177,7 +175,7 @@ namespace Raven.Server.Web.System
 
                 databaseRecord.Topology.ReplicationFactor++;
                 var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
-                
+
                 await WaitForExecutionOnSpecificNode(context, clusterTopology, node, newIndex);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -422,68 +420,6 @@ namespace Raven.Server.Web.System
                 NoContentStatus();
             }
         }
-
-        private async Task WaitForExecutionOnRelevantNodes(JsonOperationContext context, string database, ClusterTopology clusterTopology, List<string> members, long index)
-        {
-            await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
-            if (members.Count == 0)
-                throw new InvalidOperationException("Cannot wait for execution when there are no nodes to execute ON.");
-
-            var executors = new List<ClusterRequestExecutor>();
-            var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(10000));
-            var waitingTasks = new List<Task>
-            {
-                timeoutTask
-            };
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown);
-            try
-            {
-                foreach (var member in members)
-                {
-                    var url = member == ServerStore.NodeTag ? 
-                        Server.WebUrl :
-                        clusterTopology.GetUrlFromTag(member);
-                    var requester = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.Server.Certificate.Certificate);
-                    executors.Add(requester);
-                    waitingTasks.Add(requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: cts.Token));
-                }
-
-                while (true)
-                {
-                    var task = await Task.WhenAny(waitingTasks);
-                    if (task == timeoutTask)
-                        throw new TimeoutException($"Waited too long for the raft command (number {index}) to be executed on any of the relevant nodes to this command.");
-                    if (task.IsCompletedSuccessfully)
-                    {
-                        break;
-                    }
-                    waitingTasks.Remove(task);
-                    if (waitingTasks.Count == 1) // only the timeout task is left
-                        throw new InvalidDataException($"The database '{database}' was created but is not accessible, because all of the nodes on which this database was supposed to reside on, threw an exception.", task.Exception);
-                }
-            }
-            finally
-            {
-                cts.Cancel();
-                foreach (var clusterRequestExecutor in executors)
-                {
-                    clusterRequestExecutor.Dispose();
-                }
-                cts.Dispose();
-            }
-        }
-
-        private async Task WaitForExecutionOnSpecificNode(TransactionOperationContext context, ClusterTopology clusterTopology, string node, long index)
-        {
-            await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
-
-            using (var requester = ClusterRequestExecutor.CreateForSingleNode(clusterTopology.GetUrlFromTag(node), ServerStore.Server.Certificate.Certificate))
-            {
-                await requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context);
-            }
-        }
-
-        
 
         private void ValidateClusterMembers(ClusterTopology clusterTopology, DatabaseRecord databaseRecord)
         {

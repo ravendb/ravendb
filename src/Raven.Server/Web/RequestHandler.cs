@@ -7,16 +7,22 @@ using System.Net;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
+using Raven.Client.Http;
+using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.Web
 {
@@ -130,6 +136,63 @@ namespace Raven.Server.Web
             }
 
             return false;
+        }
+
+        protected async Task WaitForExecutionOnSpecificNode(TransactionOperationContext context, ClusterTopology clusterTopology, string node, long index)
+        {
+            using (var requester = ClusterRequestExecutor.CreateForSingleNode(clusterTopology.GetUrlFromTag(node), ServerStore.Server.Certificate.Certificate))
+            {
+                await requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context);
+            }
+        }
+
+        protected async Task WaitForExecutionOnRelevantNodes(JsonOperationContext context, string database, ClusterTopology clusterTopology, List<string> members, long index)
+        {
+            if (members.Count == 0)
+                throw new InvalidOperationException("Cannot wait for execution when there are no nodes to execute ON.");
+
+            var executors = new List<ClusterRequestExecutor>();
+            var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(10000));
+            var waitingTasks = new List<Task>
+            {
+                timeoutTask
+            };
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown);
+            try
+            {
+                foreach (var member in members)
+                {
+                    var url = member == ServerStore.NodeTag ?
+                        Server.WebUrl :
+                        clusterTopology.GetUrlFromTag(member);
+                    var requester = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.Server.Certificate.Certificate);
+                    executors.Add(requester);
+                    waitingTasks.Add(requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: cts.Token));
+                }
+
+                while (true)
+                {
+                    var task = await Task.WhenAny(waitingTasks);
+                    if (task == timeoutTask)
+                        throw new TimeoutException($"Waited too long for the raft command (number {index}) to be executed on any of the relevant nodes to this command.");
+                    if (task.IsCompletedSuccessfully)
+                    {
+                        break;
+                    }
+                    waitingTasks.Remove(task);
+                    if (waitingTasks.Count == 1) // only the timeout task is left
+                        throw new InvalidDataException($"The database '{database}' was created but is not accessible, because all of the nodes on which this database was supposed to reside on, threw an exception.", task.Exception);
+                }
+            }
+            finally
+            {
+                cts.Cancel();
+                foreach (var clusterRequestExecutor in executors)
+                {
+                    clusterRequestExecutor.Dispose();
+                }
+                cts.Dispose();
+            }
         }
 
         protected Stream ResponseBodyStream() => HttpContext.Response.Body;
@@ -408,7 +471,7 @@ namespace Raven.Server.Web
                     if (Server.Configuration.Security.AuthenticationEnabled == false)
                         return true;
 
-                    Server.Router.UnlikelyFailAuthorization(HttpContext, null, feature, 
+                    Server.Router.UnlikelyFailAuthorization(HttpContext, null, feature,
                         AuthorizationStatus.Operator);
                     return false;
                 case RavenServer.AuthenticationStatus.Operator:

@@ -152,13 +152,27 @@ namespace Raven.Server.Documents.Handlers
                 var disabled = GetBoolValueQueryString("disabled", required: false);
                 var mentor = options.MentorNode;
                 var subscriptionId = await Database.SubscriptionStorage.PutSubscription(options, id, disabled, mentor: mentor);
+
+                var name = options.Name ?? subscriptionId.ToString();
+
+                // need to wait on the relevant remote node
+                var node = Database.SubscriptionStorage.GetResponsibleNode(name);
+                if (node != null && node != ServerStore.NodeTag)
+                {
+                    using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverCtx))
+                    using (serverCtx.OpenReadTransaction())
+                    {
+                        await WaitForExecutionOnSpecificNode(serverCtx, ServerStore.GetClusterTopology(serverCtx), node, subscriptionId);
+                    }
+                }
+
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created; // Created
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        ["Name"] = options.Name ?? subscriptionId.ToString()
+                        ["Name"] = name
                     });
                 }
             }
