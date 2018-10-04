@@ -415,7 +415,7 @@ namespace Raven.Server.Utils
             return PropertyAccessorCache.GetOrAdd(type, x => PropertyAccessor.Create(type, value));
         }
 
-        public static PropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, HashSet<string> groupByFields)
+        public static PropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, HashSet<Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.Field> groupByFields)
         {
             var type = value.GetType();
 

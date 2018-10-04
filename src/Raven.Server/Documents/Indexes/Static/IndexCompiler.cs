@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private const string IndexExtension = ".index";
 
-        private static Lazy<(string Path, AssemblyName AssemblyName, MetadataReference Reference)[]> KnownManagedDlls = new Lazy<(string,AssemblyName,MetadataReference)[]>(DiscoverManagedDlls);
+        private static Lazy<(string Path, AssemblyName AssemblyName, MetadataReference Reference)[]> KnownManagedDlls = new Lazy<(string, AssemblyName, MetadataReference)[]>(DiscoverManagedDlls);
 
         static IndexCompiler()
         {
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 AssemblyName name;
                 try
                 {
-                    name= AssemblyLoadContext.GetAssemblyName(dll);
+                    name = AssemblyLoadContext.GetAssemblyName(dll);
                 }
                 catch (Exception)
                 {
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Indexes.Static
             MetadataReference.CreateFromFile(typeof(Uri).GetTypeInfo().Assembly.Location)
         };
 
-     
+
         public static StaticIndexBase Compile(IndexDefinition definition)
         {
             var cSharpSafeName = GetCSharpSafeName(definition.Name);
@@ -274,15 +274,21 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
             {
-                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, out string[] groupByFields));
+                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, out Field[] groupByFields));
 
-                var groupByFieldsArray = GetArrayCreationExpression(groupByFields);
+                var groupByFieldsArray = GetArrayCreationExpression<Field>(
+                    groupByFields,
+                    (builder, field) => field.WriteTo(builder));
+
                 statements.Add(RoslynHelper.This(nameof(StaticIndexBase.GroupByFields)).Assign(groupByFieldsArray).AsExpressionStatement());
             }
 
             var fields = GetIndexedFields(definition, fieldNamesValidator);
 
-            var outputFieldsArray = GetArrayCreationExpression(fields);
+            var outputFieldsArray = GetArrayCreationExpression<string>(
+                fields,
+                (builder, field) => builder.Append("\"").Append(field.Name).Append("\""));
+
             statements.Add(RoslynHelper.This(nameof(StaticIndexBase.OutputFields)).Assign(outputFieldsArray).AsExpressionStatement());
 
             var methods = methodDetector.Methods;
@@ -302,7 +308,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 .WithMembers(members.Add(ctor));
         }
 
-        private static List<string> GetIndexedFields(IndexDefinition definition, FieldNamesValidator fieldNamesValidator)
+        private static List<Field> GetIndexedFields(IndexDefinition definition, FieldNamesValidator fieldNamesValidator)
         {
             var fields = fieldNamesValidator.Fields.ToList();
 
@@ -313,13 +319,13 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (spatialField.Value.Spatial.Strategy != Client.Documents.Indexes.Spatial.SpatialSearchStrategy.BoundingBox)
                     continue;
 
-                fields.Remove(spatialField.Key);
+                fields.Remove(new SimpleField(spatialField.Key));
                 fields.AddRange(new[]
                 {
-                    spatialField.Key + "__minX",
-                    spatialField.Key + "__minY",
-                    spatialField.Key + "__maxX",
-                    spatialField.Key + "__maxY",
+                    new SimpleField(spatialField.Key + "__minX"),
+                    new SimpleField(spatialField.Key + "__minY"),
+                    new SimpleField(spatialField.Key + "__maxX"),
+                    new SimpleField(spatialField.Key + "__maxY")
                 });
             }
 
@@ -356,7 +362,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, out string[] groupByFields)
+        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, out Field[] groupByFields)
         {
             try
             {
@@ -400,7 +406,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     if (fieldNamesValidator?.Fields.Contains(groupByField) == false)
                     {
-                        throw new InvalidOperationException($"Group by field '{groupByField}' was not found on the list of index fields ({string.Join(", ",fieldNamesValidator.Fields)})");
+                        throw new InvalidOperationException($"Group by field '{groupByField.Name}' was not found on the list of index fields ({string.Join(", ",fieldNamesValidator.Fields.Select(x => x.Name))})");
                     }
                 }
 
@@ -480,7 +486,7 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
         private static StatementSyntax HandleSyntaxInReduce(ReduceFunctionProcessor reduceFunctionProcessor, MethodsInGroupByValidator methodsInGroupByValidator,
-            ExpressionSyntax expression, out string[] groupByFields)
+            ExpressionSyntax expression, out Field[] groupByFields)
         {
 
             var rewrittenExpression = (CSharpSyntaxNode)reduceFunctionProcessor.Visit(expression);
@@ -497,27 +503,25 @@ namespace Raven.Server.Documents.Indexes.Static
             return RoslynHelper.This(nameof(StaticIndexBase.Reduce)).Assign(reducingFunction).AsExpressionStatement();
         }
 
-        private static ArrayCreationExpressionSyntax GetArrayCreationExpression(IEnumerable<string> items)
+        private static ArrayCreationExpressionSyntax GetArrayCreationExpression<T>(IEnumerable<Field> items, Action<StringBuilder, Field> write)
         {
-            return SyntaxFactory.ArrayCreationExpression(SyntaxFactory.ArrayType(
-                        SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.StringKeyword)))
-                    .WithRankSpecifiers(
-                        SyntaxFactory.SingletonList(
-                            SyntaxFactory.ArrayRankSpecifier(
-                                    SyntaxFactory.SingletonSeparatedList<ExpressionSyntax>(
-                                        SyntaxFactory.OmittedArraySizeExpression()
-                                            .WithOmittedArraySizeExpressionToken(
-                                                SyntaxFactory.Token(SyntaxKind.OmittedArraySizeExpressionToken))))
-                                .WithOpenBracketToken(SyntaxFactory.Token(SyntaxKind.OpenBracketToken))
-                                .WithCloseBracketToken(SyntaxFactory.Token(SyntaxKind.CloseBracketToken)))))
-                .WithNewKeyword(SyntaxFactory.Token(SyntaxKind.NewKeyword))
-                .WithInitializer(SyntaxFactory.InitializerExpression(SyntaxKind.ArrayInitializerExpression,
-                        SyntaxFactory.SeparatedList<ExpressionSyntax>(items.Select(
-                            x =>
-                                SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression,
-                                    SyntaxFactory.Literal(x)))))
-                    .WithOpenBraceToken(SyntaxFactory.Token(SyntaxKind.OpenBraceToken))
-                    .WithCloseBraceToken(SyntaxFactory.Token(SyntaxKind.CloseBraceToken)));
+            var sb = new StringBuilder();
+            sb.Append("new ");
+            sb.Append(typeof(T).FullName);
+            sb.Append("[] {");
+            var first = true;
+            foreach (var item in items)
+            {
+                if (first == false)
+                    sb.Append(",");
+
+                first = false;
+
+                write(sb, item);
+            }
+            sb.Append("}");
+
+            return (ArrayCreationExpressionSyntax)SyntaxFactory.ParseExpression(sb.ToString());
         }
 
         private static string GetCSharpSafeName(string name)

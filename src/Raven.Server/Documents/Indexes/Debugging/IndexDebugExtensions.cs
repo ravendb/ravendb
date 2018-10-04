@@ -9,6 +9,7 @@ using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.ServerWide;
@@ -324,18 +325,30 @@ namespace Raven.Server.Documents.Indexes.Debugging
 
         private static string GetTreeName(BlittableJsonReaderObject reduceEntry, IndexDefinitionBase indexDefinition, JsonOperationContext context)
         {
-            HashSet<string> groupByFields;
+            HashSet<Field> groupByFields;
 
             if (indexDefinition is MapReduceIndexDefinition)
                 groupByFields = ((MapReduceIndexDefinition)indexDefinition).GroupByFields;
             else if (indexDefinition is AutoMapReduceIndexDefinition)
-                groupByFields = ((AutoMapReduceIndexDefinition)indexDefinition).GroupByFields.Keys.ToHashSet();
+                groupByFields = ((AutoMapReduceIndexDefinition)indexDefinition).GroupByFields.Keys
+                    .Select(x => (Field)new SimpleField(x))
+                    .ToHashSet();
             else
                 throw new InvalidOperationException("Invalid map reduce index definition: " + indexDefinition.GetType());
 
             foreach (var prop in reduceEntry.GetPropertyNames())
             {
-                if (groupByFields.Contains(prop))
+                var skip = false;
+                foreach (var groupByField in groupByFields)
+                {
+                    if (groupByField.IsMatch(prop))
+                    {
+                        skip = true;
+                        break;
+                    }
+                }
+
+                if (skip)
                     continue;
 
                 if (reduceEntry.Modifications == null)
