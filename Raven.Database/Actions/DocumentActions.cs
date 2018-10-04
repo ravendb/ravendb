@@ -145,6 +145,10 @@ namespace Raven.Database.Actions
                         {
                             token.ThrowIfCancellationRequested();
                             docCount++;
+                            if (doc == null)
+                            {
+                                continue;
+                            }
                             if (docCount - docCountOnLastAdd > 1000)
                             {
                                 addDoc(null); // heartbeat

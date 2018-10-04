@@ -833,6 +833,10 @@ namespace Raven.Database.Bundles.SqlReplication
 
                 foreach (var sqlReplicationConfigDocument in accessor.Documents.GetDocumentsWithIdStartingWith(Prefix, 0, int.MaxValue, null))
                 {
+                    if (sqlReplicationConfigDocument == null)
+                    {
+                        continue;
+                    }
                     var cfg = sqlReplicationConfigDocument.DataAsJson.JsonDeserialization<SqlReplicationConfig>();
                     var replicationStats = statistics.GetOrAdd(cfg.Name, name => new SqlReplicationStatistics(name));
                     if (!PrepareSqlReplicationConfig(cfg, sqlReplicationConfigDocument.Key, replicationStats, sqlReplicationConnections))

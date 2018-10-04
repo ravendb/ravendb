@@ -634,7 +634,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
                 if (keyFromDb.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase) == false)
                 {
                     if (StartsWithIgnoreCaseAndSymbols(keyFromDb, idPrefix))
-                        continue;
+                        yield return null;
                     yield break;
                 }
 

@@ -30,7 +30,7 @@ namespace Raven.Database
             var conflicts = actions
                 .Documents
                 .GetDocumentsWithIdStartingWith(document.Key, 0, int.MaxValue, null)
-                .Where(x => x.Key.Contains("/conflicts/"))
+                .Where(x => x != null && x.Key.Contains("/conflicts/"))
                 .ToList();
 
             KeyValuePair<JsonDocument, DateTime> local;
