@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 
@@ -70,6 +71,7 @@ namespace Raven.Server.Documents.Subscriptions
                 _logger.Info($"New Subscription with index {etag} was created");
 
             await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
+
             return etag;
         }
 
@@ -80,7 +82,7 @@ namespace Raven.Server.Documents.Subscriptions
             return subscriptionState;
         }
 
-		public async Task AcknowledgeBatchProcessed(long id, string name, string changeVector, string previousChangeVector)
+        public async Task AcknowledgeBatchProcessed(long id, string name, string changeVector, string previousChangeVector)
         {           
             var command = new AcknowledgeSubscriptionBatchCommand(_db.Name)
             {
@@ -118,6 +120,17 @@ namespace Raven.Server.Documents.Subscriptions
             using (serverStoreContext.OpenReadTransaction())
             {
                 return GetSubscriptionFromServerStore(serverStoreContext, name);
+            }
+        }
+
+        public string GetResponsibleNode(string name)
+        {
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
+            using (serverStoreContext.OpenReadTransaction())
+            {
+                var subscription = GetSubscriptionFromServerStore(serverStoreContext, name);
+                var databaseRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name, out _);
+                return _db.WhoseTaskIsIt(databaseRecord.Topology, subscription, subscription);
             }
         }
 
