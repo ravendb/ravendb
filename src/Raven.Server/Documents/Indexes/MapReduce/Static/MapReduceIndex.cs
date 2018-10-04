@@ -440,7 +440,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                             if (property.IsGroupByField)
                             {
-                                var valueForProcessor = field.Value.GroupByField.GetValue(value, blittableValue);
+                                var valueForProcessor = property.GroupByField.GetValue(value, blittableValue);
                                 _reduceKeyProcessor.Process(_parent._indexContext.Allocator, valueForProcessor);
                             }
                                 
