@@ -9,6 +9,7 @@ using Jint.Native.Object;
 using Jint.Runtime.Interop;
 using Microsoft.CSharp.RuntimeBinder;
 using Sparrow.Json;
+using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
@@ -48,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             throw new InvalidOperationException(string.Format("The {0} property was not found", name));
         }
 
-        protected PropertyAccessor(Type type, HashSet<string> groupByFields = null)
+        protected PropertyAccessor(Type type, HashSet<Field> groupByFields = null)
         {
             var isValueType = type.GetTypeInfo().IsValueType;
             foreach (var prop in type.GetProperties())
@@ -57,8 +58,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     ? (Accessor)CreateGetMethodForValueType(prop, type)
                     : CreateGetMethodForClass(prop, type);
 
-                if (groupByFields != null && groupByFields.Contains(prop.Name))
-                    getMethod.IsGroupByField = true;
+                if (groupByFields != null)
+                {
+                    foreach (var groupByField in groupByFields)
+                    {
+                        if (groupByField.IsMatch(prop.Name))
+                        {
+                            getMethod.GroupByField = groupByField;
+                            getMethod.IsGroupByField = true;
+                            break;
+                        }
+                    }
+                }
 
                 Properties.Add(prop.Name, getMethod);
                 _propertiesInOrder.Add(new KeyValuePair<string, Accessor>(prop.Name, getMethod));
@@ -134,9 +145,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             public abstract object GetValue(object target);
 
             public bool IsGroupByField;
+
+            public Field GroupByField;
         }
 
-        internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, HashSet<string> _groupByFields, bool isObjectInstance = false)
+        internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, HashSet<Field> _groupByFields, bool isObjectInstance = false)
         {
             if (isObjectInstance || type == typeof(ObjectInstance))
                 return new JintPropertyAccessor(_groupByFields);

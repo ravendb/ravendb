@@ -11,6 +11,7 @@ using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
@@ -352,7 +353,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             private IndexingStatsScope _stats;
             private IndexingStatsScope _createBlittableResultStats;
             private readonly ReduceKeyProcessor _reduceKeyProcessor;
-            private readonly HashSet<string> _groupByFields;
+            private readonly HashSet<Field> _groupByFields;
             private readonly bool _isMultiMap;
             private IPropertyAccessor _propertyAccessor;
             private readonly StaticIndexBase _compiledIndex;
@@ -398,7 +399,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 private readonly IEnumerator _enumerator;
                 private readonly AnonymousObjectToBlittableMapResultsEnumerableWrapper _parent;
                 private readonly IndexingStatsScope _createBlittableResult;
-                private readonly HashSet<string> _groupByFields;
+                private readonly HashSet<Field> _groupByFields;
                 private readonly ReduceKeyProcessor _reduceKeyProcessor;
 
                 public Enumerator(IEnumerator enumerator, AnonymousObjectToBlittableMapResultsEnumerableWrapper parent, IndexingStatsScope createBlittableResult)
@@ -438,7 +439,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                             mapResult[property.Key] = blittableValue;
 
                             if (property.IsGroupByField)
-                                _reduceKeyProcessor.Process(_parent._indexContext.Allocator, blittableValue);
+                            {
+                                var valueForProcessor = field.Value.GroupByField.GetValue(value, blittableValue);
+                                _reduceKeyProcessor.Process(_parent._indexContext.Allocator, valueForProcessor);
+                            }
+                                
                         }
 
                         if (_reduceKeyProcessor.ProcessedFields != _groupByFields.Count)
@@ -467,12 +472,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     _reduceKeyProcessor.ReleaseBuffer();
                 }
 
-                private static void ThrowMissingGroupByFieldsInMapOutput(object output, HashSet<string> groupByFields, StaticIndexBase compiledIndex)
+                private static void ThrowMissingGroupByFieldsInMapOutput(object output, HashSet<Field> groupByFields, StaticIndexBase compiledIndex)
                 {
                     throw new InvalidOperationException(
                         $"The output of the mapping function does not contain all fields that the index is supposed to group by.{Environment.NewLine}" +
                         $"Output: {output}{Environment.NewLine}" +
-                        $"Group by fields: {string.Join(",", groupByFields)}{Environment.NewLine}" +
+                        $"Group by fields: {string.Join(",", groupByFields.Select(x => x.Name))}{Environment.NewLine}" +
                         $"Compiled index def:{Environment.NewLine}{compiledIndex.Source}");
                 }
             }

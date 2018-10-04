@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
             _selectManyRewriter = selectManyRewriter;
         }
 
-        public string[] GroupByFields => _getGroupByFields.GroupByFields;
+        public Field[] GroupByFields => _getGroupByFields.GroupByFields;
 
         public override SyntaxNode Visit(SyntaxNode node)
         {
