@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
     {
         public const string SupportedGenericDictionaryType = "Dictionary<string, object>";
 
-        public HashSet<string> Fields;
+        public HashSet<Field> Fields;
 
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (Fields != null)
                 return node;
 
-            Fields = new HashSet<string>();
+            Fields = new HashSet<Field>();
 
             if (IsDictionaryObjectCreationExpression(node) == false)
             {
@@ -78,9 +78,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     throw new InvalidOperationException($"Dictionary returned in an index definition has to be '{SupportedGenericDictionaryType}'");
 
                 if (Fields == null)
-                    Fields = new HashSet<string>(StringComparer.Ordinal);
+                    Fields = new HashSet<Field>();
 
-                if (Fields.Add(dictionaryKey.Token.Value.ToString()) == false)
+                if (Fields.Add(new SimpleField(dictionaryKey.Token.Value.ToString())) == false)
                     throw new InvalidOperationException("Duplicated field name in indexed dictionary");
             }
 

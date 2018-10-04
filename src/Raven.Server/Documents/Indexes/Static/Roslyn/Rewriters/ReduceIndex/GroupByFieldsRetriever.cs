@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 {
     public abstract class MethodsInGroupByValidator : CSharpSyntaxWalker
     {
-        protected static string[] ForbiddenMethods = {"Count", "Average"};
+        protected static string[] ForbiddenMethods = { "Count", "Average" };
 
         protected Dictionary<string, string> SearchPatterns = new Dictionary<string, string>();
 
@@ -38,13 +38,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
-            var exp = node.Expression as MemberAccessExpressionSyntax;
-
-            if (exp != null && exp.ToString().EndsWith("Select"))
+            if (node.Expression is MemberAccessExpressionSyntax exp && exp.ToString().EndsWith("Select"))
             {
                 // find GroupBy(...).Select(root => .. )
-                var group = exp.Expression as InvocationExpressionSyntax;
-                if (group != null && group.Expression.ToString().EndsWith("GroupBy"))
+                if (exp.Expression is InvocationExpressionSyntax group && group.Expression.ToString().EndsWith("GroupBy"))
                 {
                     // we should be in the right place
                     var myLambda = node.ArgumentList.Arguments.First().Expression as SimpleLambdaExpressionSyntax;
@@ -85,7 +82,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 
         public override void VisitQueryContinuation(QueryContinuationSyntax node)
         {
-            if (_root == default(SyntaxToken) && node.IntoKeyword.ToString().Contains("into"))
+            if (_root == default && node.IntoKeyword.ToString().Contains("into"))
             {
                 _root = node.Identifier; // get the into object
                 SetSearchPatterns();
@@ -96,7 +93,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 
         public override void VisitFromClause(FromClauseSyntax node)
         {
-            if (_root != default(SyntaxToken))
+            if (_root != default)
             {
                 base.VisitFromClause(node);
             }
@@ -115,7 +112,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
         {
-            if (_root != default(SyntaxToken))
+            if (_root != default)
             {
                 foreach (var searchTerm in SearchPatterns)
                 {
@@ -132,7 +129,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 
     public abstract class GroupByFieldsRetriever : CSharpSyntaxRewriter
     {
-        public string[] GroupByFields { get; protected set; }
+        public Field[] GroupByFields { get; protected set; }
 
         public static GroupByFieldsRetriever QuerySyntax => new QuerySyntaxRetriever();
 
@@ -142,18 +139,17 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
         {
             public override SyntaxNode VisitGroupClause(GroupClauseSyntax node)
             {
-                var groupByFields = new List<string>();
+                var groupByFields = new List<Field>();
 
                 // by new { ... }
                 FindGroupByFields(node.ByExpression, groupByFields);
-
 
                 GroupByFields = groupByFields.ToArray();
 
                 return base.VisitGroupClause(node);
             }
 
-            private void FindGroupByFields(ExpressionSyntax expr, List<string> groupByFields)
+            private void FindGroupByFields(ExpressionSyntax expr, List<Field> groupByFields)
             {
                 switch (expr)
                 {
@@ -162,7 +158,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                         {
                             if (initializer.Expression is MemberAccessExpressionSyntax mae)
                             {
-                                groupByFields.Add(mae.Name.Identifier.Text);
+                                groupByFields.Add(new SimpleField(mae.Name.Identifier.Text));
                             }
                             else
                             {
@@ -172,14 +168,14 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 
                         break;
                     case MemberAccessExpressionSyntax mae:
-                        groupByFields.Add(mae.Name.Identifier.Text);
+                        groupByFields.Add(new SimpleField(mae.Name.Identifier.Text));
                         break;
-                        case ParenthesizedExpressionSyntax pes:
-                            FindGroupByFields(pes.Expression, groupByFields);
-                            break;
-                     case CastExpressionSyntax ces:
-                             FindGroupByFields(ces.Expression, groupByFields);
-                            break;
+                    case ParenthesizedExpressionSyntax pes:
+                        FindGroupByFields(pes.Expression, groupByFields);
+                        break;
+                    case CastExpressionSyntax ces:
+                        FindGroupByFields(ces.Expression, groupByFields);
+                        break;
                     case LiteralExpressionSyntax _:
                         // explicitly ignore, we don't need to do anything here
                         break;
@@ -221,7 +217,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 
                 if (singleGroupByField != null)
                 {
-                    GroupByFields = new[] {singleGroupByField.Name.Identifier.ValueText};
+                    GroupByFields = new[] { RewritersHelper.ExtractField(singleGroupByField) };
                 }
                 else if (multipleGroupByFields != null)
                 {
@@ -229,7 +225,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                 }
                 else if (literalGroupByField != null)
                 {
-                    GroupByFields = new string[0];
+                    GroupByFields = new Field[0];
                 }
                 else
                 {
