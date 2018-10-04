@@ -6,7 +6,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
     public class DictionaryAccessor : PropertyAccessor
     {
-        private DictionaryAccessor(Dictionary<string, object> instance, HashSet<Field> groupByFields = null) : base(instance.GetType(), groupByFields)
+        private DictionaryAccessor(Dictionary<string, object> instance, HashSet<CompiledIndexField> groupByFields = null) : base(instance.GetType(), groupByFields)
         {
             if (instance == null)
                 throw new NotSupportedException("Indexed dictionary must be of type: Dictionary<string, object>");
@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
-        internal static DictionaryAccessor Create(Dictionary<string, object> instance, HashSet<Field> groupByFields = null)
+        internal static DictionaryAccessor Create(Dictionary<string, object> instance, HashSet<CompiledIndexField> groupByFields = null)
         {
             return new DictionaryAccessor(instance, groupByFields);
         }

@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             throw new InvalidOperationException(string.Format("The {0} property was not found", name));
         }
 
-        protected PropertyAccessor(Type type, HashSet<Field> groupByFields = null)
+        protected PropertyAccessor(Type type, HashSet<CompiledIndexField> groupByFields = null)
         {
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>))
                 return; // handled by DictionaryAccessor
@@ -133,10 +133,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             public bool IsGroupByField;
 
-            public Field GroupByField;
+            public CompiledIndexField GroupByField;
         }
 
-        internal static PropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, HashSet<Field> _groupByFields)
+        internal static PropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, HashSet<CompiledIndexField> _groupByFields)
         {
             if (instance is Dictionary<string, object> dict)
                 return DictionaryAccessor.Create(dict, _groupByFields);

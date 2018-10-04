@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public string[] OutputFields;
 
-        public Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.Field[] GroupByFields;
+        public Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.CompiledIndexField[] GroupByFields;
 
         public void AddMap(string collection, IndexingFunc map)
         {

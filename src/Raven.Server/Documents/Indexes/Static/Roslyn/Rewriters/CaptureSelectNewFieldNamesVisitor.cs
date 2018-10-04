@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
     internal class CaptureSelectNewFieldNamesVisitor : CSharpSyntaxRewriter
     {
-        public HashSet<Field> Fields;
+        public HashSet<CompiledIndexField> Fields;
 
         public static HashSet<string> KnownMethodsToInspect = new HashSet<string>
         {

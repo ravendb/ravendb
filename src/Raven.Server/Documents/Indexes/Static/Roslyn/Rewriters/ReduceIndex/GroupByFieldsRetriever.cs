@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 
     public abstract class GroupByFieldsRetriever : CSharpSyntaxRewriter
     {
-        public Field[] GroupByFields { get; protected set; }
+        public CompiledIndexField[] GroupByFields { get; protected set; }
 
         public static GroupByFieldsRetriever QuerySyntax => new QuerySyntaxRetriever();
 
@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
         {
             public override SyntaxNode VisitGroupClause(GroupClauseSyntax node)
             {
-                var groupByFields = new List<Field>();
+                var groupByFields = new List<CompiledIndexField>();
 
                 // by new { ... }
                 FindGroupByFields(node.ByExpression, groupByFields);
@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                 return base.VisitGroupClause(node);
             }
 
-            private void FindGroupByFields(ExpressionSyntax expr, List<Field> groupByFields)
+            private void FindGroupByFields(ExpressionSyntax expr, List<CompiledIndexField> groupByFields)
             {
                 switch (expr)
                 {
@@ -221,11 +221,11 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                 }
                 else if (multipleGroupByFields != null)
                 {
-                    GroupByFields = RewritersHelper.ExtractFields(multipleGroupByFields, retrieveOriginal: true).ToArray();
+                    GroupByFields = RewritersHelper.ExtractFields(multipleGroupByFields, retrieveOriginal: true, nestFields: true).ToArray();
                 }
                 else if (literalGroupByField != null)
                 {
-                    GroupByFields = new Field[0];
+                    GroupByFields = new CompiledIndexField[0];
                 }
                 else
                 {
