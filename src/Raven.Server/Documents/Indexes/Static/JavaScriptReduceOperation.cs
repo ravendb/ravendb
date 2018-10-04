@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     Engine.ResetStatementsCount();
                     Engine.ResetTimeoutTicks();
 
-                    _oneItemArray[0] = ConstructValues(item);
+                    _oneItemArray[0] = ConstructGrouping(item);
                     JsValue jsItem;
                     try
                     {
@@ -208,52 +208,49 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private JsValue ConstructValues(List<BlittableJsonReaderObject> values)
+        private JsValue ConstructGrouping(List<BlittableJsonReaderObject> values)
         {
-            var items = new PropertyDescriptor[values.Count];
-            for (int j = 0; j < values.Count; j++)
-            {
-                var val = values[j];
-
-                if (JavaScriptIndexUtils.GetValue(Engine, val, out JsValue jsValue, true) == false)
-                    continue;
-                items[j] = new PropertyDescriptor(jsValue, true, true, true);
-            }
-            var jsArray = new ArrayInstance(Engine, items);
-            jsArray.Prototype = Engine.Array.PrototypeObject;
-            jsArray.Extensible = false;
+            var jsValues = ConstructValues();
+            var jsKey = ConstructKey();
 
             var result = new ObjectInstance(Engine)
             {
                 Extensible = true
             };
-            result.Put("values", jsArray, false);
-            if (_singleField)
+
+            result.Put("values", jsValues, false);
+            result.Put("key", jsKey, false);
+
+            return result;
+
+            JsValue ConstructKey()
             {
-                var index = values[0].GetPropertyIndex(_groupByFields[0].Name);
-                if (index != -1)
+                if (_singleField)
                 {
-                    BlittableJsonReaderObject.PropertyDetails prop = default;
-                    values[0].GetPropertyByIndex(index, ref prop, addObjectToCache: false);
-                    result.Put("key", JsValue.FromObject(Engine, prop.Value), false);
+                    var index = values[0].GetPropertyIndex(_groupByFields[0].Name);
+                    if (index != -1)
+                    {
+                        BlittableJsonReaderObject.PropertyDetails prop = default;
+                        values[0].GetPropertyByIndex(index, ref prop);
+
+                        return JsValue.FromObject(Engine, prop.Value);
+                    }
+
+                    return JsValue.Null;
                 }
-            }
-            else
-            {
+
                 var key = new ObjectInstance(Engine)
                 {
                     Extensible = true
                 };
-                result.Put("key", key, false);
-                for (int i = 0; i < _groupByFields.Length; i++)
-                {
-                    var groupByField = _groupByFields[i];
 
+                foreach (var groupByField in _groupByFields)
+                {
                     var index = values[0].GetPropertyIndex(groupByField.Name);
                     if (index != -1)
                     {
                         BlittableJsonReaderObject.PropertyDetails prop = default;
-                        values[0].GetPropertyByIndex(index, ref prop, addObjectToCache: false);
+                        values[0].GetPropertyByIndex(index, ref prop);
 
                         var propertyName = groupByField.Name;
                         if (groupByField is JsNestedField jsnf)
@@ -261,11 +258,34 @@ namespace Raven.Server.Documents.Indexes.Static
 
                         var value = groupByField.GetValue(null, prop.Value);
 
-                        key.Put(propertyName, JsValue.FromObject(Engine, value), false);
+                        key.Put(propertyName, JsValue.FromObject(Engine, value), throwOnError: false);
                     }
                 }
+
+                return key;
             }
-            return result;
+
+            ArrayInstance ConstructValues()
+            {
+                var items = new PropertyDescriptor[values.Count];
+                for (var i = 0; i < values.Count; i++)
+                {
+                    var val = values[i];
+
+                    if (JavaScriptIndexUtils.GetValue(Engine, val, out var jsValue, isMapReduce: true) == false)
+                        continue;
+
+                    items[i] = new PropertyDescriptor(jsValue, true, true, true);
+                }
+
+                var jsArray = new ArrayInstance(Engine, items)
+                {
+                    Prototype = Engine.Array.PrototypeObject,
+                    Extensible = false
+                };
+
+                return jsArray;
+            }
         }
 
         public Engine Engine { get; }
@@ -292,15 +312,15 @@ namespace Raven.Server.Documents.Indexes.Static
                 throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single return statement got {body.Count}.");
             }
 
-            var @params = ast.Params;
-            if (@params.Count != 1)
+            var parameters = ast.Params;
+            if (parameters.Count != 1)
             {
-                throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single argument but got {@params.Count}.");
+                throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single argument but got {parameters.Count}.");
             }
 
-            if (@params[0] is Identifier == false)
+            if (parameters[0] is Identifier == false)
             {
-                throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single argument of type 'Identifier' but got {@params[0].GetType().Name}.");
+                throw new InvalidOperationException($"Was requested to get reduce fields from a scripted function in an unexpected format, expected a single argument of type 'Identifier' but got {parameters[0].GetType().Name}.");
             }
 
             var actualBody = body[0];

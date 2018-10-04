@@ -25,9 +25,9 @@ namespace Raven.Server.Documents.Indexes.Static
         public bool HasDynamicReturns;
 
         public HashSet<string> Fields = new HashSet<string>();
-        public Dictionary<string,IndexFieldOptions> FieldOptions = new Dictionary<string, IndexFieldOptions>();
-        private Engine _engine;
-        private JintPreventResolvingTasksReferenceResolver _resolver;
+        public Dictionary<string, IndexFieldOptions> FieldOptions = new Dictionary<string, IndexFieldOptions>();
+        private readonly Engine _engine;
+        private readonly JintPreventResolvingTasksReferenceResolver _resolver;
         private readonly JsValue[] _oneItemArray = new JsValue[1];
 
         public string IndexName { get; set; }
@@ -56,20 +56,22 @@ namespace Raven.Server.Documents.Indexes.Static
                         try
                         {
                             jsItem = MapFunc.Call(JsValue.Null, _oneItemArray);
-                        }catch (JavaScriptException jse)
-                        {                            
+                        }
+                        catch (JavaScriptException jse)
+                        {
                             var (message, success) = JavaScriptIndexFuncException.PrepareErrorMessageForJavaScriptIndexFuncException(MapString, jse);
                             if (success == false)
-                                throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);                            
+                                throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", jse);
                             throw new JavaScriptIndexFuncException($"Failed to execute map script, {message}", jse);
-                        } catch (Exception e)
+                        }
+                        catch (Exception e)
                         {
                             throw new JavaScriptIndexFuncException($"Failed to execute {MapString}", e);
                         }
                         if (jsItem.IsArray())
                         {
                             var array = jsItem.AsArray();
-                            foreach(var (prop, val) in array.GetOwnProperties())
+                            foreach (var (prop, val) in array.GetOwnProperties())
                             {
                                 if (prop == "length")
                                     continue;
@@ -97,7 +99,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public void Analyze(Engine engine)
         {
             HasDynamicReturns = false;
-                               
+
             if (!(MapFunc is ScriptFunctionInstance sfi))
                 return;
 
@@ -111,7 +113,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             var loadSearcher = new EsprimaReferencedCollectionVisitor();
             loadSearcher.VisitFunctionExpression(theFuncAst);
-            ReferencedCollection.UnionWith(loadSearcher.ReferencedCollection);
+            ReferencedCollections.UnionWith(loadSearcher.ReferencedCollection);
 
             foreach (var returnStatement in JavaScriptIndexUtils.GetReturnStatements(theFuncAst.Body))
             {
@@ -136,13 +138,13 @@ namespace Raven.Server.Documents.Indexes.Static
                         Fields.Add(fieldName);
                     }
                 }
-                else if(CompareFields(oe) == false)
+                else if (CompareFields(oe) == false)
                 {
                     throw new InvalidOperationException($"Index {IndexName} contains different return structure from different code paths," +
                                                         $" expected properties: {string.Join(", ", Fields)} but also got:{string.Join(", ", oe.Properties.Select(x => x.Key.GetKey()))}");
                 }
             }
-        }            
+        }
 
         private (FunctionInstance Function, IFunction FunctionAst)? CheckIfSimpleMapExpression(Engine engine, IFunction function)
         {
@@ -155,17 +157,17 @@ namespace Raven.Server.Documents.Indexes.Static
                     new StaticMemberExpression(new Identifier("self"), new Identifier(field)), false, false)
             };
 
-            if(MoreArguments != null)
+            if (MoreArguments != null)
             {
                 for (int i = 0; i < MoreArguments.GetLength(); i++)
                 {
                     var arg = MoreArguments.Get(i.ToString()).As<FunctionInstance>();
 
-                    if(!(arg is ScriptFunctionInstance sfi))
+                    if (!(arg is ScriptFunctionInstance sfi))
                         continue;
                     var moreFuncAst = sfi.GetFunctionAst();
                     field = moreFuncAst.TryGetFieldFromSimpleLambdaExpression();
-                    if(field != null)
+                    if (field != null)
                     {
                         properties.Add(new Property(PropertyKind.Data, new Identifier(field), false,
                         new StaticMemberExpression(new Identifier("self"), new Identifier(field)), false, false));
@@ -174,22 +176,22 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
             }
 
-            var functionExp = new FunctionExpression(function.Id,new List<INode>{ new Identifier("self") },
+            var functionExp = new FunctionExpression(function.Id, new List<INode> { new Identifier("self") },
                 new BlockStatement(new List<StatementListItem>
                 {
                     new ReturnStatement(new ObjectExpression(properties))
-                }),false ,function.HoistingScope, function.Strict );
+                }), false, function.HoistingScope, function.Strict);
             var functionObject = new ScriptFunctionInstance(
                     engine,
                     functionExp,
                     LexicalEnvironment.NewDeclarativeEnvironment(engine, engine.ExecutionContext.LexicalEnvironment),
                     function.Strict
                 )
-                { Extensible = true };
+            { Extensible = true };
             return (functionObject, functionExp);
-        }            
+        }
 
-        public HashSet<CollectionName> ReferencedCollection { get; set; } = new HashSet<CollectionName>();
+        public HashSet<CollectionName> ReferencedCollections { get; set; } = new HashSet<CollectionName>();
         public ArrayInstance MoreArguments { get; set; }
         public RavenConfiguration Configuration { get; set; }
         public string MapString { get; internal set; }
@@ -207,5 +209,5 @@ namespace Raven.Server.Documents.Indexes.Static
             return true;
         }
     }
-    
+
 }
