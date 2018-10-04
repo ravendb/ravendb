@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private readonly List<KeyValuePair<string, Accessor>> _propertiesInOrder =
             new List<KeyValuePair<string, Accessor>>();
 
-        public IEnumerable<(string Key, object Value, Field GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
+        public IEnumerable<(string Key, object Value, CompiledIndexField GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
         {
             foreach ((var key, var value) in _propertiesInOrder)
             {
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             throw new InvalidOperationException(string.Format("The {0} property was not found", name));
         }
 
-        protected PropertyAccessor(Type type, HashSet<Field> groupByFields = null)
+        protected PropertyAccessor(Type type, HashSet<CompiledIndexField> groupByFields = null)
         {
             var isValueType = type.GetTypeInfo().IsValueType;
             foreach (var prop in type.GetProperties())
@@ -146,10 +146,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             public bool IsGroupByField;
 
-            public Field GroupByField;
+            public CompiledIndexField GroupByField;
         }
 
-        internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, HashSet<Field> _groupByFields, bool isObjectInstance = false)
+        internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, HashSet<CompiledIndexField> _groupByFields, bool isObjectInstance = false)
         {
             if (isObjectInstance || type == typeof(ObjectInstance))
                 return new JintPropertyAccessor(_groupByFields);
@@ -164,20 +164,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
     internal class JintPropertyAccessor : IPropertyAccessor
     {
-        private HashSet<Field> _groupByFields;
+        private HashSet<CompiledIndexField> _groupByFields;
 
-        public JintPropertyAccessor(HashSet<Field> groupByFields)
+        public JintPropertyAccessor(HashSet<CompiledIndexField> groupByFields)
         {
             _groupByFields = groupByFields;
         }
 
-        public IEnumerable<(string Key, object Value, Field GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
+        public IEnumerable<(string Key, object Value, CompiledIndexField GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
         {
             if (!(target is ObjectInstance oi))
                 throw new ArgumentException($"JintPropertyAccessor.GetPropertiesInOrder is expecting a target of type ObjectInstance but got one of type {target.GetType().Name}.");
             foreach (var property in oi.GetOwnProperties())
             {
-                Field field = null;
+                CompiledIndexField field = null;
                 var isGroupByField = _groupByFields?.TryGetValue(new SimpleField(property.Key), out field) ?? false;
 
                 yield return (property.Key, GetValue(property.Value.Value), field, isGroupByField);

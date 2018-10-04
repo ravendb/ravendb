@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private readonly List<KeyValuePair<string, DictionaryValueAccessor>> _propertiesInOrder =
             new List<KeyValuePair<string, DictionaryValueAccessor>>();
 
-        private DictionaryAccessor(Dictionary<string, object> instance, HashSet<Field> groupByFields = null)
+        private DictionaryAccessor(Dictionary<string, object> instance, HashSet<CompiledIndexField> groupByFields = null)
         {
             if (instance == null)
                 throw new NotSupportedException("Indexed dictionary must be of type: Dictionary<string, object>");
@@ -38,12 +38,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
-        internal static DictionaryAccessor Create(Dictionary<string, object> instance, HashSet<Field> groupByFields = null)
+        internal static DictionaryAccessor Create(Dictionary<string, object> instance, HashSet<CompiledIndexField> groupByFields = null)
         {
             return new DictionaryAccessor(instance, groupByFields);
         }
 
-        public IEnumerable<(string Key, object Value, Field GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
+        public IEnumerable<(string Key, object Value, CompiledIndexField GroupByField, bool IsGroupByField)> GetPropertiesInOrder(object target)
         {
             foreach ((var key, var value) in _propertiesInOrder)
             {
