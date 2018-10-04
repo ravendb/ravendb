@@ -209,6 +209,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
              MapReduceResultsStore modifiedStore, LowLevelTransaction lowLevelTransaction,
             IndexWriteOperation writer, LazyStringValue reduceKeyHash, Table table, CancellationToken token)
         {
+            if (modifiedStore.ModifiedPages.Count == 0 && modifiedStore.FreedPages.Count == 0)
+                return;
+
             EnsureValidTreeReductionStats(stats);
 
             var tree = modifiedStore.Tree;
