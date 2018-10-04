@@ -159,6 +159,10 @@ namespace Raven.Database.Raft.Storage
             var databaseDocuments = accessor.Documents.GetDocumentsWithIdStartingWith(Constants.Database.Prefix, 0, int.MaxValue, null);
             foreach (var dbDoc in databaseDocuments)
             {
+                if (dbDoc == null)
+                {
+                    continue;
+                }
                 jsonTextWriter.WritePropertyName(dbDoc.Key);
                 dbDoc.ToJson().WriteTo(jsonTextWriter);
             }

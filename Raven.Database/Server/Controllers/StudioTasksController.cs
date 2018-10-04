@@ -438,6 +438,10 @@ for(var customFunction in customFunctions) {{
 
                     foreach (var document in documents)
                     {
+                        if (document == null)
+                        {
+                            continue;
+                        }
                         document.DataAsJson["Disabled"] = disable;
                         actions.Documents.AddDocument(document.Key, document.Etag, document.DataAsJson, document.Metadata);
                     }
@@ -800,7 +804,7 @@ for(var customFunction in customFunctions) {{
                             var conflicts = accessor
                                 .Documents
                                 .GetDocumentsWithIdStartingWith(documentId, 0, int.MaxValue, null)
-                                .Where(x => x.Key.Contains("/conflicts/"))
+                                .Where(x => x != null && x.Key.Contains("/conflicts/"))
                                 .ToList();
 
                             KeyValuePair<JsonDocument, DateTime> local;
