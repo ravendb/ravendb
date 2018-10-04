@@ -190,10 +190,8 @@ namespace Raven.Server.Documents.Queries
                     {
                         var edgeResult = currentResults[resultIndex];
                         var prev = edgeResult.Get(prevNodeAlias);
-                        //for cases when there are mulitple possible edges for one vertex
-                        //something like { RelatedProducts : ["products/1", "products/3"]
                         Document related;
-                        if (TryGetMultipleRelatedMatches(edge, nextNodeAlias, edgeResults, prev, out var multipleRelatedMatches))
+                        if (TryGetMatches(edge, nextNodeAlias, edgeResults, prev, out var multipleRelatedMatches))
                         {
                             foreach (var match in multipleRelatedMatches)
                             {
@@ -215,34 +213,32 @@ namespace Raven.Server.Documents.Queries
                             continue;
                         }
 
-                        if (!TryGetRelatedMatch(edge, nextNodeAlias, edgeResults, prev, out var relatedMatch))
-                        {
-                            //if didn't find multiple AND single edges, then it has no place in query results...
-                            currentResults.RemoveAt(resultIndex);
-                            resultIndex--;
-                            continue;
-                        }
-
-                        related = relatedMatch.Get(nextNodeAlias);
-                        edgeResult.Set(nextNodeAlias, related);
+                        //if didn't find multiple AND single edges, then it has no place in query results...
+                        currentResults.RemoveAt(resultIndex);
+                        resultIndex--;
                     }
                 }
 
                 Output.AddRange(currentResults);
             }
 
-            private bool TryGetMultipleRelatedMatches(string edge, string alias, Dictionary<string, Match> edgeResults, Document prev, out IEnumerable<Match> relatedMatches)
+            private readonly HashSet<string> _includedNodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            private bool TryGetMatches(string edge, string alias, Dictionary<string, Match> edgeResults, Document prev, out IEnumerable<Match> relatedMatches)
             {
-                var nextIds = new HashSet<string>();
-                IncludeUtil.GetDocIdFromInclude(prev.Data,edge,nextIds);
+                _includedNodes.Clear();
+                IncludeUtil.GetDocIdFromInclude(prev.Data,edge, _includedNodes);
                 relatedMatches = Enumerable.Empty<Match>();
-                if (prev.Data.TryGet(edge, out string[] nextIds) == false || nextIds == null)
+                _includedNodes.Remove(null);
+                if (_includedNodes.Count == 0)
                     return false;
 
                 IEnumerable<Match> GetResultsFromEdges()
                 {
-                    foreach (var id in nextIds)
+                    foreach (var id in _includedNodes)
                     {
+                        if (id == null)
+                            continue;
                   
                         if(!edgeResults.TryGetValue(id,out var m))
                             continue;
@@ -252,7 +248,7 @@ namespace Raven.Server.Documents.Queries
 
                 IEnumerable<Match> GetResultsFromStorage()
                 {
-                    foreach (var id in nextIds)
+                    foreach (var id in _includedNodes)
                     {
 
                         var doc = _ctx.DocumentDatabase.DocumentsStorage.Get(_ctx, id, false);
