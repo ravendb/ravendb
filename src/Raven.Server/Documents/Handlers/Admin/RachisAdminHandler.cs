@@ -45,51 +45,55 @@ namespace Raven.Server.Documents.Handlers.Admin
                 HttpContext.Response.Headers["Reached-Leader"] = "true";
 
                 var commandJson = await context.ReadForMemoryAsync(RequestBodyStream(), "external/rachis/command");
-                CommandBase command;
                 try
                 {
-                    command = CommandBase.CreateFrom(commandJson);
+                    var command = CommandBase.CreateFrom(commandJson);
+                    switch (command)
+                    {
+                        case AddOrUpdateCompareExchangeBatchCommand batchCmpExchange:
+                            batchCmpExchange.ContextToWriteResult = context;
+                            break;
+                        case CompareExchangeCommandBase cmpExchange:
+                            cmpExchange.ContextToWriteResult = context;
+                            break;
+                    }
+
+                    var isClusterAdmin = IsClusterAdmin();
+                    command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
+
+                    var (etag, result) = await ServerStore.Engine.PutAsync(command);
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                    var ms = context.CheckoutMemoryStream();
+                    try
+                    {
+                        using (var writer = new BlittableJsonTextWriter(context, ms))
+                        {
+                            context.Write(writer, new DynamicJsonValue
+                            {
+                                [nameof(ServerStore.PutRaftCommandResult.RaftCommandIndex)] = etag,
+                                [nameof(ServerStore.PutRaftCommandResult.Data)] = result,
+                            });
+                            writer.Flush();
+                        }
+
+                        // now that we know that we properly serialized it
+                        ms.Position = 0;
+                        await ms.CopyToAsync(ResponseBodyStream());
+                    }
+                    finally
+                    {
+                        context.ReturnMemoryStream(ms);
+                    }
+                }
+                catch (NotLeadingException e)
+                {
+                    HttpContext.Response.Headers["Reached-Leader"] = "false";
+                    throw new NoLeaderException("Lost the leadership, cannot accept commands.", e);
                 }
                 catch (InvalidOperationException e)
                 {
                     RequestRouter.AssertClientVersion(HttpContext, e);
                     throw;
-                }
-
-                switch (command)
-                {
-                    case AddOrUpdateCompareExchangeBatchCommand batchCmpExchange:
-                        batchCmpExchange.ContextToWriteResult = context;
-                        break;
-                    case CompareExchangeCommandBase cmpExchange:
-                        cmpExchange.ContextToWriteResult = context;
-                        break;
-                }
-
-                var isClusterAdmin = IsClusterAdmin();
-                command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
-
-                var (etag, result) = await ServerStore.Engine.PutAsync(command);
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                var ms = context.CheckoutMemoryStream();
-                try
-                {
-                    using (var writer = new BlittableJsonTextWriter(context, ms))
-                    {
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            [nameof(ServerStore.PutRaftCommandResult.RaftCommandIndex)] = etag,
-                            [nameof(ServerStore.PutRaftCommandResult.Data)] = result,
-                        });
-                        writer.Flush();
-                    }
-                    // now that we know that we properly serialized it
-                    ms.Position = 0;
-                    await ms.CopyToAsync(ResponseBodyStream());
-                }
-                finally
-                {
-                    context.ReturnMemoryStream(ms);
                 }
             }
         }
