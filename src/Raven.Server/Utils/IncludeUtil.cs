@@ -15,11 +15,12 @@ namespace Raven.Server.Utils
         private const string SuffixStart = "{0}/";
         private static readonly char[] PrefixSeparatorChar = { PrefixSeparator };
         private static readonly char[] SuffixSeparatorChar = { SuffixSeparator };
-        private static Func<object, StringSegment, string> _valueHandler;
-
+        
         public static void GetDocIdFromInclude(BlittableJsonReaderObject docReader, StringSegment includePath,
             HashSet<string> includedIds)
         {
+            Func<object, StringSegment, string> valueHandler = null;
+
             var indexOfPrefixStart = includePath.IndexOfAny(PrefixSeparatorChar, 0);
 
             StringSegment pathSegment;
@@ -34,7 +35,7 @@ namespace Raven.Server.Utils
                      !addition.Value.Subsegment(0, 4).Equals(SuffixStart)))
                     return;
                 pathSegment = includePath.Subsegment(0, indexOfSuffixStart);
-                _valueHandler = HandleSuffixValue;
+                valueHandler = HandleSuffixValue;
             }
             else if (indexOfPrefixStart != -1)
             {
@@ -42,7 +43,7 @@ namespace Raven.Server.Utils
                 if (!includePath[includePath.Length - 1].Equals(')'))
                     return;
                 pathSegment = includePath.Subsegment(0, indexOfPrefixStart);
-                _valueHandler = HandlePrefixValue;
+                valueHandler = HandlePrefixValue;
             }
             else
             {
@@ -81,7 +82,7 @@ namespace Raven.Server.Utils
                         continue;
                     if (addition != null)
                     {
-                        var includedId = _valueHandler(item, addition.Value);
+                        var includedId = valueHandler(item, addition.Value);
                         if (includedId != null)
                             includedIds.Add(includedId);
                     }
@@ -92,7 +93,7 @@ namespace Raven.Server.Utils
             {
                 if (addition != null)
                 {
-                    var includedId = _valueHandler(value, addition.Value);
+                    var includedId = valueHandler(value, addition.Value);
                     if (includedId != null)
                         includedIds.Add(includedId);
                 }
