@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using Esprima;
-using Esprima.Ast;
 using Jint;
 using Jint.Native;
 using Jint.Native.Function;
+using Jint.Native.Object;
 using Jint.Runtime.Interop;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
@@ -15,32 +12,31 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
 using Sparrow;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
     public class JavaScriptIndex : StaticIndexBase
     {
-        private static readonly string GlobalDefinitions = "globalDefinition";
-        private static readonly string MapsProperty = "maps";
-        private static readonly string CollectionProperty = "collection";
-        private static readonly string MethodProperty = "method";
-        private static readonly string MoreArgsProperty = "moreArgs";
-        private static readonly string ReduceProperty = "reduce";
-        private static readonly string AggregateByProperty = "aggregateBy";
-        private static readonly string KeyProperty = "key";
+        private const string GlobalDefinitions = "globalDefinition";
+        private const string MapsProperty = "maps";
+        private const string CollectionProperty = "collection";
+        private const string MethodProperty = "method";
+        private const string MoreArgsProperty = "moreArgs";
+        private const string ReduceProperty = "reduce";
+        private const string AggregateByProperty = "aggregateBy";
+        private const string KeyProperty = "key";
 
-        private JintPreventResolvingTasksReferenceResolver _resolver;
         public JavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration)
         {
             _definitions = definition;
-            _resolver = new JintPreventResolvingTasksReferenceResolver();
+
             // we create the Jint instance directly instead of using SingleRun
             // because the index is single threaded and long lived
+            var resolver = new JintPreventResolvingTasksReferenceResolver();
             _engine = new Engine(options =>
             {
                 options.LimitRecursion(64)
-                    .SetReferencesResolver(_resolver)
+                    .SetReferencesResolver(resolver)
                     .MaxStatements(configuration.Indexing.MaxStepsForScript)
                     .Strict()
                     .AddObjectConverter(new JintGuidConverter())
@@ -49,49 +45,81 @@ namespace Raven.Server.Documents.Indexes.Static
                     .AddObjectConverter(new JintDateTimeConverter())
                     .AddObjectConverter(new JintTimeSpanConverter())
                     .LocalTimeZone(TimeZoneInfo.Utc);
-
             });
-            _engine.SetValue("load", new ClrFunctionInstance(_engine, LoadDocument));
 
-            _engine.Execute(Code);
+            InitializeEngine(definition, out var mapList);
 
-            if (definition.AdditionalSources != null)
+            var definitions = GetDefinitions();
+
+            ProcessMaps(configuration, definitions, resolver, mapList, out var collectionFunctions);
+
+            ProcessReduce(definition, definitions, resolver);
+
+            ProcessFields(definition, collectionFunctions);
+        }
+
+        private void ProcessFields(IndexDefinition definition, Dictionary<string, List<JavaScriptMapOperation>> collectionFunctions)
+        {
+            var fields = new HashSet<string>();
+            HasDynamicFields = false;
+            foreach (var (key, val) in collectionFunctions)
             {
-                foreach (var script in definition.AdditionalSources.Values)
+                Maps.Add(key, val.Select(x => (IndexingFunc)x.IndexingFunction).ToList());
+
+                //TODO: Validation of matches fields between group by / collections / etc
+                foreach (var operation in val)
                 {
-                    _engine.Execute(script);
+                    HasDynamicFields |= operation.HasDynamicReturns;
+                    fields.UnionWith(operation.Fields);
+                    foreach (var (k, v) in operation.FieldOptions)
+                    {
+                        _definitions.Fields.Add(k, v);
+                    }
                 }
             }
-            var mapList = definition.Maps.ToList();
 
-            for (var i =0; i < mapList.Count; i++)
-            { 
-                _engine.Execute(mapList[i]);
+            if (definition.Fields != null)
+            {
+                foreach (var item in definition.Fields)
+                {
+                    fields.Add(item.Key);
+                }
             }
 
-            if (definition.Reduce != null)
-                _engine.Execute(definition.Reduce);            
+            OutputFields = fields.ToArray();
+        }
 
-            var definitionsObj = _engine.GetValue(GlobalDefinitions);
-            if(definitionsObj.IsNull() || definitionsObj.IsUndefined() || definitionsObj.IsObject() == false)
-                ThrowIndexCreationException($"is missing its '{GlobalDefinitions}' global variable, are you modifying it in your script?");
-            var definitions = definitionsObj.AsObject();
-            if(definitions.HasProperty(MapsProperty) == false)
-                ThrowIndexCreationException("is missing its 'globalDefinition.maps' property, are you modifying it in your script?");
+        private void ProcessReduce(IndexDefinition definition, ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver)
+        {
+            var reduceObj = definitions.GetProperty(ReduceProperty)?.Value;
+            if (reduceObj != null && reduceObj.IsObject())
+            {
+                var reduceAsObj = reduceObj.AsObject();
+                var groupByKey = reduceAsObj.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
+                var reduce = reduceAsObj.GetProperty(AggregateByProperty).Value.As<ScriptFunctionInstance>();
+                ReduceOperation = new JavaScriptReduceOperation(reduce, groupByKey, _engine, resolver) { ReduceString = definition.Reduce };
+                GroupByFields = ReduceOperation.GetReduceFieldsNames();
+                Reduce = ReduceOperation.IndexingFunction;
+            }
+        }
+
+        private void ProcessMaps(RavenConfiguration configuration, ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, List<string> mapList,
+            out Dictionary<string, List<JavaScriptMapOperation>> collectionFunctions)
+        {
             var mapsArray = definitions.GetProperty(MapsProperty).Value;
             if (mapsArray.IsNull() || mapsArray.IsUndefined() || mapsArray.IsArray() == false)
                 ThrowIndexCreationException($"doesn't contain any map function or '{GlobalDefinitions}.{Maps}' was modified in the script");
             var maps = mapsArray.AsArray();
-            var collectionFunctions = new Dictionary<string, List<JavaScriptMapOperation>>();
+            collectionFunctions = new Dictionary<string, List<JavaScriptMapOperation>>();
             for (int i = 0; i < maps.GetLength(); i++)
             {
                 var mapObj = maps.Get(i.ToString());
-                if(mapObj.IsNull() || mapObj.IsUndefined() || mapObj.IsObject() == false)
+                if (mapObj.IsNull() || mapObj.IsUndefined() || mapObj.IsObject() == false)
                     ThrowIndexCreationException($"map function #{i} is not a valid object");
                 var map = mapObj.AsObject();
-                if(map.HasProperty(CollectionProperty) == false)
+                if (map.HasProperty(CollectionProperty) == false)
                     ThrowIndexCreationException($"map function #{i} is missing a collection name");
-                var mapCollectionStr = map.Get(CollectionProperty);                    
+                var mapCollectionStr = map.Get(CollectionProperty);
                 if (mapCollectionStr.IsString() == false)
                     ThrowIndexCreationException($"map function #{i} collection name isn't a string");
                 var mapCollection = mapCollectionStr.AsString();
@@ -100,12 +128,13 @@ namespace Raven.Server.Documents.Indexes.Static
                     list = new List<JavaScriptMapOperation>();
                     collectionFunctions.Add(mapCollection, list);
                 }
-                if(map.HasProperty(MethodProperty) == false)
+
+                if (map.HasProperty(MethodProperty) == false)
                     ThrowIndexCreationException($"map function #{i} is missing its {MethodProperty} property");
                 var funcInstance = map.Get(MethodProperty).As<FunctionInstance>();
-                if(funcInstance == null)
-                    ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a 'FunctionInstance'");                
-                var operation = new JavaScriptMapOperation(_engine,_resolver)
+                if (funcInstance == null)
+                    ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a 'FunctionInstance'");
+                var operation = new JavaScriptMapOperation(_engine, resolver)
                 {
                     MapFunc = funcInstance,
                     IndexName = _definitions.Name,
@@ -124,53 +153,55 @@ namespace Raven.Server.Documents.Indexes.Static
                         }
                     }
                 }
+
                 operation.Analyze(_engine);
                 if (ReferencedCollections.TryGetValue(mapCollection, out var collectionNames) == false)
                 {
                     collectionNames = new HashSet<CollectionName>();
                     ReferencedCollections.Add(mapCollection, collectionNames);
                 }
-                collectionNames.UnionWith(operation.ReferencedCollection);
+
+                collectionNames.UnionWith(operation.ReferencedCollections);
 
                 list.Add(operation);
             }
+        }
 
-            var reduceObj = definitions.GetProperty(ReduceProperty)?.Value;
-            if (reduceObj != null && reduceObj.IsObject())
-            {
-                var reduceAsObj = reduceObj.AsObject();
-                var groupByKey = reduceAsObj.GetProperty(KeyProperty).Value.As<ScriptFunctionInstance>();
-                var reduce = reduceAsObj.GetProperty(AggregateByProperty).Value.As<ScriptFunctionInstance>();
-                ReduceOperation = new JavaScriptReduceOperation(reduce, groupByKey, _engine, _resolver) { ReduceString = definition.Reduce};
-                GroupByFields = ReduceOperation.GetReduceFieldsNames();
-                Reduce = ReduceOperation.IndexingFunction;
-            }
-            var fields = new HashSet<string>();
-            HasDynamicFields = false;
-            foreach (var (key, val) in collectionFunctions)
-            {
-                Maps.Add(key, val.Select(x => (IndexingFunc)x.IndexingFunction).ToList());
+        private ObjectInstance GetDefinitions()
+        {
+            var definitionsObj = _engine.GetValue(GlobalDefinitions);
 
-                //TODO: Validation of matches fields between group by / collections / etc
-                foreach (var operation in val)
+            if (definitionsObj.IsNull() || definitionsObj.IsUndefined() || definitionsObj.IsObject() == false)
+                ThrowIndexCreationException($"is missing its '{GlobalDefinitions}' global variable, are you modifying it in your script?");
+
+            var definitions = definitionsObj.AsObject();
+            if (definitions.HasProperty(MapsProperty) == false)
+                ThrowIndexCreationException("is missing its 'globalDefinition.maps' property, are you modifying it in your script?");
+
+            return definitions;
+        }
+
+        private void InitializeEngine(IndexDefinition definition, out List<string> maps)
+        {
+            _engine.SetValue("load", new ClrFunctionInstance(_engine, LoadDocument));
+
+            _engine.Execute(Code);
+
+            if (definition.AdditionalSources != null)
+            {
+                foreach (var script in definition.AdditionalSources.Values)
                 {
-                    HasDynamicFields |= operation.HasDynamicReturns;
-                    fields.UnionWith(operation.Fields);
-                    foreach ((var k, var v) in operation.FieldOptions)
-                    {
-                        _definitions.Fields.Add(k,v);
-                    }
-                    
+                    _engine.Execute(script);
                 }
             }
-            if (definition.Fields != null)
-            {
-                foreach (var item in definition.Fields)
-                {
-                    fields.Add(item.Key);
-                }
-            }
-            OutputFields = fields.ToArray();
+
+            maps = definition.Maps.ToList();
+
+            foreach (var t in maps)
+                _engine.Execute(t);
+
+            if (definition.Reduce != null)
+                _engine.Execute(definition.Reduce);
         }
 
         private void ThrowIndexCreationException(string message)
@@ -194,7 +225,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 throw new ArgumentException($"The load(id, collection) method expects two string arguments, but got: load({args[0]}, {args[1]})");
             }
 
-            object doc =  CurrentIndexingScope.Current.LoadDocument(null, args[0].AsString(), args[1].AsString());
+            object doc = CurrentIndexingScope.Current.LoadDocument(null, args[0].AsString(), args[1].AsString());
             if (JavaScriptIndexUtils.GetValue(_engine, doc, out var item))
                 return item;
 
@@ -202,7 +233,7 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
 
-        private static string Code = @"
+        private const string Code = @"
 var globalDefinition =
 {
     maps: [],
@@ -238,25 +269,19 @@ function createSpatialField(lat, lng) {
 }
 ";
 
-        private IndexDefinition _definitions;
-        private Engine _engine;
+        private readonly IndexDefinition _definitions;
+        private readonly Engine _engine;
 
-        public JavaScriptReduceOperation ReduceOperation { get; }
+        public JavaScriptReduceOperation ReduceOperation { get; private set; }
 
         public void SetBufferPoolForTestingPurposes(UnmanagedBuffersPoolWithLowMemoryHandling bufferPool)
         {
-            if (ReduceOperation != null)
-            {
-                ReduceOperation.SetBufferPoolForTestingPurposes(bufferPool);
-            }
+            ReduceOperation?.SetBufferPoolForTestingPurposes(bufferPool);
         }
 
         public void SetAllocatorForTestingPurposes(ByteStringContext byteStringContext)
         {
-            if (ReduceOperation != null)
-            {
-                ReduceOperation.SetAllocatorForTestingPurposes(byteStringContext);
-            }
+            ReduceOperation?.SetAllocatorForTestingPurposes(byteStringContext);
         }
     }
 }
