@@ -38,11 +38,11 @@ namespace Raven.Server.ServerWide.Maintenance
             _token = _cts.Token;
             _server = serverStore;
             _logger = LoggingSource.Instance.GetLogger<ClusterMaintenanceWorker>(serverStore.NodeTag);
-            _name = $"Maintenance worker connection to leader {leader} in term {term}";
+            _name = $"Heartbeats worker connection to leader {leader} in term {term}";
 
             WorkerSamplePeriod = _server.Configuration.Cluster.WorkerSamplePeriod.AsTimeSpan;
             CurrentTerm = term;
-            SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Maintenance, _tcp.ProtocolVersion);
+            SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Heartbeats, _tcp.ProtocolVersion);
         }
 
         public void Start()
@@ -204,7 +204,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     FillReplicationInfo(dbInstance, report);
 
                     prevReport.TryGetValue(dbName, out var prevDatabaseReport);
-                    if (SupportedFeatures.Maintenance.SendChangesOnly && 
+                    if (SupportedFeatures.Heartbeats.SendChangesOnly && 
                         prevDatabaseReport != null && prevDatabaseReport.EnvironmentsHash == currentHash)
                     {
                         report.Status = DatabaseStatus.NoChange;

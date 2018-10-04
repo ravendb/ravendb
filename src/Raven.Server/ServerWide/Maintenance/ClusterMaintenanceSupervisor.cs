@@ -136,7 +136,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
                 _token = _cts.Token;
                 _readStatusUpdateDebugString = $"ClusterMaintenanceServer/{ClusterTag}/UpdateState/Read-Response in term {term}";
-                _name = $"Maintenance supervisor from {_parent._server.NodeTag} to {ClusterTag} in term {term}";
+                _name = $"Heartbeats supervisor from {_parent._server.NodeTag} to {ClusterTag} in term {term}";
                 _log = LoggingSource.Instance.GetLogger<ClusterNode>(_name);
             }
 
@@ -365,8 +365,8 @@ namespace Raven.Server.ServerWide.Maintenance
                     var parameters = new TcpNegotiateParameters
                     {
                         Database = null,
-                        Operation = TcpConnectionHeaderMessage.OperationTypes.Maintenance,
-                        Version = TcpConnectionHeaderMessage.MaintenanceTcpVersion,
+                        Operation = TcpConnectionHeaderMessage.OperationTypes.Heartbeats,
+                        Version = TcpConnectionHeaderMessage.HeartbeatsTcpVersion,
                         ReadResponseAndGetVersionCallback = SupervisorReadResponseAndGetVersion,
                         DestinationUrl = tcpConnectionInfo.Url,
                         DestinationNodeTag = ClusterTag
@@ -413,14 +413,14 @@ namespace Raven.Server.ServerWide.Maintenance
 
             private void WriteOperationHeaderToRemote(BlittableJsonTextWriter writer, int remoteVersion = -1, bool drop = false)
             {
-                var operation = drop ? TcpConnectionHeaderMessage.OperationTypes.Drop : TcpConnectionHeaderMessage.OperationTypes.Maintenance;
+                var operation = drop ? TcpConnectionHeaderMessage.OperationTypes.Drop : TcpConnectionHeaderMessage.OperationTypes.Heartbeats;
                 writer.WriteStartObject();
                 {
                     writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.Operation));
                     writer.WriteString(operation.ToString());
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.OperationVersion));
-                    writer.WriteInteger(TcpConnectionHeaderMessage.MaintenanceTcpVersion);
+                    writer.WriteInteger(TcpConnectionHeaderMessage.HeartbeatsTcpVersion);
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.DatabaseName));
                     writer.WriteString((string)null);
@@ -428,7 +428,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         writer.WriteComma();
                         writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.Info));
-                        writer.WriteString($"Couldn't agree on heartbeats tcp version ours:{TcpConnectionHeaderMessage.MaintenanceTcpVersion} theirs:{remoteVersion}");
+                        writer.WriteString($"Couldn't agree on heartbeats tcp version ours:{TcpConnectionHeaderMessage.HeartbeatsTcpVersion} theirs:{remoteVersion}");
                     }
                 }
                 writer.WriteEndObject();

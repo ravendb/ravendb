@@ -1396,7 +1396,7 @@ namespace Raven.Server
                 return true;
             }
 
-            if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Maintenance)
+            if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Heartbeats)
             {
                 // check for the term          
                 using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -1541,7 +1541,7 @@ namespace Raven.Server
                     switch (header.Operation)
                     {
                         case TcpConnectionHeaderMessage.OperationTypes.Cluster:
-                        case TcpConnectionHeaderMessage.OperationTypes.Maintenance:
+                        case TcpConnectionHeaderMessage.OperationTypes.Heartbeats:
                             msg = header.Operation + " is a server wide operation and the certificate " + certificate.FriendlyName + "is not ClusterAdmin/Operator";
                             return false;
                         case TcpConnectionHeaderMessage.OperationTypes.Subscription:
