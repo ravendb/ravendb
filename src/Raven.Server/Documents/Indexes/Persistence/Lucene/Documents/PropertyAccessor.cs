@@ -149,22 +149,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             public CompiledIndexField GroupByField;
         }
 
-        internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, HashSet<CompiledIndexField> _groupByFields, bool isObjectInstance = false)
+        internal static IPropertyAccessor CreateMapReduceOutputAccessor(Type type, object instance, HashSet<CompiledIndexField> groupByFields, bool isObjectInstance = false)
         {
             if (isObjectInstance || type == typeof(ObjectInstance))
-                return new JintPropertyAccessor(_groupByFields);
+                return new JintPropertyAccessor(groupByFields);
 
             if (instance is Dictionary<string, object> dict)
-                return DictionaryAccessor.Create(dict, _groupByFields);
+                return DictionaryAccessor.Create(dict, groupByFields);
 
-            return new PropertyAccessor(type, _groupByFields);
+            return new PropertyAccessor(type, groupByFields);
         }
 
     }
 
     internal class JintPropertyAccessor : IPropertyAccessor
     {
-        private HashSet<CompiledIndexField> _groupByFields;
+        private readonly HashSet<CompiledIndexField> _groupByFields;
 
         public JintPropertyAccessor(HashSet<CompiledIndexField> groupByFields)
         {

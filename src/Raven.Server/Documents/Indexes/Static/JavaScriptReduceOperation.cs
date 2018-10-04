@@ -36,24 +36,25 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private readonly JsValue[] _oneItemArray = new JsValue[1];
 
-        private JintPreventResolvingTasksReferenceResolver _resolver;
+        private readonly JintPreventResolvingTasksReferenceResolver _resolver;
 
         private Dictionary<BlittableJsonReaderObject, List<BlittableJsonReaderObject>> _groupedItems;
 
         private struct GroupByKeyComparer : IEqualityComparer<BlittableJsonReaderObject>
         {
-            JavaScriptReduceOperation _parent;
-            ReduceKeyProcessor _xKey, _yKey;
+            private readonly JavaScriptReduceOperation _parent;
+            private readonly ReduceKeyProcessor _xKey;
+            private readonly ReduceKeyProcessor _yKey;
             private BlittableJsonReaderObject _lastUsedBlittable;
             private BlittableJsonReaderObject _lastUsedBucket;
-            private ByteStringContext _allocator;
+            private readonly ByteStringContext _allocator;
 
             public GroupByKeyComparer(JavaScriptReduceOperation parent, UnmanagedBuffersPoolWithLowMemoryHandling buffersPool, ByteStringContext allocator)
             {
                 _parent = parent;
                 _allocator = allocator;
-                _xKey = new ReduceKeyProcessor(_parent._groupByFields.Count(), buffersPool);
-                _yKey = new ReduceKeyProcessor(_parent._groupByFields.Count(), buffersPool);
+                _xKey = new ReduceKeyProcessor(_parent._groupByFields.Length, buffersPool);
+                _yKey = new ReduceKeyProcessor(_parent._groupByFields.Length, buffersPool);
                 _xKey.SetMode(ReduceKeyProcessor.Mode.MultipleValues);
                 _yKey.SetMode(ReduceKeyProcessor.Mode.MultipleValues);
                 _lastUsedBlittable = null;
@@ -73,22 +74,34 @@ namespace Raven.Server.Documents.Indexes.Static
                 foreach (var field in _parent._groupByFields)
                 {
                     bool xHasField = false;
+                    bool yHasField = false;
                     object xVal = null;
                     if (xCalculated == false)
                         xHasField = x.TryGet(field.Name, out xVal);
+
                     object yVal = null;
                     if (yCalculated == false && xCalculated == false)
                     {
-                        var yHasField = y.TryGet(field.Name, out yVal);
+                        yHasField = y.TryGet(field.Name, out yVal);
                         if (xHasField != yHasField)
                             return false;
                     }
 
                     if (xCalculated == false)
+                    {
+                        if (xHasField)
+                            xVal = field.GetValue(null, xVal);
+
                         _xKey.Process(_allocator, xVal);
+                    }
 
                     if (yCalculated == false)
+                    {
+                        if (yHasField)
+                            yVal = field.GetValue(null, yVal);
+
                         _yKey.Process(_allocator, yVal);
+                    }
                 }
 
                 var xIsNotAllNulls = _xKey.IsBufferSet;
@@ -116,7 +129,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 _yKey.Reset();
                 foreach (var field in _parent._groupByFields)
                 {
-                    var xHasField = obj.TryGet(field.Name, out object xVal);
+                    if (obj.TryGet(field.Name, out object xVal))
+                        xVal = field.GetValue(null, xVal);
+
                     _yKey.Process(_allocator, xVal);
                 }
 
@@ -147,7 +162,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     Engine.ResetTimeoutTicks();
 
                     _oneItemArray[0] = ConstructValues(item);
-                    JsValue jsItem = null;
+                    JsValue jsItem;
                     try
                     {
                         jsItem = Reduce.Call(JsValue.Null, _oneItemArray).AsObject();
@@ -232,12 +247,21 @@ namespace Raven.Server.Documents.Indexes.Static
                 result.Put("key", key, false);
                 for (int i = 0; i < _groupByFields.Length; i++)
                 {
-                    var index = values[0].GetPropertyIndex(_groupByFields[i].Name);
+                    var groupByField = _groupByFields[i];
+
+                    var index = values[0].GetPropertyIndex(groupByField.Name);
                     if (index != -1)
                     {
                         BlittableJsonReaderObject.PropertyDetails prop = default;
                         values[0].GetPropertyByIndex(index, ref prop, addObjectToCache: false);
-                        key.Put(_groupByFields[i].Name, JsValue.FromObject(Engine, prop.Value), false);
+
+                        var propertyName = groupByField.Name;
+                        if (groupByField is JsNestedField jsnf)
+                            propertyName = jsnf.PropertyName;
+
+                        var value = groupByField.GetValue(null, prop.Value);
+
+                        key.Put(propertyName, JsValue.FromObject(Engine, value), false);
                     }
                 }
             }
@@ -289,7 +313,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 if (returnStatement.Argument is StaticMemberExpression sme && sme.Property is Identifier id)
                 {
-                    _groupByFields = new[] { new SimpleField(id.Name) };
+                    _groupByFields = new[] { CreateField(id.Name, GetPropertyPath(sme).ToArray()) };
                     _singleField = true;
 
                     return _groupByFields;
@@ -300,12 +324,39 @@ namespace Raven.Server.Documents.Indexes.Static
             var cur = new HashSet<CompiledIndexField>();
             foreach (var prop in oe.Properties)
             {
-                var fieldName = prop.Key.GetKey();
-                cur.Add(new SimpleField(fieldName));
+                string[] path = null;
+                if (prop.Value is MemberExpression me)
+                    path = GetPropertyPath(me).ToArray();
+
+                var propertyName = prop.Key.GetKey();
+                cur.Add(CreateField(propertyName, path));
             }
+
             _groupByFields = cur.ToArray();
 
             return _groupByFields;
+
+            CompiledIndexField CreateField(string propertyName, string[] path)
+            {
+                if (path == null || path.Length <= 1)
+                    return new SimpleField(propertyName);
+
+                return new JsNestedField(propertyName, path[0], path.Skip(1).ToArray());
+            }
+
+            IEnumerable<string> GetPropertyPath(MemberExpression e)
+            {
+                if (e.Object is MemberExpression inner)
+                {
+                    foreach (var path in GetPropertyPath(inner))
+                    {
+                        yield return path;
+                    }
+                }
+
+                if (e.Property is Identifier identifier)
+                    yield return identifier.Name;
+            }
         }
 
         public void SetBufferPoolForTestingPurposes(UnmanagedBuffersPoolWithLowMemoryHandling bufferPool)

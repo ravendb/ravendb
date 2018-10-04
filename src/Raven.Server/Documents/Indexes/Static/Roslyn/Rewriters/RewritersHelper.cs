@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Utils;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
@@ -133,13 +134,40 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         }
     }
 
+    public class JsNestedField : NestedField
+    {
+        public readonly string PropertyName;
+
+        public JsNestedField(string propertyName, string name, string[] path)
+            : base(name, path)
+        {
+            PropertyName = propertyName;
+        }
+
+        public override void WriteTo(StringBuilder sb)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override object GetValue(object value, object blittableValue)
+        {
+            if (blittableValue is BlittableJsonReaderObject bjro)
+            {
+                if (bjro.TryGet(_field.Name, out blittableValue))
+                    return _field.GetValue(null, blittableValue);
+            }
+
+            throw new NotSupportedException($"Was expecting JSON object but got '{blittableValue?.GetType().Name}'");
+        }
+    }
+
     public class NestedField : CompiledIndexField
     {
         private IPropertyAccessor _accessor;
 
         private readonly string[] _path;
 
-        private readonly CompiledIndexField _field;
+        protected readonly CompiledIndexField _field;
 
         public NestedField(string name, string[] path)
             : base(name)

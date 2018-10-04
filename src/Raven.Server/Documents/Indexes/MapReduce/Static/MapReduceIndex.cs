@@ -435,7 +435,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                         foreach (var property in accessor.GetPropertiesInOrder(output))
                         {
                             var value = property.Value;
-                            var blittableValue = TypeConverter.ToBlittableSupportedType(value);
+                            var blittableValue = TypeConverter.ToBlittableSupportedType(value, context: _parent._indexContext);
                             mapResult[property.Key] = blittableValue;
 
                             if (property.IsGroupByField)
@@ -443,7 +443,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                                 var valueForProcessor = property.GroupByField.GetValue(value, blittableValue);
                                 _reduceKeyProcessor.Process(_parent._indexContext.Allocator, valueForProcessor);
                             }
-                                
                         }
 
                         if (_reduceKeyProcessor.ProcessedFields != _groupByFields.Count)
