@@ -65,7 +65,7 @@ namespace RachisTests
             var clusterSize = 3;
             var leader = await CreateRaftClusterAndGetLeader(clusterSize);
             var replicationFactor = 2;
-            var databaseName = "test";
+            var databaseName = GetDatabaseName();
             using (var store = new DocumentStore()
             {
                 Urls = new[] { leader.WebUrl },

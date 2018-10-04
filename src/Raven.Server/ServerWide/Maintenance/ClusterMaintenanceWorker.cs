@@ -87,13 +87,14 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             nodeReport = CollectDatabaseInformation(ctx, lastNodeReport);
                         }
-                        lastNodeReport = nodeReport;
 
                         using (var writer = new BlittableJsonTextWriter(ctx, _tcp.Stream))
                         {
                             ctx.Write(writer, DynamicJsonValue.Convert(nodeReport));
-                         }
-                     }
+                        }
+
+                        lastNodeReport = nodeReport;
+                    }
                 }
                 catch (Exception e)
                 {
@@ -237,6 +238,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
                 catch (Exception e)
                 {
+                    report.EnvironmentsHash = 0; // on error we should do the complete report collaction path
                     report.Error = e.ToString();
                 }
 

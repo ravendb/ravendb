@@ -129,13 +129,14 @@ namespace Raven.Server.ServerWide.Maintenance
                 var dbName = dbReport.Key;
                 var dbStatus = dbReport.Value.Status;
 
-                if (reportStatus != ReportStatus.Ok || dbStatus != DatabaseStatus.Loaded)
-                { 
-                    SetLastDbGoodTime(lastSuccessfulReport, dbName);
+                if (reportStatus == ReportStatus.Ok && 
+                    (dbStatus == DatabaseStatus.Loaded || dbStatus == DatabaseStatus.NoChange))
+                {
+                    LastGoodDatabaseStatus[dbName] = updateDateTime;
                 }
                 else
                 {
-                    LastGoodDatabaseStatus[dbName] = updateDateTime;
+                    SetLastDbGoodTime(lastSuccessfulReport, dbName);
                 }
             }
         }
