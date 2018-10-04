@@ -154,8 +154,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         private void ThrowIndexRewritingException(QueryExpressionSyntax node, ForEachStatementSyntax stmt)
         {
             throw new InvalidOperationException("Rewriting the function to an optimized version resulted in creating invalid indexing outputs. " +
-                                                $"The output needs to have the following fields: [{string.Join(", ", _validator.Fields)}] " +
-                                                $"while after the optimization it has: [{string.Join(", ", _validator.ExtractedFields)}].{Environment.NewLine}" +
+                                                $"The output needs to have the following fields: [{string.Join(", ", _validator.Fields.Select(x => x.Name))}] " +
+                                                $"while after the optimization it has: [{string.Join(", ", _validator.ExtractedFields.Select(x => x.Name))}].{Environment.NewLine}" +
                                                 $"Original indexing func:{Environment.NewLine}{node.ToFullString()}{Environment.NewLine}{Environment.NewLine}" +
                                                 $"Optimized indexing func:{Environment.NewLine}{stmt.ToFullString()}");
         }

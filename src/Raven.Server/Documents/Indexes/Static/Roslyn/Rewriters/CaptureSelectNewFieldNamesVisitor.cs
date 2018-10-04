@@ -9,9 +9,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
     internal class CaptureSelectNewFieldNamesVisitor : CSharpSyntaxRewriter
     {
-        public HashSet<string> Fields;
+        public HashSet<Field> Fields;
 
-        public static HashSet<string> KnonwMethodsToInsepct = new HashSet<string>
+        public static HashSet<string> KnownMethodsToInspect = new HashSet<string>
         {
             "Select",
             "SelectMany",
@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             if (mae == null)
                 return Visit(node.Expression);
 
-            if (KnonwMethodsToInsepct.Contains(mae.Name.Identifier.Text) == false)
+            if (KnownMethodsToInspect.Contains(mae.Name.Identifier.Text) == false)
                 return Visit(node.Expression);
 
             CaptureFieldNames(node, x => x.VisitInvocationExpression(node));

@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
     {
         private readonly CaptureSelectNewFieldNamesVisitor _visitor = new CaptureSelectNewFieldNamesVisitor();
 
-        private HashSet<string> _baseFields;
+        private HashSet<Field> _baseFields;
 
         private string _baseFunction;
 
@@ -48,8 +48,8 @@ Additional fields		: {string.Join(", ", _visitor.Fields.Except(_baseFields))}";
             return false;
         }
 
-        public string[] Fields => _baseFields.ToArray();
+        public Field[] Fields => _baseFields.ToArray();
 
-        public string[] ExtractedFields => _visitor.Fields.ToArray();
+        public Field[] ExtractedFields => _visitor.Fields.ToArray();
     }
 }
