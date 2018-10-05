@@ -198,10 +198,10 @@ groupBy(x => x.Total.Currency)
         {
             using (var store = GetDocumentStore())
             {
-                //new MapReduceIndexWithNestedField().Execute(store);
-                //new MapReduceIndexWithNestedField2().Execute(store);
-                //new MapReduceIndexWithNestedFieldJs().Execute(store);
-                //new MapReduceIndexWithNestedFieldJs2().Execute(store);
+                new MapReduceIndexWithNestedField().Execute(store);
+                new MapReduceIndexWithNestedField2().Execute(store);
+                new MapReduceIndexWithNestedFieldJs().Execute(store);
+                new MapReduceIndexWithNestedFieldJs2().Execute(store);
                 new MultiMapReduceIndexWithNestedField().Execute(store);
 
                 using (var session = store.OpenSession())
@@ -263,13 +263,13 @@ groupBy(x => x.Total.Currency)
 
                 using (var session = store.OpenSession())
                 {
-                    //AssertResults<MapReduceIndexWithNestedField>(session);
+                    AssertResults<MapReduceIndexWithNestedField>(session);
 
-                    //AssertResults<MapReduceIndexWithNestedField2>(session);
+                    AssertResults<MapReduceIndexWithNestedField2>(session);
 
-                    //AssertResults<MapReduceIndexWithNestedFieldJs>(session);
+                    AssertResults<MapReduceIndexWithNestedFieldJs>(session);
 
-                    //AssertResults<MapReduceIndexWithNestedFieldJs2>(session);
+                    AssertResults<MapReduceIndexWithNestedFieldJs2>(session);
 
                     AssertResults<MultiMapReduceIndexWithNestedField>(session);
                 }
