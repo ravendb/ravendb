@@ -163,6 +163,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
     public class NestedField : CompiledIndexField
     {
+        private Type _accessorType;
+
         private IPropertyAccessor _accessor;
 
         private readonly string[] _path;
@@ -210,8 +212,15 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         public override object GetValue(object value, object blittableValue)
         {
+            var valueType = value?.GetType();
+            if (_accessorType != valueType)
+                _accessor = null;
+
             if (_accessor == null)
+            {
                 _accessor = TypeConverter.GetPropertyAccessor(value);
+                _accessorType = valueType;
+            }
 
             value = _accessor.GetValue(_field.Name, value);
             blittableValue = null;
