@@ -25,9 +25,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public void OnPageModifiedInReduceTree(long page)
         {
-            var pageModified = PageModifiedInReduceTree;
-
-            pageModified?.Invoke(page);
+            PageModifiedInReduceTree?.Invoke(page);
         }
 
         public long NextMapResultId;
