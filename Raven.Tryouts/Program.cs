@@ -78,9 +78,9 @@ namespace Raven.Tryouts
                 try
                 {
                     Console.WriteLine(i);
-                    using (var test = new RavenDB_3109())
+                    using (var test = new RavenDB_2516())
                     {
-                        test.ShouldWork();
+                        test.ReplicationTopologyDiscovererSimpleTestWithOAuth().Wait();
                     }
                 }
                 catch (Exception e)

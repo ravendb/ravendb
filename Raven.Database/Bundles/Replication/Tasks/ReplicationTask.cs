@@ -38,7 +38,6 @@ using Raven.Database.Storage;
 using Raven.Database.Util;
 using Raven.Json.Linq;
 using Sparrow.Collections;
-using Timer = System.Timers.Timer;
 
 namespace Raven.Bundles.Replication.Tasks
 {
@@ -111,12 +110,12 @@ namespace Raven.Bundles.Replication.Tasks
             DatabaseIdsCache = new DatabaseIdsCache(database, log);
 
             _cts = CancellationTokenSource.CreateLinkedTokenSource(database.WorkContext.CancellationToken);
-            _propagationTimeoutTimer = new Timer {AutoReset = false, Interval = docDb.Configuration.Replication.ReplicationPropagationDelayInSeconds * 1000};
-            _propagationTimeoutTimer.Elapsed += (o, s) =>
+
+            _propagationTimeoutTimer = docDb.TimerManager.NewTimer(state =>
             {
                 if (Interlocked.CompareExchange(ref _needToPropogateToSiblings, 0, 1) == 1)
                     docDb.WorkContext.ReplicationResetEvent.Set();
-            };
+            }, TimeSpan.FromSeconds(docDb.Configuration.Replication.ReplicationPropagationDelayInSeconds), TimeSpan.FromSeconds(docDb.Configuration.Replication.ReplicationPropagationDelayInSeconds));
 
             docDb.Notifications.OnIndexChange += (_, indexChangeNotification) =>
             {
@@ -143,10 +142,10 @@ namespace Raven.Bundles.Replication.Tasks
                     return;
                 }
 
-                lastWorkIsIndexOrTransformer = false;    
-                            
+                lastWorkIsIndexOrTransformer = false;
+
                 //There is no need to be thread safe this is only used to prevent unnecessary work
-                lastWorkAttachmentEtag = attachmentChangeNotification.Etag??Etag.InvalidEtag;                
+                lastWorkAttachmentEtag = attachmentChangeNotification.Etag ?? Etag.InvalidEtag;
                 docDb.WorkContext.ReplicationResetEvent.Set();
             };
 
@@ -278,7 +277,7 @@ namespace Raven.Bundles.Replication.Tasks
                             log.ErrorException("Failed to perform replication", e);
                         }
                     }
-                    
+
                     runningBecauseOfDataModifications = docDb.WorkContext.ReplicationResetEvent.Wait(timeToWait);
                     docDb.WorkContext.ReplicationResetEvent.Reset();
 
@@ -414,7 +413,7 @@ namespace Raven.Bundles.Replication.Tasks
                     var replicationTask = Task.Factory.StartNew(
                         state =>
                         {
-                            ReplicationStrategy destination = (ReplicationStrategy) state;
+                            ReplicationStrategy destination = (ReplicationStrategy)state;
 
                             using (LogContext.WithResource(docDb.Name))
                             using (CultureHelper.EnsureInvariantCulture())
@@ -431,7 +430,7 @@ namespace Raven.Bundles.Replication.Tasks
                                         {
                                             docDb.WorkContext.NotifyAboutWork();
 
-                                            return new LastReplicatedEtags {LastReplicatedDocumentEtag = lastDocumentEtag, LastReplicatedAttachmentEtag = lastAttachmentEtag};
+                                            return new LastReplicatedEtags { LastReplicatedDocumentEtag = lastDocumentEtag, LastReplicatedAttachmentEtag = lastAttachmentEtag };
                                         }
                                     }
                                     finally
@@ -499,7 +498,7 @@ namespace Raven.Bundles.Replication.Tasks
                                 if (lastReplicatedDocumentOrTombstoneEtag.Count > 0)
                                 {
                                     docDb.Maintenance.RemoveAllBefore(Constants.RavenReplicationDocsTombstones,
-                                        lastReplicatedDocumentOrTombstoneEtag.Values.Min(), timeout:TimeSpan.FromSeconds(2));
+                                        lastReplicatedDocumentOrTombstoneEtag.Values.Min(), timeout: TimeSpan.FromSeconds(2));
                                 }
 
                                 if (lastReplicatedAttachmentOrTombstoneEtag.Count > 0)
@@ -515,7 +514,7 @@ namespace Raven.Bundles.Replication.Tasks
                             }
                             catch (Exception e)
                             {
-                                log.ErrorException("Unexpected error during tombstones purging",e);
+                                log.ErrorException("Unexpected error during tombstones purging", e);
                             }
                         }
                         else
@@ -692,7 +691,7 @@ namespace Raven.Bundles.Replication.Tasks
                 }
         }
 
-        
+
 
         private bool IsNotFailing(ReplicationStrategy dest, int currentReplicationAttempts)
         {
@@ -991,7 +990,7 @@ namespace Raven.Bundles.Replication.Tasks
                             if (documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments == 0
                                 || documentsToReplicate.CountOfFilteredDocumentsWhichAreSystemDocuments > SystemDocsLimitForRemoteEtagUpdate
                                 || documentsToReplicate.CountOfFilteredDocumentsWhichOriginFromOtherDestinations > DestinationDocsLimitForRemoteEtagUpdate // see RavenDB-1555, RavenDB-4750
-                                || documentsToReplicate.CountOfFilteredEtlDocuments > EtlFilteredDocumentsForRemoteEtagUpdate) 
+                                || documentsToReplicate.CountOfFilteredEtlDocuments > EtlFilteredDocumentsForRemoteEtagUpdate)
                             {
                                 using (scope.StartRecording("Notify"))
                                 {
@@ -1126,10 +1125,10 @@ namespace Raven.Bundles.Replication.Tasks
                 }
             }
             failureInformation.FailureCount = failureCount;
-            
+
             docDb.Documents.Put(Constants.RavenReplicationDestinationsBasePath + EscapeDestinationName(url), null,
                 RavenJObject.FromObject(failureInformation), new RavenJObject(), null);
-            
+
         }
 
         private void RecordLastEtagChecked(string url, Etag lastEtagChecked)
@@ -1216,7 +1215,7 @@ namespace Raven.Bundles.Replication.Tasks
                             var ravenJObject = RavenJObject.Parse(error);
                             log.WarnException("Replication to " + destination + " had failed\r\n" + ravenJObject.Value<string>("Error"), e);
                             errorMessage = error;
-                            return false; 
+                            return false;
                         }
                     }
                     catch (Exception readResponseEx)
@@ -1264,7 +1263,7 @@ namespace Raven.Bundles.Replication.Tasks
                 var waitForNextReplicationAsync = WaitForNextReplicationAsync();
                 var past = ReplicatedPast(etag);
                 if (past >= numberOfReplicasToWaitFor)
-                    return past;                
+                    return past;
 
                 var remaining = timeout - sp.Elapsed;
                 //Times up return number of replicas so far
@@ -1273,13 +1272,13 @@ namespace Raven.Bundles.Replication.Tasks
                 var nextTimeout = Task.Delay(remaining);
                 try
                 {
-                    
+
                     if (await Task.WhenAny(waitForNextReplicationAsync, nextTimeout).ConfigureAwait(false) == nextTimeout)
                     {
                         return ReplicatedPast(etag);
                     }
                 }
-                catch ( OperationCanceledException)
+                catch (OperationCanceledException)
                 {
                     return ReplicatedPast(etag);
                 }
@@ -1413,12 +1412,12 @@ namespace Raven.Bundles.Replication.Tasks
             {
                 var destinationId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
                 var maxNumberOfItemsToReceiveInSingleBatch = destinationsReplicationInformationForSource.MaxNumberOfItemsToReceiveInSingleBatch;
-                var lastEtag = destinationsReplicationInformationForSource.LastDocumentEtag??Etag.Empty;
+                var lastEtag = destinationsReplicationInformationForSource.LastDocumentEtag ?? Etag.Empty;
 
                 int docsSinceLastReplEtag = 0;
                 List<JsonDocument> fetchedDocs;
                 List<JsonDocument> docsToReplicate;
-                result.LastEtag = lastEtag??Etag.Empty;
+                result.LastEtag = lastEtag ?? Etag.Empty;
                 var isEtl = destination.IsETL;
 
                 var collections = isEtl == false ? null :
@@ -1429,7 +1428,7 @@ namespace Raven.Bundles.Replication.Tasks
                 {
                     _cts.Token.ThrowIfCancellationRequested();
 
-                    fetchedDocs = GetDocsToReplicate(prefetchingBehavior, 
+                    fetchedDocs = GetDocsToReplicate(prefetchingBehavior,
                         result.LastEtag, maxNumberOfItemsToReceiveInSingleBatch);
 
                     IEnumerable<JsonDocument> handled = fetchedDocs;
@@ -1534,7 +1533,7 @@ namespace Raven.Bundles.Replication.Tasks
             return result;
         }
 
-        private List<JsonDocument> GetDocsToReplicate( PrefetchingBehavior prefetchingBehavior, Etag from, 
+        private List<JsonDocument> GetDocsToReplicate(PrefetchingBehavior prefetchingBehavior, Etag from,
             int? maxNumberOfItemsToReceiveInSingleBatch)
         {
             var docsToReplicate = prefetchingBehavior.GetDocumentsBatchFrom(from, maxNumberOfItemsToReceiveInSingleBatch);
@@ -1941,8 +1940,12 @@ namespace Raven.Bundles.Replication.Tasks
         {
             DatabaseIdsCache.Dispose();
 
-            _propagationTimeoutTimer.Enabled = false;
-            _propagationTimeoutTimer.Dispose();
+            if (_propagationTimeoutTimer != null)
+            {
+                docDb.TimerManager.ReleaseTimer(_propagationTimeoutTimer);
+                _propagationTimeoutTimer = null;
+            }
+
             if (IndexReplication != null)
                 IndexReplication.Dispose();
 
@@ -1950,7 +1953,7 @@ namespace Raven.Bundles.Replication.Tasks
                 TransformerReplication.Dispose();
 
             _cts.Cancel();
-            
+
             foreach (var activeTask in activeTasks)
             {
                 try
@@ -2113,9 +2116,9 @@ namespace Raven.Bundles.Replication.Tasks
                 records.Add(scopeRecord);
                 return new ReplicationStatisticsRecorderScope(name, scopeRecord);
             }
-            
+
         }
-        
+
     }
-   
+
 }
