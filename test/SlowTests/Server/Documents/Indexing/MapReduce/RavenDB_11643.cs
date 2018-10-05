@@ -11,7 +11,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json.Parsing;
-using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
@@ -88,6 +87,8 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                             reducer.Execute(null, indexContext,
                                 writeOperation,
                                 stats, CancellationToken.None);
+
+                            Assert.DoesNotContain(pageNumber, store2.FreedPages);
 
                             var table = indexContext.Transaction.InnerTransaction.OpenTable(ReduceMapResultsBase<MapReduceIndexDefinition>.ReduceResultsSchema,
                                 ReduceMapResultsBase<MapReduceIndexDefinition>.PageNumberToReduceResultTableName);
