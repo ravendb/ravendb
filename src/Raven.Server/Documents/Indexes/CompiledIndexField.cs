@@ -73,38 +73,11 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    public class JsNestedField : NestedField
-    {
-        public readonly string PropertyName;
-
-        public JsNestedField(string propertyName, string name, string[] path)
-            : base(name, path)
-        {
-            PropertyName = propertyName;
-        }
-
-        public override void WriteTo(StringBuilder sb)
-        {
-            throw new NotSupportedException();
-        }
-
-        public override object GetValue(object value, object blittableValue)
-        {
-            if (blittableValue is BlittableJsonReaderObject bjro)
-            {
-                if (bjro.TryGet(_field.Name, out blittableValue))
-                    return _field.GetValue(null, blittableValue);
-            }
-
-            throw new NotSupportedException($"Was expecting JSON object but got '{blittableValue?.GetType().Name}'");
-        }
-    }
-
     public class NestedField : CompiledIndexField
     {
         private Type _accessorType;
 
-        private IPropertyAccessor _accessor;
+        private PropertyAccessor _accessor;
 
         private readonly string[] _path;
 

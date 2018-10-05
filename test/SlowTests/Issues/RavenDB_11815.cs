@@ -99,16 +99,16 @@ namespace SlowTests.Issues
                                 };
 
                 Reduce = results => from result in results
-                    group result by result.Total.Currency into g
-                    select new
-                    {
-                        Total = new
-                        {
-                            Amount = g.Sum(x => x.Total.Amount),
-                            Currency = g.Key
-                        },
-                        Count = g.Sum(x => x.Count)
-                    };
+                                    group result by result.Total.Currency into g
+                                    select new
+                                    {
+                                        Total = new
+                                        {
+                                            Amount = g.Sum(x => x.Total.Amount),
+                                            Currency = g.Key
+                                        },
+                                        Count = g.Sum(x => x.Count)
+                                    };
             }
         }
 
@@ -196,10 +196,6 @@ namespace SlowTests.Issues
                     AssertResults<MapReduceIndexWithNestedField>(session);
 
                     AssertResults<MapReduceIndexWithNestedField2>(session);
-
-                    AssertResults<MapReduceIndexWithNestedFieldJs>(session);
-
-                    AssertResults<MapReduceIndexWithNestedFieldJs2>(session);
 
                     AssertResults<MultiMapReduceIndexWithNestedField>(session);
                 }
