@@ -14,7 +14,7 @@ namespace Voron.Impl
     {
         private readonly AbstractPager _pager;
 
-        public bool DisposeFilesOnDispose = true;
+        public bool DisposeFileOnDispose = true;
 
         public class AllocationInfo
         {
@@ -45,14 +45,14 @@ namespace Voron.Impl
             {
                 this.AllocationInfos = new[] { allocationInfo };
                 this.MapBase = allocationInfo.BaseAddress;
-                this.Files = new[] { allocationInfo.MappedFile };
+                this.File = allocationInfo.MappedFile;
                 sizeInBytes = allocationInfo.Size;
             }
             else
             {
                 this.AllocationInfos = new AllocationInfo[] { };
                 this.MapBase = null;
-                this.Files = new MemoryMappedFile[] {};                
+                this.File = null;
             }
                 
             this._segmentShift = Bits.MostSignificantBit(prefetchSegmentSize);
@@ -90,7 +90,7 @@ namespace Voron.Impl
 
         private int _refs;
 
-        public MemoryMappedFile[] Files;
+        public MemoryMappedFile File;
 
         public AllocationInfo[] AllocationInfos;
 
@@ -123,14 +123,10 @@ namespace Voron.Impl
                 AllocationInfos = null;            
             }
 
-            if (Files != null && DisposeFilesOnDispose)
+            if (File != null && DisposeFileOnDispose)
             {
-                foreach (var file in Files)
-                {
-                    file.Dispose();
-                }
-
-                Files = null;
+                File.Dispose();
+                File = null;
             }
 
             _released = true;
