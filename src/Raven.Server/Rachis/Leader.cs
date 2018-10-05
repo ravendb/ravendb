@@ -683,6 +683,7 @@ namespace Raven.Server.Rachis
         {
             var list = new List<TaskCompletionSource<Task<(long, object)>>>();
             var tasks = new List<Task<(long, object)>>();
+            var lostLeadershipException = new NotLeadingException("We no longer the leader, this leader is disposed");
             try
             {
                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -695,6 +696,12 @@ namespace Raven.Server.Rachis
                         {
                             // if the command was aborted due to timeout, we should skip it.
                             // The command is not appended, so We can and must do so, because the context of the command is no longer valid.
+                            continue;
+                        }
+
+                        if (_running.IsRaised() == false)
+                        {
+                            cmd.Tcs.TrySetException(lostLeadershipException);
                             continue;
                         }
 
@@ -732,6 +739,10 @@ namespace Raven.Server.Rachis
             }
             catch (Exception e)
             {
+                if (_running.IsRaised() == false)
+                {
+                    e = lostLeadershipException;
+                }
                 foreach (var tcs in list)
                 {
                     tcs.TrySetException(e);
