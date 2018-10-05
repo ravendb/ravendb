@@ -91,6 +91,8 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                                 writeOperation,
                                 stats, CancellationToken.None);
 
+                            Assert.DoesNotContain(pageNumber, store2.FreedPages);
+
                             var table = indexContext.Transaction.InnerTransaction.OpenTable(ReduceMapResultsBase<MapReduceIndexDefinition>.ReduceResultsSchema,
                                 ReduceMapResultsBase<MapReduceIndexDefinition>.PageNumberToReduceResultTableName);
 
