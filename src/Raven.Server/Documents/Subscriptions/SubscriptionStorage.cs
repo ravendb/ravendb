@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Subscriptions
         }
 
         public async Task AcknowledgeBatchProcessed(long id, string name, string changeVector, string previousChangeVector)
-        {           
+        {
             var command = new AcknowledgeSubscriptionBatchCommand(_db.Name)
             {
                 ChangeVector = changeVector,
@@ -123,15 +123,11 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public string GetResponsibleNode(string name)
+        public string GetResponsibleNode(TransactionOperationContext serverContext, string name)
         {
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
-            using (serverStoreContext.OpenReadTransaction())
-            {
-                var subscription = GetSubscriptionFromServerStore(serverStoreContext, name);
-                var databaseRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name, out _);
-                return _db.WhoseTaskIsIt(databaseRecord.Topology, subscription, subscription);
-            }
+            var subscription = GetSubscriptionFromServerStore(serverContext, name);
+            var databaseRecord = _serverStore.Cluster.ReadDatabase(serverContext, _db.Name, out _);
+            return _db.WhoseTaskIsIt(databaseRecord.Topology, subscription, subscription);
         }
 
         public async Task<SubscriptionState> AssertSubscriptionConnectionDetails(long id, string name)
@@ -230,7 +226,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                 if (take-- <= 0)
                     yield break;
-                
+
                 var subscriptionData = GetSubscriptionFromServerStore(context, subscriptionStateConnection.Options.SubscriptionName);
                 GetRunningSubscriptionInternal(history, subscriptionData, subscriptionState);
                 yield return subscriptionData;
@@ -253,7 +249,7 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 throw new ArgumentNullException("Must receive either subscription id or subscription name in order to provide subscription data");
             }
-            
+
 
             GetSubscriptionInternal(subscription, history);
 
@@ -293,7 +289,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             if (subscriptionConnectionState.Connection == null)
                 return null;
-            
+
             GetRunningSubscriptionInternal(history, subscription, subscriptionConnectionState);
             return subscription;
         }
@@ -320,11 +316,11 @@ namespace Raven.Server.Documents.Subscriptions
             if (subscriptionBlittable == null)
                 return null;
 
-                var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
+            var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
 
             if (_subscriptionConnectionStates.TryGetValue(subscriptionState.SubscriptionId, out SubscriptionConnectionState subscriptionConnection) == false)
                 return null;
-            
+
             return subscriptionConnection;
         }
 

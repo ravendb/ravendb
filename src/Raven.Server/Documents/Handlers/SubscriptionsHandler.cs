@@ -155,14 +155,14 @@ namespace Raven.Server.Documents.Handlers
 
                 var name = options.Name ?? subscriptionId.ToString();
 
-                // need to wait on the relevant remote node
-                var node = Database.SubscriptionStorage.GetResponsibleNode(name);
-                if (node != null && node != ServerStore.NodeTag)
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
+                using (serverContext.OpenReadTransaction())
                 {
-                    using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverCtx))
-                    using (serverCtx.OpenReadTransaction())
+                    // need to wait on the relevant remote node
+                    var node = Database.SubscriptionStorage.GetResponsibleNode(serverContext, name);
+                    if (node != null && node != ServerStore.NodeTag)
                     {
-                        await WaitForExecutionOnSpecificNode(serverCtx, ServerStore.GetClusterTopology(serverCtx), node, subscriptionId);
+                        await WaitForExecutionOnSpecificNode(serverContext, ServerStore.GetClusterTopology(serverContext), node, subscriptionId);
                     }
                 }
 
