@@ -346,6 +346,11 @@ namespace SlowTests.Server
                     Amount == other.Amount;
             }
 
+            public override int GetHashCode()
+            {
+                return 1;
+            }
+
             public override string ToString()
             {
                 return $"AgeGroup: Age({Age}) Amount({Amount})";

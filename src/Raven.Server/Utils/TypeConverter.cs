@@ -11,6 +11,7 @@ using Jint.Native.Array;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
 using Lucene.Net.Documents;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
@@ -485,7 +486,7 @@ namespace Raven.Server.Utils
             return PropertyAccessorCache.GetOrAdd(type, x => PropertyAccessor.Create(type, value));
         }
 
-        public static IPropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, HashSet<Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.CompiledIndexField> groupByFields)
+        public static IPropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, HashSet<CompiledIndexField> groupByFields)
         {
             var type = value.GetType();
             
