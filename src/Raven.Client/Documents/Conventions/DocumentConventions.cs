@@ -619,7 +619,7 @@ namespace Raven.Client.Documents.Conventions
             }
             else if (t == typeof(object))
             {
-                result = Constants.Documents.Collections.AllDocumentsCollection;
+                return null;
             }
             else
             {
