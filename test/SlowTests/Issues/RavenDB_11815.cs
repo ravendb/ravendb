@@ -142,8 +142,8 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                //new MapReduceIndexWithNestedField().Execute(store);
-                //new MapReduceIndexWithNestedField2().Execute(store);
+                new MapReduceIndexWithNestedField().Execute(store);
+                new MapReduceIndexWithNestedField2().Execute(store);
                 new MultiMapReduceIndexWithNestedField().Execute(store);
 
                 using (var session = store.OpenSession())
@@ -193,13 +193,13 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    //AssertResults<MapReduceIndexWithNestedField>(session);
+                    AssertResults<MapReduceIndexWithNestedField>(session);
 
-                    //AssertResults<MapReduceIndexWithNestedField2>(session);
+                    AssertResults<MapReduceIndexWithNestedField2>(session);
 
-                    //AssertResults<MapReduceIndexWithNestedFieldJs>(session);
+                    AssertResults<MapReduceIndexWithNestedFieldJs>(session);
 
-                    //AssertResults<MapReduceIndexWithNestedFieldJs2>(session);
+                    AssertResults<MapReduceIndexWithNestedFieldJs2>(session);
 
                     AssertResults<MultiMapReduceIndexWithNestedField>(session);
                 }

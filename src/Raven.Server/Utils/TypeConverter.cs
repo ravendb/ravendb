@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using Lucene.Net.Documents;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
@@ -415,7 +416,7 @@ namespace Raven.Server.Utils
             return PropertyAccessorCache.GetOrAdd(type, x => PropertyAccessor.Create(type, value));
         }
 
-        public static PropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, HashSet<Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.CompiledIndexField> groupByFields)
+        public static PropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, HashSet<CompiledIndexField> groupByFields)
         {
             var type = value.GetType();
 
