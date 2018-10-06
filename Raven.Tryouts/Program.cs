@@ -24,6 +24,7 @@ using Raven.Tests.Raft;
 using Raven.Tests.Faceted;
 using Raven.Abstractions.Replication;
 using Raven.Tests.Bundles.LiveTest;
+using Raven.Tests.Notifications;
 #if !DNXCORE50
 using Raven.Tests.Sorting;
 using Raven.SlowTests.RavenThreadPool;
@@ -78,9 +79,9 @@ namespace Raven.Tryouts
                 try
                 {
                     Console.WriteLine(i);
-                    using (var test = new RavenDB_2516())
+                    using (var test = new Embedded())
                     {
-                        test.ReplicationTopologyDiscovererSimpleTestWithOAuth().Wait();
+                        test.CanGetNotificationAboutDocumentDelete();
                     }
                 }
                 catch (Exception e)

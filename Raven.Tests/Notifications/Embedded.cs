@@ -23,14 +23,14 @@ namespace Raven.Tests.Notifications
         [Fact]
         public void CanGetNotificationAboutDocumentPut()
         {
-            using(var store = NewDocumentStore())
+            using (var store = NewDocumentStore())
             {
                 var list = new BlockingCollection<DocumentChangeNotification>();
                 store.Changes().Task.Result
                     .ForDocument("items/1").Task.Result
                     .Subscribe(list.Add);
 
-                using(var session = store.OpenSession())
+                using (var session = store.OpenSession())
                 {
                     session.Store(new Item(), "items/1");
                     session.SaveChanges();
@@ -50,9 +50,12 @@ namespace Raven.Tests.Notifications
             using (var store = NewDocumentStore())
             {
                 var list = new BlockingCollection<DocumentChangeNotification>();
-                store.Changes()
-                    .ForDocument("items/1")
-                    .Where(x=>x.Type == DocumentChangeTypes.Delete)
+                var databaseChanges = store.Changes();
+                databaseChanges.Task.Wait();
+                var documentSubscription = store.Changes().ForDocument("items/1");
+                documentSubscription.Task.Wait();
+                documentSubscription
+                    .Where(x => x.Type == DocumentChangeTypes.Delete)
                     .Subscribe(list.Add);
 
                 using (var session = store.OpenSession())
@@ -64,7 +67,7 @@ namespace Raven.Tests.Notifications
                 store.DatabaseCommands.Delete("items/1", null);
 
                 DocumentChangeNotification documentChangeNotification;
-                Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(2)));
+                Assert.True(list.TryTake(out documentChangeNotification, TimeSpan.FromSeconds(5)));
 
                 Assert.Equal("items/1", documentChangeNotification.Id);
                 Assert.Equal(documentChangeNotification.Type, DocumentChangeTypes.Delete);
