@@ -683,7 +683,7 @@ namespace Raven.Server.Rachis
         {
             var list = new List<TaskCompletionSource<Task<(long, object)>>>();
             var tasks = new List<Task<(long, object)>>();
-            var lostLeadershipException = new NotLeadingException("We no longer the leader, this leader is disposed");
+            var lostLeadershipException = new NotLeadingException("We are no longer the leader, this leader is disposed");
             try
             {
                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -741,7 +741,7 @@ namespace Raven.Server.Rachis
             {
                 if (_running.IsRaised() == false)
                 {
-                    e = lostLeadershipException;
+                    e = new NotLeadingException("We are no longer the leader, this leader is disposed", e);
                 }
                 foreach (var tcs in list)
                 {
