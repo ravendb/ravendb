@@ -113,6 +113,7 @@ namespace Raven.Server.Utils.Cli
             Clear,
             ResetServer,
             Stats,
+            TopThreads,
             Info,
             Gc,
             TrustServerCert,
@@ -319,6 +320,62 @@ namespace Raven.Server.Utils.Cli
             var prevLogMode = LoggingSource.Instance.LogMode;
             LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath);
             Program.WriteServerStatsAndWaitForEsc(cli._server);
+            LoggingSource.Instance.SetupLogMode(prevLogMode, cli._server.Configuration.Logs.Path.FullPath);
+            Console.WriteLine($"LogMode set back to {prevLogMode}.");
+            return true;
+        }
+
+        private static bool CommandTopThreads(List<string> args, RavenCli cli)
+        {
+            if (cli._consoleColoring == false)
+            {
+                // beware not to allow this from remote - will disable local console!                
+                WriteText("'topThreads' command not supported on remote pipe connection.", TextColor, cli);
+                return true;
+            }
+
+            var maxTopThreads = 10;
+            var updateIntervalInMs = 1000;
+            var cpuUsageThreshold = 0d;
+
+            if (args?.Count > 0)
+            {
+                const string errorMessage = "Usage: topThreads [max-top-threads] [update-interval-ms] [higher-cpu-then]";
+                if (args.Count > 3)
+                {
+                    WriteError(errorMessage, cli);
+                    return false;
+                }
+
+                if (int.TryParse(args[0], out maxTopThreads) == false || maxTopThreads <= 0)
+                {
+                    WriteError(errorMessage, cli);
+                    return false;
+                }
+
+                if (args.Count > 1 && 
+                    int.TryParse(args[1], out updateIntervalInMs) == false &&
+                    updateIntervalInMs <= 0)
+                {
+                    WriteError(errorMessage, cli);
+                    return false;
+                }
+
+                if (args.Count > 2 &&
+                    double.TryParse(args[2], out cpuUsageThreshold) == false &&
+                    cpuUsageThreshold <= 0)
+                {
+                    WriteError(errorMessage, cli);
+                    return false;
+                }
+            }
+            
+            Console.ResetColor();
+
+            LoggingSource.Instance.DisableConsoleLogging();
+            var prevLogMode = LoggingSource.Instance.LogMode;
+            LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath);
+            Program.WriteThreadsInfoAndWaitForEsc(cli._server, maxTopThreads, updateIntervalInMs, cpuUsageThreshold);
             LoggingSource.Instance.SetupLogMode(prevLogMode, cli._server.Configuration.Logs.Path.FullPath);
             Console.WriteLine($"LogMode set back to {prevLogMode}.");
             return true;
@@ -1036,6 +1093,7 @@ namespace Raven.Server.Utils.Cli
                 new[] {"helpPrompt", "Detailed prompt command usage"},
                 new[] {"clear", "Clear screen"},
                 new[] {"stats", "Online server's memory consumption stats, request ratio and documents count"},
+                new[] {"threadsInfo", "Online server's threads info (CPU, priority, state"},
                 new[] {"log [http-]<on|off|information/operations> [no-console]", "set log on/off or to specific mode. filter requests using http-on/off log. no-console to avoid printing in CLI"},
                 new[] {"info", "Print system info and current stats"},
                 new[] {"logo [no-clear]", "Clear screen and print initial logo"},
@@ -1095,6 +1153,7 @@ namespace Raven.Server.Utils.Cli
             [Command.Prompt] = new SingleAction { NumOfArgs = 1, DelegateFunc = CommandPrompt },
             [Command.HelpPrompt] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandHelpPrompt },
             [Command.Stats] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandStats },
+            [Command.TopThreads] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandTopThreads },
             [Command.Gc] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandGc },
             [Command.Log] = new SingleAction { NumOfArgs = 1, DelegateFunc = CommandLog },
             [Command.Clear] = new SingleAction { NumOfArgs = 0, DelegateFunc = CommandClear },

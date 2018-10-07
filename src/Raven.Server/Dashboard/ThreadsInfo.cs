@@ -12,6 +12,8 @@ namespace Raven.Server.Dashboard
 
         public List<ThreadInfo> List { get; }
 
+        public double CpuUsage { get; set; }
+
         public ThreadsInfo()
         {
             List = new List<ThreadInfo>();
@@ -21,6 +23,7 @@ namespace Raven.Server.Dashboard
         {
             var json = base.ToJson();
             json[nameof(List)] = new DynamicJsonArray(List.Select(x => x.ToJson()));
+            json[nameof(CpuUsage)] = CpuUsage;
             return json;
         }
     }
@@ -35,11 +38,11 @@ namespace Raven.Server.Dashboard
 
         public int? ManagedThreadId { get; set; }
 
-        public DateTime StartingTime { get; set; }
+        public DateTime? StartingTime { get; set; }
 
-        public ThreadState State { get; set; }
+        public ThreadState? State { get; set; }
 
-        public ThreadPriorityLevel Priority { get; set; }
+        public ThreadPriorityLevel? Priority { get; set; }
 
         public ThreadWaitReason? ThreadWaitReason { get; set; }
 
