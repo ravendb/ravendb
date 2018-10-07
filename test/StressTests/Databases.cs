@@ -26,6 +26,8 @@ namespace StressTests
 
             using (var store = GetDocumentStore())
             {
+                if (IntPtr.Size == sizeof(int))
+                    numberOfDatabases = 20;
                 Console.WriteLine("Creating databases");
                 CreateDatabases(numberOfDatabases, store);
                 Console.WriteLine("Done creating databases");

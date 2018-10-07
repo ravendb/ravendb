@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using SlowTests.Client.Attachments;
 using Tests.Infrastructure;
@@ -46,6 +47,8 @@ namespace StressTests.Client.Attachments
         [InlineData(100_000)]
         public async Task StressPutLotOfAttachmentsAsync(int count)
         {
+            if (IntPtr.Size == sizeof(int))
+                count = 10_000;
             using (var stress = new AttachmentsSessionAsync())
             {
                 await stress.PutLotOfAttachments(count);
