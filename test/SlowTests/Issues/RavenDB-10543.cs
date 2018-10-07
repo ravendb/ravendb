@@ -54,7 +54,7 @@ namespace SlowTests.Issues
                                     Average3 = x.Properties.Average(a => a)     //4.5
                                 }; 
                     
-                    Assert.Equal($"declare function output(x) {{{Environment.NewLine}\tvar test = 1;{Environment.NewLine}\treturn {{ Average1 : x.Properties.reduce(function(a, b) {{ return a + b; }}, 0)/x.Properties.length, Average2 : x.Items.map(function(a){{return a.Value;}}).reduce(function(a, b) {{ return a + b; }}, 0)/x.Items.length, Average3 : x.Properties.map(function(a){{return a;}}).reduce(function(a, b) {{ return a + b; }}, 0)/x.Properties.length }};{Environment.NewLine}}}{Environment.NewLine}from Articles as x select output(x)", query.ToString());
+                    Assert.Equal($"declare function output(x) {{{Environment.NewLine}\tvar test = 1;{Environment.NewLine}\treturn {{ Average1 : x.Properties.reduce(function(a, b) {{ return a + b; }}, 0)/(x.Properties.length||1), Average2 : x.Items.map(function(a){{return a.Value;}}).reduce(function(a, b) {{ return a + b; }}, 0)/(x.Items.length||1), Average3 : x.Properties.map(function(a){{return a;}}).reduce(function(a, b) {{ return a + b; }}, 0)/(x.Properties.length||1) }};{Environment.NewLine}}}{Environment.NewLine}from Articles as x select output(x)", query.ToString());
 
                     var result = query.ToList();
                     

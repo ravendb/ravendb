@@ -2837,9 +2837,9 @@ from Orders as o load o.Employee as employee select output(o, employee)" , query
                                  "Take : u.Roles.slice(0, 2), " +
                                  "Skip : u.Roles.slice(2, u.Roles.length), " +
                                  "Max : u.Roles.reduce(function(a, b) { return Raven_Max(a, b);}), " +
-                                 "MaxWithSelector : u.Details.map(function(d){return d.Number;}).reduce(function(a, b) { return Raven_Max(a, b);}), " +
+                                 "MaxWithSelector : u.Details.map(function(d){return d.Number;}).reduce(function(a, b) { return Raven_Max(a, b);}, 0), " +
                                  "Min : u.Roles.reduce(function(a, b) { return Raven_Min(a, b);}), " +
-                                 "MinWithSelector : u.Details.map(function(d){return d.Number;}).reduce(function(a, b) { return Raven_Min(a, b);}), " +
+                                 "MinWithSelector : u.Details.map(function(d){return d.Number;}).reduce(function(a, b) { return Raven_Min(a, b);}, 0), " +
                                  "Reverse : u.Roles.slice().reverse(), " +
                                  "IndexOf : u.Roles.indexOf(\"3\"), " +
                                  "Concat : u.Roles.concat($p0), " +
