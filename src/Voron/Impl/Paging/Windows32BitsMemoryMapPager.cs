@@ -166,7 +166,7 @@ namespace Voron.Impl.Paging
             }
 
             var ammountToMapInBytes = NearestSizeToAllocationGranularity((distanceFromStart + numberOfPages) * Constants.Storage.PageSize);
-            MapPages(state, allocationStartPosition, ammountToMapInBytes);
+            MapPages(state, allocationStartPosition, ammountToMapInBytes, true);
             return true;
         }
 

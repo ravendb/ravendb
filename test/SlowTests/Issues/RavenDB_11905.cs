@@ -12,7 +12,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_11905 : RavenTestBase
     {
-        [Fact]
+        [FactAndSkipWhen32BitsEnvironment]
         public async Task CanUseVoronRecoveryOnEmptyDatabase()
         {
             var dbPath = NewDataPath();

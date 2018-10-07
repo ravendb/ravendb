@@ -14,7 +14,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_11904 : RavenTestBase
     {
-        [Fact]
+        [FactAndSkipWhen32BitsEnvironment]
         public async Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode()
         {
             var dbPath = NewDataPath(prefix: Guid.NewGuid().ToString());

@@ -22,14 +22,27 @@ namespace SlowTests.Issues
             var random = new Random(1);
             var bytes = new byte[1024 * 8];
 
+            int treeKeys;
+            int treeKeysToDel;
+
+            if (IntPtr.Size == 8)
+            {
+                treeKeys = 40_000;
+                treeKeysToDel = 25_000;
+            }
+            else
+            {
+                treeKeys = 15_000;
+                treeKeysToDel = 10_000;
+            }
+            int treeKeysAssumedLeft = treeKeys - treeKeysToDel;
             // insert
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.ReadTree("tree");
 
                 Assert.True(tree.State.Flags.HasFlag(TreeFlags.LeafsCompressed));
-
-                for (int i = 0; i < 40_000; i++)
+                for (int i = 0; i < treeKeys; i++)
                 {
                     random.NextBytes(bytes);
 
@@ -46,7 +59,7 @@ namespace SlowTests.Issues
 
                 Assert.True(tree.State.Flags.HasFlag(TreeFlags.LeafsCompressed));
 
-                for (int i = 0; i < 25_000; i++)
+                for (int i = 0; i < treeKeysToDel; i++)
                 {
                     tree.Delete(GetKey(i));
                 }
@@ -68,12 +81,13 @@ namespace SlowTests.Issues
                     do
                     {
                         var key = it.CurrentKey.ToString();
-                        Assert.Equal(GetKey(25_000 + count), key);
+
+                        Assert.Equal(GetKey(treeKeysToDel + count), key);
 
                         count++;
                     } while (it.MoveNext());
 
-                    Assert.Equal(15_000, count);
+                    Assert.Equal(treeKeysAssumedLeft, count);
                 }
             }
         }
