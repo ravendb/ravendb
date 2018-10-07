@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using FastTests;
 using FastTests.Voron;
 using Sparrow;
 using Sparrow.Utils;
@@ -95,7 +96,7 @@ namespace SlowTests.Voron
             Assert.Equal(currentJournalInfo.CurrentJournal, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
         }
 
-        [Fact]
+        [FactAndSkipWhen32BitsEnvironment]
         public void CanResetLogInfoAfterBigUncommitedTransaction2()
         {
             using (var tx = Env.WriteTransaction())

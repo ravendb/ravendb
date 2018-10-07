@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests;
 using FastTests.Voron;
 using Voron;
 using Voron.Global;
@@ -33,7 +34,7 @@ namespace SlowTests.Voron
                 yield return new KeyValuePair<string, string>("Key " + i, "Data:" + dummyData);
         }
 
-        [Theory]
+        [TheoryAndSkipWhen32BitsEnvironment]
         [InlineData(2)]
         [InlineData(5)]
         [InlineData(15)]
@@ -56,8 +57,7 @@ namespace SlowTests.Voron
             Env.FlushLogToDataFile();
         }
 
-
-        [Fact]
+        [FactAndSkipWhen32BitsEnvironment]
         public void Should_be_able_to_read_and_write_lots_of_data()
         {
             CreatTestSchema();
