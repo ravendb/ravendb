@@ -290,7 +290,7 @@ loadToOrders(orderData);");
                         dbCommand.CommandText = " SELECT COUNT(*) FROM Orders";
                         Assert.Equal(1, dbCommand.ExecuteScalar());
                         dbCommand.CommandText = " SELECT OrderLinesCount FROM Orders";
-                        Assert.Equal(DBNull.Value, dbCommand.ExecuteScalar());
+                        Assert.Equal(0, dbCommand.ExecuteScalar());
                     }
                 }
             }
