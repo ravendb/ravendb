@@ -303,10 +303,6 @@ namespace Raven.Server.Utils
                 var totalProcessorTime = process.TotalProcessorTime.Ticks;
                 return (TotalProcessorTimeTicks: totalProcessorTime, TimeTicks: timeTicks);
             }
-            catch (PlatformNotSupportedException)
-            {
-                return TryGetProcessTimesForLinux();
-            }
             catch (NotSupportedException)
             {
                 return TryGetProcessTimesForLinux();

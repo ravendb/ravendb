@@ -2,27 +2,33 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Raven.Server.Dashboard;
 using Sparrow.Logging;
 using Sparrow.Utils;
+using ThreadState = System.Diagnostics.ThreadState;
 
 namespace Raven.Server.Utils
 {
-    public static class ThreadsUsage
+    public class ThreadsUsage
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineResources>("ThreadsUsage");
-        private static (long TotalProcessorTimeTicks, long TimeTicks) _processTimes;
-        private static Dictionary<int, long> _threadTimesInfo = new Dictionary<int, long>();
+        private (long TotalProcessorTimeTicks, long TimeTicks) _processTimes;
+        private Dictionary<int, long> _threadTimesInfo = new Dictionary<int, long>();
 
-        static ThreadsUsage()
+        public ThreadsUsage()
         {
             using (var process = Process.GetCurrentProcess())
             {
                 _processTimes = CpuUsage.GetProcessTimes(process);
             }
+
+            // calculate the initial threads usage
+            Thread.Sleep(10);
+            Calculate();
         }
 
-        public static ThreadsInfo Calculate()
+        public ThreadsInfo Calculate()
         {
             var threadAllocations = NativeMemory.AllThreadStats
                         .GroupBy(x => x.UnmanagedThreadId)
@@ -42,13 +48,17 @@ namespace Raven.Server.Utils
                     return threadsInfo;
 
                 var cpuUsage = (processorTimeDiff * 100.0) / timeDiff / activeCores;
+                cpuUsage = Math.Min(cpuUsage, 100);
 
                 var threadTimesInfo = new Dictionary<int, long>();
+                double totalCpuUsage = 0;
                 foreach (var thread in GetProcessThreads(process))
                 {
                     try
                     {
                         var threadCpuUsage = GetThreadCpuUsage(thread, processorTimeDiff, cpuUsage);
+                        totalCpuUsage += threadCpuUsage;
+
                         int? managedThreadId = null;
                         string threadName = null;
                         if (threadAllocations.TryGetValue((ulong)thread.Id, out var threadStats))
@@ -57,16 +67,17 @@ namespace Raven.Server.Utils
                             managedThreadId = threadStats.Id;
                         }
 
+                        var threadState = GetThreadInfoOrDefault<ThreadState?>(() => thread.ThreadState);
                         threadsInfo.List.Add(new ThreadInfo
                         {
                             Id = thread.Id,
                             CpuUsage = threadCpuUsage,
                             Name = threadName ?? "Unmanaged Thread",
                             ManagedThreadId = managedThreadId,
-                            StartingTime = thread.StartTime.ToUniversalTime(),
-                            State = thread.ThreadState,
-                            Priority = thread.PriorityLevel,
-                            ThreadWaitReason = thread.ThreadState == ThreadState.Wait ? thread.WaitReason : (ThreadWaitReason?)null
+                            StartingTime = GetThreadInfoOrDefault<DateTime?>(() => thread.StartTime.ToUniversalTime()),
+                            State = threadState,
+                            Priority = GetThreadInfoOrDefault<ThreadPriorityLevel?>(() => thread.PriorityLevel),
+                            ThreadWaitReason = GetThreadInfoOrDefault(() => threadState == ThreadState.Wait ? thread.WaitReason : (ThreadWaitReason?)null)
                         });
 
                         threadTimesInfo[thread.Id] = thread.TotalProcessorTime.Ticks;
@@ -87,8 +98,21 @@ namespace Raven.Server.Utils
                 }
 
                 _threadTimesInfo = threadTimesInfo;
+                threadsInfo.CpuUsage = Math.Min(totalCpuUsage, 100);
 
                 return threadsInfo;
+            }
+        }
+
+        private static T GetThreadInfoOrDefault<T>(Func<T> action)
+        {
+            try
+            {
+                return action();
+            }
+            catch (NotSupportedException)
+            {
+                return default(T);
             }
         }
 
@@ -104,15 +128,15 @@ namespace Raven.Server.Utils
             }
         }
 
-        private static double GetThreadCpuUsage(ProcessThread thread, long processorTimeDiff, double cpuUsage)
+        private double GetThreadCpuUsage(ProcessThread thread, long processorTimeDiff, double cpuUsage)
         {
-            if (_threadTimesInfo.TryGetValue(thread.Id, out var previousProcessorTimeTicks) == false)
+            if (_threadTimesInfo.TryGetValue(thread.Id, out var previousTotalProcessorTimeTicks) == false)
             {
                 // no previous info for this thread yet
                 return 0;
             }
 
-            var threadTimeDiff = thread.TotalProcessorTime.Ticks - previousProcessorTimeTicks;
+            var threadTimeDiff = thread.TotalProcessorTime.Ticks - previousTotalProcessorTimeTicks;
             if (threadTimeDiff == 0 || processorTimeDiff == 0)
             {
                 // no cpu usage

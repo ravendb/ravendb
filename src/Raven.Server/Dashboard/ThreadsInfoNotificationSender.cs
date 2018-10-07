@@ -12,7 +12,7 @@ namespace Raven.Server.Dashboard
     {
         private readonly ConcurrentSet<ConnectedWatcher> _watchers;
         private readonly TimeSpan _notificationsThrottle;
-
+        private readonly ThreadsUsage _threadsUsage;
         private DateTime _lastSentNotification = DateTime.MinValue;
 
         public ThreadsInfoNotificationSender(string resourceName,
@@ -21,6 +21,7 @@ namespace Raven.Server.Dashboard
         {
             _watchers = watchers;
             _notificationsThrottle = notificationsThrottle;
+            _threadsUsage = new ThreadsUsage();
         }
 
         protected override async Task DoWork()
@@ -40,7 +41,7 @@ namespace Raven.Server.Dashboard
                 if (_watchers.Count == 0)
                     return;
 
-                var threadsInfo = ThreadsUsage.Calculate();
+                var threadsInfo = _threadsUsage.Calculate();
                 foreach (var watcher in _watchers)
                 {
                     // serialize to avoid race conditions

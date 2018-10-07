@@ -17,10 +17,6 @@ namespace Raven.Server.Dashboard
             var databasesInfoNotificationSender = 
                 new DatabasesInfoNotificationSender(nameof(ServerStore), serverStore, Watchers, options.DatabasesInfoThrottle, shutdown);
             BackgroundWorkers.Add(databasesInfoNotificationSender);
-
-            var threadsInfoNotificationSender =
-                new ThreadsInfoNotificationSender(nameof(ServerStore), Watchers, options.MachineResourcesThrottle, shutdown);
-            BackgroundWorkers.Add(threadsInfoNotificationSender);
         }
     }
 }

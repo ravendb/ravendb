@@ -362,5 +362,67 @@ namespace Raven.Server
             Console.WriteLine();
             Console.WriteLine($"Stats halted.");
         }
+
+        public static void WriteThreadsInfoAndWaitForEsc(RavenServer server, int maxTopThreads, int updateIntervalInMs, double cpuUsageThreshold)
+        {
+            Console.WriteLine("Showing threads info, press any key to close...");
+            var i = 0L;
+            var threadsUsage = new ThreadsUsage();
+            Thread.Sleep(100);
+
+            var cursorLeft = Console.CursorLeft;
+            var cursorTop = Console.CursorTop;
+
+            var waitIntervals = updateIntervalInMs / 100;
+            var maxIndexNameLength = 0;
+            while (Console.KeyAvailable == false)
+            {
+                Console.SetCursorPosition(cursorLeft, cursorTop);
+
+                var threadsInfo = threadsUsage.Calculate();
+                Console.Write($"{(i++ % 2 == 0 ? "*" : "+")} ");
+                Console.WriteLine($"CPU usage: {threadsInfo.CpuUsage:0.00}% (total threads: {threadsInfo.List.Count})   ");
+                
+                var count = 0;
+                var isFirst = true;
+                var newMaxIndexNameLength = 0;
+                foreach (var threadInfo in threadsInfo.List
+                    .Where(x => x.CpuUsage >= cpuUsageThreshold)
+                    .OrderByDescending(x => x.CpuUsage))
+                {
+                    if (isFirst)
+                    {
+                        Console.WriteLine("  thread id  |  cpu usage  |   priority    |     thread name       ");
+                        isFirst = false;
+                    }
+
+                    if (++count > maxTopThreads)
+                        break;
+
+                    var nameLength = threadInfo.Name.Length;
+                    newMaxIndexNameLength = Math.Max(newMaxIndexNameLength, nameLength);
+                    var numberOfEmptySpaces = maxIndexNameLength - nameLength + 1;
+                    var emptySpaces = numberOfEmptySpaces > 0 ? new string(' ', numberOfEmptySpaces) : string.Empty;
+
+                    Console.Write($"    {threadInfo.Id,-7} ");
+                    Console.Write($" |    {$"{threadInfo.CpuUsage:0.00}%",-8}");
+                    Console.Write($" | {threadInfo.Priority,-12} ");
+                    Console.Write($" | {threadInfo.Name}{emptySpaces}");
+
+                    Console.WriteLine();
+                }
+
+                maxIndexNameLength = newMaxIndexNameLength;
+
+                for (var j = 0; j < waitIntervals && Console.KeyAvailable == false; j++)
+                {
+                    Thread.Sleep(100);
+                }
+            }
+
+            Console.ReadKey(true);
+            Console.WriteLine();
+            Console.WriteLine("Threads info halted.");
+        }
     }
 }
