@@ -140,7 +140,8 @@ namespace Raven.Server.ServerWide.Maintenance
                         continue; // Database does not exists in this server
                     }
 
-                    if (record.TryGet(nameof(DatabaseRecord.Topology), out DatabaseTopology topology) == false || topology == null)
+                    var topology = _server.Cluster.ReadDatabaseTopology(record);
+                    if (topology == null)
                     {
                         continue;
                     }

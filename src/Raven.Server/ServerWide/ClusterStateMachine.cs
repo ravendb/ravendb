@@ -1414,11 +1414,23 @@ namespace Raven.Server.ServerWide
         public DatabaseRecord ReadDatabase<T>(TransactionOperationContext<T> context, string name, out long etag)
             where T : RavenTransaction
         {
-            var doc = Read(context, "db/" + name.ToLowerInvariant(), out etag);
+            var doc = ReadRawDatabase(context, name, out etag);
             if (doc == null)
                 return null;
 
             return JsonDeserializationCluster.DatabaseRecord(doc);
+        }
+
+        public BlittableJsonReaderObject ReadRawDatabase<T>(TransactionOperationContext<T> context, string name, out long etag)
+            where T : RavenTransaction
+        {
+            return Read(context, "db/" + name.ToLowerInvariant(), out etag);
+        }
+
+        public DatabaseTopology ReadDatabaseTopology(BlittableJsonReaderObject rawDatabaseRecord)
+        {
+            rawDatabaseRecord.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject topology);
+            return JsonDeserializationCluster.DatabaseTopology(topology);
         }
 
         public IEnumerable<(string Prefix, long Value)> ReadIdentities<T>(TransactionOperationContext<T> context, string databaseName, int start, long take)
