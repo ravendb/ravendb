@@ -16,10 +16,29 @@ namespace Raven.Embedded
             if (string.IsNullOrWhiteSpace(options.DataDirectory))
                 throw new ArgumentNullException(nameof(options.DataDirectory));
 
-            var serverDllPath = Path.Combine(options.ServerDirectory, "Raven.Server.dll");
+            if (string.IsNullOrWhiteSpace(options.LogsPath))
+                throw new ArgumentNullException(nameof(options.LogsPath));
 
-            if (File.Exists(serverDllPath) == false)
-                throw new FileNotFoundException("Server file was not found", serverDllPath);
+            var serverDllPath = Path.Combine(options.ServerDirectory, "Raven.Server.dll");
+            var serverDllFound = File.Exists(serverDllPath);
+
+            if (serverDllFound == false)
+            {
+                if (string.Equals(options.ServerDirectory, ServerOptions.DefaultServerDirectory, StringComparison.OrdinalIgnoreCase))
+                {
+                    // ASP.NET (not Core) AppContext.BaseDirectory is not in 'bin' folder
+                    // but NuSpec contentFiles are extracting there
+                    var aspNetServerDllPath = Path.Combine(ServerOptions.AltServerDirectory, "Raven.Server.dll");
+                    if (File.Exists(aspNetServerDllPath))
+                    {
+                        serverDllFound = true;
+                        serverDllPath = aspNetServerDllPath;
+                    }
+                }
+
+                if (serverDllFound == false)
+                    throw new FileNotFoundException("Server file was not found", serverDllPath);
+            }
 
             if (string.IsNullOrWhiteSpace(options.DotNetPath))
                 throw new ArgumentNullException(nameof(options.DotNetPath));
@@ -34,6 +53,7 @@ namespace Raven.Embedded
             commandLineArgs.Add($"--License.Eula.Accepted={options.AcceptEula}");
             commandLineArgs.Add("--Setup.Mode=None");
             commandLineArgs.Add($"--DataDir={CommandLineArgumentEscaper.EscapeSingleArg(options.DataDirectory)}");
+            commandLineArgs.Add($"--Logs.Path={CommandLineArgumentEscaper.EscapeSingleArg(options.LogsPath)}");
 
             if (options.Security != null)
             {

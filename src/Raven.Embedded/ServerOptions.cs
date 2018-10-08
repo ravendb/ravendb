@@ -7,11 +7,17 @@ namespace Raven.Embedded
 {
     public class ServerOptions
     {
+        internal static string DefaultServerDirectory = Path.Combine(AppContext.BaseDirectory, "RavenDBServer");
+
+        internal static string AltServerDirectory = Path.Combine(AppContext.BaseDirectory, "bin", "RavenDBServer");
+
         public string FrameworkVersion { get; set; } = "2.1.5";
+
+        public string LogsPath { get; set; } = Path.Combine(AppContext.BaseDirectory, "RavenDB", "Logs");
 
         public string DataDirectory { get; set; } = Path.Combine(AppContext.BaseDirectory, "RavenDB");
 
-        internal string ServerDirectory { get; set; } = Path.Combine(AppContext.BaseDirectory, "RavenDBServer");
+        internal string ServerDirectory { get; set; } = DefaultServerDirectory;
 
         public string DotNetPath { get; set; } = "dotnet";
 
