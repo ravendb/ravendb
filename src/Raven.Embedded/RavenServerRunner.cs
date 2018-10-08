@@ -24,14 +24,16 @@ namespace Raven.Embedded
             if (string.IsNullOrWhiteSpace(options.DotNetPath))
                 throw new ArgumentNullException(nameof(options.DotNetPath));
 
+            var commandLineArgs = new List<string>(options.CommandLineArgs);
+
             using (var currentProcess = Process.GetCurrentProcess())
             {
-                options.CommandLineArgs.Add($"--Embedded.ParentProcessId={currentProcess.Id}");
+                commandLineArgs.Add($"--Embedded.ParentProcessId={currentProcess.Id}");
             }
 
-            options.CommandLineArgs.Add($"--License.Eula.Accepted={options.AcceptEula}");
-            options.CommandLineArgs.Add("--Setup.Mode=None");
-            options.CommandLineArgs.Add($"--DataDir={CommandLineArgumentEscaper.EscapeSingleArg(options.DataDirectory)}");
+            commandLineArgs.Add($"--License.Eula.Accepted={options.AcceptEula}");
+            commandLineArgs.Add("--Setup.Mode=None");
+            commandLineArgs.Add($"--DataDir={CommandLineArgumentEscaper.EscapeSingleArg(options.DataDirectory)}");
 
             if (options.Security != null)
             {
@@ -40,16 +42,16 @@ namespace Raven.Embedded
 
                 if (options.Security.CertificatePath != null)
                 {
-                    options.CommandLineArgs.Add($"--Security.Certificate.Path={CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificatePath)}");
+                    commandLineArgs.Add($"--Security.Certificate.Path={CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificatePath)}");
                     if (options.Security.CertificatePassword != null)
-                        options.CommandLineArgs.Add($"--Security.Certificate.Password={CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificatePassword)}");
+                        commandLineArgs.Add($"--Security.Certificate.Password={CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificatePassword)}");
                 }
                 else
                 {
-                    options.CommandLineArgs.Add($"--Security.Certificate.Exec={CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificateExec)}");
-                    options.CommandLineArgs.Add($"--Security.Certificate.Exec.Arguments={CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificateArguments)}");
+                    commandLineArgs.Add($"--Security.Certificate.Exec={CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificateExec)}");
+                    commandLineArgs.Add($"--Security.Certificate.Exec.Arguments={CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificateArguments)}");
                 }
-                options.CommandLineArgs.Add($"--Security.WellKnownCertificates.Admin={CommandLineArgumentEscaper.EscapeSingleArg(options.Security.ClientCertificate.Thumbprint)}");
+                commandLineArgs.Add($"--Security.WellKnownCertificates.Admin={CommandLineArgumentEscaper.EscapeSingleArg(options.Security.ClientCertificate.Thumbprint)}");
             }
             else
             {
@@ -57,13 +59,13 @@ namespace Raven.Embedded
                     options.ServerUrl = "http://127.0.0.1:0";
             }
 
-            options.CommandLineArgs.Add($"--ServerUrl={options.ServerUrl}");
-            options.CommandLineArgs.Insert(0, CommandLineArgumentEscaper.EscapeSingleArg(serverDllPath));
+            commandLineArgs.Add($"--ServerUrl={options.ServerUrl}");
+            commandLineArgs.Insert(0, CommandLineArgumentEscaper.EscapeSingleArg(serverDllPath));
 
             if (string.IsNullOrWhiteSpace(options.FrameworkVersion) == false)
-                options.CommandLineArgs.Insert(0, $"--fx-version {options.FrameworkVersion}");
+                commandLineArgs.Insert(0, $"--fx-version {options.FrameworkVersion}");
 
-            var argumentsString = string.Join(" ", options.CommandLineArgs);
+            var argumentsString = string.Join(" ", commandLineArgs);
 
             var processStartInfo = new ProcessStartInfo
             {
