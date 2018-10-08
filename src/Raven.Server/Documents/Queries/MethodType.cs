@@ -12,6 +12,7 @@
         Exists,
         Exact,
         Intersect,
+        Fuzzy,
 
         Count,
         Sum,

@@ -1713,10 +1713,36 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.MoreLikeThis:
                         HandleMoreLikeThis(methodName, arguments, parameters);
                         return;
+                    case MethodType.Fuzzy:
+                        HandleFuzzy(arguments, parameters);
+                        return;
                     default:
                         QueryMethod.ThrowMethodNotSupported(methodType, QueryText, parameters);
                         break;
                 }
+            }
+
+            private void HandleFuzzy(List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
+            {
+                if (arguments.Count != 2)
+                    throw new InvalidQueryException("Method fuzzy() expects to have two arguments", QueryText, parameters);
+
+                var firstArgument = arguments[0] as BinaryExpression;
+                if (firstArgument == null)
+                    throw new InvalidQueryException("Method fuzzy() expects that first argument will be a binary expression", QueryText, parameters);
+
+                if (firstArgument.Operator != OperatorType.Equal)
+                    throw new InvalidQueryException("Method fuzzy() expects that first argument will be a binary expression with equals operator", QueryText, parameters);
+
+                var secondArgument = arguments[1];
+                if (secondArgument is ValueExpression ve == false)
+                    throw new InvalidQueryException("Method fuzzy() expects that second argument will be a value", QueryText, parameters);
+
+                var value = QueryBuilder.GetValue(_metadata.Query, _metadata, parameters, secondArgument);
+                if (value.Type != ValueTokenType.Long && value.Type != ValueTokenType.Double)
+                    throw new InvalidQueryException("Method fuzzy() expects that second argument will be a number", QueryText, parameters);
+
+                Visit(firstArgument, parameters);
             }
 
             private void HandleMoreLikeThis(string methodName, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)

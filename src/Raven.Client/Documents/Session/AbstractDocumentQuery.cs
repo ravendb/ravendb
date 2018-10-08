@@ -969,14 +969,13 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var tokens = GetCurrentWhereTokens();
             var whereToken = tokens.Last?.Value as WhereToken;
             if (whereToken == null)
-            {
-                throw new InvalidOperationException("Missing where clause");
-            }
+                throw new InvalidOperationException("Fuzzy can only be used right after Where clause");
+
+            if (whereToken.WhereOperator != WhereOperator.Equals)
+                throw new InvalidOperationException("Fuzzy can only be used right after Where clause with equals operator");
 
             if (fuzzy < 0m || fuzzy > 1m)
-            {
                 throw new ArgumentOutOfRangeException(nameof(fuzzy), "Fuzzy distance must be between 0.0 and 1.0");
-            }
 
             whereToken.Options.Fuzzy = fuzzy;
         }

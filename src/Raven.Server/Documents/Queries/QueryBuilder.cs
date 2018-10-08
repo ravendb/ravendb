@@ -354,6 +354,8 @@ namespace Raven.Server.Documents.Queries
                 {
                     case MethodType.Search:
                         return HandleSearch(query, me, metadata, parameters, analyzer);
+                    case MethodType.Fuzzy:
+                        return HandleFuzzy(serverContext, documentsContext, query, me, metadata, parameters, analyzer, factories, exact);
                     case MethodType.Boost:
                         return HandleBoost(serverContext, documentsContext, query, me, metadata, parameters, analyzer, factories, exact);
                     case MethodType.Regex:
@@ -576,6 +578,19 @@ namespace Raven.Server.Documents.Queries
                 : valueAsString.Insert(0, LuceneQueryHelper.Asterisk);
 
             return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.WildCard);
+        }
+
+        private static Lucene.Net.Search.Query HandleFuzzy(TransactionOperationContext serverContext, DocumentsOperationContext context, Query query, MethodExpression expression, QueryMetadata metadata,
+            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact)
+        {
+            var similarity = float.Parse(((ValueExpression)expression.Arguments[1]).Token.Value);
+
+            var q = ToLuceneQuery(serverContext, context, query, expression.Arguments[0], metadata, indexDef: null, parameters, analyzer, factories, exact);
+            var tq = q as TermQuery;
+            if (tq == null)
+                throw new InvalidQueryException("Fuzzy only works on term queries", metadata.QueryText, parameters); // should not happen
+
+            return new FuzzyQuery(tq.Term, similarity);
         }
 
         private static Lucene.Net.Search.Query HandleBoost(TransactionOperationContext serverContext, DocumentsOperationContext context, Query query, MethodExpression expression, QueryMetadata metadata,
