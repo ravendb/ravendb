@@ -62,7 +62,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                         return base.VisitInvocationExpression(node);
 
                     //handle docs.SelectMany().SelectMany()...
-                    var innerQueryExp = (QueryExpressionSyntax)Visit(selectManyInvocExp);
+                    var innerQueryExp = Visit(selectManyInvocExp) as QueryExpressionSyntax;
+                    if (innerQueryExp == null)
+                        throw new NotSupportedException("This expression is not recognized, skipping prettifying");
 
                     var clausesList = innerQueryExp.Body.Clauses.Add(SyntaxFactory.LetClause(
                         SyntaxFactory.Identifier(selectorExp.ParameterList.Parameters[0].Identifier.ValueText),
