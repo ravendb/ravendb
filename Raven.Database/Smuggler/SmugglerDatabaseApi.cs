@@ -37,10 +37,16 @@ namespace Raven.Smuggler
             SetDatabaseNameIfEmpty(betweenOptions.To);
 
             using (var exportStore = CreateStore(betweenOptions.From))
-            using (var exportBulkOperation = CreateBulkInsertOperation(exportStore))
             {
                 var exportStoreFeatures = new Reference<ServerSupportedFeatures>();
-                var exportOperations = new SmugglerRemoteDatabaseOperations(() => exportStore, () => exportBulkOperation, () => exportStoreFeatures.Value.IsDocsStreamingSupported, () => exportStoreFeatures.Value.IsTransformersSupported, () => exportStoreFeatures.Value.IsIdentitiesSmugglingSupported);
+                var exportOperations = new SmugglerRemoteDatabaseOperations(() => exportStore,
+                    () =>
+                    {
+                        throw new NotSupportedException("Could not and should not open bulk insert to origin of the smuggling operation");
+                    }, 
+                    () => exportStoreFeatures.Value.IsDocsStreamingSupported, 
+                    () => exportStoreFeatures.Value.IsTransformersSupported, 
+                    () => exportStoreFeatures.Value.IsIdentitiesSmugglingSupported);
 
                 exportStoreFeatures.Value = await DetectServerSupportedFeatures(exportOperations, betweenOptions.From).ConfigureAwait(false);
 
@@ -61,7 +67,7 @@ namespace Raven.Smuggler
                         From = exportOperations,
                         To = importOperations,
                         IncrementalKey = betweenOptions.IncrementalKey
-                    }, Options, exportBulkOperation)
+                    }, Options, null)
                     .ConfigureAwait(false);
                 }
             }
