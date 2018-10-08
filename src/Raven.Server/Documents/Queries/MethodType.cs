@@ -13,6 +13,7 @@
         Exact,
         Intersect,
         Fuzzy,
+        Proximity,
 
         Count,
         Sum,

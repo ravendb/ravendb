@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Queries
 
         private static Lucene.Net.Search.Query ToLuceneQuery(TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, Query query,
             QueryExpression expression, QueryMetadata metadata, IndexDefinitionBase indexDef,
-            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false)
+            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false, int? proximity = null)
         {
             if (expression == null)
                 return new MatchAllDocsQuery();
@@ -353,9 +353,11 @@ namespace Raven.Server.Documents.Queries
                 switch (methodType)
                 {
                     case MethodType.Search:
-                        return HandleSearch(query, me, metadata, parameters, analyzer);
+                        return HandleSearch(query, me, metadata, parameters, analyzer, proximity);
                     case MethodType.Fuzzy:
                         return HandleFuzzy(serverContext, documentsContext, query, me, metadata, parameters, analyzer, factories, exact);
+                    case MethodType.Proximity:
+                        return HandleProximity(serverContext, documentsContext, query, me, metadata, parameters, analyzer, factories, exact);
                     case MethodType.Boost:
                         return HandleBoost(serverContext, documentsContext, query, me, metadata, parameters, analyzer, factories, exact);
                     case MethodType.Regex:
@@ -580,6 +582,14 @@ namespace Raven.Server.Documents.Queries
             return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.WildCard);
         }
 
+        private static Lucene.Net.Search.Query HandleProximity(TransactionOperationContext serverContext, DocumentsOperationContext context, Query query, MethodExpression expression, QueryMetadata metadata,
+            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact)
+        {
+            var proximity = int.Parse(((ValueExpression)expression.Arguments[1]).Token.Value);
+
+            return ToLuceneQuery(serverContext, context, query, expression.Arguments[0], metadata, indexDef: null, parameters, analyzer, factories, exact, proximity);
+        }
+
         private static Lucene.Net.Search.Query HandleFuzzy(TransactionOperationContext serverContext, DocumentsOperationContext context, Query query, MethodExpression expression, QueryMetadata metadata,
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact)
         {
@@ -626,7 +636,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         private static Lucene.Net.Search.Query HandleSearch(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters,
-            Analyzer analyzer)
+            Analyzer analyzer, int? proximity)
         {
             QueryFieldName fieldName;
             if (expression.Arguments[0] is FieldExpression ft)
@@ -643,12 +653,26 @@ namespace Raven.Server.Documents.Queries
 
             Debug.Assert(metadata.IsDynamic == false || metadata.WhereFields[fieldName].IsFullTextSearch);
 
-            var valueAsString = GetValueAsString(value);
-            var values = valueAsString.Split(' ');
-
             if (metadata.IsDynamic)
                 fieldName = new QueryFieldName(AutoIndexField.GetSearchAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
 
+            var valueAsString = GetValueAsString(value);
+            if (proximity.HasValue)
+            {
+                var type = GetTermType(valueAsString);
+                if (type != LuceneTermType.String)
+                    throw new InvalidQueryException("Proximity search works only on simple string terms, not wildcard or prefix ones", metadata.QueryText, parameters);
+
+                var pq = LuceneQueryHelper.AnalyzedTerm(fieldName, valueAsString, type, analyzer) as PhraseQuery; // this will return PQ, unless there is a single term
+                if (pq == null)
+                    throw new InvalidQueryException("Proximity search works only on multiple search terms", metadata.QueryText, parameters);
+
+                pq.Slop = proximity.Value;
+
+                return pq;
+            }
+
+            var values = valueAsString.Split(' ');
             if (values.Length == 1)
             {
                 var nValue = values[0];
