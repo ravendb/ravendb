@@ -259,7 +259,7 @@ namespace Raven.Server.Config
             return prop.GetCustomAttributes<DefaultValueAttribute>().FirstOrDefault()?.Value;
         }
 
-        public static object GetValue<T>(Expression<Func<RavenConfiguration, T>> getKey, RavenConfiguration serverConfiguration, DatabaseRecord record)
+        public static object GetValue<T>(Expression<Func<RavenConfiguration, T>> getKey, RavenConfiguration serverConfiguration, Dictionary<string, string> settings)
         {
             TimeUnitAttribute timeUnit = null;
 
@@ -276,7 +276,7 @@ namespace Raven.Server.Config
                 .GetCustomAttributes<ConfigurationEntryAttribute>()
                 .OrderBy(x => x.Order))
             {
-                if (record.Settings.TryGetValue(entry.Key, out var valueAsString) == false)
+                if (settings.TryGetValue(entry.Key, out var valueAsString) == false)
                     value = serverConfiguration.GetSetting(entry.Key);
 
                 if (valueAsString != null)
