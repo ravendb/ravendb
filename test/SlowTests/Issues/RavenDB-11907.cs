@@ -79,6 +79,31 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public void ChainPropagationOnMissingCollection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new Document());
+                    s.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var doc = session.Query<Document>()
+                        .Select(x => new Result
+                        {
+                            HasTags = x.Tags.Where(t => t != null).Any(t => t == "tag")
+                        })
+                        .SingleOrDefault();
+
+                    Assert.False(doc?.HasTags);
+                }
+            }
+        }
+
         private class Result
         {
             public Result()
