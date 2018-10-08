@@ -95,6 +95,9 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "counters", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Counters;
 
+            if (string.Equals(methodName, "fuzzy", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Fuzzy;
+
             if (throwIfNoMatch == false)
                 return MethodType.Unknown;
 
