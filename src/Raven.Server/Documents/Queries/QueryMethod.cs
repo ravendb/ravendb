@@ -98,6 +98,9 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "fuzzy", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Fuzzy;
 
+            if (string.Equals(methodName, "proximity", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Proximity;
+
             if (throwIfNoMatch == false)
                 return MethodType.Unknown;
 
