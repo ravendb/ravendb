@@ -364,7 +364,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     backupStatus.BackupType != periodicBackup.Configuration.BackupType || // backup type has changed
                     backupStatus.LastEtag == null || // last document etag wasn't updated
                     backupToLocalFolder && BackupTask.DirectoryContainsBackupFiles(backupStatus.LocalBackup.BackupDirectory, IsFullBackupOrSnapshot) == false)
-                // the local folder already includes a full backup or snapshot
+                    // the local folder already includes a full backup or snapshot
                 {
                     isFullBackup = true;
                 }
@@ -423,6 +423,22 @@ namespace Raven.Server.Documents.PeriodicBackup
                 task.ContinueWith(_ => backupTask.TaskCancelToken.Dispose());
 
                 return operationId;
+            }
+            catch (Exception e)
+            {
+                var message = $"Failed to start the backup task: '{periodicBackup.Configuration.Name}'";
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations(message, e);
+
+                _database.NotificationCenter.Add(AlertRaised.Create(
+                    _database.Name,
+                    $"Periodic Backup task: '{periodicBackup.Configuration.Name}'",
+                    message,
+                    AlertType.PeriodicBackup,
+                    NotificationSeverity.Error,
+                    details: new ExceptionDetails(e)));
+
+                throw;
             }
             finally
             {
