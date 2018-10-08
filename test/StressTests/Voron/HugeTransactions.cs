@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Voron;
 using Sparrow.Compression;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Global;
@@ -27,7 +28,7 @@ namespace StressTests.Voron
 
         public static Random Rand = new Random(123);
 
-        [TheoryAndSkipWhen32BitsEnvironment]
+        [Theory64Bit]
         [InlineData(2)]
         [InlineData(6, Skip = "Too large to run on scratch machines. For manual run only")]
         public void CanWriteBigTransactions(int transactionSizeInGb)
@@ -130,7 +131,7 @@ namespace StressTests.Voron
             Assert.Equal(desired, val);
         }
 
-        [TheoryAndSkipWhen32BitsEnvironment]
+        [Theory64Bit]
         [InlineData(3L * 1024 * 1024 * 1024)] // in = 3GB, out ~= 4MB
         [InlineData(2)] // in = 3GB, out ~= 1.5GB
         [InlineData(1)] // in = 3GB, out > 3GB (rare case)

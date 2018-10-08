@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Runtime.CompilerServices;
@@ -11,8 +10,6 @@ using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Sparrow;
 using Sparrow.Collections;
-using Sparrow.Logging;
-using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Global;
@@ -166,7 +163,7 @@ namespace Voron.Impl.Paging
             }
 
             var ammountToMapInBytes = NearestSizeToAllocationGranularity((distanceFromStart + numberOfPages) * Constants.Storage.PageSize);
-            MapPages(state, allocationStartPosition, ammountToMapInBytes, true);
+            MapPages(state, allocationStartPosition, ammountToMapInBytes);
             return true;
         }
 
@@ -257,11 +254,11 @@ namespace Voron.Impl.Paging
             if (state.LoadedPages.TryGetValue(allocationStartPosition, out var page))
                 return page.Pointer + (distanceFromStart * Constants.Storage.PageSize);
 
-            page = MapPages(state, allocationStartPosition, AllocationGranularity, true);
+            page = MapPages(state, allocationStartPosition, AllocationGranularity);
             return page.Pointer + (distanceFromStart * Constants.Storage.PageSize);
         }
 
-        private LoadedPage MapPages(TransactionState state, long startPage, long size, bool allowPartialMapAtEndOfFile = false)
+        private LoadedPage MapPages(TransactionState state, long startPage, long size)
         {
             _globalMemory.EnterReadLock();
             try
@@ -292,7 +289,7 @@ namespace Voron.Impl.Paging
                     // actually there in the file, and if the codewill attemp to access beyond the end of file, we'll get
                     // an access denied error, but this is already handled in higher level of the code, since we aren't just
                     // handing out access to the full range we are mapping immediately.
-                    if (allowPartialMapAtEndOfFile && (long)offset.Value < _fileStreamLength)
+                    if ((long)offset.Value < _fileStreamLength)
                         size = _fileStreamLength - (long) offset.Value;
                     else
                         ThrowInvalidMappingRequested(startPage, size);
