@@ -214,7 +214,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 _database.NotificationCenter.Add(AlertRaised.Create(
                     _database.Name,
-                    "Periodic Backup",
+                    $"Periodic Backup task: '{_periodicBackup.Configuration.Name}'",
                     message,
                     AlertType.PeriodicBackup,
                     NotificationSeverity.Error,
@@ -805,7 +805,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 _database.NotificationCenter.Add(AlertRaised.Create(
                     _database.Name,
-                    "Periodic Backup",
+                    $"Periodic Backup task: '{_periodicBackup.Configuration.Name}'",
                     message,
                     AlertType.PeriodicBackup,
                     NotificationSeverity.Error,
