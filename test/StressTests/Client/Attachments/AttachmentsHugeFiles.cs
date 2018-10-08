@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Threading.Tasks;
 using FastTests;
 using Microsoft.AspNetCore.Http.Features;
@@ -11,7 +10,7 @@ namespace StressTests.Client.Attachments
 {
     public class AttachmentsHugeFiles : NoDisposalNeeded
     {
-        [NightlyBuildTheory]
+        [NightlyBuildTheory64]
         [InlineData(FormOptions.DefaultMultipartBodyLengthLimit * 2, "vEbE0Uh02lIPx/cEFBagkmepLTP0nWWYX5+exkt9yoE=")] // 256 MB
         [InlineData(2.5 * 1024 * 1024 * 1024, "2ssXqJM7lbdDpDNkc2GsfDbmcQ6CXdgP6/LFmLtFCT4=")] // 2.5 GB
         public async Task BatchRequestWithLongMultiPartSections(long size, string hash)
@@ -31,7 +30,7 @@ namespace StressTests.Client.Attachments
             }
         }
 
-        [NightlyBuildTheory]
+        [NightlyBuildTheory64]
         [InlineData(2.5 * 1024 * 1024 * 1024, "2ssXqJM7lbdDpDNkc2GsfDbmcQ6CXdgP6/LFmLtFCT4=")] // 2.5 GB
         public async Task SupportHugeAttachment(long size, string hash)
         {

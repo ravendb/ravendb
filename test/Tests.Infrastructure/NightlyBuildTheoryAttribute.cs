@@ -6,7 +6,7 @@ namespace Tests.Infrastructure
 {
     public class NightlyBuildTheoryAttribute : TheoryAttribute
     {
-        internal static bool Force = false; // set to true if you want to force the tests to run
+        internal static bool Force = true; // set to true if you want to force the tests to run
 
         internal static bool IsNightlyBuild = Force;
 

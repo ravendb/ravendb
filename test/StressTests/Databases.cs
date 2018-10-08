@@ -18,7 +18,7 @@ namespace StressTests
 {
     public class Databases : RavenTestBase
     {
-        [NightlyBuildTheory]
+        [NightlyBuildTheory64]
         [InlineData(25)]
         public void CanHandleMultipleDatabasesOnWrite(int numberOfDatabases)
         {
@@ -26,8 +26,6 @@ namespace StressTests
 
             using (var store = GetDocumentStore())
             {
-                if (IntPtr.Size == sizeof(int))
-                    numberOfDatabases = 20;
                 Console.WriteLine("Creating databases");
                 CreateDatabases(numberOfDatabases, store);
                 Console.WriteLine("Done creating databases");
@@ -50,7 +48,12 @@ namespace StressTests
                 Console.WriteLine($"Results came from cache {_totalQueryUsedCachedResults} times out of {_totalQueryCount} total queries.");
             }
         }
-
+        [NightlyBuildTheory32]
+        [InlineData(10)]
+        public void CanHandleMultipleDatabasesOnWrite32(int numberOfDatabases)
+        {
+            CanHandleMultipleDatabasesOnWrite(numberOfDatabases);
+        }
         private static readonly Dictionary<int, string> DbNumToDbName = new Dictionary<int, string>();
 
         private static void StartAsyncQueryTask(IDocumentStore store, int numberOfDatabases, TimeSpan timeToSpin, int minTimeBetweenIntervals)
