@@ -1371,7 +1371,7 @@ more responsive application.
                     $"Parameters '{nameof(indexName)}' and '{nameof(collectionName)}' are mutually exclusive. Please specify only one of them.");
 
             if (isIndex == false && isCollection == false)
-                collectionName = Conventions.GetCollectionName(type);
+                collectionName = Conventions.GetCollectionName(type) ?? Constants.Documents.Collections.AllDocumentsCollection;
 
             return (indexName, collectionName);
         }
