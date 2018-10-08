@@ -192,18 +192,18 @@ namespace Raven.Client.Documents.Linq
                         {
                             VisitMethodCall((MethodCallExpression)expression);
                         }
-                        else
-                        {
-                            var lambdaExpression = expression as LambdaExpression;
-                            if (lambdaExpression != null)
+                        else if (expression is LambdaExpression lambdaExpression)
+                        {                           
+                            var body = lambdaExpression.Body;
+                            if (body.NodeType == ExpressionType.Constant && ((ConstantExpression)body).Value is bool)
                             {
-                                var body = lambdaExpression.Body;
-                                if (body.NodeType == ExpressionType.Constant && ((ConstantExpression)body).Value is bool)
-                                {
-                                    throw new ArgumentException("Constants expressions such as Where(x => true) are not allowed in the RavenDB queries");
-                                }
-                                VisitExpression(body);
+                                throw new ArgumentException("Constants expressions such as Where(x => true) are not allowed in the RavenDB queries");
                             }
+                            if (body.NodeType == ExpressionType.Invoke && body.Type == typeof(bool))
+                            {
+                                throw new NotSupportedException("Invocation expressions such as Where(x => SomeFunction(x)) are not supported in RavenDB queries");
+                            }
+                            VisitExpression(body);                           
                         }
                         break;
                 }
