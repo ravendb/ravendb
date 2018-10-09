@@ -19,7 +19,7 @@ namespace Tests.Infrastructure
                 return;
             }
             if (bool.TryParse(Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager"), out var result))
-                if (result == false)
+                if (result)
                     Is32Bit = true;
         }
         public override string Skip

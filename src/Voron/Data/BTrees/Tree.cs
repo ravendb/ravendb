@@ -489,7 +489,7 @@ namespace Voron.Data.BTrees
             _recentlyFoundPages.Reset(pageNumber);
 
             if (IsLeafCompressionSupported && newPage.IsCompressed)
-                DecompressionsCache.Invalidate(pageNumber, DecompressionUsage.Read);
+                DecompressionsCache?.Invalidate(pageNumber, DecompressionUsage.Read);
 
             PageModified?.Invoke(pageNumber, newPage.Flags);
 

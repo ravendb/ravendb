@@ -1,17 +1,18 @@
 ﻿using System;
+using Raven.Client.Util;
 using Sparrow.Platform;
 using Xunit;
 
 namespace Tests.Infrastructure
 {
-    public class NightlyBuildFact64Attribute : FactAttribute
+    public class NightlyBuildTheory64BitAttribute : NightlyBuildTheoryAttribute
     {
         internal static bool Is64Bit = true;
 
-        internal static string SkipMessage =
+        internal new static string SkipMessage =
             "Nightly build tests on 64bits are only working between 21:00 and 6:00 UTC and when 'RAVEN_ENABLE_NIGHTLY_BUILD_TESTS' is set to 'true'.";
 
-        public NightlyBuildFact64Attribute()
+        public NightlyBuildTheory64BitAttribute()
         {
             if (PlatformDetails.Is32Bits)
             {
@@ -22,11 +23,12 @@ namespace Tests.Infrastructure
                 if (result == false)
                     Is64Bit = false;
         }
+
         public override string Skip
         {
             get
             {
-                if (NightlyBuildTheoryAttribute.IsNightlyBuild && Is64Bit)
+                if (IsNightlyBuild && Is64Bit)
                     return null;
 
                 return SkipMessage;
