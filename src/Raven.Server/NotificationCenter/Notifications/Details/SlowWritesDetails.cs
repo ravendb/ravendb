@@ -7,6 +7,8 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 {
     public class SlowWritesDetails : INotificationDetails
     {
+        public const int MaxNumberOfWrites = 500;
+
         public Dictionary<string, SlowWriteInfo> Writes { get; set; } = new Dictionary<string, SlowWriteInfo>();
 
         public DynamicJsonValue ToJson()

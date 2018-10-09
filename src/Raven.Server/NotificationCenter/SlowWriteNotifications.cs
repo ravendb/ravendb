@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
@@ -87,6 +88,9 @@ namespace Raven.Server.NotificationCenter
                 {
                     details.Writes[info.Key] = info.Value;
                 }
+
+                if (details.Writes.Count > SlowWritesDetails.MaxNumberOfWrites)
+                    details.Writes = details.Writes.OrderBy(x => x.Value.Date).TakeLast(SlowWritesDetails.MaxNumberOfWrites).ToDictionary(x => x.Key, x => x.Value);
 
                 _notificationCenter.Add(hint);
 
