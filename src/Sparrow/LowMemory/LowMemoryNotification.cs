@@ -46,6 +46,7 @@ namespace Sparrow.LowMemory
         public LowMemEventDetails[] LowMemEventDetailsStack = new LowMemEventDetails[256];
         private int _lowMemEventDetailsIndex;
         private int _clearInactiveHandlersCounter;
+        private bool _wasLowMemory;
 
         private void RunLowMemoryHandlers(bool isLowMemory)
         {
@@ -59,7 +60,7 @@ namespace Sparrow.LowMemory
                         {
                             if (isLowMemory)
                                 handler.LowMemory();
-                            else
+                            else if (_wasLowMemory)
                                 handler.LowMemoryOver();
                         }
                         catch (Exception e)
@@ -92,6 +93,7 @@ namespace Sparrow.LowMemory
             }
             finally
             {
+                _wasLowMemory = isLowMemory;
                 _inactiveHandlers.Clear();
             }
         }
@@ -297,32 +299,31 @@ namespace Sparrow.LowMemory
                 ClearInactiveHandlers();
             }
 
-            var memInfo = MemoryInformation.GetMemoryInfo(smapsReader);
-            var isLowMemory = IsLowMemory(memInfo);
+            var memInfo = MemoryInformation.GetMemoryInfo();
+            var isLowMemory = IsLowMemory(memInfo, smapsReader);
 
             // memInfo.AvailableMemory is updated in IsLowMemory for Linux (adding shared clean)
             memStats = (memInfo.AvailableMemory, memInfo.TotalPhysicalMemory, memInfo.CurrentCommitCharge);
             return isLowMemory;
         }
 
-        public bool IsLowMemory(MemoryInfoResult memInfo)
+        public bool IsLowMemory(MemoryInfoResult memInfo, SmapsReader smapsReader)
         {
             // We consider low memory only if we don't have enough free physical memory or
             // the commited memory size if larger than our physical memory.
             // This is to ensure that from one hand we don't hit the disk to do page faults and from the other hand
             // we don't want to stay in low memory due to retained memory.
             var isLowMemory = IsAvailableMemoryBelowThreshold(memInfo);
+            if (isLowMemory && PlatformDetails.RunningOnMacOsx == false)
+            {
+                // getting extendedInfo (for windows: Process.GetCurrentProcess) or using the smaps might be expensive
+                // we'll do it if we suspect low memory
+                memInfo = MemoryInformation.GetMemoryInfo(smapsReader, extendedInfo: true);
+                isLowMemory = IsAvailableMemoryBelowThreshold(memInfo);
+            }
 
             if (PlatformDetails.RunningOnPosix == false)
             {
-                if (isLowMemory)
-                {
-                    // getting extendedInfo might be expensive (Process.GetCurrentProcess)
-                    // we'll do it if we detect low memory
-                    memInfo = MemoryInformation.GetMemoryInfo(extendedInfo: true);
-                    isLowMemory = IsAvailableMemoryBelowThreshold(memInfo);
-                }
-
                 // this is relevant only on Windows
                 var commitChargePlusMinSizeToKeepFree = memInfo.CurrentCommitCharge + GetCommitChargeThreshold(memInfo);
                 isLowMemory |= memInfo.TotalCommittableMemory <= commitChargePlusMinSizeToKeepFree;
