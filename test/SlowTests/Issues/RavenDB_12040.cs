@@ -14,15 +14,18 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
+                const int limitExceededCount = 10;
+
                 var database = await GetDatabase(store.Database);
 
-                for (int i = 0; i < SlowWritesDetails.MaxNumberOfWrites + 10; i++)
+                for (int i = 0; i < SlowWritesDetails.MaxNumberOfWrites + limitExceededCount; i++)
                 {
                     database.NotificationCenter
                         .SlowWrites
                         .Add($"C:\\Raven\\Indexes\\MyIndex\\{i}.journal", 1, 10);
 
-                    Thread.Sleep(1);
+                    if (i < limitExceededCount)
+                        Thread.Sleep(1);
                 }
 
                 database.NotificationCenter.SlowWrites.UpdateNotificationInStorage(null);
@@ -32,7 +35,7 @@ namespace SlowTests.Issues
 
                 Assert.Equal(SlowWritesDetails.MaxNumberOfWrites, details.Writes.Count);
 
-                for (int i = 10; i < SlowWritesDetails.MaxNumberOfWrites + 10; i++)
+                for (int i = limitExceededCount; i < SlowWritesDetails.MaxNumberOfWrites + limitExceededCount; i++)
                 {
                     Assert.Contains($"C:\\Raven\\Indexes\\MyIndex\\{i}.journal", details.Writes.Keys);
                 }
