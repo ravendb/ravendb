@@ -25,8 +25,9 @@ namespace SlowTests.Issues
             var reqExec = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, "Foo", null, DocumentConventions.Default);
             var op = new CreateDatabaseOperation(new Raven.Client.ServerWide.DatabaseRecord("Foo"));
             using (reqExec.ContextPool.AllocateOperationContext(out var ctx))
-                reqExec.Execute(op.GetCommand(DocumentConventions.Default, ctx), ctx);
-
+            {
+                Assert.Throws<RavenException>(() => reqExec.Execute(op.GetCommand(DocumentConventions.Default, ctx), ctx));
+            }
 
             using (var store = new DocumentStore
             {

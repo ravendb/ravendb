@@ -1040,9 +1040,9 @@ namespace Raven.Server.Utils.Cli
         private static bool CommandImportDir(List<string> args, RavenCli cli)
         {
             // ImportDir <databaseName> <path-to-dir>
-            WriteText($"ImportDir for database {args[0]} from dir `{args[1]}` to {cli._server.WebUrl}", ConsoleColor.Yellow, cli);
+            WriteText($"ImportDir for database {args[0]} from dir `{args[1]}` to {cli._server.ServerStore.GetNodeHttpServerUrl()}", ConsoleColor.Yellow, cli);
 
-            var url = $"{cli._server.WebUrl}/databases/{args[0]}/smuggler/import-dir?dir={args[1]}";
+            var url = $"{cli._server.ServerStore.GetNodeHttpServerUrl()}/databases/{args[0]}/smuggler/import-dir?dir={args[1]}";
             using (var client = new HttpClient())
             {
                 WriteText("Sending at " + DateTime.UtcNow, TextColor, cli);
@@ -1058,7 +1058,7 @@ namespace Raven.Server.Utils.Cli
             // CreateDb <databaseName> <DataDir>
             WriteText($"Create database {args[0]} with DataDir `{args[1]}`", ConsoleColor.Yellow, cli);
 
-            var port = new Uri(cli._server.WebUrl).Port;
+            var port = new Uri(cli._server.ServerStore.GetNodeHttpServerUrl()).Port;
 
             using (var store = new DocumentStore
             {
