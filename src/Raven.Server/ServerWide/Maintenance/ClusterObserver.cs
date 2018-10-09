@@ -79,7 +79,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
                 catch
                 {
-                   // nothing we can do here
+                    // nothing we can do here
                 }
             }, null, $"Cluster observer for term {_term}");
         }
@@ -104,7 +104,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 return;
 
             var prevStats = _maintenance.GetStats();
-            
+
             // wait before collecting the stats again.
             if (token.WaitHandle.WaitOne(_supervisorSamplePeriod))
                 return;
@@ -504,7 +504,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     status = dbStats.Status;
                     if (status == Loaded ||
                         status == Loading ||
-                        status == Unloaded || 
+                        status == Unloaded ||
                         status == NoChange)
                     {
                         hasLivingNodes = true;
@@ -874,7 +874,7 @@ namespace Raven.Server.ServerWide.Maintenance
             return (false, null);
         }
 
-        private void RemoveOtherNodesIfNeeded(DatabaseObservationState state,  ref List<DeleteDatabaseCommand> deletions)
+        private void RemoveOtherNodesIfNeeded(DatabaseObservationState state, ref List<DeleteDatabaseCommand> deletions)
         {
             var topology = state.DatabaseTopology;
             var dbName = state.Name;
@@ -1157,7 +1157,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 return count;
             }
 
-            public bool TryGetAutoIndex(string name,out AutoIndexDefinition definition)
+            public bool TryGetAutoIndex(string name, out AutoIndexDefinition definition)
             {
                 BlittableJsonReaderObject autoDefinition = null;
                 definition = null;
@@ -1166,21 +1166,26 @@ namespace Raven.Server.ServerWide.Maintenance
                     return false;
 
                 definition = JsonDeserializationServer.AutoIndexDefinition(autoDefinition);
-                return  true;
+                return true;
             }
 
             public Dictionary<string, DeletionInProgressStatus> ReadDeletionInProgress()
             {
-                if (RawDatabase.TryGet(nameof(DatabaseRecord.DeletionInProgress), out BlittableJsonReaderObject obj) == false)
+                if (RawDatabase.TryGet(nameof(DatabaseRecord.DeletionInProgress), out BlittableJsonReaderObject obj) == false || obj == null)
                     return null;
 
                 var deletionInProgress = new Dictionary<string, DeletionInProgressStatus>();
-                foreach (var prop in obj.GetPropertyNames())
+
+                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                foreach (var propertyIndex in obj.GetPropertiesByInsertionOrder())
                 {
-                    if (Enum.TryParse(obj[prop].ToString(), out DeletionInProgressStatus result))
-                    {
-                        deletionInProgress[prop] = result;
-                    }
+                    obj.GetPropertyByIndex(propertyIndex, ref propertyDetails);
+
+                    if (propertyDetails.Value == null)
+                        continue;
+
+                    if (Enum.TryParse(propertyDetails.Value.ToString(), out DeletionInProgressStatus result))
+                        deletionInProgress[propertyDetails.Name] = result;
                 }
 
                 return deletionInProgress;
@@ -1197,13 +1202,17 @@ namespace Raven.Server.ServerWide.Maintenance
             public Dictionary<string, string> ReadSettings()
             {
                 var settings = new Dictionary<string, string>();
-                if (RawDatabase.TryGet(nameof(DatabaseRecord.Settings), out BlittableJsonReaderObject obj) == false)
+                if (RawDatabase.TryGet(nameof(DatabaseRecord.Settings), out BlittableJsonReaderObject obj) == false || obj == null)
                     return settings;
 
-                foreach (var propertyName in obj.GetPropertyNames())
+                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                foreach (var propertyIndex in obj.GetPropertiesByInsertionOrder())
                 {
-                    settings[propertyName] = obj[propertyName].ToString();
+                    obj.GetPropertyByIndex(propertyIndex, ref propertyDetails);
+
+                    settings[propertyDetails.Name] = propertyDetails.Value?.ToString();
                 }
+
                 return settings;
             }
         }
