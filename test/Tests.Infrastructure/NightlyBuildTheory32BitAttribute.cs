@@ -5,14 +5,14 @@ using Xunit;
 
 namespace Tests.Infrastructure
 {
-    public class NightlyBuildTheory32Attribute : NightlyBuildTheoryAttribute
+    public class NightlyBuildTheory32BitAttribute : NightlyBuildTheoryAttribute
     {
         internal static bool Is32Bit = false;
 
         internal new static string SkipMessage =
             "Nightly build tests on 32bits are only working between 21:00 and 6:00 UTC and when 'RAVEN_ENABLE_NIGHTLY_BUILD_TESTS' is set to 'true'.";
 
-        public NightlyBuildTheory32Attribute()
+        public NightlyBuildTheory32BitAttribute()
         {
             if (PlatformDetails.Is32Bits)
             {
@@ -20,7 +20,7 @@ namespace Tests.Infrastructure
                 return;
             }
             if (bool.TryParse(Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager"), out var result))
-                if (result == false)
+                if (result)
                     Is32Bit = true;
         }
 
