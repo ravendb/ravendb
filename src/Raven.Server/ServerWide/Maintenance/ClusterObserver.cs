@@ -1177,7 +1177,10 @@ namespace Raven.Server.ServerWide.Maintenance
                 var deletionInProgress = new Dictionary<string, DeletionInProgressStatus>();
                 foreach (var prop in obj.GetPropertyNames())
                 {
-                    deletionInProgress[prop] = (DeletionInProgressStatus)obj[prop];
+                    if (Enum.TryParse(obj[prop].ToString(), out DeletionInProgressStatus result))
+                    {
+                        deletionInProgress[prop] = result;
+                    }
                 }
 
                 return deletionInProgress;
@@ -1194,7 +1197,9 @@ namespace Raven.Server.ServerWide.Maintenance
             public Dictionary<string, string> ReadSettings()
             {
                 var settings = new Dictionary<string, string>();
-                RawDatabase.TryGet(nameof(DatabaseRecord.Settings), out BlittableJsonReaderObject obj);
+                if (RawDatabase.TryGet(nameof(DatabaseRecord.Settings), out BlittableJsonReaderObject obj) == false)
+                    return settings;
+
                 foreach (var propertyName in obj.GetPropertyNames())
                 {
                     settings[propertyName] = obj[propertyName].ToString();
