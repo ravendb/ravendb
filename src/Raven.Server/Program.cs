@@ -374,18 +374,17 @@ namespace Raven.Server
             var cursorTop = Console.CursorTop;
 
             var waitIntervals = updateIntervalInMs / 100;
-            var maxIndexNameLength = 0;
+            var maxNameLength = 0;
             while (Console.KeyAvailable == false)
             {
                 Console.SetCursorPosition(cursorLeft, cursorTop);
 
                 var threadsInfo = threadsUsage.Calculate();
                 Console.Write($"{(i++ % 2 == 0 ? "*" : "+")} ");
-                Console.WriteLine($"CPU usage: {threadsInfo.CpuUsage:0.00}% (total threads: {threadsInfo.List.Count})   ");
+                Console.WriteLine($"CPU usage: {threadsInfo.CpuUsage:0.00}% (total threads: {threadsInfo.List.Count:#,#0}, active cores: {threadsInfo.ActiveCores})   ");
                 
                 var count = 0;
                 var isFirst = true;
-                var newMaxIndexNameLength = 0;
                 foreach (var threadInfo in threadsInfo.List
                     .Where(x => x.CpuUsage >= cpuUsageThreshold)
                     .OrderByDescending(x => x.CpuUsage))
@@ -400,8 +399,8 @@ namespace Raven.Server
                         break;
 
                     var nameLength = threadInfo.Name.Length;
-                    newMaxIndexNameLength = Math.Max(newMaxIndexNameLength, nameLength);
-                    var numberOfEmptySpaces = maxIndexNameLength - nameLength + 1;
+                    maxNameLength = Math.Max(maxNameLength, nameLength);
+                    var numberOfEmptySpaces = maxNameLength - nameLength + 1;
                     var emptySpaces = numberOfEmptySpaces > 0 ? new string(' ', numberOfEmptySpaces) : string.Empty;
 
                     Console.Write($"    {threadInfo.Id,-7} ");
@@ -411,8 +410,6 @@ namespace Raven.Server
 
                     Console.WriteLine();
                 }
-
-                maxIndexNameLength = newMaxIndexNameLength;
 
                 for (var j = 0; j < waitIntervals && Console.KeyAvailable == false; j++)
                 {
