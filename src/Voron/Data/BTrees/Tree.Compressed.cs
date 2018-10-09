@@ -47,7 +47,7 @@ namespace Voron.Data.BTrees
                     {
                         // we've just put a decompressed page to the cache however we aren't going to compress it
                         // need to invalidate it from the cache
-                        DecompressionsCache?.Invalidate(page.PageNumber, DecompressionUsage.Write);
+                        DecompressionsCache.Invalidate(page.PageNumber, DecompressionUsage.Write);
                     }
 
                     return false;
@@ -66,7 +66,7 @@ namespace Voron.Data.BTrees
             DecompressedLeafPage decompressedPage;
             DecompressedLeafPage cached = null;
 
-            if (skipCache == false && DecompressionsCache != null && DecompressionsCache.TryGet(p.PageNumber, usage, out cached))
+            if (skipCache == false && DecompressionsCache.TryGet(p.PageNumber, usage, out cached))
             {
                 decompressedPage = ReuseCachedPage(cached, usage, ref input);
 
@@ -84,7 +84,7 @@ namespace Voron.Data.BTrees
                     return decompressedPage;
 
                 HandleUncompressedNodes(decompressedPage, p, usage);
-                
+
                 return decompressedPage;
             }
             finally
@@ -93,8 +93,8 @@ namespace Voron.Data.BTrees
 
                 if (skipCache == false && decompressedPage != cached)
                 {
-                    DecompressionsCache?.Invalidate(p.PageNumber, usage);
-                    DecompressionsCache?.Add(decompressedPage);
+                    DecompressionsCache.Invalidate(p.PageNumber, usage);
+                    DecompressionsCache.Add(decompressedPage);
                 }
             }
         }
@@ -238,7 +238,7 @@ namespace Voron.Data.BTrees
 
             if (decompressedPage.LastMatch != 0)
                 return;
-            
+
             var node = decompressedPage.GetNode(decompressedPage.LastSearchPosition);
 
             if (usage == DecompressionUsage.Write)
@@ -303,42 +303,34 @@ namespace Voron.Data.BTrees
 
         public DecompressedReadResult ReadDecompressed(Slice key)
         {
-            try
+            DecompressedLeafPage decompressed;
+            TreeNodeHeader* node;
+
+            if (DecompressionsCache.TryFindPageForReading(key, _llt, out decompressed))
             {
-                DecompressedLeafPage decompressed = null;
-                TreeNodeHeader* node;
+                node = decompressed.Search(_llt, key);
 
-                if (DecompressionsCache != null && DecompressionsCache.TryFindPageForReading(key, _llt, out decompressed))
+                if (decompressed.LastMatch != 0)
+                    return null;
+            }
+            else
+            {
+                TreeCursorConstructor _;
+                var page = SearchForPage(key, true, out _, out node, addToRecentlyFoundPages: false);
+
+                if (page.IsCompressed)
                 {
-                    node = decompressed.Search(_llt, key);
-
-                    if (decompressed.LastMatch != 0)
-                        return null;
-                }
-                else
-                {
-                    TreeCursorConstructor _;
-                    var page = SearchForPage(key, true, out _, out node, addToRecentlyFoundPages: false);
-
-                    if (page.IsCompressed)
-                    {
-                        page = decompressed = DecompressPage(page);
-                        node = page.Search(_llt, key);
-                    }
-
-                    if (page.LastMatch != 0)
-                        return null;
+                    page = decompressed = DecompressPage(page);
+                    node = page.Search(_llt, key);
                 }
 
-                return new DecompressedReadResult(GetValueReaderFromHeader(node), decompressed);
+                if (page.LastMatch != 0)
+                    return null;
             }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
+
+            return new DecompressedReadResult(GetValueReaderFromHeader(node), decompressed);
         }
-        
+
         public struct DecompressionInput
         {
             public DecompressionInput(CompressedNodesHeader* header, TreePage p)
