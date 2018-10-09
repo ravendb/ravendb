@@ -683,10 +683,14 @@ namespace SlowTests.Server
 
                 var operation = new Operation(store.Commands().RequestExecutor, () => store.Changes(), store.Conventions, command.Result);
                 var operationProgresses = new List<IOperationProgress>();
-                operation.OnProgressChanged += (p) => operationProgresses.Add(p);
+                operation.OnProgressChanged += p => operationProgresses.Add(p);
+
+                await task; // we need to wait for the task
+                            // before executing WaitForCompletionAsync here
+                            // to avoid a race condition where we will wait for an operation
+                            // before it starts (request is send to the server)
 
                 var result = await operation.WaitForCompletionAsync<ReplayTxOperationResult>();
-                await task;
 
                 //Assert
                 //Todo To think how to assert this test and if this test should be exist
