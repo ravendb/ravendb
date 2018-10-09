@@ -163,7 +163,7 @@ namespace Raven.Server.Web
                 foreach (var member in members)
                 {
                     var url = member == ServerStore.NodeTag ?
-                        Server.WebUrl :
+                        Server.ServerStore.GetNodeHttpServerUrl() :
                         clusterTopology.GetUrlFromTag(member);
                     var requester = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.Server.Certificate.Certificate);
                     executors.Add(requester);

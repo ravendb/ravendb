@@ -41,6 +41,26 @@ namespace RachisTests.DatabaseCluster
         }
 
         [Fact]
+        public void CreateDatabaseOn00000Node()
+        {
+            using (var server = GetNewServer(new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "http://0.0.0.0:0",
+                [RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = UnsecuredAccessAddressRange.PublicNetwork.ToString()
+            }))
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = server,
+                ModifyDocumentStore = documentStore => documentStore.Urls = new []{server.ServerStore.GetNodeHttpServerUrl()},
+                CreateDatabase = true,
+                DeleteDatabaseOnDispose = true
+            }))
+            {
+
+            }
+        }
+
+        [Fact]
         public async Task DontPurgeTombstonesWhenNodeIsDown()
         {
             var clusterSize = 3;
