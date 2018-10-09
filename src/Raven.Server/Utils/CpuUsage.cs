@@ -218,7 +218,7 @@ namespace Raven.Server.Utils
         private static char[] _separators = new[] { ' ', '\t' };
         private static LinuxInfo GetLinuxInfo()
         {
-            var lines = File.ReadAllLines("/proc/stat");
+            var lines = File.ReadLines("/proc/stat");
             foreach (var line in lines)
             {
                 if (line.StartsWith("cpu", StringComparison.OrdinalIgnoreCase) == false)

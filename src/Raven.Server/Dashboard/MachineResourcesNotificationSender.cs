@@ -83,7 +83,7 @@ namespace Raven.Server.Dashboard
                 CommittedMemory = memInfo.CurrentCommitCharge.GetValue(SizeUnit.Bytes),
                 ProcessMemoryUsage = memInfo.WorkingSet.GetValue(SizeUnit.Bytes),
                 IsWindows = PlatformDetails.RunningOnPosix == false,
-                IsLowMemory = LowMemoryNotification.Instance.IsLowMemory(memInfo),
+                IsLowMemory = LowMemoryNotification.Instance.IsLowMemory(memInfo, smapsReader),
                 LowMemoryThreshold = LowMemoryNotification.Instance.LowMemoryThreshold.GetValue(SizeUnit.Bytes),
                 CommitChargeThreshold = LowMemoryNotification.Instance.GetCommitChargeThreshold(memInfo).GetValue(SizeUnit.Bytes),
                 MachineCpuUsage = cpuInfo.MachineCpuUsage,
