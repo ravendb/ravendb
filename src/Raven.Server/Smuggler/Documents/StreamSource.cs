@@ -100,7 +100,7 @@ namespace Raven.Server.Smuggler.Documents
                     _log.Operations(msg);
                 _result.AddWarning(msg);
 
-                SkipArray();
+                SkipArray(onSkipped: null, CancellationToken.None);
                 type = ReadType();
                 dbItemType = GetType(type);
             }
@@ -258,7 +258,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public long SkipType(DatabaseItemType type, Action<long> onSkipped)
+        public long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)
         {
             switch (type)
             {
@@ -273,7 +273,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.CompareExchange:
                 case DatabaseItemType.LegacyDocumentDeletions:
                 case DatabaseItemType.LegacyAttachmentDeletions:
-                    return SkipArray(onSkipped);
+                    return SkipArray(onSkipped, token);
                 case DatabaseItemType.DatabaseRecord:
                     return SkipObject(onSkipped);
                 default:
@@ -435,13 +435,15 @@ namespace Raven.Server.Smuggler.Documents
             return _state.Long;
         }
 
-        private long SkipArray(Action<long> onSkipped = null)
+        private long SkipArray(Action<long> onSkipped, CancellationToken token)
         {
             var count = 0L;
             foreach (var _ in ReadArray())
             {
                 using (_)
                 {
+                    token.ThrowIfCancellationRequested();
+
                     count++; //skipping
                     onSkipped?.Invoke(count);
                 }
