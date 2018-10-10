@@ -24,6 +24,7 @@ using Raven.Tests.Raft;
 using Raven.Tests.Faceted;
 using Raven.Abstractions.Replication;
 using Raven.Tests.Bundles.LiveTest;
+using Raven.Tests.Core.BulkInsert;
 using Raven.Tests.Notifications;
 #if !DNXCORE50
 using Raven.Tests.Sorting;
@@ -37,51 +38,22 @@ using Raven.Tests.FileSystem.ClientApi;
 
 namespace Raven.Tryouts
 {
-    public class Order
-    {
-        public string Id { get; set; }
-        public string Company { get; set; }
-        public string Employee { get; set; }
-        public DateTime OrderedAt { get; set; }
-        public DateTime RequireAt { get; set; }
-        public DateTime? ShippedAt { get; set; }
-        public Address ShipTo { get; set; }
-        public string ShipVia { get; set; }
-        public decimal Freight { get; set; }
-        public List<OrderLine> Lines { get; set; }
-    }
 
-    public class Address
-    {
-        public string Line1 { get; set; }
-        public string Line2 { get; set; }
-        public string City { get; set; }
-        public string Region { get; set; }
-        public string PostalCode { get; set; }
-        public string Country { get; set; }
-    }
-
-    public class OrderLine
-    {
-        public string Product { get; set; }
-        public string ProductName { get; set; }
-        public decimal PricePerUnit { get; set; }
-        public int Quantity { get; set; }
-        public decimal Discount { get; set; }
-    }
 
     public class Program
     {
         public static void Main(string[] args)
         {
-            for (var i = 0; i < 1000; i++)
+            var fixture = new TestServerFixture();
+            for (var i = 0; i < 100000; i++)
             {
                 try
                 {
                     Console.WriteLine(i);
-                    using (var test = new Embedded())
+                    using (var test = new ChunkedBulkInsert())
                     {
-                        test.CanGetNotificationAboutDocumentDelete();
+                        test.SetFixture(fixture);
+                        test.DocumentsInChunkConstraint();
                     }
                 }
                 catch (Exception e)
@@ -92,72 +64,8 @@ namespace Raven.Tryouts
             }
 
 
-        }
+        }      
 
-        private static void InitDBAndDoSomeWork(int i)
-        {
-            using (var store = new DocumentStore
-            {
-                Url = "http://localhost:8080",
-                DefaultDatabase = "Northwind"
-            })
-            {
-                store.Initialize();
-                DoSomeWork(store, i);
-                DoSomeWork(store, i);
-                DoSomeWork(store, i);
-            }
-        }
-
-        private static void DoSomeWork(DocumentStore store, int i)
-        {
-            for (int k = 0; k < 10; k++)
-            {
-                using (var session = store.OpenSession())
-                {
-                    for (int j = 1; j < 30; j++)
-                    {
-                        var order = session.Load<Order>("orders/" + j);
-                        order.Freight = i;
-                    }
-
-                    session.SaveChanges();
-                }
-            }
-        }
-
-        public static async Task AsyncMain()
-        {
-
-
-            var sp = Stopwatch.StartNew();
-            try
-            {
-                var smugglerApi = new SmugglerFilesApi();
-                await smugglerApi.ImportData(importOptions: new SmugglerImportOptions<FilesConnectionStringOptions>()
-                {
-                    To = new FilesConnectionStringOptions()
-                    {
-                        DefaultFileSystem = "FS2",
-                        Url = "http://localhost:8080",
-
-                    },
-                    FromFile = "c:\\Temp\\export.ravendump",
-                });
-            }
-            catch (Exception ex)
-            {
-
-                Console.WriteLine(ex);
-
-                Console.WriteLine(ex.StackTrace);
-            }
-
-            Console.ReadLine();
-
-            Console.WriteLine(sp.ElapsedMilliseconds);
-
-
-        }
+    
     }
 }

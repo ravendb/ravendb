@@ -21,7 +21,7 @@ namespace Raven.Client.Document
 
         private readonly IDocumentStore documentStore;
         private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
-        protected ILowLevelBulkInsertOperation Operation { get; set; }
+        public ILowLevelBulkInsertOperation Operation { get; set; }
         public IAsyncDatabaseCommands DatabaseCommands { get; private set; }
         private readonly EntityToJson entityToJson;
 
