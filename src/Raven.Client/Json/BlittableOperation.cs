@@ -131,18 +131,21 @@ namespace Raven.Client.Json
 
                         break;
                     case BlittableJsonToken.StartObject:
-                        if (oldProp.Value == null)
+                        if (oldProp.Value == null || 
+                            !(oldProp.Value is BlittableJsonReaderObject oldObj))
                         {
                             if (changes == null)
                                 return true;
 
-                            NewChange(fieldPath, newProp.Name, newProp.Value, null, docChanges,
+                            NewChange(fieldPath, newProp.Name, newProp.Value, oldProp.Value, docChanges,
                                 DocumentsChanges.ChangeType.FieldChanged);
                             break;
                         }
 
-                        changed = CompareBlittable(FieldPathCombine(fieldPath, newProp.Name), id, oldProp.Value as BlittableJsonReaderObject, newProp.Value as BlittableJsonReaderObject, changes, docChanges);
+                        if (!(newProp.Value is BlittableJsonReaderObject newObj))
+                            throw new InvalidDataException($"Invalid blittable, expected object but got {newProp.Value}");
 
+                        changed = CompareBlittable(FieldPathCombine(fieldPath, newProp.Name), id, oldObj, newObj, changes, docChanges);
                         if (changes == null && changed)
                             return true;
 
