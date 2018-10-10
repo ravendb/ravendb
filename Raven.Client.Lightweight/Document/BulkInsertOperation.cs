@@ -21,7 +21,7 @@ namespace Raven.Client.Document
 
         private readonly IDocumentStore documentStore;
         private readonly GenerateEntityIdOnTheClient generateEntityIdOnTheClient;
-        public ILowLevelBulkInsertOperation Operation { get; set; }
+        protected internal ILowLevelBulkInsertOperation Operation { get; set; }
         public IAsyncDatabaseCommands DatabaseCommands { get; private set; }
         private readonly EntityToJson entityToJson;
 
@@ -92,7 +92,7 @@ namespace Raven.Client.Document
 
         public void Store(object entity, string id)
         {
-            if(Operation.IsAborted)
+            if (Operation.IsAborted)
                 throw new InvalidOperationException("Bulk insert has been aborted or the operation was timed out");
 
             var metadata = new RavenJObject();

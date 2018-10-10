@@ -1,12 +1,9 @@
 using Raven.Abstractions.Data;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Raven.Client.Document;
-using Raven.Tests.Core.ChangesApi;
 using Xunit;
 
 namespace Raven.Tests.Core.BulkInsert
@@ -49,14 +46,14 @@ namespace Raven.Tests.Core.BulkInsert
                             Children = Enumerable.Range(0, 5).Select(x => new Node { Name = "Child" + x }).ToArray()
                         });
                     }
-                    bulkInsertStartsCounter = ((ChunkedRemoteBulkInsertOperation) bulkInsert.Operation).RemoteBulkInsertOperationSwitches;
+                    bulkInsertStartsCounter = ((ChunkedRemoteBulkInsertOperation)bulkInsert.Operation).RemoteBulkInsertOperationSwitches;
                 }
 
                 Assert.Equal(20, bulkInsertStartsCounter);
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<Node>().Customize(x => x.WaitForNonStaleResults()).Count();
-                    if(20 != count)
+                    if (20 != count)
                         WaitForUserToContinueTheTest(store);
                 }
             }
@@ -85,7 +82,7 @@ namespace Raven.Tests.Core.BulkInsert
                             Children = Enumerable.Range(0, 5).Select(x => new Node { Name = "Child" + x }).ToArray()
                         });
                     }
-                    bulkInsertStartsCounter = ((ChunkedRemoteBulkInsertOperation) bulkInsert.Operation).RemoteBulkInsertOperationSwitches;
+                    bulkInsertStartsCounter = ((ChunkedRemoteBulkInsertOperation)bulkInsert.Operation).RemoteBulkInsertOperationSwitches;
                 }
 
                 Assert.Equal(1, bulkInsertStartsCounter);
@@ -120,7 +117,7 @@ namespace Raven.Tests.Core.BulkInsert
                         });
                     }
 
-                    remoteBulkInsertOperationSwitches = ((ChunkedRemoteBulkInsertOperation) bulkInsert.Operation).RemoteBulkInsertOperationSwitches;
+                    remoteBulkInsertOperationSwitches = ((ChunkedRemoteBulkInsertOperation)bulkInsert.Operation).RemoteBulkInsertOperationSwitches;
                 }
 
                 Assert.Equal(20, remoteBulkInsertOperationSwitches);
@@ -128,7 +125,7 @@ namespace Raven.Tests.Core.BulkInsert
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<Node>().Customize(x => x.WaitForNonStaleResults()).Count();
-                    Assert.Equal(20,count);
+                    Assert.Equal(20, count);
                 }
             }
         }
@@ -156,7 +153,7 @@ namespace Raven.Tests.Core.BulkInsert
                         });
                     }
 
-                    bulkInsertStartsCounter = ((ChunkedRemoteBulkInsertOperation) bulkInsert.Operation).RemoteBulkInsertOperationSwitches;
+                    bulkInsertStartsCounter = ((ChunkedRemoteBulkInsertOperation)bulkInsert.Operation).RemoteBulkInsertOperationSwitches;
                 }
                 mre.Wait(1000);
                 Assert.Equal(1, bulkInsertStartsCounter);

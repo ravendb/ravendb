@@ -19,12 +19,12 @@ namespace Raven.Client.Document
         private readonly AsyncServerClient client;
 
         private readonly IDatabaseChanges changes;
-                
+
         private int processedItemsInCurrentOperation;
 
         private RemoteBulkInsertOperation current;
 
-        public int RemoteBulkInsertOperationSwitches { get; private set; }
+        internal int RemoteBulkInsertOperationSwitches { get; private set; }
 
         private long currentChunkSize;
 
@@ -36,7 +36,7 @@ namespace Raven.Client.Document
         {
             this.options = options;
             this.client = client;
-            this.changes = changes;			
+            this.changes = changes;
             currentChunkSize = 0;
             RemoteBulkInsertOperationSwitches = 0;
             current = GetBulkInsertOperation();
@@ -69,7 +69,7 @@ namespace Raven.Client.Document
                 await current.DisposeAsync().ConfigureAwait(false);
                 current = null;
             }
-                
+
         }
 
         private RemoteBulkInsertOperation GetBulkInsertOperation()
@@ -82,9 +82,9 @@ namespace Raven.Client.Document
                 {
                     return current;
                 }
-        // if we haven't flushed the previous one yet, we will force 
-        // a disposal of both the previous one and the one before, to avoid 
-        // consuming a lot of memory, and to have _too_ much concurrency.
+            // if we haven't flushed the previous one yet, we will force 
+            // a disposal of both the previous one and the one before, to avoid 
+            // consuming a lot of memory, and to have _too_ much concurrency.
             if (previousTask != null)
             {
                 previousTask.ConfigureAwait(false).GetAwaiter().GetResult();
@@ -143,7 +143,7 @@ namespace Raven.Client.Document
                 disposeAsync.GetAwaiter().GetResult();
             }
         }
-        
+
         public bool IsAborted
         {
             get { return current != null && current.IsAborted; }
