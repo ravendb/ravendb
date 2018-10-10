@@ -1,8 +1,11 @@
 using Raven.Abstractions.Data;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Raven.Client.Document;
 using Raven.Tests.Core.ChangesApi;
 using Xunit;
 
@@ -27,16 +30,9 @@ namespace Raven.Tests.Core.BulkInsert
         [Fact]
         public void ChunkVolumeConstraint()
         {
-            var bulkInsertStartsCounter = 0;
             using (var store = GetDocumentStore())
             {
-                store.Changes().Task.Result.ForBulkInsert().Task.Result
-                    .Subscribe(new ActionObserver<BulkInsertChangeNotification>(x =>
-                    {
-                        if (x.Type == DocumentChangeTypes.BulkInsertStarted)
-                            Interlocked.Increment(ref bulkInsertStartsCounter);
-                    }));
-
+                var bulkInsertStartsCounter = 0;
                 using (var bulkInsert = store.BulkInsert(options: new BulkInsertOptions
                 {
                     ChunkedBulkInsertOptions = new ChunkedBulkInsertOptions
@@ -53,13 +49,15 @@ namespace Raven.Tests.Core.BulkInsert
                             Children = Enumerable.Range(0, 5).Select(x => new Node { Name = "Child" + x }).ToArray()
                         });
                     }
+                    bulkInsertStartsCounter = ((ChunkedRemoteBulkInsertOperation) bulkInsert.Operation).RemoteBulkInsertOperationSwitches;
                 }
 
                 Assert.Equal(20, bulkInsertStartsCounter);
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<Node>().Customize(x => x.WaitForNonStaleResults()).Count();
-                    Assert.Equal(20, count);
+                    if(20 != count)
+                        WaitForUserToContinueTheTest(store);
                 }
             }
 
@@ -68,16 +66,9 @@ namespace Raven.Tests.Core.BulkInsert
         [Fact]
         public void ChunkVolumeConstraintMakeSureUnneededConnectionsNotCreated()
         {
-            var bulkInsertStartsCounter = 0;
             using (var store = GetDocumentStore())
             {
-                store.Changes().Task.Result.ForBulkInsert().Task.Result
-                    .Subscribe(new ActionObserver<BulkInsertChangeNotification>(x =>
-                    {
-                        if (x.Type == DocumentChangeTypes.BulkInsertStarted)
-                            Interlocked.Increment(ref bulkInsertStartsCounter);
-                    }));
-                
+                var bulkInsertStartsCounter = 0;
                 using (var bulkInsert = store.BulkInsert(options: new Abstractions.Data.BulkInsertOptions
                 {
                     ChunkedBulkInsertOptions = new ChunkedBulkInsertOptions
@@ -94,6 +85,7 @@ namespace Raven.Tests.Core.BulkInsert
                             Children = Enumerable.Range(0, 5).Select(x => new Node { Name = "Child" + x }).ToArray()
                         });
                     }
+                    bulkInsertStartsCounter = ((ChunkedRemoteBulkInsertOperation) bulkInsert.Operation).RemoteBulkInsertOperationSwitches;
                 }
 
                 Assert.Equal(1, bulkInsertStartsCounter);
@@ -109,16 +101,9 @@ namespace Raven.Tests.Core.BulkInsert
         [Fact]
         public void DocumentsInChunkConstraint()
         {
-            var bulkInsertStartsCounter = 0;
             using (var store = GetDocumentStore())
             {
-                store.Changes().Task.Result.ForBulkInsert().Task.Result
-                     .Subscribe(new ActionObserver<BulkInsertChangeNotification>(x =>
-                     {
-                         if (x.Type == DocumentChangeTypes.BulkInsertStarted)
-                             Interlocked.Increment(ref bulkInsertStartsCounter);
-                     }));
-                
+                var remoteBulkInsertOperationSwitches = 0;
                 using (var bulkInsert = store.BulkInsert(options: new Abstractions.Data.BulkInsertOptions
                 {
                     ChunkedBulkInsertOptions = new ChunkedBulkInsertOptions
@@ -134,35 +119,27 @@ namespace Raven.Tests.Core.BulkInsert
                             Name = "Parent",
                         });
                     }
+
+                    remoteBulkInsertOperationSwitches = ((ChunkedRemoteBulkInsertOperation) bulkInsert.Operation).RemoteBulkInsertOperationSwitches;
                 }
 
-                Assert.Equal(20, bulkInsertStartsCounter);
+                Assert.Equal(20, remoteBulkInsertOperationSwitches);
+
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<Node>().Customize(x => x.WaitForNonStaleResults()).Count();
-                    Assert.Equal(count, 20);
+                    Assert.Equal(20,count);
                 }
             }
-
         }
 
         [Fact]
         public void DocumentsInChunkConstraintMakeSureUnneedConnectionsNotCreated()
         {
-            var bulkInsertStartsCounter = 0;
             var mre = new ManualResetEventSlim();
             using (var store = GetDocumentStore())
             {
-                store.Changes().Task.Result.ForBulkInsert().Task.Result
-                     .Subscribe(new ActionObserver<BulkInsertChangeNotification>(x =>
-                     {
-                         if (x.Type == DocumentChangeTypes.BulkInsertStarted)
-                         {
-                             Interlocked.Increment(ref bulkInsertStartsCounter);
-                             mre.Set();
-                         }
-                     }));
-
+                var bulkInsertStartsCounter = 0;
                 using (var bulkInsert = store.BulkInsert(options: new Abstractions.Data.BulkInsertOptions
                 {
                     ChunkedBulkInsertOptions = new ChunkedBulkInsertOptions
@@ -178,6 +155,8 @@ namespace Raven.Tests.Core.BulkInsert
                             Name = "Parent",
                         });
                     }
+
+                    bulkInsertStartsCounter = ((ChunkedRemoteBulkInsertOperation) bulkInsert.Operation).RemoteBulkInsertOperationSwitches;
                 }
                 mre.Wait(1000);
                 Assert.Equal(1, bulkInsertStartsCounter);
@@ -192,16 +171,9 @@ namespace Raven.Tests.Core.BulkInsert
         [Fact]
         public void ValidateChunkedBulkInsertOperationsIDsCount()
         {
-            var bulkInsertStartsCounter = new ConcurrentDictionary<Guid, BulkInsertChangeNotification>();
+            var bulkInsertStartsCounter = new HashSet<Guid>();
             using (var store = GetDocumentStore())
             {
-                store.Changes().Task.Result.ForBulkInsert().Task.Result
-                    .Subscribe(new ActionObserver<BulkInsertChangeNotification>(x =>
-                    {
-                        if (x.Type == DocumentChangeTypes.BulkInsertStarted)
-                            Assert.True(bulkInsertStartsCounter.TryAdd(x.OperationId, x));
-                    }));
-                
                 for (var i = 0; i < 10; i++)
                 {
                     using (var bulkInsert = store.BulkInsert())
@@ -211,6 +183,8 @@ namespace Raven.Tests.Core.BulkInsert
                             Name = "Parent",
                             Children = Enumerable.Range(0, 5).Select(x => new Node { Name = "Child" + x }).ToArray()
                         });
+
+                        bulkInsertStartsCounter.Add(bulkInsert.OperationId);
                     }
                 }
             }

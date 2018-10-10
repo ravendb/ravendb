@@ -23,7 +23,9 @@ namespace Raven.Client.Document
         private int processedItemsInCurrentOperation;
 
         private RemoteBulkInsertOperation current;
-                
+
+        public int RemoteBulkInsertOperationSwitches { get; private set; }
+
         private long currentChunkSize;
 
         private bool disposed;
@@ -36,6 +38,7 @@ namespace Raven.Client.Document
             this.client = client;
             this.changes = changes;			
             currentChunkSize = 0;
+            RemoteBulkInsertOperationSwitches = 0;
             current = GetBulkInsertOperation();
         }
 
@@ -76,17 +79,17 @@ namespace Raven.Client.Document
 
             if (processedItemsInCurrentOperation < options.ChunkedBulkInsertOptions.MaxDocumentsPerChunk)
                 if (options.ChunkedBulkInsertOptions.MaxChunkVolumeInBytes <= 0 || currentChunkSize < options.ChunkedBulkInsertOptions.MaxChunkVolumeInBytes)
+                {
                     return current;
-
-            // if we haven't flushed the previous one yet, we will force 
-            // a disposal of both the previous one and the one before, to avoid 
-            // consuming a lot of memory, and to have _too_ much concurrency.
+                }
+        // if we haven't flushed the previous one yet, we will force 
+        // a disposal of both the previous one and the one before, to avoid 
+        // consuming a lot of memory, and to have _too_ much concurrency.
             if (previousTask != null)
             {
                 previousTask.ConfigureAwait(false).GetAwaiter().GetResult();
             }
             previousTask = current.DisposeAsync();
-
             currentChunkSize = 0;
             processedItemsInCurrentOperation = 0;
             current = CreateBulkInsertOperation(previousTask);
@@ -99,7 +102,10 @@ namespace Raven.Client.Document
             if (OperationId == Guid.Empty)
                 existingOperationId = null;
             else
-            existingOperationId = OperationId;
+                existingOperationId = OperationId;
+
+            RemoteBulkInsertOperationSwitches++;
+
             var operation = new RemoteBulkInsertOperation(options, client, changes, disposeAsync, existingOperationId);
             if (Report != null)
                 operation.Report += Report;
