@@ -40,6 +40,26 @@ namespace Raven.Server.Documents.Queries.Parser
             return _pos == _q.Length;
         }
 
+        public bool NextPathSegment()
+        {
+            if (SkipWhitespace() == false)
+                return false;
+            for (; _pos < _q.Length; _pos++)
+                if (char.IsLetter(_q[_pos]))
+                    break;
+            return true;
+        }
+
+        public bool SkipUntil(char match)
+        {
+            if (SkipWhitespace() == false)
+                return false;
+            for (; _pos < _q.Length; _pos++)
+                if (match == _q[_pos])
+                    break;
+            return true;
+        }
+
         public bool NextToken()
         {
             if (SkipWhitespace() == false)

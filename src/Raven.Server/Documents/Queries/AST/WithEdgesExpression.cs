@@ -12,15 +12,18 @@ namespace Raven.Server.Documents.Queries.AST
 
         public StringSegment? FromAlias;
 
+        public List<StringSegment> Path;
+
         public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> OrderBy;
 
-        public WithEdgesExpression(QueryExpression @where, string edgeType, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy)
+        public WithEdgesExpression(QueryExpression @where, string edgeType, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy, List<StringSegment> path = null)
         {
             Where = @where;
             OrderBy = orderBy;
             //null edges means all edges 
             EdgeType = edgeType;
             Type = ExpressionType.WithEdge;
+            Path = path;
         }
 
         public override string ToString() => GetText();
