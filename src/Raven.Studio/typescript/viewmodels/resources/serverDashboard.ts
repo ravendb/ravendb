@@ -345,8 +345,36 @@ class trafficSection {
     totalRequestsPerSecond = ko.observable<number>(0);
     totalWritesPerSecond = ko.observable<number>(0);
     totalDataWritesPerSecond = ko.observable<number>(0);
-    
-    init()  {
+
+    totalDocsWritesPerSecond = ko.observable<number>(0);
+    totalAttachmentsWritesPerSecond = ko.observable<number>(0);
+    totalCountersWritesPerSecond = ko.observable<number>(0);
+    totalDocsWriteBytesPerSecond = ko.observable<number>(0);
+    totalAttachmentsWriteBytesPerSecond = ko.observable<number>(0);
+    totalCountersWriteBytesPerSecond = ko.observable<number>(0);
+
+    writesPerSecondTooltip: KnockoutComputed<string>;
+    writeBytesPerSecondTooltip: KnockoutComputed<string>;
+
+    constructor() {
+        this.writesPerSecondTooltip = ko.pureComputed(() => {
+            return `<div>
+                    Documents: <strong>${this.totalDocsWritesPerSecond().toLocaleString()}</strong><br />
+                    Attachments: <strong>${this.totalAttachmentsWritesPerSecond().toLocaleString()}</strong><br />
+                    Counters: <strong>${this.totalCountersWritesPerSecond().toLocaleString()}</strong>
+                    </div>`;
+        });
+
+        this.writeBytesPerSecondTooltip = ko.pureComputed(() => {
+            return `<div>
+                    Documents: <strong>${this.sizeFormatter(this.totalDocsWriteBytesPerSecond())}/s</strong><br />
+                    Attachments: <strong>${this.sizeFormatter(this.totalAttachmentsWriteBytesPerSecond())}/s</strong><br />
+                    Counters: <strong>${this.sizeFormatter(this.totalCountersWriteBytesPerSecond())}/s</strong>
+                    </div>`;
+        });
+    }
+
+    init() {
         const grid = this.gridController();
 
         grid.headerVisible(true);
@@ -377,6 +405,8 @@ class trafficSection {
             },
             tooltipProvider: data => this.trafficTooltip(data)
         });
+
+        $('.dashboard-traffic [data-toggle="tooltip"]').tooltip();
     }
     
     onResize() {
@@ -443,13 +473,33 @@ class trafficSection {
         let totalRequests = 0;
         let writesPerSecond = 0;
         let dataWritesPerSecond = 0;
+        let docsWritesPerSeconds = 0;
+        let attachmentsWritesPerSecond = 0;
+        let countersWritesPerSecond = 0;
+        let docsWriteBytesPerSeconds = 0;
+        let attachmentsWriteBytesPerSecond = 0;
+        let countersWriteBytesPerSecond = 0;
 
         this.table.forEach(item => {
             totalRequests += item.requestsPerSecond();
             writesPerSecond += item.writesPerSecond();
             dataWritesPerSecond += item.dataWritesPerSecond();
+
+            docsWritesPerSeconds += item.docsWritesPerSeconds();
+            attachmentsWritesPerSecond += item.attachmentsWritesPerSecond();
+            countersWritesPerSecond += item.countersWritesPerSecond();
+            docsWriteBytesPerSeconds += item.docsWriteBytesPerSeconds();
+            attachmentsWriteBytesPerSecond += item.attachmentsWriteBytesPerSecond();
+            countersWriteBytesPerSecond += item.countersWriteBytesPerSecond();
         });
 
+        this.totalDocsWritesPerSecond(docsWritesPerSeconds);
+        this.totalAttachmentsWritesPerSecond(attachmentsWritesPerSecond);
+        this.totalCountersWritesPerSecond(countersWritesPerSecond);
+        this.totalDocsWriteBytesPerSecond(docsWriteBytesPerSeconds);
+        this.totalAttachmentsWriteBytesPerSecond(attachmentsWriteBytesPerSecond);
+        this.totalCountersWriteBytesPerSecond(countersWriteBytesPerSecond);
+        
         this.totalRequestsPerSecond(totalRequests);
         this.totalWritesPerSecond(writesPerSecond);
         this.totalDataWritesPerSecond(dataWritesPerSecond);

@@ -74,12 +74,12 @@
                                     </span>
                                     </div>
                                     <div>
-                                        <div data-toggle="tooltip" data-html="true" data-bind="attr: { 'data-original-title': totalMemoryTooltip }" data-animation="true">
+                                        <div data-toggle="tooltip" data-html="true" data-bind="tooltipText: totalMemoryTooltip" data-animation="true">
                                             <i class="icon-server icon-document-group"></i>
                                             <strong class="text-success" data-bind="text: $root.sizeFormatter(totalMemory())"></strong>
                                         </div>
 
-                                        <div data-toggle="tooltip" data-html="true" data-bind="attr: { 'data-original-title': machineMemoryUsageTooltip }" data-animation="true">
+                                        <div data-toggle="tooltip" data-html="true" data-bind="tooltipText: machineMemoryUsageTooltip" data-animation="true">
                                             <i class="icon-server machine-usage"></i>
                                             <strong class="text-success" data-bind="text: $root.sizeFormatter(usedMemory())"></strong>
                                         </div>
@@ -113,12 +113,21 @@
                     <div class="infogrid">
                         <div class="infogrid-label">
                             <div class="absolute-center loading" data-bind="visible: $root.spinners.loading"><div class="global-spinner"></div></div>
-                            <div data-bind="style: { visibility: $root.spinners.loading()? 'hidden' : 'visible' }"> <!-- using visibility here to reserve space -->
-                                <div class="margin-bottom">Requests/s<br/>
+                            <div data-bind="style: { visibility: $root.spinners.loading()? 'hidden' : 'visible' }">
+                                <!-- using visibility here to reserve space -->
+                                <div class="margin-bottom">
+                                    Requests/s<br />
                                     <i class="total-requests-legend legend-rect"></i>
-                                    <strong data-bind="text: totalRequestsPerSecond().toLocaleString()"></strong></div>
-                                <div class="margin-bottom">Writes/s<br/> <i class="total-writes-legend legend-rect" ></i> <strong data-bind="text: totalWritesPerSecond().toLocaleString()"></strong></div>
-                                <div>Data Written/s<br /> <i class="total-written-legend legend-rect"></i> <strong data-bind="text: $root.sizeFormatter(totalDataWritesPerSecond())"></strong></div>    
+                                    <strong data-bind="text: totalRequestsPerSecond().toLocaleString()"></strong>
+                                </div>
+                                <div class="margin-bottom" data-toggle="tooltip" data-placement="right" data-html="true" data-bind="tooltipText: writesPerSecondTooltip" data-animation="true">
+                                    Writes/s<br /> <i class="total-writes-legend legend-rect">
+                                    </i> <strong data-bind="text: totalWritesPerSecond().toLocaleString()"></strong>
+                                </div>
+                                <div data-toggle="tooltip" data-placement="right" data-html="true" data-bind="tooltipText: writeBytesPerSecondTooltip" data-animation="true">
+                                    Data Written/s<br /> <i class="total-written-legend legend-rect"></i>
+                                    <strong data-bind="text: $root.sizeFormatter(totalDataWritesPerSecond())"></strong>
+                                </div>
                             </div>
                         </div>
                         <div class="infogrid-graph">
