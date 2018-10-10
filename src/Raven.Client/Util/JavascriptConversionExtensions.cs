@@ -610,8 +610,22 @@ namespace Raven.Client.Util
                             }
                         }
                     case "Count":
-                        HandleCount(context, methodCallExpression.Arguments[0]);
-                        return;
+                    {
+                        context.PreventDefault();
+                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                        var writer = context.GetWriter();
+                        using (writer.Operation(methodCallExpression))
+                        {
+                            if (methodCallExpression.Arguments.Count > 1)
+                            {
+                                writer.Write(".filter");
+                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                            }
+
+                            writer.Write(".length");
+                            return;
+                        }
+                    }
                     default:
                         throw new NotSupportedException($"Unable to translate '{methodName}' to RQL operation because this method is not familiar to the RavenDB query provider.")
                         {
