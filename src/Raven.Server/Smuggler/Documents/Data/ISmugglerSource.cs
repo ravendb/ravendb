@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
@@ -25,7 +26,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         IEnumerable<(string Prefix, long Value)> GetIdentities();
         IEnumerable<(string key, long index, BlittableJsonReaderObject value)> GetCompareExchangeValues();
         IEnumerable<CounterDetail> GetCounterValues();
-        long SkipType(DatabaseItemType type, Action<long> onSkipped);
+        long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token);
     }
 
     public class IndexDefinitionAndType

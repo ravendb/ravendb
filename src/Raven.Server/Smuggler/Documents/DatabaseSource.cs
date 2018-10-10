@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
@@ -271,7 +272,7 @@ namespace Raven.Server.Smuggler.Documents
             return _database.DocumentsStorage.CountersStorage.GetCountersFrom(_context, _startDocumentEtag, 0, int.MaxValue);
         }
 
-        public long SkipType(DatabaseItemType type, Action<long> onSkipped)
+        public long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)
         {
             return 0; // no-op
         }
