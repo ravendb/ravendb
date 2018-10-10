@@ -29,9 +29,17 @@ namespace Raven.Server.Dashboard
         
         public int RequestsPerSecond { get; set; }
 
-        public int WritesPerSecond { get; set; }
+        public int DocumentWritesPerSecond { get; set; }
 
-        public double WriteBytesPerSecond { get; set; }
+        public int AttachmentWritesPerSecond { get; set; }
+
+        public int CounterWritesPerSecond { get; set; }
+
+        public double DocumentsWriteBytesPerSecond { get; set; }
+
+        public double AttachmentsWriteBytesPerSecond { get; set; }
+
+        public double CountersWriteBytesPerSecond { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -39,8 +47,12 @@ namespace Raven.Server.Dashboard
             {
                 [nameof(Database)] = Database,
                 [nameof(RequestsPerSecond)] = RequestsPerSecond,
-                [nameof(WritesPerSecond)] = WritesPerSecond,
-                [nameof(WriteBytesPerSecond)] = WriteBytesPerSecond
+                [nameof(DocumentWritesPerSecond)] = DocumentWritesPerSecond,
+                [nameof(AttachmentWritesPerSecond)] = AttachmentWritesPerSecond,
+                [nameof(CounterWritesPerSecond)] = CounterWritesPerSecond,
+                [nameof(DocumentsWriteBytesPerSecond)] = DocumentsWriteBytesPerSecond,
+                [nameof(AttachmentsWriteBytesPerSecond)] = AttachmentsWriteBytesPerSecond,
+                [nameof(CountersWriteBytesPerSecond)] = CountersWriteBytesPerSecond
             };
         }
     }

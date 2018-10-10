@@ -132,18 +132,17 @@ namespace Raven.Server.Dashboard
                         var documentsStorage = database.DocumentsStorage;
                         var indexStorage = database.IndexStore;
 
-                        var writesPerSecond = (int)database.Metrics.Docs.PutsPerSec.OneSecondRate +
-                                              (int)database.Metrics.Attachments.PutsPerSec.OneSecondRate +
-                                              (int)database.Metrics.Counters.PutsPerSec.OneSecondRate;
-                        var writeBytesPerSecond = database.Metrics.Docs.BytesPutsPerSec.OneSecondRate +
-                                                  database.Metrics.Attachments.BytesPutsPerSec.OneSecondRate +
-                                                  database.Metrics.Counters.BytesPutsPerSec.OneSecondRate;
+
                         var trafficWatchItem = new TrafficWatchItem
                         {
                             Database = database.Name,
                             RequestsPerSecond = (int)database.Metrics.Requests.RequestsPerSec.OneSecondRate,
-                            WritesPerSecond = writesPerSecond,
-                            WriteBytesPerSecond = writeBytesPerSecond
+                            DocumentWritesPerSecond = (int)database.Metrics.Docs.PutsPerSec.OneSecondRate,
+                            AttachmentWritesPerSecond = (int)database.Metrics.Attachments.PutsPerSec.OneSecondRate,
+                            CounterWritesPerSecond = (int)database.Metrics.Counters.PutsPerSec.OneSecondRate,
+                            DocumentsWriteBytesPerSecond = database.Metrics.Docs.BytesPutsPerSec.OneSecondRate,
+                            AttachmentsWriteBytesPerSecond = database.Metrics.Attachments.BytesPutsPerSec.OneSecondRate,
+                            CountersWriteBytesPerSecond = database.Metrics.Counters.BytesPutsPerSec.OneSecondRate
                         };
                         trafficWatch.Items.Add(trafficWatchItem);
 
