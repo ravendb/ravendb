@@ -103,9 +103,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                             default:
                                 throw new NotSupportedException();
                         }
-                        Console.WriteLine("HandleReferences.cs(lastReferenceEtag = " + lastReferenceEtag+")"
-                                          + "moreWorkFound = "+ moreWorkFound);
-
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Executing handle references for '{_index.Name}'. LastReferenceEtag: {lastReferenceEtag}.");
 
@@ -235,20 +232,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                     }
                 }
             }
-
-            if (moreWorkFound)
-            {
-                foreach (var kvp in CurrentIndexingScope.Current.ReferenceEtagsByCollection)
-                {
-                    foreach (var collections in kvp.Value)
-                    {
-                        Console.WriteLine("collections.Value:   " + collections.Value);
-
-                    }
-                }
-                CurrentIndexingScope.Current.ReferenceEtagsByCollection.Clear();
-            }
-
             return moreWorkFound;
         }
 
