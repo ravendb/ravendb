@@ -166,11 +166,12 @@ namespace Raven.Server.Documents.Queries.Results
         public Document GetProjectionFromDocument(Document doc, Lucene.Net.Documents.Document luceneDoc, float score, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
         {
             var result = new DynamicJsonValue();
-
+            var hasSucceededToFindProjectionFields = false;
             foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
             {
                 if (TryGetValue(fieldToFetch, doc, luceneDoc, state, out var key, out var fieldVal))
                 {
+                    hasSucceededToFindProjectionFields = true;
                     if (fieldsToFetch.SingleBodyOrMethodWithNoAlias)
                     {
                         Document newDoc = null;
@@ -222,7 +223,17 @@ namespace Raven.Server.Documents.Queries.Results
                 }
             }
 
+            if (hasSucceededToFindProjectionFields == false)
+            {
+                ThrowMissingOrInvalidAliasesInSelect();
+            }
+
             return ReturnProjection(result, doc, score, context);
+        }
+
+        private static void ThrowMissingOrInvalidAliasesInSelect()
+        {
+            throw new InvalidOperationException($"Didn't find any suitable fields to project. Most likely this is because there are invalid or non declared aliases for Vertex match or Document collection.{Environment.NewLine}Do note that aliases are required for SELECT clause of graph queries.{Environment.NewLine}");
         }
 
         private static void ThrowInvalidQueryBodyResponse(object fieldVal)
@@ -631,7 +642,8 @@ namespace Raven.Server.Documents.Queries.Results
             else if (field.IsCompositeField == false)
             {
                 if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, field.Name, out value) == false &&
-                    BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, field.ProjectedName, out value) == false)
+                    (field.ProjectedName == null || 
+                    BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, field.ProjectedName, out value) == false))
                 {
                     return false;
                 }
