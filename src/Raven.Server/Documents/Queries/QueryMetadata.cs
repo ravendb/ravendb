@@ -237,9 +237,16 @@ namespace Raven.Server.Documents.Queries
 
             if (IsGraph)
             {
-                AliasesInGraphSelect = Query.GraphQuery.WithEdgePredicates.Keys
-                    .Union(
-                        Query.GraphQuery.WithDocumentQueries.Keys)
+                var edgePredicateKeys = Query.GraphQuery.WithEdgePredicates?.Keys ?? Enumerable.Empty<StringSegment>();
+                var documentQueryKeys = Query.GraphQuery.WithDocumentQueries.Keys;
+
+                if (documentQueryKeys == null)
+                {
+                    ThrowMissingVertexMatchClauses();
+                }
+
+                AliasesInGraphSelect = edgePredicateKeys
+                    .Union(documentQueryKeys)
                     .Select(str => (string)str)
                     .ToArray();
             }
@@ -295,6 +302,11 @@ namespace Raven.Server.Documents.Queries
 
             if (Query.DeclaredFunctions != null)
                 HandleDeclaredFunctions();
+        }
+
+        private static void ThrowMissingVertexMatchClauses()
+        {
+            throw new InvalidOperationException("Graph queries should have at least one vertex match clause");
         }
 
         private void HandleDeclaredFunctions()
