@@ -64,7 +64,7 @@ namespace Raven.Database.Smuggler
                     From = Operations,
                     To = importOperations,
                     IncrementalKey = betweenOptions.IncrementalKey
-                }, Options, null)
+                }, Options)
                 .ConfigureAwait(false);
             }
         }

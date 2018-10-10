@@ -30,7 +30,9 @@ namespace Raven.Smuggler
     {
         public Action<string> OnShowProgress { get; set; } 
 
-        public async Task Between(SmugglerBetweenOperations betweenOperations, SmugglerDatabaseOptions databaseOptions, IDisposable exportOperationDisposer)
+        public async Task Between(
+            SmugglerBetweenOperations betweenOperations, 
+            SmugglerDatabaseOptions databaseOptions)
         {
             var exportOperations = betweenOperations.From;
             var importOperations = betweenOperations.To;
@@ -84,7 +86,7 @@ namespace Raven.Smuggler
                 incremental.LastAttachmentsEtag = await ExportAttachments(exportOperations, importOperations, databaseOptions).ConfigureAwait(false);
             }
 
-            await ExportIdentities(exportOperations, importOperations, databaseOptions.OperateOnTypes, exportOperationDisposer).ConfigureAwait(false);
+            await ExportIdentities(exportOperations, importOperations, databaseOptions.OperateOnTypes).ConfigureAwait(false);
 
             if (databaseOptions.Incremental)
             {
@@ -108,12 +110,13 @@ namespace Raven.Smuggler
             }
         }
 
-        private async Task ExportIdentities(ISmugglerDatabaseOperations exportOperations, ISmugglerDatabaseOperations importOperations, ItemType operateOnTypes, IDisposable exportOperationDisposer)
+        private async Task ExportIdentities(ISmugglerDatabaseOperations exportOperations, 
+            ISmugglerDatabaseOperations importOperations, 
+            ItemType operateOnTypes)
         {
             ShowProgress("Exporting Identities");
 
             var identities = await exportOperations.GetIdentities().ConfigureAwait(false);
-            exportOperationDisposer?.Dispose(); //we don't need it anymore, so let us get rid of it
 
             ShowProgress("Got {0} following identities: {1}", identities.Count, string.Join(", ", identities.Select(x => x.Key)));
 
