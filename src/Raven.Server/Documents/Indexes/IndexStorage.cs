@@ -265,7 +265,10 @@ namespace Raven.Server.Documents.Indexes
             if (result == null)
                 return 0;
 
-            return result.Reader.ReadLittleEndianInt64();
+            var etag = result.Reader.ReadLittleEndianInt64();
+
+            Console.WriteLine($"ReadLastProcessedReferenceEtag({collection}, {referencedCollection.Name}) = {etag}");
+            return etag;
         }
 
         public long ReadLastProcessedReferenceTombstoneEtag(RavenTransaction tx, string collection, CollectionName referencedCollection)
@@ -307,6 +310,7 @@ namespace Raven.Server.Documents.Indexes
 
         public unsafe void WriteLastReferenceEtag(RavenTransaction tx, string collection, CollectionName referencedCollection, long etag)
         {
+            Console.WriteLine($"WriteLastReferenceEtag({collection}, {referencedCollection.Name}) = {etag}");
             var tree = tx.InnerTransaction.CreateTree("$" + collection);
             using (Slice.From(tx.InnerTransaction.Allocator, referencedCollection.Name, ByteStringType.Immutable, out Slice collectionSlice))
             using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))
@@ -537,9 +541,10 @@ namespace Raven.Server.Documents.Indexes
                         using (Slice.From(tx.InnerTransaction.Allocator, collectionName.Name, ByteStringType.Immutable, out Slice collectionKey))
                         {
                             var etag = collections.Value;
-
+                            Console.WriteLine("collectionName.Name = "+ collectionName.Name + " etag = "+ collections.Value);
                             var result = collectionEtagTree.Read(collectionKey);
                             var oldEtag = result?.Reader.ReadLittleEndianInt64();
+                            Console.WriteLine("oldEtag = " + oldEtag + " etag = " + collections.Value);
                             if (oldEtag >= etag)
                                 continue;
 
