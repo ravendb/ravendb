@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.Util;
 using Raven.Server.Background;
 using Raven.Server.Documents;
 using Raven.Server.Json;
@@ -30,7 +31,7 @@ namespace Raven.Server.Dashboard
         private DateTime _lastSentNotification = DateTime.MinValue;
 
         public DatabasesInfoNotificationSender(string resourceName, ServerStore serverStore,
-            ConcurrentSet<ConnectedWatcher> watchers, TimeSpan notificationsThrottle, CancellationToken shutdown) 
+            ConcurrentSet<ConnectedWatcher> watchers, TimeSpan notificationsThrottle, CancellationToken shutdown)
             : base(resourceName, shutdown)
         {
             _serverStore = serverStore;
@@ -40,7 +41,7 @@ namespace Raven.Server.Dashboard
 
         protected override async Task DoWork()
         {
-            var now = DateTime.UtcNow;
+            var now = SystemTime.UtcNow;
             var timeSpan = now - _lastSentNotification;
             if (timeSpan < _notificationsThrottle)
             {
@@ -68,12 +69,12 @@ namespace Raven.Server.Dashboard
             }
             finally
             {
-                _lastSentNotification = DateTime.UtcNow;
+                _lastSentNotification = SystemTime.UtcNow;
             }
         }
 
-        private static readonly ConcurrentDictionary<string, DatabaseInfoCache> CachedDatabaseInfo = 
-            new ConcurrentDictionary<string, DatabaseInfoCache>();
+        private static readonly ConcurrentDictionary<string, DatabaseInfoCache> CachedDatabaseInfo =
+            new ConcurrentDictionary<string, DatabaseInfoCache>(StringComparer.OrdinalIgnoreCase);
 
         private class DatabaseInfoCache
         {
@@ -139,7 +140,7 @@ namespace Raven.Server.Dashboard
                                                   database.Metrics.Counters.BytesPutsPerSec.OneSecondRate;
                         var trafficWatchItem = new TrafficWatchItem
                         {
-                            Database = databaseName,
+                            Database = database.Name,
                             RequestsPerSecond = (int)database.Metrics.Requests.RequestsPerSec.OneSecondRate,
                             WritesPerSecond = writesPerSecond,
                             WriteBytesPerSecond = writeBytesPerSecond
@@ -147,20 +148,20 @@ namespace Raven.Server.Dashboard
                         trafficWatch.Items.Add(trafficWatchItem);
 
                         var currentEnvironmentsHash = database.GetEnvironmentsHash();
-                        if (CachedDatabaseInfo.TryGetValue(databaseName, out var cached) && cached.Hash == currentEnvironmentsHash)
+                        if (CachedDatabaseInfo.TryGetValue(database.Name, out var item) && item.Hash == currentEnvironmentsHash)
                         {
-                            databasesInfo.Items.Add(cached.Item);
+                            databasesInfo.Items.Add(item.Item);
 
-                            if (cached.NextDiskSpaceCheck < DateTime.UtcNow)
+                            if (item.NextDiskSpaceCheck < SystemTime.UtcNow)
                             {
-                                CachedDatabaseInfo[databaseName].MountPoints = new List<Client.ServerWide.Operations.MountPointUsage>();
-                                DiskUsageCheck(cts, database, databaseName, drivesUsage);
+                                item.MountPoints = new List<Client.ServerWide.Operations.MountPointUsage>();
+                                DiskUsageCheck(item, database, drivesUsage, cts);
                             }
                             else
                             {
-                                foreach (var cachedMountPoint in cached.MountPoints)
+                                foreach (var cachedMountPoint in item.MountPoints)
                                 {
-                                    UpdateMountPoint(cachedMountPoint, databaseName, drivesUsage);
+                                    UpdateMountPoint(cachedMountPoint, database.Name, drivesUsage);
                                 }
                             }
                         }
@@ -171,7 +172,7 @@ namespace Raven.Server.Dashboard
                             {
                                 var databaseInfoItem = new DatabaseInfoItem
                                 {
-                                    Database = databaseName,
+                                    Database = database.Name,
                                     DocumentsCount = documentsStorage.GetNumberOfDocuments(documentsContext),
                                     IndexesCount = database.IndexStore.Count,
                                     AlertsCount = database.NotificationCenter.GetAlertCount(),
@@ -180,14 +181,14 @@ namespace Raven.Server.Dashboard
                                     Online = true
                                 };
                                 databasesInfo.Items.Add(databaseInfoItem);
-                                CachedDatabaseInfo[databaseName] = new DatabaseInfoCache
+                                CachedDatabaseInfo[database.Name] = item = new DatabaseInfoCache
                                 {
                                     Hash = currentEnvironmentsHash,
                                     Item = databaseInfoItem
                                 };
                             }
 
-                            DiskUsageCheck(cts, database, databaseName, drivesUsage);
+                            DiskUsageCheck(item, database, drivesUsage, cts);
                         }
                     }
                     catch (Exception)
@@ -201,26 +202,25 @@ namespace Raven.Server.Dashboard
             yield return indexingSpeed;
             yield return trafficWatch;
             yield return drivesUsage;
-            
         }
 
-        private static void DiskUsageCheck(CancellationTokenSource cts, DocumentDatabase database, string databaseName, DrivesUsage drivesUsage)
+        private static void DiskUsageCheck(DatabaseInfoCache item, DocumentDatabase database, DrivesUsage drivesUsage, CancellationTokenSource cts)
         {
             foreach (var mountPointUsage in database.GetMountPointsUsage())
             {
                 if (cts.IsCancellationRequested)
                     return;
 
-                UpdateMountPoint(mountPointUsage, databaseName, drivesUsage);
-                CachedDatabaseInfo[databaseName].MountPoints.Add(mountPointUsage);
+                UpdateMountPoint(mountPointUsage, database.Name, drivesUsage);
+                item.MountPoints.Add(mountPointUsage);
             }
 
-            CachedDatabaseInfo[databaseName].NextDiskSpaceCheck = DateTime.UtcNow.AddSeconds(30);
+            item.NextDiskSpaceCheck = SystemTime.UtcNow.AddSeconds(30);
         }
 
         private static void UpdateMountPoint(
-            Client.ServerWide.Operations.MountPointUsage mountPointUsage, 
-            string databaseName, 
+            Client.ServerWide.Operations.MountPointUsage mountPointUsage,
+            string databaseName,
             DrivesUsage drivesUsage)
         {
             var mountPoint = mountPointUsage.DiskSpaceResult.DriveName;
@@ -258,9 +258,9 @@ namespace Raven.Server.Dashboard
         private static void SetOfflineDatabaseInfo(
             ServerStore serverStore,
             TransactionOperationContext context,
-            string databaseName, 
-            DatabasesInfo existingDatabasesInfo, 
-            DrivesUsage existingDrivesUsage, 
+            string databaseName,
+            DatabasesInfo existingDatabasesInfo,
+            DrivesUsage existingDrivesUsage,
             bool disabled)
         {
             var databaseRecord = serverStore.Cluster.ReadRawDatabase(context, databaseName, out var _);
