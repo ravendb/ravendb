@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using CsvHelper;
 using Raven.Client;
 using Raven.Client.Documents.Smuggler;
@@ -349,7 +350,7 @@ namespace Raven.Server.Smuggler.Documents
             return Enumerable.Empty<(string key, long index, BlittableJsonReaderObject value)>();
         }
 
-        public long SkipType(DatabaseItemType type, Action<long> onSkipped)
+        public long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)
         {
             return 0;
         }

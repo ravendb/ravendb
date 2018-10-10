@@ -234,7 +234,7 @@ namespace Raven.Server.Smuggler.Documents
                 _onProgress.Invoke(result.Progress);
             }
 
-            var numberOfItemsSkipped = _source.SkipType(type, onSkipped: OnSkipped);
+            var numberOfItemsSkipped = _source.SkipType(type, OnSkipped, _token);
 
             if (ensureStepProcessed == false)
                 return;
