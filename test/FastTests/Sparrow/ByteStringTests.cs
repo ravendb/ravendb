@@ -233,7 +233,7 @@ namespace FastTests.Sparrow
                 {
                     using (context.From("string", ByteStringType.Immutable, out value))
                     {
-                        value.Ptr[2] = (byte)'t';
+                        value.Address[2] = (byte)'t';
                     }
                 });
             }
@@ -249,7 +249,7 @@ namespace FastTests.Sparrow
                     ByteString value;
                     using (context.From("string", ByteStringType.Immutable, out value))
                     {
-                        value.Ptr[2] = (byte)'t';
+                        value.Address[2] = (byte)'t';
                     }
                 }
             });

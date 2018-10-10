@@ -138,11 +138,11 @@ namespace Sparrow
             // PERF: Given that for the normal use case the INativeOptions we will use returns constants the
             //       JIT will be able to fold all this if sequence into a branchless single call.
             if (allocator._options.ElectricFenceEnabled)
-                ElectricFencedMemory.Free((byte*)ptr.Ptr);
+                ElectricFencedMemory.Free((byte*)ptr.Address);
             else if (allocator._options.UseSecureMemory)
                 throw new NotImplementedException();
             else
-                NativeMemory.Free((byte*)ptr.Ptr, ptr.Size);
+                NativeMemory.Free((byte*)ptr.Address, ptr.Size);
 
             ptr = new Pointer();
         }

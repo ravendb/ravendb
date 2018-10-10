@@ -143,11 +143,11 @@ namespace Sparrow
                     BlockPointer section = _freed[index];
 
                     // Pointer was holding the marker for the next released block instead. 
-                    allocator._freed[index] = *((BlockPointer*)section.Ptr);
+                    allocator._freed[index] = *((BlockPointer*)section.Address);
                     allocator.InUse += size;
                     allocator.TotalAllocated += section.Size;
 
-                    return new BlockPointer(section.Ptr, section.BlockSize, size);
+                    return new BlockPointer(section.Address, section.BlockSize, size);
                 }
             }        
 
@@ -156,7 +156,7 @@ namespace Sparrow
             allocator.Allocated += ptr.Size;
             allocator.TotalAllocated += ptr.Size;
 
-            return new BlockPointer(ptr.Ptr, size, size);
+            return new BlockPointer(ptr.Address, size, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -183,12 +183,12 @@ namespace Sparrow
             if (section.IsValid)
             {
                 // Copy the section pointer that is already freed to the current memory. 
-                *(BlockPointer*)ptr.Ptr = section;
+                *(BlockPointer*)ptr.Address = section;
             }
             else
             {
                 // Put a copy of the currently released memory block on the front. 
-                *(BlockPointer*)ptr.Ptr = new BlockPointer();
+                *(BlockPointer*)ptr.Address = new BlockPointer();
             }
 
             allocator._freed[index] = ptr;
@@ -207,7 +207,7 @@ namespace Sparrow
             allocator.InUse -= ptr.Size;
             allocator.Allocated -= ptr.BlockSize;
 
-            Pointer nakedPtr = new Pointer(ptr.Ptr, ptr.BlockSize);
+            Pointer nakedPtr = new Pointer(ptr.Address, ptr.BlockSize);
             allocator._internalAllocator.Release(ref nakedPtr);
 
             ptr = new Pointer(); // Nullify the pointer
@@ -284,10 +284,10 @@ namespace Sparrow
                     BlockPointer current = section;
 
                     // Copy the pointer found on the first memory bytes of the section. 
-                    section = *(BlockPointer*)current.Ptr;
+                    section = *(BlockPointer*)current.Address;
 
                     // The block is guaranteed to be valid, so we release it to the internal allocator.
-                    Pointer currentPtr = new Pointer(current.Ptr, current.BlockSize);
+                    Pointer currentPtr = new Pointer(current.Address, current.BlockSize);
                     allocator._internalAllocator.Release(ref currentPtr);
                 }
             }

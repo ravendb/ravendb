@@ -15,7 +15,7 @@ namespace Sparrow
 #endif
     public unsafe struct Pointer : IPointerType, Meta.IDescribe
         {
-    public readonly void* Ptr;
+    public readonly void* Address;
 
         public readonly int Size;
 
@@ -25,7 +25,7 @@ namespace Sparrow
 
         public Pointer(void* ptr, int size)
         {
-            this.Ptr = ptr;
+            this.Address = ptr;
             this.Size = size;
 #if VALIDATE
             this.Generation = 0;
@@ -35,13 +35,13 @@ namespace Sparrow
         public bool IsValid
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return Ptr != null; }
+            get { return Address != null; }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<byte> AsSpan()
         {
-            return new Span<byte>(Ptr, (int)Size);
+            return new Span<byte>(Address, (int)Size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -50,7 +50,7 @@ namespace Sparrow
             if (length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 
-            return new Span<byte>(Ptr, length);
+            return new Span<byte>(Address, length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -59,13 +59,13 @@ namespace Sparrow
             if (start + length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 
-            return new Span<byte>((byte*)Ptr + start, length);
+            return new Span<byte>((byte*)Address + start, length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> AsReadOnlySpan()
         {
-            return new ReadOnlySpan<byte>(Ptr, (int)Size);
+            return new ReadOnlySpan<byte>(Address, (int)Size);
         }
 
 
@@ -75,7 +75,7 @@ namespace Sparrow
             if (length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 
-            return new ReadOnlySpan<byte>(Ptr, length);
+            return new ReadOnlySpan<byte>(Address, length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -84,18 +84,18 @@ namespace Sparrow
             if (start + length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 
-            return new ReadOnlySpan<byte>((byte*)Ptr + start, length);
+            return new ReadOnlySpan<byte>((byte*)Address + start, length);
         }
 
         public static implicit operator Pointer(Pointer<byte> ptr)
         {
-            return new Pointer(ptr.Ptr, ptr.SizeAsBytes);
+            return new Pointer(ptr.Address, ptr.SizeAsBytes);
         }
 
         public string Describe()
         {
             if (this.IsValid)
-                return $"{{{(long)this.Ptr:X32}|{this.Size}}}";
+                return $"{{{(long)this.Address:X32}|{this.Size}}}";
 
             return "{null}";
         }
@@ -113,7 +113,7 @@ namespace Sparrow
 #endif
     public unsafe struct Pointer<T> : Meta.IDescribe, IPointerType<T> where T : struct
     {
-        public readonly void* Ptr;
+        public readonly void* Address;
 
         private readonly int _size;
 
@@ -131,7 +131,7 @@ namespace Sparrow
 
         public Pointer(Pointer ptr)
         {
-            this.Ptr = ptr.Ptr;
+            this.Address = ptr.Address;
             this._size = ptr.Size / Unsafe.SizeOf<T>();
 
 #if VALIDATE
@@ -141,7 +141,7 @@ namespace Sparrow
 
         public Pointer(void* ptr, int size)
         {
-            this.Ptr = ptr;
+            this.Address = ptr;
             this._size = size;
 
 #if VALIDATE
@@ -152,13 +152,13 @@ namespace Sparrow
         public bool IsValid
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return Ptr != null; }
+            get { return Address != null; }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<T> AsSpan()
         {
-            return new Span<T>(Ptr, (int)Size);
+            return new Span<T>(Address, (int)Size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -167,7 +167,7 @@ namespace Sparrow
             if (length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 
-            return new Span<T>(Ptr, length);
+            return new Span<T>(Address, length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -176,13 +176,13 @@ namespace Sparrow
             if (start + length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 
-            return new Span<T>((byte*)Ptr + start * Unsafe.SizeOf<T>(), length);
+            return new Span<T>((byte*)Address + start * Unsafe.SizeOf<T>(), length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> AsReadOnlySpan()
         {
-            return new ReadOnlySpan<byte>(Ptr, (int)Size);
+            return new ReadOnlySpan<byte>(Address, (int)Size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -191,7 +191,7 @@ namespace Sparrow
             if (length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 
-            return new ReadOnlySpan<T>(Ptr, length);
+            return new ReadOnlySpan<T>(Address, length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -200,7 +200,7 @@ namespace Sparrow
             if (start + length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 
-            return new ReadOnlySpan<T>((byte*)Ptr + start * Unsafe.SizeOf<T>(), length);
+            return new ReadOnlySpan<T>((byte*)Address + start * Unsafe.SizeOf<T>(), length);
         }
 
         public int Size
@@ -228,7 +228,7 @@ namespace Sparrow
         public string Describe()
         {
             if (this.IsValid)
-                return $"{{{(long)this.Ptr:X32}|{this.Size}|{this.SizeAsBytes}b}}";
+                return $"{{{(long)this.Address:X32}|{this.Size}|{this.SizeAsBytes}b}}";
 
             return "{null}";
         }
@@ -242,13 +242,13 @@ namespace Sparrow
         [Conditional("VALIDATE")]
         internal void EnsureIsNotBadPointerAccess()
         {
-            if (Ptr == null)
+            if (Address == null)
                 throw new InvalidOperationException($"Trying to access the pointer but it is not valid");
         }
 
         public static implicit operator Pointer(Pointer<T> ptr)
         {
-            return new Pointer(ptr.Ptr, ptr.SizeAsBytes);
+            return new Pointer(ptr.Address, ptr.SizeAsBytes);
         }
     }
 
@@ -265,7 +265,7 @@ namespace Sparrow
 #endif
     public unsafe struct BlockPointer : IPointerType, Meta.IDescribe
     {
-        public readonly void* Ptr;
+        public readonly void* Address;
 
         public readonly int Size;
 
@@ -277,7 +277,7 @@ namespace Sparrow
 
         public BlockPointer(void* ptr, int blockSize, int size)
         {
-            this.Ptr = ptr;
+            this.Address = ptr;
             this.Size = size;
             this.BlockSize = blockSize;
 
@@ -289,13 +289,13 @@ namespace Sparrow
         public bool IsValid
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return Ptr != null; }
+            get { return Address != null; }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<byte> AsSpan()
         {
-            return new Span<byte>(Ptr, (int)Size);
+            return new Span<byte>(Address, (int)Size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -304,7 +304,7 @@ namespace Sparrow
             if (length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 
-            return new Span<byte>(Ptr, length);
+            return new Span<byte>(Address, length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -313,13 +313,13 @@ namespace Sparrow
             if (start + length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 
-            return new Span<byte>((byte*)Ptr + start, length);
+            return new Span<byte>((byte*)Address + start, length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> AsReadOnlySpan()
         {
-            return new ReadOnlySpan<byte>(Ptr, (int)Size);
+            return new ReadOnlySpan<byte>(Address, (int)Size);
         }
 
 
@@ -329,7 +329,7 @@ namespace Sparrow
             if (length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 
-            return new ReadOnlySpan<byte>(Ptr, length);
+            return new ReadOnlySpan<byte>(Address, length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -338,13 +338,13 @@ namespace Sparrow
             if (start + length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 
-            return new ReadOnlySpan<byte>((byte*)Ptr + start, length);
+            return new ReadOnlySpan<byte>((byte*)Address + start, length);
         }
 
         public string Describe()
         {
             if (this.IsValid)
-                return $"{{{(long)this.Ptr:X32}|{this.Size}|{this.BlockSize}}}";
+                return $"{{{(long)this.Address:X32}|{this.Size}|{this.BlockSize}}}";
 
             return "{null}";
         }
@@ -356,7 +356,7 @@ namespace Sparrow
 
         public static implicit operator BlockPointer(Pointer ptr)
         {
-            return new BlockPointer(ptr.Ptr, ptr.Size, ptr.Size);
+            return new BlockPointer(ptr.Address, ptr.Size, ptr.Size);
         }
     }
 
@@ -372,7 +372,7 @@ namespace Sparrow
 #endif
     public unsafe struct BlockPointer<T> : Meta.IDescribe, IPointerType<T> where T : struct
     {
-        public readonly void* Ptr;
+        public readonly void* Address;
 
         private readonly int _size;
 
@@ -392,7 +392,7 @@ namespace Sparrow
 
         public BlockPointer(BlockPointer ptr)
         {
-            this.Ptr = ptr.Ptr;
+            this.Address = ptr.Address;
             this._size = ptr.Size / Unsafe.SizeOf<T>();
             this.BlockSize = ptr.BlockSize;
 
@@ -403,7 +403,7 @@ namespace Sparrow
 
         public BlockPointer(void* ptr, int blockSize, int size)
         {
-            this.Ptr = ptr;
+            this.Address = ptr;
             this._size = size;
             this.BlockSize = blockSize;
 
@@ -415,13 +415,13 @@ namespace Sparrow
         public bool IsValid
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get { return Ptr != null; }
+            get { return Address != null; }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Span<T> AsSpan()
         {
-            return new Span<T>(Ptr, (int)Size);
+            return new Span<T>(Address, (int)Size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -430,7 +430,7 @@ namespace Sparrow
             if (length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 
-            return new Span<T>(Ptr, length);
+            return new Span<T>(Address, length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -439,13 +439,13 @@ namespace Sparrow
             if (start + length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
             
-            return new Span<T>((byte*)Ptr + start * Unsafe.SizeOf<T>(), length);
+            return new Span<T>((byte*)Address + start * Unsafe.SizeOf<T>(), length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ReadOnlySpan<byte> AsReadOnlySpan()
         {
-            return new ReadOnlySpan<byte>(Ptr, (int)Size);
+            return new ReadOnlySpan<byte>(Address, (int)Size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -454,7 +454,7 @@ namespace Sparrow
             if (length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 
-            return new ReadOnlySpan<T>(Ptr, length);
+            return new ReadOnlySpan<T>(Address, length);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -463,7 +463,7 @@ namespace Sparrow
             if (start + length > Size)
                 throw new ArgumentException($"{nameof(length)} cannot be bigger than block size.");            
 
-            return new ReadOnlySpan<T>((byte*)Ptr + start * Unsafe.SizeOf<T>(), length);
+            return new ReadOnlySpan<T>((byte*)Address + start * Unsafe.SizeOf<T>(), length);
         }
 
         public int Size
@@ -492,14 +492,14 @@ namespace Sparrow
         [Conditional("VALIDATE")]
         internal void EnsureIsNotBadPointerAccess()
         {
-            if (Ptr == null)
+            if (Address == null)
                 throw new InvalidOperationException($"Trying to access the pointer but it is not valid");
         }
 
         public string Describe()
         {
             if (this.IsValid)
-                return $"{{{(long)this.Ptr:X64}|{this.Size}|{this.BlockSize}|{this.SizeAsBytes}b}}";
+                return $"{{{(long)this.Address:X64}|{this.Size}|{this.BlockSize}|{this.SizeAsBytes}b}}";
 
             return "{null}";
         }
@@ -511,17 +511,17 @@ namespace Sparrow
 
         public static implicit operator BlockPointer(BlockPointer<T> ptr)
         {
-            return new BlockPointer(ptr.Ptr, ptr.BlockSize, ptr.Size);
+            return new BlockPointer(ptr.Address, ptr.BlockSize, ptr.Size);
         }
 
         public static implicit operator BlockPointer<T>(Pointer<T> ptr)
         {
-            return new BlockPointer<T>(ptr.Ptr, ptr.SizeAsBytes, ptr.SizeAsBytes);
+            return new BlockPointer<T>(ptr.Address, ptr.SizeAsBytes, ptr.SizeAsBytes);
         }
 
         public static implicit operator BlockPointer<T>(BlockPointer ptr)
         {
-            return new BlockPointer<T>(ptr.Ptr, ptr.BlockSize, ptr.Size);
+            return new BlockPointer<T>(ptr.Address, ptr.BlockSize, ptr.Size);
         }
     }
 }

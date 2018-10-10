@@ -185,7 +185,7 @@ namespace Sparrow
             }
 
             allocator._currentBuffer = segment;
-            allocator._ptrCurrent = (byte*)segment.Ptr;
+            allocator._ptrCurrent = (byte*)segment.Address;
 
             allocator._used = 0;            
         }
@@ -197,8 +197,8 @@ namespace Sparrow
             ptr.Generation = 0;
 #endif
             
-            byte* address = (byte*)ptr.Ptr;
-            if (address < allocator._currentBuffer.Ptr || address != allocator._ptrCurrent - ptr.Size)
+            byte* address = (byte*)ptr.Address;
+            if (address < allocator._currentBuffer.Address || address != allocator._ptrCurrent - ptr.Size)
             {
                 // We have fragmentation. note that this fragmentation will be healed by the call to Reset
                 // trying to do this on the fly is too expensive unless the chunk is big enough to consider it a whole segment for himself.

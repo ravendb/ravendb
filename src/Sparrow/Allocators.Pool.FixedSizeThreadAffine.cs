@@ -236,7 +236,7 @@ namespace Sparrow
 
         public void Release(ref FixedSizeThreadAffinePoolAllocator<TOptions> allocator, ref Pointer ptr)
         {
-            void* nakedPtr = ptr.Ptr;
+            void* nakedPtr = ptr.Address;
             if (ptr.Size != allocator._options.BlockSize || Allocator.LowMemoryFlag.IsRaised())
                 goto UnlikelyRelease;
 

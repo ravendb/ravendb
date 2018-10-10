@@ -48,7 +48,7 @@ namespace FastTests.Sparrow
                         int allocationSize = fixedSize != InvalidSize ? fixedSize : rnd.Next(16000) + 1;
 
                         Pointer ptr = allocator.Allocate(allocationSize);
-                        var hash = Hashing.XXHash64.Calculate((byte*)ptr.Ptr, (ulong)ptr.Size);
+                        var hash = Hashing.XXHash64.Calculate((byte*)ptr.Address, (ulong)ptr.Size);
                         allocated.Add(new HashedPointer { Hash = hash, Pointer = ptr });
                         continue;
                     }
@@ -81,7 +81,7 @@ namespace FastTests.Sparrow
                             var span = localPtr.AsSpan();
                             span[location] = 1;
 
-                            var hash = Hashing.XXHash64.Calculate((byte*)localPtr.Ptr, (ulong)localPtr.Size);
+                            var hash = Hashing.XXHash64.Calculate((byte*)localPtr.Address, (ulong)localPtr.Size);
                             hashedPtr.Hash = hash;
                             allocated[idx] = hashedPtr;
                         }
@@ -94,7 +94,7 @@ namespace FastTests.Sparrow
                             var localPtr = hashedPtr.Pointer;
                             Assert.True(localPtr.IsValid);
 
-                            var hash = Hashing.XXHash64.Calculate((byte*)localPtr.Ptr, (ulong)localPtr.Size);
+                            var hash = Hashing.XXHash64.Calculate((byte*)localPtr.Address, (ulong)localPtr.Size);
                             Assert.Equal(hashedPtr.Hash, hash);
                         }
                     }
@@ -178,7 +178,7 @@ namespace FastTests.Sparrow
                     if (action < Deallocate) // We are allocating
                     {
                         BlockPointer ptr = allocator.Allocate(rnd.Next(16000) + 1);
-                        var hash = Hashing.XXHash64.Calculate((byte*)ptr.Ptr, (ulong)ptr.Size);
+                        var hash = Hashing.XXHash64.Calculate((byte*)ptr.Address, (ulong)ptr.Size);
                         allocated.Add(new HashedBlockPointer { Hash = hash, Pointer = ptr });
                         continue;
                     }
@@ -211,7 +211,7 @@ namespace FastTests.Sparrow
                             var span = localPtr.AsSpan();
                             span[location] = 1;
 
-                            var hash = Hashing.XXHash64.Calculate((byte*)localPtr.Ptr, (ulong)localPtr.Size);
+                            var hash = Hashing.XXHash64.Calculate((byte*)localPtr.Address, (ulong)localPtr.Size);
                             hashedPtr.Hash = hash;
                             allocated[idx] = hashedPtr;
                         }
@@ -224,7 +224,7 @@ namespace FastTests.Sparrow
                             var localPtr = hashedPtr.Pointer;
                             Assert.True(localPtr.IsValid);
 
-                            var hash = Hashing.XXHash64.Calculate((byte*)localPtr.Ptr, (ulong)localPtr.Size);
+                            var hash = Hashing.XXHash64.Calculate((byte*)localPtr.Address, (ulong)localPtr.Size);
                             Assert.Equal(hashedPtr.Hash, hash);
                         }
                     }

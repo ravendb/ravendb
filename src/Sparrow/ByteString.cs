@@ -247,7 +247,7 @@ namespace Sparrow
         [Conditional("VALIDATE")]
         internal void EnsureIsNotBadPointer()
         {
-            if (_pointer->Ptr == null)
+            if (_pointer->Address == null)
                 throw new InvalidOperationException("The inner storage pointer is not initialized. This is a defect on the implementation of the ByteStringContext class");
 
             if (_pointer->Key == ByteStringStorage.NullKey)
@@ -585,7 +585,7 @@ namespace Sparrow
 
             _totalAllocated += sizeof(ByteStringStorage);
             BlockPointer ptr = _allocator.Allocate(ref _allocator, sizeof(ByteStringStorage));
-            ByteStringStorage* storagePtr = (ByteStringStorage*)ptr.Ptr;   
+            ByteStringStorage* storagePtr = (ByteStringStorage*)ptr.Address;   
 
             storagePtr->Flags = type;
             storagePtr->Length = size;
@@ -613,10 +613,10 @@ namespace Sparrow
 
             Debug.Assert(length <= ptr.BlockSize - sizeof(ByteStringStorage));
 
-            var basePtr = (ByteStringStorage*)ptr.Ptr;
+            var basePtr = (ByteStringStorage*)ptr.Address;
             basePtr->Flags = type;
             basePtr->Length = length;
-            basePtr->Ptr = (byte*)ptr.Ptr + sizeof(ByteStringStorage);            
+            basePtr->Ptr = (byte*)ptr.Address + sizeof(ByteStringStorage);            
             basePtr->Size = ptr.BlockSize;            
 
             // We are registering the storage for validation here. Not the ByteString itself

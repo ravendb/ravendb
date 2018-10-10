@@ -187,8 +187,8 @@ namespace Sparrow
             }
             
             allocator._currentBuffer = newBuffer;
-            allocator._ptrStart = (byte*)newBuffer.Ptr;
-            allocator._ptrCurrent = (byte*)newBuffer.Ptr;
+            allocator._ptrStart = (byte*)newBuffer.Address;
+            allocator._ptrCurrent = (byte*)newBuffer.Address;
 
             allocator._used = 0;
 
@@ -205,7 +205,7 @@ namespace Sparrow
         /// <param name="ptr">The pointer to release</param>
         public void Release(ref ArenaAllocator<TOptions> allocator, ref Pointer ptr)
         {            
-            byte* address = (byte*)ptr.Ptr;
+            byte* address = (byte*)ptr.Address;
             if (address >= allocator._ptrStart && address == allocator._ptrCurrent - ptr.Size)
             {
                 // since the returned allocation is at the end of the arena, we can move
@@ -291,7 +291,7 @@ namespace Sparrow
                 allocator._olderBuffers.Clear();
             }
 
-            allocator._ptrStart = allocator._ptrCurrent = (byte*)allocator._currentBuffer.Ptr;
+            allocator._ptrStart = allocator._ptrCurrent = (byte*)allocator._currentBuffer.Address;
             allocator._used = 0;
             allocator.InUse = 0;
         }

@@ -107,7 +107,7 @@ namespace Sparrow
                 Pointer section = _freed;
 
                 // Pointer was holding the marker for the next released block instead. 
-                allocator._freed = *((Pointer*)section.Ptr);
+                allocator._freed = *((Pointer*)section.Address);
                 allocator.InUse += section.Size;
                 allocator.TotalAllocated += section.Size;
 
@@ -119,7 +119,7 @@ namespace Sparrow
             allocator.Allocated += ptr.Size;
             allocator.TotalAllocated += ptr.Size;
 
-            return new Pointer(ptr.Ptr, size);
+            return new Pointer(ptr.Address, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -137,12 +137,12 @@ namespace Sparrow
             if (section.IsValid)
             {
                 // Copy the section pointer that is already freed to the current memory. 
-                *(BlockPointer*)ptr.Ptr = section;
+                *(BlockPointer*)ptr.Address = section;
             }
             else
             {
                 // Put a copy of the currently released memory block on the front. 
-                *(BlockPointer*)ptr.Ptr = new BlockPointer();
+                *(BlockPointer*)ptr.Address = new BlockPointer();
             }
 
             // Put a copy of the currently released memory block on the front. 
@@ -161,7 +161,7 @@ namespace Sparrow
             allocator.InUse -= ptr.Size;
             allocator.Allocated -= ptr.Size;
 
-            Pointer nakedPtr = new Pointer(ptr.Ptr, ptr.Size);
+            Pointer nakedPtr = new Pointer(ptr.Address, ptr.Size);
             allocator._internalAllocator.Release(ref nakedPtr);
         }
 
@@ -243,10 +243,10 @@ namespace Sparrow
                 Pointer current = section;
 
                 // Copy the pointer found on the first memory bytes of the section. 
-                section = *(Pointer*)current.Ptr;
+                section = *(Pointer*)current.Address;
 
                 // The block is guaranteed to be valid, so we release it to the internal allocator.
-                Pointer currentPtr = new Pointer(current.Ptr, current.Size);
+                Pointer currentPtr = new Pointer(current.Address, current.Size);
                 allocator._internalAllocator.Release(ref currentPtr);
             }
         }

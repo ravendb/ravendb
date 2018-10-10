@@ -66,7 +66,7 @@ namespace FastTests.Sparrow
                 for (int i = 0; i < span.Length; i++)
                     span[i] = 3;
 
-                byte* nakedPtr = (byte*)ptr.Ptr;
+                byte* nakedPtr = (byte*)ptr.Address;
                 for (int i = 0; i < 1000; i++)
                     Assert.Equal(3, nakedPtr[i]);
 
@@ -133,7 +133,7 @@ namespace FastTests.Sparrow
                 Assert.Equal(1024, ptr.BlockSize);
                 Assert.True(ptr.IsValid);
 
-                long pointerAddress = (long)ptr.Ptr;
+                long pointerAddress = (long)ptr.Address;
 
                 allocator.Release(ref ptr);
                 Assert.False(ptr.IsValid);
@@ -142,7 +142,7 @@ namespace FastTests.Sparrow
                 Assert.Equal(size, ptr.Size);
                 Assert.True(ptr.IsValid);
 
-                Assert.Equal(pointerAddress, (long)ptr.Ptr);
+                Assert.Equal(pointerAddress, (long)ptr.Address);
 
                 allocator.Release(ref ptr);
             }
@@ -167,7 +167,7 @@ namespace FastTests.Sparrow
                     Assert.Equal(1024, ptr.BlockSize);
 
                     pointers[i] = ptr;
-                    addresses[i] = (long)ptr.Ptr;
+                    addresses[i] = (long)ptr.Address;
                 }
 
                 for (int i = 0; i < 5; i++)
@@ -179,7 +179,7 @@ namespace FastTests.Sparrow
                 for (int i = 0; i < 5; i++)
                 {
                     var ptr = allocator.Allocate(size);
-                    Assert.Contains((long)ptr.Ptr, addresses);
+                    Assert.Contains((long)ptr.Address, addresses);
                     Assert.Equal(1024, ptr.BlockSize);
                 }
 
@@ -206,7 +206,7 @@ namespace FastTests.Sparrow
                 Assert.Equal(config.BlockSize, ptr.Size);
                 Assert.True(ptr.IsValid);
 
-                long pointerAddress = (long)ptr.Ptr;
+                long pointerAddress = (long)ptr.Address;
 
                 allocator.Release(ref ptr);
                 Assert.False(ptr.IsValid);
@@ -215,7 +215,7 @@ namespace FastTests.Sparrow
                 Assert.Equal(config.BlockSize, ptr.Size);
                 Assert.True(ptr.IsValid);
 
-                Assert.Equal(pointerAddress, (long)ptr.Ptr);
+                Assert.Equal(pointerAddress, (long)ptr.Address);
             }
         }
 
@@ -282,7 +282,7 @@ namespace FastTests.Sparrow
                     Assert.True(ptr.IsValid);
 
                     pointers[i] = ptr;
-                    addresses[i] = (long)ptr.Ptr;
+                    addresses[i] = (long)ptr.Address;
                 }
 
                 for (int i = 4; i >= 0; i--)
@@ -294,7 +294,7 @@ namespace FastTests.Sparrow
                 for (int i = 0; i < 4; i++)
                 {
                     var ptr = allocator.Allocate(size);
-                    Assert.Contains((long)ptr.Ptr, addresses);
+                    Assert.Contains((long)ptr.Address, addresses);
                 }
 
                 var nonReusedPtr = allocator.Allocate(size);
@@ -325,7 +325,7 @@ namespace FastTests.Sparrow
                     Assert.True(ptr.IsValid);
 
                     pointers[i] = ptr;
-                    addresses[i] = (long)ptr.Ptr;
+                    addresses[i] = (long)ptr.Address;
                 }
 
                 for (int i = length - 1; i >= 0; i--)
@@ -363,7 +363,7 @@ namespace FastTests.Sparrow
                     Assert.True(ptr.IsValid);
 
                     pointers[i] = ptr;
-                    addresses[i] = (long)ptr.Ptr;
+                    addresses[i] = (long)ptr.Address;
                 }
 
                 for (int i = length - 1; i >= 0; i--)
@@ -398,7 +398,7 @@ namespace FastTests.Sparrow
                     Assert.True(ptr.IsValid);
 
                     pointers[i] = ptr;
-                    addresses[i] = (long)ptr.Ptr;
+                    addresses[i] = (long)ptr.Address;
                 }
 
                 for (int i = 0; i < 5; i++)
@@ -410,7 +410,7 @@ namespace FastTests.Sparrow
                 for (int i = 0; i < 4; i++)
                 {
                     var ptr = allocator.Allocate();
-                    Assert.Contains((long)ptr.Ptr, addresses);
+                    Assert.Contains((long)ptr.Address, addresses);
                 }
 
                 var nonReusedPtr = allocator.Allocate();
