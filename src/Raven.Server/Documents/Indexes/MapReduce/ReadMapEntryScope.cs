@@ -4,7 +4,7 @@ using Voron.Util;
 
 namespace Raven.Server.Documents.Indexes.MapReduce
 {
-    public unsafe class ReadMapEntryScope : IDisposable
+    public unsafe struct ReadMapEntryScope : IDisposable
     {
         public ReadMapEntryScope(DecompressedReadResult read)
         {
@@ -15,6 +15,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public ReadMapEntryScope(PtrSize data)
         {
             Data = data;
+            _read = null;
         }
 
         public readonly PtrSize Data;
