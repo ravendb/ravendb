@@ -144,9 +144,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     default:
                                         throw new NotSupportedException();
                                 }
-
-                                var list = references.ToList();
-                                foreach (var referencedDocument in list)
+                                foreach (var referencedDocument in references)
                                 {
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Executing handle references for '{_index.Name}'. Processing reference: {referencedDocument.Key}.");
