@@ -66,6 +66,7 @@ namespace Raven.Client.Documents.Linq
         private const string DefaultLoadAlias = "__load";
         private const string DefaultAliasPrefix = "__alias";
         private bool _addedDefaultAlias;
+        private Type _ofType;
 
         private readonly HashSet<string> _aliasKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -1467,6 +1468,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         var type = expression.Arguments[0].Type.GetGenericArguments()[0];
                         _documentQuery.AddRootType(type);
                     }
+
+                    if (expression.Type.GetTypeInfo().IsGenericType)
+                    {
+                        _ofType = expression.Type.GetGenericArguments()[0];
+                    }
+
                     VisitExpression(expression.Arguments[0]);
                     break;
                 case "Where":
@@ -2904,7 +2911,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             HandleKeywordsIfNeeded(ref field, ref alias);
 
-            var identityProperty = _documentQuery.Conventions.GetIdentityProperty(_originalQueryType);
+            var identityProperty = _documentQuery.Conventions.GetIdentityProperty(_ofType ?? _originalQueryType);
             if (identityProperty != null && identityProperty.Name == field)
             {
                 FieldsToFetch.Add(new FieldToFetch(Constants.Documents.Indexing.Fields.DocumentIdFieldName, alias));
