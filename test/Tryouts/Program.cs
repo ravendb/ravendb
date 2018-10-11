@@ -26,9 +26,9 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var test = new RavenDB_7043())
+                using (var test = new RDBC_128())
                 {
-                    test.Should_mark_index_as_errored_and_throw_on_querying_it_even_its_very_small_and_everything_fails();
+                    test.IndexingOfLoadDocumentWhileChanged();
                 }               
             }
         }
