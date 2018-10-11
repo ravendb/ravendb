@@ -58,6 +58,8 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
+                    documentsContext.CloseTransaction();
+
                     Stopwatch sw = null;
                     QueryTimingsScope scope;
                     DocumentQueryResult result;
