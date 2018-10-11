@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Patch
                     switch (name)
                     {
                         case "reduce":
-                            value = new ClrFunctionInstance(engine, (thisObj, values) => values.Length > 1 ? values[1] : thisObj);
+                            value = new ClrFunctionInstance(engine, (thisObj, values) => values.Length > 1 ? values[1] : JsValue.Null);
                             return true;
                         case "concat":
                             value = new ClrFunctionInstance(engine, (thisObj, values) => values[0]);
