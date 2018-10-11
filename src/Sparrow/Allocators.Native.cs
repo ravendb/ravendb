@@ -64,7 +64,7 @@ namespace Sparrow
         private long _allocated;
 
 #if VALIDATE || DEBUG
-        private EnhancedStackTrace _initializeStackTrace;
+        private object _initializeStackTrace;
 #endif
 
         public void Configure<TConfig>(ref NativeAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
@@ -105,7 +105,9 @@ namespace Sparrow
             allocator._totalAllocated = 0;
 
 #if VALIDATE || DEBUG
-            allocator._initializeStackTrace = EnhancedStackTrace.Current();
+            // https://github.com/benaadams/Ben.Demystifier/issues/75
+            // allocator._initializeStackTrace = EnhancedStackTrace.Current();
+            allocator._initializeStackTrace = "currently missing because of bug";
 #endif
         }
 
