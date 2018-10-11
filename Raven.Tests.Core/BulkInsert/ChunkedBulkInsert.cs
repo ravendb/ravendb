@@ -53,8 +53,7 @@ namespace Raven.Tests.Core.BulkInsert
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<Node>().Customize(x => x.WaitForNonStaleResults()).Count();
-                    if (20 != count)
-                        WaitForUserToContinueTheTest(store);
+                    Assert.Equal(20, count);
                 }
             }
 
@@ -160,7 +159,7 @@ namespace Raven.Tests.Core.BulkInsert
                 using (var session = store.OpenSession())
                 {
                     var count = session.Query<Node>().Customize(x => x.WaitForNonStaleResults()).Count();
-                    Assert.Equal(count, 20);
+                    Assert.Equal(20, count);
                 }
             }
         }
