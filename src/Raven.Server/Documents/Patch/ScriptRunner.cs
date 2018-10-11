@@ -1034,18 +1034,17 @@ namespace Raven.Server.Documents.Patch
             {
                 if (string.IsNullOrEmpty(key))
                     return JsValue.Undefined;
-                BlittableJsonReaderObject value = null;
+
                 using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    value = _database.ServerStore.Cluster.GetCompareExchangeValue(ctx, key).Value;
+                    var value = _database.ServerStore.Cluster.GetCompareExchangeValue(ctx, key).Value;
+                    if (value == null)
+                        return null;
+
+                    var jsValue = TranslateToJs(ScriptEngine, _jsonCtx, value.Clone(_jsonCtx));
+                    return jsValue.AsObject().Get("Object");
                 }
-
-                if (value == null)
-                    return null;
-
-                var jsValue = TranslateToJs(ScriptEngine, _jsonCtx, value);
-                return jsValue.AsObject().Get("Object");
             }
 
             private JsValue LoadDocumentInternal(string id)
@@ -1192,7 +1191,7 @@ namespace Raven.Server.Documents.Patch
 
                 if (o is BlittableJsonReaderObject json)
                 {
-                    return new BlittableObjectInstance(engine, null, json, null, null);
+                    return new BlittableObjectInstance(engine, null, Clone(json, context), null, null);
                 }
 
                 if (o == null)
@@ -1308,7 +1307,7 @@ namespace Raven.Server.Documents.Patch
                 _run.RefreshOriginalDocument = false;
 
                 _run.UpdatedDocumentCounterIds?.Clear();
-                
+
                 _parent._cache.Enqueue(_run);
 
                 _run = null;
