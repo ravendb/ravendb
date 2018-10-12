@@ -181,7 +181,6 @@ namespace Raven.Server.Documents.Queries
                                 case LuceneFieldType.String:
                                     var valueAsString = GetValueAsString(value);
 
-
                                     if (exact && metadata.IsDynamic)
                                         luceneFieldName = AutoIndexField.GetExactAutoIndexFieldName(luceneFieldName);
 
@@ -360,9 +359,9 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Regex:
                         return HandleRegex(query, me, metadata, parameters, factories);
                     case MethodType.StartsWith:
-                        return HandleStartsWith(query, me, metadata, parameters, exact);
+                        return HandleStartsWith(query, me, metadata, indexDef, parameters, exact);
                     case MethodType.EndsWith:
-                        return HandleEndsWith(query, me, metadata, parameters, exact);
+                        return HandleEndsWith(query, me, metadata, indexDef, parameters, exact);
                     case MethodType.Lucene:
                         return HandleLucene(query, me, metadata, parameters, analyzer, exact);
                     case MethodType.Exists:
@@ -557,7 +556,7 @@ namespace Raven.Server.Documents.Queries
             return parser.Parse(GetValueAsString(value));
         }
 
-        private static Lucene.Net.Search.Query HandleStartsWith(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, bool exact)
+        private static Lucene.Net.Search.Query HandleStartsWith(Query query, MethodExpression expression, QueryMetadata metadata, IndexDefinitionBase indexDefinition, BlittableJsonReaderObject parameters, bool exact)
         {
             var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
@@ -571,13 +570,15 @@ namespace Raven.Server.Documents.Queries
             else
                 valueAsString += LuceneQueryHelper.Asterisk;
 
+            exact = IsExact(indexDefinition, exact, fieldName);
+
             if (exact && metadata.IsDynamic)
                 fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
 
             return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.Prefix, exact: exact);
         }
 
-        private static Lucene.Net.Search.Query HandleEndsWith(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, bool exact)
+        private static Lucene.Net.Search.Query HandleEndsWith(Query query, MethodExpression expression, QueryMetadata metadata, IndexDefinitionBase indexDefinition, BlittableJsonReaderObject parameters, bool exact)
         {
             var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
@@ -589,6 +590,8 @@ namespace Raven.Server.Documents.Queries
             valueAsString = string.IsNullOrEmpty(valueAsString)
                 ? LuceneQueryHelper.Asterisk
                 : valueAsString.Insert(0, LuceneQueryHelper.Asterisk);
+
+            exact = IsExact(indexDefinition, exact, fieldName);
 
             if (exact && metadata.IsDynamic)
                 fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
@@ -990,8 +993,7 @@ namespace Raven.Server.Documents.Queries
                 if (parameters.TryGetMember(parameterName, out var parameterValue) == false)
                     ThrowParameterValueWasNotProvided(parameterName, metadata.QueryText, parameters);
 
-                var array = parameterValue as BlittableJsonReaderArray;
-                if (array != null)
+                if (parameterValue is BlittableJsonReaderArray array)
                 {
                     ValueTokenType? expectedValueType = null;
                     var unwrappedArray = UnwrapArray(array, metadata.QueryText, parameters);
@@ -1097,7 +1099,7 @@ namespace Raven.Server.Documents.Queries
                 case ValueTokenType.String:
                     return (value.Token, ValueTokenType.String);
                 case ValueTokenType.Long:
-                    var valueAsLong = QueryBuilder.ParseInt64WithSeparators(value.Token);
+                    var valueAsLong = ParseInt64WithSeparators(value.Token);
                     return (valueAsLong, ValueTokenType.Long);
                 case ValueTokenType.Double:
                     var valueAsDouble = double.Parse(value.Token, CultureInfo.InvariantCulture);
@@ -1192,84 +1194,6 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public static string Unescape(string term)
-        {
-            // method doesn't allocate a StringBuilder unless the string requires unescaping
-            // also this copies chunks of the original string into the StringBuilder which
-            // is far more efficient than copying character by character because StringBuilder
-            // can access the underlying string data directly
-
-            if (string.IsNullOrEmpty(term))
-            {
-                return term;
-            }
-
-            var isPhrase = term.StartsWith("\"") && term.EndsWith("\"");
-            var start = 0;
-            var length = term.Length;
-            StringBuilder buffer = null;
-            var prev = '\0';
-            for (var i = start; i < length; i++)
-            {
-                var ch = term[i];
-                if (prev != '\\')
-                {
-                    prev = ch;
-                    continue;
-                }
-                prev = '\0'; // reset
-                switch (ch)
-                {
-                    case '*':
-                    case '?':
-                    case '+':
-                    case '-':
-                    case '&':
-                    case '|':
-                    case '!':
-                    case '(':
-                    case ')':
-                    case '{':
-                    case '}':
-                    case '[':
-                    case ']':
-                    case '^':
-                    case '"':
-                    case '~':
-                    case ':':
-                    case '\\':
-                        {
-                            if (buffer == null)
-                            {
-                                // allocate builder with headroom
-                                buffer = new StringBuilder(length * 2);
-                            }
-                            // append any leading substring
-                            buffer.Append(term, start, i - start - 1);
-                            buffer.Append(ch);
-                            start = i + 1;
-                            break;
-                        }
-                }
-            }
-
-            if (buffer == null)
-            {
-                if (isPhrase)
-                    return term.Substring(1, term.Length - 2);
-                // no changes required
-                return term;
-            }
-
-            if (length > start)
-            {
-                // append any trailing substring
-                buffer.Append(term, start, length - start);
-            }
-
-            return buffer.ToString();
-        }
-
         public static ValueTokenType GetValueTokenType(object parameterValue, string queryText, BlittableJsonReaderObject parameters, bool unwrapArrays = false)
         {
             if (parameterValue == null)
@@ -1289,8 +1213,7 @@ namespace Raven.Server.Documents.Queries
 
             if (unwrapArrays)
             {
-                var array = parameterValue as BlittableJsonReaderArray;
-                if (array != null)
+                if (parameterValue is BlittableJsonReaderArray array)
                 {
                     if (array.Length == 0)
                         return ValueTokenType.Null;
@@ -1304,7 +1227,7 @@ namespace Raven.Server.Documents.Queries
 
             ThrowUnexpectedParameterValue(parameterValue, queryText, parameters);
 
-            return default(ValueTokenType);
+            return default;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1355,7 +1278,7 @@ namespace Raven.Server.Documents.Queries
 
         public static void ThrowParametersWereNotProvided(string queryText)
         {
-            throw new InvalidQueryException("The query is parametrized but the actual values of parameters were not provided", queryText, (BlittableJsonReaderObject)null);
+            throw new InvalidQueryException("The query is parametrized but the actual values of parameters were not provided", queryText, null);
         }
 
         public static void ThrowParameterValueWasNotProvided(string parameterName, string queryText, BlittableJsonReaderObject parameters)
