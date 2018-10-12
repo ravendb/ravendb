@@ -51,7 +51,7 @@ namespace Sparrow
             /// <param name="allocator">the allocator to dispose.</param>
             public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
             {
-                allocator.Dispose(disposing);
+                allocator?.Dispose(disposing);
             }
         }
 
@@ -175,6 +175,10 @@ namespace Sparrow
             allocator._options = (TOptions)(object)configuration;
             allocator._internalAllocator = allocator._options.CreateAllocator();
 
+            // We are not going to support non thread safe allocator as 'backing allocators'. 
+            if (!allocator._internalAllocator.IsThreadSafe)
+                throw new NotSupportedException($"The internal allocator '{allocator._internalAllocator.GetType().Name}' is not thread-safe, therefore not supported to be used by this allocator.");
+
             if (allocator._options.ItemsPerLane < 1)
                 throw new ArgumentOutOfRangeException($"{nameof(allocator._options.ItemsPerLane)} cannot be smaller than 1.");
             if (allocator._options.ItemsPerLane > 4)
@@ -220,7 +224,7 @@ namespace Sparrow
                         goto SUCCESS;
                 }
             }
-
+           
             Pointer ptr = allocator._internalAllocator.Allocate(size);
             allocator.InUse += ptr.Size;
             allocator.Allocated += ptr.Size;
@@ -361,5 +365,7 @@ namespace Sparrow
         {
             _internalAllocator.LowMemoryOver();
         }
+
+        public bool IsThreadSafe => true;
     }
 }

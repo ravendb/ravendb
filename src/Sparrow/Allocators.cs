@@ -5,7 +5,10 @@ using Sparrow.Threading;
 
 namespace Sparrow
 {
-    public interface IAllocator {}
+    public interface IAllocator
+    {
+        bool IsThreadSafe { get; }
+    }
 
     public interface IAllocatorOptions { }
 
@@ -59,6 +62,8 @@ namespace Sparrow
 
         void LowMemory();
         void LowMemoryOver();
+
+        bool IsThreadSafe { get; }
     }
 
     public interface IAllocator<T, TPointerType> : IAllocator
@@ -294,6 +299,8 @@ namespace Sparrow
             if (_allocator is ILowMemoryHandler<TAllocator> a)
                 a.NotifyLowMemoryOver(ref _allocator);
         }
+
+        public bool IsThreadSafe => _allocator.IsThreadSafe;
     }
 
     public sealed class BlockAllocator<TAllocator> : IAllocatorComposer<BlockPointer>, IDisposable, ILowMemoryHandler
@@ -490,6 +497,8 @@ namespace Sparrow
             if (_allocator is ILowMemoryHandler<TAllocator> a)
                 a.NotifyLowMemoryOver(ref _allocator);
         }
+
+        public bool IsThreadSafe => _allocator.IsThreadSafe;
     }
 
     public sealed class FixedSizeAllocator<TAllocator> : IDisposable, ILowMemoryHandler
@@ -666,5 +675,7 @@ namespace Sparrow
             if (_allocator is ILowMemoryHandler<TAllocator> a)
                 a.NotifyLowMemoryOver(ref _allocator);
         }
+
+        public bool IsThreadSafe => _allocator.IsThreadSafe;
     }
 }

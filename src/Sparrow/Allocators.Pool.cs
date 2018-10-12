@@ -38,7 +38,7 @@ namespace Sparrow
             /// <param name="allocator">the allocator to dispose.</param>
             public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
             {
-                allocator.Dispose(disposing);
+                allocator?.Dispose(disposing);
             }
         }
 
@@ -64,7 +64,7 @@ namespace Sparrow
             {
                 // For all uses and purposes the underlying Native Allocator will be finalized as Statics should
                 // never deallocate until the process dies. This way we also skip the leak checks. 
-                allocator.Dispose(false);
+                allocator?.Dispose(false);
             }
         }
     }
@@ -306,5 +306,7 @@ namespace Sparrow
         {
             allocator._internalAllocator.LowMemoryOver();
         }
+
+        public bool IsThreadSafe => false;
     }
 }

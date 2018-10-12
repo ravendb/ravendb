@@ -52,7 +52,7 @@ namespace Sparrow
     /// <summary>
     /// The NativeAllocator is the barebones allocator, it will redirect the request straight to the OS system calls.
     /// It will not keep track of allocations (except when running in validation mode), that means that
-    /// this allocator can leak if used improperly. This allocator is Thread-Safe.
+    /// this allocator can leak if used improperly. This allocator is thread-safe.
     /// </summary>
     /// <typeparam name="TOptions">The options to use for the allocator.</typeparam>
     /// <remarks>The Options object must be properly implemented to achieve performance improvements. (use constants as much as you can)</remarks>
@@ -96,6 +96,8 @@ namespace Sparrow
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return _allocated; }
         }
+
+        public bool IsThreadSafe => true;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Initialize(ref NativeAllocator<TOptions> allocator)

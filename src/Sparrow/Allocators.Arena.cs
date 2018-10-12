@@ -27,6 +27,17 @@ namespace Sparrow
 
     public static class ArenaAllocator
     {
+        public struct DoNotGrowStrategy : IArenaGrowthStrategy
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public int GetPreferredSize(long allocated, long used)
+            {
+                if (allocated > used)
+                    return (int)allocated;                
+                return (int)used;                
+            }
+        }
+
         public struct DoubleGrowthStrategy : IArenaGrowthStrategy
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -96,6 +107,8 @@ namespace Sparrow
 
         // Buffers that has been used and cannot be cleaned until a reset happens.
         private List<Pointer> _olderBuffers;
+
+        public bool IsThreadSafe => false;
 
         public long TotalAllocated
         {

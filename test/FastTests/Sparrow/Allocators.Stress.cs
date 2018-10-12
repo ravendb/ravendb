@@ -295,6 +295,13 @@ namespace FastTests.Sparrow
             StressBlockTester<PoolAllocator<PoolAllocator.Default>, PoolAllocator.Default>(new BlockAllocator<PoolAllocator<PoolAllocator.Default>>(), seed, supportsRenew: false);
         }
 
+        [Theory]
+        [InlineDataWithRandomSeed]
+        public void NonBlockingPool_Stress_Testing(int seed)
+        {
+            StressBlockTester<NonBlockingPoolAllocator<PoolAllocator.Default>, PoolAllocator.Default>(new BlockAllocator<NonBlockingPoolAllocator<PoolAllocator.Default>>(), seed, supportsRenew: false);
+        }
+
         public struct FixedSizeDefault : IPoolAllocatorOptions, INativeOptions
         {
             public bool UseSecureMemory => false;

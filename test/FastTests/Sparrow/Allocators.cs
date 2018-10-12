@@ -454,11 +454,11 @@ namespace FastTests.Sparrow
             public long InUse { get; }
 
             public void Initialize(ref StubAllocator<TOptions> allocator)
-            {               
+            {
             }
 
             public void Configure<TConfig>(ref StubAllocator<TOptions> allocator, ref TConfig configuration) where TConfig : struct, IAllocatorOptions
-            {             
+            {
             }
 
             public Pointer Allocate(ref StubAllocator<TOptions> allocator, int size)
@@ -467,7 +467,7 @@ namespace FastTests.Sparrow
             }
 
             public void Release(ref StubAllocator<TOptions> allocator, ref Pointer ptr)
-            {                
+            {
             }
 
             public void Renew(ref StubAllocator<TOptions> allocator)
@@ -501,6 +501,8 @@ namespace FastTests.Sparrow
             {
                 throw new NotSupportedException($"{nameof(NativeAllocator<TOptions>)} does not support '.{nameof(Reset)}()'");
             }
+
+            public bool IsThreadSafe => true;
 
             public bool BeforeInitializedCalled;
 

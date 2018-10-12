@@ -32,7 +32,7 @@ namespace Sparrow
             /// <param name="allocator">the allocator to dispose.</param>
             public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
             {
-                allocator.Dispose(disposing);
+                allocator?.Dispose(disposing);
             }
         }
     }
@@ -264,5 +264,7 @@ namespace Sparrow
         {
             allocator._internalAllocator.LowMemoryOver();
         }
+
+        public bool IsThreadSafe => false;
     }
 }

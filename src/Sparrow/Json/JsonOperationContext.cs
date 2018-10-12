@@ -457,7 +457,7 @@ namespace Sparrow.Json
             Pointer ptr = _arenaAllocatorForLongLivedValues.Allocate(requestedSize);
             return new AllocatedMemoryData
             {
-                Address = (byte*)ptr.Ptr,
+                Address = (byte*)ptr.Address,
                 SizeInBytes = ptr.Size,
                 ContextGeneration = Generation,
                 Parent = this,
@@ -477,7 +477,7 @@ namespace Sparrow.Json
             Pointer ptr = _arenaAllocatorForLongLivedValues.Allocate(requestedSize);
             return new AllocatedMemoryData
             {
-                Address = (byte*)ptr.Ptr,
+                Address = (byte*)ptr.Address,
                 SizeInBytes = ptr.Size,
                 ContextGeneration = Generation,
                 Parent = this,
