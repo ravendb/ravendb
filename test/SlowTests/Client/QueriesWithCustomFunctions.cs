@@ -1601,7 +1601,7 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
                         };
 
                     Assert.Equal("from Users as u select { FirstName : u.Name, " +
-                                 "LastName : u.LastName!=null?u.LastName:\"Has no last name\" }"
+                                 "LastName : (u.LastName!=null?u.LastName:\"Has no last name\") }"
                         , query.ToString());
 
                     var queryResult = query.ToList();
