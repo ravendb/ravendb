@@ -22,6 +22,8 @@ namespace Raven.Server.Documents.Queries.AST
         public string QueryText;
         public (string FunctionText, Esprima.Ast.Program Program) SelectFunctionBody;
         public string UpdateBody;
+        public ValueExpression Offset;
+        public ValueExpression Fetch;
 
         public bool TryAddFunction(StringSegment name, (string FunctionText, Esprima.Ast.Program Program) func)
         {

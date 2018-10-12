@@ -1121,8 +1121,22 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             BuildLoad(queryText);
             BuildSelect(queryText);
             BuildInclude(queryText);
+            BuildPagination(queryText);
 
             return queryText.ToString();
+        }
+
+        private void BuildPagination(StringBuilder queryText)
+        {
+            if (Start > 0)
+                queryText
+                    .Append(" offset $")
+                    .Append(AddQueryParameter(Start));
+
+            if (PageSize.HasValue)
+                queryText
+                    .Append(" fetch $")
+                    .Append(AddQueryParameter(PageSize.Value));
         }
 
         private void BuildInclude(StringBuilder queryText)
@@ -1689,7 +1703,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             var tokens = GetCurrentWhereTokens();
             var current = tokens.First;
-            while(current != null)
+            while (current != null)
             {
                 if (current.Value is WhereToken w)
                     current.Value = w.AddAlias(fromAlias);

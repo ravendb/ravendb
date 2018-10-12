@@ -938,6 +938,15 @@ namespace Raven.Server.Documents.Queries
             throw new ArgumentException("Expected valid number, but got: " + token, nameof(token));
         }
 
+        public static long GetLongValue(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, QueryExpression expression)
+        {
+            var value = GetValue(query, metadata, parameters, expression);
+            if (value.Type != ValueTokenType.Long)
+                ThrowValueTypeMismatch(value.Type, ValueTokenType.Long);
+
+            return (long)value.Value;
+        }
+
         public static (object Value, ValueTokenType Type) GetValue(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, QueryExpression expression, bool allowObjectsInParameters = false)
         {
             var value = expression as ValueExpression;
@@ -1241,6 +1250,11 @@ namespace Raven.Server.Documents.Queries
         private static void ThrowValueTypeMismatch(string fieldName, ValueTokenType fieldType, ValueTokenType expectedType)
         {
             throw new InvalidOperationException($"Field '{fieldName}' should be a '{expectedType}' but was '{fieldType}'.");
+        }
+
+        private static void ThrowValueTypeMismatch(ValueTokenType fieldType, ValueTokenType expectedType)
+        {
+            throw new InvalidOperationException($"Value should be a '{expectedType}' but was '{fieldType}'.");
         }
     }
 }
