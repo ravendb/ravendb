@@ -141,10 +141,24 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
             }
 
+            if (Scanner.TryScan("OFFSET"))
+                q.Offset = OffsetOrFetch("OFFSET");
+
+            if (Scanner.TryScan("FETCH"))
+                q.Fetch =  OffsetOrFetch("FETCH");
+
             if (recursive == false && Scanner.AtEndOfInput() == false)
                 ThrowParseException("Expected end of query");
 
             return q;
+        }
+
+        private ValueExpression OffsetOrFetch(string name)
+        {
+            if (Value(out var val) == false)
+                throw new InvalidQueryException($"{name} must contain a value", Scanner.Input, null);
+
+            return val;
         }
 
         private void WithClause(Query q)
@@ -890,7 +904,9 @@ namespace Raven.Server.Documents.Queries.Parser
             "GROUP",
             "ORDER",
             "INCLUDE",
-            "UPDATE"
+            "UPDATE",
+            "OFFSET",
+            "FETCH"
         };
 
         private bool Alias(bool aliasAsRequired, out StringSegment? alias)
