@@ -19,6 +19,22 @@ namespace Raven.Server.Documents.Queries
         [JsonDeserializationIgnore]
         public QueryTimingsScope Timings { get; private set; }
 
+        public new int Start
+        {
+#pragma warning disable 618
+            get => base.Start;
+            set => base.Start = value;
+#pragma warning restore 618
+        }
+
+        public new int PageSize
+        {
+#pragma warning disable 618
+            get => base.PageSize;
+            set => base.PageSize = value;
+#pragma warning restore 618
+        }
+
         private IndexQueryServerSide()
         {
             // for deserialization

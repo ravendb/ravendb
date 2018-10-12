@@ -28,8 +28,10 @@ namespace Raven.Client.Documents.Queries
                 hasher.Write(WaitForNonStaleResults);
                 hasher.Write(SkipDuplicateChecking);
                 hasher.Write(WaitForNonStaleResultsTimeout?.Ticks);
+#pragma warning disable 618
                 hasher.Write(Start);
                 hasher.Write(PageSize);
+#pragma warning restore 618
                 hasher.Write(QueryParameters);
 
                 return hasher.GetHash();
@@ -125,11 +127,13 @@ namespace Raven.Client.Documents.Queries
         /// <summary>
         /// Number of records that should be skipped.
         /// </summary>
+        [Obsolete("Use OFFSET in RQL instead")]
         public int Start { get; set; }
 
         /// <summary>
         /// Maximum number of records that will be retrieved.
         /// </summary>
+        [Obsolete("Use FETCH in RQL instead")]
         public int PageSize
         {
             get => _pageSize;
@@ -160,9 +164,11 @@ namespace Raven.Client.Documents.Queries
                 return true;
 
             return PageSizeSet.Equals(other.PageSizeSet) &&
+#pragma warning disable 618
                    PageSize == other.PageSize &&
-                   string.Equals(Query, other.Query) &&
                    Start == other.Start &&
+#pragma warning restore 618
+                   string.Equals(Query, other.Query) &&
                    WaitForNonStaleResultsTimeout == other.WaitForNonStaleResultsTimeout &&
                    WaitForNonStaleResults.Equals(other.WaitForNonStaleResults);
         }
@@ -181,9 +187,11 @@ namespace Raven.Client.Documents.Queries
             unchecked
             {
                 var hashCode = PageSizeSet.GetHashCode();
+#pragma warning disable 618
                 hashCode = (hashCode * 397) ^ PageSize.GetHashCode();
-                hashCode = (hashCode * 397) ^ (Query?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ Start;
+#pragma warning restore 618
+                hashCode = (hashCode * 397) ^ (Query?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (WaitForNonStaleResultsTimeout != null ? WaitForNonStaleResultsTimeout.GetHashCode() : 0);
                 return hashCode;
             }

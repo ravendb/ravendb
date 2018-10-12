@@ -49,9 +49,7 @@ namespace SlowTests.Tests.Indexes
                 {
                     Assert.True(commands.Query(new IndexQuery()
                     {
-                        Query = $"FROM INDEX '{index.IndexName}'",
-                        PageSize = 2,
-                        Start = 0,
+                        Query = $"FROM INDEX '{index.IndexName}' OFFSET 0 FETCH 2"
                     }).IsStale);
                 }
             }
