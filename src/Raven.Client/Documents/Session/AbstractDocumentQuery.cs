@@ -722,7 +722,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </summary>
         /// <param name = "fieldName">Name of the field.</param>
         /// <param name = "value">The value.</param>
-        public void WhereStartsWith(string fieldName, object value)
+        public void WhereStartsWith(string fieldName, object value, bool exact = false)
         {
             var whereParams = new WhereParams
             {
@@ -738,7 +738,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
             NegateIfNeeded(tokens, whereParams.FieldName);
-            var whereToken = WhereToken.Create(WhereOperator.StartsWith, whereParams.FieldName, AddQueryParameter(transformToEqualValue));
+            var whereToken = WhereToken.Create(WhereOperator.StartsWith, whereParams.FieldName, AddQueryParameter(transformToEqualValue), new WhereToken.WhereOptions(exact));
             tokens.AddLast(whereToken);
         }
 
@@ -747,7 +747,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </summary>
         /// <param name = "fieldName">Name of the field.</param>
         /// <param name = "value">The value.</param>
-        public void WhereEndsWith(string fieldName, object value)
+        public void WhereEndsWith(string fieldName, object value, bool exact = false)
         {
             var whereParams = new WhereParams
             {
@@ -763,7 +763,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
             NegateIfNeeded(tokens, whereParams.FieldName);
-            var whereToken = WhereToken.Create(WhereOperator.EndsWith, whereParams.FieldName, AddQueryParameter(transformToEqualValue));
+            var whereToken = WhereToken.Create(WhereOperator.EndsWith, whereParams.FieldName, AddQueryParameter(transformToEqualValue), new WhereToken.WhereOptions(exact));
             tokens.AddLast(whereToken);
         }
 

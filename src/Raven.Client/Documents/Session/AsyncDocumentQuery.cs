@@ -182,30 +182,30 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereStartsWith(string fieldName, object value)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereStartsWith(string fieldName, object value, bool exact)
         {
-            WhereStartsWith(fieldName, value);
+            WhereStartsWith(fieldName, value, exact);
             return this;
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
-            WhereStartsWith(GetMemberQueryPath(propertySelector.Body), value);
+            WhereStartsWith(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEndsWith(string fieldName, object value)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEndsWith(string fieldName, object value, bool exact)
         {
-            WhereEndsWith(fieldName, value);
+            WhereEndsWith(fieldName, value, exact);
             return this;
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
-            WhereEndsWith(GetMemberQueryPath(propertySelector.Body), value);
+            WhereEndsWith(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
