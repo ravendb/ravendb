@@ -1618,7 +1618,10 @@ namespace Raven.Client.Util
                     binaryExpression.Left, 
                     Expression.Convert(binaryExpression.Right, binaryExpression.Left.Type));
 
+                var writer = context.GetWriter();
+                writer.Write('(');
                 context.Visitor.Visit(condition);
+                writer.Write(')');
             }
         }
 
