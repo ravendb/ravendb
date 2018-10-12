@@ -220,16 +220,12 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Matches fields which ends with the specified value.
         /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="value">The value.</param>
-        TSelf WhereEndsWith(string fieldName, object value);
+        TSelf WhereEndsWith(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///     Matches fields which ends with the specified value.
         /// </summary>
-        /// <param name="propertySelector">Property selector for the field.</param>
-        /// <param name="value">The value.</param>
-        TSelf WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+        TSelf WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
         ///     Matches value
@@ -350,16 +346,12 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Matches fields which starts with the specified value.
         /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="value">The value.</param>
-        TSelf WhereStartsWith(string fieldName, object value);
+        TSelf WhereStartsWith(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///     Matches fields which starts with the specified value.
         /// </summary>
-        /// <param name="propertySelector">Property selector for the field.</param>
-        /// <param name="value">The value.</param>
-        TSelf WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+        TSelf WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
         ///     Check if the given field exists

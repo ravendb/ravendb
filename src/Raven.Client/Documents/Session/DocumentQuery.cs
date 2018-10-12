@@ -448,30 +448,30 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereStartsWith(string fieldName, object value)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereStartsWith(string fieldName, object value, bool exact)
         {
-            WhereStartsWith(fieldName, value);
+            WhereStartsWith(fieldName, value, exact);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
-            WhereStartsWith(GetMemberQueryPath(propertySelector.Body), value);
+            WhereStartsWith(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereEndsWith(string fieldName, object value)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereEndsWith(string fieldName, object value, bool exact)
         {
-            WhereEndsWith(fieldName, value);
+            WhereEndsWith(fieldName, value, exact);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
-            WhereEndsWith(GetMemberQueryPath(propertySelector.Body), value);
+            WhereEndsWith(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 

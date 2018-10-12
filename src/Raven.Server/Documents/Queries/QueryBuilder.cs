@@ -363,9 +363,9 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Regex:
                         return HandleRegex(query, me, metadata, parameters, factories);
                     case MethodType.StartsWith:
-                        return HandleStartsWith(query, me, metadata, parameters);
+                        return HandleStartsWith(query, me, metadata, parameters, exact);
                     case MethodType.EndsWith:
-                        return HandleEndsWith(query, me, metadata, parameters);
+                        return HandleEndsWith(query, me, metadata, parameters, exact);
                     case MethodType.Lucene:
                         return HandleLucene(query, me, metadata, parameters, analyzer, exact);
                     case MethodType.Exists:
@@ -549,7 +549,7 @@ namespace Raven.Server.Documents.Queries
             return parser.Parse(GetValueAsString(value));
         }
 
-        private static Lucene.Net.Search.Query HandleStartsWith(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
+        private static Lucene.Net.Search.Query HandleStartsWith(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, bool exact)
         {
             var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
@@ -563,10 +563,13 @@ namespace Raven.Server.Documents.Queries
             else
                 valueAsString += LuceneQueryHelper.Asterisk;
 
-            return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.Prefix);
+            if (exact && metadata.IsDynamic)
+                fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
+
+            return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.Prefix, exact: exact);
         }
 
-        private static Lucene.Net.Search.Query HandleEndsWith(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
+        private static Lucene.Net.Search.Query HandleEndsWith(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, bool exact)
         {
             var fieldName = ExtractIndexFieldName(query, parameters, expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
@@ -579,7 +582,10 @@ namespace Raven.Server.Documents.Queries
                 ? LuceneQueryHelper.Asterisk
                 : valueAsString.Insert(0, LuceneQueryHelper.Asterisk);
 
-            return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.WildCard);
+            if (exact && metadata.IsDynamic)
+                fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
+
+            return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.WildCard, exact: exact);
         }
 
         private static Lucene.Net.Search.Query HandleProximity(TransactionOperationContext serverContext, DocumentsOperationContext context, Query query, MethodExpression expression, QueryMetadata metadata,
