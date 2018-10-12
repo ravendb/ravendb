@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -40,10 +41,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (indexDefinition.IndexFields.ContainsKey(Constants.Documents.Indexing.Fields.AllFields))
                 throw new InvalidOperationException($"Detected '{Constants.Documents.Indexing.Fields.AllFields}'. This field should not be present here, because inheritance is done elsewhere.");
 
+            var analyzers = new Dictionary<Type, Analyzer>();
+
             var hasDefaultFieldOptions = false;
             Analyzer defaultAnalyzerToUse = null;
-            RavenStandardAnalyzer standardAnalyzer = null;
-            KeywordAnalyzer keywordAnalyzer = null;
             Analyzer defaultAnalyzer = null;
             if (indexDefinition is MapIndexDefinition mid)
             {
@@ -54,13 +55,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     switch (value.Indexing)
                     {
                         case FieldIndexing.Exact:
-                            defaultAnalyzerToUse = keywordAnalyzer = new KeywordAnalyzer();
+                            if (analyzers.TryGetValue(typeof(KeywordAnalyzer), out defaultAnalyzerToUse) == false)
+                                analyzers[typeof(KeywordAnalyzer)] = defaultAnalyzerToUse = new KeywordAnalyzer();
                             break;
                         case FieldIndexing.Search:
                             if (value.Analyzer != null)
-                                defaultAnalyzerToUse = GetAnalyzer(Constants.Documents.Indexing.Fields.AllFields, value.Analyzer, forQuerying);
+                                defaultAnalyzerToUse = GetAnalyzer(Constants.Documents.Indexing.Fields.AllFields, value.Analyzer, analyzers, forQuerying);
+
                             if (defaultAnalyzerToUse == null)
-                                defaultAnalyzerToUse = standardAnalyzer = new RavenStandardAnalyzer(Version.LUCENE_29);
+                            {
+                                if (analyzers.TryGetValue(typeof(RavenStandardAnalyzer), out defaultAnalyzerToUse) == false)
+                                    analyzers[typeof(RavenStandardAnalyzer)] = defaultAnalyzerToUse = new RavenStandardAnalyzer(Version.LUCENE_29);
+                            }
                             break;
                         default:
                             // explicitly ignore all other values
@@ -70,7 +76,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             if (defaultAnalyzerToUse == null)
+            {
                 defaultAnalyzerToUse = defaultAnalyzer = createDefaultAnalyzer();
+                analyzers.Add(defaultAnalyzerToUse.GetType(), defaultAnalyzerToUse);
+            }
 
             var perFieldAnalyzerWrapper = new RavenPerFieldAnalyzerWrapper(defaultAnalyzerToUse);
             foreach (var field in indexDefinition.IndexFields)
@@ -80,13 +89,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 switch (field.Value.Indexing)
                 {
                     case FieldIndexing.Exact:
-                        if (keywordAnalyzer == null)
-                            keywordAnalyzer = new KeywordAnalyzer();
+                        if (analyzers.TryGetValue(typeof(KeywordAnalyzer), out var keywordAnalyzer) == false)
+                            analyzers[typeof(KeywordAnalyzer)] = keywordAnalyzer = new KeywordAnalyzer();
 
                         perFieldAnalyzerWrapper.AddAnalyzer(fieldName, keywordAnalyzer);
                         break;
                     case FieldIndexing.Search:
-                        var analyzer = GetAnalyzer(fieldName, field.Value.Analyzer, forQuerying);
+                        var analyzer = GetAnalyzer(fieldName, field.Value.Analyzer, analyzers, forQuerying);
                         if (analyzer != null)
                         {
                             perFieldAnalyzerWrapper.AddAnalyzer(fieldName, analyzer);
@@ -113,8 +122,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             void AddStandardAnalyzer(string fieldName)
             {
-                if (standardAnalyzer == null)
-                    standardAnalyzer = new RavenStandardAnalyzer(Version.LUCENE_29);
+                if (analyzers.TryGetValue(typeof(RavenStandardAnalyzer), out var standardAnalyzer) == false)
+                    analyzers[typeof(RavenStandardAnalyzer)] = standardAnalyzer = new RavenStandardAnalyzer(Version.LUCENE_29);
 
                 perFieldAnalyzerWrapper.AddAnalyzer(fieldName, standardAnalyzer);
             }
@@ -122,17 +131,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public abstract void Dispose();
 
-        private static Analyzer GetAnalyzer(string name, string analyzer, bool forQuerying)
+        private static Analyzer GetAnalyzer(string name, string analyzer, Dictionary<Type, Analyzer> analyzers, bool forQuerying)
         {
             if (string.IsNullOrWhiteSpace(analyzer))
                 return null;
 
-            var analyzerInstance = IndexingExtensions.CreateAnalyzerInstance(name, analyzer);
+            var analyzerType = IndexingExtensions.GetAnalyzerType(name, analyzer);
+
+            if (analyzers.TryGetValue(analyzerType, out var analyzerInstance) == false)
+                analyzers[analyzerType] = analyzerInstance = IndexingExtensions.CreateAnalyzerInstance(name, analyzerType);
 
             if (forQuerying)
             {
-                var analyzerType = analyzerInstance.GetType();
-
                 var notForQuerying = NotForQuerying
                     .GetOrAdd(analyzerType, t => analyzerInstance.GetType().GetTypeInfo().GetCustomAttributes<NotForQueryingAttribute>(false).Any());
 

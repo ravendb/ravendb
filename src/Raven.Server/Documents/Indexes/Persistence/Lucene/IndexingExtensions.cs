@@ -21,10 +21,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private static readonly object[] ConstructorParameterValues = { global::Lucene.Net.Util.Version.LUCENE_30 };
 
-        public static Analyzer CreateAnalyzerInstance(string name, string analyzerTypeAsString)
+        public static Analyzer CreateAnalyzerInstance(string name, Type analyzerType)
         {
-            var analyzerType = GetAnalyzerType(name, analyzerTypeAsString);
-
             try
             {
                 // try to get parameterless ctor
@@ -39,10 +37,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Could not create new analyzer instance '{analyzerTypeAsString}' for field: {name}", e);
+                throw new InvalidOperationException($"Could not create new analyzer instance '{analyzerType.Name}' for field: {name}", e);
             }
 
-            throw new InvalidOperationException($"Could not create new analyzer instance '{analyzerTypeAsString}' for field: {name}. No recognizable constructor found.");
+            throw new InvalidOperationException($"Could not create new analyzer instance '{analyzerType.Name}' for field: {name}. No recognizable constructor found.");
+        }
+
+        public static Analyzer CreateAnalyzerInstance(string name, string analyzerTypeAsString)
+        {
+            var analyzerType = GetAnalyzerType(name, analyzerTypeAsString);
+
+            return CreateAnalyzerInstance(name, analyzerType);
         }
 
         public static Type GetAnalyzerType(string name, string analyzerTypeAsString)
