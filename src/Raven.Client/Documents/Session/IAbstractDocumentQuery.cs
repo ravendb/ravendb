@@ -149,16 +149,12 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///   Matches fields which starts with the specified value.
         /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "value">The value.</param>
-        void WhereStartsWith(string fieldName, object value);
+        void WhereStartsWith(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///   Matches fields which ends with the specified value.
         /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "value">The value.</param>
-        void WhereEndsWith(string fieldName, object value);
+        void WhereEndsWith(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///   Matches fields where the value is between the specified start and end, inclusive
