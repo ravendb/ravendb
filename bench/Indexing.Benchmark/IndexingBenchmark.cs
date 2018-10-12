@@ -56,9 +56,7 @@ namespace Indexing.Benchmark
                     {
                         var queryCommand = new QueryCommand((InMemoryDocumentSessionOperations)session, new IndexQuery
                         {
-                            Query = $"FROM INDEX '{test.Index.IndexName}'",
-                            PageSize = 0,
-                            Start = 0
+                            Query = $"FROM INDEX '{test.Index.IndexName}' OFFSET 0 FETCH 0"
                         });
 
                         requestExecuter.Execute(queryCommand, context);

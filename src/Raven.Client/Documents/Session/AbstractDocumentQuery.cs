@@ -1074,15 +1074,17 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var indexQuery = new IndexQuery
             {
                 Query = query,
-                Start = Start,
                 WaitForNonStaleResults = TheWaitForNonStaleResults,
                 WaitForNonStaleResultsTimeout = Timeout,
                 QueryParameters = QueryParameters,
                 DisableCaching = DisableCaching
             };
 
+#pragma warning disable 618
+            indexQuery.Start = Start;
             if (PageSize != null)
                 indexQuery.PageSize = PageSize.Value;
+#pragma warning restore 618
 
             return indexQuery;
         }

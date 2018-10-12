@@ -88,9 +88,7 @@ select new {
 
                     var q = commands.Query(new IndexQuery
                     {
-                        Query = "FROM INDEX 'CommentsCountPerBlog' WHERE blog_id = 3",
-                        Start = 0,
-                        PageSize = 10
+                        Query = "FROM INDEX 'CommentsCountPerBlog' WHERE blog_id = 3 OFFSET 0 FETCH 10"
                     });
 
                     var result = (BlittableJsonReaderObject)q.Results[0];

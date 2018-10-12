@@ -15,12 +15,14 @@ namespace Raven.Client.Extensions
             writer.WriteString(query.Query);
             writer.WriteComma();
 
+#pragma warning disable 618
             if (query.PageSizeSet && query.PageSize >= 0)
             {
                 writer.WritePropertyName(nameof(query.PageSize));
                 writer.WriteInteger(query.PageSize);
                 writer.WriteComma();
             }
+#pragma warning restore 618
 
             if (query.WaitForNonStaleResults)
             {
@@ -29,12 +31,14 @@ namespace Raven.Client.Extensions
                 writer.WriteComma();
             }
 
+#pragma warning disable 618
             if (query.Start > 0)
             {
                 writer.WritePropertyName(nameof(query.Start));
                 writer.WriteInteger(query.Start);
                 writer.WriteComma();
             }
+#pragma warning restore 618
 
             if (query.WaitForNonStaleResultsTimeout.HasValue)
             {
@@ -49,15 +53,6 @@ namespace Raven.Client.Extensions
                 writer.WriteBool(query.DisableCaching);
                 writer.WriteComma();
             }
-
-#if FEATURE_SHOW_TIMINGS
-            if (query.ShowTimings)
-            {
-                writer.WritePropertyName(nameof(query.ShowTimings));
-                writer.WriteBool(query.ShowTimings);
-                writer.WriteComma();
-            }
-#endif
 
             if (query.SkipDuplicateChecking)
             {

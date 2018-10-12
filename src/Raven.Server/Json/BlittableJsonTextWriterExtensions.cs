@@ -592,12 +592,6 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
-#if FEATURE_SHOW_TIMINGS
-            writer.WritePropertyName(nameof(query.ShowTimings));
-            writer.WriteBool(query.ShowTimings);
-            writer.WriteComma();
-#endif
-
             writer.WritePropertyName(nameof(query.SkipDuplicateChecking));
             writer.WriteBool(query.SkipDuplicateChecking);
             writer.WriteComma();

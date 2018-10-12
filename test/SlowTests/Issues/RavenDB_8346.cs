@@ -29,8 +29,8 @@ namespace SlowTests.Issues
 from Orders as o
 where o.ShipTo.City = 'London'
 load o.Company as c
-select upper(c) as CompanyName, o.Employee",
-                        PageSize = 1
+select upper(c) as CompanyName, o.Employee
+fetch 1"
                     });
 
                     var json = (BlittableJsonReaderObject)qr.Results[0];
@@ -49,8 +49,8 @@ load o.Company as c
 select {
     CompanyName: upper(c),
     Employee: o.Employee
-}",
-                        PageSize = 1
+} 
+fetch 1"
                     });
 
                     json = (BlittableJsonReaderObject)qr.Results[0];
