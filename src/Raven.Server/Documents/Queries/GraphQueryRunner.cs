@@ -16,9 +16,11 @@ using System.Linq;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Utils;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -181,6 +183,8 @@ namespace Raven.Server.Documents.Queries
                     var nextNodeAlias = ee.Path[pathIndex + 1].Alias;
                     
                     var edge = _gq.WithEdgePredicates[ee.Path[pathIndex].Alias].EdgeType.Value;
+                    var edgePath = _gq.WithEdgePredicates[ee.Path[pathIndex].Alias].Path;
+                    var edgePathType = _gq.WithEdgePredicates[ee.Path[pathIndex].Alias].EdgePathType;
                     _gq.WithEdgePredicates[ee.Path[pathIndex].Alias].FromAlias = prevNodeAlias;
 
                     if(!_source.TryGetByAlias(nextNodeAlias, out var edgeResults))
@@ -190,12 +194,18 @@ namespace Raven.Server.Documents.Queries
                     {
                         var edgeResult = currentResults[resultIndex];
                         var prev = edgeResult.Get(prevNodeAlias);
-                        Document related;
-                        if (TryGetMatches(edge, nextNodeAlias, edgeResults, prev, out var multipleRelatedMatches))
+
+                        var edgeExpression = edge;
+                        if (edgePathType == QueryParser.EdgePathType.EmbeddedCollection)
+                        {
+                            edgeExpression = edge + "[]";
+                        }
+
+                        if (TryGetMatches(edgeExpression, edgePath, nextNodeAlias, edgeResults, prev, out var multipleRelatedMatches))
                         {
                             foreach (var match in multipleRelatedMatches)
                             {
-                                related = match.Get(nextNodeAlias);
+                                var related = match.Get(nextNodeAlias);
                                 if (edgeResult.TryGetKey(nextNodeAlias,out _) == false)
                                 {
                                     edgeResult.Set(nextNodeAlias,related); 
@@ -224,10 +234,11 @@ namespace Raven.Server.Documents.Queries
 
             private readonly HashSet<string> _includedNodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            private bool TryGetMatches(string edge, string alias, Dictionary<string, Match> edgeResults, Document prev, out IEnumerable<Match> relatedMatches)
+            private bool TryGetMatches(string edge, List<StringSegment> edgePath, string alias, Dictionary<string, Match> edgeResults, Document prev,
+                out IEnumerable<Match> relatedMatches)
             {
                 _includedNodes.Clear();
-                IncludeUtil.GetDocIdFromInclude(prev.Data,edge, _includedNodes);
+                IncludeUtil.GetDocIdFromInclude(prev.Data, $"{edge}.{string.Join('.', edgePath)}", _includedNodes);
                 relatedMatches = Enumerable.Empty<Match>();
                 _includedNodes.Remove(null);
                 if (_includedNodes.Count == 0)

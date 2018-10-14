@@ -363,7 +363,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if(Scanner.TryScan('(') == false)
                 throw new InvalidQueryException("MATCH operator expected a '(', but didn't get it.", Scanner.Input, null);
 
-            if(GraphAlias(isEdge: false, out var alias) == false)
+            if(GraphAlias(false, out var alias) == false)
             {
                 if (BinaryGraph(out op) == false)
                 {
@@ -403,7 +403,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             if (foundDash == false)
                                 throw new InvalidQueryException("Got '[' when expected '-', did you forget to add '-[' ?", Scanner.Input, null);
 
-                            if (GraphAlias(isEdge: true, out alias) == false)
+                            if (GraphAlias(true, out alias) == false)
                                 throw new InvalidQueryException("MATCH identifider after '-['", Scanner.Input, null);
                             if (Scanner.TryScan(']') == false)
                                 throw new InvalidQueryException("MATCH operator expected a ']' after reading: " + alias, Scanner.Input, null);
@@ -448,7 +448,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             if (expectNode == false && list[list.Count - 1].EdgeType != EdgeType.Left)
                                 throw new InvalidQueryException("Got '(', but it wasn't expected", Scanner.Input, null);
 
-                            if (GraphAlias(isEdge: false, out alias) == false)
+                            if (GraphAlias(false, out alias) == false)
                                 throw new InvalidQueryException("Couldn't get node's alias", Scanner.Input, null);
 
                             if (Scanner.TryScan(')') == false)
