@@ -13,13 +13,13 @@ namespace Raven.Server.Documents.Queries.AST
 
         public StringSegment? FromAlias;
 
-        public List<StringSegment> Path;
+        public StringSegment Path;
 
         public QueryParser.EdgePathType EdgePathType;
 
         public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> OrderBy;
 
-        public WithEdgesExpression(QueryExpression @where, string edgeType, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy, List<StringSegment> path = null,QueryParser.EdgePathType edgePathType = QueryParser.EdgePathType.EdgeProperty)
+        public WithEdgesExpression(QueryExpression @where, string edgeType, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy, StringSegment path = default ,QueryParser.EdgePathType edgePathType = QueryParser.EdgePathType.EdgeProperty)
         {
             Where = @where;
             OrderBy = orderBy;

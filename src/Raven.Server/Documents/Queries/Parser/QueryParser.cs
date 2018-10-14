@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Queries.Parser
         private int _statePos;
 
         public QueryScanner Scanner = new QueryScanner();
-        private Dictionary<StringSegment, (StringSegment Collection, QueryExpression Filter, bool IsEdge, List<StringSegment> path, EdgePathType edgePathType)> _synteticWithQueries;
+        private Dictionary<StringSegment, (StringSegment Collection, QueryExpression Filter, bool IsEdge, StringSegment path, EdgePathType edgePathType)> _synteticWithQueries;
 
         public void Init(string q)
         {
@@ -266,16 +266,17 @@ namespace Raven.Server.Documents.Queries.Parser
                     edgeType = EdgePathType.EmbeddedCollection;
                 }
 
+                var pathAsString = String.Empty;
                 if (isEdge && Scanner.TryScan('.')) //perhaps we have edge as a field of embedded object?
                                                     // Example : this is for cases like -[:Lines.Product.Foo.Bar]->
                                                     // TODO : refactor this to use object pool for List<StringSegment> or something similar
                 {
+                    int pathStart = Scanner.Position;
                     if (edgeType != EdgePathType.EmbeddedCollection)
                         edgeType = EdgePathType.EmbeddedProperty;
 
                     while (Scanner.Identifier())
                     {
-                        path.Add(new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength));
                         if (Scanner.TryPeek('(') || Scanner.TryPeek(']'))
                         {
                             break;
@@ -284,12 +285,15 @@ namespace Raven.Server.Documents.Queries.Parser
                         if (Scanner.TryScan('.'))
                             Scanner.NextPathSegment();
                     }
+
+                    int pathEnd = Scanner.Position;
+                    pathAsString = new StringSegment(Scanner.Input,pathStart,pathEnd - pathStart);
                 }
                 else if (isEdge)
                     edgeType = EdgePathType.EdgeProperty;
 
 
-                AddWithQuery(collection, alias, filter, isEdge, start, path, edgeType);
+                AddWithQuery(collection, alias, filter, isEdge, start, pathAsString, edgeType);
             }
             return true;
         }
@@ -302,10 +306,10 @@ namespace Raven.Server.Documents.Queries.Parser
             EmbeddedCollection
         }
 
-        private void AddWithQuery(StringSegment collection, StringSegment alias, QueryExpression filter, bool isEdge, int start, List<StringSegment> path = null, EdgePathType edgePathType = EdgePathType.NotEdge)
+        private void AddWithQuery(StringSegment collection, StringSegment alias, QueryExpression filter, bool isEdge, int start, StringSegment path = default , EdgePathType edgePathType = EdgePathType.NotEdge)
         {
             if (_synteticWithQueries == null)
-                _synteticWithQueries = new Dictionary<StringSegment, (StringSegment Collection, QueryExpression Filter, bool IsEdge, List<StringSegment> path, EdgePathType edgeType)>(StringSegmentEqualityComparer.Instance);
+                _synteticWithQueries = new Dictionary<StringSegment, (StringSegment Collection, QueryExpression Filter, bool IsEdge, StringSegment path, EdgePathType edgeType)>(StringSegmentEqualityComparer.Instance);
 
             if(_synteticWithQueries.TryGetValue(alias, out var existing))
             {

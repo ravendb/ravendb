@@ -234,11 +234,11 @@ namespace Raven.Server.Documents.Queries
 
             private readonly HashSet<string> _includedNodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            private bool TryGetMatches(string edge, List<StringSegment> edgePath, string alias, Dictionary<string, Match> edgeResults, Document prev,
+            private bool TryGetMatches(string edge, StringSegment edgePath, string alias, Dictionary<string, Match> edgeResults, Document prev,
                 out IEnumerable<Match> relatedMatches)
             {
                 _includedNodes.Clear();
-                IncludeUtil.GetDocIdFromInclude(prev.Data, $"{edge}.{string.Join('.', edgePath)}", _includedNodes);
+                IncludeUtil.GetDocIdFromInclude(prev.Data, $"{edge}.{edgePath}", _includedNodes);
                 relatedMatches = Enumerable.Empty<Match>();
                 _includedNodes.Remove(null);
                 if (_includedNodes.Count == 0)
