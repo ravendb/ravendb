@@ -148,7 +148,6 @@ namespace Raven.Server.Documents.Queries
 
                 try
                 {
-                    context.CloseTransaction();
                     index = GetIndex(indexName);
 
                     var etag = index.GetIndexEtag(null);
