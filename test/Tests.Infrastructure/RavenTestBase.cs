@@ -46,6 +46,12 @@ namespace FastTests
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
         }
 
+        protected static void CreateNorthwindDatabase(DocumentStore store)
+        {
+            store.Maintenance.Send(new CreateSampleDataOperation());
+        }
+
+
         protected async Task SetDatabaseId(DocumentStore store, Guid dbId)
         {
             var database = await GetDocumentDatabaseInstanceFor(store);
