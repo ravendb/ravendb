@@ -357,7 +357,7 @@ namespace Raven.Server
                     Thread.Sleep(100);
                 }
             }
-
+            char x = '\x1b';
             Console.ReadKey(true);
             Console.WriteLine();
             Console.WriteLine($"Stats halted.");
@@ -377,12 +377,22 @@ namespace Raven.Server
             var maxNameLength = 0;
             while (Console.KeyAvailable == false)
             {
-                Console.SetCursorPosition(cursorLeft, cursorTop);
+                if (PlatformDetails.RunningOnPosix)
+                {
+                    Console.Out.Write('\x1b');
+                    Console.Out.Write($"[{cursorTop};{0}f");
+                    Console.Out.Flush();
+                }
+                else
+                {
+                    Console.SetCursorPosition(cursorLeft, cursorTop);
+                }
 
                 var threadsInfo = threadsUsage.Calculate();
                 Console.Write($"{(i++ % 2 == 0 ? "*" : "+")} ");
                 Console.WriteLine($"CPU usage: {threadsInfo.CpuUsage:0.00}% (total threads: {threadsInfo.List.Count:#,#0}, active cores: {threadsInfo.ActiveCores})   ");
-                
+                var printedLines = 1;
+
                 var count = 0;
                 var isFirst = true;
                 foreach (var threadInfo in threadsInfo.List
@@ -391,6 +401,7 @@ namespace Raven.Server
                 {
                     if (isFirst)
                     {
+                        printedLines++;
                         Console.WriteLine("  thread id  |  cpu usage  |   priority    |     thread name       ");
                         isFirst = false;
                     }
@@ -409,11 +420,21 @@ namespace Raven.Server
                     Console.Write($" | {threadInfo.Name}{emptySpaces}");
 
                     Console.WriteLine();
+                    printedLines++;
                 }
 
                 for (var j = 0; j < waitIntervals && Console.KeyAvailable == false; j++)
                 {
                     Thread.Sleep(100);
+                }
+
+                if (PlatformDetails.RunningOnPosix)
+                {
+                    var newTop = Console.BufferHeight - cursorTop - printedLines;
+                    if (newTop < 0)
+                    {
+                        cursorTop = Math.Max(0, cursorTop + newTop);
+                    }
                 }
             }
 
