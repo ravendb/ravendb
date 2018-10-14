@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
+using Voron;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -30,12 +31,16 @@ namespace SlowTests.Issues
 
                     Assert.Equal(0, query.ToList().Count);
 
+                    var s = Slices.Empty;
+
                     query = session.Query<Document>()
                         .Where(x => x.Id == null);
 
                     iq = RavenTestHelper.GetIndexQuery(query);
                     Assert.Equal("from Documents where id() = $p0", iq.Query);
                     Assert.Null(iq.QueryParameters["p0"]);
+
+                    s = Slices.Empty;
 
                     Assert.Equal(0, query.ToList().Count);
 

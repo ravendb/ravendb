@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using Sparrow.Json;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
+using Sparrow.Platform.Win32;
 
 namespace Voron
 {
@@ -208,20 +209,35 @@ namespace Voron
 
     public static class Slices
     {
-        private static readonly ByteStringContext SharedSliceContent = new ByteStringContext();
+        private static readonly ByteStringContext<ByteStringContext.ElectricFence> SharedSliceContent = new ByteStringContext<ByteStringContext.ElectricFence>();
 
         public static readonly Slice AfterAllKeys;
         public static readonly Slice BeforeAllKeys;
-        public static readonly Slice Empty;
+        public static readonly Slice _Empty;
+        public static Slice Empty
+        {
+            get
+            {
+                if(_Empty.Size != 0)
+                {
+                    Console.WriteLine("?A");
+                }
+                return _Empty;
+            }
+        }
 
-        static Slices()
+        unsafe static Slices()
         {
             SharedSliceContent.From(string.Empty, out ByteString empty);
-            Empty = new Slice(SliceOptions.Key, empty);
+            _Empty = new Slice(SliceOptions.Key, empty);
             SharedSliceContent.From(string.Empty, out ByteString before);
             BeforeAllKeys = new Slice(SliceOptions.BeforeAllKeys, before);
             SharedSliceContent.From(string.Empty, out ByteString after);
             AfterAllKeys = new Slice(SliceOptions.AfterAllKeys, after);
+
+            Win32MemoryProtectMethods.VirtualProtect((byte*)_Empty.Content._pointer, new UIntPtr(4096),
+                Win32MemoryProtectMethods.MemoryProtection.READONLY,
+                out var _);
         }
     }
 }

@@ -461,6 +461,30 @@ namespace Sparrow
             public int MaxPoolSizeInBytes => 0; // We are effectively disabling the pooling. 
         }
 
+        public struct ElectricFence : IPoolAllocatorOptions
+        {
+            public bool HasOwnership => false;
+            public IAllocatorComposer<Pointer> CreateAllocator()
+            {
+                var allocator = new Allocator<NativeAllocator<NativeAllocator.ElectricFence>>();
+                allocator.Initialize(default(NativeAllocator.ElectricFence));
+                return allocator;
+            }
+
+            /// <summary>
+            /// By default whenever we create an allocator we are going to dispose it too when the time comes.
+            /// </summary>
+            /// <param name="allocator">the allocator to dispose.</param>
+            public void ReleaseAllocator(IAllocatorComposer<Pointer> allocator, bool disposing)
+            {
+                allocator.Dispose(disposing);
+            }
+
+            public int BlockSize => default(FragmentPool).BlockSize;
+            public int MaxBlockSize => 0;
+            public int MaxPoolSizeInBytes => 0; // We are effectively disabling the pooling. 
+        }
+
         public struct WithPooling : IPoolAllocatorOptions
         {
             public bool HasOwnership => false;
