@@ -68,6 +68,14 @@ namespace Raven.Server.Utils
                         }
                     }
                 }
+                if(value is BlittableJsonReaderArray array)
+                {
+                    foreach (var item in array)
+                    {
+                        if (item is BlittableJsonReaderObject inner)
+                            GetDocIdFromInclude(inner, leftPath, includedIds);
+                    }
+                }
 
                 return;
             }

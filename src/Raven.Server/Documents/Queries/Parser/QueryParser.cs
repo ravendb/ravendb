@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Queries.Parser
         private int _statePos;
 
         public QueryScanner Scanner = new QueryScanner();
-        private Dictionary<StringSegment, (StringSegment Collection, QueryExpression Filter, bool IsEdge, StringSegment path, EdgePathType edgePathType)> _synteticWithQueries;
+        private Dictionary<StringSegment, (FieldExpression Path, QueryExpression Filter, bool IsEdge)> _synteticWithQueries;
 
         public void Init(string q)
         {
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     {
                         if (sq.IsEdge)
                         {
-                            var with = new WithEdgesExpression(sq.Filter, sq.Collection, null,sq.path, sq.edgePathType);
+                            var with = new WithEdgesExpression(sq.Filter, sq.Path, null);
                             q.TryAddWithEdgePredicates(with, alias);
                         }
                         else
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Queries.Parser
                              {
                                  From = new FromClause
                                  {
-                                     From = new FieldExpression(new List<StringSegment> { sq.Collection }),
+                                     From = sq.Path,
                                  },
                                  Where = sq.Filter
                              }, alias);
@@ -163,31 +163,28 @@ namespace Raven.Server.Documents.Queries.Parser
             }
         }
 
-        private StringSegment WithEdgeType()
+        private FieldExpression GetEdgePath()
         {
-            StringSegment edgeType = null;
+            FieldExpression f = null;
             if (Scanner.TryScan('('))
             {
-                if (Scanner.Identifier() == true)
-                {
-                    edgeType = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength);
-                }
+                Field(out f); // okay if false
                 if (Scanner.TryScan(')') == false)
                     ThrowParseException("With edges(<identifier>) was not closed with ')'");
             }
 
-            return edgeType;
+            return f;
         }
 
         private (WithEdgesExpression Expression, StringSegment Allias) WithEdges()
         {
-            StringSegment edgeType = WithEdgeType();
+            var edgeField = GetEdgePath();
 
             if (Scanner.TryScan('{') == false)
             {
                 if (Alias(true, out var shortAlias) && shortAlias.HasValue)
                 {
-                    var shortWithEdges = new WithEdgesExpression(null, edgeType, null);
+                    var shortWithEdges = new WithEdgesExpression(null, edgeField, null);
                     return (shortWithEdges, shortAlias.Value);
                 }
 
@@ -210,7 +207,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Alias(true, out var alias) == false || alias.HasValue == false)
                 throw new InvalidQueryException("With clause must contain allias but none was provided", Scanner.Input, null);
 
-            var wee = new WithEdgesExpression(qe, edgeType, orderBy);
+            var wee = new WithEdgesExpression(qe, edgeField, orderBy);
             return (wee, alias.Value);
         }
 
@@ -238,14 +235,17 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (Scanner.TryScan(':'))
             {
+                // Edge path syntax is:
+                // Lines[].Product, Lines.Product
+                // Lines(Name = 'Chang')[].Product, Lines(Name = 'Chang').Product
+                // Lines(Name = 'Chang' and MadeBy.Country = 'China').Product
+
                 if (Scanner.Identifier() == false)
-                    throw new InvalidQueryException("Failed to read collection after: " + alias, Scanner.Input, null);
+                    throw new InvalidQueryException("Failed to read edge path after: " + alias, Scanner.Input, null);
 
                 QueryExpression filter = null;
-                var collection = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength);
-                var path = new List<StringSegment>();
-
-                //filter expressions come before path (ex. -[:Lines(ProductName = 'Chang').Product]->)
+                var firstPropOnPath = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength);
+                
                 if (Scanner.TryScan('('))
                 {
                     if(Expression(out filter) == false)
@@ -255,68 +255,41 @@ namespace Raven.Server.Documents.Queries.Parser
                         throw new InvalidQueryException("Failed to find closing ')' after filter expression for: " + alias, Scanner.Input, null);
                 }
 
-                var edgeType = EdgePathType.NotEdge;
-
-                //for cases like -[:Lines[].Product]->
-                //the '[]' is essentially a syntax sugar, so simply skip it...
-                if (isEdge && Scanner.TryPeek('['))
+                FieldExpression f;
+                if (Scanner.TryScan('.'))
                 {
-                    Scanner.TryScan('[');
-                    Scanner.TryScan(']');
-                    edgeType = EdgePathType.EmbeddedCollection;
-                }
-
-                var pathAsString = String.Empty;
-                if (isEdge && Scanner.TryScan('.')) //perhaps we have edge as a field of embedded object?
-                                                    // Example : this is for cases like -[:Lines.Product.Foo.Bar]->
-                                                    // TODO : refactor this to use object pool for List<StringSegment> or something similar
-                {
-                    int pathStart = Scanner.Position;
-                    if (edgeType != EdgePathType.EmbeddedCollection)
-                        edgeType = EdgePathType.EmbeddedProperty;
-
-                    while (Scanner.Identifier())
+                    if (Field(out f))
                     {
-                        if (Scanner.TryPeek('(') || Scanner.TryPeek(']'))
-                        {
-                            break;
-                        }
-
-                        if (Scanner.TryScan('.'))
-                            Scanner.NextPathSegment();
+                        f.Compound.Insert(0, firstPropOnPath);
                     }
+                    else
+                    {
+                        throw new InvalidQueryException("Expected field expression after . for " + firstPropOnPath, Scanner.Input, null);
+                    }   
 
-                    int pathEnd = Scanner.Position;
-                    pathAsString = new StringSegment(Scanner.Input,pathStart,pathEnd - pathStart);
                 }
-                else if (isEdge)
-                    edgeType = EdgePathType.EdgeProperty;
+                else
+                {
+                    f = new FieldExpression(new List<StringSegment> { firstPropOnPath });
+                }
 
+                AddWithQuery(f, alias, filter, isEdge, start);
 
-                AddWithQuery(collection, alias, filter, isEdge, start, pathAsString, edgeType);
             }
             return true;
         }
 
-        public enum EdgePathType
-        {
-            NotEdge,
-            EdgeProperty,
-            EmbeddedProperty,
-            EmbeddedCollection
-        }
-
-        private void AddWithQuery(StringSegment collection, StringSegment alias, QueryExpression filter, bool isEdge, int start, StringSegment path = default , EdgePathType edgePathType = EdgePathType.NotEdge)
+        private void AddWithQuery(FieldExpression path, StringSegment alias, QueryExpression filter, bool isEdge, int start)
         {
             if (_synteticWithQueries == null)
-                _synteticWithQueries = new Dictionary<StringSegment, (StringSegment Collection, QueryExpression Filter, bool IsEdge, StringSegment path, EdgePathType edgeType)>(StringSegmentEqualityComparer.Instance);
+                _synteticWithQueries = new Dictionary<StringSegment, (FieldExpression Collection, QueryExpression Filter, bool IsEdge)>(StringSegmentEqualityComparer.Instance);
 
             if(_synteticWithQueries.TryGetValue(alias, out var existing))
             {
                 if (existing.IsEdge != isEdge)
                     ThrowDuplicateAliasWithoutSameBody(start);
 
-                if (collection != existing.Collection)
+                if (path != existing.Path)
                     ThrowDuplicateAliasWithoutSameBody(start);
 
                 if((filter != null ) != (existing.Filter != null))
@@ -328,7 +301,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 return;
             }
 
-            _synteticWithQueries.Add(alias, (collection, filter, isEdge, path, edgePathType));
+            _synteticWithQueries.Add(alias, (path, filter, isEdge));
         }
 
         private void ThrowDuplicateAliasWithoutSameBody(int start)

@@ -174,17 +174,14 @@ namespace Raven.Server.Documents.Queries
                 
                 Output = new List<Match>();
 
-                // TODO: for now, we require node->edge->node->edge syntax
                 for (int pathIndex = 1; pathIndex < ee.Path.Length-1; pathIndex+=2)
                 {
                     Debug.Assert(ee.Path[pathIndex].IsEdge);
                     
                     var prevNodeAlias = ee.Path[pathIndex - 1].Alias;
                     var nextNodeAlias = ee.Path[pathIndex + 1].Alias;
-                    
-                    var edge = _gq.WithEdgePredicates[ee.Path[pathIndex].Alias].EdgeType.Value;
-                    var edgePath = _gq.WithEdgePredicates[ee.Path[pathIndex].Alias].Path;
-                    var edgePathType = _gq.WithEdgePredicates[ee.Path[pathIndex].Alias].EdgePathType;
+
+                    var edge = _gq.WithEdgePredicates[ee.Path[pathIndex].Alias];
                     _gq.WithEdgePredicates[ee.Path[pathIndex].Alias].FromAlias = prevNodeAlias;
 
                     if(!_source.TryGetByAlias(nextNodeAlias, out var edgeResults))
@@ -195,13 +192,7 @@ namespace Raven.Server.Documents.Queries
                         var edgeResult = currentResults[resultIndex];
                         var prev = edgeResult.Get(prevNodeAlias);
 
-                        var edgeExpression = edge;
-                        if (edgePathType == QueryParser.EdgePathType.EmbeddedCollection)
-                        {
-                            edgeExpression = edge + "[]";
-                        }
-
-                        if (TryGetMatches(edgeExpression, edgePath, nextNodeAlias, edgeResults, prev, out var multipleRelatedMatches))
+                        if (TryGetMatches(edge.Path, nextNodeAlias, edgeResults, prev, out var multipleRelatedMatches))
                         {
                             foreach (var match in multipleRelatedMatches)
                             {
@@ -234,11 +225,14 @@ namespace Raven.Server.Documents.Queries
 
             private readonly HashSet<string> _includedNodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            private bool TryGetMatches(string edge, StringSegment edgePath, string alias, Dictionary<string, Match> edgeResults, Document prev,
+            private bool TryGetMatches(FieldExpression field, string alias, Dictionary<string, Match> edgeResults, Document prev,
                 out IEnumerable<Match> relatedMatches)
             {
                 _includedNodes.Clear();
-                IncludeUtil.GetDocIdFromInclude(prev.Data, $"{edge}.{edgePath}", _includedNodes);
+                IncludeUtil.GetDocIdFromInclude(prev.Data, 
+                    //TODO: Avoid these allocations
+                    string.Join(".", field.Compound),
+                    _includedNodes);
                 relatedMatches = Enumerable.Empty<Match>();
                 _includedNodes.Remove(null);
                 if (_includedNodes.Count == 0)

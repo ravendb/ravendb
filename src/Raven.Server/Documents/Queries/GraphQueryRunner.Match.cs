@@ -57,7 +57,8 @@ namespace Raven.Server.Documents.Queries
                     {
                         if (gq.WithEdgePredicates.TryGetValue(alias, out var edge) && 
                             edge.FromAlias.GetValueOrDefault() == item.Key &&
-                            item.Value.Data.TryGet(edge.EdgeType, out object property))
+                            //TODO: Handle complex fields
+                            item.Value.Data.TryGet(edge.Path.Compound[0], out object property))
                         {
                             j[alias] = property;
                         }

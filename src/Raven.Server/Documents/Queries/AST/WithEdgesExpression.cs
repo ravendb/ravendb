@@ -9,24 +9,18 @@ namespace Raven.Server.Documents.Queries.AST
     {
         public QueryExpression Where;
 
-        public StringSegment? EdgeType;
 
         public StringSegment? FromAlias;
 
-        public StringSegment Path;
-
-        public QueryParser.EdgePathType EdgePathType;
+        public FieldExpression Path;
 
         public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> OrderBy;
 
-        public WithEdgesExpression(QueryExpression @where, string edgeType, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy, StringSegment path = default ,QueryParser.EdgePathType edgePathType = QueryParser.EdgePathType.EdgeProperty)
+        public WithEdgesExpression(QueryExpression @where, FieldExpression path, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy)
         {
             Where = @where;
             OrderBy = orderBy;
-            //null edges means all edges 
-            EdgeType = edgeType;
             Type = ExpressionType.WithEdge;
-            EdgePathType = edgePathType;
             Path = path;
         }
 
@@ -36,7 +30,7 @@ namespace Raven.Server.Documents.Queries.AST
         private string GetText()
         {
             var sb = new StringBuilder("WITH EDGES");
-            sb.Append("(").Append(EdgeType).Append(")");
+            sb.Append("(").Append(Path).Append(")");
 
             var visitor = new StringQueryVisitor(sb);
 
@@ -59,7 +53,7 @@ namespace Raven.Server.Documents.Queries.AST
             if (!(other is WithEdgesExpression ie))
                 return false;
 
-            if (EdgeType != ie.EdgeType)
+            if (Path != ie.Path)
                 return false;
 
             if ((Where != null) != (ie.Where != null) || 

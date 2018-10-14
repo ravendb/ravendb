@@ -370,7 +370,15 @@ namespace Raven.Server.Documents.Queries.AST
             foreach (var withEdgesClause in expression)
             {
                 EnsureLine();
-                _sb.Append("WITH EDGES(").Append(withEdgesClause.Value.EdgeType).Append(")");
+                _sb.Append("WITH EDGES ");
+                if(withEdgesClause.Value.Path != null)
+                {
+                    _sb.Append("(");
+                    //TODO: Need to write the filter on the edge path 
+                    VisitExpression(withEdgesClause.Value.Path);
+                    _sb.Append(")");
+                }
+
                 if (withEdgesClause.Value.Where == null && 
                     (withEdgesClause.Value.OrderBy == null || withEdgesClause.Value.OrderBy.Count == 0))
                 {
