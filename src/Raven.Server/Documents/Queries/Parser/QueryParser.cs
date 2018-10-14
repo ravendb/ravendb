@@ -240,11 +240,17 @@ namespace Raven.Server.Documents.Queries.Parser
                 // Lines(Name = 'Chang')[].Product, Lines(Name = 'Chang').Product
                 // Lines(Name = 'Chang' and MadeBy.Country = 'China').Product
 
-                if (Scanner.Identifier() == false)
+                StringSegment firstPropOnPath;
+                if (Scanner.Identifier())
+                {
+                    firstPropOnPath = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength);
+                }
+                else if (Scanner.String(out firstPropOnPath) == false)
+                {
                     throw new InvalidQueryException("Failed to read edge path after: " + alias, Scanner.Input, null);
+                }
 
                 QueryExpression filter = null;
-                var firstPropOnPath = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength);
                 
                 if (Scanner.TryScan('('))
                 {
@@ -254,6 +260,8 @@ namespace Raven.Server.Documents.Queries.Parser
                     if (Scanner.TryScan(')') == false)
                         throw new InvalidQueryException("Failed to find closing ')' after filter expression for: " + alias, Scanner.Input, null);
                 }
+
+                Scanner.TryScan("[]");// ignore array indexing here
 
                 FieldExpression f;
                 if (Scanner.TryScan('.'))

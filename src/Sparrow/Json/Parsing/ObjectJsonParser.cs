@@ -290,6 +290,7 @@ namespace Sparrow.Json.Parsing
                         current = propDetails.Name;
                         continue;
                     }
+                    bjro.Modifications = null;
                     current = modifications;
                     continue;
                 }
@@ -319,6 +320,7 @@ namespace Sparrow.Json.Parsing
                         current = bjra[modifications.SourceIndex];
                         continue;
                     }
+                    bjra.Modifications = null;
                     current = modifications;
                     continue;
 
