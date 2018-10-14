@@ -630,10 +630,12 @@ namespace Raven.Server.Documents.Queries.Results
             }
             else if (field.IsCompositeField == false)
             {
-                if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, field.Name, out value) == false &&
-                    BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, field.ProjectedName, out value) == false)
+                if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, field.Name, out value) == false)
                 {
-                    return false;
+                    if (field.ProjectedName == null)
+                        return false;
+                    if(BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, field.ProjectedName, out value) == false)
+                        return false;
                 }
             }
             else
