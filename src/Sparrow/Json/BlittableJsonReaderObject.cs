@@ -804,7 +804,7 @@ NotFound:
                 cloned.Modifications = new DynamicJsonValue(cloned);
                 foreach (var property in Modifications.Properties)
                 {
-                    cloned.Modifications.Properties.Enqueue(property);
+                    cloned.Modifications.Properties.Add(property);
                 }
             }
 

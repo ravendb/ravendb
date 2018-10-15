@@ -78,16 +78,17 @@ namespace Raven.Client.Json
                     SetToken(JsonToken.StartObject);
                     return true;
                 }
-                if (current.Object.Modifications != null && current.Object.Modifications.Properties.Count > 0)
+                var modifications = current.Object.Modifications;
+                if (modifications != null && modifications.Properties.Count < modifications.ModificationsIndex)
                 {
                     (string Name, object Value) property;
                     if (CurrentState != State.Property)
                     {
-                        property = current.Object.Modifications.Properties.Peek();
+                        property = modifications.Properties[modifications.ModificationsIndex];
                         SetToken(JsonToken.PropertyName, property.Item1);
                         return true;
                     }
-                    property = current.Object.Modifications.Properties.Dequeue(); // move to next property
+                    property = modifications.Properties[modifications .ModificationsIndex++]; // move to next property
                     return SetToken(GetTokenFromType(property.Item2), property.Item2);
                 }
                 if (current.Position == current.Object.Count)
