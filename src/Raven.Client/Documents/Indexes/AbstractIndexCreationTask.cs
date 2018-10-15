@@ -181,7 +181,8 @@ namespace Raven.Client.Documents.Indexes
                 SpatialIndexes = SpatialIndexes,
                 SpatialIndexesStrings = SpatialIndexesStrings,
                 OutputReduceToCollection = OutputReduceToCollection,
-                AdditionalSources = AdditionalSources
+                AdditionalSources = AdditionalSources,
+                Configuration = Configuration
             }.ToIndexDefinition(Conventions);
 
             return indexDefinition;
@@ -203,6 +204,11 @@ namespace Raven.Client.Documents.Indexes
 
     public abstract class AbstractCommonApiForIndexes
     {
+        protected AbstractCommonApiForIndexes()
+        {
+            Configuration = new IndexConfiguration();
+        }
+
         /// <summary>
         /// Allows to use lambdas recursively
         /// </summary>
@@ -327,5 +333,7 @@ namespace Raven.Client.Documents.Indexes
         /// Add additional sources to be compiled with the index on the server.
         /// </summary>
         public Dictionary<string, string> AdditionalSources { get; set; }
+
+        public IndexConfiguration Configuration { get; set; }
     }
 }
