@@ -62,7 +62,6 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
-                    documentsContext.CloseTransaction();
                     Stopwatch sw = null;
                     QueryTimingsScope scope;
                     DocumentQueryResult result;
@@ -97,7 +96,6 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
-                    documentsContext.CloseTransaction();
                     await GetRunner(query).ExecuteStreamQuery(query, documentsContext, response, writer, token);
                     return;
                 }
@@ -123,7 +121,6 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
-                    documentsContext.CloseTransaction();
                     var sw = Stopwatch.StartNew();
 
                     var result = await _static.ExecuteFacetedQuery(query, existingResultEtag, documentsContext, token);
@@ -182,7 +179,6 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
-                    context.CloseTransaction();
                     var sw = Stopwatch.StartNew();
 
                     if (query.Metadata.SelectFields.Length != 1 || query.Metadata.SelectFields[0].IsSuggest == false)
@@ -233,7 +229,6 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
-                    context.CloseTransaction();
                     return await GetRunner(query).ExecuteIndexEntriesQuery(query, context, existingResultEtag, token);
                 }
                 catch (ObjectDisposedException e)
@@ -255,7 +250,6 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
-                    context.CloseTransaction();
                     return await GetRunner(query).ExecuteDeleteQuery(query, options, context, onProgress, token);
                 }
                 catch (ObjectDisposedException e)
@@ -277,7 +271,6 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
-                    context.CloseTransaction();
                     return await GetRunner(query).ExecutePatchQuery(query, options, patch, patchArgs, context, onProgress, token);
                 }
                 catch (ObjectDisposedException e)

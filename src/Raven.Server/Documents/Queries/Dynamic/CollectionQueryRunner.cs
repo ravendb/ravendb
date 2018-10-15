@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var result = new DocumentQueryResult();
 
-            if (documentsContext.Transaction == null)
+            if (documentsContext.Transaction == null || documentsContext.Transaction.Disposed)
                 documentsContext.OpenReadTransaction();
 
             FillCountOfResultsAndIndexEtag(result, query.Metadata, documentsContext);
