@@ -29,7 +29,7 @@ namespace Tryouts
                 using (var test = new RDBC_128())
                 {
                     test.IndexingOfLoadDocumentWhileChanged();
-                }               
+                }
             }
         }
     }

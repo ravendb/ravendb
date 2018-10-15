@@ -193,6 +193,12 @@ namespace Sparrow.Json
 
             public void Dispose()
             {
+                if (Context.DoNotReuse)
+                {
+                    Context.Dispose();
+                    return;
+                }
+
                 Context.Reset();
                 // These contexts are reused, so we don't want to use LowerOrDie here.
                 Context.InUse.Lower();

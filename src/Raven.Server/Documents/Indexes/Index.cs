@@ -2931,6 +2931,10 @@ namespace Raven.Server.Documents.Indexes
                 {
                     _allocationCleanupNeeded = true;
 
+                    documentsOperationContext.DoNotReuse = true;
+                    indexingContext.DoNotReuse = true;
+
+
                     if (stats.MapAttempts >= Configuration.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)
                     {
                         stats.RecordMapCompletedReason("Cannot budget additional memory for batch");

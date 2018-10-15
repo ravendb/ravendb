@@ -61,6 +61,12 @@ namespace Sparrow.Json
         private int _numberOfAllocatedStringsValues;
         private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
 
+        /// <summary>
+        /// This flag means that this should be disposed, usually because we exceeded the maximum
+        /// amount of memory budget we have and need to return it to the system
+        /// </summary>
+        public bool DoNotReuse;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AcquirePathCache(out Dictionary<StringSegment, object> pathCache, out Dictionary<int, object> pathCacheByIndex)
         {
