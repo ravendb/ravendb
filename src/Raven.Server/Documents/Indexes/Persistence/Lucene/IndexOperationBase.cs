@@ -138,17 +138,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var analyzerType = IndexingExtensions.GetAnalyzerType(name, analyzer);
 
-            if (analyzers.TryGetValue(analyzerType, out var analyzerInstance) == false)
-                analyzers[analyzerType] = analyzerInstance = IndexingExtensions.CreateAnalyzerInstance(name, analyzerType);
-
             if (forQuerying)
             {
                 var notForQuerying = NotForQuerying
-                    .GetOrAdd(analyzerType, t => analyzerInstance.GetType().GetTypeInfo().GetCustomAttributes<NotForQueryingAttribute>(false).Any());
+                    .GetOrAdd(analyzerType, t => t.GetCustomAttributes<NotForQueryingAttribute>(false).Any());
 
                 if (notForQuerying)
                     return null;
             }
+
+            if (analyzers.TryGetValue(analyzerType, out var analyzerInstance) == false)
+                analyzers[analyzerType] = analyzerInstance = IndexingExtensions.CreateAnalyzerInstance(name, analyzerType);
 
             return analyzerInstance;
         }

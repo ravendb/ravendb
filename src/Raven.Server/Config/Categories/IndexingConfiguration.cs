@@ -123,6 +123,18 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.CleanupIntervalInMin", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting CleanupInterval { get; set; }
 
+        [Description("Smallest n-gram to generate when NGram analyzer is used")]
+        [DefaultValue(2)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.Analyzers.NGram.MinGram", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MinGram { get; set; }
+
+        [Description("Largest n-gram to generate when NGram analyzer is used")]
+        [DefaultValue(6)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.Analyzers.NGram.MaxGram", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MaxGram { get; set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             var updateTypeAttribute = property.GetCustomAttribute<IndexUpdateTypeAttribute>();

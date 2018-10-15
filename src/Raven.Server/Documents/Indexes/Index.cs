@@ -1437,7 +1437,7 @@ namespace Raven.Server.Documents.Indexes
 
                 using (var tx = indexContext.OpenWriteTransaction())
                 using (CurrentIndexingScope.Current =
-                    new CurrentIndexingScope(DocumentDatabase.DocumentsStorage, databaseContext, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
+                    new CurrentIndexingScope(this, DocumentDatabase.DocumentsStorage, databaseContext, Definition, indexContext, GetOrAddSpatialField, _unmanagedBuffersPool))
                 {
                     var writeOperation = new Lazy<IndexWriteOperation>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction, indexContext));
 
@@ -2472,13 +2472,13 @@ namespace Raven.Server.Documents.Indexes
             if (referencedCollections != null)
             {
                 foreach (var referencedCollection in GetReferencedCollections())
-                foreach (var refCollection in referencedCollection.Value)
-                {
-                    var etag = GetLastEtagInCollection(context, refCollection.Name);
+                    foreach (var refCollection in referencedCollection.Value)
+                    {
+                        var etag = GetLastEtagInCollection(context, refCollection.Name);
 
-                    if (referenceCutoffEtag == null || etag > referenceCutoffEtag)
-                        referenceCutoffEtag = etag;
-                }
+                        if (referenceCutoffEtag == null || etag > referenceCutoffEtag)
+                            referenceCutoffEtag = etag;
+                    }
             }
 
             return (cutoffEtag, referenceCutoffEtag);
