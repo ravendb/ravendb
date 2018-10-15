@@ -113,6 +113,8 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public Dictionary<string, string> AdditionalSources { get; set; }
 
+        public IndexConfiguration Configuration { get; set; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
         /// </summary>
@@ -133,6 +135,7 @@ namespace Raven.Client.Documents.Indexes
             TermVectorsStrings = new Dictionary<string, FieldTermVector>();
             SpatialIndexes = new Dictionary<Expression<Func<TReduceResult, object>>, SpatialOptions>();
             SpatialIndexesStrings = new Dictionary<string, SpatialOptions>();
+            Configuration = new IndexConfiguration();
         }
 
         /// <summary>
@@ -204,7 +207,7 @@ namespace Raven.Client.Documents.Indexes
                     spatialOptions.Add(spatialString);
                 }
 
-            
+
 
                 ApplyValues(indexDefinition, indexes, (options, value) => options.Indexing = value);
                 ApplyValues(indexDefinition, stores, (options, value) => options.Storage = value);
@@ -225,6 +228,7 @@ namespace Raven.Client.Documents.Indexes
                 }
 
                 indexDefinition.AdditionalSources = AdditionalSources;
+                indexDefinition.Configuration = Configuration;
 
                 return indexDefinition;
             }
@@ -248,7 +252,8 @@ namespace Raven.Client.Documents.Indexes
 
         private bool ContainsWhereEntityIs()
         {
-            if (Map == null) return false;
+            if (Map == null)
+                return false;
             var whereEntityIsVisitor = new WhereEntityIsVisitor();
             whereEntityIsVisitor.Visit(Map.Body);
             return whereEntityIsVisitor.HasWhereEntityIs;
