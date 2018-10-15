@@ -80,7 +80,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             }
             else
             {
-                ThrowIndexingFunctionMustReturnAnonymousObjectOrDictionary();
+                var selectClause = nodes.LastOrDefault(x => x.IsKind(SyntaxKind.SelectClause));
+
+                ThrowIndexingFunctionMustReturnAnonymousObjectOrDictionary(maybeNew: selectClause != null);
             }
         }
 
@@ -109,9 +111,13 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return node;
         }
 
-        private static void ThrowIndexingFunctionMustReturnAnonymousObjectOrDictionary()
+        private static void ThrowIndexingFunctionMustReturnAnonymousObjectOrDictionary(bool maybeNew)
         {
-            throw new InvalidOperationException($"Indexing function must return an anonymous object or {CaptureDictionaryFieldsNamesVisitor.SupportedGenericDictionaryType}");
+            var message = $"Indexing function must return an anonymous object or {CaptureDictionaryFieldsNamesVisitor.SupportedGenericDictionaryType}.";
+            if (maybeNew)
+                message += " Did you forget to add 'new' in last select clause?";
+
+            throw new InvalidOperationException(message);
         }
     }
 }
