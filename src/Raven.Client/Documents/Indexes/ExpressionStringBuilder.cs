@@ -761,8 +761,8 @@ namespace Raven.Client.Documents.Indexes
                 var enumType = node.Value.GetType();
                 if (_insideWellKnownType || TypeExistsOnServer(enumType))
                 {
-                    var name = _insideWellKnownType 
-                        ? enumType.Name 
+                    var name = _insideWellKnownType
+                        ? enumType.Name
                         : enumType.FullName;
 
                     Out(name.Replace("+", "."));
@@ -1723,6 +1723,9 @@ namespace Raven.Client.Documents.Indexes
                 {
                     Out(", ");
                 }
+
+                var argument = node.Arguments[i];
+
                 if (node.Members?[i] != null)
                 {
                     string name = node.Members[i].Name;
@@ -1730,16 +1733,21 @@ namespace Raven.Client.Documents.Indexes
                     Out(name);
                     Out(" = ");
 
-                    var constantExpression = node.Arguments[i] as ConstantExpression;
-                    if (constantExpression != null && constantExpression.Value == null)
+                    if (argument is ConstantExpression constantExpression && constantExpression.Value == null)
                     {
                         Out("(");
                         VisitType(GetMemberType(node.Members[i]));
                         Out(")");
                     }
                 }
+                else if (TypeExistsOnServer(argument.Type))
+                {
+                    Out("(");
+                    VisitType(argument.Type);
+                    Out(")");
+                }
 
-                Visit(node.Arguments[i]);
+                Visit(argument);
             }
             if (TypeExistsOnServer(node.Type))
             {
