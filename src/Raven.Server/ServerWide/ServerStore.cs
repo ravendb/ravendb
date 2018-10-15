@@ -95,6 +95,7 @@ namespace Raven.Server.ServerWide
         public readonly LicenseManager LicenseManager;
         public readonly FeedbackSender FeedbackSender;
         public readonly SecretProtection Secrets;
+        public readonly AsyncManualResetEvent InitializationCompleted;
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
 
@@ -130,6 +131,8 @@ namespace Raven.Server.ServerWide
             DatabaseInfoCache = new DatabaseInfoCache();
 
             Secrets = new SecretProtection(configuration.Security);
+
+            InitializationCompleted = new AsyncManualResetEvent(_shutdownNotification.Token);
 
             _frequencyToCheckForIdleDatabases = Configuration.Databases.FrequencyToCheckForIdle.AsTimeSpan;
 
@@ -552,6 +555,7 @@ namespace Raven.Server.ServerWide
             LatestVersionCheck.Check(this);
 
             ConfigureAuditLog();
+            InitializationCompleted.Set();
         }
 
 
