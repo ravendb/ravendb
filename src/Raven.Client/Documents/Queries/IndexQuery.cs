@@ -133,7 +133,7 @@ namespace Raven.Client.Documents.Queries
         /// <summary>
         /// Maximum number of records that will be retrieved.
         /// </summary>
-        [Obsolete("Use FETCH in RQL instead")]
+        [Obsolete("Use LIMIT in RQL instead")]
         public int PageSize
         {
             get => _pageSize;
