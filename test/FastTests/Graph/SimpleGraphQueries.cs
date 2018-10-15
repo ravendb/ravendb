@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Tests.Infrastructure;
 using Xunit;
 using Order = FastTests.Server.Basic.Entities.Order;
@@ -200,6 +201,84 @@ namespace FastTests.Graph
             }
         }
         
+        [Fact]
+        public void Can_query_with_edge_defined_in_embedded_object()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateMoviesData(store);
+                using (var session = store.OpenSession())
+                {
+                    var moviesQueryResult = session.Advanced.RawQuery<JObject>(@"
+                        match (u:Users(id() = 'users/2'))-[:HasRated.Movie]->(m:Movies) select m
+                    ").ToList().Select(x => x["m"].ToObject<Movie>()).ToList();
+                    
+                    Assert.Equal(2,moviesQueryResult.Count);
+                    Assert.Contains(moviesQueryResult.Select(x => x.Name), name => name == "Firefly Serenity" || name == "Indiana Jones and the Temple Of Doom");
+                }
+            }
+        }
+
+        [Fact]
+        public void Graph_query_can_handle_edges_defined_in_property_with_whitespaces()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+
+                //create properties with whitespace in their name
+                var operation = store
+                    .Operations
+                    .Send(new PatchByQueryOperation(@"
+                                      from Orders as o
+                                      update
+                                      {
+                                          o['Order Lines'] = o.Lines
+                                      }"));
+                    
+                operation.WaitForCompletion();
+
+                using (var session = store.OpenSession())
+                {
+                    //note the whitespace in edge property name in the graph query
+                    var resultsAsJson = session.Advanced
+                        .RawQuery<JObject>(@"match (o:Orders (id() = 'orders/825-A'))-[:'Order Lines'.Product]->(p:Products) select p.Name as Name").ToList();
+                    var productNamesFromMatch = resultsAsJson.Select(r => r["Name"].Value<string>()).ToArray();
+                    Assert.Equal(4,productNamesFromMatch.Length); //sanity check
+
+                    var query = session.Advanced.RawQuery<JObject>(@"from Orders where id() = 'orders/825-A' select Lines").ToArray();
+                    var productsIdsFromDocumentQuery = query.Select(r => r["Lines"])
+                        .SelectMany(x => x)
+                        .Select(x => x.ToObject<OrderLine>().Product).ToArray();
+
+                    var productNamesFromDocumentQuery = session.Load<Product>(productsIdsFromDocumentQuery).Select(x => x.Value.Name);
+                    
+                    //note : OrderByDescending is required because graph and document queries may give results in different order
+                    Assert.Equal(productNamesFromDocumentQuery.OrderByDescending(x => x),productNamesFromMatch.OrderByDescending(x => x));
+                }
+                //
+            }
+        }
+
+        [Fact(Skip = "Should not work until RavenDB-12073 is implemented")]
+        public void Graph_query_should_return_proper_metadata()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateMoviesData(store);
+                using (var session = store.OpenSession())
+                {
+                    var moviesQueryResult = session.Advanced.RawQuery<JObject>(@"
+                        match (u:Users(id() = 'users/2'))-[:HasRated.Movie]->(m:Movies) select m
+                    ").ToList().Select(x => x["m"].ToObject<Movie>()).ToList();
+                    
+                    Assert.Equal(2,moviesQueryResult.Count);
+                    //If proper metadata is retrieved, Ids here won't be null
+                    Assert.False(moviesQueryResult.Any(x => x.Id == null));
+                }
+            }
+        }
+
         [Fact(Skip = "Currently is not supposed to work until relevant issue are implemented. " +
                      "See RavenDB-12072 and RavenDB-12074")]
         public void Can_query_intersection_of_multiple_patterns()
@@ -433,50 +512,49 @@ namespace FastTests.Graph
                     Assert.Equal(productNamesFromDocumentQuery.OrderByDescending(x => x),productNamesFromMatch.OrderByDescending(x => x));
                 }
             }
+        }       
+
+        [Fact]
+        public void Matching_with_edge_defined_in_embedded_collection_and_select_should_work()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                using (var session = store.OpenSession())
+                {
+                    var matchQueryResultsAsJson = session.Advanced
+                        .RawQuery<JObject>(@"match (o:Orders (id() = 'orders/825-A'))-[l:Lines.Product]->(p:Products) 
+                                                    select o,l,p").ToList();
+                    Assert.Equal(4, matchQueryResultsAsJson.Count); //sanity check                    
+
+                    var orderFromMatchQuery = matchQueryResultsAsJson.First()["o"].ToObject<Order>();
+                    var productNamesFromMatchQuery = matchQueryResultsAsJson.Select(x => x["p"].ToObject<Product>().Name).ToArray();
+                    var orderLinesFromMatchQuery = matchQueryResultsAsJson.Select(x => x["l"].Select(ix => ix.ToObject<OrderLine>())).ToArray();
+
+                    var orderFromDocumentQuery = session.Load<Order>("orders/825-A");
+                    var linesQuery = session.Advanced.RawQuery<JObject>(@"from Orders where id() = 'orders/825-A' select Lines").ToArray();
+                    var productsIdsFromDocumentQuery = linesQuery.Select(r => r["Lines"])
+                                                                 .SelectMany(x => x)
+                                                                 .Select(x => x.ToObject<OrderLine>().Product)
+                                                                 .ToArray();
+
+                    var productNamesFromDocumentQuery = session.Load<Product>(productsIdsFromDocumentQuery).Select(x => x.Value.Name);
+                    var orderLinesFromDocumentQuery = linesQuery.Select(r => r["Lines"])
+                        .Select(x => x.ToObject<OrderLine[]>()).ToArray();
+
+
+                    //compare orders
+                    Assert.Equal(orderFromDocumentQuery.Lines.Count, orderFromMatchQuery.Lines.Count);
+                    Assert.Equal(orderFromDocumentQuery.Employee, orderFromMatchQuery.Employee);
+                    Assert.Equal(orderFromDocumentQuery.Company, orderFromMatchQuery.Company);
+
+                    //compare product names
+                    Assert.Equal(productNamesFromDocumentQuery.OrderBy(x => x), productNamesFromMatchQuery.OrderBy(x => x));
+
+                    //compare order lines
+                    Assert.True(orderLinesFromMatchQuery.All(item => item.Count() == orderLinesFromDocumentQuery.First().Length));
+                }
+            }
         }
-
-        //TODO : finish this (WIP)
-        //[Fact]
-        //public void Matching_with_edge_defined_in_embedded_collection_and_select_should_work()
-        //{
-        //    using (var store = GetDocumentStore())
-        //    {
-        //        CreateNorthwindDatabase(store);
-        //        using (var session = store.OpenSession())
-        //        {
-        //            var matchQueryResultsAsJson = session.Advanced
-        //                .RawQuery<JObject>(@"match (o:Orders (id() = 'orders/825-A'))-[l:Lines.Product]->(p:Products) 
-        //                                            select o,l,p").ToList();
-        //            Assert.Equal(4,matchQueryResultsAsJson.Count); //sanity check                    
-
-        //            var orderFromMatchQuery = matchQueryResultsAsJson.First()["o"].ToObject<Order>();
-        //            var productNamesFromMatchQuery = matchQueryResultsAsJson.Select(x => x["p"].ToObject<Product>().Name).ToArray();
-        //            var orderLinesFromMatchQuery = matchQueryResultsAsJson.Select(x => x["l"]).ToArray();
-
-        //            var orderFromDocumentQuery = session.Load<Order>("orders/825-A");
-        //            var linesQuery = session.Advanced.RawQuery<JObject>(@"from Orders where id() = 'orders/825-A' select Lines").ToArray();
-        //            var productsIdsFromDocumentQuery = linesQuery.Select(r => r["Lines"])
-        //                .SelectMany(x => x)
-        //                .Select(x => x.ToObject<OrderLine>().Product).ToArray();
-
-        //            var productNamesFromDocumentQuery = session.Load<Product>(productsIdsFromDocumentQuery).Select(x => x.Value.Name);
-        //            var orderLinesFromDocumentQuery = linesQuery.Select(r => r["Lines"])
-        //                .SelectMany(x => x)
-        //                .Select(x => x.ToObject<OrderLine>()).ToArray();
-
-
-        //            //compare orders
-        //            Assert.Equal(orderFromDocumentQuery.Lines.Count,orderFromMatchQuery.Lines.Count);
-        //            Assert.Equal(orderFromDocumentQuery.Employee,orderFromMatchQuery.Employee);
-        //            Assert.Equal(orderFromDocumentQuery.Company,orderFromMatchQuery.Company);
-
-        //            //compare product names
-        //            Assert.Equal(productNamesFromMatchQuery.OrderBy(x =>x),productNamesFromMatchQuery.OrderBy(x => x));
-
-        //            //compare order lines
-        //            //Assert.Equal(orderLinesFromDocumentQuery.Select(x => x.PricePerUnit).OrderBy(x => x),pricePerUnitFromIrderLinesFromMatchQuery.OrderBy(x => x));
-        //        }
-        //    }
-        //}
     }
 }
