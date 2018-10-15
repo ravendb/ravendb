@@ -5,10 +5,12 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Esprima;
 using Esprima.Ast;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
@@ -165,6 +167,14 @@ namespace Raven.Server.Documents.Queries
             string methodName = null
             )
         {
+            var split = fieldName.Value.Split(".");
+            if (split.Length > 1 && 
+                RootAliasPaths.Count > 0 &&
+                RootAliasPaths.TryGetValue(split[0], out _) == false)
+            {
+                ThrowUnknownAlias(split[0], parameters);
+            }
+
             var indexFieldName = GetIndexFieldName(fieldName, parameters);
 
             if (operatorType == null &&
@@ -336,6 +346,11 @@ namespace Raven.Server.Documents.Queries
             {
                 var expressionPath = ParseExpressionPath(include, path, Query.From.Alias);
 
+                if (expressionPath.LoadFromAlias != null &&
+                    RootAliasPaths.Count > 0 &&
+                    RootAliasPaths.TryGetValue(expressionPath.LoadFromAlias, out _) == false)
+                    ThrowUnknownAlias(expressionPath.LoadFromAlias, parameters);
+
                 if (includes == null)
                     includes = new List<string>();
 
@@ -463,6 +478,8 @@ namespace Raven.Server.Documents.Queries
 
             if (RootAliasPaths.Count == 0)
                 ThrowMissingAliasOnSelectFunctionBody(parameters);
+
+            VerifyKnownAliasesInScript(parameters);
 
             var name = "__selectOutput";
             if (Query.DeclaredFunctions != null &&
@@ -653,6 +670,13 @@ namespace Raven.Server.Documents.Queries
 
                 string loadFromAlias;
                 (path, loadFromAlias) = ParseExpressionPath(load.Expression, path, Query.From.Alias);
+
+                if (loadFromAlias != null && 
+                    RootAliasPaths.Count > 0 &&
+                    RootAliasPaths.TryGetValue(loadFromAlias, out _) == false)
+                {
+                    ThrowUnknownAlias(loadFromAlias, parameters);
+                }
 
                 if (RootAliasPaths.TryAdd(alias, (path, array, parameter, quoted, loadFromAlias)) == false)
                 {
@@ -1963,6 +1987,64 @@ namespace Raven.Server.Documents.Queries
             sb.Append(updateBody);
 
             return sb.ToString();
+        }
+
+        private static readonly HashSet<string> _jsBaseObjects = new HashSet<string>
+        {
+            "Math", "Number", "Object", "Date"
+        };
+
+        private void VerifyKnownAliasesInScript(BlittableJsonReaderObject parameters)
+        {
+            HashSet<string> maybeUnknowns = null;
+            Identifier currentProp = null;
+
+            void VerifyKnownAlias(INode node)
+            {
+                switch (node)
+                {
+                    case Identifier identifier when currentProp == null:
+                        currentProp = identifier;
+                        break;
+                    case ArrowFunctionExpression arrowFunction:
+                        RemoveFromUnknowns(maybeUnknowns, arrowFunction.Params);
+                        break;
+                    case FunctionExpression functionExpression:
+                        RemoveFromUnknowns(maybeUnknowns, functionExpression.Params);
+                        break;
+                    case Property prop when prop.Key == currentProp:
+                        if (maybeUnknowns?.Count > 0)
+                            ThrowUnknownAlias(maybeUnknowns.First(), parameters);
+                        currentProp = null;
+                        break;
+                    case StaticMemberExpression sme when sme.Object is Identifier id &&
+                                                         RootAliasPaths.TryGetValue(id.Name, out _) == false &&
+                                                         _jsBaseObjects.Contains(id.Name) == false &&
+                                                         parameters.TryGet(id.Name, out object _) == false:
+                        maybeUnknowns = maybeUnknowns ?? new HashSet<string>();
+                        maybeUnknowns.Add(id.Name);
+                        break;
+                }
+            }
+
+            new JavaScriptParser("return " + Query.SelectFunctionBody.FunctionText, new ParserOptions(), VerifyKnownAlias).ParseProgram();
+        }
+
+        private static void RemoveFromUnknowns(HashSet<string> maybeUnknowns, List<INode> parameters)
+        {
+            if (maybeUnknowns?.Count > 0 == false)
+                return;
+
+            foreach (var p in parameters)
+            {
+                if (!(p is Identifier i))
+                    continue;
+
+                if (maybeUnknowns.Contains(i.Name))
+                {
+                    maybeUnknowns.Remove(i.Name);
+                }
+            }
         }
     }
 }
