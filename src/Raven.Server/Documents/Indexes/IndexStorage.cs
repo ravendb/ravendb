@@ -541,8 +541,7 @@ namespace Raven.Server.Documents.Indexes
                             var oldEtag = result?.Reader.ReadLittleEndianInt64();
                             if (oldEtag >= etag)
                                 continue;
-                            if (oldEtag < etag)
-                                etag = oldEtag.Value;
+
                             if (oldEtag == lastIndexedEtag)
                                 continue;
 

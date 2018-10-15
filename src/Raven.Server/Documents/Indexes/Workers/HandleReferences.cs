@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -23,6 +22,8 @@ namespace Raven.Server.Documents.Indexes.Workers
         private readonly IndexingConfiguration _configuration;
         private readonly DocumentsStorage _documentsStorage;
         private readonly IndexStorage _indexStorage;
+
+        private readonly Reference _reference = new Reference();
 
         public HandleReferences(Index index, Dictionary<string, HashSet<CollectionName>> referencedCollections, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
         {
@@ -92,6 +93,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                             _logger.Info($"Executing handle references for '{_index.Name}'. Collection: {referencedCollection.Name}. Type: {actionType}.");
 
                         long lastReferenceEtag;
+
                         switch (actionType)
                         {
                             case ActionType.Document:
@@ -103,6 +105,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                             default:
                                 throw new NotSupportedException();
                         }
+
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Executing handle references for '{_index.Name}'. LastReferenceEtag: {lastReferenceEtag}.");
 
@@ -131,7 +134,13 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                         references = _documentsStorage
                                             .GetDocumentsFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
-                                            .Select(document => new Reference{Etag = document.Etag, Key = document.Id });
+                                            .Select(document =>
+                                            {
+                                                _reference.Key = document.Id;
+                                                _reference.Etag = document.Etag;
+
+                                                return _reference;
+                                            });
                                         break;
                                     case ActionType.Tombstone:
                                         if (lastCollectionEtag == -1)
@@ -139,11 +148,18 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                         references = _documentsStorage
                                             .GetTombstonesFrom(databaseContext, referencedCollection.Name, lastEtag + 1, 0, pageSize)
-                                            .Select(tombstone => new Reference { Etag = tombstone.Etag, Key = tombstone.LowerId });
+                                            .Select(tombstone =>
+                                            {
+                                                _reference.Key = tombstone.LowerId;
+                                                _reference.Etag = tombstone.Etag;
+
+                                                return _reference;
+                                            });
                                         break;
                                     default:
                                         throw new NotSupportedException();
                                 }
+
                                 foreach (var referencedDocument in references)
                                 {
                                     if (_logger.IsInfoEnabled)
@@ -230,6 +246,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     }
                 }
             }
+
             return moreWorkFound;
         }
 
