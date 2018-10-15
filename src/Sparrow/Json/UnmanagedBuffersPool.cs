@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using Sparrow.Binary;
 using Sparrow.Logging;
@@ -133,11 +133,12 @@ namespace Sparrow.Json
                 };
             }
 
+            actualSize = GetIndexSize(ref index, actualSize); // when we request 7 bytes, we want to get 16 bytes
+
             if (_freeSegments[index].TryPop(out AllocatedMemoryData list))
             {
                 return list;
             }
-            actualSize = GetIndexSize(index, actualSize); // when we request 7 bytes, we want to get 16 bytes
             return new AllocatedMemoryData
             {
                 SizeInBytes = actualSize,
@@ -148,7 +149,7 @@ namespace Sparrow.Json
         }
 
 
-        private static int GetIndexSize(int index, int powerBy2Size)
+        private static int GetIndexSize(ref int index, int powerBy2Size)
         {
             switch (index)
             {
@@ -157,9 +158,11 @@ namespace Sparrow.Json
                 case 3:
                 case 4:
                 case 5:
+                    index = 5;
                     return 16;
                 case 12:
                 case 13:
+                    index = 13;
                     return 4096;
                 default:
                     return powerBy2Size;
