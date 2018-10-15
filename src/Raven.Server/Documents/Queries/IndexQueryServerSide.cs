@@ -76,10 +76,15 @@ namespace Raven.Server.Documents.Queries
                 result.Timings = new QueryTimingsScope(start: false);
 
             if (result.Metadata.Query.Offset != null)
-                result.Start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset);
+            {
+                var start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset);
+                result.Start = result.Start != 0 || json.TryGet(nameof(Start), out int _)
+                    ? Math.Min(start, result.Start) 
+                    : start;
+            }
 
             if (result.Metadata.Query.Limit != null)
-                result.PageSize = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit);
+                result.PageSize = Math.Min((int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit), result.PageSize);
 
             return result;
         }
@@ -99,6 +104,9 @@ namespace Raven.Server.Documents.Queries
                 PageSize = pageSize,
             };
 
+            var startSet = false;
+            var pageSizeSet = false;
+
             foreach (var item in httpContext.Request.Query)
             {
                 try
@@ -113,9 +121,6 @@ namespace Raven.Server.Documents.Queries
                                 result.QueryParameters = context.Read(stream, "query parameters");
                             }
                             continue;
-                        case RequestHandler.StartParameter:
-                        case RequestHandler.PageSizeParameter:
-                            break;
                         case "waitForNonStaleResults":
                             result.WaitForNonStaleResults = bool.Parse(item.Value[0]);
                             break;
@@ -124,6 +129,12 @@ namespace Raven.Server.Documents.Queries
                             break;
                         case "skipDuplicateChecking":
                             result.SkipDuplicateChecking = bool.Parse(item.Value[0]);
+                            break;
+                        case RequestHandler.StartParameter:
+                            startSet = true;
+                            break;
+                        case RequestHandler.PageSizeParameter:
+                            pageSizeSet = true;
                             break;
                     }
                 }
@@ -139,10 +150,20 @@ namespace Raven.Server.Documents.Queries
                 result.Timings = new QueryTimingsScope(start: false);
 
             if (result.Metadata.Query.Offset != null)
-                result.Start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset);
+            {
+                start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset);
+                result.Start = startSet 
+                    ? Math.Min(start, result.Start) 
+                    : start;
+            }
 
             if (result.Metadata.Query.Limit != null)
-                result.PageSize = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit);
+            {
+                pageSize = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit);
+                result.Start = pageSizeSet 
+                    ? Math.Min(pageSize, result.PageSize) 
+                    : pageSize;
+            }
 
             return result;
         }
