@@ -134,7 +134,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var dbTask) == false)
                 {
-                    var record = _server.Cluster.Read(ctx, dbName);
+                    var record = _server.Cluster.ReadRawDatabase(ctx, dbName, out _);
                     if (record == null)
                     {
                         continue; // Database does not exists in this server

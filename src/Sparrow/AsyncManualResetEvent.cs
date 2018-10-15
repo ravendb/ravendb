@@ -21,6 +21,7 @@ namespace Sparrow
             token.Register(() => _tcs.TrySetCanceled());
             _token = token;
         }
+
         public Task<bool> WaitAsync()
         {
             _token.ThrowIfCancellationRequested();

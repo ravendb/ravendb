@@ -95,6 +95,8 @@ namespace Raven.Server.ServerWide
         public readonly LicenseManager LicenseManager;
         public readonly FeedbackSender FeedbackSender;
         public readonly SecretProtection Secrets;
+        public readonly AsyncManualResetEvent InitializationCompleted;
+        public bool Initialized;
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
 
@@ -130,6 +132,8 @@ namespace Raven.Server.ServerWide
             DatabaseInfoCache = new DatabaseInfoCache();
 
             Secrets = new SecretProtection(configuration.Security);
+
+            InitializationCompleted = new AsyncManualResetEvent(_shutdownNotification.Token);
 
             _frequencyToCheckForIdleDatabases = Configuration.Databases.FrequencyToCheckForIdle.AsTimeSpan;
 
@@ -552,8 +556,10 @@ namespace Raven.Server.ServerWide
             LatestVersionCheck.Check(this);
 
             ConfigureAuditLog();
-        }
 
+            Initialized = true;
+            InitializationCompleted.Set();
+        }
 
         private void BeforeAppendToRaftLog(TransactionOperationContext ctx, CommandBase cmd)
         {
@@ -1490,7 +1496,7 @@ namespace Raven.Server.ServerWide
                             {
 
                             }
-                        });                    
+                        });
 
                     exceptionAggregator.Execute(_shutdownNotification.Dispose);
 
@@ -1686,7 +1692,7 @@ namespace Raven.Server.ServerWide
 
             Debug.Assert(record.Topology != null);
 
-            if(string.IsNullOrEmpty(record.Topology.DatabaseTopologyIdBase64))
+            if (string.IsNullOrEmpty(record.Topology.DatabaseTopologyIdBase64))
                 record.Topology.DatabaseTopologyIdBase64 = Guid.NewGuid().ToBase64Unpadded();
 
             record.Topology.Stamp = new LeaderStamp
@@ -1750,7 +1756,7 @@ namespace Raven.Server.ServerWide
             var response = await SendToLeaderAsyncInternal(cmd);
 
 #if DEBUG
-            
+
             if (Leader.GetConvertResult(cmd) == null && // if cmd specifies a convert, it explicitly handles this
                 response.Result.ContainsBlittableObject())
             {

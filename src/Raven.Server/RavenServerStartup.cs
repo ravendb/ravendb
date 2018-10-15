@@ -158,8 +158,10 @@ namespace Raven.Server
                 context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
                 context.Response.Headers[Constants.Headers.ServerVersion] = RavenVersionAttribute.Instance.AssemblyVersion;
 
-                var sp = Stopwatch.StartNew();
+                if (_server.ServerStore.Initialized == false)
+                    await _server.ServerStore.InitializationCompleted.WaitAsync();
 
+                var sp = Stopwatch.StartNew();
                 database = await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
 
                 if (_logger.IsInfoEnabled && SkipHttpLogging == false)
