@@ -86,7 +86,9 @@ namespace Raven.Server.Documents.ETL
         }
     }
 
-    public abstract class EtlProcess<TExtracted, TTransformed, TConfiguration, TConnectionString> : EtlProcess where TExtracted : ExtractedItem where TConfiguration : EtlConfiguration<TConnectionString> where TConnectionString : ConnectionString
+    public abstract class EtlProcess<TExtracted, TTransformed, TConfiguration, TConnectionString> : EtlProcess where TExtracted : ExtractedItem
+        where TConfiguration : EtlConfiguration<TConnectionString>
+        where TConnectionString : ConnectionString
     {
         private readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim();
         private readonly CancellationTokenSource _cts;
@@ -287,7 +289,7 @@ namespace Raven.Server.Documents.ETL
 
                         try
                         {
-                            if (CanContinueBatch(stats, item) == false)
+                            if (CanContinueBatch(stats, item, context) == false)
                                 break;
 
                             transformer.Transform(item);
@@ -375,7 +377,7 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract void LoadInternal(IEnumerable<TTransformed> items, JsonOperationContext context);
 
-        public bool CanContinueBatch(EtlStatsScope stats, TExtracted currentItem)
+        public bool CanContinueBatch(EtlStatsScope stats, TExtracted currentItem, JsonOperationContext ctx)
         {
             if (currentItem.Type == EtlItemType.Counter)
             {
@@ -420,14 +422,14 @@ namespace Raven.Server.Documents.ETL
                 return false;
             }
 
-            var currentlyInUse = new Size(_threadAllocations.Allocations, SizeUnit.Bytes);
+            var currentlyInUse = new Size(_threadAllocations.TotalAllocated, SizeUnit.Bytes);
             if (currentlyInUse > _currentMaximumAllowedMemory)
             {
                 if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
                         currentlyInUse,
                         Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Logger, out ProcessMemoryUsage memoryUsage) == false)
                 {
-                    var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {_threadAllocations.TotalAllocated}. Current memory usage: " +
+                    var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {new Size(_threadAllocations.TotalAllocated, SizeUnit.Bytes)}. Current memory usage: " +
                                  $"{nameof(memoryUsage.WorkingSet)} = {memoryUsage.WorkingSet}," +
                                  $"{nameof(memoryUsage.PrivateMemory)} = {memoryUsage.PrivateMemory}";
 
@@ -435,6 +437,8 @@ namespace Raven.Server.Documents.ETL
                         Logger.Info(reason);
 
                     stats.RecordBatchCompleteReason(reason);
+
+                    ctx.DoNotReuse = true;
 
                     return false;
                 }
@@ -886,7 +890,7 @@ namespace Raven.Server.Documents.ETL
                     {
                         ravenEtl.EnsureThreadAllocationStats();
 
-                        var results = ravenEtl.Transform(new[] { new RavenEtlItem(document, docCollection) }, context, new EtlStatsScope(new EtlRunStats()),
+                        var results = ravenEtl.Transform(new[] {new RavenEtlItem(document, docCollection)}, context, new EtlStatsScope(new EtlRunStats()),
                             new EtlProcessState());
 
                         return new RavenEtlTestScriptResult
