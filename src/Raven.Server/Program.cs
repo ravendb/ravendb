@@ -357,7 +357,7 @@ namespace Raven.Server
                     Thread.Sleep(100);
                 }
             }
-            char x = '\x1b';
+
             Console.ReadKey(true);
             Console.WriteLine();
             Console.WriteLine($"Stats halted.");
@@ -377,16 +377,7 @@ namespace Raven.Server
             var maxNameLength = 0;
             while (Console.KeyAvailable == false)
             {
-                if (PlatformDetails.RunningOnPosix)
-                {
-                    Console.Out.Write('\x1b');
-                    Console.Out.Write($"[{cursorTop};{0}f");
-                    Console.Out.Flush();
-                }
-                else
-                {
-                    Console.SetCursorPosition(cursorLeft, cursorTop);
-                }
+                Console.SetCursorPosition(cursorLeft, cursorTop);
 
                 var threadsInfo = threadsUsage.Calculate();
                 Console.Write($"{(i++ % 2 == 0 ? "*" : "+")} ");
@@ -430,7 +421,7 @@ namespace Raven.Server
 
                 if (PlatformDetails.RunningOnPosix)
                 {
-                    var newTop = Console.BufferHeight - cursorTop - printedLines;
+                    var newTop = Console.BufferHeight - cursorTop - printedLines - 1;
                     if (newTop < 0)
                     {
                         cursorTop = Math.Max(0, cursorTop + newTop);
