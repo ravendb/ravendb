@@ -1130,15 +1130,26 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         private void BuildPagination(StringBuilder queryText)
         {
+            if (Start > 0 && PageSize.HasValue)
+            {
+                queryText
+                    .Append(" limit $")
+                    .Append(AddQueryParameter(Start))
+                    .Append(", $")
+                    .Append(AddQueryParameter(PageSize.Value));
+
+                return;
+            }
+
+            if (PageSize.HasValue)
+                queryText
+                    .Append(" limit $")
+                    .Append(AddQueryParameter(PageSize.Value));
+            
             if (Start > 0)
                 queryText
                     .Append(" offset $")
                     .Append(AddQueryParameter(Start));
-
-            if (PageSize.HasValue)
-                queryText
-                    .Append(" fetch $")
-                    .Append(AddQueryParameter(PageSize.Value));
         }
 
         private void BuildInclude(StringBuilder queryText)

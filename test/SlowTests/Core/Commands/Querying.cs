@@ -93,7 +93,7 @@ namespace SlowTests.Core.Commands
                 {
                     stringBuilder.Append(@" (Name = 'Async Company #1') OR");
                 }
-                stringBuilder.Append(@" (Name = 'Async Company #2') OFFSET 0 FETCH 50");
+                stringBuilder.Append(@" (Name = 'Async Company #2') OFFSET 0 LIMIT 50");
 
                 var indexQuery = new IndexQuery { Query = stringBuilder.ToString() };
 

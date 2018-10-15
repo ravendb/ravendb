@@ -141,11 +141,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
             }
 
-            if (Scanner.TryScan("OFFSET"))
-                q.Offset = OffsetOrFetch("OFFSET");
-
-            if (Scanner.TryScan("FETCH"))
-                q.Fetch =  OffsetOrFetch("FETCH");
+            Paging(out q.Offset, out q.Limit);
 
             if (recursive == false && Scanner.AtEndOfInput() == false)
                 ThrowParseException("Expected end of query");
@@ -153,12 +149,36 @@ namespace Raven.Server.Documents.Queries.Parser
             return q;
         }
 
-        private ValueExpression OffsetOrFetch(string name)
+        private void Paging(out ValueExpression offset, out ValueExpression limit)
         {
-            if (Value(out var val) == false)
-                throw new InvalidQueryException($"{name} must contain a value", Scanner.Input, null);
+            offset = null;
+            limit = null;
 
-            return val;
+            if (Scanner.TryScan("LIMIT"))
+            {
+                if (Value(out var first) == false)
+                    throw new InvalidQueryException("Limit must contain a value", Scanner.Input, null);
+
+                if (Scanner.TryScan(","))
+                {
+                    if (Value(out var second) == false)
+                        throw new InvalidQueryException("Limit must contain a second value", Scanner.Input, null);
+
+                    offset = first;
+                    limit = second;
+                }
+            }
+
+            if (Scanner.TryScan("OFFSET"))
+            {
+                if (offset != null)
+                    throw new InvalidQueryException("Cannot use 'offset' after 'limit $skip,$take'", Scanner.Input, null);
+
+                if (Value(out var second) == false)
+                    throw new InvalidQueryException("Offset must contain a value", Scanner.Input, null);
+
+                offset = second;
+            }
         }
 
         private void WithClause(Query q)
@@ -906,7 +926,7 @@ namespace Raven.Server.Documents.Queries.Parser
             "INCLUDE",
             "UPDATE",
             "OFFSET",
-            "FETCH"
+            "LIMIT"
         };
 
         private bool Alias(bool aliasAsRequired, out StringSegment? alias)

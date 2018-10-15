@@ -78,8 +78,8 @@ namespace Raven.Server.Documents.Queries
             if (result.Metadata.Query.Offset != null)
                 result.Start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset);
 
-            if (result.Metadata.Query.Fetch != null)
-                result.PageSize = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Fetch);
+            if (result.Metadata.Query.Limit != null)
+                result.PageSize = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit);
 
             return result;
         }
@@ -141,8 +141,8 @@ namespace Raven.Server.Documents.Queries
             if (result.Metadata.Query.Offset != null)
                 result.Start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset);
 
-            if (result.Metadata.Query.Fetch != null)
-                result.PageSize = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Fetch);
+            if (result.Metadata.Query.Limit != null)
+                result.PageSize = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit);
 
             return result;
         }
