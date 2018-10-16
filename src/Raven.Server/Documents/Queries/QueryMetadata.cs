@@ -70,7 +70,6 @@ namespace Raven.Server.Documents.Queries
                 if (IsDynamic == false || IsGroupBy)
                     IsCollectionQuery = false;
 
-
                 IsOptimizedSortOnly = IsCollectionQuery == false
                                       && WhereFields.Count == 0
                                       && OrderBy?.Length == 1
@@ -83,7 +82,6 @@ namespace Raven.Server.Documents.Queries
             {
                 IsCollectionQuery = false;
             }
-
 
             if (IsGroupBy && IsDynamic == false)
                 throw new ArgumentException("Can't use 'group by' when querying on an Index. 'group by' can be used only when querying on collections.");
@@ -153,6 +151,8 @@ namespace Raven.Server.Documents.Queries
 
         //in case we have JS function in SELECT, keep the original select fields
         public string[] AliasesInGraphSelect;
+
+        public bool IsProjectionInGraphSelect;
 
         public HighlightingField[] Highlightings;
 
@@ -248,10 +248,37 @@ namespace Raven.Server.Documents.Queries
                     ThrowMissingVertexMatchClauses();
                 }
 
-                AliasesInGraphSelect = edgePredicateKeys
-                    .Union(documentQueryKeys)
-                    .Select(str => (string)str)
-                    .ToArray();
+                
+                if (Query.Select != null && Query.Select.Count == 1)
+                {
+                    var alias = ((FieldExpression)Query.Select[0].Expression).Compound[0];
+                    IsProjectionInGraphSelect = ((FieldExpression)Query.Select[0].Expression).Compound.Count > 1;
+                    var edgeKeys = edgePredicateKeys.ToArray();
+                   
+                    if (!edgeKeys.Contains(alias) && documentQueryKeys != null && !documentQueryKeys.Contains(alias))
+                    {
+                        ThrowOneUndefinedAlias(alias);
+                    }
+
+                    AliasesInGraphSelect = new[] { (string)alias };
+                }
+                else if (Query.Select != null && Query.Select.Count > 1)
+                {
+                    //make sure that there are no undefined aliases in select
+                    var selectAliases = Query.Select.Select(x => ((FieldExpression)x.Expression).Compound[0]);
+                    IsProjectionInGraphSelect = Query.Select.Any(x => ((FieldExpression)x.Expression).Compound.Count > 1);
+                    var aliasesUndefinedInQuery = selectAliases.Except(edgePredicateKeys.Union(documentQueryKeys)).ToArray();
+                    if (aliasesUndefinedInQuery.Length > 0)
+                    {
+                        ThrowOneOrMoreUndefinedAlias(aliasesUndefinedInQuery);
+                    }
+
+                    AliasesInGraphSelect = Array.Empty<string>();
+                }
+                else
+                {
+                    AliasesInGraphSelect = edgePredicateKeys.Union(documentQueryKeys).Select(str => (string)str).ToArray();
+                }
             }
 
             if (Query.Where != null)
@@ -305,6 +332,16 @@ namespace Raven.Server.Documents.Queries
 
             if (Query.DeclaredFunctions != null)
                 HandleDeclaredFunctions();
+        }
+
+        private static void ThrowOneOrMoreUndefinedAlias(StringSegment[] aliasesUndefinedInQuery)
+        {
+            throw new InvalidQueryException($"One or more aliases ({string.Join(',', aliasesUndefinedInQuery)}) in SELECT clause are not defined in the query.");
+        }
+
+        private static void ThrowOneUndefinedAlias(StringSegment alias)
+        {
+            throw new InvalidQueryException($"Could not find alias '{alias}' defined the query. SELECT clause must include an alias that refers to either a vertex or an edge");
         }
 
         private static void ThrowMissingVertexMatchClauses()
