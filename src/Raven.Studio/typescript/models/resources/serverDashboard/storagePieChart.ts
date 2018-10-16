@@ -49,7 +49,7 @@ class storagePieChart {
     
     highlightDatabase(dbName: string, container: JQuery) {
         if (dbName) {
-            $("[data-db-name=" + dbName + "]", container).addClass("active");
+            $("[data-db-name=" + CSS.escape(dbName) + "]", container).addClass("active");
         } else {
             $("path", container).removeClass("active");
         }
