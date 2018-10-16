@@ -370,28 +370,44 @@ namespace Raven.Server.Documents.Queries.AST
             foreach (var withEdgesClause in expression)
             {
                 EnsureLine();
-                _sb.Append("WITH EDGES ");
-                if(withEdgesClause.Value.Path != null)
-                {
-                    _sb.Append("(");
-                    //TODO: Need to write the filter on the edge path 
-                    VisitExpression(withEdgesClause.Value.Path);
-                    _sb.Append(")");
-                }
+                
+                VisitWithEdgesExpression(withEdgesClause.Key, withEdgesClause.Value);
+                
+            }
+        }
 
-                if (withEdgesClause.Value.Where == null && 
-                    (withEdgesClause.Value.OrderBy == null || withEdgesClause.Value.OrderBy.Count == 0))
+        public override void VisitWithEdgesExpression(string alias, WithEdgesExpression withEdgesClause)
+        {
+            _sb.Append("WITH EDGES ");
+            if (withEdgesClause.Path != null)
+            {
+                _sb.Append("(");
+                bool first = true;
+                foreach (var item in withEdgesClause.Path.Compound)
                 {
-                    _sb.Append(" AS ").Append(withEdgesClause.Key);
-                    continue;
+                    if (first == false)
+                        _sb.Append(".");
+                    first = false;
+                    _sb.Append(item);
                 }
+                _sb.Append(")");
+            }
+
+            if (withEdgesClause.Where != null ||
+                (withEdgesClause.OrderBy != null && withEdgesClause.OrderBy.Count != 0))
+            {
                 _sb.Append(" {");
                 _indent++;
                 EnsureLine();
-                VisitWithEdgesExpression(withEdgesClause.Value);
+
+                base.VisitWithEdgesExpression(alias, withEdgesClause);
+
                 _indent--;
-                _sb.Append("} AS ").Append(withEdgesClause.Key);
+                _sb.Append("}");
+
             }
+            if (string.IsNullOrEmpty(alias) == false)
+                _sb.Append(" AS ").Append(alias);
         }
 
         public override void VisitPatternMatchElementExpression(PatternMatchElementExpression elementExpression)

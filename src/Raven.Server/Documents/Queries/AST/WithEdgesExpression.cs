@@ -29,20 +29,11 @@ namespace Raven.Server.Documents.Queries.AST
 
         private string GetText()
         {
-            var sb = new StringBuilder("WITH EDGES");
-            sb.Append("(").Append(Path).Append(")");
+            var sb = new StringBuilder();
 
             var visitor = new StringQueryVisitor(sb);
 
-            if (Where != null)
-            {
-                visitor.VisitWhereClause(Where);
-            }
-
-            if (OrderBy != null)
-            {
-                visitor.VisitOrderBy(OrderBy);
-            }
+            visitor.VisitWithEdgesExpression(FromAlias?.ToString(),this);
 
             return sb.ToString();
         }

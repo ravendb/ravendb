@@ -22,7 +22,7 @@ MATCH (u)")]
 WITH {
     FROM Movies
 } AS m
-WITH EDGES(Rated) {
+WITH EDGES (Rated) {
     WHERE Rating > 4
 } AS r
 MATCH (u)-[r]->(m)")]
@@ -32,7 +32,7 @@ MATCH (u)-[r]->(m)")]
 WITH {
     FROM Movies WHERE Genre = $genre
 } AS m
-WITH EDGES(Rated) {
+WITH EDGES (Rated) {
     WHERE Rating > 4
 } AS r
 MATCH (u)-[r]->(m)")]
@@ -42,7 +42,7 @@ MATCH (u)-[r]->(m)")]
 WITH {
     FROM Movies
 } AS m
-WITH EDGES(Rated) AS r
+WITH EDGES (Rated) AS r
 MATCH (m)-[r]->(u)")]
         [InlineData(@"
 with { from Movies where Genre = $genre } as m
@@ -55,9 +55,9 @@ WITH {
 WITH {
     FROM Actors
 } AS actor
-WITH EDGES(Rated) AS r
-WITH EDGES(ActedOn) AS __alias1
-WITH EDGES(Likes) AS __alias2
+WITH EDGES (Rated) AS r
+WITH EDGES (ActedOn) AS __alias1
+WITH EDGES (Likes) AS __alias2
 MATCH ((m)-[r]->(u) AND ((actor)-[__alias1]->(m) AND (u)-[__alias2]->(actor)))")]
         [InlineData(@"
 with { from Movies where Genre = $genre } as m
@@ -70,9 +70,9 @@ WITH {
 WITH {
     FROM Actors
 } AS actor
-WITH EDGES(Rated) AS r
-WITH EDGES(ActedOn) AS __alias1
-WITH EDGES(Likes) AS __alias2
+WITH EDGES (Rated) AS r
+WITH EDGES (ActedOn) AS __alias1
+WITH EDGES (Likes) AS __alias2
 MATCH (((m)-[r]->(u) AND NOT ((actor)-[__alias1]->(m))) OR (u)-[__alias2]->(actor))")]
         [InlineData(@"with { from Movies where Genre = $genre } as m
 match (u:Users)<-[r:Rated]-(m)", @"WITH {
@@ -81,7 +81,7 @@ match (u:Users)<-[r:Rated]-(m)", @"WITH {
 WITH {
     FROM Users
 } AS u
-WITH EDGES(Rated) AS r
+WITH EDGES (Rated) AS r
 MATCH (m)-[r]->(u)")]
         [InlineData(@"with { from Movies where Genre = $genre } as m
 match (u:Users)<-[r:Rated]-(m)->(a:Actor)", @"WITH {
@@ -93,7 +93,7 @@ WITH {
 WITH {
     FROM Actor
 } AS a
-WITH EDGES(Rated) AS r
+WITH EDGES (Rated) AS r
 MATCH ((m)-[r]->(u) AND (m)->(a))")]
         public void CanRoundTripQueries(string q, string expected)
         {
@@ -161,7 +161,7 @@ match (src)-[r1:Rated]->(m:Movie)<-[r2:Rated]-(dst:Users) and (dst:Users)-[a:Pai
         {
             const string text = @"
 with { from Users } as u
-with edges(Rated)  as r
+with EDGES (Rated)  as r
 with { from Movies } as m
 match (u)-[r]->(m)
 ";
@@ -191,7 +191,7 @@ match (u)-[r]->(m)
         {
             const string text = @"
 with { from Users } as u
-with edges(Rated) { } as r
+with EDGES (Rated) { } as r
 with { from Movies } as m
 match (m)<-[r]-(u)
 ";
@@ -238,7 +238,7 @@ match (m:Movies)<-[r:Rated]-( u:Users(City='Hadera') )
 
                 Assert.Equal("FROM Users WHERE City = 'Hadera'", query.GraphQuery.WithDocumentQueries["u"].ToString().Trim());
                 Assert.Equal("FROM Movies", query.GraphQuery.WithDocumentQueries["m"].ToString().Trim());
-                Assert.Equal("WITH EDGES(Rated)", query.GraphQuery.WithEdgePredicates["r"].ToString());
+                Assert.Equal("WITH EDGES (Rated)", query.GraphQuery.WithEdgePredicates["r"].ToString().Trim());
             }
             else
             {

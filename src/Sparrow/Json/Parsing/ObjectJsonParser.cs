@@ -44,7 +44,7 @@ namespace Sparrow.Json.Parsing
             if (_source != null)
             {
 #if DEBUG
-                if (_source.Modifications != null)
+                if (_source.Modifications != null && _source.Modifications.Properties.Count != _source.Modifications.ModificationsIndex)
                     throw new InvalidOperationException("The source already has modifications");
 #endif
                 _source.Modifications = this;
@@ -224,7 +224,6 @@ namespace Sparrow.Json.Parsing
                     }
                     if (value.ModificationsIndex >= value.Properties.Count)
                     {
-                        value.ModificationsIndex = 0;
                         _seenValues.Remove(value);
                         _state.CurrentTokenType = JsonParserToken.EndObject;
                         return true;
@@ -247,7 +246,6 @@ namespace Sparrow.Json.Parsing
                     if (array.ModificationsIndex >= array.Items.Count)
                     {
                         _seenValues.Remove(array);
-                        array.ModificationsIndex = 0;
                         _state.CurrentTokenType = JsonParserToken.EndArray;
                         return true;
                     }
