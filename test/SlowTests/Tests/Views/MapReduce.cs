@@ -135,7 +135,7 @@ select new {
 
             var q = commands.Query(new IndexQuery()
             {
-                Query = $"FROM INDEX 'CommentsCountPerBlog' WHERE {query} OFFSET 0 LIMIT 10"
+                Query = $"FROM INDEX 'CommentsCountPerBlog' WHERE {query} LIMIT 10 OFFSET 0"
             });
 
             var array = new DynamicJsonArray();

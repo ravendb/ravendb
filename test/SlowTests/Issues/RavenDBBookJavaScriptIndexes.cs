@@ -48,11 +48,6 @@ namespace SlowTests.Issues
             }
         }
 
-        private void CreateNorthwindDatabase(DocumentStore store)
-        {
-            store.Maintenance.Send(new CreateSampleDataOperation());
-        }
-
         private class DynamicFields : AbstractIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()

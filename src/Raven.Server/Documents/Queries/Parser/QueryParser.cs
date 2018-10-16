@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
             while (Scanner.TryScan("WITH"))
             {
-                if (recursive == true)
+                if (recursive)
                     ThrowParseException("With clause is not allow inside inner query");
 
                 WithClause(q);
@@ -58,8 +58,8 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (Scanner.TryScan("MATCH") == false)
             {
-                if(q.GraphQuery != null)
-                    ThrowParseException("Missing a 'match' clause after 'with' caluse");
+                if (q.GraphQuery != null)
+                    ThrowParseException("Missing a 'match' clause after 'with' clause");
 
                 q.From = FromClause();
 
@@ -74,11 +74,11 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (q.GraphQuery == null)
                     q.GraphQuery = new GraphQuery();
 
-                if(BinaryGraph(out var op) == false)
-                    ThrowParseException("Unexpceted input when trying to parse the MATCH clause");
+                if (BinaryGraph(out var op) == false)
+                    ThrowParseException("Unexpected input when trying to parse the MATCH clause");
                 q.GraphQuery.MatchClause = op;
 
-                if(_synteticWithQueries != null)
+                if (_synteticWithQueries != null)
                 {
                     foreach (var (alias, sq) in _synteticWithQueries)
                     {
@@ -89,14 +89,14 @@ namespace Raven.Server.Documents.Queries.Parser
                         }
                         else
                         {
-                             q.TryAddWithClause(new Query
-                             {
-                                 From = new FromClause
-                                 {
-                                     From = sq.Path,
-                                 },
-                                 Where = sq.Filter
-                             }, alias);
+                            q.TryAddWithClause(new Query
+                            {
+                                From = new FromClause
+                                {
+                                    From = sq.Path,
+                                },
+                                Where = sq.Filter
+                            }, alias);
                         }
                     }
                     _synteticWithQueries.Clear();
@@ -226,7 +226,7 @@ namespace Raven.Server.Documents.Queries.Parser
             }
 
             QueryExpression qe = null;
-            if (Scanner.TryScan("WHERE") && (Expression(out qe) == false|| qe == null))
+            if (Scanner.TryScan("WHERE") && (Expression(out qe) == false || qe == null))
                 ThrowParseException("Unable to parse WHERE clause of an 'With Edges' clause");
 
             List<(QueryExpression Expression, OrderByFieldType OrderingType, bool Ascending)> orderBy = null;
@@ -239,7 +239,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 throw new InvalidQueryException("With clause contains invalid body", Scanner.Input, null);
 
             if (Alias(true, out var alias) == false || alias.HasValue == false)
-                throw new InvalidQueryException("With clause must contain allias but none was provided", Scanner.Input, null);
+                throw new InvalidQueryException("With clause must contain alias but none was provided", Scanner.Input, null);
 
             var wee = new WithEdgesExpression(qe, edgeField, orderBy);
             return (wee, alias.Value);
@@ -285,10 +285,10 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
 
                 QueryExpression filter = null;
-                
+
                 if (Scanner.TryScan('('))
                 {
-                    if(Expression(out filter) == false)
+                    if (Expression(out filter) == false)
                         throw new InvalidQueryException("Failed to parse filter expression for: " + alias, Scanner.Input, null);
 
                     if (Scanner.TryScan(')') == false)
@@ -307,7 +307,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     else
                     {
                         throw new InvalidQueryException("Expected field expression after . for " + firstPropOnPath, Scanner.Input, null);
-                    }   
+                    }
 
                 }
                 else
@@ -326,18 +326,18 @@ namespace Raven.Server.Documents.Queries.Parser
             if (_synteticWithQueries == null)
                 _synteticWithQueries = new Dictionary<StringSegment, (FieldExpression Collection, QueryExpression Filter, bool IsEdge)>(StringSegmentEqualityComparer.Instance);
 
-            if(_synteticWithQueries.TryGetValue(alias, out var existing))
+            if (_synteticWithQueries.TryGetValue(alias, out var existing))
             {
                 if (existing.IsEdge != isEdge)
                     ThrowDuplicateAliasWithoutSameBody(start);
 
-                if (path.Equals(existing.Path) ==false)
+                if (path.Equals(existing.Path) == false)
                     ThrowDuplicateAliasWithoutSameBody(start);
 
-                if((filter != null ) != (existing.Filter != null))
+                if ((filter != null) != (existing.Filter != null))
                     ThrowDuplicateAliasWithoutSameBody(start);
 
-                if(filter != null && filter.Equals(existing.Filter) == false)
+                if (filter != null && filter.Equals(existing.Filter) == false)
                     ThrowDuplicateAliasWithoutSameBody(start);
 
                 return;
@@ -348,7 +348,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private void ThrowDuplicateAliasWithoutSameBody(int start)
         {
-            throw new InvalidQueryException("Duplicated alias  was found with a different definition than previous defined: " + 
+            throw new InvalidQueryException("Duplicated alias  was found with a different definition than previous defined: " +
                 new StringSegment(Scanner.Input, start, Scanner.Position - start),
                  Scanner.Input, null);
         }
@@ -379,10 +379,10 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private bool GraphOperation(out QueryExpression op)
         {
-            if(Scanner.TryScan('(') == false)
+            if (Scanner.TryScan('(') == false)
                 throw new InvalidQueryException("MATCH operator expected a '(', but didn't get it.", Scanner.Input, null);
 
-            if(GraphAlias(false, out var alias) == false)
+            if (GraphAlias(false, out var alias) == false)
             {
                 if (BinaryGraph(out op) == false)
                 {
@@ -423,7 +423,7 @@ namespace Raven.Server.Documents.Queries.Parser
                                 throw new InvalidQueryException("Got '[' when expected '-', did you forget to add '-[' ?", Scanner.Input, null);
 
                             if (GraphAlias(true, out alias) == false)
-                                throw new InvalidQueryException("MATCH identifider after '-['", Scanner.Input, null);
+                                throw new InvalidQueryException("MATCH identifier after '-['", Scanner.Input, null);
                             if (Scanner.TryScan(']') == false)
                                 throw new InvalidQueryException("MATCH operator expected a ']' after reading: " + alias, Scanner.Input, null);
 
@@ -446,7 +446,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             expectNode = true;
                             continue;
                         case "<":
-                            throw new InvalidQueryException("Got unexpceted '<', did you forget to add '->' ?", Scanner.Input, null);
+                            throw new InvalidQueryException("Got unexpected '<', did you forget to add '->' ?", Scanner.Input, null);
                         case ">":
                             if (foundDash == false)
                                 throw new InvalidQueryException("Got '>' when expected '-', did you forget to add '->' ?", Scanner.Input, null);
@@ -508,13 +508,13 @@ namespace Raven.Server.Documents.Queries.Parser
             QueryExpression op;
             if (hasIncoming)
             {
-                if(hasOutgoing == false)
+                if (hasOutgoing == false)
                 {
                     ReverseIncomingChain(list);
                 }
                 else
                 {
-                    return BreakPatternChainToAndClasues(list, out op);
+                    return BreakPatternChainToAndClauses(list, out op);
                 }
 
             }
@@ -527,7 +527,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return op;
         }
 
-        private static QueryExpression BreakPatternChainToAndClasues(List<MatchPath> list, out QueryExpression op)
+        private static QueryExpression BreakPatternChainToAndClauses(List<MatchPath> list, out QueryExpression op)
         {
             // need to split the expression based on the direction of the arrows
             var clauses = new List<PatternMatchElementExpression>();
@@ -535,7 +535,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 if (list[i].EdgeType != list[i - 1].EdgeType)
                 {
-                    var part = list.Skip(i ).ToList();
+                    var part = list.Skip(i).ToList();
                     if (part.Last().EdgeType == EdgeType.Left)
                     {
                         ReverseIncomingChain(part);
@@ -552,7 +552,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     list[i] = new MatchPath
                     {
                         Alias = list[i].Alias,
-                        EdgeType = list[i-1].EdgeType,
+                        EdgeType = list[i - 1].EdgeType,
                         IsEdge = list[i].IsEdge
                     };
                     clauses.Add(new PatternMatchElementExpression
@@ -560,11 +560,11 @@ namespace Raven.Server.Documents.Queries.Parser
                         Path = part.ToArray(),
                         Type = ExpressionType.Pattern
                     });
-                    list.RemoveRange(i+1, list.Count - i -1);
+                    list.RemoveRange(i + 1, list.Count - i - 1);
                 }
             }
 
-            if(list[0].EdgeType == EdgeType.Left)
+            if (list[0].EdgeType == EdgeType.Left)
             {
                 ReverseIncomingChain(list);
             }
@@ -603,15 +603,15 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan('{') == false)
                 throw new InvalidQueryException("With keyword should be followed with either 'edges' or '{' ", Scanner.Input, null);
 
-            var query = Parse(recursive:true);
+            var query = Parse(recursive: true);
 
             if (Scanner.TryScan('}') == false)
                 throw new InvalidQueryException("With clause contains invalid body", Scanner.Input, null);
 
-            if (Alias(true, out var allias) == false || allias.HasValue == false)
-                throw new InvalidQueryException("With clause must contain allias but none was provided", Scanner.Input, null);
+            if (Alias(true, out var alias) == false || alias.HasValue == false)
+                throw new InvalidQueryException("With clause must contain alias but none was provided", Scanner.Input, null);
 
-            return (query, allias.Value);
+            return (query, alias.Value);
         }
 
         private static Esprima.Ast.Program ValidateScript(string script)
@@ -863,12 +863,12 @@ namespace Raven.Server.Documents.Queries.Parser
                     alias = ve.Token;
                 }
 
-                @select.Add((expr, alias));
+                select.Add((expr, alias));
 
                 if (Scanner.TryScan(",") == false)
                     break;
             } while (true);
-            return @select;
+            return select;
         }
 
 
@@ -1036,8 +1036,8 @@ namespace Raven.Server.Documents.Queries.Parser
         private bool TrySimplifyBinaryExpression(
             QueryExpression right,
             OperatorType type,
-            bool negate, 
-            bool parenthesis, 
+            bool negate,
+            bool parenthesis,
             ref QueryExpression op)
         {
             if (parenthesis == false)
@@ -1409,7 +1409,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 return true;
             }
 
-            if (Parameter(out int tokenStart, out int tokenLength))
+            if (Parameter(out _, out _))
             {
                 val = new ValueExpression(
                     new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
