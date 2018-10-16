@@ -163,5 +163,10 @@ namespace Raven.Server.Documents.Indexes.Errors
         {
             throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
+
+        public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
+        {
+            throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
+        }
     }
 }

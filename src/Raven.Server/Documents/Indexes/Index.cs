@@ -2437,6 +2437,18 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public abstract (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields();
+
+        protected List<string> GetDynamicEntriesFields(HashSet<string> staticFields)
+        {
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+            using (var indexTx = indexContext.OpenReadTransaction())
+            using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
+            {
+                return reader.DynamicEntriesFields(staticFields).ToList();
+            }
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AssertIndexState(bool assertState = true)
         {

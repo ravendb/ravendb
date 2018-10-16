@@ -12,6 +12,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Lucene.Net.Util;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
@@ -121,8 +122,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             results[termDocs.Doc] = result = new Dictionary<string, object>();
 
                         var propertyName = term.Field;
-                        if (propertyName.EndsWith("_ConvertToJson") ||
-                            propertyName.EndsWith("_IsArray") ||
+                        if (propertyName.EndsWith(LuceneDocumentConverterBase.ConvertToJsonSuffix) ||
+                            propertyName.EndsWith(LuceneDocumentConverterBase.IsArrayFieldSuffix) ||
                             propertyName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
                             continue;
 

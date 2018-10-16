@@ -16,6 +16,7 @@ using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Highlightings;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
@@ -215,7 +216,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> QuerySortOnly(
             IndexQueryServerSide query, IQueryResultRetriever retriever, int start, int pageSize, Reference<int> totalResults, CancellationToken token)
         {
-        
+
             totalResults.Value = _searcher.IndexReader.NumDocs();
             var subReaders = _searcher.IndexReader.GetSequentialSubReaders();
 
@@ -225,7 +226,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var isAscending = order.Ascending;
             var fieldName = order.Name;
 
-            var indexes = new(Reference<int> Index, HashSet<int> Seen, StringIndex Item, IndexReader IndexReader)[subReaders.Length];
+            var indexes = new (Reference<int> Index, HashSet<int> Seen, StringIndex Item, IndexReader IndexReader)[subReaders.Length];
             for (var i = 0; i < subReaders.Length; i++)
             {
                 var subReader = subReaders[i];
@@ -306,7 +307,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     innerDoc = tpl.Item.reverseOrder[index];
 
-                    if (innerDoc == -1 || 
+                    if (innerDoc == -1 ||
                         (tpl.IndexReader.HasDeletions && tpl.IndexReader.IsDeleted(innerDoc))
                         || tpl.Seen.Add(innerDoc) == false)
                     {
@@ -840,6 +841,29 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 var document = termsDocs[scoreDoc.Doc];
 
                 yield return document;
+            }
+        }
+
+        public IEnumerable<string> DynamicEntriesFields(HashSet<string> staticFields)
+        {
+            foreach (var fieldName in _searcher
+                .IndexReader
+                .GetFieldNames(IndexReader.FieldOption.ALL))
+            {
+                if (staticFields.Contains(fieldName))
+                    continue;
+
+                if (fieldName == Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName
+                    || fieldName == Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName
+                    || fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                    continue;
+
+                if (fieldName.EndsWith(LuceneDocumentConverterBase.ConvertToJsonSuffix) ||
+                    fieldName.EndsWith(LuceneDocumentConverterBase.IsArrayFieldSuffix) ||
+                    fieldName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
+                    continue;
+
+                yield return fieldName;
             }
         }
 
