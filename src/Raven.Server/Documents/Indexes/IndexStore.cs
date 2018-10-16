@@ -31,6 +31,7 @@ using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
+using Sparrow.Threading;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -353,7 +354,10 @@ namespace Raven.Server.Documents.Indexes
 
             _initialized = true;
 
-            return Task.Run(() => { OpenIndexes(record); });
+            return Task.Run(() =>
+            {
+                OpenIndexes(record);
+            });
         }
 
         public Index GetIndex(string name)
@@ -485,7 +489,6 @@ namespace Raven.Server.Documents.Indexes
         {
             Debug.Assert(index != null);
             Debug.Assert(string.IsNullOrEmpty(index.Name) == false);
-
             _indexes.Add(index);
 
             if (_documentDatabase.Configuration.Indexing.Disabled == false && _run)
@@ -843,8 +846,11 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public SharedMultipleUseFlag IsDisposed = new SharedMultipleUseFlag(false);
+
         public void Dispose()
         {
+            IsDisposed.Raise();
             //FlushMapIndexes();
             //FlushReduceIndexes();
 

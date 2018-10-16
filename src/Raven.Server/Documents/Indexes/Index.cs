@@ -571,6 +571,12 @@ namespace Raven.Server.Documents.Indexes
             if (_initialized == false)
                 throw new InvalidOperationException($"Index '{Name}' was not initialized.");
 
+            if (DocumentDatabase.IndexStore.IsDisposed.IsRaised())
+            {
+                Dispose();
+                return;
+            }
+
             using (DrainRunningQueries())
             {
                 StartIndexingThread();
