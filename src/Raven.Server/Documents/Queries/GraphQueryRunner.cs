@@ -81,8 +81,7 @@ namespace Raven.Server.Documents.Queries
 
                     foreach (var match in matchResults)
                     {
-
-                        if(query.Metadata.AliasesInGraphSelect.Length == 1)
+                        if(query.Metadata.AliasesInGraphSelect.Length == 1 && query.Metadata.IsProjectionInGraphSelect == false)
                         {
                             final.AddResult(match.GetResult(query.Metadata.AliasesInGraphSelect[0]));
                             continue;
