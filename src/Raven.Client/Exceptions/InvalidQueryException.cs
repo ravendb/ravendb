@@ -10,7 +10,7 @@ namespace Raven.Client.Exceptions
         {
         }
 
-        private InvalidQueryException(string message)
+        public InvalidQueryException(string message)
             : base(message)
         {
         }
