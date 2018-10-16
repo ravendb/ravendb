@@ -132,15 +132,15 @@ class queryUtil {
             .split(" ");
     }
     
-    static getCollectionOrIndexName(query: string): string {
+    static getCollectionOrIndexName(query: string): [string, "index" | "collection"] {
         const words = queryUtil.tokenizeQuery(query);
 
         for (let i = 0; i < words.length; i++) {
             if (words[i] === "from") {
                 if (words[i + 1] === "index") {
-                    return words[i + 2];
+                    return [words[i + 2], "index"];
                 } else {
-                    return words[i + 1];
+                    return [words[i + 1], "collection"];
                 }
             }
         }

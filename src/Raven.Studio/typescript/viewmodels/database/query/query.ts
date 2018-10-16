@@ -793,7 +793,7 @@ class query extends viewModelBase {
     }
 
     private getRecentQueryName(): string {
-        const collectionIndexName = queryUtil.getCollectionOrIndexName(this.criteria().queryText());
+        const [collectionIndexName] = queryUtil.getCollectionOrIndexName(this.criteria().queryText());
 
         return query.recentKeyword + " (" + collectionIndexName + ")";
     }
