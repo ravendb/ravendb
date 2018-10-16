@@ -37,10 +37,38 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public void OfTypeAfterSelectShouldWorkFine()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new UsersIndex2().Execute(store);
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Friend = new User()
+                    });
+                    session.SaveChanges();
+                }
+                WaitForIndexing(store);
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<UsersIndex2.Result, UsersIndex2>()
+                        .Select(u => u.Friend)
+                        .OfType<UsersIndex2.Result>();
+                    Assert.Equal("from index 'indexes/users/default2' select Friend", query.ToString());
+                    var friends = query.ToList();
+                    Assert.NotNull(friends[0]);
+                }
+            }
+        }
+
         private class User
         {
             public string Id { get; set; }
             public string Name { get; set; }
+            public User Friend { get; set; }
         }
 
         private class UsersIndex : AbstractIndexCreationTask<User, UsersIndex.Result>
@@ -62,5 +90,24 @@ namespace SlowTests.Issues
             }
         }
 
+        private class UsersIndex2 : AbstractIndexCreationTask<User, UsersIndex2.Result>
+        {
+            public override string IndexName => "indexes/users/default2";
+            public UsersIndex2()
+            {
+                Map = users => from user in users
+                    select new Result
+                    {
+                        Name = user.Name,
+                        Friend = user.Friend
+                    };
+            }
+            public class Result
+            {
+                public string Name { get; set; }
+                public User Friend { get; set; }
+
+            }
+        }
     }
 }
