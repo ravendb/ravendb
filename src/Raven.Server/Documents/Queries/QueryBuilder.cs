@@ -952,13 +952,19 @@ namespace Raven.Server.Documents.Queries
             throw new ArgumentException("Expected valid number, but got: " + token, nameof(token));
         }
 
-        public static long GetLongValue(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, QueryExpression expression)
+        public static long GetLongValue(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, QueryExpression expression, long nullValue)
         {
             var value = GetValue(query, metadata, parameters, expression);
-            if (value.Type != ValueTokenType.Long)
-                ThrowValueTypeMismatch(value.Type, ValueTokenType.Long);
-
-            return (long)value.Value;
+            switch (value.Type)
+            {
+                case ValueTokenType.Long:
+                    return (long)value.Value;
+                case ValueTokenType.Null:
+                    return nullValue;
+                default:
+                    ThrowValueTypeMismatch(value.Type, ValueTokenType.Long);
+                    return -1;
+            }
         }
 
         public static (object Value, ValueTokenType Type) GetValue(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, QueryExpression expression, bool allowObjectsInParameters = false)
