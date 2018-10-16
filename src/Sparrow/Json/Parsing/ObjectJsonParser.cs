@@ -269,6 +269,7 @@ namespace Sparrow.Json.Parsing
                     {
                         _elements.Push(bjro);
                         bjro.Modifications.SourceIndex = -1;
+                        bjro.Modifications.ModificationsIndex = 0;
                         bjro.Modifications.SourceProperties = bjro.GetPropertiesByInsertionOrder();
                         _state.CurrentTokenType = JsonParserToken.StartObject;
                         return true;
@@ -303,6 +304,7 @@ namespace Sparrow.Json.Parsing
                     {
                         _elements.Push(bjra);
                         bjra.Modifications.SourceIndex = -1;
+                        bjra.Modifications.ModificationsIndex = 0;
                         _state.CurrentTokenType = JsonParserToken.StartArray;
                         return true;
                     }

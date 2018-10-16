@@ -1134,10 +1134,10 @@ NotFound:
 
             data.NoCache = true;
 
-            if (assertRemovals && data.Modifications?.Removals?.Count > 0)
+            if (assertRemovals && data.Modifications?.Removals?.Count > 0 && data.Modifications.SourceIndex < data.Count)
                 throw new InvalidOperationException($"Modifications (removals) detected in '{id}'. JSON: {data}");
 
-            if (assertProperties && data.Modifications?.Properties.Count > 0)
+            if (assertProperties && data.Modifications?.Properties.Count > 0 && data.Modifications.Properties.Count > data.Modifications.ModificationsIndex)
                 throw new InvalidOperationException($"Modifications (properties) detected in '{id}'. JSON: {data}");
 
             if (assertChildren == false)

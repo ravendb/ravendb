@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
@@ -87,6 +88,24 @@ namespace Raven.Server.Documents.Queries
                 {
                     i.Add(item.Key, this, item.Value);
                 }
+            }
+
+            internal Document GetFirstResult()
+            {
+                foreach (var item in _inner)
+                {
+                    item.Value.EnsureMetadata();
+
+                    return item.Value;
+                }
+                throw new InvalidOperationException("Cannot return single result when there are no results");
+            }
+
+            internal Document GetResult(string alias)
+            {
+                var val = _inner[alias];
+                val.EnsureMetadata();
+                return val;
             }
         }
     }

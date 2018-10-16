@@ -194,9 +194,9 @@ namespace FastTests.Graph
                     var result = session.Advanced.RawQuery<JObject>(@"match (e:Entities)-[:References]->(e2:Entities)").ToList();
 
                     Assert.Equal(3, result.Count);
-                    Assert.Contains(result, item => item["e"].Value<string>("Id") == "entity/1" && item["e2"].Value<string>("Id") == "entity/2");
-                    Assert.Contains(result, item => item["e"].Value<string>("Id") == "entity/2" && item["e2"].Value<string>("Id") == "entity/3");
-                    Assert.Contains(result, item => item["e"].Value<string>("Id") == "entity/3" && item["e2"].Value<string>("Id") == "entity/1");
+                    Assert.Contains(result, item => item["e"].Value<JObject>("@metadata").Value<string>("@id") == "entity/1" && item["e2"].Value<JObject>("@metadata").Value<string>("@id") == "entity/2");
+                    Assert.Contains(result, item => item["e"].Value<JObject>("@metadata").Value<string>("@id") == "entity/2" && item["e2"].Value<JObject>("@metadata").Value<string>("@id") == "entity/3");
+                    Assert.Contains(result, item => item["e"].Value<JObject>("@metadata").Value<string>("@id") == "entity/3" && item["e2"].Value<JObject>("@metadata").Value<string>("@id") == "entity/1");
                 }
             }
         }
@@ -372,22 +372,21 @@ namespace FastTests.Graph
             }
         }
 
-        //TODO : update this test if RavenDB-12076 will get approved/implemented
         [Fact]
         public void Match_without_any_parameters_should_work()
         {
             using (var store = GetDocumentStore())
             {
                 CreateNorthwindDatabase(store);
-                using (var session = store.OpenSession())
+                using (var one= store.OpenSession())
+                using (var two = store.OpenSession())
                 {
-                    var orderFromMatchAsJson = session.Advanced.RawQuery<JObject>(@"match (o:Orders (id() = 'orders/825-A'))").First();
-                    var orderFromMatch = orderFromMatchAsJson["o"].ToObject<Order>();
+                    var orderFromMatch = one.Advanced.RawQuery<Order>(@"match (o:Orders (id() = 'orders/825-A'))").First();
 
-                    var orderFromLoad = session.Load<Order>("orders/825-A");
-                    
+                    var orderFromLoad = two.Load<Order>("orders/825-A");
+
                     //compare some meaningful properties, just to be sure
-                    Assert.Equal(orderFromLoad.Id,orderFromMatch.Id);
+                    Assert.Equal(orderFromLoad.Id, orderFromMatch.Id);
                     Assert.Equal(orderFromLoad.Company,orderFromMatch.Company);
                     Assert.Equal(orderFromLoad.Employee,orderFromMatch.Employee);
                 }

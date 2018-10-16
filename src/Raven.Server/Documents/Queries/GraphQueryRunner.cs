@@ -81,6 +81,13 @@ namespace Raven.Server.Documents.Queries
 
                     foreach (var match in matchResults)
                     {
+
+                        if(query.Metadata.AliasesInGraphSelect.Length == 1)
+                        {
+                            final.AddResult(match.GetResult(query.Metadata.AliasesInGraphSelect[0]));
+                            continue;
+                        }
+
                         var json = new DynamicJsonValue();
                         match.Populate(json, query.Metadata.AliasesInGraphSelect, q.GraphQuery);
 
@@ -101,6 +108,12 @@ namespace Raven.Server.Documents.Queries
 
         private static void HandleResultsWithoutSelect(DocumentsOperationContext documentsContext, List<Match> matchResults, DocumentQueryResult final)
         {
+            if(matchResults.Count == 1)
+            {
+                final.AddResult(matchResults[0].GetFirstResult());
+                return;
+            }
+
             foreach (var match in matchResults)
             {
                 var resultAsJson = new DynamicJsonValue();
