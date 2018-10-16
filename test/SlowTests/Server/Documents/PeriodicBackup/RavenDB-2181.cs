@@ -201,7 +201,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                                 new Dictionary<string, string>());
                         }
                     });
-                    Assert.Equal($"AWS location as set to {region2}, but the bucket named: '{bucketName}' is located in: {region1}", error2.Message);
+                    Assert.Equal($"AWS location is set to {region2}, but the bucket named: '{bucketName}' is located in: {region1}", error2.Message);
                 }
                 finally
                 {

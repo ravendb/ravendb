@@ -315,7 +315,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (bucketLocation.Equals(AwsRegion, StringComparison.OrdinalIgnoreCase) == false)
             {
                 throw new InvalidOperationException(
-                    $"AWS location as set to {AwsRegion}, " +
+                    $"AWS location is set to {AwsRegion}, " +
                     $"but the bucket named: '{_bucketName}' " +
                     $"is located in: {bucketLocation}");
             }
@@ -369,8 +369,18 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     var xElement = XElement.Load(reader);
                     var value = xElement.Value;
 
-                    // when the bucket's region is US East (N. Virginia - us-east-1), 
-                    // Amazon S3 returns an empty string for the bucket's region
+                    if (value.Equals(string.Empty))
+                    {
+                        // when the bucket's region is US East (N. Virginia - us-east-1), 
+                        // Amazon S3 returns an empty string for the bucket's region
+                        value = DefaultRegion;
+                    }
+                    else if (value.Equals("EU", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // EU (Ireland) => EU or eu-west-1
+                        value = "eu-west-1";
+                    }
+
                     return value == string.Empty ? DefaultRegion : value;
                 }
             }
