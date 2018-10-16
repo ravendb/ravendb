@@ -479,7 +479,15 @@ namespace Raven.Server.Documents.Queries
             if (RootAliasPaths.Count == 0)
                 ThrowMissingAliasOnSelectFunctionBody(parameters);
 
-            VerifyKnownAliasesInScript(parameters);
+            // validate that this is valid JS code
+            try
+            {
+                Query.SelectFunctionBody.Program = ValidateScript(parameters);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidQueryException("Select clause contains invalid script", QueryText, parameters, e);
+            }
 
             var name = "__selectOutput";
             if (Query.DeclaredFunctions != null &&
@@ -1994,12 +2002,12 @@ namespace Raven.Server.Documents.Queries
             "Math", "Number", "Object", "Date"
         };
 
-        private void VerifyKnownAliasesInScript(BlittableJsonReaderObject parameters)
+        private Esprima.Ast.Program ValidateScript(BlittableJsonReaderObject parameters)
         {
             HashSet<string> maybeUnknowns = null;
             Identifier currentProp = null;
 
-            void VerifyKnownAlias(INode node)
+            void VerifyKnownAliases(INode node)
             {
                 switch (node)
                 {
@@ -2027,7 +2035,7 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            new JavaScriptParser("return " + Query.SelectFunctionBody.FunctionText, new ParserOptions(), VerifyKnownAlias).ParseProgram();
+            return new JavaScriptParser("return " + Query.SelectFunctionBody.FunctionText, new ParserOptions(), VerifyKnownAliases).ParseProgram();
         }
 
         private static void RemoveFromUnknowns(HashSet<string> maybeUnknowns, List<INode> parameters)
@@ -2040,10 +2048,7 @@ namespace Raven.Server.Documents.Queries
                 if (!(p is Identifier i))
                     continue;
 
-                if (maybeUnknowns.Contains(i.Name))
-                {
-                    maybeUnknowns.Remove(i.Name);
-                }
+                maybeUnknowns.Remove(i.Name);
             }
         }
     }
