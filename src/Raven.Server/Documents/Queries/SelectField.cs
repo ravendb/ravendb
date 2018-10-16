@@ -50,6 +50,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool IsCounter;
 
+        public FieldExpression ExpressionField;
+
         protected SelectField()
         {
 
@@ -64,7 +66,15 @@ namespace Raven.Server.Documents.Queries
             };
         }
 
-        public static SelectField Create(QueryFieldName name, string alias, string sourceAlias, bool array, bool hasSourceAlias, bool isParameter = false, bool isQuoted = false, string loadFromAlias = null)
+        public static SelectField Create(
+            QueryFieldName name, 
+            string alias, 
+            string sourceAlias, 
+            bool array, 
+            bool hasSourceAlias, 
+            bool isParameter = false, 
+            bool isQuoted = false, 
+            string loadFromAlias = null)
         {
             return new SelectField
             {
