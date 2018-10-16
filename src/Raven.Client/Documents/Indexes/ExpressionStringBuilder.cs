@@ -1740,7 +1740,7 @@ namespace Raven.Client.Documents.Indexes
                         Out(")");
                     }
                 }
-                else if (TypeExistsOnServer(argument.Type))
+                else if (TypeExistsOnServer(argument.Type) && IsEnum(argument.Type) == false)
                 {
                     Out("(");
                     VisitType(argument.Type);
@@ -1749,15 +1749,23 @@ namespace Raven.Client.Documents.Indexes
 
                 Visit(argument);
             }
-            if (TypeExistsOnServer(node.Type))
-            {
-                Out(")");
-            }
-            else
-            {
-                Out("}");
-            }
+
+            Out(TypeExistsOnServer(node.Type) ? ")" : "}");
+
             return node;
+
+            bool IsEnum(Type type)
+            {
+                var isEnum = type.IsEnum;
+                if (isEnum == false)
+                {
+                    var nonNullableType = Nullable.GetUnderlyingType(type);
+                    if (nonNullableType != null)
+                        isEnum = nonNullableType.IsEnum;
+                }
+
+                return isEnum;
+            }
         }
 
         private void VisitType(Type type)
