@@ -297,6 +297,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return StaticIndexHelper.IsStaleDueToReferences(this, databaseContext, indexContext, referenceCutoff, stalenessReasons) || isStale;
         }
 
+        public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
+        {
+            var staticEntries = _compiled.OutputFields.ToHashSet();
+
+            var dynamicEntries = GetDynamicEntriesFields(staticEntries)
+                .Except(staticEntries)
+                .ToArray();
+
+            return (staticEntries, dynamicEntries);
+        }
+
         protected override unsafe long CalculateIndexEtag(DocumentsOperationContext documentsContext, TransactionOperationContext indexContext,
             QueryMetadata query, bool isStale)
         {

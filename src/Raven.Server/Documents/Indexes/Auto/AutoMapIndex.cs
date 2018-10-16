@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.ServerWide.Context;
@@ -45,6 +46,18 @@ namespace Raven.Server.Documents.Indexes.Auto
         {
             base.SetState(state);
             Definition.State = state;
+        }
+
+        public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
+        {
+            var staticEntries = Definition
+                .IndexFields
+                .Keys
+                .ToHashSet();
+
+            var dynamicEntries = GetDynamicEntriesFields(staticEntries);
+
+            return (staticEntries, dynamicEntries);
         }
 
         protected override void LoadValues()

@@ -142,6 +142,11 @@ namespace FastTests.Server.Documents.Indexing
             throw new NotImplementedException();
         }
 
+        public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
+        {
+            throw new NotImplementedException();
+        }
+
         public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch,
             IncludeDocumentsCommand includeDocumentsCommand)
         {
