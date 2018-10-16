@@ -79,24 +79,13 @@ namespace Raven.Server.Documents.Queries
                         documentsContext, 
                         fieldsToFetch, null);
 
+                    
+
                     foreach (var match in matchResults)
                     {
-                        if(query.Metadata.AliasesInGraphSelect.Length == 1 && query.Metadata.IsProjectionInGraphSelect == false)
-                        {
-                            final.AddResult(match.GetResult(query.Metadata.AliasesInGraphSelect[0]));
-                            continue;
-                        }
+                        var result = resultRetriever.ProjectFromMatch(match, documentsContext);
 
-                        var json = new DynamicJsonValue();
-                        match.Populate(json, query.Metadata.AliasesInGraphSelect, q.GraphQuery);
-
-                        var doc = documentsContext.ReadObject(json, "graph/projection");
-                        var projectedDoc = resultRetriever.Get(new Document
-                        {
-                            Data = doc
-                        });
-                     
-                        final.AddResult(projectedDoc);
+                        final.AddResult(result);
                     }
                 }        
 

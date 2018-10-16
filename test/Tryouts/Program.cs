@@ -19,9 +19,9 @@ namespace Tryouts
        
         public static void Main(string[] args)
         {
-            using (var test = new SimpleGraphQueries())
+            using (var test = new GraphQueries())
             {
-                test.FindTwoFriendliesWhoPointToTheSameVertex();
+                test.CanProjectSameDocumentTwice();
             }
             return;
             /*

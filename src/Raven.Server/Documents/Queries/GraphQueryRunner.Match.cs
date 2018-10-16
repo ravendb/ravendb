@@ -21,6 +21,7 @@ namespace Raven.Server.Documents.Queries
             {
                 Document result = null;
                 _inner?.TryGetValue(alias, out result);
+                result?.EnsureMetadata();
                 return result;
             }           
 

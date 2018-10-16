@@ -149,11 +149,6 @@ namespace Raven.Server.Documents.Queries
 
         public SelectField[] SelectFields;
 
-        //in case we have JS function in SELECT, keep the original select fields
-        public string[] AliasesInGraphSelect;
-
-        public bool IsProjectionInGraphSelect;
-
         public HighlightingField[] Highlightings;
 
         public ExplanationField Explanation;
@@ -211,6 +206,8 @@ namespace Raven.Server.Documents.Queries
             WhereFields[indexFieldName] = new WhereField(isFullTextSearch: search, isExactSearch: exact, spatial: spatial);
         }
 
+        private readonly static Dictionary<StringSegment, WithEdgesExpression> EmptyEdges = new Dictionary<StringSegment, WithEdgesExpression>();
+
         private void Build(BlittableJsonReaderObject parameters)
         {
             string fromAlias = null;
@@ -233,53 +230,45 @@ namespace Raven.Server.Documents.Queries
             if (Query.Load != null)
                 HandleLoadClause(parameters);
 
-            if (Query.SelectFunctionBody.FunctionText != null)
-                HandleSelectFunctionBody(parameters);
-            else if (Query.Select != null)
-                FillSelectFields(parameters);
-
             if (IsGraph)
             {
-                var edgePredicateKeys = Query.GraphQuery.WithEdgePredicates?.Keys ?? Enumerable.Empty<StringSegment>();
-                var documentQueryKeys = Query.GraphQuery.WithDocumentQueries.Keys;
+                var edgePredicateKeys = Query.GraphQuery.WithEdgePredicates ?? EmptyEdges;
+                var documentQueryKeys = Query.GraphQuery.WithDocumentQueries;
+
+                foreach (var edge in edgePredicateKeys)
+                {
+                    RootAliasPaths.TryAdd(edge.Key, (null, false, false, false, null));
+                }
+                foreach (var doc in documentQueryKeys)
+                {
+                    RootAliasPaths.TryAdd(doc.Key, (null, false, false, false, null));
+                }
 
                 if (documentQueryKeys == null)
                 {
                     ThrowMissingVertexMatchClauses();
                 }
-
-                
-                if (Query.Select != null && Query.Select.Count == 1)
+              
+                if (Query.Select != null)
                 {
-                    var alias = ((FieldExpression)Query.Select[0].Expression).Compound[0];
-                    IsProjectionInGraphSelect = ((FieldExpression)Query.Select[0].Expression).Compound.Count > 1;
-                    var edgeKeys = edgePredicateKeys.ToArray();
-                   
-                    if (!edgeKeys.Contains(alias) && documentQueryKeys != null && !documentQueryKeys.Contains(alias))
+                    foreach (var projection in Query.Select)
                     {
-                        ThrowOneUndefinedAlias(alias);
-                    }
+                        if (!(projection.Expression is FieldExpression field))
+                            continue;
 
-                    AliasesInGraphSelect = new[] { (string)alias };
-                }
-                else if (Query.Select != null && Query.Select.Count > 1)
-                {
-                    //make sure that there are no undefined aliases in select
-                    var selectAliases = Query.Select.Select(x => ((FieldExpression)x.Expression).Compound[0]);
-                    IsProjectionInGraphSelect = Query.Select.Any(x => ((FieldExpression)x.Expression).Compound.Count > 1);
-                    var aliasesUndefinedInQuery = selectAliases.Except(edgePredicateKeys.Union(documentQueryKeys)).ToArray();
-                    if (aliasesUndefinedInQuery.Length > 0)
-                    {
-                        ThrowOneOrMoreUndefinedAlias(aliasesUndefinedInQuery);
+                        var alias = field.Compound[0];
+                        if (!edgePredicateKeys.ContainsKey(alias) && !documentQueryKeys.ContainsKey(alias))
+                        {
+                            ThrowOneUndefinedAlias(alias);
+                        }
                     }
-
-                    AliasesInGraphSelect = Array.Empty<string>();
-                }
-                else
-                {
-                    AliasesInGraphSelect = edgePredicateKeys.Union(documentQueryKeys).Select(str => (string)str).ToArray();
                 }
             }
+
+            if (Query.SelectFunctionBody.FunctionText != null)
+                HandleSelectFunctionBody(parameters);
+            else if (Query.Select != null)
+                FillSelectFields(parameters);
 
             if (Query.Where != null)
             {
@@ -568,25 +557,6 @@ namespace Raven.Server.Documents.Queries
                 sb.Append(alias.Key);
                 args[index++] = SelectField.Create(QueryFieldName.Empty, alias.Key, alias.Value.PropertyPath,
                     alias.Value.Array, true, alias.Value.Parameter, alias.Value.Quoted, alias.Value.LoadFromAlias);
-            }
-
-            if (IsGraph)
-            {
-                foreach (var withClause in Query.GraphQuery.WithDocumentQueries)
-                {
-                    if (index != 0)
-                        sb.Append(", ");
-                    sb.Append(withClause.Key);
-                    args[index++] = SelectField.Create(QueryFieldName.Empty, withClause.Key, null, false, false);
-                }
-
-                foreach (var withEdgePredicate in Query.GraphQuery.WithEdgePredicates)
-                {
-                    if (index != 0)
-                        sb.Append(", ");
-                    sb.Append(withEdgePredicate.Key);
-                    args[index++] = SelectField.Create(QueryFieldName.Empty, withEdgePredicate.Key, null, false, false);
-                }
             }
 
             if (index != 0)
@@ -909,6 +879,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         [ThreadStatic] private static HashSet<string> _duplicateAliasHelper;
+
         static QueryMetadata()
         {
             ThreadLocalCleanup.ReleaseThreadLocalState += () => _duplicateAliasHelper = null;
@@ -1293,7 +1264,9 @@ namespace Raven.Server.Documents.Queries
                 quoted = sourceAlias.Quoted;
                 loadFromAlias = sourceAlias.LoadFromAlias;
             }
-            return SelectField.Create(name, alias, sourceAlias.Path, array, hasSourceAlias, parameter, quoted, loadFromAlias);
+            var fld = SelectField.Create(name, alias, sourceAlias.Path, array, hasSourceAlias, parameter, quoted, loadFromAlias);
+            fld.ExpressionField = expressionField;
+            return fld;
         }
 
         public QueryFieldName GetIndexFieldName(FieldExpression fe, BlittableJsonReaderObject parameters)
