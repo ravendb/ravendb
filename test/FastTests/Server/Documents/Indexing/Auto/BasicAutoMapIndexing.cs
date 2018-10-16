@@ -932,13 +932,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
         [Fact]
         public async Task AutoIndexesShouldBeMarkedAsIdleAndDeleted()
         {
-            DatabaseRecord ReadRecord(DocumentDatabase database)
-            {
-                using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                    return database.ServerStore.Cluster.ReadDatabase(context, database.Name);
-            }
-
             void WaitForIndexDeletion(DocumentDatabase database, string indexName)
             {
                 Assert.True(SpinWait.SpinUntil(() => database.IndexStore.GetIndex(indexName) == null, TimeSpan.FromSeconds(15)));
