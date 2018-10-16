@@ -17,7 +17,7 @@ namespace Raven.Server.ServerWide.Memory
         {
             if (isRunningOn32Bits)
             {
-                currentUsage = null;
+                currentUsage = new ProcessMemoryUsage(-1, -1);
                 return false;
             }
 

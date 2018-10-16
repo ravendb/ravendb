@@ -549,22 +549,22 @@ loadToOrders(orderData);");
 
                 await client.ConnectAsync(new Uri(str), CancellationToken.None);
                 var task = Task.Run((Func<Task>)(async () =>
-               {
-                   ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
-                   while (client.State == WebSocketState.Open)
-                   {
-                       var value = await ReadFromWebSocket(buffer, client);
-                       lock (sb)
-                       {
-                           mre.Set();
-                           sb.AppendLine(value);
-                       }
-                       const string expectedValue = "skipping document: orders/1";
-                       if (value.Contains(expectedValue) || sb.ToString().Contains(expectedValue))
-                           return;
+                {
+                    ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
+                    while (client.State == WebSocketState.Open)
+                    {
+                        var value = await ReadFromWebSocket(buffer, client);
+                        lock (sb)
+                        {
+                            mre.Set();
+                            sb.AppendLine(value);
+                        }
+                        const string expectedValue = "skipping document: orders/1";
+                        if (value.Contains(expectedValue) || sb.ToString().Contains(expectedValue))
+                            return;
 
-                   }
-               }));
+                    }
+                }));
                 await mre.WaitAsync(TimeSpan.FromSeconds(60));
                 SetupSqlEtl(store, @"output ('Tralala'); 
 
@@ -620,7 +620,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var result = (SqlEtlTestScriptResult) SqlEtl.TestScript(new TestSqlEtlScript
+                    var result = (SqlEtlTestScriptResult)SqlEtl.TestScript(new TestSqlEtlScript
                     {
                         PerformRolledBackTransaction = performRolledBackTransaction,
                         DocumentId = "orders/1-A",
@@ -927,7 +927,7 @@ loadToOrders(orderData);
                         dbCommand.CommandText = " SELECT Pic FROM Orders WHERE Id = 'orders/1-A'";
 
                         var sqlDataReader = dbCommand.ExecuteReader();
-                        
+
                         Assert.True(sqlDataReader.Read());
                         Assert.True(sqlDataReader.IsDBNull(0));
                     }
