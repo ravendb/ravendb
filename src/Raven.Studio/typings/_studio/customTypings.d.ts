@@ -73,6 +73,10 @@ declare module "ace/ace" {
     export = ace;
 }
 
+interface CSS {
+    escape(input: string): string;
+}
+
 interface KnockoutObservable<T> {
     throttle(throttleTimeInMs: number): KnockoutObservable<T>;
     distinctUntilChanged(): KnockoutObservable<T>;
