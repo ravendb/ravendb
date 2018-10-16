@@ -125,7 +125,7 @@
                                     <i data-bind="attr: { class: $root.createIsLocalDatabaseObservable(name)() ? 'icon-database-home': 'icon-database' }"></i><span data-bind="text: name"></span>
                                 </a>
                             </h3>
-                            <span data-bind="" class="label text-uppercase label-success" style="">Testing</span>
+                            <span data-bind="attr: { class: 'label text-uppercase ' + $root.environmentClass(environment)() }, text: environment, visible: environment() !== 'None'">Development</span>
                         </div>
                         <div class="flex-horizontal">
                             <div class="database-encryption-status">
