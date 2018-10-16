@@ -297,7 +297,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (existing.IsEdge != isEdge)
                     ThrowDuplicateAliasWithoutSameBody(start);
 
-                if (path != existing.Path)
+                if (path.Equals(existing.Path) ==false)
                     ThrowDuplicateAliasWithoutSameBody(start);
 
                 if((filter != null ) != (existing.Filter != null))

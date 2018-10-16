@@ -378,7 +378,7 @@ namespace FastTests.Graph
             using (var store = GetDocumentStore())
             {
                 CreateNorthwindDatabase(store);
-                using (var one= store.OpenSession())
+                using (var one= store.OpenSession())    
                 using (var two = store.OpenSession())
                 {
                     var orderFromMatch = one.Advanced.RawQuery<Order>(@"match (o:Orders (id() = 'orders/825-A'))").First();
