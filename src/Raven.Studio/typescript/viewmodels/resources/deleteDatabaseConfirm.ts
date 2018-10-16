@@ -6,9 +6,12 @@ import dialog = require("plugins/dialog");
 
 class deleteDatabaseConfirm extends confirmViewModelBase<deleteDatabaseConfirmResult> {
     private isKeepingFiles = ko.observable<boolean>(true);
+    private encryptedCount: number;
 
     constructor(private databasesToDelete: Array<databaseInfo>) {
         super();
+
+        this.encryptedCount = databasesToDelete.filter(x => x.isEncrypted()).length;
     }
 
     keepFiles() {
