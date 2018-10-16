@@ -37,6 +37,7 @@ class trafficWatch extends viewModelBase {
         ["BulkDocs", "Counters", "Documents", "Hilo", "Index", "MultiGet", "None", "Operations", "Queries", "Streams", "Subscriptions"];
     private filteredTypeData = this.allTypeData.map(x => new typeData(x));
     private selectedTypeNames = ko.observableArray<string>(this.allTypeData.splice(0));
+    onlyErrors = ko.observable<boolean>(false);
 
     stats = {
         count: ko.observable<string>(),
@@ -61,6 +62,7 @@ class trafficWatch extends viewModelBase {
         this.updateStats();
 
         this.filter.throttle(500).subscribe(() => this.refresh());
+        this.onlyErrors.subscribe(() => this.refresh());
         this.selectedTypeNames.subscribe(() => this.refresh());
     }
     
@@ -108,10 +110,12 @@ class trafficWatch extends viewModelBase {
         const textFilter = this.filter();
         const uri = item.RequestUri.toLocaleLowerCase();
         
+        
         const textFilterMatch = !textFilter || uri.includes(textFilter.toLocaleLowerCase()); 
         const typeMatch = _.includes(this.selectedTypeNames(), item.Type);
+        const statusMatch = !this.onlyErrors() || item.ResponseStatusCode >= 400;
         
-        return textFilterMatch && typeMatch;
+        return textFilterMatch && typeMatch && statusMatch;
     }
 
     private updateStats() {
@@ -212,8 +216,9 @@ class trafficWatch extends viewModelBase {
     private fetchTraffic(skip: number, take: number): JQueryPromise<pagedResult<Raven.Client.Documents.Changes.TrafficWatchChange>> {
         const textFilterDefined = this.filter();
         const filterUsingType = this.selectedTypeNames().length !== this.filteredTypeData.length;
+        const filterUsingStatus = this.onlyErrors();
         
-        if (textFilterDefined || filterUsingType) {
+        if (textFilterDefined || filterUsingType || filterUsingStatus) {
             this.filteredData = this.allData.filter(item => this.matchesFilters(item));
         } else {
             this.filteredData = this.allData;

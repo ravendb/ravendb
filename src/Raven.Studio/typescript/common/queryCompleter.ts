@@ -822,7 +822,7 @@ class queryCompleter {
                 callback(collectionsTracker.default.getCollectionNames());
             },
             indexFields: (indexName, callback) => {
-                new getIndexEntriesFieldsCommand(indexName, activeDatabase())
+                new getIndexEntriesFieldsCommand(indexName, activeDatabase(), false)
                     .execute()
                     .done(result => {
                         callback(result.Results);

@@ -387,7 +387,26 @@ namespace Voron.Data.BTrees
                     decompressedLeafPage = _tree.DecompressPage(page, skipCache: true);
 
                     if (decompressedLeafPage.NumberOfEntries > 0)
-                        node = decompressedLeafPage.GetNode(0);
+                    {
+                        if (page.NumberOfEntries == 0)
+                            node = decompressedLeafPage.GetNode(0);
+                        else
+                        {
+                            // we want to find the smallest key in compressed page
+                            // it can be inside compressed part or not compressed one
+                            // in particular, it can be the key of compression tombstone node that we don't see after decompression
+                            // so we need to take first keys from decompressed and compressed page and compare them
+
+                            var decompressedNode = decompressedLeafPage.GetNode(0);
+                            var compressedNode = page.GetNode(0);
+
+                            using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, decompressedNode, out var firstDecompressedKey))
+                            using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, compressedNode, out var firstCompressedKey))
+                            {
+                                node = SliceComparer.CompareInline(firstDecompressedKey, firstCompressedKey) > 0 ? compressedNode : decompressedNode;
+                            }
+                        }
+                    }
                     else
                     {
                         // we have empty page after decompression (each compressed entry has a corresponding CompressionTombstone)

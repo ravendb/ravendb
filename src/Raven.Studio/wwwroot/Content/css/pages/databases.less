@@ -138,9 +138,8 @@
             font-size: 118%;
             margin-bottom: 0;
             font-weight: normal;
-            overflow: hidden;
-            text-overflow: ellipsis;
             white-space: nowrap;
+            overflow: hidden;
             flex-grow: 1;
         }
 
@@ -159,10 +158,26 @@
             .database-name {
                 top: -3px;
                 position: relative;
+                display: flex;
+
+                a, span {
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                i {
+                    flex-shrink: 0;
+                }
             }
 
             h3 {
                 margin-top: 0px;
+            }
+
+            .label {
+                font-size: 11px;
+                margin-right: @grid-gutter-width/2;
+                flex-shrink: 0;
             }
         }
 

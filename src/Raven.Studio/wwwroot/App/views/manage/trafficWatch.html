@@ -18,30 +18,39 @@
             <select id="visibleTypesSelector" size="5" multiple="multiple"
                     data-bind="options: filteredTypeData, selectedOptions: selectedTypeNames, optionsText: 'propertyName', optionsValue: 'propertyName'"></select>
         </div>
-        <div class="flex-end text-muted">
-            <div class="text-center"><small>Requests:</small></div>
-            <div class="text-center">
-                <small><strong data-bind="text: stats.count"></strong></small>
-            </div>
+        <div class="checkbox">
+            <input class="styled" id="onlyErrors" type="checkbox" data-bind="checked: onlyErrors">
+            <label for="onlyErrors">Only errors</label>
         </div>
-        <div class="flex-end text-muted">
-            <div class="text-center"><small>Minimum duration:</small></div>
-            <div class="text-center">
-                <small><strong data-bind="text: stats.min"></strong></small>
+        <div class="flex-end text-muted flex-horizontal flex-grow">
+            <div class="flex-separator"></div>
+            <div>
+                <div class="text-center"><small>Requests:</small></div>
+                <div class="text-center">
+                    <small><strong data-bind="text: stats.count"></strong></small>
+                </div>
             </div>
-        </div>
-        <div class="flex-end text-muted" data-toggle="tooltip" title="Average request duration (excluding web sockets)" data-placement="right" >
-            <div class="text-center"><small>Average duration:</small></div>
-            <div class="text-center">
-                <small><strong data-bind="text: stats.avg"></strong></small>
+            <div class="flex-end text-muted">
+                <div class="text-center"><small>Minimum duration:</small></div>
+                <div class="text-center">
+                    <small><strong data-bind="text: stats.min"></strong></small>
+                </div>
             </div>
-        </div>
-        <div class="flex-end text-muted">
-            <div class="text-center"><small>Maximum duration:</small></div>
-            <div class="text-center">
-                <small><strong data-bind="text: stats.max"></strong></small>
+            <div class="flex-end text-muted" data-toggle="tooltip" title="Average request duration (excluding web sockets)" data-placement="right" >
+                <div class="text-center"><small>Average duration:</small></div>
+                <div class="text-center">
+                    <small><strong data-bind="text: stats.avg"></strong></small>
+                </div>
             </div>
+            <div class="flex-end text-muted">
+                <div class="text-center"><small>Maximum duration:</small></div>
+                <div class="text-center">
+                    <small><strong data-bind="text: stats.max"></strong></small>
+                </div>
+            </div>
+            <div class="flex-separator"></div>
         </div>
+        
     </div>
     <div class="flex-horizontal flex-noshrink">
         <div class="flex-separator"></div>
