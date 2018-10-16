@@ -16,7 +16,6 @@ import transformationScriptSyntax = require("viewmodels/database/tasks/transform
 import ongoingTaskSqlEtlTableModel = require("models/database/tasks/ongoingTaskSqlEtlTableModel");
 import connectionStringSqlEtlModel = require("models/database/settings/connectionStringSqlEtlModel");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import docsIdsBasedOnQueryFetcher = require("viewmodels/database/patch/docsIdsBasedOnQueryFetcher");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import jsonUtil = require("common/jsonUtil");
 import document = require("models/database/documents/document");
@@ -31,7 +30,6 @@ class sqlTaskTestMode {
     performRolledBackTransaction = ko.observable<boolean>(false);
     documentId = ko.observable<string>();
     docsIdsAutocompleteResults = ko.observableArray<string>([]);
-    docsIdsAutocompleteSource: docsIdsBasedOnQueryFetcher;
     db: KnockoutObservable<database>;
     configurationProvider: () => Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration;
     connectionProvider: () => Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString;
@@ -71,7 +69,6 @@ class sqlTaskTestMode {
         this.validateParent = validateParent;
         this.configurationProvider = configurationProvider;
         this.connectionProvider = connectionProvider;
-        this.docsIdsAutocompleteSource = new docsIdsBasedOnQueryFetcher(db);
         
         _.bindAll(this, "onAutocompleteOptionSelected");
     }

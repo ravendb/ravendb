@@ -12,6 +12,8 @@ import docsIdsBasedOnQueryFetcher = require("viewmodels/database/patch/docsIdsBa
 import patchCommand = require("commands/database/patch/patchCommand");
 import validationHelpers = require("viewmodels/common/validationHelpers");
 import documentPreviewer = require("models/database/documents/documentPreviewer");
+import queryUtil = require("common/queryUtil");
+import getIndexesDefinitionsCommand = require("commands/database/index/getIndexesDefinitionsCommand");
 
 class patchTester extends viewModelBase {
 
@@ -41,6 +43,8 @@ class patchTester extends viewModelBase {
     };
 
     private $body = $('body');
+    
+    mapReduceIndexesCache = new Set<string>();
 
     docsIdsAutocompleteResults = ko.observableArray<string>([]);
     docsIdsAutocompleteSource: docsIdsBasedOnQueryFetcher;
@@ -67,6 +71,16 @@ class patchTester extends viewModelBase {
         });
 
         this.docsIdsAutocompleteSource = new docsIdsBasedOnQueryFetcher(this.db);
+        
+        new getIndexesDefinitionsCommand(this.db(), 0, 1024 * 1024)
+            .execute()
+            .then(indexes => {
+                indexes.forEach(index => {
+                    if (index.Type === "AutoMapReduce" || index.Type === "MapReduce" || index.Type === "JavaScriptMapReduce") {
+                        this.mapReduceIndexesCache.add(index.Name.toLocaleLowerCase());
+                    }
+                })
+            });
     }
 
     private initObservables() {
@@ -89,14 +103,21 @@ class patchTester extends viewModelBase {
                return;
            }
 
+           const [name, type] = queryUtil.getCollectionOrIndexName(this.query());
+           
+           if (type === "index" && this.mapReduceIndexesCache.has(name.toLocaleLowerCase())) {
+               // patch is not supported for map-reduce indexes
+               messagePublisher.reportWarning("Patch operation is not supported for Map-Reduce indexes");
+               return;
+           }
+           
            this.spinners.autocomplete(true);
-           this.docsIdsAutocompleteSource.fetch(this.query())
+           this.docsIdsAutocompleteSource.fetch(this.documentId(), this.query())
                 .done(results => {
                     const term = item.toLowerCase();
                     results = _.take(results.filter(x => x.toLowerCase().indexOf(term) !== -1), 10);
                     this.docsIdsAutocompleteResults(results);
                 })
-                .fail((err: JQueryXHR) => messagePublisher.reportError("Error fetching documents IDs", err.responseText, err.statusText))
                 .always(() => this.spinners.autocomplete(false));
         });
     }
