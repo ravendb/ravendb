@@ -77,14 +77,14 @@ namespace Raven.Server.Documents.Queries
 
             if (result.Metadata.Query.Offset != null)
             {
-                var start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset);
+                var start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
                 result.Start = result.Start != 0 || json.TryGet(nameof(Start), out int _)
                     ? Math.Min(start, result.Start) 
                     : start;
             }
 
             if (result.Metadata.Query.Limit != null)
-                result.PageSize = Math.Min((int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit), result.PageSize);
+                result.PageSize = Math.Min((int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue), result.PageSize);
 
             return result;
         }
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Queries
 
             if (result.Metadata.Query.Offset != null)
             {
-                start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset);
+                start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
                 result.Start = startSet 
                     ? Math.Min(start, result.Start) 
                     : start;
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Queries
 
             if (result.Metadata.Query.Limit != null)
             {
-                pageSize = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit);
+                pageSize = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
                 result.Start = pageSizeSet 
                     ? Math.Min(pageSize, result.PageSize) 
                     : pageSize;
