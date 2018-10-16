@@ -54,6 +54,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             var analyzerType = LuceneAssembly.GetType(analyzerTypeAsString) ??
                                Type.GetType(analyzerTypeAsString) ??
+                               Type.GetType("Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers." + analyzerTypeAsString) ??
                                LuceneAssembly.GetType("Lucene.Net.Analysis." + analyzerTypeAsString) ??
                                LuceneAssembly.GetType("Lucene.Net.Analysis.Standard." + analyzerTypeAsString);
 

@@ -6,7 +6,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Config;
-using SlowTests.Utils.Analyzers;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                                   Name = new[] { i.Name },
                               };
                 Index(r => r.Name, FieldIndexing.Search);
-                Analyzers.Add(n => n.Name, typeof(NGramAnalyzer).AssemblyQualifiedName);
+                Analyzers.Add(n => n.Name, nameof(NGramAnalyzer));
             }
         }
 
