@@ -32,6 +32,8 @@ class databaseInfo {
     indexingErrors = ko.observable<number>();
     alerts = ko.observable<number>();
 
+    environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
+    
     badgeText: KnockoutComputed<string>;
     badgeClass: KnockoutComputed<string>;
 
@@ -172,6 +174,8 @@ class databaseInfo {
         this.loadError(dto.LoadError);
         this.uptime(generalUtils.timeSpanAsAgo(dto.UpTime, false));
         this.dynamicDatabaseDistribution(dto.DynamicNodesDistribution);
+        
+        this.environment(dto.Environment);
 
         if (dto.BackupInfo && dto.BackupInfo.LastBackup) {
             this.lastFullOrIncrementalBackup(moment.utc(dto.BackupInfo.LastBackup).local().fromNow());
