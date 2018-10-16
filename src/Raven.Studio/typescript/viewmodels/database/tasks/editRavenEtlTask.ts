@@ -11,7 +11,6 @@ import generalUtils = require("common/generalUtils");
 import ongoingTaskRavenEtlEditModel = require("models/database/tasks/ongoingTaskRavenEtlEditModel");
 import ongoingTaskRavenEtlTransformationModel = require("models/database/tasks/ongoingTaskRavenEtlTransformationModel");
 import connectionStringRavenEtlModel = require("models/database/settings/connectionStringRavenEtlModel");
-import docsIdsBasedOnQueryFetcher = require("viewmodels/database/patch/docsIdsBasedOnQueryFetcher");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import transformationScriptSyntax = require("viewmodels/database/tasks/transformationScriptSyntax");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
@@ -33,7 +32,6 @@ type resultItem = {
 class ravenTaskTestMode {
     documentId = ko.observable<string>();
     docsIdsAutocompleteResults = ko.observableArray<string>([]);
-    docsIdsAutocompleteSource: docsIdsBasedOnQueryFetcher;
     db: KnockoutObservable<database>;
     configurationProvider: () => Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration;
 
@@ -64,7 +62,6 @@ class ravenTaskTestMode {
         this.db = db;
         this.validateParent = validateParent;
         this.configurationProvider = configurationProvider;
-        this.docsIdsAutocompleteSource = new docsIdsBasedOnQueryFetcher(db);
 
         _.bindAll(this, "onAutocompleteOptionSelected");
     }

@@ -327,7 +327,7 @@ class patch extends viewModelBase {
     }
     
     private getRecentPatchName(): string {
-        const collectionIndexName = queryUtil.getCollectionOrIndexName(this.patchDocument().query());
+        const [collectionIndexName] = queryUtil.getCollectionOrIndexName(this.patchDocument().query());
 
         return patch.recentKeyword + " (" + collectionIndexName + ")";
     }

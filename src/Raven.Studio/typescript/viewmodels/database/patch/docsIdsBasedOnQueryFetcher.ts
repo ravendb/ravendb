@@ -11,8 +11,8 @@ class docsIdsBasedOnQueryFetcher {
     constructor(database: KnockoutObservable<database>) {
         this.database = database
     }
-
-    fetch(query: string, count: number = docsIdsBasedOnQueryFetcher.MAX_RESULTS): JQueryPromise<string[]> {
+    
+    fetch(documentIdPrefix: string, query: string, count: number = docsIdsBasedOnQueryFetcher.MAX_RESULTS): JQueryPromise<string[]> {
         if (!query)
             query = "from @all_docs";
 
@@ -21,18 +21,16 @@ class docsIdsBasedOnQueryFetcher {
             wherelessQueryText = "from @all_docs";
         
         const criteria = new queryCriteria();
-        criteria.queryText(`${wherelessQueryText}`);
+        criteria.queryText(`${wherelessQueryText} where startsWith(id(), '${this.escape(documentIdPrefix)}')`);
         criteria.metadataOnly(true);
+        
+        return new queryCommand(this.database(), 0, 10, criteria)
+            .execute()
+            .then(result => result.items.map(x => x.getId()));
+    }
 
-        const q = new queryCommand(this.database(), 0, 100, criteria);
-        return q.execute()
-            .then(result => { 
-                const ids = result.items
-                .map(x => x.getId())
-                .filter(x => x && x.indexOf('Raven') !== 0);
-
-                return ids;
-            });
+    private escape(inputString: string) {
+        return inputString ? inputString.replace("'", "''") : "";
     }
 }
 
@@ -59,7 +57,7 @@ from 'Roder'
      * @type {RegExp}
      */
     private static IndexInfoQueryPartRegex = /from\s+(index)?\s*(('[^']+'|"[^"]+")|[\S]+)/mi;
-
+    
     static extract(query: string) {
         if (!query)
             return '';
