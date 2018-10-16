@@ -2,7 +2,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
-using SlowTests.Utils.Analyzers;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Xunit;
 
 namespace SlowTests.MailingList

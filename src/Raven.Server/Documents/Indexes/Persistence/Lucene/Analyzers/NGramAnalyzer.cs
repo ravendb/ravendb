@@ -1,18 +1,11 @@
-// -----------------------------------------------------------------------
-//  <copyright file="NGramAnalyzer.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.IO;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Version = Lucene.Net.Util.Version;
 
-namespace SlowTests.Utils.Analyzers
+namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
 {
     [NotForQuerying]
     public class NGramAnalyzer : Analyzer
