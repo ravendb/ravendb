@@ -1130,7 +1130,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         private void BuildPagination(StringBuilder queryText)
         {
-            if (Start > 0 && PageSize.HasValue)
+            if (PageSize.HasValue)
             {
                 queryText
                     .Append(" limit $")
@@ -1140,11 +1140,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
                 return;
             }
-
-            if (PageSize.HasValue)
-                queryText
-                    .Append(" limit $")
-                    .Append(AddQueryParameter(PageSize.Value));
             
             if (Start > 0)
                 queryText
