@@ -10,7 +10,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
-using Raven.Client.Documents.Operations.Backups;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
