@@ -67,6 +67,7 @@ namespace Raven.Client.Documents.Linq
         private const string DefaultAliasPrefix = "__alias";
         private bool _addedDefaultAlias;
         private Type _ofType;
+        private bool _isSelectArg;
 
         private readonly HashSet<string> _aliasKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -1469,7 +1470,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         _documentQuery.AddRootType(type);
                     }
 
-                    if (expression.Type.GetTypeInfo().IsGenericType)
+                    //set the _ofType variable only if OfType call precedes the projection
+                    if (_isSelectArg && expression.Type.GetTypeInfo().IsGenericType) 
                     {
                         _ofType = expression.Type.GetGenericArguments()[0];
                     }
@@ -1517,7 +1519,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             CheckForLetOrLoadFromSelect(expression, lambdaExpression);
                         }
 
+                        _isSelectArg = true;
                         VisitExpression(expression.Arguments[0]);
+
+                        _isSelectArg = false;
 
                         var operand = ((UnaryExpression)expression.Arguments[1]).Operand;
 
