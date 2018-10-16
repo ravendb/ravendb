@@ -32,7 +32,7 @@ from Orders as o
 where o.ShipTo.City = 'London'
 load o.Company as c
 select upper(c) as CompanyName, o.Employee
-fetch 1"
+limit 1"
                     });
 
                     var json = (BlittableJsonReaderObject)qr.Results[0];
@@ -52,7 +52,7 @@ select {
     CompanyName: upper(c),
     Employee: o.Employee
 }
-fetch 1"
+limit 1"
                     });
 
                     json = (BlittableJsonReaderObject)qr.Results[0];
