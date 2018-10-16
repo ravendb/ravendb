@@ -26,6 +26,7 @@ import changeSubscription = require("common/changeSubscription");
 import databasesManager = require("common/shell/databasesManager");
 import generalUtils = require("common/generalUtils");
 import popoverUtils = require("common/popoverUtils");
+import database = require("models/resources/database");
 import eventsCollector = require("common/eventsCollector");
 
 class databases extends viewModelBase {
@@ -54,6 +55,9 @@ class databases extends viewModelBase {
 
     accessManager = accessManager.default.databasesView;
     isAboveUserAccess = accessManager.default.operatorAndAbove;
+
+    environmentClass = (source: KnockoutObservable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>) => 
+        database.createEnvironmentColorComputed("label", source);
    
     constructor() {
         super();
