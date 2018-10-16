@@ -46,7 +46,7 @@ namespace Raven.Client.Extensions
                 return processes;
             }
             if (rv != 0)
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to RmStartSession");
+                throw new Win32Exception(Marshal.GetLastWin32Error(), $"Failed to RmStartSession (error: {rv})");
             try
             {
                 // Let the restart manager know what files we’re interested in
@@ -55,7 +55,7 @@ namespace Raven.Client.Extensions
                                          (uint) pathStrings.Length, pathStrings,
                                          0, null, 0, null);
                 if (rv != 0)
-                    throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to RmRegisterResources (sessionHandle=" + sessionHandle + ")");
+                    throw new Win32Exception(Marshal.GetLastWin32Error(), $"Failed to RmRegisterResources for file '{filePath}' with error {rv} (sessionHandle={sessionHandle})");
 
                 // Ask the restart manager what other applications 
                 // are using those files
@@ -90,10 +90,10 @@ namespace Raven.Client.Extensions
                         }
                     }
                     else
-                        throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to RmGetList (sessionHandle=" + sessionHandle + ")");
+                        throw new Win32Exception(Marshal.GetLastWin32Error(), $"Failed to RmGetList for file '{filePath}' with error {rv} (sessionHandle={sessionHandle})");
                 }
                 else if (rv != 0)
-                    throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to RmGetList (sessionHandle=" + sessionHandle + ")");
+                    throw new Win32Exception(Marshal.GetLastWin32Error(), $"Failed to RmGetList for file '{filePath}' with error {rv} (sessionHandle={sessionHandle})");
             }
             finally
             {
