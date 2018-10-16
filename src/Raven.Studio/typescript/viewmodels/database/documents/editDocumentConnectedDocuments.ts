@@ -241,7 +241,7 @@ class connectedDocuments {
         let relatedDocumentsCandidates: string[] = documentHelpers.findRelatedDocumentsCandidates(this.document());
 
         if (search) {
-            relatedDocumentsCandidates = relatedDocumentsCandidates.filter(x => x.includes(search));
+            relatedDocumentsCandidates = relatedDocumentsCandidates.filter(x => x.toLocaleLowerCase().includes(search));
         }
 
         const docIDsVerifyCommand = new verifyDocumentsIDsCommand(relatedDocumentsCandidates, this.db());
@@ -259,9 +259,15 @@ class connectedDocuments {
 
     fetchCounters(skip: number, take: number): JQueryPromise<pagedResult<counterItem>> {
         const doc = this.document();
+        const search = this.searchInput().toLocaleLowerCase();
 
         if (doc.__metadata.hasFlag("Revision")) {
-            const counters = doc.__metadata.revisionCounters();
+            let counters = doc.__metadata.revisionCounters();
+
+            if (search) {
+                counters = counters.filter(c => c.name.toLocaleLowerCase().includes(search));
+            }
+            
             return $.when({
                 items: counters.map(x => {
                     return {
@@ -283,7 +289,11 @@ class connectedDocuments {
         new getCountersCommand(doc.getId(), this.db())
             .execute()
             .done(result => {
-                const mappedResults = result.Counters.map(x => this.resultItemToCounterItem(x));               
+                if (search) {
+                    result.Counters = result.Counters.filter(x => x.CounterName.toLocaleLowerCase().includes(search));
+                }
+                const mappedResults = result.Counters
+                    .map(x => this.resultItemToCounterItem(x));               
               
                 fetchTask.resolve({
                     items: mappedResults,
@@ -297,7 +307,6 @@ class connectedDocuments {
     }
 
     private resultItemToCounterItem(counterDetail: Raven.Client.Documents.Operations.Counters.CounterDetail): counterItem {
-        
         const counter = counterDetail;
         
         let valuesPerNode = Array<nodeCounterValue>();
@@ -327,7 +336,7 @@ class connectedDocuments {
         let attachments: documentAttachmentDto[] = doc.__metadata.attachments() || [];
 
         if (search) {
-            attachments = attachments.filter(file => file.Name.includes(search));
+            attachments = attachments.filter(file => file.Name.toLocaleLowerCase().includes(search));
         }
 
         const mappedFiles = attachments.map(file => ({
