@@ -335,7 +335,7 @@ namespace Voron.Impl.Paging
                         new Win32Exception(lastWin32Error));
                 }
 
-                if (_options.EncryptionEnabled && LockMemory)
+                if (_options.EncryptionEnabled && LockMemory && size > 0)
                     LockMemory32Bits(result, size, state);
 
                 NativeMemory.RegisterFileMapping(_fileInfo.FullName, new IntPtr(result), size, GetAllocatedInBytes);
@@ -465,7 +465,7 @@ namespace Voron.Impl.Paging
                     if (!set.TryRemove(addr))
                         continue;
 
-                    if (_options.EncryptionEnabled && LockMemory)
+                    if (_options.EncryptionEnabled && LockMemory && addr.Size > 0)
                         UnlockMemory32Bits((byte*)addr.Address, addr.Size);
 
                     Interlocked.Add(ref _totalMapped, -addr.Size);

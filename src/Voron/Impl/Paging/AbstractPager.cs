@@ -55,7 +55,7 @@ namespace Voron.Impl.Paging
             {
                 newState.AddRef();
 
-                if (LockMemory)
+                if (LockMemory && _options.RunningOn32Bits == false)
                 {
                     try
                     {
@@ -98,7 +98,7 @@ namespace Voron.Impl.Paging
                 // From: https://msdn.microsoft.com/en-us/library/windows/desktop/ms686234(v=vs.85).aspx
                 // "The maximum number of pages that a process can lock is equal to the number of pages in its minimum working set minus a small overhead"
                 // let's increase the max size of memory we can lock by increasing the MinWorkingSet. On Windows, that is available for all users
-                var nextSize = Bits.NextPowerOf2(currentProcess.MinWorkingSet.ToInt64() + sumOfAllocationsInBytes);
+                var nextSize = Bits.NextPowerOf2(currentProcess.MinWorkingSet.ToInt64() + sumOfAllocationsInBytes + sizeToLock);
                 if (nextSize > int.MaxValue && IntPtr.Size == sizeof(int))
                 {
                     nextSize = int.MaxValue;
