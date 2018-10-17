@@ -11,6 +11,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Voron.Debugging;
 using Voron.Exceptions;
@@ -151,7 +152,7 @@ namespace Raven.Server.Documents
                 {
                     // clean shutdown, nothing to do
                 }
-                catch (Exception e) when (e is OutOfMemoryException)
+                catch (Exception e) when (e is EarlyOutOfMemoryException || e is OutOfMemoryException)
                 {
                     // this catch block is meant to handle potentially transient errors
                     // in particular, an OOM error is something that we want to recover
