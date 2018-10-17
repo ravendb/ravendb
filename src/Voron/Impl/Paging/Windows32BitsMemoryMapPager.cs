@@ -231,6 +231,43 @@ namespace Voron.Impl.Paging
 
         }
 
+        // The 32-bit pager doesn't hold allocation information in its pagerState. Mappings are created on demand.
+        // Locking/unlocking the memory is done for each mapping separately.
+        // (Unlike the way it's done in 64-bit where we map the entire file and we lock it all)
+        public override bool ShouldLockMemoryAtPagerLevel()
+        {
+            return false;
+        }
+
+        private void LockMemory32Bits(byte* address, long sizeToLock, TransactionState state)
+        {
+            try
+            {
+                if (Sodium.sodium_mlock(address, (UIntPtr)sizeToLock) != 0)
+                {
+                    if (DoNotConsiderMemoryLockFailureAsCatastrophicError == false)
+                    {
+                        TryHandleFailureToLockMemory(address, sizeToLock, state.TotalLoadedSize * 2);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to lock memory in 32-bit mode", e);
+            }
+        }
+        private void UnlockMemory32Bits(byte* address, long sizeToUnlock)
+        {
+            try
+            {
+                Sodium.sodium_munlock(address, (UIntPtr)sizeToUnlock);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to unlock memory in 32-bit mode", e);
+            }
+        }
+
         public override I4KbBatchWrites BatchWriter()
         {
             return new Windows32Bit4KbBatchWrites(this);
@@ -287,9 +324,9 @@ namespace Voron.Impl.Paging
                 if ((long)offset.Value + size > _fileStreamLength)
                 {
                     // this can happen when the file size is not a natural multiple of the allocation granularity
-                    // frex: granularity of 64KB, and the file size is 80KB. In this case, a request to map the last
+                    // For example: granularity of 64KB, and the file size is 80KB. In this case, a request to map the last
                     // 64 kb will run into a problem, there aren't any. In this case only, we'll map the bytes that are
-                    // actually there in the file, and if the codewill attemp to access beyond the end of file, we'll get
+                    // actually there in the file, and if the code will attempt to access beyond the end of file, we'll get
                     // an access denied error, but this is already handled in higher level of the code, since we aren't just
                     // handing out access to the full range we are mapping immediately.
                     if (allowPartialMapAtEndOfFile && (long)offset.Value < _fileStreamLength)
@@ -310,6 +347,8 @@ namespace Voron.Impl.Paging
                         new Win32Exception(lastWin32Error));
                 }
 
+                if (LockMemory && size > 0)
+                    LockMemory32Bits(result, size, state);
                 NativeMemory.RegisterFileMapping(_fileInfo.FullName, new IntPtr(result), size, GetAllocatedInBytes);
                 Interlocked.Add(ref _totalMapped, size);
                 var mappedAddresses = new MappedAddresses
@@ -433,6 +472,9 @@ namespace Voron.Impl.Paging
 
                     if (!set.TryRemove(addr))
                         continue;
+
+                    if (LockMemory && addr.Size > 0)
+                        UnlockMemory32Bits((byte*)addr.Address, addr.Size);
 
                     Interlocked.Add(ref _totalMapped, -addr.Size);
                     UnmapViewOfFile((byte*)addr.Address);

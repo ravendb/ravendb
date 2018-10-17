@@ -53,18 +53,24 @@ namespace Voron.Impl.Paging
             {
                 newState.AddRef();
 
-                if (LockMemory)
-                {
+                if (ShouldLockMemoryAtPagerLevel())
+                {                    
+                    // Note: This is handled differently in 32-bits.
+                    // Locking/unlocking the memory is done separately for each mapping.
                     try
                     {
                         foreach (var info in newState.AllocationInfos)
                         {
+                            if (info.Size == 0 || info.BaseAddress == null)
+                                continue;
+
                             if (Sodium.sodium_mlock(info.BaseAddress, (UIntPtr)info.Size) != 0)
                             {
                                 if (DoNotConsiderMemoryLockFailureAsCatastrophicError)
                                     continue; // okay, can skip this, then
 
-                                if (TryHandleFailureToLockMemory(newState, info))
+                                var sumOfAllocations = Bits.NextPowerOf2(newState.AllocationInfos.Sum(x => x.Size) * 2);
+                                if (TryHandleFailureToLockMemory(info.BaseAddress, info.Size, sumOfAllocations))
                                     break;
                             }
                         }
@@ -85,17 +91,21 @@ namespace Voron.Impl.Paging
             }
         }
 
-        private bool TryHandleFailureToLockMemory(PagerState newState, PagerState.AllocationInfo info)
+        public virtual bool ShouldLockMemoryAtPagerLevel()
+        {
+            return LockMemory;
+        }
+
+        protected bool TryHandleFailureToLockMemory(byte* addressToLock, long sizeToLock, long sumOfAllocationsInBytes)
         {
             var currentProcess = Process.GetCurrentProcess();
-            var sum = Bits.NextPowerOf2(newState.AllocationInfos.Sum(x => x.Size) * 2);
 
             if (PlatformDetails.RunningOnPosix == false)
             {
                 // From: https://msdn.microsoft.com/en-us/library/windows/desktop/ms686234(v=vs.85).aspx
                 // "The maximum number of pages that a process can lock is equal to the number of pages in its minimum working set minus a small overhead"
                 // let's increase the max size of memory we can lock by increasing the MinWorkingSet. On Windows, that is available for all users
-                var nextSize = Bits.NextPowerOf2(currentProcess.MinWorkingSet.ToInt64() + sum);
+                var nextSize = Bits.NextPowerOf2(currentProcess.MinWorkingSet.ToInt64() + sumOfAllocationsInBytes + sizeToLock);
                 if (nextSize > int.MaxValue && IntPtr.Size == sizeof(int))
                 {
                     nextSize = int.MaxValue;
@@ -112,7 +122,7 @@ namespace Voron.Impl.Paging
                     catch (Exception e)
                     {
                         throw new InsufficientMemoryException($"Need to increase the min working set size from {(long)currentProcess.MinWorkingSet:#,#;;0} to {nextSize:#,#;;0} but the max working set size was too small: {(long)currentProcess.MaxWorkingSet:#,#;;0}. " +
-                                                              $"Failed to increase the max working set size so we can lock {info.Size:#,#;;0} for {FileName}. With encrypted " +
+                                                              $"Failed to increase the max working set size so we can lock {sizeToLock:#,#;;0} for {FileName}. With encrypted " +
                                                               "databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error " +
                                                               "and aborting the current operation.", e);
                     }
@@ -124,22 +134,22 @@ namespace Voron.Impl.Paging
                 }
                 catch (Exception e)
                 {
-                    throw new InsufficientMemoryException($"Failed to increase the min working set size so we can lock {info.Size:#,#;;0} for {FileName}. With encrypted " +
+                    throw new InsufficientMemoryException($"Failed to increase the min working set size so we can lock {sizeToLock:#,#;;0} for {FileName}. With encrypted " +
                                                           "databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error " +
                                                           "and aborting the current operation.", e);
                 }
 
                 // now we can try again, after we raised the limit, we only do so once, though
-                if (Sodium.sodium_mlock(info.BaseAddress, (UIntPtr)info.Size) == 0)
+                if (Sodium.sodium_mlock(addressToLock, (UIntPtr)sizeToLock) == 0)
                     return false;
             }
 
             var msg =
-                $"Unable to lock memory for {FileName} with size {info.Size:#,#;;0}), with encrypted databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error and aborting the current operation.{Environment.NewLine}";
+                $"Unable to lock memory for {FileName} with size {sizeToLock:#,#;;0}), with encrypted databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error and aborting the current operation.{Environment.NewLine}";
             if (PlatformDetails.RunningOnPosix)
             {
                 msg +=
-                    $"The admin may configure higher limits using: 'sudo prlimit --pid {currentProcess.Id} --memlock={sum}' to increase the limit. (It's recommended to do that as part of the startup script){Environment.NewLine}";
+                    $"The admin may configure higher limits using: 'sudo prlimit --pid {currentProcess.Id} --memlock={sumOfAllocationsInBytes}' to increase the limit. (It's recommended to do that as part of the startup script){Environment.NewLine}";
             }
             else
             {
