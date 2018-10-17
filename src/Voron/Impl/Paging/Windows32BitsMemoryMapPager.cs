@@ -226,6 +226,14 @@ namespace Voron.Impl.Paging
             }
         }
 
+        // The 32-bit pager doesn't hold allocation information in its pagerState. Mappings are created on demand.
+        // Locking/unlocking the memory is done for each mapping separately.
+        // (Unlike the way it's done in 64-bit where we map the entire file and we lock it all)
+        public override bool ShouldLockMemoryAtPagerLevel()
+        {
+            return false;
+        }
+
         private void LockMemory32Bits(byte* address, long sizeToLock, TransactionState state)
         {
             try
@@ -335,7 +343,7 @@ namespace Voron.Impl.Paging
                         new Win32Exception(lastWin32Error));
                 }
 
-                if (_options.EncryptionEnabled && LockMemory && size > 0)
+                if (LockMemory && size > 0)
                     LockMemory32Bits(result, size, state);
 
                 NativeMemory.RegisterFileMapping(_fileInfo.FullName, new IntPtr(result), size, GetAllocatedInBytes);
@@ -465,7 +473,7 @@ namespace Voron.Impl.Paging
                     if (!set.TryRemove(addr))
                         continue;
 
-                    if (_options.EncryptionEnabled && LockMemory && addr.Size > 0)
+                    if (LockMemory && addr.Size > 0)
                         UnlockMemory32Bits((byte*)addr.Address, addr.Size);
 
                     Interlocked.Add(ref _totalMapped, -addr.Size);
