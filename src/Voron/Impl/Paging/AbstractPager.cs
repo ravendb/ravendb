@@ -55,8 +55,10 @@ namespace Voron.Impl.Paging
             {
                 newState.AddRef();
 
-                if (LockMemory && _options.RunningOn32Bits == false)
+                if (ShouldLockMemoryAtPagerLevel())
                 {
+                    // Note: This is handled differently in 32-bits.
+                    // Locking/unlocking the memory is done separately for each mapping.
                     try
                     {
                         foreach (var info in newState.AllocationInfos)
@@ -87,6 +89,11 @@ namespace Voron.Impl.Paging
                 PagerStateChanged?.Invoke(newState);
                 oldState?.Release();
             }
+        }
+
+        public virtual bool ShouldLockMemoryAtPagerLevel()
+        {
+            return LockMemory;
         }
 
         protected bool TryHandleFailureToLockMemory(byte* addressToLock, long sizeToLock, long sumOfAllocationsInBytes)
