@@ -696,12 +696,17 @@ namespace Voron
 
                 if (EncryptionEnabled)
                 {
-                    // even though we don't care need encryption here, we still need to ensure that this
+                    // even though we don't need encryption here, we still need to ensure that this
                     // isn't paged to disk
                     pager.LockMemory = true;
                     pager.DoNotConsiderMemoryLockFailureAsCatastrophicError = DoNotConsiderMemoryLockFailureAsCatastrophicError;
 
-                    pager.SetPagerState(pager.PagerState); // with LockMemory = true set
+                    // We need to call SetPagerState after setting LockMemory = true to ensure the initial temp buffer is protected.
+                    // In 32-bits it's not necessary to do this. We can assume there was no mapping made yet since the pager is new and mappings
+                    // are made on demand and not on creation of the pager state. Locking/unlocking the memory is done separately for each mapping.
+                    // (plus, we can't do this in 32-bits. We'll get an NRE for the mapping base address - there isn't one)
+                    if (RunningOn32Bits == false)
+                        pager.SetPagerState(pager.PagerState);
                 }
                 return pager;
             }
