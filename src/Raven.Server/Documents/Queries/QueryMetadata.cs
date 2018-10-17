@@ -167,9 +167,7 @@ namespace Raven.Server.Documents.Queries
             )
         {
             var split = fieldName.Value.Split(".");
-            if (split.Length > 1 && 
-                RootAliasPaths.Count > 0 &&
-                RootAliasPaths.TryGetValue(split[0], out _) == false)
+            if (split.Length > 1 && NotInRootAliasPaths(split[0]))
             {
                 ThrowUnknownAlias(split[0], parameters);
             }
@@ -345,9 +343,8 @@ namespace Raven.Server.Documents.Queries
             {
                 var expressionPath = ParseExpressionPath(include, path, Query.From.Alias);
 
-                if (expressionPath.LoadFromAlias != null &&
-                    RootAliasPaths.Count > 0 &&
-                    RootAliasPaths.TryGetValue(expressionPath.LoadFromAlias, out _) == false)
+                if (expressionPath.LoadFromAlias != null && 
+                    NotInRootAliasPaths(expressionPath.LoadFromAlias))
                     ThrowUnknownAlias(expressionPath.LoadFromAlias, parameters);
 
                 if (includes == null)
@@ -679,8 +676,7 @@ namespace Raven.Server.Documents.Queries
                 (path, loadFromAlias) = ParseExpressionPath(load.Expression, path, Query.From.Alias);
 
                 if (loadFromAlias != null && 
-                    RootAliasPaths.Count > 0 &&
-                    RootAliasPaths.TryGetValue(loadFromAlias, out _) == false)
+                    NotInRootAliasPaths(loadFromAlias))
                 {
                     ThrowUnknownAlias(loadFromAlias, parameters);
                 }
@@ -1996,7 +1992,7 @@ namespace Raven.Server.Documents.Queries
             return sb.ToString();
         }
 
-        private static readonly HashSet<string> _jsBaseObjects = new HashSet<string>
+        private static readonly HashSet<string> JsBaseObjects = new HashSet<string>
         {
             "Math", "Number", "Object", "Date"
         };
@@ -2014,10 +2010,10 @@ namespace Raven.Server.Documents.Queries
                         currentProp = identifier;
                         break;
                     case ArrowFunctionExpression arrowFunction:
-                        RemoveFromUnknowns(maybeUnknowns, arrowFunction.Params);
+                        RemoveFromUnknowns(arrowFunction.Params);
                         break;
                     case FunctionExpression functionExpression:
-                        RemoveFromUnknowns(maybeUnknowns, functionExpression.Params);
+                        RemoveFromUnknowns(functionExpression.Params);
                         break;
                     case Property prop when prop.Key == currentProp:
                         if (maybeUnknowns?.Count > 0)
@@ -2025,37 +2021,43 @@ namespace Raven.Server.Documents.Queries
                         currentProp = null;
                         break;
                     case StaticMemberExpression sme when sme.Object is Identifier id &&
-                                                         UnknownIdentifier(id.Name, parameters):
+                                                         UnknownIdentifier(id.Name):
                         maybeUnknowns = maybeUnknowns ?? new HashSet<string>();
                         maybeUnknowns.Add(id.Name);
                         break;
                 }
             }
 
+            bool UnknownIdentifier(string identifier)
+            {
+                return RootAliasPaths.TryGetValue(identifier, out _) == false &&
+                       JsBaseObjects.Contains(identifier) == false &&
+                       (parameters == null ||
+                        identifier.StartsWith("$") == false ||
+                        parameters.TryGet(identifier.Substring(1), out object _) == false);
+            }
+
+            void RemoveFromUnknowns(List<INode> functionParameters)
+            {
+                if (maybeUnknowns?.Count > 0 == false)
+                    return;
+
+                foreach (var p in functionParameters)
+                {
+                    if (!(p is Identifier i))
+                        continue;
+
+                    maybeUnknowns.Remove(i.Name);
+                }
+            }
+
             return new JavaScriptParser("return " + Query.SelectFunctionBody.FunctionText, new ParserOptions(), VerifyKnownAliases).ParseProgram();
         }
 
-        private bool UnknownIdentifier(string identifier, BlittableJsonReaderObject parameters)
+        private bool NotInRootAliasPaths(string key)
         {
-            return RootAliasPaths.TryGetValue(identifier, out _) == false &&
-                   _jsBaseObjects.Contains(identifier) == false &&
-                   (parameters == null || 
-                    identifier.StartsWith("$p") == false || 
-                    parameters.TryGet(identifier.Substring(1), out object _) == false);
-        }
-
-        private static void RemoveFromUnknowns(HashSet<string> maybeUnknowns, List<INode> parameters)
-        {
-            if (maybeUnknowns?.Count > 0 == false)
-                return;
-
-            foreach (var p in parameters)
-            {
-                if (!(p is Identifier i))
-                    continue;
-
-                maybeUnknowns.Remove(i.Name);
-            }
+            return RootAliasPaths.Count > 0 &&
+                   RootAliasPaths.TryGetValue(key, out _) == false;
         }
     }
 }

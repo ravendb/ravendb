@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Exceptions;
@@ -170,6 +171,26 @@ namespace SlowTests.Issues
                     var ex = Assert.Throws<InvalidQueryException>(() => query.ToList());
 
                     Assert.Contains("Unknown alias x, but there are aliases specified in the query (a)", ex.Message);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void ShouldThrowUnknownAlias9()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var s = store.OpenSession())
+                {
+                    var query = s.Advanced
+                        .RawQuery<object>("from EmailEvents as a " +
+                                          "where a.Email = 'email' " +
+                                          "select { Email: a.Email, Category: $category.Name, Event: $event.Date }") // unknown alias $event
+                        .AddParameter("category", new { Name = "support" });
+                    var ex = Assert.Throws<InvalidQueryException>(() => query.ToList());
+
+                    Assert.Contains("Unknown alias $event, but there are aliases specified in the query (a)", ex.Message);
 
                 }
             }
