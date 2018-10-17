@@ -24,6 +24,30 @@ namespace FastTests.Graph
             }
         }
 
+        public void AssertQueryResults(params (string q, int results)[] expected)
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new CreateSampleDataOperation());
+
+                WaitForIndexing(store);
+
+                foreach (var item in expected)
+                {
+                    using (var s = store.OpenSession())
+                    {
+                        var results = s.Advanced.RawQuery<object>(item.q).ToList();
+                        if(results.Count != item.results)
+                        {
+                            Assert.False(true,
+                                item.q + " was suppsed to return " + item.results + " but we got " + results.Count
+                                );
+                        }
+                    }
+                }
+            }
+        }
+
         public class OrderAndProduct
         {
             public string OrderId;
@@ -46,6 +70,28 @@ select {
                 Assert.Equal("orders/828-A", item.OrderId);
                 Assert.NotNull(item.Product);
             }
+        }
+
+        [Fact]
+        public void CanFilterIOnEdges()
+        {
+            // not a theory because I want to run all queries on a single db
+            AssertQueryResults(
+               ("match (o:Orders (id() = 'orders/828-A'))-[:Lines(ProductName = 'Chang').Product]->(p:Products)", 1),
+               ("match (o:Orders (id() = 'orders/828-A'))-[:Lines(ProductName != 'Chang').Product]->(p:Products)", 2),
+               ("match (o:Orders (id() = 'orders/17-A'))-[:Lines(Discount > 0).Product]->(p:Products)", 1),
+               ("match (o:Orders (id() = 'orders/17-A'))-[:Lines(Discount >= 0).Product]->(p:Products)", 2),
+               ("match (o:Orders (id() = 'orders/17-A'))-[:Lines(Discount <= 0.15).Product]->(p:Products)", 2),
+               ("match (o:Orders (id() = 'orders/17-A'))-[:Lines(Discount < 0.15).Product]->(p:Products)", 1),
+                ("match (o:Orders (id() = 'orders/828-A'))-[:Lines(ProductName in ('Spegesild', 'Chang') ).Product]->(p:Products)", 2),
+                ("match (o:Orders (id() = 'orders/830-A'))-[:Lines(Discount between 0 and 0.1).Product]->(p:Products)", 24),
+                ("match( e: Employees(Territories all in ('60179', '60601') ) )", 1),
+                ("match(e: Employees(Territories in ('60179', '60601')) )", 1)
+
+
+
+            );
+
         }
     }
 }

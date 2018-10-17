@@ -184,13 +184,30 @@ namespace Sparrow.Json
 
         public int CompareTo(object that)
         {
-            if (that is double)
-                return Compare(this, (double)that);
+            if (that is double d)
+                return Compare(this, d);
+
+            if (that is long l)
+                return Compare(this, l);
 
             if (that is LazyNumberValue)
                 return Compare(this, (LazyNumberValue)that);
 
             throw new NotSupportedException($"Could not compare with '{that}' of type '{that.GetType()}'.");
+        }
+
+        public int? TryCompareTo(object that)
+        {
+            if (that is double d)
+                return Compare(this, d);
+
+            if (that is long l)
+                return Compare(this, l);
+
+            if (that is LazyNumberValue)
+                return Compare(this, (LazyNumberValue)that);
+
+            return null;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

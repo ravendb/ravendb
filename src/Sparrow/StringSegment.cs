@@ -278,6 +278,28 @@ namespace Sparrow
             return string.Compare(Buffer, Offset, other, 0, Length, stringComparison) == 0;
         }
 
+
+
+        public int Compare(string other, StringComparison stringComparison)
+        {
+            if (other == null)
+                return 1;
+
+            var result = string.Compare(Buffer, Offset, other, 0, Length, stringComparison);
+            if (result == 0)
+                return Length - other.Length;
+            return result;
+        }
+
+
+        public int Compare(StringSegment other, StringComparison stringComparison)
+        {
+            var result = string.Compare(Buffer, Offset, other.Buffer, other.Offset, Length, stringComparison);
+            if (result == 0)
+                return Length - other.Length;
+            return result;
+        }
+
         public unsafe bool Equals(StringSegment other)
         {
             if (Length != other.Length)
