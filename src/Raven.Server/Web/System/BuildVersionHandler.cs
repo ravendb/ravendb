@@ -46,7 +46,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/build/version", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/build/version", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public async Task Get()
         {
             HttpContext.Response.Headers.Add(Constants.Headers.ServerStartupTime, ServerStore.Server.Statistics.StartUpTime.GetDefaultRavenFormat(isUtc: true));
