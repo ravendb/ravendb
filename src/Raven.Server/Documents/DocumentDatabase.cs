@@ -100,6 +100,9 @@ namespace Raven.Server.Documents
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
             try
             {
+                if (configuration.Initialized == false)
+                    throw new InvalidOperationException("Cannot create a new document database instance without initialized configuration");
+
                 TryAcquireWriteLock();
 
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
