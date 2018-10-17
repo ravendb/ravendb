@@ -170,6 +170,7 @@ namespace Sparrow.LowMemory
                                 break;
                             case 0:
                                 SimulateLowMemory();
+                                timeout = 1000; // on EarlyOOM just run cleaners once (CheckMemoryStatus will run in 1000mSec and will return system to normal)
                                 break;
                             case 1: // shutdown requested
                                 return;
