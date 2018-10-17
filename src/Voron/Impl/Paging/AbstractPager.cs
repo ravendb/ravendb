@@ -63,6 +63,9 @@ namespace Voron.Impl.Paging
                     {
                         foreach (var info in newState.AllocationInfos)
                         {
+                            if (info.Size == 0 || info.BaseAddress == null)
+                                continue;
+
                             if (Sodium.sodium_mlock(info.BaseAddress, (UIntPtr)info.Size) != 0)
                             {
                                 if (DoNotConsiderMemoryLockFailureAsCatastrophicError)

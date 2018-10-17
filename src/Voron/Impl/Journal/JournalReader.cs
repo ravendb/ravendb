@@ -378,6 +378,7 @@ namespace Voron.Impl.Journal
         {
             var size = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
             var numberOfPages = GetNumberOfPagesFor(positionInsidePage + sizeof(TransactionHeader) + size);
+            _recoveryPager.EnsureContinuous(pageNumber, numberOfPages);
             _journalPager.EnsureMapped(this, pageNumber, numberOfPages);
 
             var pageHeader = _journalPager.AcquirePagePointer(this, pageNumber)
