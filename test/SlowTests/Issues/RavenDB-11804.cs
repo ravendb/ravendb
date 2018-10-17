@@ -20,7 +20,7 @@ namespace SlowTests.Issues
                                                             "and a.Event = 'processed' " +
                                                             "order by a.Timestamp desc " +
                                                             "select { Email: a.Email, Category: a.Category[0], " +
-                                                                "Event: a.Event, DateA: new Date(x.Timestamp * 1000)}"); // unknown alias x
+                                                            "Event: a.Event, DateA: new Date(x.Timestamp * 1000)}"); // unknown alias x
                     var ex = Assert.Throws<InvalidQueryException>(() => query.ToList());
 
                     Assert.Contains("Unknown alias x, but there are aliases specified in the query (a)", ex.Message);

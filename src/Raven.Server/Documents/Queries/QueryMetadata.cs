@@ -10,7 +10,6 @@ using Esprima.Ast;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
@@ -2026,9 +2025,7 @@ namespace Raven.Server.Documents.Queries
                         currentProp = null;
                         break;
                     case StaticMemberExpression sme when sme.Object is Identifier id &&
-                                                         RootAliasPaths.TryGetValue(id.Name, out _) == false &&
-                                                         _jsBaseObjects.Contains(id.Name) == false &&
-                                                         parameters.TryGet(id.Name, out object _) == false:
+                                                         UnknownIdentifier(id.Name, parameters):
                         maybeUnknowns = maybeUnknowns ?? new HashSet<string>();
                         maybeUnknowns.Add(id.Name);
                         break;
@@ -2036,6 +2033,15 @@ namespace Raven.Server.Documents.Queries
             }
 
             return new JavaScriptParser("return " + Query.SelectFunctionBody.FunctionText, new ParserOptions(), VerifyKnownAliases).ParseProgram();
+        }
+
+        private bool UnknownIdentifier(string identifier, BlittableJsonReaderObject parameters)
+        {
+            return RootAliasPaths.TryGetValue(identifier, out _) == false &&
+                   _jsBaseObjects.Contains(identifier) == false &&
+                   (parameters == null || 
+                    identifier.StartsWith("$p") == false || 
+                    parameters.TryGet(identifier.Substring(1), out object _) == false);
         }
 
         private static void RemoveFromUnknowns(HashSet<string> maybeUnknowns, List<INode> parameters)
