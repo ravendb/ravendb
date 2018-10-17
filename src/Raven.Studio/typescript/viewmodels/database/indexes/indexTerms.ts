@@ -1,6 +1,7 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
 import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
+import getIndexEntriesFieldsCommandResult = require("commands/database/index/getIndexEntriesFieldsCommandResult");
 import queryCriteria = require("models/database/query/queryCriteria");
 import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 import queryUtil = require("common/queryUtil");
@@ -33,7 +34,7 @@ class indexTerms extends viewModelBase {
         this.bindToCurrentInstance("navigateToQuery");
     }
 
-    activate(indexName: string): JQueryPromise<resultsDto<string>> {
+    activate(indexName: string): JQueryPromise<getIndexEntriesFieldsCommandResult> {
         super.activate(indexName);
 
         this.indexName = indexName;
@@ -44,7 +45,7 @@ class indexTerms extends viewModelBase {
     fetchIndexEntriesFields(indexName: string) {
         return new getIndexEntriesFieldsCommand(indexName, this.activeDatabase())
             .execute()
-            .done((fields) => this.processFields(fields.Results));
+            .done((fields) => this.processFields(fields.Static));
     }
 
     navigateToQuery(fieldName: string, term: string) {

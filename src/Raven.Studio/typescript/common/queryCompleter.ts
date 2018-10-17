@@ -825,7 +825,7 @@ class queryCompleter {
                 new getIndexEntriesFieldsCommand(indexName, activeDatabase(), false)
                     .execute()
                     .done(result => {
-                        callback(result.Results);
+                        callback(result.Static);
                     })
             },
             collectionFields: (collectionName, prefix, callback) => {
