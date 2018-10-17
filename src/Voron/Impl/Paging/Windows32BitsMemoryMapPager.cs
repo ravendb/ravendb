@@ -223,9 +223,37 @@ namespace Voron.Impl.Paging
             {
                 if (result != null)
                     UnmapViewOfFile(result);
-
             }
+        }
 
+        private void LockMemory32Bits(byte* address, long sizeToLock, TransactionState state)
+        {
+            try
+            {
+                if (Sodium.sodium_mlock(address, (UIntPtr)sizeToLock) != 0)
+                {
+                    if (DoNotConsiderMemoryLockFailureAsCatastrophicError == false)
+                    {
+                        TryHandleFailureToLockMemory(address, sizeToLock, state.TotalLoadedSize * 2);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to lock memory in 32-bit mode", e);
+            }
+        }
+
+        private void UnlockMemory32Bits(byte* address, long sizeToUnlock)
+        {
+            try
+            {
+                Sodium.sodium_munlock(address, (UIntPtr)sizeToUnlock);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to unlock memory in 32-bit mode", e);
+            }            
         }
 
         public override I4KbBatchWrites BatchWriter()
@@ -306,6 +334,9 @@ namespace Voron.Impl.Paging
                         $"Unable to map {size / Constants.Size.Kilobyte:#,#0} kb starting at {startPage} on {FileName}",
                         new Win32Exception(lastWin32Error));
                 }
+
+                if (_options.EncryptionEnabled && LockMemory)
+                    LockMemory32Bits(result, size, state);
 
                 NativeMemory.RegisterFileMapping(_fileInfo.FullName, new IntPtr(result), size, GetAllocatedInBytes);
                 Interlocked.Add(ref _totalMapped, size);
@@ -433,6 +464,9 @@ namespace Voron.Impl.Paging
 
                     if (!set.TryRemove(addr))
                         continue;
+
+                    if (_options.EncryptionEnabled && LockMemory)
+                        UnlockMemory32Bits((byte*)addr.Address, addr.Size);
 
                     Interlocked.Add(ref _totalMapped, -addr.Size);
                     UnmapViewOfFile((byte*)addr.Address);
