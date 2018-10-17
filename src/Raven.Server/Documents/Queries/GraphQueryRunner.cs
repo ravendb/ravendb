@@ -21,6 +21,7 @@ using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Utils;
 using Sparrow;
+using Raven.Server.Json;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -57,7 +58,7 @@ namespace Raven.Server.Documents.Queries
                     }
                 }
 
-                var matchResults = ExecutePatternMatch(documentsContext, q, query.Metadata, ir) ?? new List<Match>();
+                var matchResults = ExecutePatternMatch(documentsContext, query, ir) ?? new List<Match>();
 
                 //TODO: handle order by, load, select clauses
 
@@ -116,10 +117,10 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private List<Match> ExecutePatternMatch(DocumentsOperationContext documentsContext, Query q, QueryMetadata queryMetadata, IntermediateResults ir)
+        private List<Match> ExecutePatternMatch(DocumentsOperationContext documentsContext, IndexQueryServerSide query, IntermediateResults ir)
         {
-            var visitor = new GraphExecuteVisitor(ir, q.GraphQuery, documentsContext);
-            visitor.VisitExpression(q.GraphQuery.MatchClause);
+            var visitor = new GraphExecuteVisitor(ir, query, documentsContext);
+            visitor.VisitExpression(query.Metadata.Query.GraphQuery.MatchClause);
             return visitor.Output;
 
         }
@@ -148,13 +149,15 @@ namespace Raven.Server.Documents.Queries
         {
             private readonly IntermediateResults _source;
             private readonly GraphQuery _gq;
+            private readonly BlittableJsonReaderObject _queryParameters;
             private readonly DocumentsOperationContext _ctx;
             public List<Match> Output;            
 
-            public GraphExecuteVisitor(IntermediateResults source, GraphQuery gq, DocumentsOperationContext documentsContext)
+            public GraphExecuteVisitor(IntermediateResults source, IndexQueryServerSide query, DocumentsOperationContext documentsContext)
             {
                 _source = source;
-                _gq = gq;
+                _gq = query.Metadata.Query.GraphQuery;
+                _queryParameters = query.QueryParameters;
                 _ctx = documentsContext;
             }
 
@@ -193,7 +196,7 @@ namespace Raven.Server.Documents.Queries
                         var edgeResult = currentResults[resultIndex];
                         var prev = edgeResult.Get(prevNodeAlias);
 
-                        if (TryGetMatches(edge.Path, nextNodeAlias, edgeResults, prev, out var multipleRelatedMatches))
+                        if (TryGetMatches(edge, nextNodeAlias, edgeResults, prev, out var multipleRelatedMatches))
                         {
                             foreach (var match in multipleRelatedMatches)
                             {
@@ -225,34 +228,93 @@ namespace Raven.Server.Documents.Queries
             }
 
             private readonly HashSet<string> _includedNodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            private readonly List<Match> _results = new List<Match>();
 
-            private bool TryGetMatches(FieldExpression field, string alias, Dictionary<string, Match> edgeResults, Document prev,
-                out IEnumerable<Match> relatedMatches)
+            private void F(BlittableJsonReaderObject docReader, StringSegment edgePath, HashSet<string> includedIds)
+            {
+                if (BlittableJsonTraverser.Default.TryRead(docReader, edgePath, out object value, out StringSegment leftPath) == false)
+                {
+                    switch (value)
+                    {
+                        case BlittableJsonReaderObject json:
+                            IncludeUtil.GetDocIdFromInclude(json, leftPath, includedIds);
+                            break;
+                        case BlittableJsonReaderArray array:
+                            foreach (var item in array)
+                            {
+                                if (item is BlittableJsonReaderObject inner)
+                                    IncludeUtil.GetDocIdFromInclude(inner, leftPath, includedIds);
+                            }
+                            break;
+                        case string s:
+                            includedIds.Add(s);
+                            break;
+                        case LazyStringValue lsv:
+                            includedIds.Add(lsv.ToString());
+                            break;
+                        case LazyCompressedStringValue lcsv:
+                            includedIds.Add(lcsv.ToString());
+                            break;
+                        default:
+                            break;
+                    }
+
+                    return;
+                }
+
+            }
+
+            
+            private bool TryGetMatches(WithEdgesExpression edge, string alias, Dictionary<string, Match> edgeResults, Document prev,
+                out List<Match> relatedMatches)
+            {
+                _results.Clear();
+                relatedMatches = _results;
+                if (edge.Where != null)
+                {
+                    if (prev.Data.TryGetMember(edge.Path.Compound[0], out var value) == false)
+                        return false;
+
+                    bool hasResults = false;
+
+                    switch (value)
+                    {
+                        case BlittableJsonReaderArray array:
+                            foreach (var item in array)
+                            {
+                                if(item is BlittableJsonReaderObject json &&
+                                    edge.Where.IsMatchedBy(json, _queryParameters))
+                                {
+                                    hasResults |= TryGetMatchesAfterFiltering(json, edge.Path.FieldValueWithoutAlias, edgeResults, alias);
+                                }
+                            }
+                            break;
+                        case BlittableJsonReaderObject json:
+                            if (edge.Where.IsMatchedBy(json, _queryParameters))
+                            {
+                                hasResults |= TryGetMatchesAfterFiltering(json, edge.Path.FieldValueWithoutAlias, edgeResults, alias);
+                            }
+                            break;
+                    }
+
+                    return hasResults;
+
+                }
+                return TryGetMatchesAfterFiltering(prev.Data, edge.Path.FieldValue, edgeResults, alias);
+            }
+
+            private bool TryGetMatchesAfterFiltering(BlittableJsonReaderObject src, string path, Dictionary<string, Match> edgeResults, string alias)
             {
                 _includedNodes.Clear();
-                IncludeUtil.GetDocIdFromInclude(prev.Data, 
-                    //TODO: Avoid these allocations
-                    string.Join(".", field.Compound),
-                    _includedNodes);
-                relatedMatches = Enumerable.Empty<Match>();
+                IncludeUtil.GetDocIdFromInclude(src,
+                   path,
+                   _includedNodes);
                 _includedNodes.Remove(null);
+
                 if (_includedNodes.Count == 0)
                     return false;
 
-                IEnumerable<Match> GetResultsFromEdges()
-                {
-                    foreach (var id in _includedNodes)
-                    {
-                        if (id == null)
-                            continue;
-                  
-                        if(!edgeResults.TryGetValue(id,out var m))
-                            continue;
-                        yield return m;
-                    }
-                }
-
-                IEnumerable<Match> GetResultsFromStorage()
+                if(edgeResults == null)
                 {
                     foreach (var id in _includedNodes)
                     {
@@ -264,11 +326,22 @@ namespace Raven.Server.Documents.Queries
                         var m = new Match();
                         m.Set(alias, doc);
 
-                        yield return m;
+                        _results.Add(m);
                     }
                 }
+                else
+                {
+                    foreach (var id in _includedNodes)
+                    {
+                        if (id == null)
+                            continue;
 
-                relatedMatches = edgeResults != null ? GetResultsFromEdges() : GetResultsFromStorage();
+                        if (!edgeResults.TryGetValue(id, out var m))
+                            continue;
+
+                        _results.Add(m);
+                    }
+                }
 
                 return true;
             }
