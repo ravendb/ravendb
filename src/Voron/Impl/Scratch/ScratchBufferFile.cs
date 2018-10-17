@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow.Collections;
+using Sparrow.Threading;
 using Voron.Global;
 using Voron.Impl.Paging;
 
@@ -30,7 +31,8 @@ namespace Voron.Impl.Scratch
         private readonly Dictionary<long, LinkedList<PendingPage>> _freePagesBySize = new Dictionary<long, LinkedList<PendingPage>>(NumericEqualityComparer.BoxedInstanceInt64);
         private readonly Dictionary<long, LinkedList<long>> _freePagesBySizeAvailableImmediately = new Dictionary<long, LinkedList<long>>(NumericEqualityComparer.BoxedInstanceInt64);
         private readonly Dictionary<long, PageFromScratchBuffer> _allocatedPages = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.BoxedInstanceInt64);
-        
+        private readonly DisposeOnce<SingleAttempt> _disposeOnceRunner;
+
         private long _allocatedPagesCount;
         private long _lastUsedPage;
         private long _txIdAfterWhichLatestFreePagesBecomeAvailable = -1;
@@ -44,6 +46,12 @@ namespace Voron.Impl.Scratch
             _allocatedPagesCount = 0;
 
             scratchPager.AllocatedInBytesFunc = () => AllocatedPagesCount * Constants.Storage.PageSize;
+
+            _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
+            {
+                _scratchPager.PagerState.DiscardOnTxCopy = true;
+                _scratchPager.Dispose();
+            });
         }
 
         public void Reset()
@@ -297,8 +305,7 @@ namespace Voron.Impl.Scratch
 
         public void Dispose()
         {
-            _scratchPager.PagerState.DiscardOnTxCopy = true;
-            _scratchPager.Dispose();
+            _disposeOnceRunner.Dispose();
         }
 
         public void BreakLargeAllocationToSeparatePages(IPagerLevelTransactionState tx, PageFromScratchBuffer value)
