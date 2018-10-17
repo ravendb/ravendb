@@ -693,12 +693,13 @@ namespace Voron
 
                 if (EncryptionEnabled)
                 {
-                    // even though we don't care need encryption here, we still need to ensure that this
+                    // even though we don't need encryption in this pager, we still need to ensure that this
                     // isn't paged to disk
                     pager.LockMemory = true;
                     pager.DoNotConsiderMemoryLockFailureAsCatastrophicError = DoNotConsiderMemoryLockFailureAsCatastrophicError;
 
-                    pager.SetPagerState(pager.PagerState); // with LockMemory = true set
+                    // We need to call SetPagerState after setting LockMemory = true to ensure the initial temp buffer is protected. 
+                    pager.SetPagerState(pager.PagerState);
                 }
                 return pager;
             }
