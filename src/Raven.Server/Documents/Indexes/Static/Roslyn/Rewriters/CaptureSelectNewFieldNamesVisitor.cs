@@ -9,6 +9,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
     internal class CaptureSelectNewFieldNamesVisitor : CSharpSyntaxRewriter
     {
+        private bool? _isQueryExpression;
+
         public HashSet<CompiledIndexField> Fields;
 
         public static HashSet<string> KnownMethodsToInspect = new HashSet<string>
@@ -21,10 +23,21 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             "Distinct",
             "Where"
         };
-        
+
+        public override SyntaxNode Visit(SyntaxNode node)
+        {
+            // if we have query expression then we can only look for fields in query body
+            // if we have invocation expression then we can only look for fields in invocation
+            // LINQ syntax would be invalid otherwise
+            if (_isQueryExpression.HasValue == false)
+                _isQueryExpression = node is QueryExpressionSyntax;
+
+            return base.Visit(node);
+        }
+
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
-            if (Fields != null)
+            if (Fields != null || (_isQueryExpression.HasValue && _isQueryExpression.Value))
                 return node;
 
             var mae = node.Expression as MemberAccessExpressionSyntax;
@@ -41,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         public override SyntaxNode VisitQueryBody(QueryBodySyntax node)
         {
-            if (Fields != null)
+            if (Fields != null || (_isQueryExpression.HasValue && _isQueryExpression.Value == false))
                 return node;
 
             CaptureFieldNames(node, x => x.VisitQueryBody(node));
