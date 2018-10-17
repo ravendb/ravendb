@@ -103,6 +103,13 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.MapTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting MapTimeout { get; protected set; }
 
+        [Description("Maximum number of mapped documents. Cannot be less than 128. By default 'null' - no limit.")]
+        [DefaultValue(null)]
+        [MinValue(128)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.MapBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int? MapBatchSize { get; protected set; }
+
         [Description("Number of minutes after which mapping will end even if there is more to map. This will only be applied if we pass the last etag in collection that we saw when batch was started.")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Minutes)]
