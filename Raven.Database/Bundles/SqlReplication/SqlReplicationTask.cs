@@ -634,7 +634,7 @@ namespace Raven.Database.Bundles.SqlReplication
 			{
 				const string prefix = "Raven/SqlReplication/Configuration/";
 				foreach (var document in accessor.Documents.GetDocumentsWithIdStartingWith(
-								prefix, 0, 256))
+								prefix, 0, 10000))
 				{
 					var cfg = document.DataAsJson.JsonDeserialization<SqlReplicationConfig>();
 					if (string.IsNullOrWhiteSpace(cfg.Name))
