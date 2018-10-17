@@ -33,12 +33,6 @@ namespace Raven.Client.Documents.Indexes
             set => _definition.Reduce = value;
         }
 
-        public IndexConfiguration Configuration
-        {
-            get => _definition.Configuration;
-            set => _definition.Configuration = value;
-        }
-
         /// <inheritdoc />
         public override bool IsMapReduce => Reduce != null;
 
@@ -53,6 +47,8 @@ namespace Raven.Client.Documents.Indexes
         {
             _definition.Type = IsMapReduce ? IndexType.JavaScriptMapReduce : IndexType.JavaScriptMap;
             _definition.AdditionalSources = AdditionalSources ?? (_definition.AdditionalSources = new Dictionary<string, string>());
+            _definition.Configuration = Configuration;
+
             return _definition.Clone();
         }
     }
