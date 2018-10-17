@@ -12,12 +12,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 
         public LazyStringReader LazyStringReader { get; set; }
 
-        public BlittableObjectReader BlittableObjectReader { get; set; }
-
         public void Dispose()
         {
             LazyStringReader?.Dispose();
-            BlittableObjectReader?.Dispose();
         }
     }
 }

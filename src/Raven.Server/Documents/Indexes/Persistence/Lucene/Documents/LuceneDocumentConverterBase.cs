@@ -529,7 +529,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     }
                     else
                     {
-                        blittableReader = new BlittableObjectReader();
+                        blittableReader = Scope.GetBlittableReader();
                         reader = blittableReader.GetTextReaderFor(blittableValue);
                     }
 
@@ -538,7 +538,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 else
                 {
                     if (value == null && lazyValue == null)
-                        blittableReader = new BlittableObjectReader();
+                        blittableReader = Scope.GetBlittableReader();
 
                     field = new Field(name,
                         value ?? LazyStringReader.GetStringFor(lazyValue) ?? blittableReader.GetStringFor(blittableValue),
@@ -552,27 +552,28 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 {
                     Key = new FieldCacheKey(name, index, store, termVector, _multipleItemsSameFieldCount.ToArray()),
                     Field = field,
-                    LazyStringReader = stringReader,
-                    BlittableObjectReader = blittableReader
+                    LazyStringReader = stringReader
                 };
             }
             else
             {
+                BlittableObjectReader blittableReader = null;
+
                 field = cached.Field;
                 if (lazyValue != null && cached.LazyStringReader == null)
                     cached.LazyStringReader = new LazyStringReader();
-                if (blittableValue != null && cached.BlittableObjectReader == null)
-                    cached.BlittableObjectReader = new BlittableObjectReader();
+                if (blittableValue != null)
+                    blittableReader = Scope.GetBlittableReader();
 
                 if ((lazyValue != null || blittableValue != null) && store.IsStored() == false && index.IsIndexed() && index.IsAnalyzed())
                 {
                     field.SetValue(lazyValue != null
                         ? cached.LazyStringReader.GetTextReaderFor(lazyValue)
-                        : cached.BlittableObjectReader.GetTextReaderFor(blittableValue));
+                        : blittableReader.GetTextReaderFor(blittableValue));
                 }
                 else
                 {
-                    field.SetValue(value ?? LazyStringReader.GetStringFor(lazyValue) ?? cached.BlittableObjectReader.GetStringFor(blittableValue));
+                    field.SetValue(value ?? LazyStringReader.GetStringFor(lazyValue) ?? blittableReader.GetStringFor(blittableValue));
                 }
             }
 
@@ -762,6 +763,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         protected class ConversionScope : IDisposable
         {
             private readonly LinkedList<BlittableJsonReaderObject> _jsons = new LinkedList<BlittableJsonReaderObject>();
+            private readonly LinkedList<BlittableObjectReader> _readers = new LinkedList<BlittableObjectReader>();
 
             public BlittableJsonReaderObject CreateJson(DynamicJsonValue djv, JsonOperationContext context)
             {
@@ -774,15 +776,29 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             public void Dispose()
             {
-                if (_jsons.Count == 0)
-                    return;
-
-                foreach (var json in _jsons)
+                if (_jsons.Count > 0)
                 {
-                    json.Dispose();
+                    foreach (var json in _jsons)
+                        json.Dispose();
+
+                    _jsons.Clear();
                 }
 
-                _jsons.Clear();
+                if (_readers.Count > 0)
+                {
+                    foreach (var reader in _readers)
+                        BlittableObjectReaderPool.Instance.Free(reader);
+
+                    _readers.Clear();
+                }
+            }
+
+            public BlittableObjectReader GetBlittableReader()
+            {
+                var reader = BlittableObjectReaderPool.Instance.Allocate();
+                _readers.AddFirst(reader);
+
+                return reader;
             }
         }
     }
