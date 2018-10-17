@@ -224,6 +224,12 @@ namespace Raven.Server.Documents.Indexes.Workers
                 return false;
             }
 
+            if (_configuration.MapBatchSize.HasValue && count >= _configuration.MapBatchSize.Value)
+            {
+                stats.RecordMapCompletedReason($"Reached maximum configured map batch size ({_configuration.MapBatchSize.Value}).");
+                return false;
+            }
+
             if (currentEtag >= maxEtag && stats.Duration >= _configuration.MapTimeoutAfterEtagReached.AsTimeSpan)
             {
                 stats.RecordMapCompletedReason($"Reached maximum etag that was seen when batch started ({maxEtag:#,#;;0}) and map duration ({stats.Duration}) exceeded configured limit ({_configuration.MapTimeoutAfterEtagReached.AsTimeSpan})");
