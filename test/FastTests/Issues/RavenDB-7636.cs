@@ -31,7 +31,7 @@ namespace FastTests.Issues
             string publicServerUrl = null, 
             string serverUrl = null)
         {
-            var configuration = new RavenConfiguration(null, ResourceType.Server);
+            var configuration = RavenConfiguration.CreateForServer(null);
             configuration.SetSetting(
                 RavenConfiguration.GetKey(x => x.Core.ServerUrls), serverUrl);
             configuration.SetSetting(

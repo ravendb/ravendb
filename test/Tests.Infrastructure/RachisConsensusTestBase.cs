@@ -116,7 +116,7 @@ namespace Tests.Infrastructure
             return nodes.FirstOrDefault(x => x.CurrentState == RachisState.Leader);
         }
 
-        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int port = 0, int electionTimeout = 300 ,[CallerMemberName] string caller = null)
+        protected RachisConsensus<CountingStateMachine> SetupServer(bool bootstrap = false, int port = 0, int electionTimeout = 300, [CallerMemberName] string caller = null)
         {
             var tcpListener = new TcpListener(IPAddress.Loopback, port);
             tcpListener.Start();
@@ -132,7 +132,7 @@ namespace Tests.Infrastructure
             var server = StorageEnvironmentOptions.CreateMemoryOnly();
 
             int seed = PredictableSeeds ? _random.Next(int.MaxValue) : _count;
-            var configuration = new RavenConfiguration(caller, ResourceType.Server);
+            var configuration = RavenConfiguration.CreateForServer(caller);
             configuration.Initialize();
             configuration.Core.RunInMemory = true;
             configuration.Cluster.ElectionTimeout = new TimeSetting(electionTimeout, TimeUnit.Milliseconds);
@@ -180,7 +180,7 @@ namespace Tests.Infrastructure
                     {
                         if (rachis.Url == null)
                             return;
-                        
+
                         lock (this)
                         {
                             if (_rejectionList.TryGetValue(rachis.Url, out var set))
@@ -197,7 +197,7 @@ namespace Tests.Infrastructure
                 }
                 catch
                 {
-                  // expected
+                    // expected
                 }
             }
         }
@@ -251,7 +251,7 @@ namespace Tests.Infrastructure
 
             await ActionWithLeader(l =>
             {
-                
+
                 using (l.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                     index = l.GetLastEntryIndex(context);
@@ -388,7 +388,7 @@ namespace Tests.Infrastructure
 
                     SupportedFeatures = new TcpConnectionHeaderMessage.SupportedFeatures(TcpConnectionHeaderMessage.NoneBaseLine),
                     Disconnect = () => tcpClient.Client.Disconnect(false)
-                };                
+                };
             }
         }
 

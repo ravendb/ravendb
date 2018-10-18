@@ -65,7 +65,7 @@ namespace Raven.Server
                 File.Copy(destinationSettingsFile.FullPath, targetSettingsFile.FullPath);
             }
 
-            var configuration = new RavenConfiguration(null, ResourceType.Server, CommandLineSwitches.CustomConfigPath);
+            var configuration = RavenConfiguration.CreateForServer(null, CommandLineSwitches.CustomConfigPath);
 
             if (configurationArgs != null)
                 configuration.AddCommandLine(configurationArgs);
@@ -113,7 +113,7 @@ namespace Raven.Server
                     Console.WriteLine("\nRestarting Server...");
                     rerun = false;
 
-                    configuration = new RavenConfiguration(null, ResourceType.Server, CommandLineSwitches.CustomConfigPath);
+                    configuration = RavenConfiguration.CreateForServer(null, CommandLineSwitches.CustomConfigPath);
 
                     if (configurationArgs != null)
                     {

@@ -320,7 +320,7 @@ namespace FastTests
         {
             lock (_getNewServerSync)
             {
-                var configuration = new RavenConfiguration(Guid.NewGuid().ToString(), ResourceType.Server, customConfigPath);
+                var configuration = RavenConfiguration.CreateForServer(Guid.NewGuid().ToString(), customConfigPath);
 
                 if (customSettings != null)
                 {

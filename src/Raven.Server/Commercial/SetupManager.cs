@@ -1772,7 +1772,7 @@ namespace Raven.Server.Commercial
 
         public static async Task SimulateRunningServer(X509Certificate2 serverCertificate, string serverUrl, IPEndPoint[] addresses, int port, string settingsPath, SetupMode setupMode, CancellationToken token)
         {
-            var configuration = new RavenConfiguration(null, ResourceType.Server, settingsPath);
+            var configuration = RavenConfiguration.CreateForServer(null, settingsPath);
             configuration.Initialize();
             var guid = Guid.NewGuid().ToString();
 

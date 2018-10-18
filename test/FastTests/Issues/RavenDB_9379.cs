@@ -17,10 +17,10 @@ namespace FastTests.Issues
                 "--ServerUrl=http://0.0.0.0:8080"
             };
 
-            var confBeforeRestart = new RavenConfiguration(null, ResourceType.Server);
+            var confBeforeRestart = RavenConfiguration.CreateForServer(null);
             confBeforeRestart.Core.ServerUrls = new[] {"http://0.0.0.0:8080"};
 
-            var newConf = new RavenConfiguration(null, ResourceType.Server);
+            var newConf = RavenConfiguration.CreateForServer(null);
             newConf.SetSetting("ServerUrl", "http://127.0.0.1:9090");
 
             // ACT
@@ -39,10 +39,10 @@ namespace FastTests.Issues
                 "--ServerUrl=http://0.0.0.0:8080"
             };
 
-            var confBeforeRestart = new RavenConfiguration(null, ResourceType.Server);
+            var confBeforeRestart = RavenConfiguration.CreateForServer(null);
             confBeforeRestart.Core.ServerUrls = new[] {"http://0.0.0.0:8080"};
 
-            var newConf = new RavenConfiguration(null, ResourceType.Server);
+            var newConf = RavenConfiguration.CreateForServer(null);
             newConf.SetSetting("ServerUrl", "https://127.0.0.1:9090");
 
             // ACT
@@ -72,9 +72,9 @@ namespace FastTests.Issues
                 Environment.SetEnvironmentVariable(RavenInDocker, "true");
                 Environment.SetEnvironmentVariable(RemoveUnsecuredCliArg, "true");
 
-                var confBeforeRestart = new RavenConfiguration(null, ResourceType.Server);
+                var confBeforeRestart = RavenConfiguration.CreateForServer(null);
 
-                var newConf = new RavenConfiguration(null, ResourceType.Server);
+                var newConf = RavenConfiguration.CreateForServer(null);
 
                 // ACT
                 updatedArgs = PostSetupCliArgumentsUpdater.Process(args, confBeforeRestart, newConf);
