@@ -24,6 +24,7 @@ using Raven.Client.Properties;
 using Raven.Server.Config;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -151,7 +152,8 @@ namespace Raven.Server
 
         private async Task RequestHandler(HttpContext context)
         {
-            string database = null;
+            var database = new Reference<string>();
+            Stopwatch sp = null;
             try
             {
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -161,8 +163,8 @@ namespace Raven.Server
                 if (_server.ServerStore.Initialized == false)
                     await _server.ServerStore.InitializationCompleted.WaitAsync();
 
-                var sp = Stopwatch.StartNew();
-                database = await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value);
+                sp = Stopwatch.StartNew();
+                await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value, database);
 
                 if (_logger.IsInfoEnabled && SkipHttpLogging == false)
                 {
@@ -171,18 +173,10 @@ namespace Raven.Server
 
                 // check if TW has clients
                 if (TrafficWatchManager.HasRegisteredClients)
-                    LogTrafficWatch(context, sp.ElapsedMilliseconds, database);
-
-                sp.Stop();
+                    LogTrafficWatch(context, sp.ElapsedMilliseconds, database.Value);
             }
             catch (Exception e)
             {
-                if (TrafficWatchManager.HasRegisteredClients)
-                    LogTrafficWatch(context, 0, database ?? "N/A");
-
-                if (context.RequestAborted.IsCancellationRequested)
-                    return;
-
                 if (context.Request.Headers.TryGetValue(Constants.Headers.ClientVersion, out var versions))
                 {
                     var version = versions.ToString();
@@ -191,6 +185,12 @@ namespace Raven.Server
                 }
 
                 MaybeSetExceptionStatusCode(context, e);
+
+                if (TrafficWatchManager.HasRegisteredClients)
+                    LogTrafficWatch(context, sp?.ElapsedMilliseconds ?? 0, database.Value);
+
+                if (context.RequestAborted.IsCancellationRequested)
+                    return;
 
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 {

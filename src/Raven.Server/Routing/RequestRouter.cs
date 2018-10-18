@@ -51,7 +51,7 @@ namespace Raven.Server.Routing
             return tryMatch.Value;
         }
 
-        public async ValueTask<string> HandlePath(HttpContext context, string method, string path)
+        public async Task HandlePath(HttpContext context, string method, string path, Reference<string> database)
         {
             var tryMatch = _trie.TryMatch(method, path);
             if (tryMatch.Value == null)
@@ -72,6 +72,8 @@ namespace Raven.Server.Routing
             var handler = tuple.Item1 ?? await tuple.Item2;
 
             reqCtx.Database?.Metrics?.Requests.RequestsPerSec.Mark();
+            database.Value = reqCtx.Database?.Name;
+
             _serverMetrics.Requests.RequestsPerSec.Mark();
 
             Interlocked.Increment(ref _serverMetrics.Requests.ConcurrentRequestsCount);
@@ -101,14 +103,15 @@ namespace Raven.Server.Routing
                                 ["Message"] = $"There is no handler for {context.Request.Method} {context.Request.Path}"
                             });
                     }
-                    return null;
+
+                    return;
                 }
 
                 if (_ravenServer.Configuration.Security.AuthenticationEnabled)
                 {
                     var authResult = TryAuthorize(tryMatch.Value, context, reqCtx.Database);
                     if (authResult == false)
-                        return reqCtx.Database?.Name;
+                        return;
                 }
 
                 if (reqCtx.Database != null)
@@ -134,8 +137,6 @@ namespace Raven.Server.Routing
             {
                 Interlocked.Decrement(ref _serverMetrics.Requests.ConcurrentRequestsCount);
             }
-
-            return reqCtx.Database?.Name;
         }
 
         public static void AssertClientVersion(HttpContext context, Exception innerException)
