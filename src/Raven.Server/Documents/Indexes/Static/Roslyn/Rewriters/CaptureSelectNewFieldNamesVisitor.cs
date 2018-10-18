@@ -4,6 +4,7 @@ using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Raven.Server.Documents.Indexes.Static.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
@@ -37,24 +38,28 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
-            if (Fields != null || (_isQueryExpression.HasValue && _isQueryExpression.Value))
+            if (Fields != null)
                 return node;
 
             var mae = node.Expression as MemberAccessExpressionSyntax;
             if (mae == null)
                 return Visit(node.Expression);
 
-            if (KnownMethodsToInspect.Contains(mae.Name.Identifier.Text) == false)
+            var methodName = mae.Name.Identifier.Text;
+
+            if (KnownMethodsToInspect.Contains(methodName) == false)
                 return Visit(node.Expression);
 
-            CaptureFieldNames(node, x => x.VisitInvocationExpression(node));
+            // even when using query expression we can wrap everything in a Boost method
+            if (_isQueryExpression == null || _isQueryExpression == false || methodName == nameof(DynamicExtensionMethods.Boost))
+                CaptureFieldNames(node, x => x.VisitInvocationExpression(node));
 
             return node;
         }
 
         public override SyntaxNode VisitQueryBody(QueryBodySyntax node)
         {
-            if (Fields != null || (_isQueryExpression.HasValue && _isQueryExpression.Value == false))
+            if (Fields != null || (_isQueryExpression.HasValue && _isQueryExpression == false))
                 return node;
 
             CaptureFieldNames(node, x => x.VisitQueryBody(node));
