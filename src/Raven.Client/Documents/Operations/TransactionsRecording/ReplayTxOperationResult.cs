@@ -13,7 +13,8 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
         {
             return new DynamicJsonValue(GetType())
             {
-                [nameof(ExecutedCommandsAmount)] = ExecutedCommandsAmount
+                [nameof(ExecutedCommandsAmount)] = ExecutedCommandsAmount,
+                [nameof(Message)] = Message
             };
         }
 

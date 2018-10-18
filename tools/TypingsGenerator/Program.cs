@@ -184,6 +184,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OperationStatusChange));
             scripter.AddType(typeof(DeterminateProgress));
             scripter.AddType(typeof(IndeterminateProgress));
+            scripter.AddType(typeof(IndeterminateProgressCount));
             scripter.AddType(typeof(BulkOperationResult));
             scripter.AddType(typeof(ReplayTxOperationResult));
             scripter.AddType(typeof(BulkInsertProgress));
