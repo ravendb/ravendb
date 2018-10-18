@@ -57,7 +57,7 @@ namespace Raven.Server.Web.Studio
             return Task.CompletedTask;
         }
 
-        [RavenAction("/studio-tasks/offline-migration-test", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/studio-tasks/offline-migration-test", "GET", AuthorizationStatus.Operator)]
         public Task OfflineMigrationTest()
         {
             var mode = GetStringQueryString("mode");

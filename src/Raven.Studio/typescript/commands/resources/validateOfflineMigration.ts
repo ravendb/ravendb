@@ -12,7 +12,7 @@ class validateOfflineMigration extends commandBase {
             mode: this.mode,
             path: this.pathToTest
         };
-        const url = endpoints.global.studioTasks.studioTasksOfflineMigrationTest;
+        const url = endpoints.global.studioTasks.adminStudioTasksOfflineMigrationTest;
         
         return this.query<Raven.Server.Web.Studio.StudioTasksHandler.OfflineMigrationValidation>(url, args);
     }
