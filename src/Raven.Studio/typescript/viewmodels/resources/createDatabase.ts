@@ -18,6 +18,7 @@ import license = require("models/auth/licenseModel");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
 class createDatabase extends dialogViewModelBase {
     
@@ -34,7 +35,8 @@ class createDatabase extends dialogViewModelBase {
     clusterNodes = [] as clusterNode[];
     
     encryptionSection: setupEncryptionKey;
-    usingHttps = location.protocol === "https:";  
+    usingHttps = location.protocol === "https:"; 
+    operationNotSupported: boolean;
     
     protected currentAdvancedSection = ko.observable<availableConfigurationSectionId>();
 
@@ -63,6 +65,8 @@ class createDatabase extends dialogViewModelBase {
     constructor(mode: dbCreationMode) {
         super();
 
+        this.operationNotSupported = mode === "legacyMigration" && clusterTopologyManager.default.nodeInfo().OsInfo.Type !== "Windows";
+        
         this.databaseModel = new databaseCreationModel(mode);
         
         switch (mode) {

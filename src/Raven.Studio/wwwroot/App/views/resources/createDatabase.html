@@ -12,7 +12,16 @@
                 </h4>
             </div>
             <div class="modal-body">
-                <div class="modal-settings-panel">
+                <div class="text-center" data-bind="if: operationNotSupported">
+                    <h2 class="text-warning">Creating database from legacy files is only supported on servers hosted on Microsoft Windows</h2>
+                    <p class="margin-top margin-lg">
+                        
+                        You can still import your data using 
+                        <a target="_blank" href="https://ravendb.net/docs/article-page/4.1/Csharp/migration/server/data-migration#how-to-live-import-data-from-a-running-instance?">live import</a> or
+                        using <a href="https://ravendb.net/docs/article-page/4.1/Csharp/migration/server/data-migration#how-to-import-database-from-.ravendump-file?" target="_blank">.ravendump</a> file 
+                    </p>
+                </div>
+                <div class="modal-settings-panel" data-bind="visible: !operationNotSupported">
                     <div class="modal-settings-panel-main">
                         <div class="form-group" data-bind="validationElement: databaseModel.name">
                             <h3>NAME<i class="required"></i></h3>
