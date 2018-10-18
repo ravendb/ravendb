@@ -82,8 +82,14 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
                             this.textClass("text-warning");
                         }
                     })
-                    .fail(() => {
-                        this.clientDetailsIssue("Failed to get client connection details");
+                    .fail((response: JQueryXHR) => {
+                        if (response.status === 0) {
+                            // we can't even connect to node, show node connectivity error
+                            this.clientDetailsIssue("Failed to connect to " + this.responsibleNode().NodeUrl + ". Please make sure this url is accessible from your browser.");
+                        } else {
+                            this.clientDetailsIssue("Failed to get client connection details");    
+                        }
+                        
                         this.textClass("text-danger");
                     });
             });

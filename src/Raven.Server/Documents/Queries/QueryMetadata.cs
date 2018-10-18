@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Esprima;
 using Esprima.Ast;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -185,6 +186,12 @@ namespace Raven.Server.Documents.Queries
             string methodName = null
             )
         {
+            var split = fieldName.Value.Split(".");
+            if (split.Length > 1 && NotInRootAliasPaths(split[0]))
+            {
+                ThrowUnknownAlias(split[0], parameters);
+            }
+
             var indexFieldName = GetIndexFieldName(fieldName, parameters);
 
             if (operatorType == null &&
@@ -409,6 +416,10 @@ namespace Raven.Server.Documents.Queries
             {
                 var expressionPath = ParseExpressionPath(include, path, Query.From.Alias);
 
+                if (expressionPath.LoadFromAlias != null && 
+                    NotInRootAliasPaths(expressionPath.LoadFromAlias))
+                    ThrowUnknownAlias(expressionPath.LoadFromAlias, parameters);
+
                 if (includes == null)
                     includes = new List<string>();
 
@@ -536,6 +547,16 @@ namespace Raven.Server.Documents.Queries
 
             if (RootAliasPaths.Count == 0 && IsGraph == false )
                 ThrowMissingAliasOnSelectFunctionBody(parameters);
+
+            // validate that this is valid JS code
+            try
+            {
+                Query.SelectFunctionBody.Program = ValidateScript(parameters);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidQueryException("Select clause contains invalid script", QueryText, parameters, e);
+            }
 
             var name = "__selectOutput";
             if (Query.DeclaredFunctions != null &&
@@ -729,6 +750,12 @@ namespace Raven.Server.Documents.Queries
 
                 string loadFromAlias;
                 (path, loadFromAlias) = ParseExpressionPath(load.Expression, path, Query.From.Alias);
+
+                if (loadFromAlias != null && 
+                    NotInRootAliasPaths(loadFromAlias))
+                {
+                    ThrowUnknownAlias(loadFromAlias, parameters);
+                }
 
                 if (RootAliasPaths.TryAdd(alias, (path, array, parameter, quoted, loadFromAlias)) == false)
                 {
@@ -2042,6 +2069,74 @@ namespace Raven.Server.Documents.Queries
             sb.Append(updateBody);
 
             return sb.ToString();
+        }
+
+        private static readonly HashSet<string> JsBaseObjects = new HashSet<string>
+        {
+            "Math", "Number", "Object", "Date"
+        };
+
+        private Esprima.Ast.Program ValidateScript(BlittableJsonReaderObject parameters)
+        {
+            HashSet<string> maybeUnknowns = null;
+            Identifier currentProp = null;
+
+            void VerifyKnownAliases(INode node)
+            {
+                switch (node)
+                {
+                    case Identifier identifier when currentProp == null:
+                        currentProp = identifier;
+                        break;
+                    case ArrowFunctionExpression arrowFunction:
+                        RemoveFromUnknowns(arrowFunction.Params);
+                        break;
+                    case FunctionExpression functionExpression:
+                        RemoveFromUnknowns(functionExpression.Params);
+                        break;
+                    case Property prop when prop.Key == currentProp:
+                        if (maybeUnknowns?.Count > 0)
+                            ThrowUnknownAlias(maybeUnknowns.First(), parameters);
+                        currentProp = null;
+                        break;
+                    case StaticMemberExpression sme when sme.Object is Identifier id &&
+                                                         UnknownIdentifier(id.Name):
+                        maybeUnknowns = maybeUnknowns ?? new HashSet<string>();
+                        maybeUnknowns.Add(id.Name);
+                        break;
+                }
+            }
+
+            bool UnknownIdentifier(string identifier)
+            {
+                return RootAliasPaths.TryGetValue(identifier, out _) == false &&
+                       JsBaseObjects.Contains(identifier) == false &&
+                       (parameters == null ||
+                        identifier.StartsWith("$") == false ||
+                        parameters.TryGet(identifier.Substring(1), out object _) == false);
+            }
+
+            void RemoveFromUnknowns(List<INode> functionParameters)
+            {
+                if (maybeUnknowns?.Count > 0 == false)
+                    return;
+
+                foreach (var p in functionParameters)
+                {
+                    if (!(p is Identifier i))
+                        continue;
+
+                    maybeUnknowns.Remove(i.Name);
+                }
+            }
+
+            return new JavaScriptParser("return " + Query.SelectFunctionBody.FunctionText, new ParserOptions(), VerifyKnownAliases).ParseProgram();
+        }
+
+        private bool NotInRootAliasPaths(string key)
+        {
+            return RootAliasPaths.Count > 0 &&
+                   RootAliasPaths.TryGetValue(key, out _) == false;
         }
     }
 }
