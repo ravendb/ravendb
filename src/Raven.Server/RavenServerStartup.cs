@@ -152,8 +152,11 @@ namespace Raven.Server
 
         private async Task RequestHandler(HttpContext context)
         {
+            var requestHandlerContext = new RequestHandlerContext
+            {
+                HttpContext = context
+            };
             Exception exception = null;
-            var database = new Reference<string>();
             Stopwatch sp = null;
 
             try
@@ -166,12 +169,8 @@ namespace Raven.Server
                     await _server.ServerStore.InitializationCompleted.WaitAsync();
 
                 sp = Stopwatch.StartNew();
-                await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value, database);
+                await _router.HandlePath(requestHandlerContext);
                 sp.Stop();
-
-                // check if TW has clients
-                if (TrafficWatchManager.HasRegisteredClients)
-                    LogTrafficWatch(context, sp.ElapsedMilliseconds, database.Value);
             }
             catch (Exception e)
             {
@@ -188,9 +187,6 @@ namespace Raven.Server
                 }
 
                 MaybeSetExceptionStatusCode(context, e);
-
-                if (TrafficWatchManager.HasRegisteredClients)
-                    LogTrafficWatch(context, sp?.ElapsedMilliseconds ?? 0, database.Value);
 
                 if (context.RequestAborted.IsCancellationRequested)
                     return;
@@ -227,6 +223,13 @@ namespace Raven.Server
             }
             finally
             {
+                // check if TW has clients
+                if (TrafficWatchManager.HasRegisteredClients)
+                {
+                    var database = requestHandlerContext.Database?.Name;
+                    LogTrafficWatch(context, sp?.ElapsedMilliseconds ?? 0, database);
+                }
+
                 if (_logger.IsInfoEnabled && SkipHttpLogging == false)
                 {
                     _logger.Info($"{context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString.Value} - {context.Response.StatusCode} - {(sp?.ElapsedMilliseconds ?? 0):#,#;;0} ms", exception);
