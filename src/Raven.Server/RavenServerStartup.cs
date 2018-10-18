@@ -152,8 +152,10 @@ namespace Raven.Server
 
         private async Task RequestHandler(HttpContext context)
         {
+            Exception exception = null;
             var database = new Reference<string>();
             Stopwatch sp = null;
+
             try
             {
                 context.Response.StatusCode = (int)HttpStatusCode.OK;
@@ -165,11 +167,7 @@ namespace Raven.Server
 
                 sp = Stopwatch.StartNew();
                 await _router.HandlePath(context, context.Request.Method, context.Request.Path.Value, database);
-
-                if (_logger.IsInfoEnabled && SkipHttpLogging == false)
-                {
-                    _logger.Info($"{context.Request.Method} {context.Request.Path.Value}?{context.Request.QueryString.Value} - {context.Response.StatusCode} - {sp.ElapsedMilliseconds:#,#;;0} ms");
-                }
+                sp.Stop();
 
                 // check if TW has clients
                 if (TrafficWatchManager.HasRegisteredClients)
@@ -177,11 +175,16 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
+                sp?.Stop();
+                exception = e;
+
                 if (context.Request.Headers.TryGetValue(Constants.Headers.ClientVersion, out var versions))
                 {
                     var version = versions.ToString();
                     if (version.Length > 0 && version[0] != RavenVersionAttribute.Instance.MajorVersionAsChar)
-                        e = new ClientVersionMismatchException($"RavenDB does not support interaction between Client API and Server when major version does not match. Client: {version}. Server: {RavenVersionAttribute.Instance.AssemblyVersion}", e);
+                        e = new ClientVersionMismatchException(
+                            $"RavenDB does not support interaction between Client API and Server when major version does not match. Client: {version}. Server: {RavenVersionAttribute.Instance.AssemblyVersion}",
+                            e);
                 }
 
                 MaybeSetExceptionStatusCode(context, e);
@@ -220,6 +223,13 @@ namespace Raven.Server
                     File.Delete(f);
 #endif
 
+                }
+            }
+            finally
+            {
+                if (_logger.IsInfoEnabled && SkipHttpLogging == false)
+                {
+                    _logger.Info($"{context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString.Value} - {context.Response.StatusCode} - {(sp?.ElapsedMilliseconds ?? 0):#,#;;0} ms", exception);
                 }
             }
         }
