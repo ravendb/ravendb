@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
     <metadata>
         <id>RavenDB.Embedded</id>
-        <version>4.1.0-custom-41</version>
+        <version>4.2.0-custom-42</version>
         <title>RavenDB Embedded</title>
         <authors>Hibernating Rhinos</authors>
         <owners>Hibernating Rhinos</owners>
@@ -15,10 +15,10 @@
         <repository type="git" url="https://github.com/ravendb/ravendb" />
         <dependencies>
             <group targetFramework=".NETFramework4.6.1">
-                <dependency id="RavenDB.Client" version="4.1.0-custom-41" exclude="Build,Analyzers" />
+                <dependency id="RavenDB.Client" version="4.2.0-custom-42" exclude="Build,Analyzers" />
             </group>
             <group targetFramework=".NETStandard2.0">
-                <dependency id="RavenDB.Client" version="4.1.0-custom-41" exclude="Build,Analyzers" />
+                <dependency id="RavenDB.Client" version="4.2.0-custom-42" exclude="Build,Analyzers" />
                 <dependency id="System.Runtime.Loader" version="4.3.0" exclude="Build,Analyzers" />
             </group>
         </dependencies>
