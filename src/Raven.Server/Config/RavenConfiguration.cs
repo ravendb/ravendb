@@ -87,7 +87,7 @@ namespace Raven.Server.Config
         internal CommandLineConfigurationSource CommandLineSettings =>
             _configBuilder.Sources.OfType<CommandLineConfigurationSource>().FirstOrDefault();
 
-        public RavenConfiguration(string resourceName, ResourceType resourceType, string customConfigPath = null)
+        private RavenConfiguration(string resourceName, ResourceType resourceType, string customConfigPath = null)
         {
             ResourceName = resourceName;
             ResourceType = resourceType;
@@ -306,11 +306,16 @@ namespace Raven.Server.Config
             return dataDirectoryPath;
         }
 
-        public static RavenConfiguration CreateFrom(RavenConfiguration parent, string name, ResourceType type)
+        public static RavenConfiguration CreateForServer(string name, string customConfigPath = null)
         {
-            var dataDirectoryPath = GetDataDirectoryPath(parent.Core, name, type);
+            return new RavenConfiguration(name, ResourceType.Server, customConfigPath);
+        }
 
-            var result = new RavenConfiguration(name, type)
+        public static RavenConfiguration CreateForDatabase(RavenConfiguration parent, string name)
+        {
+            var dataDirectoryPath = GetDataDirectoryPath(parent.Core, name, ResourceType.Database);
+
+            var result = new RavenConfiguration(name, ResourceType.Database)
             {
                 ServerWideSettings = parent.Settings,
                 Settings = new ConfigurationRoot(new List<IConfigurationProvider> { new MemoryConfigurationProvider(new MemoryConfigurationSource()) })
@@ -321,6 +326,14 @@ namespace Raven.Server.Config
             };
 
             return result;
+        }
+
+        /// <summary>
+        /// This method should only be used for testing purposes
+        /// </summary>
+        internal static RavenConfiguration CreateForTesting(string name, ResourceType resourceType, string customConfigPath = null)
+        {
+            return new RavenConfiguration(name, resourceType, customConfigPath);
         }
 
         private static string GenerateDefaultDataDirectory(string template, ResourceType type, string name)

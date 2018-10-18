@@ -15,7 +15,7 @@ namespace FastTests.Issues
         {
             try
             {
-                var configuration = new RavenConfiguration(null, ResourceType.Server, "thisIsANonExistentSettingsFile.json");
+                var configuration = RavenConfiguration.CreateForServer(null, "thisIsANonExistentSettingsFile.json");
                 throw new Exception("Configuration loading should have thrown.");
             }
             catch (FileNotFoundException exc)
