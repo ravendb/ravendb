@@ -4,12 +4,15 @@ import clusterTopology = require("models/database/cluster/clusterTopology");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import changesContext = require("common/changesContext");
 import licenseModel = require("models/auth/licenseModel");
+import getClusterNodeInfoCommand = require("commands/database/cluster/getClusterNodeInfoCommand");
 
 class clusterTopologyManager {
 
     static default = new clusterTopologyManager();
 
     topology = ko.observable<clusterTopology>();
+    
+    nodeInfo = ko.observable<Raven.Client.ServerWide.Commands.NodeInfo>();
 
     localNodeTag: KnockoutComputed<string>;
     localNodeUrl: KnockoutComputed<string>;
@@ -20,8 +23,16 @@ class clusterTopologyManager {
     
     throttledLicenseUpdate = _.throttle(() => licenseModel.fetchLicenseStatus(), 5000);
     
-    init(): JQueryPromise<clusterTopology> {
-        return this.fetchTopology();
+    init(): JQueryPromise<void> {
+        return $.when<any>(this.fetchTopology(), this.fetchNodeInfo());
+    }
+    
+    private fetchNodeInfo() {
+        return new getClusterNodeInfoCommand()
+            .execute()
+            .done(nodeInfo => {
+                this.nodeInfo(nodeInfo);
+            });
     }
 
     private fetchTopology() {

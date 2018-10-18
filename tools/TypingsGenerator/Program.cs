@@ -31,6 +31,7 @@ using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -217,6 +218,7 @@ namespace TypingsGenerator
             // cluster 
             scripter.AddType(typeof(ClusterTopology));
             scripter.AddType(typeof(ClusterObserverDecisions));
+            scripter.AddType(typeof(NodeInfo));
 
             // query 
             scripter.AddType(typeof(QueryResult<,>));
