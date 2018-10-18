@@ -187,7 +187,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(BulkOperationResult));
             scripter.AddType(typeof(ReplayTxOperationResult));
             scripter.AddType(typeof(BulkInsertProgress));
-            scripter.AddType(typeof(ReplayTxProgress));
             scripter.AddType(typeof(OperationExceptionResult));
             scripter.AddType(typeof(DocumentChange));
             scripter.AddType(typeof(IndexChange));
