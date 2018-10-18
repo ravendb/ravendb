@@ -809,19 +809,7 @@ namespace Raven.Server.Documents.Queries.Parser
             var functionStart = Scanner.Position;
             if (Scanner.FunctionBody())
             {
-                var functionText = Scanner.Input.Substring(functionStart, Scanner.Position - functionStart);
-
-                // validate that this is valid JS code
-                try
-                {
-                    var program = ValidateScript("return " + functionText);
-                    query.SelectFunctionBody = (functionText, program);
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidQueryException("Select clause contains invalid script", Scanner.Input, null, e);
-                }
-
+                query.SelectFunctionBody.FunctionText = Scanner.Input.Substring(functionStart, Scanner.Position - functionStart);
                 return new List<(QueryExpression, StringSegment?)>();
             }
 

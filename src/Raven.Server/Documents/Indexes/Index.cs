@@ -1121,11 +1121,10 @@ namespace Raven.Server.Documents.Indexes
                                 // anytime soon
                                 ReduceMemoryUsage();
 
-                                var numberOfSetEvents =
-                                    WaitHandle.WaitAny(new[]
-                                        {_mre.WaitHandle, _logsAppliedEvent.WaitHandle, _indexingProcessCancellationTokenSource.Token.WaitHandle});
+                                WaitHandle.WaitAny(new[]
+                                    {_mre.WaitHandle, _logsAppliedEvent.WaitHandle, _indexingProcessCancellationTokenSource.Token.WaitHandle});
 
-                                if (numberOfSetEvents == 1 && _logsAppliedEvent.IsSet)
+                                if (_logsAppliedEvent.IsSet && _mre.IsSet == false && _indexingProcessCancellationTokenSource.IsCancellationRequested == false)
                                 {
                                     _hadRealIndexingWorkToDo.Lower();
                                     storageEnvironment.Cleanup();

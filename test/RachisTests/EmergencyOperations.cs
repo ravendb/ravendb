@@ -36,7 +36,7 @@ namespace RachisTests
                     continue;
                 leaderSelectedTasks.Add(server.ServerStore.WaitForState(RachisState.Leader, CancellationToken.None).ContinueWith(_=>server));
             }
-            Assert.True(await Task.WhenAny(leaderSelectedTasks).WaitAsync(TimeSpan.FromSeconds(2)),"New leader was not elected after old leader left the cluster.");            
+            Assert.True(await Task.WhenAny(leaderSelectedTasks).WaitAsync(TimeSpan.FromSeconds(10)),"New leader was not elected after old leader left the cluster.");            
         }
 
         [Fact]

@@ -1,21 +1,22 @@
 ﻿using System;
 using System.IO;
-using System.Threading;
 using FastTests.Voron;
 using Voron;
+using Voron.Global;
 using Xunit;
 
 namespace SlowTests.Voron.Issues
 {
-    public class RavenDB_7097 : StorageTest
+    public class RavenDB_11865 : StorageTest
     {
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;
+            options.MaxScratchBufferSize = 2 * Constants.Size.Megabyte;
         }
 
         [Fact]
-        public void Recyclable_journal_files_are_deleted_on_dispose()
+        public void Scratch_files_on_recyclable_area_should_be_deleted_on_dispose()
         {
             RequireFileBasedPager();
 
@@ -36,18 +37,26 @@ namespace SlowTests.Voron.Issues
             }
 
             Env.FlushLogToDataFile();
-            Env.ForceSyncDataFile();
 
-            var journalPath = ((StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)Env.Options).JournalPath.FullPath;
+            for (int i = 0; i < 1000; i++)
+            {
+                using (var tx = Env.WriteTransaction())
+                {
+                    r.NextBytes(bytes);
 
-            Assert.True(SpinWait.SpinUntil(() => new DirectoryInfo(journalPath).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*").Length == 6,
-                TimeSpan.FromSeconds(30)));
+                    tx.CreateTree("items").Add($"item/{i}", new MemoryStream(bytes));
+
+                    tx.Commit();
+                }
+            }
 
             Env.Dispose();
 
-            var journalsForReuse = new DirectoryInfo(journalPath).GetFiles($"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}*");
+            var temp = ((StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)Env.Options).TempPath.FullPath;
 
-            Assert.Equal(0, journalsForReuse.Length);
+            var scratches = new DirectoryInfo(temp).GetFiles("scratch.*");
+
+            Assert.Equal(0, scratches.Length);
         }
     }
 }

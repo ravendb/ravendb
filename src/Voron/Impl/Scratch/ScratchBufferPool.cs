@@ -63,6 +63,14 @@ namespace Voron.Impl.Scratch
                 }
 
                 _scratchBuffers.Clear();
+
+                while (_recycleArea.First != null)
+                {
+                    var recycledScratch = _recycleArea.First.Value;
+
+                    recycledScratch.File.Dispose();
+                    _recycleArea.RemoveFirst();
+                }
             });
 
             _env = env;

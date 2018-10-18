@@ -11,7 +11,7 @@ class getSubscriptionConnectionDetailsCommand extends commandBase {
     execute(): JQueryPromise<Raven.Server.Documents.TcpHandlers.SubscriptionConnectionDetails> {
         return this.getConnectionDetails()
             .fail((response: JQueryXHR) => {
-                this.reportError(`Failed to get connection details for subscription: ${this.taskName}. `, response.responseText, response.statusText);
+                this.reportError(`Failed to get connection details`, response.responseText, response.statusText);
             });
     }
 
