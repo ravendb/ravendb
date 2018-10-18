@@ -109,5 +109,189 @@ namespace FastTests.Blittable
                 }
             }
         }
+
+        [Fact]
+        public void Equals_with_the_usage_of_memcmp_underneath()
+        {
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                var json1 = new DynamicJsonValue()
+                {
+                    ["Name"] = "Oren",
+                    ["Age"] = 34,
+                    ["Dogs"] = new DynamicJsonArray()
+                    {
+
+                        "Arava",
+                        "Oscar",
+                        "Phoebe"
+                    },
+                    ["Office"] = new DynamicJsonValue()
+                    {
+                        ["Name"] = "Hibernating Rhinos",
+                        ["Street"] = "Hanasi 21",
+                        ["City"] = "Hadera",
+                    }
+                };
+
+                var json2 = new DynamicJsonValue()
+                {
+                    ["Name"] = "Oren",
+                    ["Age"] = 34,
+                    ["Dogs"] = new DynamicJsonArray()
+                    {
+
+                        "Arava",
+                        "Oscar",
+                        "Phoebe"
+                    },
+                    ["Office"] = new DynamicJsonValue()
+                    {
+                        ["Name"] = "Hibernating Rhinos",
+                        ["Street"] = "Hanasi 21",
+                        ["City"] = "Hadera",
+                    }
+                };
+
+                using (var blittable1 = ctx.ReadObject(json1, "foo"))
+                using (var blittable2 = ctx.ReadObject(json2, "foo"))
+                {
+                    Assert.True(blittable1.Equals(blittable2));
+
+                    blittable1.TryGet("Office", out BlittableJsonReaderObject ob1);
+                    blittable2.TryGet("Office", out BlittableJsonReaderObject ob2);
+
+                    Assert.True(ob1.Equals(ob2));
+                }
+            }
+        }
+
+        [Fact]
+        public void Equals_with_the_usage_of_memcmp_underneath_and_complex_nested_object()
+        {
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                var json1 = new DynamicJsonValue()
+                {
+                    ["Name"] = "Oren",
+                    ["Age"] = 34,
+                    ["Dogs"] = new DynamicJsonArray()
+                    {
+
+                        "Arava",
+                        "Oscar",
+                        "Phoebe"
+                    },
+                    ["Office"] = new DynamicJsonValue()
+                    {
+                        ["Name"] = new DynamicJsonValue()
+                        {
+                            ["Company"] = "Hibernating Rhinos",
+                            ["Type"] = "LTD",
+                        },
+                        ["Street"] = "Hanasi 21",
+                        ["City"] = "Hadera",
+                    }
+                };
+
+                var json2 = new DynamicJsonValue()
+                {
+                    ["Name"] = "Oren",
+                    ["Age"] = 34,
+                    ["Dogs"] = new DynamicJsonArray()
+                    {
+
+                        "Arava",
+                        "Oscar",
+                        "Phoebe"
+                    },
+                    ["Office"] = new DynamicJsonValue()
+                    {
+                        ["Name"] = new DynamicJsonValue()
+                        {
+                            ["Company"] = "Hibernating Rhinos",
+                            ["Type"] = "LTD",
+                        },
+                        ["Street"] = "Hanasi 21",
+                        ["City"] = "Hadera",
+                    }
+                };
+
+                using (var blittable1 = ctx.ReadObject(json1, "foo"))
+                using (var blittable2 = ctx.ReadObject(json2, "foo"))
+                {
+                    Assert.True(blittable1.Equals(blittable2));
+
+                    blittable1.TryGet("Office", out BlittableJsonReaderObject ob1);
+                    blittable2.TryGet("Office", out BlittableJsonReaderObject ob2);
+
+                    Assert.True(ob1.Equals(ob2));
+                }
+            }
+        }
+
+        [Fact]
+        public void Must_not_be_equal_if_nested_property_name_is_different()
+        {
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                var json1 = new DynamicJsonValue()
+                {
+                    ["Name"] = "Oren",
+                    ["Age"] = 34,
+                    ["Dogs"] = new DynamicJsonArray()
+                    {
+
+                        "Arava",
+                        "Oscar",
+                        "Phoebe"
+                    },
+                    ["Office"] = new DynamicJsonValue()
+                    {
+                        ["Name"] = new DynamicJsonValue()
+                        {
+                            ["Company"] = "Hibernating Rhinos",
+                            ["Type"] = "LTD",
+                        },
+                        ["Street"] = "Hanasi 21",
+                        ["City"] = "Hadera",
+                    }
+                };
+
+                var json2 = new DynamicJsonValue()
+                {
+                    ["Name"] = "Oren",
+                    ["Age"] = 34,
+                    ["Dogs"] = new DynamicJsonArray()
+                    {
+
+                        "Arava",
+                        "Oscar",
+                        "Phoebe"
+                    },
+                    ["Office"] = new DynamicJsonValue()
+                    {
+                        ["Name"] = new DynamicJsonValue()
+                        {
+                            ["Company"] = "Hibernating Rhinos",
+                            ["DDDD"] = "LTD",                   // <---- property name is different here
+                        },
+                        ["Street"] = "Hanasi 21",
+                        ["City"] = "Hadera",
+                    }
+                };
+
+                using (var blittable1 = ctx.ReadObject(json1, "foo"))
+                using (var blittable2 = ctx.ReadObject(json2, "foo"))
+                {
+                    Assert.False(blittable1.Equals(blittable2));
+
+                    blittable1.TryGet("Office", out BlittableJsonReaderObject ob1);
+                    blittable2.TryGet("Office", out BlittableJsonReaderObject ob2);
+
+                    Assert.False(ob1.Equals(ob2));
+                }
+            }
+        }
     }
 }

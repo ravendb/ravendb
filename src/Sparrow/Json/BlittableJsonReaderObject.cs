@@ -1099,11 +1099,47 @@ NotFound:
         {
             if (_propCount != other._propCount)
                 return false;
+            
+            if (_isRoot == false && other._isRoot == false)
+            {
+                var buffer = new PropertiesInsertionBuffer();
+
+                GetPropertiesByInsertionOrder(buffer);
+
+                var dataStart = _objStart - buffer.Offsets[0];
+                var dataSize = _objStart - dataStart;
+
+                other.GetPropertiesByInsertionOrder(buffer);
+
+                var otherDataStart = other._objStart - buffer.Offsets[0];
+                var otherDataSize = other._objStart - otherDataStart;
+
+                if (dataSize != otherDataSize)
+                    return false;
+
+                if (dataSize < int.MaxValue)
+                {
+                    if (Memory.CompareInline(dataStart, otherDataStart, (int)dataSize) == 0)
+                    {
+                        // data of property values is the same, we also need to check names of properties
+                        // they as are defined in root so it requires separate check
+
+                        return HasSamePropertyNames(other);
+                    }
+                }
+            }
+            else if (_isRoot && other._isRoot)
+            {
+                if (_size != other._size)
+                    return false;
+
+                if (Memory.CompareInline(_mem, other._mem, _size) == 0)
+                    return true;
+            }
 
             foreach (var propertyName in GetPropertyNames())
             {
-                object result;
-                if (other.TryGetMember(propertyName, out result) == false)
+                if (other.TryGetMember(propertyName, out object result) == false)
                     return false;
 
                 var current = this[propertyName];
@@ -1121,6 +1157,34 @@ NotFound:
         public override int GetHashCode()
         {
             return _isRoot ? _size ^ _propCount : _propCount;
+        }
+
+        private bool HasSamePropertyNames(BlittableJsonReaderObject other)
+        {
+            var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
+
+            for (int i = 0; i < _propCount; i++)
+            {
+                GetPropertyTypeAndPosition(i, metadataSize, out var type, out _, out var id);
+
+                var propName = GetPropertyName(id);
+
+                if (other.Contains(propName) == false)
+                    return false;
+
+                var token = type & TypesMask;
+
+                if (token != BlittableJsonToken.StartObject && token != BlittableJsonToken.EmbeddedBlittable)
+                    continue;
+                
+                var current = (BlittableJsonReaderObject)this[propName];
+                var otherCurrent = (BlittableJsonReaderObject)other[propName];
+
+                if (current.HasSamePropertyNames(otherCurrent) == false)
+                    return false;
+            }
+
+            return true;
         }
 
         [Conditional("DEBUG")]
