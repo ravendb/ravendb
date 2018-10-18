@@ -329,7 +329,7 @@ namespace Voron.Impl.Paging
                     // actually there in the file, and if the code will attempt to access beyond the end of file, we'll get
                     // an access denied error, but this is already handled in higher level of the code, since we aren't just
                     // handing out access to the full range we are mapping immediately.
-                    if (allowPartialMapAtEndOfFile && (long)offset.Value < _fileStreamLength)
+                    if ((long)offset.Value < _fileStreamLength)
                         size = _fileStreamLength - (long) offset.Value;
                     else
                         ThrowInvalidMappingRequested(startPage, size);
