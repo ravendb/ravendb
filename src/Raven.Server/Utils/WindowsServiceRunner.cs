@@ -77,7 +77,7 @@ namespace Raven.Server.Utils
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info("Error initializing the server", e);
-                    
+
                 throw;
             }
         }
@@ -88,7 +88,7 @@ namespace Raven.Server.Utils
                 Logger.Info($"Restarting RavenDB Windows Service: {ServiceName}.");
 
             _ravenServer.Dispose();
-            var configuration = new RavenConfiguration(null, ResourceType.Server, CommandLineSwitches.CustomConfigPath);
+            var configuration = RavenConfiguration.CreateForServer(null, CommandLineSwitches.CustomConfigPath);
 
             if (_args != null)
                 configuration.AddCommandLine(_args);
@@ -96,7 +96,7 @@ namespace Raven.Server.Utils
             configuration.Initialize();
             _ravenServer = new RavenServer(configuration);
             Start(_args, _serviceStoppedCallback);
-            
+
             configuration.Initialize();
         }
 

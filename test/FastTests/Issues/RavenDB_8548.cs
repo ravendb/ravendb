@@ -23,7 +23,7 @@ namespace FastTests.Issues
 
             try
             {
-                var configuration = new RavenConfiguration("test", ResourceType.Server);
+                var configuration = RavenConfiguration.CreateForServer("test");
 
                 configuration.Initialize();
 

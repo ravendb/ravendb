@@ -596,7 +596,7 @@ namespace Raven.Server.Documents
         protected RavenConfiguration CreateConfiguration(DatabaseRecord record)
         {
             Debug.Assert(_serverStore.Disposed == false);
-            var config = RavenConfiguration.CreateFrom(_serverStore.Configuration, record.DatabaseName, ResourceType.Database);
+            var config = RavenConfiguration.CreateForDatabase(_serverStore.Configuration, record.DatabaseName);
 
             foreach (var setting in record.Settings)
                 config.SetSetting(setting.Key, setting.Value);

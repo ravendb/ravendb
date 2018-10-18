@@ -10,13 +10,13 @@ namespace FastTests.Issues
         [Fact]
         public void ShouldWork()
         {
-            var server = new RavenConfiguration(null, ResourceType.Server);
+            var server = RavenConfiguration.CreateForServer(null);
             server.SetSetting(RavenConfiguration.GetKey(x => x.Storage.ForceUsing32BitsPager), "true");
             server.Initialize(); // should not throw
 
             Assert.True(server.Storage.ForceUsing32BitsPager);
 
-            var database = RavenConfiguration.CreateFrom(server, "dbName", ResourceType.Database);
+            var database = RavenConfiguration.CreateForDatabase(server, "dbName");
             database.SetSetting(RavenConfiguration.GetKey(x => x.Storage.ForceUsing32BitsPager), "true");
 
             var e = Assert.Throws<InvalidOperationException>(() => database.Initialize());

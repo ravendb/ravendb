@@ -32,7 +32,7 @@ namespace FastTests.Issues
         [Fact]
         public void Default_database_path_settings()
         {
-            var config = new RavenConfiguration("foo", ResourceType.Database, _emptySettingFile);
+            var config = RavenConfiguration.CreateForTesting("foo", ResourceType.Database, _emptySettingFile);
 
             config.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true");
 
@@ -47,8 +47,7 @@ namespace FastTests.Issues
 
             // actual configuration is created in the following manner
 
-            config = RavenConfiguration.CreateFrom(new RavenConfiguration(null, ResourceType.Server, _emptySettingFile), "foo",
-                ResourceType.Database);
+            config = RavenConfiguration.CreateForDatabase(RavenConfiguration.CreateForServer(null, _emptySettingFile), "foo");
 
             config.Initialize();
 
@@ -63,7 +62,7 @@ namespace FastTests.Issues
         [Fact]
         public void Inherits_server_settings_and_appends_resource_specific_suffix_paths()
         {
-            var server = new RavenConfiguration(null, ResourceType.Server);
+            var server = RavenConfiguration.CreateForServer(null);
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true");
 
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), $@"{_rootPathString}Deployment");
@@ -74,7 +73,7 @@ namespace FastTests.Issues
 
             server.Initialize();
 
-            var database = RavenConfiguration.CreateFrom(server, "Foo", ResourceType.Database);
+            var database = RavenConfiguration.CreateForDatabase(server, "Foo");
 
             database.Initialize();
 
@@ -88,7 +87,7 @@ namespace FastTests.Issues
         [Fact]
         public void Resource_specific_paths_do_not_require_any_suffixes()
         {
-            var server = new RavenConfiguration(null, ResourceType.Server);
+            var server = RavenConfiguration.CreateForServer(null);
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true");
 
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), $@"{_rootPathString}Deployment");
@@ -99,7 +98,7 @@ namespace FastTests.Issues
 
             server.Initialize();
 
-            var database = RavenConfiguration.CreateFrom(server, "Foo", ResourceType.Database);
+            var database = RavenConfiguration.CreateForDatabase(server, "Foo");
 
             database.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), $@"{_rootPathString}MyDatabase");
 
@@ -119,14 +118,14 @@ namespace FastTests.Issues
        [Fact]
         public void Should_create_data_in_directory_specified_at_server_level()
         {
-            var server = new RavenConfiguration(null, ResourceType.Server);
+            var server = RavenConfiguration.CreateForServer(null);
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true");
 
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), $@"{_rootPathString}RavenData");
 
             server.Initialize();
 
-            var database = RavenConfiguration.CreateFrom(server, "Foo", ResourceType.Database);
+            var database = RavenConfiguration.CreateForDatabase(server, "Foo");
 
             database.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), @"Items");
 
