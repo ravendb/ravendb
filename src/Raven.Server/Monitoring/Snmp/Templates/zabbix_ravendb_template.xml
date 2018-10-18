@@ -9,8 +9,8 @@
     </groups>
     <templates>
         <template>
-            <template>Template RavenDB 4.0</template>
-            <name>Template RavenDB 4.0</name>
+            <template>Template RavenDB 4.2</template>
+            <name>Template RavenDB 4.2</name>
             <description/>
             <groups>
                 <group>

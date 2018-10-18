@@ -1,7 +1,7 @@
 image: ravendb/ravendb:latest
 manifests:
   -
-    image: ravendb/ravendb:4.1-ubuntu-latest
+    image: ravendb/ravendb:4.2-ubuntu-latest
     platform:
       architecture: amd64
       os: linux

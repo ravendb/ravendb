@@ -5,7 +5,7 @@ PKG_INSTALLER="apt-get" # supports : sudo ${PKG_INSTALLER} install <pkgname>
 
 CHK_PKGS=( "bzip2" "libunwind8" "tar" "libcurl3" )
 DOTNET_DIR="dotnet"
-RAVENDB_DIR="ravendb.4.1"
+RAVENDB_DIR="ravendb.4.2"
 PROGS=( ${DOTNET_DIR} ${RAVENDB_DIR} )
 RDB_DAEMON="ravendbd"
 
@@ -366,7 +366,7 @@ function addToStartup () {
 	if [ $OP_SYSTEM_STARTUP == 1 ]
 	then
 		echoExecProgram "Add RavenDB daemon to startup"
-		sudo chmod +x ravendb.4.1/ravendb.watchdog.sh
+		sudo chmod +x ravendb.4.2/ravendb.watchdog.sh
 		ESCAPED_PWD=$(pwd | sed 's/\//\\\//g' | sed 's/\&/\\\&/g')
 		cat ${RAVENDB_DIR}/${RDB_DAEMON} | sed 's/RDB_DOTNET_PATH/'${ESCAPED_PWD}'\/'${DOTNET_DIR}'/g' | sed 's/RDB_RAVENDB_PATH/'${ESCAPED_PWD}'\/'${RAVENDB_DIR}'/g' | sed 's/RDB_USERNAME/'${USER}'/g' > ${RDB_DAEMON}.config
 		sudo mv ${RDB_DAEMON}.config /etc/init.d/${RDB_DAEMON} >& /dev/null

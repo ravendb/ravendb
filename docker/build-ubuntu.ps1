@@ -24,13 +24,13 @@ function BuildUbuntuDockerImage ($version) {
     Copy-Item -Path $RavenDockerSettingsPath -Destination $(Join-Path -Path $DockerfileDir -ChildPath "settings.json") -Force
 
     write-host "Build docker image: $version"
-    write-host "Tags: $($repo):$version-ubuntu.18.04-x64 $($repo):4.1-ubuntu-latest"
+    write-host "Tags: $($repo):$version-ubuntu.18.04-x64 $($repo):4.2-ubuntu-latest"
 
     docker build $DockerfileDir `
         -t "$($repo):latest" `
         -t "$($repo):ubuntu-latest" `
         -t "$($repo):$version-ubuntu.18.04-x64" `
-        -t "$($repo):4.1-ubuntu-latest"
+        -t "$($repo):4.2-ubuntu-latest"
 
     Remove-Item -Path $dockerPackagePath
 }

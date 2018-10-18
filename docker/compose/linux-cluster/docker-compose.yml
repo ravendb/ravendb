@@ -1,7 +1,7 @@
 version: '3.1'
 services:
   raven1:
-    image: ravendb/ravendb-nightly:4.1-ubuntu-latest
+    image: ravendb/ravendb-nightly:4.2-ubuntu-latest
     container_name: raven1
     ports:
       - 8081:8080
@@ -15,7 +15,7 @@ services:
     env_file: ./license.env
       
   raven2:
-    image: ravendb/ravendb-nightly:4.1-ubuntu-latest
+    image: ravendb/ravendb-nightly:4.2-ubuntu-latest
     container_name: raven2
     ports:
       - 8082:8080
@@ -28,7 +28,7 @@ services:
     env_file: ./license.env
    
   raven3:
-    image: ravendb/ravendb-nightly:4.1-ubuntu-latest
+    image: ravendb/ravendb-nightly:4.2-ubuntu-latest
     container_name: raven3
     ports:
       - 8083:8080
