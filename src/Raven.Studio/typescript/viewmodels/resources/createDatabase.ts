@@ -122,7 +122,7 @@ class createDatabase extends dialogViewModelBase {
         
         popoverUtils.longWithHover($(".data-directory-label small"), 
             {
-                content: 'Absolute path to data directory. <br/> This folder should contain file <strong>Data.jfm</strong> or <strong>Raven.voron</strong>.'
+                content: 'Absolute path to data directory. <br/> This folder should contain file <strong>Data</strong>, <strong>Data.ravenfs</strong> or <strong>Raven.voron</strong>.'
             });
 
         this.databaseModel.encryption.key.subscribe(() => {

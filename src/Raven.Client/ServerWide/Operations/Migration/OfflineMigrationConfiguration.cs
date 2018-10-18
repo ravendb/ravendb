@@ -9,7 +9,8 @@ namespace Raven.Client.ServerWide.Operations.Migration
     public class OfflineMigrationConfiguration
     {
         private const string StorageExporterExecutable = "Raven.StorageExporter.exe";
-        private const string EsentDataFile = "Data.jfm";
+        private const string EsentDBDataFile = "Data";
+        private const string EsentFSDataFile = "Data.ravenfs";
         private const string VoronDataFile = "Raven.voron";
         
         private OfflineMigrationConfiguration()
@@ -71,10 +72,11 @@ namespace Raven.Client.ServerWide.Operations.Migration
             if (Directory.Exists(dataDirectory) == false)
                 throw new DirectoryNotFoundException($"Could not find directory {dataDirectory}");
 
-            var esentDataFile = Path.Combine(dataDirectory, EsentDataFile);
+            var esentDataDbFile = Path.Combine(dataDirectory, EsentDBDataFile);
+            var esentDataFsFile = Path.Combine(dataDirectory, EsentFSDataFile);
             var voronDataFile = Path.Combine(dataDirectory, VoronDataFile);
-            if (!File.Exists(esentDataFile) && !File.Exists(voronDataFile)) 
-                throw new FileNotFoundException($"Data directory should contain file '{EsentDataFile}' or '{VoronDataFile}'");
+            if (!File.Exists(esentDataDbFile) && !File.Exists(esentDataFsFile) && !File.Exists(voronDataFile))
+                throw new FileNotFoundException($"Data directory should contain file '{EsentDBDataFile}', '{EsentFSDataFile}' or '{VoronDataFile}'");
         }
 
         internal static void ValidateExporterPath(string dataExporterPath)
