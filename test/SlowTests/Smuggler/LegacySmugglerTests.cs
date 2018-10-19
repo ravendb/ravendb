@@ -31,7 +31,7 @@ namespace SlowTests.Smuggler
 
                 await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
 
-                var stats = await GetStatsAsync(store, s => s.CountOfIndexes >= 3, TimeSpan.FromSeconds(10));
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
 
                 Assert.Equal(1059, stats.CountOfDocuments);
                 Assert.Equal(3, stats.CountOfIndexes); // there are 4 in ravendbdump, but Raven/DocumentsByEntityName is skipped
@@ -80,7 +80,9 @@ namespace SlowTests.Smuggler
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.True(record.Indexes.Count > 0);
 
-                var stats = await GetStatsAsync(store, s => s.CountOfIndexes >= 463, TimeSpan.FromSeconds(60));
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+
+                //var stats = await GetStatsAsync(store, s => s.CountOfIndexes >= 463, TimeSpan.FromSeconds(60));
 
                 Assert.Equal(0, stats.CountOfDocuments);
 
@@ -189,21 +191,6 @@ namespace SlowTests.Smuggler
                     }
                 }
             }
-        }
-
-        private static async Task<DatabaseStatistics> GetStatsAsync(IDocumentStore store, Func<DatabaseStatistics, bool> action, TimeSpan timeout)
-        {
-            var sw = Stopwatch.StartNew();
-            while (sw.Elapsed < timeout)
-            {
-                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
-                if (action(stats))
-                    return stats;
-
-                await Task.Delay(1000);
-            }
-
-            throw new TimeoutException("Did not get stats in " + timeout);
         }
 
         private class User

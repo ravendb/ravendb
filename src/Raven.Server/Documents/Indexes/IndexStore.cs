@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -82,6 +83,8 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var kvp in record.AutoIndexes)
             {
+                _documentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();
+
                 var name = kvp.Key;
                 try
                 {
@@ -210,6 +213,8 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var kvp in record.Indexes)
             {
+                _documentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();
+
                 var name = kvp.Key;
                 var definition = kvp.Value;
 
@@ -324,6 +329,8 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var index in _indexes)
             {
+                _documentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();
+
                 var indexNormalizedName = index.Name;
                 if (indexNormalizedName.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix))
                 {
@@ -1510,14 +1517,29 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    var (etag, _) = await _store._serverStore.SendToLeaderAsync(_command);
+                    var (index, _) = await _store._serverStore.SendToLeaderAsync(_command);
 
-                    await _store._documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _store._serverStore.Engine.OperationTimeout);
+                    var indexCount = _command.Static.Count + _command.Auto.Count;
+                    var operationTimeout = _store._serverStore.Engine.OperationTimeout;
+                    var timeout = TimeSpan.FromSeconds((indexCount / 50.0) * operationTimeout.TotalSeconds);
+                    if (operationTimeout > timeout)
+                        timeout = operationTimeout;
+
+                    await _store._documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, timeout);
                 }
                 catch (TimeoutException toe)
                 {
-                    //throw new IndexCreationException($"Failed to create auto index: {definition.Name}, the cluster is probably down. " +
-                    //                                 $"Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
+                    var sb = new StringBuilder();
+                    sb.AppendLine("Failed to create indexes. The cluster is probably down.");
+                    if (_command.Static != null && _command.Static.Count > 0)
+                        sb.AppendLine("Static: " + string.Join(", ", _command.Static.Select(x => x.Name)));
+
+                    if (_command.Auto != null && _command.Auto.Count > 0)
+                        sb.AppendLine("Auto: " + string.Join(", ", _command.Auto.Select(x => x.Name)));
+
+                    sb.AppendLine($"Node {_store._serverStore.NodeTag} state is {_store._serverStore.LastStateChangeReason()}");
+
+                    throw new IndexCreationException(sb.ToString(), toe);
                 }
                 finally
                 {
