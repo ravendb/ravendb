@@ -19,6 +19,8 @@ namespace Raven.Server.ServerWide
 
         public const int Base41CommandsVersion = 41_000;
 
+        public const int Base42CommandsVersion = 42_000;
+
         public static readonly int MyCommandsVersion;
 
         public static int CurrentClusterMinimalVersion => _currentClusterMinimalVersion;
@@ -88,7 +90,9 @@ namespace Raven.Server.ServerWide
             [nameof(CleanUpClusterStateCommand)] = Base41CommandsVersion,
             [nameof(ClusterTransactionCommand)] = Base41CommandsVersion,
             [nameof(SetIndexStateCommand)] = Base41CommandsVersion,
-            [nameof(PutServerWideStudioConfigurationCommand)] = Base41CommandsVersion
+            [nameof(PutServerWideStudioConfigurationCommand)] = Base41CommandsVersion,
+
+            [nameof(PutIndexesCommand)] = Base42CommandsVersion
         };
 
         public static bool CanPutCommand(string command)
