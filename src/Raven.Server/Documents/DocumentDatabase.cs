@@ -62,6 +62,8 @@ namespace Raven.Server.Documents
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
 
         private readonly object _idleLocker = new object();
+
+        private readonly object _locker = new object();
         /// <summary>
         /// The current lock, used to make sure indexes have a unique names
         /// </summary>
@@ -383,7 +385,6 @@ namespace Raven.Server.Documents
 
         private unsafe void DisposeInternal()
         {
-
             //before we dispose of the database we take its latest info to be displayed in the studio
             try
             {
@@ -415,6 +416,11 @@ namespace Raven.Server.Documents
             }
 
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
+
+            var lockTaken = false;
+            Monitor.TryEnter(_locker, TimeSpan.FromSeconds(5), ref lockTaken);
+            if (lockTaken == false && _logger.IsOperationsEnabled)
+                _logger.Operations("Failed to acquire lock during database dispose for cluster notifications. Will dispose rudely...");
 
             foreach (var connection in RunningTcpConnections)
             {
@@ -519,9 +525,9 @@ namespace Raven.Server.Documents
                     {
                         // Unlock isn't supported on macOS
                     }
-                    
+
                     _writeLockFile.Dispose();
-                    
+
                     try
                     {
                         if (File.Exists(_lockFile))
@@ -532,6 +538,9 @@ namespace Raven.Server.Documents
                     }
                 }
             });
+
+            if (lockTaken)
+                Monitor.Exit(_locker);
 
             exceptionAggregator.ThrowIfNeeded();
 
@@ -848,8 +857,10 @@ namespace Raven.Server.Documents
 
         private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
         {
-            lock (this)
+            lock (_locker)
             {
+                DatabaseShutdown.ThrowIfCancellationRequested();
+
                 Debug.Assert(string.Equals(Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
                     $"{Name} != {record.DatabaseName}");
 
@@ -872,7 +883,7 @@ namespace Raven.Server.Documents
                     ReplicationLoader?.HandleDatabaseRecordChange(record);
                     EtlLoader?.HandleDatabaseRecordChange(record);
                     OnDatabaseRecordChanged(record);
-                    SubscriptionStorage?.HandleDatabaseValueChange(record);
+                    SubscriptionStorage?.HandleDatabaseRecordChange(record);
 
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
@@ -888,9 +899,11 @@ namespace Raven.Server.Documents
 
         private void NotifyFeaturesAboutValueChange(DatabaseRecord record)
         {
-            lock (this)
+            lock (_locker)
             {
-                SubscriptionStorage?.HandleDatabaseValueChange(record);
+                DatabaseShutdown.ThrowIfCancellationRequested();
+
+                SubscriptionStorage?.HandleDatabaseRecordChange(record);
                 EtlLoader?.HandleDatabaseValueChanged(record);
             }
         }
