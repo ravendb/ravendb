@@ -59,7 +59,7 @@
                     </div>
                     <div class="btn-group dropdown-right">
                         <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                            title="Choose visible columns">
+                            data-bind="css: { active: columnsSelector.customLayout }, attr: { title: columnsSelector.customLayout() ? 'Using custom columns and its order' : 'Choose visible columns' } ">
                             <i class="icon-table"></i><span>Display</span>
                             <span class="caret"></span>
                         </button>

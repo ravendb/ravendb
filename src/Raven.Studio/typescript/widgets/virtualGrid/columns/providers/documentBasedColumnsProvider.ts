@@ -3,6 +3,7 @@
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
+import customColumn = require("widgets/virtualGrid/columns/customColumn");
 import flagsColumn = require("widgets/virtualGrid/columns/flagsColumn");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
@@ -14,6 +15,7 @@ import document = require("models/database/documents/document");
 import virtualGridUtils = require("widgets/virtualGrid/virtualGridUtils");
 import app = require("durandal/app");
 import showDataDialog = require("viewmodels/common/showDataDialog");
+
 
 type columnOptionsDto = {
     extraClass?: (item: document) => string;
@@ -43,6 +45,7 @@ class documentBasedColumnsProvider {
     private readonly columnOptions: columnOptionsDto;
     private readonly customInlinePreview: (doc: document) => void;
     private readonly collectionTracker: collectionsTracker;
+    private readonly customColumnProvider: () => virtualColumn[];
 
     private static readonly externalIdRegex = /^\w+\/\w+/ig;
 
@@ -60,6 +63,19 @@ class documentBasedColumnsProvider {
     }
 
     findColumns(viewportWidth: number, results: pagedResult<document>, prioritizedColumns?: string[]): virtualColumn[] {
+        if (this.customColumnProvider) {
+            try {
+                const customColumns = this.customColumnProvider();
+                
+                if (customColumns) {
+                    return customColumns;
+                }
+            } catch (e) {
+                console.error(e);
+                // fall through here  - we want to execute default action if restore failed
+            }
+        }
+        
         const columnNames = this.findColumnNames(results, Math.floor(viewportWidth / documentBasedColumnsProvider.minColumnWidth), prioritizedColumns);
 
         // Insert the row selection checkbox column as necessary.
@@ -80,7 +96,7 @@ class documentBasedColumnsProvider {
         let flags: flagsColumn = null;
         
         if (this.showFlags) {
-            flags = new flagsColumn(this.gridController)
+            flags = new flagsColumn(this.gridController);
             initialColumns.push(flags);
         }
 
@@ -113,6 +129,30 @@ class documentBasedColumnsProvider {
         return finalColumns;
     }
 
+    reviver(source: virtualColumnDto): virtualColumn {
+        if (source.type === "hyperlink" && source.serializedValue.includes("x.getId()")) {
+            return new hyperlinkColumn(this.gridController, 
+                (x: document) => x.getId(), 
+                    x => appUrl.forEditDoc(x.getId(), this.db, x.__metadata.collection),
+                source.header, source.width, this.columnOptions);    
+        }
+        
+        switch (source.type) {
+            case "flags":
+                return new flagsColumn(this.gridController);
+            case "checkbox":
+                return new checkedColumn(this.showSelectAllCheckbox);
+            case "text":
+                return new textColumn(this.gridController, source.serializedValue, source.header, source.width, this.columnOptions);
+            case "hyperlink":
+                return new hyperlinkColumn(this.gridController, source.serializedValue, _.partial(this.findLink, _, source.serializedValue).bind(this), source.header, source.width, this.columnOptions);
+            case "custom":
+                return new customColumn(this.gridController, source.serializedValue, source.header, source.width);
+            default:
+                throw new Error("Unhandled column type: " + source);
+        }
+    }
+    
     static showPreview(doc: document) {
         const docDto = doc.toDto(true);
         

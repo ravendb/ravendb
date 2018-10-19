@@ -29,6 +29,10 @@ class legendColumn<T> implements virtualColumn {
         const color = this.colorAccessor(item);
         return `<div class="cell text-cell" style="width: ${this.width}"><div class="legend-rect" style="background-color: ${color}"></div></div>`;
     }
+    
+    toDto(): virtualColumnDto {
+        throw new Error("Legend column does not support serialization");
+    }
 
 }
 

@@ -39,6 +39,15 @@ class customColumn<T> extends textColumn<T> {
         return _.uniq(result);
     }
 
+    toDto(): virtualColumnDto {
+        return {
+            type: "custom",
+            width: this.width,
+            header: this.header,
+            serializedValue: this.jsCode
+        }
+    }
+
 }
 
 export = customColumn;

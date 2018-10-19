@@ -63,6 +63,18 @@ class documents extends viewModelBase {
     constructor() {
         super();
 
+        this.columnsSelector.configureColumnsPersistence(() => {
+            if (this.currentCollection().isAllDocuments) {
+                // don't save custom layout for all documents
+                return null;
+            }
+            
+            const dbName = this.activeDatabase().name;
+            const collectionName = this.currentCollection().name;
+            
+            return dbName + ".[" + collectionName + "]";
+        });
+        
         this.initObservables();
     }
 
@@ -178,7 +190,7 @@ class documents extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-
+        
         this.$downloadForm = $("#exportCsvForm");
         
         this.setupDisableReasons();
@@ -204,6 +216,8 @@ class documents extends viewModelBase {
                 return documentsProvider.findColumns(w, r);
             }
         }, (results: pagedResultWithAvailableColumns<document>) => results.availableColumns);
+        
+        this.columnsSelector.tryInitializeWithSavedDefault(source => documentsProvider.reviver(source));
 
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
