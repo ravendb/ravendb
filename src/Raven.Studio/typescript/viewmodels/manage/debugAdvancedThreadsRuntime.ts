@@ -1,7 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
-import columnsSelector = require("viewmodels/partial/columnsSelector");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import generalUtils = require("common/generalUtils");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
@@ -13,7 +12,6 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
     filteredData = ko.observable<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo[]>();
 
     private gridController = ko.observable<virtualGridController<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>>();
-    columnsSelector = new columnsSelector<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>();
     private columnPreview = new columnPreviewPlugin<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>();
 
     threadsCount: KnockoutComputed<number>;

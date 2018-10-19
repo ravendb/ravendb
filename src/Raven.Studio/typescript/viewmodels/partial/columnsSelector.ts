@@ -6,6 +6,8 @@ import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import customColumn = require("widgets/virtualGrid/columns/customColumn");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
+import storageKeyProvider = require("common/storage/storageKeyProvider");
+import flagsColumn = require("widgets/virtualGrid/columns/flagsColumn");
 
 class columnItem {
 
@@ -22,9 +24,18 @@ class columnItem {
         return !(column instanceof checkedColumn) && !isActionColumn && !isMetadata;
     });
 
-    constructor(col: virtualColumn, editable: boolean) {
+    constructor(col: virtualColumn, editable: boolean, visible: boolean = false) {
         this.virtualColumn(col);
         this.editable(editable);
+        this.visible(visible);
+    }
+    
+    toDto(): serializedColumnDto {
+        return {
+            visible: this.visible(),
+            editable: this.editable(),
+            column: this.virtualColumn().toDto()
+        }
     }
 }
 
@@ -121,6 +132,8 @@ class customColumnForm {
 
 class columnsSelector<T> {
 
+    static readonly storagePrefix = "custom-columns-";
+    
     static readonly defaultWidth = "200px";
 
     private grid: virtualGridController<T>;
@@ -128,19 +141,34 @@ class columnsSelector<T> {
     private defaultColumnsProvider: (containerWidth: number, results: pagedResult<T>) => virtualColumn[];
     private availableColumnsProvider: (results: pagedResult<T>) => string[];
     private customLayout = ko.observable<boolean>(false);
+    private contextNameProvider: () => string;
 
     customColumnForm = new customColumnForm();
     columnLayout = ko.observableArray<columnItem>();
+    
     selectionState: KnockoutComputed<checkbox>;
     hasAtLeastOneColumn: KnockoutComputed<boolean>;
+    allVisibleColumns: KnockoutComputed<columnItem[]>;
 
     constructor() {
         this.initObservables();
     }
 
+    /**
+     * when you provide contextNameProvider settings will be saved in local storage
+     * in other case we don't persist custom columns order
+     * 
+     * If function returns falsy, we don't save given context
+     */
+    configureColumnsPersistence(contextNameProvider: () => string) {
+        this.contextNameProvider = contextNameProvider;
+    }
+    
     private initObservables() {
+        this.allVisibleColumns = ko.pureComputed(() => this.columnLayout().filter(x => x.visibleInSelector()));
+        
         this.selectionState = ko.pureComputed<checkbox>(() => {
-            const allVisibleColumns = this.columnLayout().filter(x => x.visibleInSelector());
+            const allVisibleColumns = this.allVisibleColumns();
             const checkedCount = allVisibleColumns.filter(x => x.visible()).length;
 
             if (allVisibleColumns.length && checkedCount === allVisibleColumns.length)
@@ -150,10 +178,10 @@ class columnsSelector<T> {
         });
         
         this.hasAtLeastOneColumn = ko.pureComputed(() => {
-            const allVisibleColumns = this.columnLayout().filter(x => x.visibleInSelector());
+            const allVisibleColumns = this.allVisibleColumns();
             const selectedCount = allVisibleColumns.filter(x => x.visible()).length;
-            return selectedCount > 0;
-        })
+            return allVisibleColumns.length === 0 || selectedCount > 0;
+        });
     }
 
     init(grid: virtualGridController<T>, fetcher: (skip: number, take: number, previewColumns: string[], fullColumns: string[]) => JQueryPromise<pagedResult<T>>,
@@ -164,8 +192,6 @@ class columnsSelector<T> {
         this.defaultColumnsProvider = defaultColumnsProvider;
         this.availableColumnsProvider = availableColumnsProvider;
 
-        //TODO: restore custom colums (if any) - optionally introduce option to disallow customization - make sure it works properly with required columns
-
         this.grid.init((s, t) => this.onFetch(s, t), (w, r) => this.provideColumns(w, r));
     }
     
@@ -175,7 +201,7 @@ class columnsSelector<T> {
             trigger: 'focus'
         });
     }
-
+    
     private registerSortable() {
         const list = $(".columns-list-container .column-list")[0];
 
@@ -196,7 +222,7 @@ class columnsSelector<T> {
     }
 
     toggleSelectAll(): void {
-        const allVisibleColumns = this.columnLayout().filter(x => x.visibleInSelector());
+        const allVisibleColumns = this.allVisibleColumns();
 
         const selectedCount = allVisibleColumns.filter(x => x.visible()).length;
 
@@ -210,10 +236,12 @@ class columnsSelector<T> {
     applyColumns() {
         if (this.hasAtLeastOneColumn()) {
             this.customLayout(true);
-            this.grid.reset(true);    
+            this.grid.reset(true);
+            
+            this.saveAsDefault();
         }
     }
-
+    
     addCustomColumn() {
         if (this.customColumnForm.validationGroup.isValid()) {
             const item = this.customColumnForm.asColumnItem(this.grid);
@@ -261,6 +289,12 @@ class columnsSelector<T> {
     useDefaults() {
         this.reset();
         this.grid.reset(true);
+
+        const contextName = this.getContextName();
+        if (contextName) {
+            const localStorageKey = storageKeyProvider.storageKeyFor(contextName);
+            localStorage.removeItem(localStorageKey);
+        }
     }
 
     reset() {
@@ -390,14 +424,56 @@ class columnsSelector<T> {
 
         return _.uniq(columns);
     }
-
-    saveAsDefault(contextName: string) {
-        //TODO:
+    
+    private getContextName() {
+        if (this.contextNameProvider) {
+            const contextName = this.contextNameProvider();
+            if (contextName) {
+                return columnsSelector.storagePrefix + contextName;
+            }
+        }
+        
+        return null;
     }
 
+    saveAsDefault() {
+        const contextName = this.getContextName();
+        if (contextName) {
+            const serializedColumns = this.columnLayout().map(x => x.toDto());
+            const localStorageKey = storageKeyProvider.storageKeyFor(contextName);
+            localStorage.setObject(localStorageKey, serializedColumns);
+        }
+    }
+    
+    tryInitializeWithSavedDefault(reviver: (source: virtualColumnDto) => virtualColumn) {
+        const defaults = this.loadDefaults();
+        
+        if (defaults) {
+            this.customLayout(true);
 
-    loadDefaults(contextName: string) {
-        //TODO:
+            try {
+                this.columnLayout(
+                    defaults.map(
+                        item => new columnItem(
+                            reviver(item.column),
+                            item.editable,
+                            item.visible)));
+            } catch (e) {
+                // something bad happen, but show must go on - restore back to defaults
+                console.error(e);
+                this.useDefaults();
+            }
+        }
+    }
+
+    private loadDefaults(): serializedColumnDto[] {
+        const contextName = this.getContextName();
+        if (contextName) {
+            const localStorageKey = storageKeyProvider.storageKeyFor(contextName);
+            return localStorage.getObject(localStorageKey);
+        }
+        
+        return undefined;
     }
 }
 

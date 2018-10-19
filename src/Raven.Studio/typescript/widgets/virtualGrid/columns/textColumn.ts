@@ -120,6 +120,15 @@ class textColumn<T> implements virtualColumn {
 
         throw new Error("Unhandled value: " + cellValue);
     }
+    
+    toDto(): virtualColumnDto {
+        return {
+            type: "text",
+            width: this.width,
+            header: this.header,
+            serializedValue: this.valueAccessor.toString()
+        }
+    }
 
 }
 

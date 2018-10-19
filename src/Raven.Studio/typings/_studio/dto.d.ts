@@ -479,3 +479,17 @@ interface periodicBackupServerLimitsResponse {
     AllowedAwsRegions: Array<string>;
     AllowedDestinations: Array<backupOptions>;
 }
+
+interface serializedColumnDto {
+    visible: boolean;
+    editable: boolean;
+    column: virtualColumnDto;
+}
+
+
+interface virtualColumnDto {
+    type: "flags" | "checkbox" | "text" | "hyperlink" | "custom"
+    width: string;
+    header: string;
+    serializedValue: string;
+}

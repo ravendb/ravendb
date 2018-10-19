@@ -36,6 +36,15 @@ class checkedColumn implements virtualColumn {
 
         return `<div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox" /><label></label></div></div>`;
     }
+
+    toDto(): virtualColumnDto {
+        return {
+            type: "checkbox",
+            serializedValue: null,
+            header: null,
+            width: this.width
+        }
+    }
 }
 
 export = checkedColumn;

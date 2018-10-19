@@ -1,7 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
-import columnsSelector = require("viewmodels/partial/columnsSelector");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
@@ -24,7 +23,6 @@ class memoryMappedFiles extends viewModelBase {
     filter = ko.observable<string>();
     
     private gridController = ko.observable<virtualGridController<memoryMappingItem>>();
-    columnsSelector = new columnsSelector<memoryMappingItem>();
     private columnPreview = new columnPreviewPlugin<memoryMappingItem>();
     
     filesCount: KnockoutComputed<number>;
