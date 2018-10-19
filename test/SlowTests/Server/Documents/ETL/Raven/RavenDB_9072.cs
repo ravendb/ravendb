@@ -36,7 +36,6 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     var database = GetDatabase(store.Database).Result;
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
                     {
                         var result = (RavenEtlTestScriptResult)RavenEtl.TestScript(new TestRavenEtlScript
                         {
@@ -109,7 +108,6 @@ loadToOrders(orderData);"
                 var database = GetDatabase(store.Database).Result;
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
                 {
                     RavenEtl.TestScript(new TestRavenEtlScript
                     {
@@ -154,7 +152,6 @@ loadToOrders(this);"
                 var database = GetDatabase(store.Database).Result;
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
                 {
                     var ex = Assert.Throws<InvalidOperationException>(() => RavenEtl.TestScript(new TestRavenEtlScript
                     {
@@ -200,7 +197,6 @@ loadToDifferentCollection(this);"
                     var database = GetDatabase(store.Database).Result;
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
                     {
                         var result = (RavenEtlTestScriptResult)RavenEtl.TestScript(new TestRavenEtlScript
                         {
