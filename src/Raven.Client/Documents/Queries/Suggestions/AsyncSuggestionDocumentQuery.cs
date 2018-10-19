@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
         private readonly AsyncDocumentQuery<T> _source;
 
         public AsyncSuggestionDocumentQuery(AsyncDocumentQuery<T> source)
-            : base((InMemoryDocumentSessionOperations)source.Session)
+            : base((InMemoryDocumentSessionOperations)source.AsyncSession)
         {
             _source = source;
         }
