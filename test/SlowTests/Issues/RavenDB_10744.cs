@@ -115,8 +115,6 @@ namespace SlowTests.Issues
 
                     db.ServerStore.DatabasesLandlord.CatastrophicFailureHandler.MaxDatabaseUnloads = 0;
 
-                    index.Start();
-
                     var mre = new ManualResetEventSlim();
 
                     db.Changes.OnIndexChange += change =>
@@ -124,6 +122,8 @@ namespace SlowTests.Issues
                         if (change.Type == IndexChangeTypes.IndexMarkedAsErrored)
                             mre.Set();
                     };
+
+                    index.Start();
 
                     Assert.True(mre.Wait(TimeSpan.FromMinutes(1)));
                     Assert.Equal(IndexState.Error, index.State);
