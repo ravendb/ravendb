@@ -1173,12 +1173,16 @@ NotFound:
 
                 if (token != BlittableJsonToken.StartObject && token != BlittableJsonToken.EmbeddedBlittable)
                     continue;
-                
-                var current = (BlittableJsonReaderObject)this[propName];
-                var otherCurrent = (BlittableJsonReaderObject)other[propName];
 
-                if (current.HasSamePropertyNames(otherCurrent) == false)
+                if (this[propName] is BlittableJsonReaderObject current && other[propName] is BlittableJsonReaderObject otherCurrent)
+                {
+                    if (current.HasSamePropertyNames(otherCurrent) == false)
+                        return false;
+                }
+                else
+                {
                     return false;
+                }
             }
 
             return true;
