@@ -293,5 +293,134 @@ namespace FastTests.Blittable
                 }
             }
         }
+
+        [Fact]
+        public void Equals_when_creating_blittable_in_different_ways()
+        {
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(ctx))
+                using (var embeddedBuilder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(ctx))
+                {
+                    builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
+                    embeddedBuilder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
+
+                    embeddedBuilder.StartWriteObjectDocument();
+                    embeddedBuilder.StartWriteObject();
+
+                    embeddedBuilder.WritePropertyName("Name");
+                    embeddedBuilder.WriteValue("Hibernating Rhinos");
+                    embeddedBuilder.WritePropertyName("Type");
+                    embeddedBuilder.WriteValue("LTD");
+
+                    embeddedBuilder.WriteObjectEnd();
+                    embeddedBuilder.FinalizeDocument();
+                    var embeddedCompany = embeddedBuilder.CreateReader();
+
+                    builder.StartWriteObjectDocument();
+                    builder.StartWriteObject();
+
+                    builder.WritePropertyName("Company");
+                    builder.WriteEmbeddedBlittableDocument(embeddedCompany);
+                    builder.WritePropertyName("Street");
+                    builder.WriteValue("Hanasi 21");
+                    builder.WritePropertyName("City");
+                    builder.WriteValue("Hadera");
+
+                    builder.WriteObjectEnd();
+                    builder.FinalizeDocument();
+                    var blittable1 = builder.CreateReader();
+
+                    var json2 = new DynamicJsonValue()
+                    {
+                        ["Company"] = new DynamicJsonValue()
+                        {
+                            ["Name"] = "Hibernating Rhinos",
+                            ["Type"] = "LTD",
+                        },
+                        ["Street"] = "Hanasi 21",
+                        ["City"] = "Hadera",
+                    };
+
+                    using (var blittable2 = ctx.ReadObject(json2, "foo"))
+                    {
+                        Assert.Equal(blittable1, blittable2);
+
+                        blittable1.TryGet("Company", out BlittableJsonReaderObject ob1);
+                        blittable2.TryGet("Company", out BlittableJsonReaderObject ob2);
+
+                        Assert.Equal(ob1, ob2);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void Equals_blittables_created_manually()
+        {
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                BlittableJsonReaderObject CreateBlittable()
+                {
+                    using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(ctx))
+                    using (var officeBuilder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(ctx))
+                    using (var companyBuilder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(ctx))
+                    {
+                        builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
+                        officeBuilder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
+                        companyBuilder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
+
+                        companyBuilder.StartWriteObjectDocument();
+                        companyBuilder.StartWriteObject();
+
+                        companyBuilder.WritePropertyName("Name");
+                        companyBuilder.WriteValue("Hibernating Rhinos");
+                        companyBuilder.WritePropertyName("Type");
+                        companyBuilder.WriteValue("LTD");
+
+                        companyBuilder.WriteObjectEnd();
+                        companyBuilder.FinalizeDocument();
+                        var embeddedCompany = companyBuilder.CreateReader();
+
+                        officeBuilder.StartWriteObjectDocument();
+                        officeBuilder.StartWriteObject();
+
+                        officeBuilder.WritePropertyName("Company");
+                        officeBuilder.WriteEmbeddedBlittableDocument(embeddedCompany);
+                        officeBuilder.WritePropertyName("Street");
+                        officeBuilder.WriteValue("Hanasi 21");
+                        officeBuilder.WritePropertyName("City");
+                        officeBuilder.WriteValue("Hadera");
+
+                        officeBuilder.WriteObjectEnd();
+                        officeBuilder.FinalizeDocument();
+
+                        var embeddedOffice = officeBuilder.CreateReader();
+
+                        builder.StartWriteObjectDocument();
+                        builder.StartWriteObject();
+
+                        builder.WritePropertyName("Office");
+                        builder.WriteEmbeddedBlittableDocument(embeddedOffice);
+
+                        builder.WriteObjectEnd();
+                        builder.FinalizeDocument();
+
+                        return builder.CreateReader();
+                    }
+                }
+
+                using (var blittable1 = CreateBlittable())
+                using (var blittable2 = CreateBlittable())
+                {
+                    Assert.Equal(blittable1, blittable2);
+                    
+                    blittable1.TryGet("Office", out BlittableJsonReaderObject ob1);
+                    blittable2.TryGet("Office", out BlittableJsonReaderObject ob2);
+
+                    Assert.Equal(ob1, ob2);
+                }
+            }
+        }
     }
 }
