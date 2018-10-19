@@ -1,3 +1,4 @@
+using System;
 using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Queries.Suggestions
@@ -20,6 +21,21 @@ namespace Raven.Client.Documents.Queries.Suggestions
         protected override void InvokeAfterQueryExecuted(QueryResult result)
         {
             _source.InvokeAfterQueryExecuted(result);
+        }
+
+        public IAsyncSuggestionDocumentQuery<T> AndSuggestUsing(SuggestionBase suggestion)
+        {
+            _source.SuggestUsing(suggestion);
+            return this;
+        }
+
+        public IAsyncSuggestionDocumentQuery<T> AndSuggestUsing(Action<ISuggestionBuilder<T>> builder)
+        {
+            var f = new SuggestionBuilder<T>();
+            builder.Invoke(f);
+
+            _source.SuggestUsing(f.Suggestion);
+            return this;
         }
     }
 }

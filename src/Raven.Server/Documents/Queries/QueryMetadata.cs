@@ -966,8 +966,8 @@ namespace Raven.Server.Documents.Queries
 
         private SelectField GetSelectField(BlittableJsonReaderObject parameters, QueryExpression expression, string alias)
         {
-            if (HasSuggest)
-                ThrowSuggestionQueryMustContainsOnlyOneSuggestInSelect(parameters);
+            //if (HasSuggest)
+            //    ThrowSuggestionQueryMustContainsOnlyOneSuggestInSelect(parameters);
 
             if (expression is ValueExpression ve)
             {

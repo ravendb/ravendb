@@ -205,7 +205,7 @@ namespace Raven.Client.Documents
 
             source = source.Provider.CreateQuery<T>(Expression.Call(null, currentMethod, expression, Expression.Constant(suggestion)));
 
-            return new SuggestionQuery<T>(source);
+            return new SuggestionQuery<T>(source, ConvertExpressionIfNecessary, ConvertMethodIfNecessary, currentMethod);
         }
 
         /// <summary>
