@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
 using FastTests.Utils;
 using Raven.Client;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Smuggler;
@@ -81,8 +79,6 @@ namespace SlowTests.Smuggler
                 Assert.True(record.Indexes.Count > 0);
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
-
-                //var stats = await GetStatsAsync(store, s => s.CountOfIndexes >= 463, TimeSpan.FromSeconds(60));
 
                 Assert.Equal(0, stats.CountOfDocuments);
 
