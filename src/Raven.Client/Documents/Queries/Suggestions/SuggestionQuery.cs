@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -16,12 +18,21 @@ namespace Raven.Client.Documents.Queries.Suggestions
 {
     internal class SuggestionQuery<T> : SuggestionQueryBase, ISuggestionQuery<T>
     {
-        private readonly IQueryable<T> _source;
+        private IQueryable<T> _source;
+        private readonly Func<IQueryable<T>, Expression> _convertExpressionIfNecessary;
+        private readonly Func<MethodInfo, Type, MethodInfo> _convertMethodIfNecessary;
+        private readonly MethodInfo _suggestUsingMethod;
 
-        public SuggestionQuery(IQueryable<T> source) 
-            : base(((IRavenQueryInspector)source).Session)
+        public SuggestionQuery(
+            IQueryable<T> source,
+            Func<IQueryable<T>, Expression> convertExpressionIfNecessary,
+            Func<MethodInfo, Type, MethodInfo> convertMethodIfNecessary,
+            MethodInfo suggestUsingMethod) : base(((IRavenQueryInspector)source).Session)
         {
             _source = source;
+            _convertExpressionIfNecessary = convertExpressionIfNecessary;
+            _convertMethodIfNecessary = convertMethodIfNecessary;
+            _suggestUsingMethod = suggestUsingMethod;
         }
 
         protected override IndexQuery GetIndexQuery(bool isAsync)
@@ -34,6 +45,22 @@ namespace Raven.Client.Documents.Queries.Suggestions
         {
             var provider = (RavenQueryProvider<T>)_source.Provider;
             provider.InvokeAfterQueryExecuted(result);
+        }
+
+        public ISuggestionQuery<T> AndSuggestUsing(SuggestionBase suggestion)
+        {
+            var expression = _convertExpressionIfNecessary(_source);
+            var method = _convertMethodIfNecessary(_suggestUsingMethod, typeof(T));
+            _source = _source.Provider.CreateQuery<T>(Expression.Call(null, method, expression, Expression.Constant(suggestion)));
+            return this;
+        }
+
+        public ISuggestionQuery<T> AndSuggestUsing(Action<ISuggestionBuilder<T>> builder)
+        {
+            var f = new SuggestionBuilder<T>();
+            builder?.Invoke(f);
+
+            return AndSuggestUsing(f.Suggestion);
         }
     }
 
@@ -54,7 +81,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
 
             _duration = Stopwatch.StartNew();
             _session.IncrementRequestCount();
-            _session.RequestExecutor.Execute(command, _session.Context, sessionInfo:_session.SessionInfo);
+            _session.RequestExecutor.Execute(command, _session.Context, sessionInfo: _session.SessionInfo);
 
             return ProcessResults(command.Result, _session.Conventions);
         }

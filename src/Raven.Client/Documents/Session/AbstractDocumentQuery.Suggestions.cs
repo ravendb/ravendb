@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Session.Tokens;
 
@@ -11,7 +12,7 @@ namespace Raven.Client.Documents.Session
             if (suggestion == null)
                 throw new ArgumentNullException(nameof(suggestion));
 
-            AssertCanSuggest();
+            AssertCanSuggest(suggestion);
 
             SuggestToken token;
             switch (suggestion)
@@ -38,13 +39,21 @@ namespace Raven.Client.Documents.Session
             return optionsParameterName;
         }
 
-        private void AssertCanSuggest()
+        private void AssertCanSuggest(SuggestionBase suggestion)
         {
             if (WhereTokens.Count > 0)
                 throw new InvalidOperationException("Cannot add suggest when WHERE statements are present.");
 
             if (SelectTokens.Count > 0)
-                throw new InvalidOperationException("Cannot add suggest when SELECT statements are present.");
+            {
+                if (SelectTokens.Last.Value is SuggestToken st)
+                {
+                    if (st.FieldName == suggestion.Field)
+                        throw new InvalidOperationException("Cannot add suggest for the same field again.");
+                }
+                else
+                    throw new InvalidOperationException("Cannot add suggest when SELECT statements are present.");
+            }
 
             if (OrderByTokens.Count > 0)
                 throw new InvalidOperationException("Cannot add suggest when ORDER BY statements are present.");

@@ -181,23 +181,29 @@ namespace Raven.Server.Documents.Queries
                 {
                     var sw = Stopwatch.StartNew();
 
-                    if (query.Metadata.SelectFields.Length != 1 || query.Metadata.SelectFields[0].IsSuggest == false)
-                        throw new InvalidQueryException("Suggestion query must have one suggest token in SELECT.", query.Metadata.QueryText, query.QueryParameters);
-
-                    var selectField = (SuggestionField)query.Metadata.SelectFields[0];
+                    if (query.Metadata.SelectFields.Length == 0)
+                        throw new InvalidQueryException("Suggestion query must have at least one suggest token in SELECT.", query.Metadata.QueryText, query.QueryParameters);
 
                     var index = GetIndex(query.Metadata.IndexName);
 
                     var indexDefinition = index.GetIndexDefinition();
 
-                    if (indexDefinition.Fields.TryGetValue(selectField.Name, out IndexFieldOptions field) == false)
-                        throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' does not have a field '{selectField.Name}'.");
+                    foreach (var f in query.Metadata.SelectFields)
+                    {
+                        if (f.IsSuggest == false)
+                            throw new InvalidQueryException("Suggestion query must have only suggest tokens in SELECT.", query.Metadata.QueryText, query.QueryParameters);
 
-                    if (field.Suggestions == null)
-                        throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' does not have suggestions configured for field '{selectField.Name}'.");
+                        var selectField = (SuggestionField)f;
 
-                    if (field.Suggestions.Value == false)
-                        throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' have suggestions explicitly disabled for field '{selectField.Name}'.");
+                        if (indexDefinition.Fields.TryGetValue(selectField.Name, out IndexFieldOptions field) == false)
+                            throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' does not have a field '{selectField.Name}'.");
+
+                        if (field.Suggestions == null)
+                            throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' does not have suggestions configured for field '{selectField.Name}'.");
+
+                        if (field.Suggestions.Value == false)
+                            throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' have suggestions explicitly disabled for field '{selectField.Name}'.");
+                    }
 
                     if (existingResultEtag.HasValue)
                     {

@@ -5,13 +5,13 @@ namespace Raven.Client.Documents.Session.Tokens
 {
     public class SuggestToken : QueryToken
     {
-        private readonly string _fieldName;
+        public readonly string FieldName;
         private readonly string _termParameterName;
         private readonly string _optionsParameterName;
 
         private SuggestToken(string fieldName, string termParameterName, string optionsParameterName)
         {
-            _fieldName = fieldName ?? throw new ArgumentNullException(nameof(fieldName));
+            FieldName = fieldName ?? throw new ArgumentNullException(nameof(fieldName));
             _termParameterName = termParameterName ?? throw new ArgumentNullException(nameof(termParameterName));
             _optionsParameterName = optionsParameterName;
         }
@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Session.Tokens
         {
             writer
                 .Append("suggest(")
-                .Append(_fieldName)
+                .Append(FieldName)
                 .Append(", $")
                 .Append(_termParameterName);
 

@@ -2083,7 +2083,7 @@ namespace Raven.Server.Documents.Indexes
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
-                        if(documentsContext.Transaction == null || documentsContext.Transaction.Disposed)
+                        if (documentsContext.Transaction == null || documentsContext.Transaction.Disposed)
                             documentsContext.OpenReadTransaction();
 
                         // we have to open read tx for mapResults _after_ we open index tx
@@ -2386,13 +2386,15 @@ namespace Raven.Server.Documents.Indexes
 
                             documentsContext.CloseTransaction();
 
-                            var suggestField = (SuggestionField)query.Metadata.SelectFields[0];
-                            using (var reader = IndexPersistence.OpenSuggestionIndexReader(indexTx.InnerTransaction, suggestField.Name))
+                            foreach (var selectField in query.Metadata.SelectFields)
                             {
-                                result.Results.Add(reader.Suggestions(query, suggestField, documentsContext, token.Token));
-                                result.TotalResults = result.Results.Count;
-                                return result;
+                                var suggestField = (SuggestionField)selectField;
+                                using (var reader = IndexPersistence.OpenSuggestionIndexReader(indexTx.InnerTransaction, suggestField.Name))
+                                    result.Results.Add(reader.Suggestions(query, suggestField, documentsContext, token.Token));
                             }
+
+                            result.TotalResults = result.Results.Count;
+                            return result;
                         }
                     }
                 }
