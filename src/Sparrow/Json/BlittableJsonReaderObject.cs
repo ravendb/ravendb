@@ -1099,7 +1099,10 @@ NotFound:
         {
             if (_propCount != other._propCount)
                 return false;
-            
+
+            if (_propCount == 0)
+                return true;
+
             if (_isRoot == false && other._isRoot == false)
             {
                 var buffer = new PropertiesInsertionBuffer();
@@ -1114,10 +1117,7 @@ NotFound:
                 var otherDataStart = other._objStart - buffer.Offsets[0];
                 var otherDataSize = other._objStart - otherDataStart;
 
-                if (dataSize != otherDataSize)
-                    return false;
-
-                if (dataSize < int.MaxValue)
+                if (dataSize == otherDataSize && dataSize < int.MaxValue)
                 {
                     if (Memory.CompareInline(dataStart, otherDataStart, (int)dataSize) == 0)
                     {
@@ -1130,10 +1130,7 @@ NotFound:
             }
             else if (_isRoot && other._isRoot)
             {
-                if (_size != other._size)
-                    return false;
-
-                if (Memory.CompareInline(_mem, other._mem, _size) == 0)
+                if (_size == other.Size && Memory.CompareInline(_mem, other._mem, _size) == 0)
                     return true;
             }
 
