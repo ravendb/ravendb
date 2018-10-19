@@ -1,15 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
-using FastTests.Server.Documents.Revisions;
 using FastTests.Utils;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Sparrow;
 using Xunit;
@@ -29,7 +31,7 @@ namespace SlowTests.Smuggler
 
                 await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
 
-                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                var stats = await GetStatsAsync(store, s => s.CountOfIndexes >= 3, TimeSpan.FromSeconds(10));
 
                 Assert.Equal(1059, stats.CountOfDocuments);
                 Assert.Equal(3, stats.CountOfIndexes); // there are 4 in ravendbdump, but Raven/DocumentsByEntityName is skipped
@@ -75,7 +77,10 @@ namespace SlowTests.Smuggler
 
                 var result = operation.WaitForCompletion<SmugglerResult>();
 
-                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.True(record.Indexes.Count > 0);
+
+                var stats = await GetStatsAsync(store, s => s.CountOfIndexes >= 463, TimeSpan.FromSeconds(60));
 
                 Assert.Equal(0, stats.CountOfDocuments);
 
@@ -122,7 +127,7 @@ namespace SlowTests.Smuggler
                     unexpectedErrors.Add(errorMessage);
                 }
 
-                Assert.True(stats.CountOfIndexes >= 463, $"{stats.CountOfIndexes} >= 584. Errors: {string.Join($", {Environment.NewLine}", unexpectedErrors)}");
+                Assert.True(stats.CountOfIndexes >= 463, $"{stats.CountOfIndexes} >= 463. Errors: {string.Join($", {Environment.NewLine}", unexpectedErrors)}");
                 Assert.True(stats.CountOfIndexes <= 658, $"{stats.CountOfIndexes} <= 658");
 
                 // not everything can be imported
@@ -184,6 +189,21 @@ namespace SlowTests.Smuggler
                     }
                 }
             }
+        }
+
+        private static async Task<DatabaseStatistics> GetStatsAsync(IDocumentStore store, Func<DatabaseStatistics, bool> action, TimeSpan timeout)
+        {
+            var sw = Stopwatch.StartNew();
+            while (sw.Elapsed < timeout)
+            {
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                if (action(stats))
+                    return stats;
+
+                await Task.Delay(1000);
+            }
+
+            throw new TimeoutException("Did not get stats in " + timeout);
         }
 
         private class User

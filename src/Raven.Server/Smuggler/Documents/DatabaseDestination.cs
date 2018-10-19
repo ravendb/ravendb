@@ -100,24 +100,44 @@ namespace Raven.Server.Smuggler.Documents
         private class DatabaseIndexActions : IIndexActions
         {
             private readonly DocumentDatabase _database;
+            private readonly IndexStore.IndexBatchScope _batch;
 
             public DatabaseIndexActions(DocumentDatabase database)
             {
                 _database = database;
+
+                if (_database.IndexStore.CanUseIndexBatch())
+                    _batch = _database.IndexStore.CreateIndexBatch();
             }
 
             public void WriteIndex(IndexDefinitionBase indexDefinition, IndexType indexType)
             {
+                if (_batch != null)
+                {
+                    _batch.AddIndex(indexDefinition);
+                    return;
+                }
+
                 AsyncHelpers.RunSync(() => _database.IndexStore.CreateIndex(indexDefinition));
             }
 
             public void WriteIndex(IndexDefinition indexDefinition)
             {
+                if (_batch != null)
+                {
+                    _batch.AddIndex(indexDefinition);
+                    return;
+                }
+
                 AsyncHelpers.RunSync(() => _database.IndexStore.CreateIndex(indexDefinition));
             }
 
             public void Dispose()
             {
+                if (_batch == null)
+                    return;
+
+                AsyncHelpers.RunSync(() => _batch.SaveAsync());
             }
         }
 
