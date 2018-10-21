@@ -40,6 +40,11 @@ namespace Raven.Client.Documents.Conventions
 
         internal static readonly DocumentConventions Default = new DocumentConventions();
 
+        internal static readonly DocumentConventions DefaultConventionsForCompareExchange = new DocumentConventions
+        {
+            FindIdentityProperty = _ => false
+        };
+
         private static Dictionary<Type, string> _cachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
 
         private readonly Dictionary<MemberInfo, CustomQueryTranslator> _customQueryTranslators = new Dictionary<MemberInfo, CustomQueryTranslator>();
