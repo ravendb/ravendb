@@ -18,10 +18,10 @@ namespace Raven.Client.Documents.Session
             switch (suggestion)
             {
                 case SuggestionWithTerm term:
-                    token = SuggestToken.Create(term.Field, AddQueryParameter(term.Term), GetOptionsParameterName(term.Options));
+                    token = SuggestToken.Create(term.Field, term.DisplayField, AddQueryParameter(term.Term), GetOptionsParameterName(term.Options));
                     break;
                 case SuggestionWithTerms terms:
-                    token = SuggestToken.Create(terms.Field, AddQueryParameter(terms.Terms), GetOptionsParameterName(terms.Options));
+                    token = SuggestToken.Create(terms.Field, terms.DisplayField, AddQueryParameter(terms.Terms), GetOptionsParameterName(terms.Options));
                     break;
                 default:
                     throw new NotSupportedException($"Unknown type of suggestion '{suggestion.GetType()}'");
