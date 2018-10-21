@@ -52,7 +52,8 @@ namespace Raven.Client.Documents.Session
             DocumentConventions conventions,
             JsonOperationContext context,
             JsonSerializer serializer,
-            DocumentInfo documentInfo)
+            DocumentInfo documentInfo,
+            bool isCompareExchange = false)
         {
             if (value is ValueType || 
                 value is string || 
@@ -63,11 +64,11 @@ namespace Raven.Client.Documents.Session
             if (value is IEnumerable && !(value is IDictionary))
             {
                 return ((IEnumerable)value).Cast<object>()
-                    .Select(v=> ConvertToBlittableIfNeeded(v, conventions, context, serializer, documentInfo));
+                    .Select(v=> ConvertToBlittableIfNeeded(v, conventions, context, serializer, documentInfo, isCompareExchange));
             }
             
             using (var writer = new BlittableJsonWriter(context, documentInfo))
-                return ConvertEntityToBlittableInternal(value, conventions, context, serializer, writer);
+                return ConvertEntityToBlittableInternal(value, conventions, context, serializer, writer, isCompareExchange);
         }
 
         internal static BlittableJsonReaderObject ConvertEntityToBlittable(
@@ -102,14 +103,15 @@ namespace Raven.Client.Documents.Session
             DocumentConventions conventions,
             JsonOperationContext context,
             JsonSerializer serializer,
-            BlittableJsonWriter writer)
+            BlittableJsonWriter writer,
+            bool isCompareExchange = false)
         {
             serializer.Serialize(writer, entity);
             writer.FinalizeDocument();
             var reader = writer.CreateReader();
             var type = entity.GetType();
 
-            var changes = TryRemoveIdentityProperty(reader, type, conventions);
+            var changes = isCompareExchange == false && TryRemoveIdentityProperty(reader, type, conventions);
             changes |= TrySimplifyJson(reader);
 
             if (changes)
