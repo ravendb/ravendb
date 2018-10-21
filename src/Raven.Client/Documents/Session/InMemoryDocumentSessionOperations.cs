@@ -851,11 +851,13 @@ more responsive application.
 
             if (clusterTransactionOperations.StoreCompareExchange != null)
             {
+                var conventions = DocumentConventions.DefaultConventionsForCompareExchange;
+
                 foreach (var item in clusterTransactionOperations.StoreCompareExchange)
                 {
-                    var djv = new DynamicJsonValue()
+                    var djv = new DynamicJsonValue
                     {
-                        ["Object"] = EntityToBlittable.ConvertToBlittableIfNeeded(item.Value.Entity)
+                        ["Object"] = EntityToBlittable.ConvertToBlittableIfNeeded(item.Value.Entity, conventions, Context, JsonSerializer, documentInfo: null)
                     };
                     var blittable = Context.ReadObject(djv, item.Key);
                     result.SessionCommands.Add(new PutCompareExchangeCommandData(item.Key, blittable, item.Value.Index));

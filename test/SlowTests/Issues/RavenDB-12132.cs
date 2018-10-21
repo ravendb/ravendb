@@ -1,15 +1,13 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using FastTests;
+﻿using System.Threading.Tasks;
+using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations.CompareExchange;
-using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_12132 : RavenTestBase
+    public class RavenDB_12132 : ReplicationTestBase
     {
         [Fact]
         public async Task CanPutObjectWithId()
@@ -25,6 +23,36 @@ namespace SlowTests.Issues
             Assert.True(res.Successful);
             Assert.Equal("Grisha", res.Value.Name);
             Assert.Equal("users/1", res.Value.Id);
+        }
+
+        [Fact]
+        public async Task CanCreateClusterTransactionRequest1()
+        {
+            var leader = await CreateRaftClusterAndGetLeader(3);
+            using (var leaderStore = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = 3
+            }))
+            {
+                var user = new User
+                {
+                    Id = "this/is/my/id",
+                    Name = "Grisha"
+                };
+                using (var session = leaderStore.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user);
+                    await session.SaveChangesAsync();
+
+                    var userFromCluster = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende")).Value;
+                    Assert.Equal(user.Name, userFromCluster.Name);
+                    Assert.Equal(user.Id, userFromCluster.Id);
+                }
+            }
         }
     }
 }
