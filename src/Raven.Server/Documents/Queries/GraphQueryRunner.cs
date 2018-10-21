@@ -10,6 +10,13 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Diagnostics;
+using System.Linq;
+using System.Security.Policy;
+using System.Text;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Exceptions;
+using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
@@ -500,9 +507,6 @@ namespace Raven.Server.Documents.Queries
                 _aliasesInMatch.Add(ee,aliases); //if we don't visit each match pattern exactly once, we have an issue 
                 _intermediateOutputs[ee].AddRange(currentResults);                
             }
-
-            private readonly HashSet<string> _includedNodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            private readonly List<Match> _results = new List<Match>();
 
             private void F(BlittableJsonReaderObject docReader, StringSegment edgePath, HashSet<string> includedIds)
             {
