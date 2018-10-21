@@ -61,16 +61,18 @@ class clusterNode {
             return osTitle;
         });
         
-        this.osIcon = ko.pureComputed(() => {
-            switch (this.osInfo().Type) {
-                case "Linux":
-                    return "icon-linux";
-                case "Windows":
-                    return "icon-windows";
-                case "MacOS":
-                    return "icon-apple";
-            }
-        })
+        this.osIcon = ko.pureComputed(() => clusterNode.osIcon(this.osInfo().Type));
+    }
+    
+    static osIcon(type: Raven.Client.ServerWide.Operations.OSType) {
+        switch (type) {
+            case "Linux":
+                return "icon-linux";
+            case "Windows":
+                return "icon-windows";
+            case "MacOS":
+                return "icon-apple";
+        }
     }
     
     errorDetailsShort = ko.pureComputed(() => {
