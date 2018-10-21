@@ -45,6 +45,18 @@ namespace Raven.Server.Documents.Queries
             Metadata = metadata;
         }
 
+        public string ServerSideQuery 
+        {
+            get
+            {
+                if (Metadata.IsGraph)
+                {
+                    return Metadata.Query.GraphQuery.ToString();
+                }
+
+                return Query; //For none graph queries the Query string is identical to what the server will execute 
+            }
+        }
         public IndexQueryServerSide(string query, BlittableJsonReaderObject queryParameters = null)
         {
             Query = Uri.UnescapeDataString(query);

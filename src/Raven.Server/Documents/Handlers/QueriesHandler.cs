@@ -103,6 +103,7 @@ namespace Raven.Server.Documents.Handlers
             }
 
             var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
+            var shouldReturnServerSideQuery = GetBoolValueQueryString("withServerSideQuery", required: false) ?? false;
 
             DocumentQueryResult result;
             try
@@ -126,13 +127,26 @@ namespace Raven.Server.Documents.Handlers
             int numberOfResults;
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
-                result.Timings = indexQuery.Timings?.ToTimings();
-                numberOfResults = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly);
+                result.Timings = indexQuery.Timings?.ToTimings();               
+                numberOfResults = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly, CaptureServerSideQueryCallback(indexQuery, shouldReturnServerSideQuery));
                 await writer.OuterFlushAsync();
             }
 
             Database.QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
             AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs);
+        }
+
+        private Func<AsyncBlittableJsonTextWriter, Task> CaptureServerSideQueryCallback(IndexQueryServerSide indexQuery, bool shouldReturnServerSideQuery)
+        {
+            return shouldReturnServerSideQuery
+                ? w =>
+                {
+                    w.WriteComma();
+                    w.WritePropertyName(nameof(indexQuery.ServerSideQuery));
+                    w.WriteString(indexQuery.ServerSideQuery);
+                    return Task.CompletedTask;
+                }
+                : (Func<AsyncBlittableJsonTextWriter, Task>)null;
         }
 
         private async Task<IndexQueryServerSide> GetIndexQuery(JsonOperationContext context, HttpMethod method)
