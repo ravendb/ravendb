@@ -80,6 +80,9 @@ namespace Raven.Server.Documents.Indexes
                         .Replace(" ", string.Empty)
                         .ToUpperFirstLetter();
 
+                if (x.HasSuggestions)
+                    return AutoIndexField.GetSuggestionsAutoIndexFieldName(name).ToUpperFirstLetter();
+
                 return name;
             }
 
@@ -93,6 +96,9 @@ namespace Raven.Server.Documents.Indexes
 
             if (x.Indexing.HasFlag(AutoFieldIndexing.Exact))
                 functions.Add(AutoIndexField.GetExactAutoIndexFieldName(name).ToUpperFirstLetter());
+
+            if (x.HasSuggestions)
+                functions.Add(AutoIndexField.GetSuggestionsAutoIndexFieldName(name).ToUpperFirstLetter());
 
             return string.Join("And", functions);
         }

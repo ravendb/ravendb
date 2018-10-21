@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
@@ -169,51 +168,26 @@ namespace Raven.Server.Documents.Queries
             throw CreateRetriesFailedException(lastException);
         }
 
-        public async Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
+        public override async Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
         {
-            if (query.Metadata.IsDynamic)
-                throw new InvalidQueryException("Suggestion query must be executed against static index.", query.Metadata.QueryText, query.QueryParameters);
-
             ObjectDisposedException lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
             {
                 try
                 {
-                    var sw = Stopwatch.StartNew();
-
-                    if (query.Metadata.SelectFields.Length == 0)
-                        throw new InvalidQueryException("Suggestion query must have at least one suggest token in SELECT.", query.Metadata.QueryText, query.QueryParameters);
-
-                    var index = GetIndex(query.Metadata.IndexName);
-
-                    var indexDefinition = index.GetIndexDefinition();
-
-                    foreach (var f in query.Metadata.SelectFields)
+                    Stopwatch sw = null;
+                    QueryTimingsScope scope;
+                    SuggestionQueryResult result;
+                    using (scope = query.Timings?.Start())
                     {
-                        if (f.IsSuggest == false)
-                            throw new InvalidQueryException("Suggestion query must have only suggest tokens in SELECT.", query.Metadata.QueryText, query.QueryParameters);
+                        if (scope == null)
+                            sw = Stopwatch.StartNew();
 
-                        var selectField = (SuggestionField)f;
-
-                        if (indexDefinition.Fields.TryGetValue(selectField.Name, out IndexFieldOptions field) == false)
-                            throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' does not have a field '{selectField.Name}'.");
-
-                        if (field.Suggestions == null)
-                            throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' does not have suggestions configured for field '{selectField.Name}'.");
-
-                        if (field.Suggestions.Value == false)
-                            throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' have suggestions explicitly disabled for field '{selectField.Name}'.");
+                        result = await GetRunner(query).ExecuteSuggestionQuery(query, context, existingResultEtag, token);
                     }
 
-                    if (existingResultEtag.HasValue)
-                    {
-                        var etag = index.GetIndexEtag(query.Metadata);
-                        if (etag == existingResultEtag.Value)
-                            return SuggestionQueryResult.NotModifiedResult;
-                    }
+                    result.DurationInMs = sw != null ? (long)sw.Elapsed.TotalMilliseconds : (long)scope.Duration.TotalMilliseconds;
 
-                    var result = await index.SuggestionQuery(query, context, token);
-                    result.DurationInMs = (int)sw.Elapsed.TotalMilliseconds;
                     return result;
                 }
                 catch (ObjectDisposedException e)

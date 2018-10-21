@@ -93,7 +93,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                     Aggregation = autoField.Aggregation,
                     Spatial = autoField.Spatial,
                     IsNameQuoted = autoField.HasQuotedName,
-                    GroupByArrayBehavior = autoField.GroupByArrayBehavior
+                    GroupByArrayBehavior = autoField.GroupByArrayBehavior,
+                    Suggestions = autoField.HasSuggestions
                 };
             }
 
