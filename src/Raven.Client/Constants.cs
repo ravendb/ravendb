@@ -153,6 +153,8 @@ namespace Raven.Client
                 public const string Expires = "@expires";
 
                 public const string HasValue = "HasValue";
+
+                public const string Etag = "@etag";
             }
 
             public class Collections

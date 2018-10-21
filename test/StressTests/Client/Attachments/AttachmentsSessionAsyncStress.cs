@@ -8,10 +8,20 @@ namespace StressTests.Client.Attachments
 {
     public class AttachmentsSessionAsyncStress : NoDisposalNeeded
     {
-        [NightlyBuildTheory]
+        [NightlyBuildTheory64Bit]
         [InlineData(100_000)]
         [InlineData(1_000_000)]
         public async Task PutLotOfAttachments(int count)
+        {
+            using (var stress = new AttachmentsSessionAsync())
+            {
+                await stress.PutLotOfAttachments(count);
+            }
+        }
+
+        [NightlyBuildTheory32Bit]
+        [InlineData(50_000)]
+        public async Task PutLotOfAttachments32(int count)
         {
             using (var stress = new AttachmentsSessionAsync())
             {

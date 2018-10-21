@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Tests.Infrastructure;
 using Voron.Recovery;
 using Xunit;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_11905 : RavenTestBase
     {
-        [Fact]
+        [Fact64Bit]
         public async Task CanUseVoronRecoveryOnEmptyDatabase()
         {
             var dbPath = NewDataPath();

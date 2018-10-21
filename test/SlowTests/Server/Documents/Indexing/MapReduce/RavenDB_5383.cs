@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -46,7 +47,8 @@ select new
                         
                         var firstRunStats = new IndexingRunStats();
                         var scope = new IndexingStatsScope(firstRunStats);
-                        index.DoIndexingWork(scope, CancellationToken.None);
+                        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+                        while (index.DoIndexingWork(scope, cts.Token));
 
                         Assert.Equal(numberOfDocs, firstRunStats.MapAttempts);
                         Assert.Equal(numberOfDocs, firstRunStats.MapSuccesses);
@@ -65,7 +67,8 @@ select new
 
                         var secondRunStats = new IndexingRunStats();
                         scope = new IndexingStatsScope(secondRunStats);
-                        index.DoIndexingWork(scope, CancellationToken.None);
+                        cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+                        while (index.DoIndexingWork(scope, cts.Token));
 
                         Assert.Equal(firstRunStats.MapAttempts, secondRunStats.MapAttempts);
                         Assert.Equal(firstRunStats.MapSuccesses, secondRunStats.MapSuccesses);

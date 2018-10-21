@@ -5,13 +5,14 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Exceptions;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_10621 : RavenTestBase
     {
-        [Fact]
+        [Fact64Bit]
         public void ShouldErrorIndexOnInvalidProgramException()
         {
             // if this test fails it's very likely the following issue got fixed: https://github.com/dotnet/coreclr/issues/14672
@@ -41,6 +42,30 @@ namespace SlowTests.Issues
                 var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(new BigIndexOutput().IndexName));
 
                 Assert.Equal(IndexState.Error, indexStats.State);
+            }
+        }
+
+        [Fact32Bit]
+        public void ShouldNotErrorIndexOnInvalidProgramException()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new BigIndexOutput().Execute(store);
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new ErroringDocument
+                    {
+                        NumVals = { { "Value001", 2.0 } }
+                    });
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession())
+                {
+                    var happyQuery = session.Query<ErroringDocument, BigIndexOutput>().Customize(x => x.WaitForNonStaleResults()).ToList();
+                    Assert.Equal(1, happyQuery.Count);
+                }
+                var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(new BigIndexOutput().IndexName));
+                Assert.Equal(IndexState.Normal, indexStats.State);
             }
         }
 

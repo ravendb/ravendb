@@ -18,7 +18,7 @@ namespace StressTests
 {
     public class Databases : RavenTestBase
     {
-        [NightlyBuildTheory]
+        [NightlyBuildTheory64Bit]
         [InlineData(25)]
         public void CanHandleMultipleDatabasesOnWrite(int numberOfDatabases)
         {
@@ -47,6 +47,13 @@ namespace StressTests
                 Console.WriteLine($"Avarage={_avarageQueryTime}ms Max={_maxQueryTime}");
                 Console.WriteLine($"Results came from cache {_totalQueryUsedCachedResults} times out of {_totalQueryCount} total queries.");
             }
+        }
+
+        [NightlyBuildTheory32Bit]
+        [InlineData(10)]
+        public void CanHandleMultipleDatabasesOnWrite32(int numberOfDatabases)
+        {
+            CanHandleMultipleDatabasesOnWrite(numberOfDatabases);
         }
 
         private static readonly Dictionary<int, string> DbNumToDbName = new Dictionary<int, string>();

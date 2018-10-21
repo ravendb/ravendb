@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using FastTests.Voron;
 using SlowTests.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Voron;
 
@@ -10,7 +11,7 @@ namespace SlowTests.Voron
 {
     public class LargeValues : StorageTest
     {
-        [Fact]
+        [Fact64Bit]
         public void ShouldProperlyRecover()
         {
             var sequentialLargeIds = TestDataUtil.ReadData("non-leaf-page-seq-id-large-values-2.txt");
