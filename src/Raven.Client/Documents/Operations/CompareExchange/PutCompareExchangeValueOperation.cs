@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                 _key = key;
                 _value = value;
                 _index = index;
-                _conventions = DocumentConventions.DefaultConventionsForCompareExchange;
+                _conventions = conventions ?? DocumentConventions.Default;
             }
 
             public override bool IsReadRequest => false;
