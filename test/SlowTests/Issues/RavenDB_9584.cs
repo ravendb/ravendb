@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -15,6 +16,7 @@ namespace SlowTests.Issues
             public string Id { get; set; }
             public string Name { get; set; }
             public string Company { get; set; }
+            public string Title { get; set; }
         }
 
         private static void Setup(IDocumentStore store)
@@ -120,7 +122,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void CanUseAliasInSuggestionsWithAutoIndex()
+        public void CanUseSuggestionsWithAutoIndex()
         {
             using (var store = GetDocumentStore())
             {
@@ -136,6 +138,38 @@ namespace SlowTests.Issues
 
                     Assert.Equal(1, suggestionQueryResult["NewName"].Suggestions.Count);
                     Assert.Equal("oren", suggestionQueryResult["NewName"].Suggestions[0]);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanExtendAutoIndexWithSuggestions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                Setup(store);
+
+                using (var s = store.OpenSession())
+                {
+                    // creating auto-index
+                    s.Query<User>()
+                        .Where(x => x.Name == "Oren" && x.Company == "HR")
+                        .ToList();
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    var suggestionQueryResult = s.Query<User>()
+                        .Statistics(out var stats)
+                        .SuggestUsing(x => x
+                            .ByField(y => y.Name, "Owen")
+                            .WithDisplayName("NewName"))
+                        .Execute();
+
+                    Assert.Equal(1, suggestionQueryResult["NewName"].Suggestions.Count);
+                    Assert.Equal("oren", suggestionQueryResult["NewName"].Suggestions[0]);
+
+                    Assert.Equal("Auto/Users/ByCompanyAndSuggest(Name)", stats.IndexName);
                 }
             }
         }
