@@ -51,6 +51,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         if (field.Spatial != null)
                             indexField.Spatial = new AutoSpatialOptions(field.Spatial);
 
+                        indexField.HasSuggestions = field.HasSuggestions;
+
                         return indexField;
                     }
                 ).ToArray());
@@ -82,6 +84,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (field.Spatial != null)
                         indexField.Spatial = new AutoSpatialOptions(field.Spatial);
 
+                    indexField.HasSuggestions = field.HasSuggestions;
+
                     return indexField;
                 }).ToArray(),
                 GroupByFields.Values.Select(field =>
@@ -103,6 +107,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                     if (field.Spatial != null)
                         indexField.Spatial = new AutoSpatialOptions(field.Spatial);
+
+                    indexField.HasSuggestions = field.HasSuggestions;
 
                     return indexField;
                 }).ToArray());
@@ -141,6 +147,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                                 isFullTextSearch: isFullTextSearch,
                                 isExactSearch: isExactSearch,
                                 hasHighlighting: queryField.HasHighlighting || indexField.Indexing.HasFlag(AutoFieldIndexing.Highlighting),
+                                hasSuggestions: queryField.HasSuggestions || indexField.HasSuggestions,
                                 spatial: queryField.Spatial ?? indexField.Spatial)
                             : DynamicQueryMappingItem.CreateGroupBy(
                                 queryField.Name,
@@ -162,6 +169,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                             isFullTextSearch: indexField.Indexing.HasFlag(AutoFieldIndexing.Search),
                             isExactSearch: indexField.Indexing.HasFlag(AutoFieldIndexing.Exact),
                             hasHighlighting: indexField.Indexing.HasFlag(AutoFieldIndexing.Highlighting),
+                            hasSuggestions: indexField.HasSuggestions,
                             spatial: indexField.Spatial));
                     }
                 }
@@ -235,7 +243,19 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (mapFields.TryGetValue(fieldName, out var value))
                         value.HasHighlighting = true;
                     else
-                        mapFields[fieldName] = DynamicQueryMappingItem.Create(fieldName, AggregationOperation.None, isFullTextSearch: true, isExactSearch: false, hasHighlighting: true, spatial: null);
+                        mapFields[fieldName] = DynamicQueryMappingItem.Create(fieldName, AggregationOperation.None, isFullTextSearch: true, isExactSearch: false, hasHighlighting: true, hasSuggestions: false, spatial: null);
+                }
+            }
+
+            if (query.Metadata.HasSuggest)
+            {
+                foreach (var selectField in query.Metadata.SelectFields)
+                {
+                    var fieldName = selectField.Name;
+                    if (mapFields.TryGetValue(fieldName, out var value))
+                        value.HasSuggestions = true;
+                    else
+                        mapFields[fieldName] = DynamicQueryMappingItem.Create(fieldName, AggregationOperation.None, isFullTextSearch: false, isExactSearch: false, hasHighlighting: false, hasSuggestions: true, spatial: null);
                 }
             }
 
@@ -267,6 +287,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                             isFullTextSearch: autoField.Indexing.HasFlag(AutoFieldIndexing.Search),
                             isExactSearch: autoField.Indexing.HasFlag(AutoFieldIndexing.Exact),
                             hasHighlighting: autoField.Indexing.HasFlag(AutoFieldIndexing.Highlighting),
+                            hasSuggestions: autoField.HasSuggestions,
                             spatial: autoField.Spatial);
             }
 

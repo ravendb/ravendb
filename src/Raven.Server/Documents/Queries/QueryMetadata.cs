@@ -70,14 +70,6 @@ namespace Raven.Server.Documents.Queries
 
                 if (IsDynamic == false || IsGroupBy)
                     IsCollectionQuery = false;
-
-                IsOptimizedSortOnly = IsCollectionQuery == false
-                                      && WhereFields.Count == 0
-                                      && OrderBy?.Length == 1
-                                      && (OrderBy[0].OrderingType == OrderByFieldType.Implicit || OrderBy[0].OrderingType == OrderByFieldType.String)
-                                      && HasExplanations == false
-                                      && HasHighlightings == false
-                                      && IsDistinct == false;
             }
             else
             {
@@ -92,6 +84,14 @@ namespace Raven.Server.Documents.Queries
             Build(parameters);
 
             CanCache = cacheKey != 0;
+
+            IsOptimizedSortOnly = IsCollectionQuery == false
+                                  && WhereFields.Count == 0
+                                  && OrderBy?.Length == 1
+                                  && (OrderBy[0].OrderingType == OrderByFieldType.Implicit || OrderBy[0].OrderingType == OrderByFieldType.String)
+                                  && HasExplanations == false
+                                  && HasHighlightings == false
+                                  && IsDistinct == false;
 
             CreatedAt = DateTime.UtcNow;
             LastQueriedAt = CreatedAt;
@@ -1057,6 +1057,7 @@ namespace Raven.Server.Documents.Queries
                             ThrowSuggestionQueryCannotBeFacet(parameters);
 
                         HasSuggest = true;
+                        IsCollectionQuery = false;
 
                         return CreateSuggest(me, alias, parameters);
                     }

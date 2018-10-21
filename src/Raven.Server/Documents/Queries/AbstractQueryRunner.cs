@@ -5,10 +5,16 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.Documents.Indexes.MapReduce.Static;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -47,6 +53,44 @@ namespace Raven.Server.Documents.Queries
 
         public abstract Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch,
             BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token);
+
+        public abstract Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token);
+
+        protected async Task<SuggestionQueryResult> ExecuteSuggestion(
+            IndexQueryServerSide query, 
+            Index index, 
+            DocumentsOperationContext documentsContext,
+            long? existingResultEtag, 
+            OperationCancelToken token)
+        {
+            if (query.Metadata.SelectFields.Length == 0)
+                throw new InvalidQueryException("Suggestion query must have at least one suggest token in SELECT.", query.Metadata.QueryText, query.QueryParameters);
+
+            var fields = index.Definition.IndexFields;
+
+            foreach (var f in query.Metadata.SelectFields)
+            {
+                if (f.IsSuggest == false)
+                    throw new InvalidQueryException("Suggestion query must have only suggest tokens in SELECT.", query.Metadata.QueryText, query.QueryParameters);
+
+                var selectField = (SuggestionField)f;
+
+                if (fields.TryGetValue(selectField.Name, out var field) == false)
+                    throw new InvalidOperationException($"Index '{index.Name}' does not have a field '{selectField.Name}'.");
+
+                if (field.HasSuggestions == false)
+                    throw new InvalidOperationException($"Index '{index.Name}' does not have suggestions configured for field '{selectField.Name}'.");
+            }
+
+            if (existingResultEtag.HasValue)
+            {
+                var etag = index.GetIndexEtag(query.Metadata);
+                if (etag == existingResultEtag.Value)
+                    return SuggestionQueryResult.NotModifiedResult;
+            }
+
+            return await index.SuggestionQuery(query, documentsContext, token);
+        }
 
         protected Task<IOperationResult> ExecuteDelete(IndexQueryServerSide query, Index index, QueryOperationOptions options, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
@@ -138,7 +182,7 @@ namespace Raven.Server.Documents.Queries
                             subCommand.AfterExecute = details => result.Details.Add(details);
 
                         return subCommand;
-                    }, rateGate, token, 
+                    }, rateGate, token,
                         maxTransactionSize: 16 * Constants.Size.Megabyte,
                         batchSize: batchSize);
 

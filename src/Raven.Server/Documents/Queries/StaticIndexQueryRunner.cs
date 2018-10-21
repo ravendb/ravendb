@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.Facets;
+using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -84,6 +85,13 @@ namespace Raven.Server.Documents.Queries
             var index = GetIndex(query.Metadata.IndexName);
 
             return ExecutePatch(query, index, options, patch, patchArgs, context, onProgress, token);
+        }
+
+        public override Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        {
+            var index = GetIndex(query.Metadata.IndexName);
+
+            return ExecuteSuggestion(query, index, documentsContext, existingResultEtag, token);
         }
     }
 }

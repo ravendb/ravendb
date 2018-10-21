@@ -4,20 +4,14 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Extensions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Client;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Diagnostics;
-using System.Linq;
-using Raven.Client.Documents.Linq;
-using Raven.Client.Exceptions;
-using Raven.Server.Documents.Includes;
-using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Utils;
 using Sparrow;
@@ -70,17 +64,17 @@ namespace Raven.Server.Documents.Queries
                 }
                 else if (q.Select != null)
                 {
-                    var fieldsToFetch = new FieldsToFetch(query.Metadata.SelectFields,null);
+                    var fieldsToFetch = new FieldsToFetch(query.Metadata.SelectFields, null);
                     var resultRetriever = new GraphQueryResultRetriever(
                         q.GraphQuery,
-                        Database, 
-                        query, 
-                        timingScope, 
-                        Database.DocumentsStorage, 
-                        documentsContext, 
+                        Database,
+                        query,
+                        timingScope,
+                        Database.DocumentsStorage,
+                        documentsContext,
                         fieldsToFetch, null);
 
-                    
+
 
                     foreach (var match in matchResults)
                     {
@@ -88,7 +82,7 @@ namespace Raven.Server.Documents.Queries
 
                         final.AddResult(result);
                     }
-                }        
+                }
 
                 final.TotalResults = final.Results.Count;
                 return final;
@@ -97,7 +91,7 @@ namespace Raven.Server.Documents.Queries
 
         private static void HandleResultsWithoutSelect(DocumentsOperationContext documentsContext, List<Match> matchResults, DocumentQueryResult final)
         {
-            if(matchResults.Count == 1)
+            if (matchResults.Count == 1)
             {
                 final.AddResult(matchResults[0].GetFirstResult());
                 return;
@@ -145,13 +139,18 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException("You cannot patch based on graph query");
         }
 
+        public override Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        {
+            throw new NotSupportedException("You cannot suggest based on graph query");
+        }
+
         private class GraphExecuteVisitor : QueryVisitor
         {
             private readonly IntermediateResults _source;
             private readonly GraphQuery _gq;
             private readonly BlittableJsonReaderObject _queryParameters;
             private readonly DocumentsOperationContext _ctx;
-            public List<Match> Output;            
+            public List<Match> Output;
 
             public GraphExecuteVisitor(IntermediateResults source, IndexQueryServerSide query, DocumentsOperationContext documentsContext)
             {
@@ -162,12 +161,12 @@ namespace Raven.Server.Documents.Queries
             }
 
             public override void VisitPatternMatchElementExpression(PatternMatchElementExpression ee)
-            {                
+            {
                 Debug.Assert(ee.Path[0].EdgeType == EdgeType.Right);
-                if (_source.TryGetByAlias(ee.Path[0].Alias, out var nodeResults) == false || 
+                if (_source.TryGetByAlias(ee.Path[0].Alias, out var nodeResults) == false ||
                     nodeResults.Count == 0)
                     return; // if root is empty, the entire thing is empty
-                
+
                 var currentResults = new List<Match>();
                 foreach (var item in nodeResults)
                 {
@@ -175,20 +174,20 @@ namespace Raven.Server.Documents.Queries
                     match.Set(ee.Path[0].Alias, item.Value.Get(ee.Path[0].Alias));
                     currentResults.Add(match);
                 }
-                
+
                 Output = new List<Match>();
 
-                for (int pathIndex = 1; pathIndex < ee.Path.Length-1; pathIndex+=2)
+                for (int pathIndex = 1; pathIndex < ee.Path.Length - 1; pathIndex += 2)
                 {
                     Debug.Assert(ee.Path[pathIndex].IsEdge);
-                    
+
                     var prevNodeAlias = ee.Path[pathIndex - 1].Alias;
                     var nextNodeAlias = ee.Path[pathIndex + 1].Alias;
 
                     var edge = _gq.WithEdgePredicates[ee.Path[pathIndex].Alias];
                     _gq.WithEdgePredicates[ee.Path[pathIndex].Alias].FromAlias = prevNodeAlias;
 
-                    if(!_source.TryGetByAlias(nextNodeAlias, out var edgeResults))
+                    if (!_source.TryGetByAlias(nextNodeAlias, out var edgeResults))
                         throw new InvalidOperationException("Could not fetch destination nod edge data. This should not happen and is likely a bug.");
 
                     for (int resultIndex = 0; resultIndex < currentResults.Count; resultIndex++)
@@ -201,15 +200,15 @@ namespace Raven.Server.Documents.Queries
                             foreach (var match in multipleRelatedMatches)
                             {
                                 var related = match.Get(nextNodeAlias);
-                                if (edgeResult.TryGetKey(nextNodeAlias,out _) == false)
+                                if (edgeResult.TryGetKey(nextNodeAlias, out _) == false)
                                 {
-                                    edgeResult.Set(nextNodeAlias,related); 
+                                    edgeResult.Set(nextNodeAlias, related);
                                     //no need to add to Output here, since item is part of currentResults and they will get added later
                                 }
                                 else
                                 {
                                     var multipleEdgeResult = new Match();
-                                    
+
                                     multipleEdgeResult.Set(prevNodeAlias, prev);
                                     multipleEdgeResult.Set(nextNodeAlias, related);
                                     Output.Add(multipleEdgeResult);
@@ -264,7 +263,7 @@ namespace Raven.Server.Documents.Queries
 
             }
 
-            
+
             private bool TryGetMatches(WithEdgesExpression edge, string alias, Dictionary<string, Match> edgeResults, Document prev,
                 out List<Match> relatedMatches)
             {
@@ -282,7 +281,7 @@ namespace Raven.Server.Documents.Queries
                         case BlittableJsonReaderArray array:
                             foreach (var item in array)
                             {
-                                if(item is BlittableJsonReaderObject json &&
+                                if (item is BlittableJsonReaderObject json &&
                                     edge.Where.IsMatchedBy(json, _queryParameters))
                                 {
                                     hasResults |= TryGetMatchesAfterFiltering(json, edge.Path.FieldValueWithoutAlias, edgeResults, alias);
@@ -314,7 +313,7 @@ namespace Raven.Server.Documents.Queries
                 if (_includedNodes.Count == 0)
                     return false;
 
-                if(edgeResults == null)
+                if (edgeResults == null)
                 {
                     foreach (var id in _includedNodes)
                     {

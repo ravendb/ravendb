@@ -11,6 +11,8 @@ namespace Raven.Server.Documents.Indexes
 
         public FieldStorage Storage { get; set; }
 
+        public bool HasSuggestions { get; set; }
+
         public T As<T>() where T : IndexFieldBase
         {
             return this as T;
@@ -28,8 +30,6 @@ namespace Raven.Server.Documents.Indexes
         public FieldTermVector TermVector { get; set; }
 
         public SpatialOptions Spatial { get; set; }
-
-        public bool HasSuggestions { get; set; }
 
         public IndexField()
         {
@@ -123,7 +123,9 @@ namespace Raven.Server.Documents.Indexes
                 Analyzer = Analyzer,
                 Indexing = Indexing,
                 Storage = Storage,
-                TermVector = TermVector
+                TermVector = TermVector,
+                Suggestions = HasSuggestions,
+                Spatial = Spatial
             };
         }
     }
@@ -164,6 +166,9 @@ namespace Raven.Server.Documents.Indexes
             if (options.Spatial != null)
                 field.Spatial = new AutoSpatialOptions(options.Spatial);
 
+            if (options.Suggestions.HasValue)
+                field.HasSuggestions = options.Suggestions.Value;
+
             field.Aggregation = options.Aggregation;
             field.GroupByArrayBehavior = options.GroupByArrayBehavior;
 
@@ -181,6 +186,7 @@ namespace Raven.Server.Documents.Indexes
                     Indexing = FieldIndexing.Default,
                     Name = Name,
                     Storage = Storage,
+                    HasSuggestions = HasSuggestions,
                     Spatial = new AutoSpatialOptions(Spatial)
                 });
 
@@ -197,7 +203,8 @@ namespace Raven.Server.Documents.Indexes
                 Indexing = FieldIndexing.Default,
                 Name = Name,
                 OriginalName = HasQuotedName ? originalName : null,
-                Storage = Storage
+                Storage = Storage,
+                HasSuggestions = HasSuggestions
             });
 
             if (Indexing == AutoFieldIndexing.Default)
@@ -287,6 +294,11 @@ namespace Raven.Server.Documents.Indexes
         public static string GetGroupByArrayContentAutoIndexFieldName(string name)
         {
             return $"array({name})";
+        }
+
+        public static string GetSuggestionsAutoIndexFieldName(string name)
+        {
+            return $"suggest({name})";
         }
     }
 }

@@ -123,14 +123,16 @@ namespace Raven.Server.Documents.Indexes.Auto
             {
                 var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
 
-                json.TryGet(nameof(IndexField.Name), out string name);
+                json.TryGet(nameof(AutoIndexField.Name), out string name);
                 json.TryGet(nameof(AutoIndexField.Indexing), out string indexing);
+                json.TryGet(nameof(AutoIndexField.HasSuggestions), out bool hasSuggestions);
 
                 var field = new AutoIndexField
                 {
                     Name = name,
                     Storage = FieldStorage.No,
-                    Indexing = (AutoFieldIndexing)Enum.Parse(typeof(AutoFieldIndexing), indexing)
+                    Indexing = (AutoFieldIndexing)Enum.Parse(typeof(AutoFieldIndexing), indexing),
+                    HasSuggestions = hasSuggestions
                 };
 
                 fields[i] = field;

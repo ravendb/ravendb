@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -82,6 +83,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 MaxOpsPerSecond = options.MaxOpsPerSecond
             }, patch, patchArgs, onProgress, token);
+        }
+
+        public override Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        {
+            throw new NotSupportedException("Collection query is handled directly by documents storage so suggestions aren't supported");
         }
 
         private void ExecuteCollectionQuery(QueryResultServerSide resultToFill, IndexQueryServerSide query, string collection, DocumentsOperationContext context, CancellationToken cancellationToken)

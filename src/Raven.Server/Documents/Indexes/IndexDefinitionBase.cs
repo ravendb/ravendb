@@ -129,14 +129,14 @@ namespace Raven.Server.Documents.Indexes
             {
                 MapFields.Add(field.Name, field);
 
-                if ((object)field is AutoIndexField autoField)
+                if (field is AutoIndexField autoField)
                 {
                     foreach (var indexField in autoField.ToIndexFields())
                     {
                         IndexFields.Add(indexField.Name, indexField);
                     }
                 }
-                else if ((object)field is IndexField indexField)
+                else if (field is IndexField indexField)
                     IndexFields.Add(indexField.Name, indexField);
             }
             

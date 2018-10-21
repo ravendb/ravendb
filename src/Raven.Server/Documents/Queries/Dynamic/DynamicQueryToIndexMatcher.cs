@@ -182,6 +182,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
                             return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
                         }
                     }
+
+                    if (field.HasSuggestions && indexField.HasSuggestions == false)
+                    {
+                        explanations?.Add(new Explanation(indexName, $"The following field does not have suggestions enabled {indexField.Name}, while the query needs to perform suggest() on it"));
+                        return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
+                    }
                 }
                 else
                 {

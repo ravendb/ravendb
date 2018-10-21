@@ -8,6 +8,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -80,6 +81,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var index = await MatchIndex(query, true, null, context, token.Token);
 
             return await ExecutePatch(query, index, options, patch, patchArgs, context, onProgress, token);
+        }
+
+        public override async Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        {
+            var index = await MatchIndex(query, true, null, documentsContext, token.Token);
+
+            return await ExecuteSuggestion(query, index, documentsContext, existingResultEtag, token);
         }
 
         private async Task<Index> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, TimeSpan? customStalenessWaitTimeout, DocumentsOperationContext docsContext,

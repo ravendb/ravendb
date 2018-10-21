@@ -49,6 +49,10 @@ namespace Raven.Server.Documents.Indexes.Auto
                     writer.WriteNull();
                 else
                     writer.WriteObject(EntityToBlittable.ConvertCommandToBlittable(field.Spatial, context));
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(field.HasSuggestions));
+                writer.WriteBool(field.HasSuggestions);
 
                 writer.WriteEndObject();
 
