@@ -27,13 +27,13 @@ namespace Raven.Server.Documents.Queries
                 return result;
             }           
 
-            public bool TryGetDocPtr(string alias, out byte* ptr)
+            public bool TryGetAliasId(string alias, out long id)
             {
-                ptr = null;
+                id = -1;
                 var hasKey = _inner.TryGetValue(alias, out var doc);
 
                 if (hasKey)
-                    ptr = doc.Data.BasePointer;
+                    id = (long)doc.Data.BasePointer;
 
                 return hasKey;
             }
@@ -50,12 +50,14 @@ namespace Raven.Server.Documents.Queries
             }
 
             //try to set, but don't overwrite
-            public bool TrySet(StringSegment alias, Document val)
+            public long? TrySet(StringSegment alias, Document val)
             {
                 if (_inner == null)
                     _inner = new Dictionary<string, Document>();
 
-                return _inner.TryAdd(alias, val);
+                if (_inner.TryAdd(alias, val) == false)
+                    return null;
+                return (long)val.Data.BasePointer;
             }
 
             public void Set(StringSegment alias, Document val)
