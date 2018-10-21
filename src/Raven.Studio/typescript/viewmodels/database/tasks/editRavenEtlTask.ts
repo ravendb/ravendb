@@ -31,6 +31,7 @@ type resultItem = {
 
 class ravenTaskTestMode {
     documentId = ko.observable<string>();
+    testDelete = ko.observable<boolean>(false);
     docsIdsAutocompleteResults = ko.observableArray<string>([]);
     db: KnockoutObservable<database>;
     configurationProvider: () => Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration;
@@ -132,6 +133,7 @@ class ravenTaskTestMode {
 
             const dto = {
                 DocumentId: this.documentId(),
+                IsDelete: this.testDelete(),
                 Configuration: this.configurationProvider()
             } as Raven.Server.Documents.ETL.Providers.Raven.Test.TestRavenEtlScript;
 
