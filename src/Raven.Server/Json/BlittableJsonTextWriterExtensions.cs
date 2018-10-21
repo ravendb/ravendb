@@ -225,7 +225,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static async Task<int> WriteDocumentQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result, bool metadataOnly)
+        public static async Task<int> WriteDocumentQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result, bool metadataOnly, Func<AsyncBlittableJsonTextWriter,Task> writeAdditionalData = null)
         {
             writer.WriteStartObject();
 
@@ -307,6 +307,8 @@ namespace Raven.Server.Json
                 writer.WritePropertyName(nameof(result.IncludedCounterNames));
                 WriteIncludedCounterNames(writer, result);
             }
+
+            writeAdditionalData?.Invoke(writer);
 
             writer.WriteEndObject();
             return numberOfResults;

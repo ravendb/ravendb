@@ -362,6 +362,7 @@ namespace Raven.Server.Documents.Queries.AST
                 _indent--;
                 EnsureLine();
                 _sb.Append("} AS ").Append(withClause.Key);
+                _sb.AppendLine();
             }
         }
 
@@ -378,6 +379,7 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override void VisitWithEdgesExpression(string alias, WithEdgesExpression withEdgesClause)
         {
+            EnsureSpace();
             _sb.Append("WITH EDGES ");
             if (withEdgesClause.Path != null)
             {
@@ -408,6 +410,8 @@ namespace Raven.Server.Documents.Queries.AST
             }
             if (string.IsNullOrEmpty(alias) == false)
                 _sb.Append(" AS ").Append(alias);
+
+            _sb.AppendLine();
         }
 
         public override void VisitPatternMatchElementExpression(PatternMatchElementExpression elementExpression)
@@ -422,6 +426,8 @@ namespace Raven.Server.Documents.Queries.AST
             _sb.Append("MATCH ");
 
             base.VisitMatchExpression(expr);
+
+            _sb.AppendLine();
         }
     }
 }
