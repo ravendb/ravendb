@@ -657,8 +657,10 @@ namespace Raven.Client.Documents.Linq
                         constant = expression.Object;
                         break;
                     case ExpressionType.Parameter:
-                        fieldInfo = new ExpressionInfo(_currentPath.Substring(0, _currentPath.Length - 1), expression.Object.Type,
-                                                       false);
+                        fieldInfo = new ExpressionInfo(_currentPath.EndsWith("[].")
+                            ? _currentPath.Substring(0, _currentPath.Length - 3)
+                            : _currentPath.Substring(0, _currentPath.Length - 1), 
+                            expression.Object.Type, false);
                         constant = expression.Arguments[0];
                         break;
                     default:
