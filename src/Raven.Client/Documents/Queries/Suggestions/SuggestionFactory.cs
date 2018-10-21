@@ -17,6 +17,8 @@ namespace Raven.Client.Documents.Queries.Suggestions
 
     public interface ISuggestionOperations<T>
     {
+        ISuggestionOperations<T> WithDisplayName(string displayName);
+
         ISuggestionOperations<T> WithOptions(SuggestionOptions options);
     }
 
@@ -24,6 +26,13 @@ namespace Raven.Client.Documents.Queries.Suggestions
     {
         private SuggestionWithTerm _term;
         private SuggestionWithTerms _terms;
+
+        public ISuggestionOperations<T> WithDisplayName(string displayName)
+        {
+            Suggestion.DisplayField = displayName;
+
+            return this;
+        }
 
         public ISuggestionOperations<T> ByField(string fieldName, string term)
         {

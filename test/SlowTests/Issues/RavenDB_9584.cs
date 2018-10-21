@@ -97,5 +97,26 @@ namespace SlowTests.Issues
                 }
             }
         }
+
+        [Fact]
+        public void CanUseAliasInSuggestions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                Setup(store);
+
+                using (var s = store.OpenSession())
+                {
+                    var suggestionQueryResult = s.Query<User>("test")
+                        .SuggestUsing(x => x
+                            .ByField(y => y.Name, "Owen")
+                            .WithDisplayName("NewName"))
+                        .Execute();
+
+                    Assert.Equal(1, suggestionQueryResult["NewName"].Suggestions.Count);
+                    Assert.Equal("oren", suggestionQueryResult["NewName"].Suggestions[0]);
+                }
+            }
+        }
     }
 }

@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var result = new SuggestionResult
             {
-                Name = field.Name
+                Name = field.Alias ?? field.Name
             };
 
             result.Suggestions.AddRange(terms.Count > 1
