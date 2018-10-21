@@ -13,6 +13,8 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Policy;
+using System.Text;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
@@ -83,7 +85,7 @@ namespace Raven.Server.Documents.Queries
 
                 if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
                 {
-                    HandleResultsWithoutSelect(documentsContext, matchResults, final);
+                    HandleResultsWithoutSelect(documentsContext, matchResults.ToList(), final);
                 }
                 else if (q.Select != null)
                 {
@@ -115,7 +117,9 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private static void HandleResultsWithoutSelect(DocumentsOperationContext documentsContext, List<Match> matchResults, DocumentQueryResult final)
+       private static void HandleResultsWithoutSelect(
+            DocumentsOperationContext documentsContext, 
+            List<Match> matchResults, DocumentQueryResult final)
         {
             if(matchResults.Count == 1)
             {
@@ -143,12 +147,11 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private List<Match> ExecutePatternMatch(DocumentsOperationContext documentsContext, IndexQueryServerSide query, IntermediateResults ir)
+        private IEnumerable<Match> ExecutePatternMatch(DocumentsOperationContext documentsContext, IndexQueryServerSide query, IntermediateResults ir)
         {
             var visitor = new GraphExecuteVisitor(ir, query, documentsContext);
             visitor.VisitExpression(query.Metadata.Query.GraphQuery.MatchClause);
             return visitor.Output;
-
         }
 
         public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer, OperationCancelToken token)
@@ -182,14 +185,112 @@ namespace Raven.Server.Documents.Queries
             private readonly GraphQuery _gq;
             private readonly BlittableJsonReaderObject _queryParameters;
             private readonly DocumentsOperationContext _ctx;
-            public List<Match> Output;            
+        
+            public IEnumerable<Match> Output => 
+                _intermediateOutputs.TryGetValue(_gq.MatchClause, out var results) ? 
+                    results : Enumerable.Empty<Match>();
 
+            private readonly Dictionary<QueryExpression,List<Match>> _intermediateOutputs = new Dictionary<QueryExpression, List<Match>>();
+            private readonly Dictionary<long,List<Match>> _clauseIntersectionIntermediate = new Dictionary<long, List<Match>>();
+            
+            private readonly HashSet<string> _includedNodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            private readonly List<Match> _results = new List<Match>();
+            private readonly Dictionary<PatternMatchElementExpression,HashSet<StringSegment>> _aliasesInMatch = new Dictionary<PatternMatchElementExpression, HashSet<StringSegment>>();
+            
             public GraphExecuteVisitor(IntermediateResults source, IndexQueryServerSide query, DocumentsOperationContext documentsContext)
             {
                 _source = source;
                 _gq = query.Metadata.Query.GraphQuery;
                 _queryParameters = query.QueryParameters;
                 _ctx = documentsContext;
+            }
+
+            public override void VisitCompoundWhereExpression(BinaryExpression @where)
+            {                
+                if (!(@where.Left is PatternMatchElementExpression left) || 
+                    !(@where.Right is PatternMatchElementExpression right))
+                {
+                    base.VisitCompoundWhereExpression(@where);
+                }
+                else
+                {
+                   
+                    VisitExpression(left);
+                    VisitExpression(right);
+
+                    switch (where.Operator)
+                    {
+                        case OperatorType.And:
+                            IntersectExpressions(where, left, right);
+                            break;
+                        case OperatorType.Or:
+                            UnionExpressions(where, left, right);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
+            }
+
+
+            //TODO : make sure there is no double results/invalid permutations of results
+            private unsafe void IntersectExpressions(QueryExpression parent,
+                PatternMatchElementExpression left, 
+                PatternMatchElementExpression right)
+            {
+                Debug.Assert(_intermediateOutputs.ContainsKey(left));
+                Debug.Assert(_intermediateOutputs.ContainsKey(right));
+
+                var aliasIntersection = _aliasesInMatch[left];
+                aliasIntersection.IntersectWith(_aliasesInMatch[right]);
+
+                var output = new List<Match>();
+                for (int l = 0; l < _intermediateOutputs[left].Count; l++)
+                {
+                    var leftMatch = _intermediateOutputs[left][l];
+                    for (int r = 0; r < _intermediateOutputs[right].Count; r++)
+                    {
+                        var rightMatch = _intermediateOutputs[right][r];
+                        var allIntersectionsMatch = true;
+                        foreach (var intersect in aliasIntersection)
+                        {
+                            if (!leftMatch.TryGetDocPtr(intersect, out var leftPtr) ||
+                                !rightMatch.TryGetDocPtr(intersect, out var rightPtr) ||
+                                leftPtr != rightPtr)
+                            {
+                                allIntersectionsMatch = false;
+                                break;
+                            }
+                        }
+
+                        if (allIntersectionsMatch)
+                        {
+                            var match = new Match();
+                            foreach (var mergeAlias in leftMatch.Aliases.Union(rightMatch.Aliases))
+                            {
+                                var doc = leftMatch.Get(mergeAlias) ?? rightMatch.Get(mergeAlias);
+                                Debug.Assert(doc != null);
+                                match.TrySet(mergeAlias, doc);
+                            }
+
+                            if (match.Count > 0)
+                            {
+                                output.Add(match);
+                            }
+                        }
+
+                    }
+                }
+
+                _intermediateOutputs.Add(parent, output);
+            }
+
+            private void UnionExpressions(QueryExpression parent, PatternMatchElementExpression left, PatternMatchElementExpression right)
+            {
+                Debug.Assert(_intermediateOutputs.ContainsKey(left));
+                Debug.Assert(_intermediateOutputs.ContainsKey(right));
+
+                throw new NotImplementedException();
             }
 
             public override void VisitPatternMatchElementExpression(PatternMatchElementExpression ee)
@@ -207,8 +308,9 @@ namespace Raven.Server.Documents.Queries
                     currentResults.Add(match);
                 }
                 
-                Output = new List<Match>();
 
+                _intermediateOutputs.Add(ee,new List<Match>());
+                var aliases = new HashSet<StringSegment>();
                 for (int pathIndex = 1; pathIndex < ee.Path.Length-1; pathIndex+=2)
                 {
                     Debug.Assert(ee.Path[pathIndex].IsEdge);
@@ -220,6 +322,9 @@ namespace Raven.Server.Documents.Queries
                     var edge = _gq.WithEdgePredicates[edgeAlias];
                     edge.EdgeAlias = edgeAlias;
                     edge.FromAlias = prevNodeAlias;
+
+                    aliases.Add(prevNodeAlias);
+                    aliases.Add(nextNodeAlias);
 
                     if(!_source.TryGetByAlias(nextNodeAlias, out var edgeResults))
                         throw new InvalidOperationException("Could not fetch destination nod edge data. This should not happen and is likely a bug.");
@@ -245,11 +350,13 @@ namespace Raven.Server.Documents.Queries
                                 else
                                 {
                                     var multipleEdgeResult = new Match();
+                                   
                                     if(relatedEdge!=null)
                                         multipleEdgeResult.Set(edgeAlias, relatedEdge);
                                     multipleEdgeResult.Set(prevNodeAlias, prev);
                                     multipleEdgeResult.Set(nextNodeAlias, related);
-                                    Output.Add(multipleEdgeResult);
+                                    
+                                    _intermediateOutputs[ee].Add(multipleEdgeResult);
                                 }
                             }
                             continue;
@@ -261,12 +368,12 @@ namespace Raven.Server.Documents.Queries
                     }
                 }
 
-                Output.AddRange(currentResults);
+                _aliasesInMatch.Add(ee,aliases); //if we don't visit each match pattern exactly once, we have an issue 
+                _intermediateOutputs[ee].AddRange(currentResults);                
             }
 
-            private readonly Dictionary<string, Document> _includedEdges = new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
-            private readonly List<Match> _results = new List<Match>();
-            
+          
+
             private bool TryGetMatches(WithEdgesExpression edge, string alias, Dictionary<string, Match> edgeResults, Document prev,
                 out List<Match> relatedMatches)
             {
@@ -340,6 +447,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     foreach (var kvp in _includedEdges)
                     {
+
                         var doc = _ctx.DocumentDatabase.DocumentsStorage.Get(_ctx, kvp.Key, false);
                         if (doc == null)
                             continue;

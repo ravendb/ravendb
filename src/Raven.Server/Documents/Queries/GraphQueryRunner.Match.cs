@@ -9,11 +9,13 @@ namespace Raven.Server.Documents.Queries
 {
     public partial class GraphQueryRunner
     {
-        public struct Match // using struct because we have a single field 
+        public unsafe struct Match // using struct because we have a single field 
         {
             private Dictionary<string, Document> _inner;
 
             public object Key => _inner;
+
+            public int Count => _inner?.Count ?? 0;
 
             public IEnumerable<string> Aliases => _inner.Keys;
 
@@ -30,6 +32,17 @@ namespace Raven.Server.Documents.Queries
                 return result;
             }           
 
+            public bool TryGetDocPtr(string alias, out byte* ptr)
+            {
+                ptr = null;
+                var hasKey = _inner.TryGetValue(alias, out var doc);
+
+                if (hasKey)
+                    ptr = doc.Data.BasePointer;
+
+                return hasKey;
+            }
+
             public bool TryGetKey(string alias, out string key)
             {
                 key = null;
@@ -39,6 +52,15 @@ namespace Raven.Server.Documents.Queries
                     key = doc.Id;
 
                 return hasKey;
+            }
+
+            //try to set, but don't overwrite
+            public bool TrySet(StringSegment alias, Document val)
+            {
+                if (_inner == null)
+                    _inner = new Dictionary<string, Document>();
+
+                return _inner.TryAdd(alias, val);
             }
 
             public void Set(StringSegment alias, Document val)
