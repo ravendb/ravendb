@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Handlers
             }
 
             var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
-            var shouldReturnServerSideQuery = GetBoolValueQueryString("withServerSideQuery", required: false) ?? false;
+            var shouldReturnServerSideQuery = GetBoolValueQueryString("includeServerSideQuery", required: false) ?? false;
 
             DocumentQueryResult result;
             try
