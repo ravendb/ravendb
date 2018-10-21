@@ -5,20 +5,15 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions.Cluster;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Errors;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
@@ -952,7 +947,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var now = database.Time.GetUtcNow();
                 using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
-                using(var raw = database.ServerStore.Cluster.ReadRawDatabase(context, database.Name, out _))
+                using (var raw = database.ServerStore.Cluster.ReadRawDatabase(context, database.Name, out _))
                 {
                     var state = new ClusterObserver.DatabaseObservationState
                     {
@@ -1012,7 +1007,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
-                using(var raw = database.ServerStore.Cluster.ReadRawDatabase(context, database.Name, out _))
+                using (var raw = database.ServerStore.Cluster.ReadRawDatabase(context, database.Name, out _))
                 {
                     var state = new ClusterObserver.DatabaseObservationState()
                     {
@@ -1259,9 +1254,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 var definition3 = new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.Yes } });
 
-                var e = (await Assert.ThrowsAsync<CommandExecutionException>(() => database.IndexStore.CreateIndex(definition3))).InnerException;
+                var e = await Assert.ThrowsAsync<IndexCreationException>(() => database.IndexStore.CreateIndex(definition3));
 
-                Assert.Contains("Can not update auto-index", e.Message);
+                Assert.Contains("Can not update auto-index", e.ToString());
                 Assert.NotNull(index1);
                 Assert.Equal(1, database.IndexStore.GetIndexes().Count());
             }
