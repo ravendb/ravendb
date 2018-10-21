@@ -221,7 +221,15 @@ namespace Raven.Server.Documents.Queries
                     switch (where.Operator)
                     {
                         case OperatorType.And:
-                            IntersectExpressions<Intersection>(where, left, right);
+
+                            //if(right is NegatedExpression n)
+                            //{
+                            //    IntersectExpressions<Except>(where, left, n.Expression);
+                            //}
+                            //else
+                            {
+                                IntersectExpressions<Intersection>(where, left, right);
+                            }
                             break;
                         case OperatorType.Or:
                             IntersectExpressions<Union>(where, left, right);
@@ -245,11 +253,15 @@ namespace Raven.Server.Documents.Queries
                     bool allIntersectionsMatch,
                     HashSet<Match> state);
 
+                bool CanOptimizeSides { get; }
+
                 void Complete(List<Match> output, Dictionary<long, List<Match>>intersection, HashSet<StringSegment> aliases, HashSet<Match> state);
             }
 
             private struct Intersection : ISetOp
             {
+                public bool CanOptimizeSides => true;
+
                 public void Complete(List<Match> output, Dictionary<long, List<Match>> intersection, HashSet<StringSegment> aliases, HashSet<Match> state)
                 {
                     // nothing to do
@@ -274,6 +286,8 @@ namespace Raven.Server.Documents.Queries
 
             private struct Union : ISetOp
             {
+                public bool CanOptimizeSides => true;
+
                 public void Complete(List<Match> output, Dictionary<long, List<Match>> intersection, HashSet<StringSegment> aliases, HashSet<Match> state)
                 {
                     foreach (var  kvp in intersection)
@@ -307,6 +321,34 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
+            private struct Except : ISetOp
+            {
+                // for AND NOT, the sides really matter, so we can't optimize it
+                public bool CanOptimizeSides => false;
+
+                public void Complete(List<Match> output, Dictionary<long, List<Match>> intersection, HashSet<StringSegment> aliases, HashSet<Match> state)
+                {
+                    foreach (var kvp in intersection)
+                    {
+                        foreach (var item in kvp.Value)
+                        {
+                            if (state.Contains(item) == false)
+                                output.Add(item);
+                        }
+                    }
+                }
+
+                public void Op(List<Match> output,
+                    (Match Match, HashSet<StringSegment> Aliases) left,
+                    (Match Match, HashSet<StringSegment> Aliases) right,
+                    bool allIntersectionsMatch,
+                    HashSet<Match> state)
+                {
+                    if (allIntersectionsMatch)
+                        state.Add(left.Match);
+                }
+            }
+
             private unsafe void IntersectExpressions<TOp>(QueryExpression parent,
                 PatternMatchElementExpression left, 
                 PatternMatchElementExpression right)
@@ -328,7 +370,7 @@ namespace Raven.Server.Documents.Queries
                 var yAliases = _aliasesInMatch[right];
 
                 // ensure that we start processing from the smaller side
-                if(xOutput.Count < yOutput.Count)
+                if(xOutput.Count < yOutput.Count && operation.CanOptimizeSides)
                 {
                     var tmp = xOutput;
                     yOutput = xOutput;
