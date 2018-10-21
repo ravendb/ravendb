@@ -3,6 +3,7 @@ using System.IO;
 using FastTests.Voron;
 using Sparrow;
 using Sparrow.Utils;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Exceptions;
 using Voron.Global;
@@ -95,7 +96,7 @@ namespace SlowTests.Voron
             Assert.Equal(currentJournalInfo.CurrentJournal, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
         }
 
-        [Fact]
+        [Fact64Bit]
         public void CanResetLogInfoAfterBigUncommitedTransaction2()
         {
             using (var tx = Env.WriteTransaction())

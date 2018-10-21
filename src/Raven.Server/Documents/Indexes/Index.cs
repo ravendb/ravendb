@@ -2049,7 +2049,8 @@ namespace Raven.Server.Documents.Indexes
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
-                        documentsContext.OpenReadTransaction();
+                        if (documentsContext.Transaction == null || documentsContext.Transaction.Disposed)
+                            documentsContext.OpenReadTransaction();
                         // we have to open read tx for mapResults _after_ we open index tx
 
                         if (query.WaitForNonStaleResults && cutoffEtag == null)
@@ -2857,6 +2858,9 @@ namespace Raven.Server.Documents.Indexes
                     out ProcessMemoryUsage memoryUsage) == false)
                 {
                     _allocationCleanupNeeded = true;
+
+                    documentsOperationContext.DoNotReuse = true;
+                    indexingContext.DoNotReuse = true;
 
                     if (stats.MapAttempts >= Configuration.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)
                     {

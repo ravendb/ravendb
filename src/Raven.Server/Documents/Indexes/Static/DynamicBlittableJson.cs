@@ -18,9 +18,10 @@ namespace Raven.Server.Documents.Indexes.Static
         private const int MetadataHasValueIndex = 2;
         private const int MetadataKeyIndex = 3;
         private const int MetadataIdIndex = 4;
-        private const int MetadataEtagIndex = 5;
+        private const int MetadataChangeVectorIndex = 5;
         private const int MetadataLastModifiedIndex = 6;
         private const int CountIndex = 7;
+        private const int MetadataEtagIndex = 8;
 
         private static readonly CompareKey[] PrecomputedTable;
 
@@ -35,7 +36,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 new CompareKey(Constants.Documents.Metadata.Id, 1),
                 new CompareKey(Constants.Documents.Metadata.ChangeVector, 1),
                 new CompareKey(Constants.Documents.Metadata.LastModified, 1),
-                new CompareKey("Count", 2)
+                new CompareKey("Count", 2),
+                new CompareKey(Constants.Documents.Metadata.Etag, 1),
             };
         }
 
@@ -116,6 +118,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 getResult = true;
                 if (FastCompare(name, MetadataIdIndex))
                     result = _doc.Id;
+                else if (FastCompare(name, MetadataChangeVectorIndex))
+                    result = _doc.ChangeVector;
                 else if (FastCompare(name, MetadataEtagIndex))
                     result = _doc.Etag;
                 else if (FastCompare(name, MetadataLastModifiedIndex))

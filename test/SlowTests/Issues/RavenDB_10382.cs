@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
 using Xunit;
@@ -9,8 +10,17 @@ namespace SlowTests.Issues
 {
     public class RavenDB_10382 : StorageTest
     {
-        [Fact]
-        public void ShouldWork()
+        [Fact64Bit]
+        public void ShouldWork64()
+        {
+            ShouldWork(40_000, 25_000);
+        }
+        [Fact32Bit]
+        public void ShouldWork32()
+        {
+            ShouldWork(7_000, 4_000);
+        }
+        private void ShouldWork(int treeKeys, int treeKeysToDel)
         {
             using (var tx = Env.WriteTransaction())
             {
@@ -21,7 +31,7 @@ namespace SlowTests.Issues
 
             var random = new Random(1);
             var bytes = new byte[1024 * 8];
-
+            int treeKeysAssumedLeft = treeKeys - treeKeysToDel;
             // insert
             using (var tx = Env.WriteTransaction())
             {
@@ -29,7 +39,7 @@ namespace SlowTests.Issues
 
                 Assert.True(tree.State.Flags.HasFlag(TreeFlags.LeafsCompressed));
 
-                for (int i = 0; i < 40_000; i++)
+                for (int i = 0; i < treeKeys; i++)
                 {
                     random.NextBytes(bytes);
 
@@ -46,7 +56,7 @@ namespace SlowTests.Issues
 
                 Assert.True(tree.State.Flags.HasFlag(TreeFlags.LeafsCompressed));
 
-                for (int i = 0; i < 25_000; i++)
+                for (int i = 0; i < treeKeysToDel; i++)
                 {
                     tree.Delete(GetKey(i));
                 }
@@ -68,12 +78,12 @@ namespace SlowTests.Issues
                     do
                     {
                         var key = it.CurrentKey.ToString();
-                        Assert.Equal(GetKey(25_000 + count), key);
+                        Assert.Equal(GetKey(treeKeysToDel + count), key);
 
                         count++;
                     } while (it.MoveNext());
 
-                    Assert.Equal(15_000, count);
+                    Assert.Equal(treeKeysAssumedLeft, count);
                 }
             }
         }

@@ -294,11 +294,11 @@ namespace Voron.Impl.Paging
             if (state.LoadedPages.TryGetValue(allocationStartPosition, out var page))
                 return page.Pointer + (distanceFromStart * Constants.Storage.PageSize);
 
-            page = MapPages(state, allocationStartPosition, AllocationGranularity, true);
+            page = MapPages(state, allocationStartPosition, AllocationGranularity);
             return page.Pointer + (distanceFromStart * Constants.Storage.PageSize);
         }
 
-        private LoadedPage MapPages(TransactionState state, long startPage, long size, bool allowPartialMapAtEndOfFile = false)
+        private LoadedPage MapPages(TransactionState state, long startPage, long size)
         {
             _globalMemory.EnterReadLock();
             try

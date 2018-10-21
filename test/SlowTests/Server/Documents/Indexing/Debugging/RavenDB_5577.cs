@@ -10,6 +10,7 @@ using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Server.Documents.Indexing.Debugging
@@ -96,7 +97,14 @@ select new
             }
         }
 
-        [Theory]
+        [Theory32Bit]
+        [InlineData(10, 1, 1)]
+        public void Getting_trees32(int numberOfDocs, int expectedTreeDepth, int expectedPageCount)
+        {
+            Getting_trees(numberOfDocs, expectedTreeDepth, expectedPageCount);
+        }
+
+        [Theory64Bit]
         [InlineData(1000, 2, 3)]
         [InlineData(10, 1, 1)] // nested section
         public void Getting_trees(int numberOfDocs, int expectedTreeDepth, int expectedPageCount)

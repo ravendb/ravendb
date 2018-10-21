@@ -227,7 +227,7 @@ namespace Raven.Server.Documents.ETL
                             stats.RecordLastTransformedEtag(item.Etag);
                             stats.RecordChangeVector(item.ChangeVector);
 
-                            if (CanContinueBatch(stats) == false)
+                            if (CanContinueBatch(stats, context) == false)
                                 break;
                         }
                         catch (JavaScriptParseException e)
@@ -305,7 +305,7 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract void LoadInternal(IEnumerable<TTransformed> items, JsonOperationContext context);
 
-        public bool CanContinueBatch(EtlStatsScope stats)
+        public bool CanContinueBatch(EtlStatsScope stats, JsonOperationContext ctx)
         {
             if (stats.NumberOfExtractedItems >= Database.Configuration.Etl.MaxNumberOfExtractedDocuments)
             {
@@ -331,14 +331,14 @@ namespace Raven.Server.Documents.ETL
                 return false;
             }
 
-            var currentlyInUse = new Size(_threadAllocations.Allocations, SizeUnit.Bytes);
+            var currentlyInUse = new Size(_threadAllocations.TotalAllocated, SizeUnit.Bytes);
             if (currentlyInUse > _currentMaximumAllowedMemory)
             {
                 if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
                         currentlyInUse,
                         Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Logger, out ProcessMemoryUsage memoryUsage) == false)
                 {
-                    var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {_threadAllocations.TotalAllocated}. Current memory usage: " +
+                    var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {new Size(_threadAllocations.TotalAllocated, SizeUnit.Bytes)}. Current memory usage: " +
                                  $"{nameof(memoryUsage.WorkingSet)} = {memoryUsage.WorkingSet}," +
                                  $"{nameof(memoryUsage.PrivateMemory)} = {memoryUsage.PrivateMemory}";
 
@@ -346,6 +346,8 @@ namespace Raven.Server.Documents.ETL
                         Logger.Info(reason);
 
                     stats.RecordBatchCompleteReason(reason);
+
+                    ctx.DoNotReuse = true;
 
                     return false;
                 }
