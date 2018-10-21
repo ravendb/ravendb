@@ -208,55 +208,105 @@ namespace Raven.Server.Documents.Queries
 
 
             //TODO : make sure there is no double results/invalid permutations of results
+
+            private Dictionary<long, List<Match>> _tempIntersect = new Dictionary<long, List<Match>>();
+
             private unsafe void IntersectExpressions(QueryExpression parent,
                 PatternMatchElementExpression left, 
                 PatternMatchElementExpression right)
             {
-                Debug.Assert(_intermediateOutputs.ContainsKey(left));
-                Debug.Assert(_intermediateOutputs.ContainsKey(right));
+                _tempIntersect.Clear();
 
-                var aliasIntersection = _aliasesInMatch[left];
-                aliasIntersection.IntersectWith(_aliasesInMatch[right]);
+                // TODO: Move this to the parent object
+                var intersectedAliases = _aliasesInMatch[left].Intersect(_aliasesInMatch[right]).ToList();
+
+                if (intersectedAliases.Count == 0)
+                    return; // no intersection, nothing matches
+
+                var xOutput = _intermediateOutputs[left];
+                var yOutput = _intermediateOutputs[right];
+
+                // ensure that we start processing from the smaller side
+                if(xOutput.Count < yOutput.Count)
+                {
+                    var tmp = xOutput;
+                    yOutput = xOutput;
+                    xOutput = tmp;
+                }
+
+                for (int l = 0; l < xOutput.Count; l++)
+                {
+                    var xMatch = xOutput[l];
+                    long key = GetMatchHashKey(intersectedAliases, xMatch);
+
+                    if (_tempIntersect.TryGetValue(key, out var matches) == false)
+                        _tempIntersect[key] = matches = new List<Match>(); // TODO: pool these
+                    matches.Add(xMatch);
+                }
+
 
                 var output = new List<Match>();
-                for (int l = 0; l < _intermediateOutputs[left].Count; l++)
+
+                for (int l = 0; l < yOutput.Count; l++)
                 {
-                    var leftMatch = _intermediateOutputs[left][l];
-                    for (int r = 0; r < _intermediateOutputs[right].Count; r++)
+                    var yMatch = yOutput[l];
+                    long key = GetMatchHashKey(intersectedAliases, yMatch);
+
+                    if (_tempIntersect.TryGetValue(key, out var matchesFromLeft) == false)
+                        continue; // nothing matched, can skip
+
+                    for (int i = 0; i < matchesFromLeft.Count; i++)
                     {
-                        var rightMatch = _intermediateOutputs[right][r];
+                        var xMatch = matchesFromLeft[i];
                         var allIntersectionsMatch = true;
-                        foreach (var intersect in aliasIntersection)
+                        for (int j = 0; j < intersectedAliases.Count; j++)
                         {
-                            if (!leftMatch.TryGetDocPtr(intersect, out var leftPtr) ||
-                                !rightMatch.TryGetDocPtr(intersect, out var rightPtr) ||
-                                leftPtr != rightPtr)
+                            var intersect = intersectedAliases[j];
+                            if (!xMatch.TryGetAliasId(intersect, out var x) ||
+                                !yMatch.TryGetAliasId(intersect, out var y) ||
+                                x != y)
                             {
                                 allIntersectionsMatch = false;
                                 break;
                             }
                         }
 
-                        if (allIntersectionsMatch)
-                        {
-                            var match = new Match();
-                            foreach (var mergeAlias in leftMatch.Aliases.Union(rightMatch.Aliases))
-                            {
-                                var doc = leftMatch.Get(mergeAlias) ?? rightMatch.Get(mergeAlias);
-                                Debug.Assert(doc != null);
-                                match.TrySet(mergeAlias, doc);
-                            }
+                        if (allIntersectionsMatch == false)
+                            continue;
 
-                            if (match.Count > 0)
-                            {
-                                output.Add(match);
-                            }
-                        }
+                        var resultMatch = new Match();
 
+                        CopyAliases(xMatch, ref resultMatch, _aliasesInMatch[left]);
+                        CopyAliases(yMatch, ref resultMatch, _aliasesInMatch[right]);
+                        output.Add(resultMatch);
                     }
                 }
 
                 _intermediateOutputs.Add(parent, output);
+            }
+
+            private static unsafe void CopyAliases(Match src, ref Match dst, HashSet<StringSegment> aliases)
+            {
+                foreach (var alias in aliases)
+                {
+                    dst.TrySet(alias, src.Get(alias));
+                }
+            }
+
+            private static unsafe long GetMatchHashKey(List<StringSegment> intersectedAliases, Match match)
+            {
+                long key = 0L;
+                for (int i = 0; i < intersectedAliases.Count; i++)
+                {
+                    var alias = intersectedAliases[i];
+
+                    if (match.TryGetAliasId(alias, out long aliasId) == false)
+                        aliasId = -i;
+
+                    key = Hashing.Combine(key, aliasId);
+                }
+
+                return key;
             }
 
             private void UnionExpressions(QueryExpression parent, PatternMatchElementExpression left, PatternMatchElementExpression right)
