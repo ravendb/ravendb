@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Queries
         public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey, QueryType queryType = QueryType.Select)
             : this(ParseQuery(query, queryType), parameters, cacheKey)
         {
-            
+
         }
 
         private static Query ParseQuery(string q, QueryType queryType)
@@ -213,7 +213,7 @@ namespace Raven.Server.Documents.Queries
             WhereFields[indexFieldName] = new WhereField(isFullTextSearch: search, isExactSearch: exact, spatial: spatial);
         }
 
-        private readonly static Dictionary<StringSegment, WithEdgesExpression> EmptyEdges = new Dictionary<StringSegment, WithEdgesExpression>();
+        private static readonly Dictionary<StringSegment, WithEdgesExpression> EmptyEdges = new Dictionary<StringSegment, WithEdgesExpression>();
 
         private void Build(BlittableJsonReaderObject parameters)
         {
@@ -255,7 +255,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     ThrowMissingVertexMatchClauses();
                 }
-              
+
                 if (Query.Select != null)
                 {
                     foreach (var projection in Query.Select)
@@ -328,11 +328,6 @@ namespace Raven.Server.Documents.Queries
 
             if (Query.DeclaredFunctions != null)
                 HandleDeclaredFunctions();
-        }
-
-        private static void ThrowOneOrMoreUndefinedAlias(StringSegment[] aliasesUndefinedInQuery)
-        {
-            throw new InvalidQueryException($"One or more aliases ({string.Join(',', aliasesUndefinedInQuery)}) in SELECT clause are not defined in the query.");
         }
 
         private static void ThrowOneUndefinedAlias(StringSegment alias)
@@ -416,7 +411,7 @@ namespace Raven.Server.Documents.Queries
             {
                 var expressionPath = ParseExpressionPath(include, path, Query.From.Alias);
 
-                if (expressionPath.LoadFromAlias != null && 
+                if (expressionPath.LoadFromAlias != null &&
                     NotInRootAliasPaths(expressionPath.LoadFromAlias))
                     ThrowUnknownAlias(expressionPath.LoadFromAlias, parameters);
 
@@ -545,7 +540,7 @@ namespace Raven.Server.Documents.Queries
             if (Query.Select != null && Query.Select.Count > 0)
                 ThrowInvalidFunctionSelectWithMoreFields(parameters);
 
-            if (RootAliasPaths.Count == 0 && IsGraph == false )
+            if (RootAliasPaths.Count == 0 && IsGraph == false)
                 ThrowMissingAliasOnSelectFunctionBody(parameters);
 
             // validate that this is valid JS code
@@ -567,8 +562,8 @@ namespace Raven.Server.Documents.Queries
 
             sb.Append("function ").Append(name).Append("(");
             int index = 0;
-            var args = new SelectField[IsGraph ? 
-                Query.GraphQuery.WithDocumentQueries.Count + Query.GraphQuery.WithEdgePredicates.Count : 
+            var args = new SelectField[IsGraph ?
+                Query.GraphQuery.WithDocumentQueries.Count + Query.GraphQuery.WithEdgePredicates.Count :
                 RootAliasPaths.Count];
 
             foreach (var alias in RootAliasPaths)
@@ -751,7 +746,7 @@ namespace Raven.Server.Documents.Queries
                 string loadFromAlias;
                 (path, loadFromAlias) = ParseExpressionPath(load.Expression, path, Query.From.Alias);
 
-                if (loadFromAlias != null && 
+                if (loadFromAlias != null &&
                     NotInRootAliasPaths(loadFromAlias))
                 {
                     ThrowUnknownAlias(loadFromAlias, parameters);
@@ -919,7 +914,7 @@ namespace Raven.Server.Documents.Queries
             try
             {
                 SelectFields = new SelectField[Query.Select.Count];
-                
+
                 for (var index = 0; index < Query.Select.Count; index++)
                 {
                     var fieldInfo = Query.Select[index];
@@ -966,13 +961,13 @@ namespace Raven.Server.Documents.Queries
 
         private SelectField GetSelectField(BlittableJsonReaderObject parameters, QueryExpression expression, string alias)
         {
-            //if (HasSuggest)
-            //    ThrowSuggestionQueryMustContainsOnlyOneSuggestInSelect(parameters);
-
             if (expression is ValueExpression ve)
             {
                 if (HasFacet)
                     ThrowFacetQueryMustContainsOnlyFacetInSelect(ve, parameters);
+
+                if (HasSuggest)
+                    ThrowSuggestionQueryMustContainsOnlySuggestInSelect(ve, parameters);
 
                 return SelectField.CreateValue(ve.Token, alias, ve.Value);
             }
@@ -981,6 +976,9 @@ namespace Raven.Server.Documents.Queries
             {
                 if (HasFacet)
                     ThrowFacetQueryMustContainsOnlyFacetInSelect(fe, parameters);
+
+                if (HasSuggest)
+                    ThrowSuggestionQueryMustContainsOnlySuggestInSelect(fe, parameters);
 
                 if (fe.IsQuoted && fe.Compound.Count == 1)
                     return SelectField.CreateValue(fe.Compound[0], alias, ValueTokenType.String);
@@ -996,6 +994,9 @@ namespace Raven.Server.Documents.Queries
                     {
                         if (HasFacet)
                             ThrowFacetQueryMustContainsOnlyFacetInSelect(me, parameters);
+
+                        if (HasSuggest)
+                            ThrowSuggestionQueryMustContainsOnlySuggestInSelect(me, parameters);
 
                         var args = new SelectField[me.Arguments.Count];
                         for (int i = 0; i < me.Arguments.Count; i++)
@@ -1016,6 +1017,9 @@ namespace Raven.Server.Documents.Queries
                         if (HasFacet)
                             ThrowFacetQueryMustContainsOnlyFacetInSelect(me, parameters);
 
+                        if (HasSuggest)
+                            ThrowSuggestionQueryMustContainsOnlySuggestInSelect(me, parameters);
+
                         if (IsGroupBy)
                             ThrowInvalidIdInGroupByQuery(parameters);
 
@@ -1032,6 +1036,9 @@ namespace Raven.Server.Documents.Queries
 
                         if (IsDistinct)
                             ThrowFacetQueryCannotBeDistinct(parameters);
+
+                        if (HasSuggest)
+                            ThrowFacetQueryCannotBeSuggest(parameters);
 
                         HasFacet = true;
 
@@ -1059,6 +1066,9 @@ namespace Raven.Server.Documents.Queries
                     {
                         if (HasFacet)
                             ThrowFacetQueryMustContainsOnlyFacetInSelect(me, parameters);
+
+                        if (HasSuggest)
+                            ThrowSuggestionQueryMustContainsOnlySuggestInSelect(me, parameters);
 
                         if (me.Arguments.Count == 0 || me.Arguments.Count > 2)
                             ThrowInvalidNumberOfArgumentsForCounter(methodName, parameters, me.Arguments.Count);
@@ -1098,6 +1108,9 @@ namespace Raven.Server.Documents.Queries
 
                 if (HasFacet)
                     ThrowFacetQueryMustContainsOnlyFacetInSelect(expression, parameters);
+
+                if (HasSuggest)
+                    ThrowSuggestionQueryMustContainsOnlySuggestInSelect(expression, parameters);
 
                 QueryFieldName fieldName = null;
 
@@ -1502,9 +1515,19 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException($"Unsupported expression of type {expression.GetType().Name} specified as an argument of facet(). Text: {expression.GetText(null)}.", QueryText, parameters);
         }
 
+        private void ThrowSuggestionQueryMustContainsOnlySuggestInSelect(QueryExpression expression, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException($"Unsupported expression of type {expression.GetType().Name} specified as an argument of suggest(). Text: {expression.GetText(null)}.", QueryText, parameters);
+        }
+
         private void ThrowSuggestionQueryCannotBeFacet(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Cannot use SELECT suggest() in a facet query", QueryText, parameters);
+        }
+
+        private void ThrowFacetQueryCannotBeSuggest(BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("Cannot use SELECT facet() in a suggestion query", QueryText, parameters);
         }
 
         private void ThrowSuggestionQueryCannotBeDistinct(BlittableJsonReaderObject parameters)
@@ -1515,11 +1538,6 @@ namespace Raven.Server.Documents.Queries
         private void ThrowSuggestionQueryCannotBeGroupBy(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Cannot use GROUP BY in a suggestion query", QueryText, parameters);
-        }
-
-        private void ThrowSuggestionQueryMustContainsOnlyOneSuggestInSelect(BlittableJsonReaderObject parameters)
-        {
-            throw new InvalidQueryException("Suggestion query can only contain one suggest() in SELECT", QueryText, parameters);
         }
 
         private void ThrowSuggestMethodArgumentMustBeValue(int index, QueryExpression argument, BlittableJsonReaderObject parameters)
@@ -1763,7 +1781,7 @@ namespace Raven.Server.Documents.Queries
                         if (arguments.Count == 1)
                             throw new InvalidQueryException($"Method {methodName}() expects second argument to be provided", QueryText, parameters);
 
-                        if (!(arguments[1] is ValueExpression valueToken))
+                        if (!(arguments[1] is ValueExpression))
                             throw new InvalidQueryException($"Method {methodName}() expects value token as second argument, got {arguments[1]} type", QueryText,
                                 parameters);
 
