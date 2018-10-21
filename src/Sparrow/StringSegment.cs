@@ -131,6 +131,26 @@ namespace Sparrow
         private string _valueString;
         public string Value => _valueString ?? (_valueString = Buffer?.Substring(Offset, Length));
 
+        private sealed class StringSegmentEqualityComparer : IEqualityComparer<StringSegment>
+        {
+            public bool Equals(StringSegment x, StringSegment y)
+            {
+                return string.Equals(x.Buffer, y.Buffer) && x.Length == y.Length && x.Offset == y.Offset;
+            }
+
+            public int GetHashCode(StringSegment obj)
+            {
+                unchecked
+                {
+                    var hashCode = (obj.Buffer != null ? obj.Buffer.GetHashCode() : 0);
+                    hashCode = (hashCode * 397) ^ obj.Length;
+                    hashCode = (hashCode * 397) ^ obj.Offset;
+                    return hashCode;
+                }
+            }
+        }
+
+        public static IEqualityComparer<StringSegment> BufferLengthOffsetComparer { get; } = new StringSegmentEqualityComparer();
 
         // PERF: Included this version to exploit the knowledge that we are going to get a full string.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
