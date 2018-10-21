@@ -386,20 +386,28 @@ namespace Raven.Server.Documents.Indexes
 
             ValidateStaticIndex(definition);
 
+            var command = new PutIndexCommand(definition, _documentDatabase.Name);
+
+            long index = 0;
             try
             {
-                var command = new PutIndexCommand(definition, _documentDatabase.Name);
+                index = (await _serverStore.SendToLeaderAsync(command)).Index;
+            }
+            catch (Exception e)
+            {
+                ThrowIndexCreationException("static", definition.Name, e, "the cluster is probably down");
+            }
 
-                var (etag, _) = await _serverStore.SendToLeaderAsync(command);
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
-
-                return GetIndex(definition.Name);
+            try
+            {
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, _serverStore.Engine.OperationTimeout);
             }
             catch (TimeoutException toe)
             {
-                throw new IndexCreationException($"Failed to create static index: {definition.Name}, the cluster is probably down. " +
-                                                 $"Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
+                ThrowIndexCreationException("static", definition.Name, toe, $"the operation timed out after: {_serverStore.Engine.OperationTimeout}.");
             }
+
+            return GetIndex(definition.Name);
         }
 
         private bool NeedToCheckIfCollectionEmpty(IndexDefinition definition)
@@ -461,23 +469,28 @@ namespace Raven.Server.Documents.Indexes
 
             ValidateAutoIndex(definition);
 
+            var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBase)definition, _documentDatabase.Name);
+
+            long index = 0;
             try
             {
-                var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBase)definition, _documentDatabase.Name);
+                index = (await _serverStore.SendToLeaderAsync(command)).Index;
+            }
+            catch (Exception e)
+            {
+                ThrowIndexCreationException("auto", definition.Name, e, "the cluster is probably down");
+            }
 
-                var (etag, _) = await _serverStore.SendToLeaderAsync(command);
-
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
-
-                var instance = GetIndex(definition.Name);
-
-                return instance;
+            try
+            {
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, _serverStore.Engine.OperationTimeout);
             }
             catch (TimeoutException toe)
             {
-                throw new IndexCreationException($"Failed to create auto index: {definition.Name}, the cluster is probably down. " +
-                                                     $"Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
+                ThrowIndexCreationException("static", definition.Name, toe, $"the operation timed out after: {_serverStore.Engine.OperationTimeout}.");
             }
+
+            return GetIndex(definition.Name);
         }
 
         private void ValidateAutoIndex(IndexDefinitionBase definition)
@@ -1467,6 +1480,11 @@ namespace Raven.Server.Documents.Indexes
             return indexMerger.ProposeIndexMergeSuggestions();
         }
 
+        private void ThrowIndexCreationException(string indexType, string indexName, Exception exception, string reason)
+        {
+            throw new IndexCreationException($"Failed to create {indexType} index '{indexName}', {reason}. Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", exception);
+        }
+
         public class IndexBatchScope
         {
             private readonly IndexStore _store;
@@ -1517,7 +1535,15 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    var (index, _) = await _store._serverStore.SendToLeaderAsync(_command);
+                    long index = 0;
+                    try
+                    {
+                        index = (await _store._serverStore.SendToLeaderAsync(_command)).Index;
+                    }
+                    catch (Exception e)
+                    {
+                        ThrowIndexCreationException(e, "Cluster is probably down.");
+                    }
 
                     var indexCount = _command.Static.Count + _command.Auto.Count;
                     var operationTimeout = _store._serverStore.Engine.OperationTimeout;
@@ -1525,32 +1551,35 @@ namespace Raven.Server.Documents.Indexes
                     if (operationTimeout > timeout)
                         timeout = operationTimeout;
 
-                    await _store._documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, timeout);
-                }
-                catch (TimeoutException toe)
-                {
-                    var sb = new StringBuilder();
-                    sb.AppendLine("Failed to create indexes. The cluster is probably down.");
-                    if (_command.Static != null && _command.Static.Count > 0)
-                        sb.AppendLine("Static: " + string.Join(", ", _command.Static.Select(x => x.Name)));
-
-                    if (_command.Auto != null && _command.Auto.Count > 0)
-                        sb.AppendLine("Auto: " + string.Join(", ", _command.Auto.Select(x => x.Name)));
-
-                    sb.AppendLine($"Node {_store._serverStore.NodeTag} state is {_store._serverStore.LastStateChangeReason()}");
-
-                    throw new IndexCreationException(sb.ToString(), toe);
+                    try
+                    {
+                        await _store._documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, timeout);
+                    }
+                    catch (TimeoutException toe)
+                    {
+                        ThrowIndexCreationException(toe, $"Operation timed out after: {timeout}.");
+                    }
                 }
                 finally
                 {
                     _command = null;
                 }
             }
-        }
-    }
 
-    public class CustomIndexPaths
-    {
-        public Dictionary<string, string> Paths;
+            private void ThrowIndexCreationException(Exception exception, string reason)
+            {
+                var sb = new StringBuilder();
+                sb.AppendLine($"Failed to create indexes. {reason}");
+                if (_command.Static != null && _command.Static.Count > 0)
+                    sb.AppendLine("Static: " + string.Join(", ", _command.Static.Select(x => x.Name)));
+
+                if (_command.Auto != null && _command.Auto.Count > 0)
+                    sb.AppendLine("Auto: " + string.Join(", ", _command.Auto.Select(x => x.Name)));
+
+                sb.AppendLine($"Node {_store._serverStore.NodeTag} state is {_store._serverStore.LastStateChangeReason()}");
+
+                throw new IndexCreationException(sb.ToString(), exception);
+            }
+        }
     }
 }

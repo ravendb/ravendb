@@ -115,8 +115,6 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, FeedbackForm> FeedbackForm = GenerateJsonDeserializationRoutine<FeedbackForm>();
 
-        public static readonly Func<BlittableJsonReaderObject, CustomIndexPaths> CustomIndexPaths = GenerateJsonDeserializationRoutine<CustomIndexPaths>();
-
         public static readonly Func<BlittableJsonReaderObject, CertificateDefinition> CertificateDefinition = GenerateJsonDeserializationRoutine<CertificateDefinition>();
 
         public static readonly Func<BlittableJsonReaderObject, UserDomainsResult> UserDomainsResult = GenerateJsonDeserializationRoutine<UserDomainsResult>();
