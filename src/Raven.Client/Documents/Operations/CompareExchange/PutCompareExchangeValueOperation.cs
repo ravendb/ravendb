@@ -57,7 +57,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                 url = $"{node.Url}/databases/{node.Database}/cmpxchg?key={_key}&index={_index}";
                 var djv = new DynamicJsonValue
                 {
-                    ["Object"] = EntityToBlittable.ConvertToBlittableIfNeeded(_value, _conventions, ctx, _conventions.CreateSerializer(), documentInfo: null, isCompareExchange: true)
+                    ["Object"] = EntityToBlittable.ConvertToBlittableIfNeeded(_value, _conventions, ctx, _conventions.CreateSerializer(), documentInfo: null, removeIdentityProperty: false)
                 };
                var blittable = ctx.ReadObject(djv,_key);
 
