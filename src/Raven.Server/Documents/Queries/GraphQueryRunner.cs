@@ -195,10 +195,10 @@ namespace Raven.Server.Documents.Queries
                     switch (where.Operator)
                     {
                         case OperatorType.And:
-                            IntersectExpressions(where, left, right);
+                            IntersectExpressions<Intersection>(where, left, right);
                             break;
                         case OperatorType.Or:
-                            UnionExpressions(where, left, right);
+                            IntersectExpressions<Union>(where, left, right);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -211,12 +211,85 @@ namespace Raven.Server.Documents.Queries
 
             private Dictionary<long, List<Match>> _tempIntersect = new Dictionary<long, List<Match>>();
 
-            private unsafe void IntersectExpressions(QueryExpression parent,
+            private interface ISetOp
+            {
+                void Op(List<Match> output, 
+                    (Match Match, HashSet<StringSegment> Aliases) left,
+                    (Match Match, HashSet<StringSegment> Aliases) right, 
+                    bool allIntersectionsMatch,
+                    HashSet<Match> state);
+
+                void Complete(List<Match> output, Dictionary<long, List<Match>>intersection, HashSet<StringSegment> aliases, HashSet<Match> state);
+            }
+
+            private struct Intersection : ISetOp
+            {
+                public void Complete(List<Match> output, Dictionary<long, List<Match>> intersection, HashSet<StringSegment> aliases, HashSet<Match> state)
+                {
+                    // nothing to do
+                }
+
+                public void Op(List<Match> output,
+                    (Match Match, HashSet<StringSegment> Aliases) left,
+                    (Match Match, HashSet<StringSegment> Aliases) right,
+                    bool allIntersectionsMatch,
+                    HashSet<Match> state)
+                {
+                    if (allIntersectionsMatch == false)
+                        return;
+
+                    var resultMatch = new Match();
+
+                    CopyAliases(left.Match, ref resultMatch, left.Aliases);
+                    CopyAliases(right.Match, ref resultMatch, right.Aliases);
+                    output.Add(resultMatch);
+                }
+            }
+
+            private struct Union : ISetOp
+            {
+                public void Complete(List<Match> output, Dictionary<long, List<Match>> intersection, HashSet<StringSegment> aliases, HashSet<Match> state)
+                {
+                    foreach (var  kvp in intersection)
+                    {
+                        foreach (var item in kvp.Value)
+                        {
+                            if (state.Contains(item) == false)
+                                output.Add(item);
+                        }
+                    }
+                }
+
+                public void Op(List<Match> output,
+                    (Match Match, HashSet<StringSegment> Aliases) left,
+                    (Match Match, HashSet<StringSegment> Aliases) right,
+                    bool allIntersectionsMatch,
+                    HashSet<Match> state)
+                {
+                    if (allIntersectionsMatch == false)
+                    {
+                        output.Add(right.Match);
+                        return;
+                    }
+
+                    var resultMatch = new Match();
+
+                    CopyAliases(left.Match, ref resultMatch, left.Aliases);
+                    CopyAliases(right.Match, ref resultMatch, right.Aliases);
+                    output.Add(resultMatch);
+                    state.Add(left.Match);
+                }
+            }
+
+            private unsafe void IntersectExpressions<TOp>(QueryExpression parent,
                 PatternMatchElementExpression left, 
                 PatternMatchElementExpression right)
+                where TOp : struct, ISetOp
             {
                 _tempIntersect.Clear();
 
+                var operation = new TOp();
+                var operationState = new HashSet<Match>();
                 // TODO: Move this to the parent object
                 var intersectedAliases = _aliasesInMatch[left].Intersect(_aliasesInMatch[right]).ToList();
 
@@ -224,7 +297,9 @@ namespace Raven.Server.Documents.Queries
                     return; // no intersection, nothing matches
 
                 var xOutput = _intermediateOutputs[left];
+                var xAliases = _aliasesInMatch[left];
                 var yOutput = _intermediateOutputs[right];
+                var yAliases = _aliasesInMatch[right];
 
                 // ensure that we start processing from the smaller side
                 if(xOutput.Count < yOutput.Count)
@@ -232,6 +307,9 @@ namespace Raven.Server.Documents.Queries
                     var tmp = xOutput;
                     yOutput = xOutput;
                     xOutput = tmp;
+                    var tmpAliases = xAliases;
+                    xAliases = yAliases;
+                    yAliases = tmpAliases;
                 }
 
                 for (int l = 0; l < xOutput.Count; l++)
@@ -271,16 +349,11 @@ namespace Raven.Server.Documents.Queries
                             }
                         }
 
-                        if (allIntersectionsMatch == false)
-                            continue;
-
-                        var resultMatch = new Match();
-
-                        CopyAliases(xMatch, ref resultMatch, _aliasesInMatch[left]);
-                        CopyAliases(yMatch, ref resultMatch, _aliasesInMatch[right]);
-                        output.Add(resultMatch);
+                        operation.Op(output, (xMatch, xAliases), (yMatch, yAliases), allIntersectionsMatch, operationState);
                     }
                 }
+
+                operation.Complete(output, _tempIntersect, xAliases, operationState);
 
                 _intermediateOutputs.Add(parent, output);
             }
@@ -307,14 +380,6 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 return key;
-            }
-
-            private void UnionExpressions(QueryExpression parent, PatternMatchElementExpression left, PatternMatchElementExpression right)
-            {
-                Debug.Assert(_intermediateOutputs.ContainsKey(left));
-                Debug.Assert(_intermediateOutputs.ContainsKey(right));
-
-                throw new NotImplementedException();
             }
 
             public override void VisitPatternMatchElementExpression(PatternMatchElementExpression ee)
