@@ -21,6 +21,13 @@ namespace Raven.Server.Documents.Queries
 
             public bool Empty => _inner == null || _inner.Count == 0;
 
+            public override string ToString()
+            {
+                if (_inner == null)
+                    return "<empty>";
+                return string.Join(", ", _inner.Select(x=> x.Key + " - " + (x.Value.Id ?? x.Value.Data.ToString())));
+            }
+
             public Match(Match other)
             {
                 if (other._inner == null)

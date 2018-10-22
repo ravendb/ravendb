@@ -486,7 +486,7 @@ namespace Raven.Server.Documents.Queries
                 for (int pathIndex = 1; pathIndex < ee.Path.Length-1; pathIndex+=2)
                 {
                     Debug.Assert(ee.Path[pathIndex].IsEdge);
-                    
+
                     var prevNodeAlias = ee.Path[pathIndex - 1].Alias;
                     var nextNodeAlias = ee.Path[pathIndex + 1].Alias;
 
@@ -498,50 +498,70 @@ namespace Raven.Server.Documents.Queries
                     aliases.Add(prevNodeAlias);
                     aliases.Add(nextNodeAlias);
 
-                    if(!_source.TryGetByAlias(nextNodeAlias, out var edgeResults))
+                    if (!_source.TryGetByAlias(nextNodeAlias, out var edgeResults))
                         throw new InvalidOperationException("Could not fetch destination nod edge data. This should not happen and is likely a bug.");
 
-                    for (int resultIndex = 0; resultIndex < currentResults.Count; resultIndex++)
-                    {
-                        var edgeResult = currentResults[resultIndex];
-                        var prev = edgeResult.Get(prevNodeAlias);
-
-                        if (TryGetMatches(edge, nextNodeAlias, edgeResults, prev, out var multipleRelatedMatches))
-                        {
-                            foreach (var match in multipleRelatedMatches)
-                            {
-                                var related = match.Get(nextNodeAlias);
-                                var relatedEdge = match.Get(edgeAlias);
-                                if (edgeResult.TryGetKey(nextNodeAlias,out _) == false)
-                                {
-                                     edgeResult.Set(nextNodeAlias,related);
-                                    if(relatedEdge != null)
-                                        edgeResult.Set(edgeAlias, relatedEdge);
-                                    //no need to add to Output here, since item is part of currentResults and they will get added later
-                                }
-                                else
-                                {
-                                    var multipleEdgeResult = new Match();
-                                                                     
-                                    if(relatedEdge!=null)
-                                        multipleEdgeResult.Set(edgeAlias, relatedEdge);
-                                    multipleEdgeResult.Set(prevNodeAlias, prev);
-                                    multipleEdgeResult.Set(nextNodeAlias, related);
-                                    
-                                    _intermediateOutputs[ee].Add(multipleEdgeResult);
-                                }
-                            }
-                            continue;
-                        }
-
-                        //if didn't find multiple AND single edges, then it has no place in query results...
-                        currentResults.RemoveAt(resultIndex);
-                        resultIndex--;
-                    }
+                    AddToResultsIfMatch(currentResults, prevNodeAlias, nextNodeAlias, edgeAlias, edge, edgeResults);
                 }
 
                 _aliasesInMatch.Add(ee,aliases); //if we don't visit each match pattern exactly once, we have an issue 
-                _intermediateOutputs[ee].AddRange(currentResults);                
+
+                var listMatches = _intermediateOutputs[ee];
+                foreach (var item in currentResults)
+                {
+                    if (item.Empty == false)
+                        listMatches.Add(item);
+                }
+            }
+
+            private void AddToResultsIfMatch(
+                List<Match> currentResults, 
+                StringSegment prevNodeAlias, 
+                StringSegment nextNodeAlias, 
+                StringSegment edgeAlias, 
+                WithEdgesExpression edge, 
+                Dictionary<string, Match> edgeResults)
+            {
+                var currentResultsStartingSize = currentResults.Count;
+                for (int resultIndex = 0; resultIndex < currentResultsStartingSize; resultIndex++)
+                {
+                    var edgeResult = currentResults[resultIndex];
+
+                    if (edgeResult.Empty)
+                        continue;
+
+                    var prev = edgeResult.Get(prevNodeAlias);
+
+                    if (TryGetMatches(edge, nextNodeAlias, edgeResults, prev, out var multipleRelatedMatches))
+                    {
+                        bool reusedSlot = false;
+                        foreach (var match in multipleRelatedMatches)
+                        {
+                            var related = match.Get(nextNodeAlias);
+                            var relatedEdge = match.Get(edgeAlias);
+                            var updatedMatch = new Match(edgeResult);
+
+                            if (relatedEdge != null)
+                                updatedMatch.Set(edgeAlias, relatedEdge);
+                            updatedMatch.Set(nextNodeAlias, related);
+
+                            if (reusedSlot)
+                            {
+                                currentResults.Add(updatedMatch);
+                            }
+                            else
+                            {
+                                reusedSlot = true;
+                                currentResults[resultIndex] = updatedMatch;
+                            }
+
+                        }
+                        continue;
+                    }
+
+                    //if didn't find multiple AND single edges, then it has no place in query results...
+                    currentResults[resultIndex] = default;
+                }
             }
 
             private bool TryGetMatches(WithEdgesExpression edge, string alias, Dictionary<string, Match> edgeResults, Document prev,
