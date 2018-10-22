@@ -909,7 +909,8 @@ namespace Voron
                 CountOfTrees = countOfTrees,
                 CountOfTables = countOfTables,
                 Journals = Journal.Files.ToList(),
-                TempPath = Options.TempPath
+                TempPath = Options.TempPath,
+                JournalPath = (Options as StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)?.JournalPath
             });
         }
 
@@ -974,7 +975,8 @@ namespace Voron
                 Tables = tables,
                 CalculateExactSizes = calculateExactSizes,
                 ScratchBufferPoolInfo = _scratchBufferPool.InfoForDebug(PossibleOldestReadTransaction(tx.LowLevelTransaction)),
-                TempPath = Options.TempPath
+                TempPath = Options.TempPath,
+                JournalPath = (Options as StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)?.JournalPath
             });
         }
 
