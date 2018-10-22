@@ -51,7 +51,7 @@ namespace Raven.Debug
 
             _app.HelpOption(HelpOptionString);
 
-            _app.Command("stacktrace", cmd =>
+            _app.Command("stacktraces", cmd =>
             {
                 cmd.ExtendedHelpText = cmd.Description = "Print stacktraces of the attached process.";
                 cmd.HelpOption(HelpOptionString);
@@ -207,17 +207,22 @@ namespace Raven.Debug
                 Formatting = Formatting.Indented
             };
 
+            var result = new
+            {
+                Results = mergedStackTraces
+            };
+
             if (outputPath != null)
             {
                 using (var output = File.Create(outputPath))
                 using (var streamWriter = new StreamWriter(output))
                 {
-                    jsonSerializer.Serialize(streamWriter, mergedStackTraces);
+                    jsonSerializer.Serialize(streamWriter, result);
                 }
             }
             else
             {
-                jsonSerializer.Serialize(cmd.Out, mergedStackTraces);
+                jsonSerializer.Serialize(cmd.Out, result);
             }
         }
     }

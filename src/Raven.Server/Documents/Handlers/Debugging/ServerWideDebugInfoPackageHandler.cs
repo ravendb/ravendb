@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             requestHeader = JsonDeserializationServer.NodeDebugInfoRequestHeader(requestHeaderJson);
                         }
 
-                        await WriteServerWide(archive, jsonOperationContext, localEndpointClient, stacktrace: false);
+                        await WriteServerWide(archive, jsonOperationContext, localEndpointClient, stacktraces: false);
                         foreach (var databaseName in requestHeader.DatabaseNames)
                         {
                             await WriteForDatabase(archive, jsonOperationContext, localEndpointClient, databaseName);
@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                             using (var localArchive = new ZipArchive(localMemoryStream, ZipArchiveMode.Create, true))
                             {
-                                await WriteServerWide(localArchive, jsonOperationContext, localEndpointClient, stacktrace: false);
+                                await WriteServerWide(localArchive, jsonOperationContext, localEndpointClient, stacktraces: false);
                                 await WriteForAllLocalDatabases(localArchive, jsonOperationContext, localEndpointClient);
                             }
 
@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/admin/debug/info-package", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task GetInfoPackage()
         {
-            var stacktrace = (GetBoolValueQueryString("stacktrace", required: false) ?? false) && PlatformDetails.RunningOnPosix == false;
+            var stacktraces = (GetBoolValueQueryString("stacktraces", required: false) ?? false) && PlatformDetails.RunningOnPosix == false;
 
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Node [{ServerStore.NodeTag}].zip";
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
@@ -202,7 +202,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {
                         var localEndpointClient = new LocalEndpointClient(Server);
-                        await WriteServerWide(archive, context, localEndpointClient, stacktrace);
+                        await WriteServerWide(archive, context, localEndpointClient, stacktraces);
                         await WriteForAllLocalDatabases(archive, context, localEndpointClient);
                     }
 
@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private void DumpStacktrace(ZipArchive archive, string prefix)
+        private void DumpStacktraces(ZipArchive archive, string prefix)
         {
             var stacktrace = archive.CreateEntry($"{prefix}/stacktraces.json", CompressionLevel.Optimal);
 
@@ -241,7 +241,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         {
                             StartInfo = new ProcessStartInfo
                             {
-                                Arguments = $"--pid={currentProcess.Id} --stacktrace --output={CommandLineArgumentEscaper.EscapeSingleArg(ravenDebugOutput)}",
+                                Arguments = $"stacktraces --pid {currentProcess.Id} --output {CommandLineArgumentEscaper.EscapeSingleArg(ravenDebugOutput)}",
                                 FileName = ravenDebugExec,
                                 WindowStyle = ProcessWindowStyle.Normal,
                                 LoadUserProfile = false,
@@ -315,7 +315,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private async Task WriteServerWide(ZipArchive archive, JsonOperationContext context, LocalEndpointClient localEndpointClient, bool stacktrace, string prefix = "server-wide")
+        private async Task WriteServerWide(ZipArchive archive, JsonOperationContext context, LocalEndpointClient localEndpointClient, bool stacktraces, string prefix = "server-wide")
         {
             //theoretically this could be parallelized,
             //however ZipArchive allows only one archive entry to be open concurrently
@@ -342,8 +342,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
             }
 
-            if (stacktrace)
-                DumpStacktrace(archive, prefix);
+            if (stacktraces)
+                DumpStacktraces(archive, prefix);
         }
 
         private async Task WriteForAllLocalDatabases(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, string prefix = null)
