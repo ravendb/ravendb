@@ -24,7 +24,6 @@ using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Utils;
 using Sparrow;
-using Raven.Server.Json;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -117,7 +116,8 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-       private static void HandleResultsWithoutSelect(
+
+        private static void HandleResultsWithoutSelect(
             DocumentsOperationContext documentsContext, 
             List<Match> matchResults, DocumentQueryResult final)
         {
@@ -221,7 +221,6 @@ namespace Raven.Server.Documents.Queries
                     switch (where.Operator)
                     {
                         case OperatorType.And:
-
                             //if(right is NegatedExpression n)
                             //{
                             //    IntersectExpressions<Except>(where, left, n.Expression);
@@ -254,13 +253,14 @@ namespace Raven.Server.Documents.Queries
                     HashSet<Match> state);
 
                 bool CanOptimizeSides { get; }
-
+                bool ShouldContinueWhenNoIntersection { get; }
                 void Complete(List<Match> output, Dictionary<long, List<Match>>intersection, HashSet<StringSegment> aliases, HashSet<Match> state);
             }
 
             private struct Intersection : ISetOp
             {
                 public bool CanOptimizeSides => true;
+                public bool ShouldContinueWhenNoIntersection => false;
 
                 public void Complete(List<Match> output, Dictionary<long, List<Match>> intersection, HashSet<StringSegment> aliases, HashSet<Match> state)
                 {
@@ -287,6 +287,7 @@ namespace Raven.Server.Documents.Queries
             private struct Union : ISetOp
             {
                 public bool CanOptimizeSides => true;
+                public bool ShouldContinueWhenNoIntersection => true;
 
                 public void Complete(List<Match> output, Dictionary<long, List<Match>> intersection, HashSet<StringSegment> aliases, HashSet<Match> state)
                 {
@@ -295,9 +296,14 @@ namespace Raven.Server.Documents.Queries
                         foreach (var item in kvp.Value)
                         {
                             if (state.Contains(item) == false)
+                            {
                                 output.Add(item);
+                            }
                         }
                     }
+
+                    foreach(var nonIntersectedItem in state)
+                        output.Add(nonIntersectedItem);
                 }
 
                 public void Op(List<Match> output,
@@ -325,6 +331,7 @@ namespace Raven.Server.Documents.Queries
             {
                 // for AND NOT, the sides really matter, so we can't optimize it
                 public bool CanOptimizeSides => false;
+                public bool ShouldContinueWhenNoIntersection => true;
 
                 public void Complete(List<Match> output, Dictionary<long, List<Match>> intersection, HashSet<StringSegment> aliases, HashSet<Match> state)
                 {
@@ -361,8 +368,8 @@ namespace Raven.Server.Documents.Queries
                 // TODO: Move this to the parent object
                 var intersectedAliases = _aliasesInMatch[left].Intersect(_aliasesInMatch[right]).ToList();
 
-                if (intersectedAliases.Count == 0)
-                    return; // no intersection, nothing matches
+                if (intersectedAliases.Count == 0 && !operation.ShouldContinueWhenNoIntersection)
+                    return; // no matching aliases, so we need to stop when the operation is intersection
 
                 var xOutput = _intermediateOutputs[left];
                 var xAliases = _aliasesInMatch[left];
@@ -399,7 +406,11 @@ namespace Raven.Server.Documents.Queries
                     long key = GetMatchHashKey(intersectedAliases, yMatch);
 
                     if (_tempIntersect.TryGetValue(key, out var matchesFromLeft) == false)
+                    {
+                        if (operation.ShouldContinueWhenNoIntersection)
+                            operationState.Add(yMatch);
                         continue; // nothing matched, can skip
+                    }
 
                     for (int i = 0; i < matchesFromLeft.Count; i++)
                     {
@@ -426,15 +437,18 @@ namespace Raven.Server.Documents.Queries
                 _intermediateOutputs.Add(parent, output);
             }
 
-            private static unsafe void CopyAliases(Match src, ref Match dst, HashSet<StringSegment> aliases)
+            private static void CopyAliases(Match src, ref Match dst, HashSet<StringSegment> aliases)
             {
                 foreach (var alias in aliases)
                 {
-                    dst.TrySet(alias, src.Get(alias));
+                    var doc = src.Get(alias);
+                    if(doc == null)
+                        continue;
+                    dst.TrySet(alias, doc);
                 }
             }
 
-            private static unsafe long GetMatchHashKey(List<StringSegment> intersectedAliases, Match match)
+            private static long GetMatchHashKey(List<StringSegment> intersectedAliases, Match match)
             {
                 long key = 0L;
                 for (int i = 0; i < intersectedAliases.Count; i++)
@@ -465,7 +479,6 @@ namespace Raven.Server.Documents.Queries
                     currentResults.Add(match);
                 }
                 
-
                 _intermediateOutputs.Add(ee,new List<Match>());
                 var aliases = new HashSet<StringSegment>();
                 for (int pathIndex = 1; pathIndex < ee.Path.Length-1; pathIndex+=2)
@@ -499,7 +512,7 @@ namespace Raven.Server.Documents.Queries
                                 var relatedEdge = match.Get(edgeAlias);
                                 if (edgeResult.TryGetKey(nextNodeAlias,out _) == false)
                                 {
-                                    edgeResult.Set(nextNodeAlias,related);
+                                     edgeResult.Set(nextNodeAlias,related);
                                     if(relatedEdge != null)
                                         edgeResult.Set(edgeAlias, relatedEdge);
                                     //no need to add to Output here, since item is part of currentResults and they will get added later
@@ -507,7 +520,7 @@ namespace Raven.Server.Documents.Queries
                                 else
                                 {
                                     var multipleEdgeResult = new Match();
-                                   
+                                                                     
                                     if(relatedEdge!=null)
                                         multipleEdgeResult.Set(edgeAlias, relatedEdge);
                                     multipleEdgeResult.Set(prevNodeAlias, prev);
@@ -528,8 +541,6 @@ namespace Raven.Server.Documents.Queries
                 _aliasesInMatch.Add(ee,aliases); //if we don't visit each match pattern exactly once, we have an issue 
                 _intermediateOutputs[ee].AddRange(currentResults);                
             }
-
-          
 
             private bool TryGetMatches(WithEdgesExpression edge, string alias, Dictionary<string, Match> edgeResults, Document prev,
                 out List<Match> relatedMatches)
@@ -569,9 +580,9 @@ namespace Raven.Server.Documents.Queries
                 return TryGetMatchesAfterFiltering(prev.Data, edge.Path.FieldValue, edgeResults, alias, edge.EdgeAlias);
             }
 
-            private struct IncludeEdgeOp : IncludeUtil.IIncludeOp
+             private struct IncludeEdgeOp : IncludeUtil.IIncludeOp
             {
-                GraphExecuteVisitor _parent;
+                 GraphExecuteVisitor _parent;
 
                 public IncludeEdgeOp(GraphExecuteVisitor parent)
                 {
@@ -597,19 +608,23 @@ namespace Raven.Server.Documents.Queries
                    path,
                    op);
 
+
                 if (_includedEdges.Count == 0)
                     return false;
 
                 if(edgeResults == null)
                 {
+
                     foreach (var kvp in _includedEdges)
                     {
+
 
                         var doc = _ctx.DocumentDatabase.DocumentsStorage.Get(_ctx, kvp.Key, false);
                         if (doc == null)
                             continue;
 
                         var m = new Match();
+
                         m.Set(docAlias, doc);
                         if(kvp.Value != null)
                             m.Set(edgeAlias, kvp.Value);
@@ -619,10 +634,13 @@ namespace Raven.Server.Documents.Queries
                 }
                 else
                 {
+
                     foreach (var kvp in _includedEdges)
                     {
+
                         if (kvp.Key == null)
                             continue;
+
 
                         if (!edgeResults.TryGetValue(kvp.Key, out var m))
                             continue;
