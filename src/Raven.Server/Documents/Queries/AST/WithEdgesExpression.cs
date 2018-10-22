@@ -16,6 +16,8 @@ namespace Raven.Server.Documents.Queries.AST
 
         public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> OrderBy;
 
+        public StringSegment EdgeAlias;
+
         public WithEdgesExpression(QueryExpression @where, FieldExpression path, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy)
         {
             Where = @where;

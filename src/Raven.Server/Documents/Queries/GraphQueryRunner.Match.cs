@@ -21,7 +21,10 @@ namespace Raven.Server.Documents.Queries
             {
                 Document result = null;
                 _inner?.TryGetValue(alias, out result);
-                result?.EnsureMetadata();
+                if(result?.Id != null)
+                {
+                    result.EnsureMetadata();
+                }
                 return result;
             }           
 
@@ -52,7 +55,10 @@ namespace Raven.Server.Documents.Queries
                 var edgeAliases = aliases.Except(_inner.Keys).ToArray();
                 foreach (var item in _inner)
                 {
-                    item.Value.EnsureMetadata();
+                    if (item.Value.Id != null)
+                    {
+                        item.Value.EnsureMetadata();
+                    }
                     j[item.Key] = item.Value.Data;
 
                     foreach (var alias in edgeAliases)
@@ -75,7 +81,10 @@ namespace Raven.Server.Documents.Queries
 
                 foreach (var item in _inner)
                 {
-                    item.Value.EnsureMetadata();
+                    if (item.Value.Id != null)
+                    {
+                        item.Value.EnsureMetadata();
+                    }
                     j[item.Key] = item.Value.Data;                    
                 }
             }
@@ -95,7 +104,10 @@ namespace Raven.Server.Documents.Queries
             {
                 foreach (var item in _inner)
                 {
-                    item.Value.EnsureMetadata();
+                    if (item.Value.Id != null)
+                    {
+                        item.Value.EnsureMetadata();
+                    }
 
                     return item.Value;
                 }
@@ -105,7 +117,10 @@ namespace Raven.Server.Documents.Queries
             internal Document GetResult(string alias)
             {
                 var val = _inner[alias];
-                val.EnsureMetadata();
+                if (val.Id != null)
+                {
+                    val.EnsureMetadata();
+                }
                 return val;
             }
         }

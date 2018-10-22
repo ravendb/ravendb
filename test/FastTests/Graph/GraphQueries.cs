@@ -52,6 +52,7 @@ namespace FastTests.Graph
         {
             public string OrderId;
             public string Product;
+            public double Discount;
         }
 
         [Fact]
@@ -73,6 +74,26 @@ select {
         }
 
         [Fact]
+        public void CanProjectEdges()
+        {
+            var results = Query<OrderAndProduct>(@"
+match (o:Orders (id() = 'orders/821-A'))-[l:Lines.Product]->(p:Products)
+select {
+    OrderId: id(o),
+    Product: p.Name,
+    Discount: l.Discount
+}
+");
+            Assert.Equal(3, results.Count);
+            foreach (var item in results)
+            {
+                Assert.Equal("orders/821-A", item.OrderId);
+                Assert.NotNull(item.Product);
+                Assert.Equal(0.15d, item.Discount);
+            }
+        }
+
+        [Fact]
         public void CanFilterIOnEdges()
         {
             // not a theory because I want to run all queries on a single db
@@ -87,9 +108,6 @@ select {
                 ("match (o:Orders (id() = 'orders/830-A'))-[:Lines(Discount between 0 and 0.1).Product]->(p:Products)", 24),
                 ("match( e: Employees(Territories all in ('60179', '60601') ) )", 1),
                 ("match(e: Employees(Territories in ('60179', '60601')) )", 1)
-
-
-
             );
 
         }
