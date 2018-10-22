@@ -11,6 +11,7 @@ using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Client.Documents.Session.Operations
@@ -163,8 +164,15 @@ namespace Raven.Client.Documents.Session.Operations
 
                 if (fieldsToFetch.FieldsToFetch != null && fieldsToFetch.FieldsToFetch[0] == fieldsToFetch.Projections[0])
                 {
-                    if (inner is BlittableJsonReaderObject innerJson) //extraction from original type
+                    if (inner is BlittableJsonReaderObject innerJson)
+                    {
+                        //extraction from original type
                         document = innerJson;
+                    }
+                    else if (inner is BlittableJsonReaderArray bjra)
+                    {
+                        return DeserializeInnerArray<T>(document, fieldsToFetch.FieldsToFetch[0], session, bjra);
+                    }
                 }
             }
 
@@ -180,6 +188,31 @@ namespace Raven.Client.Documents.Session.Operations
             }
 
             return result;
+        }
+
+        private static T DeserializeInnerArray<T>(BlittableJsonReaderObject document, string fieldToFetch, InMemoryDocumentSessionOperations session,
+            BlittableJsonReaderArray blittableArray)
+        {
+            const string dummyPropertyName = "Result";
+
+            document.Modifications = new DynamicJsonValue(document)
+            {
+                [dummyPropertyName] = blittableArray
+            };
+
+            document.Modifications.Remove(fieldToFetch);
+
+            var dummyObject = new
+            {
+                Result = Activator.CreateInstance<T>()
+            };
+
+            var deserialized = session.Conventions.DeserializeEntityFromBlittable(dummyObject.GetType(), document);
+            var property = deserialized.GetType().GetProperty(dummyPropertyName);
+
+            return property != null 
+                ? (T)property.GetValue(deserialized) 
+                : default;
         }
 
         [Obsolete("Use NoTracking instead")]
