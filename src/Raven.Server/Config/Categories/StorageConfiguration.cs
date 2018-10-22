@@ -64,5 +64,20 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.PrefetchResetThresholdInGb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size PrefetchResetThreshold { get; set; }
 
+        [Description("A command or executable to run when creating a new directory (storage environment). RavenDB will execute: command [user-arg-1] ... [user-arg-n] <environment-type> <database-name> <path-to-dir>")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Storage.OnCreateDirectory.Exec", ConfigurationEntryScope.ServerWideOnly)]
+        public string OnCreateDirectoryExec { get; set; }
+
+        [Description("The user arguments for the 'Storage.OnCreateDirectory.Exec' command or executable.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Storage.OnCreateDirectory.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly)]
+        public string OnCreateDirectoryArguments { get; set; }
+
+        [Description("The number of seconds to wait for the OnCreateDirectory executable to exit. Default: 30 seconds")]
+        [DefaultValue(30)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Storage.OnCreateDirectory.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting OnCreateDirectoryExecTimeout { get; set; }
     }
 }

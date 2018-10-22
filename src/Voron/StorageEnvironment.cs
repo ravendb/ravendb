@@ -140,6 +140,10 @@ namespace Voron
                 _validPages[_validPages.Length - 1] |= unchecked(((long)ulong.MaxValue << (int)remainingBits));
 
                 _decompressionBuffers = new DecompressionBuffersPool(options);
+
+                if (string.IsNullOrEmpty(options.OnCreateDirectoryExec) == false)
+                    OnCreateDirectory();
+
                 var isNew = _headerAccessor.Initialize();
 
                 _scratchBufferPool = new ScratchBufferPool(this);
@@ -160,6 +164,83 @@ namespace Voron
             {
                 Dispose();
                 throw;
+            }
+        }
+
+        private void OnCreateDirectory()
+        {
+
+            var userArgs = _options.OnCreateDirectoryArguments ?? string.Empty;
+            var args = $"{userArgs} {_options.Type} {_options.DatabaseName} {_options.BasePath} ";
+
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = _options.OnCreateDirectoryExec,
+                    Arguments = args,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = false,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                    Verb = "runas"
+        }
+            };
+
+            var sw = Stopwatch.StartNew();
+
+            try
+            {
+                process.Start();
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Unable to execute '{_options.OnCreateDirectoryExec} {args}'. Failed to start process.", e);
+            }
+
+            var readErrors = process.StandardError.ReadToEndAsync();
+
+            string GetStdError()
+            {
+                try
+                {
+                    return readErrors.Result;
+                }
+                catch
+                {
+                    return "Unable to get stderr";
+                }
+            }
+
+            if (process.WaitForExit((int)_options.OnCreateDirectoryExecTimeout.TotalMilliseconds) == false)
+            {
+                process.Kill();
+                throw new InvalidOperationException($"Unable to execute '{_options.OnCreateDirectoryExec} {args}', waited for {(int)_options.OnCreateDirectoryExecTimeout.TotalMilliseconds} ms but the process didn't exit. Stderr: {GetStdError()}");
+            }
+            try
+            {
+                readErrors.Wait(_options.OnCreateDirectoryExecTimeout);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException(
+                    $"Unable to execute '{_options.OnCreateDirectoryExec} {args}', waited for {(int)_options.OnCreateDirectoryExecTimeout.TotalMilliseconds} ms but the process didn't exit. Stderr: {GetStdError()}",
+                    e);
+
+            }
+
+            if (_log.IsOperationsEnabled)
+            {
+                var errors = GetStdError();
+                _log.Operations(string.Format($"Executing '{_options.OnCreateDirectoryExec} {args}' took {sw.ElapsedMilliseconds:#,#;;0} ms"));
+                if (!string.IsNullOrWhiteSpace(errors))
+                    _log.Operations(string.Format($"Executing '{_options.OnCreateDirectoryExec} {args}' finished with exit code: {process.ExitCode}. Errors: {errors}"));
+            }
+
+            if (process.ExitCode != 0)
+            {
+                throw new InvalidOperationException(
+                    $"Command or executable '{_options.OnCreateDirectoryExec} {args}' failed. The exit code is {process.ExitCode}. Stderr: {GetStdError()}");
             }
         }
 

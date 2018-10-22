@@ -503,6 +503,12 @@ namespace Raven.Server.ServerWide
                 options.MaxScratchBufferSize = Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
+            options.OnCreateDirectoryExec = Configuration.Storage.OnCreateDirectoryExec;
+            options.OnCreateDirectoryArguments = Configuration.Storage.OnCreateDirectoryArguments;
+            options.OnCreateDirectoryExecTimeout = Configuration.Storage.OnCreateDirectoryExecTimeout.AsTimeSpan;
+            options.DatabaseName = EnvironmentType.System.ToString();
+            options.Type = EnvironmentType.System;
+            
             try
             {
                 StorageEnvironment.MaxConcurrentFlushes = Configuration.Storage.MaxConcurrentFlushes;

@@ -231,6 +231,11 @@ namespace Raven.Server.Documents
             options.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             options.AddToInitLog = _addToInitLog;
             options.MasterKey = DocumentDatabase.MasterKey?.ToArray();
+            options.OnCreateDirectoryExec = DocumentDatabase.Configuration.Storage.OnCreateDirectoryExec;
+            options.OnCreateDirectoryArguments = DocumentDatabase.Configuration.Storage.OnCreateDirectoryArguments;
+            options.OnCreateDirectoryExecTimeout = DocumentDatabase.Configuration.Storage.OnCreateDirectoryExecTimeout.AsTimeSpan;
+            options.DatabaseName = DocumentDatabase.Name;
+            options.Type = EnvironmentType.Database;
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = DocumentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
             if (DocumentDatabase.Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = DocumentDatabase.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
