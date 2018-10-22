@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
+using Newtonsoft.Json;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
@@ -16,6 +19,8 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Platform;
+using Sparrow.Utils;
 using Voron.Platform.Posix;
 
 namespace Raven.Server.Documents.Handlers.Debugging
@@ -44,7 +49,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             requestHeader = JsonDeserializationServer.NodeDebugInfoRequestHeader(requestHeaderJson);
                         }
 
-                        await WriteServerWide(archive, jsonOperationContext, localEndpointClient);
+                        await WriteServerWide(archive, jsonOperationContext, localEndpointClient, stacktrace: false);
                         foreach (var databaseName in requestHeader.DatabaseNames)
                         {
                             await WriteForDatabase(archive, jsonOperationContext, localEndpointClient, databaseName);
@@ -82,11 +87,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                             using (var localArchive = new ZipArchive(localMemoryStream, ZipArchiveMode.Create, true))
                             {
-
-                                await WriteServerWide(localArchive, jsonOperationContext, localEndpointClient);
+                                await WriteServerWide(localArchive, jsonOperationContext, localEndpointClient, stacktrace: false);
                                 await WriteForAllLocalDatabases(localArchive, jsonOperationContext, localEndpointClient);
-
-
                             }
 
                             localMemoryStream.Position = 0;
@@ -189,6 +191,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/admin/debug/info-package", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task GetInfoPackage()
         {
+            var stacktrace = (GetBoolValueQueryString("stacktrace", required: false) ?? false) && PlatformDetails.RunningOnPosix == false;
+
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Node [{ServerStore.NodeTag}].zip";
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -198,12 +202,88 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {
                         var localEndpointClient = new LocalEndpointClient(Server);
-                        await WriteServerWide(archive, context, localEndpointClient);
+                        await WriteServerWide(archive, context, localEndpointClient, stacktrace);
                         await WriteForAllLocalDatabases(archive, context, localEndpointClient);
                     }
 
                     ms.Position = 0;
                     await ms.CopyToAsync(ResponseBodyStream());
+                }
+            }
+        }
+
+        private void DumpStacktrace(ZipArchive archive, string prefix)
+        {
+            var stacktrace = archive.CreateEntry($"{prefix}/stacktraces.json", CompressionLevel.Optimal);
+
+            var tempPath = ServerStore.Configuration.Storage.TempPath?.FullPath ?? Path.GetTempPath();
+
+            var ravenDebugExec = Path.Combine(AppContext.BaseDirectory, "Raven.Debug.exe");
+            var ravenDebugOutput = Path.Combine(tempPath, "stacktraces.json");
+
+            var output = string.Empty;
+            var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+            jsonSerializer.Formatting = Formatting.Indented;
+
+            using (var stacktraceStream = stacktrace.Open())
+            {
+                try
+                {
+                    if (Debugger.IsAttached)
+                        throw new InvalidOperationException("Cannot get stacktraces when debugger is attached");
+
+                    if (File.Exists(ravenDebugExec) == false)
+                        throw new FileNotFoundException($"Could not find debugger tool at '{ravenDebugExec}'");
+
+                    using (var currentProcess = Process.GetCurrentProcess())
+                    {
+                        var process = new Process
+                        {
+                            StartInfo = new ProcessStartInfo
+                            {
+                                Arguments = $"--pid={currentProcess.Id} --stacktrace --output={CommandLineArgumentEscaper.EscapeSingleArg(ravenDebugOutput)}",
+                                FileName = ravenDebugExec,
+                                WindowStyle = ProcessWindowStyle.Normal,
+                                LoadUserProfile = false,
+                                RedirectStandardError = true,
+                                RedirectStandardOutput = true,
+                                UseShellExecute = false
+                            },
+                            EnableRaisingEvents = true
+                        };
+
+                        process.OutputDataReceived += (sender, args) => output += args.Data;
+                        process.ErrorDataReceived += (sender, args) => output += args.Data;
+
+                        process.Start();
+
+                        process.BeginErrorReadLine();
+                        process.BeginOutputReadLine();
+
+                        process.WaitForExit();
+
+                        if (process.ExitCode != 0)
+                        {
+                            //Log.Error("Could not read stacktraces. Message: " + output);
+                            throw new InvalidOperationException("Could not read stacktraces.");
+                        }
+
+                        using (var stackDumpOutputStream = File.Open(ravenDebugOutput, FileMode.Open))
+                        {
+                            stackDumpOutputStream.CopyTo(stacktraceStream);
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    using (var writer = new StreamWriter(stacktraceStream))
+                    {
+                        jsonSerializer.Serialize(writer, new
+                        {
+                            Error = e.Message,
+                            Details = output
+                        });
+                    }
                 }
             }
         }
@@ -235,7 +315,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private static async Task WriteServerWide(ZipArchive archive, JsonOperationContext context, LocalEndpointClient localEndpointClient, string prefix = "server-wide")
+        private async Task WriteServerWide(ZipArchive archive, JsonOperationContext context, LocalEndpointClient localEndpointClient, bool stacktrace, string prefix = "server-wide")
         {
             //theoretically this could be parallelized,
             //however ZipArchive allows only one archive entry to be open concurrently
@@ -261,6 +341,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryRoute);
                 }
             }
+
+            if (stacktrace)
+                DumpStacktrace(archive, prefix);
         }
 
         private async Task WriteForAllLocalDatabases(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, string prefix = null)
