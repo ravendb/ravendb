@@ -379,7 +379,12 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override void VisitWithEdgesExpression(string alias, WithEdgesExpression withEdgesClause)
         {
+            if ((withEdgesClause.Path == null || withEdgesClause.Path.Compound.Count == 0) &&
+                withEdgesClause.Where == null && withEdgesClause.OrderBy == null)
+                return;
+
             EnsureSpace();
+
             _sb.Append("WITH EDGES ");
             if (withEdgesClause.Path != null)
             {

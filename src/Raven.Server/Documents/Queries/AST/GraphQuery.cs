@@ -12,6 +12,8 @@ namespace Raven.Server.Documents.Queries.AST
 
         public QueryExpression MatchClause;
 
+        public QueryExpression Where;
+
         public List<QueryExpression> Include;
 
         public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> OrderBy;

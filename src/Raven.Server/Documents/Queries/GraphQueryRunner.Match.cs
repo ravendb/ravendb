@@ -17,6 +17,8 @@ namespace Raven.Server.Documents.Queries
 
             public IEnumerable<string> Aliases => _inner.Keys;
 
+            public bool Empty => _inner == null || _inner.Count == 0;
+
             public Document Get(string alias)
             {
                 Document result = null;
@@ -46,33 +48,6 @@ namespace Raven.Server.Documents.Queries
 
                 _inner.Add(alias, val);
             }            
-
-            public void Populate(DynamicJsonValue j, string[] aliases, GraphQuery gq)
-            {
-                if (_inner == null)
-                    return;
-
-                var edgeAliases = aliases.Except(_inner.Keys).ToArray();
-                foreach (var item in _inner)
-                {
-                    if (item.Value.Id != null)
-                    {
-                        item.Value.EnsureMetadata();
-                    }
-                    j[item.Key] = item.Value.Data;
-
-                    foreach (var alias in edgeAliases)
-                    {
-                        if (gq.WithEdgePredicates.TryGetValue(alias, out var edge) && 
-                            edge.FromAlias.GetValueOrDefault() == item.Key &&
-                            //TODO: Handle complex fields
-                            item.Value.Data.TryGet(edge.Path.Compound[0], out object property))
-                        {
-                            j[alias] = property;
-                        }
-                    }
-                }
-            }
 
             public void PopulateVertices(DynamicJsonValue j)
             {

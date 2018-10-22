@@ -77,6 +77,9 @@ namespace Raven.Server.Documents.Queries.AST
             if (q.MatchClause != null)
                 VisitMatchExpression(q.MatchClause);
 
+            if (q.Where != null)
+                VisitExpression(q.Where);
+
             if (q.Include != null)
                 VisitInclude(q.Include);
 

@@ -101,6 +101,9 @@ namespace Raven.Server.Documents.Queries.Parser
                     }
                     _synteticWithQueries.Clear();
                 }
+
+                if (Scanner.TryScan("WHERE") && Expression(out q.GraphQuery.Where) == false)
+                    ThrowParseException("Unable to parse MATCH's WHERE clause");
             }
 
             if (Scanner.TryScan("ORDER BY"))
@@ -118,6 +121,10 @@ namespace Raven.Server.Documents.Queries.Parser
                         q.Include = IncludeClause();
                     break;
                 case QueryType.Update:
+
+                    if(q.GraphQuery != null)
+                        ThrowParseException("Update operations cannot use graph queries");
+
                     if (Scanner.TryScan("UPDATE") == false)
                         ThrowParseException("Update operations must end with UPDATE clause");
 

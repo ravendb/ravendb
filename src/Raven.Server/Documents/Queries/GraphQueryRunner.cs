@@ -61,6 +61,22 @@ namespace Raven.Server.Documents.Queries
 
                 var matchResults = ExecutePatternMatch(documentsContext, query, ir) ?? new List<Match>();
 
+                var filter = q.GraphQuery.Where;
+                if (filter != null)
+                {
+                    for (int i = 0; i < matchResults.Count; i++)
+                    {
+                        var resultAsJson = new DynamicJsonValue();
+                        matchResults[i].PopulateVertices(resultAsJson);
+
+                        using (var result = documentsContext.ReadObject(resultAsJson, "graph/result"))
+                        {
+                            if (filter.IsMatchedBy(result, query.QueryParameters) == false)
+                                matchResults[i] = default;
+                        }
+                    }
+                }
+
                 //TODO: handle order by, load, select clauses
 
                 var final = new DocumentQueryResult();
@@ -85,6 +101,9 @@ namespace Raven.Server.Documents.Queries
 
                     foreach (var match in matchResults)
                     {
+                        if (match.Empty)
+                            continue;
+
                         var result = resultRetriever.ProjectFromMatch(match, documentsContext);
 
                         final.AddResult(result);
@@ -100,12 +119,18 @@ namespace Raven.Server.Documents.Queries
         {
             if(matchResults.Count == 1)
             {
+                if (matchResults[0].Empty)
+                    return;
+
                 final.AddResult(matchResults[0].GetFirstResult());
                 return;
             }
 
             foreach (var match in matchResults)
             {
+                if (matchResults[0].Empty)
+                    continue;
+
                 var resultAsJson = new DynamicJsonValue();
                 match.PopulateVertices(resultAsJson);
 
