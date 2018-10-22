@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -90,6 +91,20 @@ select {
                 Assert.Equal("orders/821-A", item.OrderId);
                 Assert.NotNull(item.Product);
                 Assert.Equal(0.15d, item.Discount);
+            }
+        }
+
+        [Fact]
+        public void CanUseEmptyDocumentAlias()
+        {
+            var results = Query<Employee>(@"
+match (e:Employees(FirstName='Nancy'))-[:ReportsTo]->(manager)
+select manager
+");
+            Assert.Equal(1, results.Count);
+            foreach (var item in results)
+            {
+                Assert.Equal("Fuller", item.LastName);
             }
         }
 

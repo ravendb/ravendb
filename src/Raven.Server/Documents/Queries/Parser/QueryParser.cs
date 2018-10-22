@@ -318,6 +318,10 @@ namespace Raven.Server.Documents.Queries.Parser
                 AddWithQuery(f, alias, filter, isEdge, start);
 
             }
+            else
+            {
+                AddWithQuery(new FieldExpression(new List<StringSegment>()), alias, null, isEdge, start);
+            }
             return true;
         }
 
@@ -332,7 +336,16 @@ namespace Raven.Server.Documents.Queries.Parser
                     ThrowDuplicateAliasWithoutSameBody(start);
 
                 if (path.Equals(existing.Path) == false)
-                    ThrowDuplicateAliasWithoutSameBody(start);
+                {
+                    if(path.Compound.Count != 0)
+                    {
+                        ThrowDuplicateAliasWithoutSameBody(start);
+                    }
+                    if(existing.Path.Compound.Count == 0)
+                    {
+                        existing.Path = path;
+                    }
+                }
 
                 if ((filter != null) != (existing.Filter != null))
                     ThrowDuplicateAliasWithoutSameBody(start);
