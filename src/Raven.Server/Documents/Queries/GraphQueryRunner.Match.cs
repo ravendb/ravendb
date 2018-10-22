@@ -21,6 +21,18 @@ namespace Raven.Server.Documents.Queries
 
             public bool Empty => _inner == null || _inner.Count == 0;
 
+            public Match(Match other)
+            {
+                if (other._inner == null)
+                {
+                    _inner = null;
+                }
+                else
+                {
+                    _inner = new Dictionary<string, Document>(other._inner);
+                }
+            }
+
             public Document Get(string alias)
             {
                 Document result = null;

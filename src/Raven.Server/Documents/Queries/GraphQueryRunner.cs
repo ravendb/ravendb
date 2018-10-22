@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private IEnumerable<Match> ExecutePatternMatch(DocumentsOperationContext documentsContext, IndexQueryServerSide query, IntermediateResults ir)
+        private List<Match> ExecutePatternMatch(DocumentsOperationContext documentsContext, IndexQueryServerSide query, IntermediateResults ir)
         {
             var visitor = new GraphExecuteVisitor(ir, query, documentsContext);
             visitor.VisitExpression(query.Metadata.Query.GraphQuery.MatchClause);
@@ -185,15 +185,17 @@ namespace Raven.Server.Documents.Queries
             private readonly GraphQuery _gq;
             private readonly BlittableJsonReaderObject _queryParameters;
             private readonly DocumentsOperationContext _ctx;
-        
-            public IEnumerable<Match> Output => 
+
+            private static List<Match> Empty = new List<Match>();
+
+            public List<Match> Output => 
                 _intermediateOutputs.TryGetValue(_gq.MatchClause, out var results) ? 
-                    results : Enumerable.Empty<Match>();
+                    results : Empty;
 
             private readonly Dictionary<QueryExpression,List<Match>> _intermediateOutputs = new Dictionary<QueryExpression, List<Match>>();
             private readonly Dictionary<long,List<Match>> _clauseIntersectionIntermediate = new Dictionary<long, List<Match>>();
             
-            private readonly HashSet<string> _includedNodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            private readonly Dictionary<string, Document> _includedEdges = new Dictionary<string, Document>(StringComparer.OrdinalIgnoreCase);
             private readonly List<Match> _results = new List<Match>();
             private readonly Dictionary<PatternMatchElementExpression,HashSet<StringSegment>> _aliasesInMatch = new Dictionary<PatternMatchElementExpression, HashSet<StringSegment>>();
             
@@ -614,11 +616,8 @@ namespace Raven.Server.Documents.Queries
 
                 if(edgeResults == null)
                 {
-
                     foreach (var kvp in _includedEdges)
                     {
-
-
                         var doc = _ctx.DocumentDatabase.DocumentsStorage.Get(_ctx, kvp.Key, false);
                         if (doc == null)
                             continue;
@@ -641,14 +640,15 @@ namespace Raven.Server.Documents.Queries
                         if (kvp.Key == null)
                             continue;
 
-
                         if (!edgeResults.TryGetValue(kvp.Key, out var m))
                             continue;
 
-                        if (kvp.Value != null)
-                            m.Set(edgeAlias, kvp.Value);
+                        var clone = new Match(m);
 
-                        _results.Add(m);
+                        if (kvp.Value != null)
+                            clone.Set(edgeAlias, kvp.Value);
+
+                        _results.Add(clone);
                     }
                 }
 
