@@ -284,6 +284,127 @@ namespace FastTests.Graph
         }
 
         [Fact]
+        public void Can_query_union_with_no_intersections()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Movie
+                    {
+                        Name = "M1"
+                    },"movies/1");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M2"
+                    },"movies/2");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M3"
+                    },"movies/3");
+
+                    session.Store(new User
+                    {
+                        Name = "A",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/1" }
+                        }
+                    });
+                    session.Store(new User
+                    {
+                        Name = "B",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/2" }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<Movie>(@"
+                       match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
+                             OR
+                             (u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
+                       select m.Name
+                    ").ToList();
+
+                    Assert.NotEmpty(results);
+                    Assert.Equal(2,results.Count);
+                    Assert.Contains("M1", results.Select(x => x.Name));
+                    Assert.Contains("M2", results.Select(x => x.Name));
+                }
+            }
+        }
+
+        [Fact(Skip = "WIP, Union doesn't work properly, yet")]
+        public void Can_query_union_with_some_intersections()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Movie
+                    {
+                        Name = "M1"
+                    },"movies/1");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M2"
+                    },"movies/2");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M3"
+                    },"movies/3");
+
+                    session.Store(new User
+                    {
+                        Name = "A",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/1" },
+                            new User.Rating{ Movie = "movies/3" }
+                        }
+                    });
+                    session.Store(new User
+                    {
+                        Name = "B",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/2" },
+                            new User.Rating{ Movie = "movies/3" }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<Movie>(@"
+                       match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
+                             OR
+                             (u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
+                       select m.Name
+                    ").ToList();
+
+                    Assert.NotEmpty(results);
+                    Assert.Equal(3,results.Count);
+                    Assert.Contains("M1", results.Select(x => x.Name));
+                    Assert.Contains("M2", results.Select(x => x.Name));
+                    Assert.Contains("M3", results.Select(x => x.Name));
+                }
+            }
+        }
+
+        [Fact]
         public void Can_query_intersection_of_multiple_patterns()
         {
             using (var store = GetDocumentStore())
@@ -291,20 +412,22 @@ namespace FastTests.Graph
                 CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
-                    var result = session.Advanced.RawQuery<JObject>(@"
-                        match (u1:Users)-[:HasRated(Score > 1).Movie]->(m:Movies) AND
-                              (u2:Users)-[:HasRated.Movie]->(m:Movies)
-                        select u1,u2
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                       match (u1:Users)-[:HasRated(Score > 1).Movie]->(m:Movies(id() = 'movies/2'))<-[:HasRated.Movie]-(u2:Users)                              
+                       select u1.Name as U1,u2.Name as U2
                     ").ToList().Select(x => new
                     {
-                        U1 = x["u1"].ToObject<User>(),
-                        U2 = x["u2"].ToObject<User>(),
+                        u1 = x["U1"].Value<string>(),
+                        u2 = x["U2"].Value<string>(),
                     }).ToList();
 
-                    Assert.NotEmpty(result);
-                
-                    //Assert.Contains(result, item => item["u1"].Value<string>("Id")== "users/1" && item["u2"].Value<string>("Id") == "users/2");
-                    //Assert.Contains(result, item => item["u1"].Value<string>("Id") == "users/2" && item["u2"].Value<string>("Id") == "users/3");
+                    //since we didn't use "where" clause to make sure (u1 != u2), we would have all permutations
+                    Assert.NotEmpty(results);
+                    Assert.Equal(4, results.Count);
+                    Assert.Contains(results, item => item.u1 == "Jack" && item.u2 == "Jill");
+                    Assert.Contains(results, item => item.u1 == "Jack" && item.u2 == "Jack");
+                    Assert.Contains(results, item => item.u1 == "Jill" && item.u2 == "Jill");
+                    Assert.Contains(results, item => item.u1 == "Jack" && item.u2 == "Jack");
                 }
             }
         }
