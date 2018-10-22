@@ -345,6 +345,7 @@ namespace FastTests.Blittable
                     using (var blittable2 = ctx.ReadObject(json2, "foo"))
                     {
                         Assert.Equal(blittable1, blittable2);
+                        Assert.Equal(blittable1.GetHashCode(), blittable2.GetHashCode());
 
                         blittable1.TryGet("Company", out BlittableJsonReaderObject ob1);
                         blittable2.TryGet("Company", out BlittableJsonReaderObject ob2);
@@ -414,6 +415,7 @@ namespace FastTests.Blittable
                 using (var blittable2 = CreateBlittable())
                 {
                     Assert.Equal(blittable1, blittable2);
+                    Assert.Equal(blittable1.GetHashCode(), blittable2.GetHashCode());
                     
                     blittable1.TryGet("Office", out BlittableJsonReaderObject ob1);
                     blittable2.TryGet("Office", out BlittableJsonReaderObject ob2);
