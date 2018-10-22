@@ -12,7 +12,10 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config;
+using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -44,6 +47,28 @@ namespace RachisTests
                 var dbName = GetDatabaseName();
                 var db = await CreateDatabaseInCluster(dbName, 4, leader.WebUrl);
                 Assert.False(db.Servers.Contains(serverToDispose));
+            }
+        }
+
+        [Fact]
+        public async Task DisallowAddingNodeWithInvalidSourceUrl()
+        {
+            var raft1 = await CreateRaftClusterAndGetLeader(1,customSettings: new Dictionary<string,string>
+            {
+                [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)]  = "http://fake.url:8080"
+            });
+            var raft2 = await CreateRaftClusterAndGetLeader(1);
+
+            var source = raft1.WebUrl;
+            var dest = raft2.ServerStore.GetNodeHttpServerUrl();
+
+            using (raft1.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(source, raft1.ServerStore.Server.Certificate.Certificate))
+            {
+                var nodeConnectionTest = new TestNodeConnectionCommand(dest, bidirectional: true);
+                await requestExecutor.ExecuteAsync(nodeConnectionTest, context);
+                var error = NodeConnectionTestResult.GetError(raft1.ServerStore.GetNodeHttpServerUrl(), dest);
+                Assert.StartsWith(error, nodeConnectionTest.Result.Error);
             }
         }
 
