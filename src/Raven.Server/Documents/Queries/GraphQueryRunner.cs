@@ -34,23 +34,7 @@ namespace Raven.Server.Documents.Queries
 
             using (var timingScope = new QueryTimingsScope())
             {
-                var ir = new IntermediateResults();
-
-                foreach (var documentQuery in q.GraphQuery.WithDocumentQueries)
-                {
-                    var queryMetadata = new QueryMetadata(documentQuery.Value, query.QueryParameters, 0);
-                    var results = await Database.QueryRunner.ExecuteQuery(new IndexQueryServerSide(queryMetadata),
-                        documentsContext, existingResultEtag, token);
-
-                    ir.EnsureExists(documentQuery.Key);
-
-                    foreach (var result in results.Results)
-                    {
-                        var match = new Match();
-                        match.Set(documentQuery.Key, result);
-                        match.PopulateVertices(ref ir);
-                    }
-                }
+                var ir = new IntermediateResults(Database, query, documentsContext,existingResultEtag, token);
 
                 var matchResults = ExecutePatternMatch(documentsContext, query, ir) ?? new List<Match>();
 

@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            public void PopulateVertices(ref IntermediateResults i)
+            public void PopulateVertices(IntermediateResults i)
             {
                 if (_inner == null)
                     return;
