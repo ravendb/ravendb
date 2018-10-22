@@ -284,7 +284,7 @@ namespace FastTests.Graph
         }
 
         [Fact]
-        public void Can_query_union_with_no_intersections()
+        public void Can_query_multiple_match_clauses_with_union_no_intersecting_results()
         {
             using (var store = GetDocumentStore())
             {
@@ -327,23 +327,28 @@ namespace FastTests.Graph
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Advanced.RawQuery<Movie>(@"
+                    var results = session.Advanced.RawQuery<JObject>(@"
                        match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
                              OR
                              (u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
-                       select m.Name
-                    ").ToList();
+                       select u1.Name as u1, m.Name as movie, u2.Name as u2
+                    ").ToList().Select(x => new
+                    {
+                        u1 = x["u1"]?.Value<string>(),
+                        u2 = x["u2"]?.Value<string>(),
+                        m = x["movie"].Value<string>()
+                    }).ToList();
 
                     Assert.NotEmpty(results);
                     Assert.Equal(2,results.Count);
-                    Assert.Contains("M1", results.Select(x => x.Name));
-                    Assert.Contains("M2", results.Select(x => x.Name));
+                    Assert.True(results.Any(x => x.u1 == "A" && x.m == "M1" && x.u2 == null));
+                    Assert.True(results.Any(x => x.u1 == null && x.m == "M2" && x.u2 == "B"));
                 }
             }
         }
 
-        [Fact(Skip = "WIP, Union doesn't work properly, yet")]
-        public void Can_query_union_with_some_intersections()
+        [Fact]
+        public void Can_query_multiple_match_clauses_with_union_partial()
         {
             using (var store = GetDocumentStore())
             {
@@ -385,27 +390,61 @@ namespace FastTests.Graph
 
                     session.SaveChanges();
                 }
-
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Advanced.RawQuery<Movie>(@"
+                    var results = session.Advanced.RawQuery<JObject>(@"
                        match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
                              OR
-                             (u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
-                       select m.Name
-                    ").ToList();
+                             ( u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
+                       select u1.Name as u1, m.Name as movie, u2.Name as u2
+                    ").ToList().Select(x => new
+                    {
+                        u1 = x["u1"]?.Value<string>(),
+                        u2 = x["u2"]?.Value<string>(),
+                        m = x["movie"].Value<string>()
+                    }).ToList();
 
                     Assert.NotEmpty(results);
-                    Assert.Equal(3,results.Count);
-                    Assert.Contains("M1", results.Select(x => x.Name));
-                    Assert.Contains("M2", results.Select(x => x.Name));
-                    Assert.Contains("M3", results.Select(x => x.Name));
+                    Assert.Equal(4,results.Count);
+                    Assert.True(results.Any(x => x.u1 == "A" && x.m == "M3" && x.u2 == "B"));
+                    Assert.True(results.Any(x => x.u1 == "A" && x.m == "M1" && x.u2 == null));
+                    Assert.True(results.Any(x => x.u1 == "A" && x.m == "M3" && x.u2 == null));
+                    Assert.True(results.Any(x => x.u1 == null && x.m == "M2" && x.u2 == "B"));
                 }
             }
         }
 
         [Fact]
-        public void Can_query_intersection_of_multiple_patterns()
+        public void Can_query_multiple_match_clauses_with_explicit_intersection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateMoviesData(store);
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                       match (u1:Users)-[:HasRated(Score > 1).Movie]->(m:Movies(id() = 'movies/2'))
+                         and (u2:Users)-[:HasRated.Movie]->(m:Movies(id() = 'movies/2'))
+                       select u1.Name as U1,u2.Name as U2
+                    ").ToList().Select(x => new
+                    {
+                        u1 = x["U1"].Value<string>(),
+                        u2 = x["U2"].Value<string>(),
+                    }).ToList();
+
+                    //since we didn't use "where" clause to make sure (u1 != u2), we would have all permutations
+                    Assert.NotEmpty(results);
+                    Assert.Equal(4, results.Count);
+                    Assert.Contains(results, item => item.u1 == "Jack" && item.u2 == "Jill");
+                    Assert.Contains(results, item => item.u1 == "Jack" && item.u2 == "Jack");
+                    Assert.Contains(results, item => item.u1 == "Jill" && item.u2 == "Jill");
+                    Assert.Contains(results, item => item.u1 == "Jack" && item.u2 == "Jack");
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_query_multiple_match_clauses_with_implicit_intersection()
         {
             using (var store = GetDocumentStore())
             {
@@ -498,6 +537,137 @@ namespace FastTests.Graph
             }
         }
 
+        [Fact]
+        public void Query_with_duplicate_implicit_aliases_in_select_should_fail_properly()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var arava = new Dog
+                    {
+                        Name = "Arava",
+                        Likes = new[] {"dogs/1", "dogs/2"}
+                    }; //dogs/1
+                    var oscar = new Dog
+                    {
+                        Name = "Oscar"
+                    }; //dogs/2
+                    var pheobe = new Dog
+                    {
+                        Name = "Pheobe",
+                        Likes = new[] {"dogs/2"}
+                    }; //dogs/3
+
+                    session.Store(arava, "dogs/1");
+                    session.Store(oscar, "dogs/2");
+                    session.Store(pheobe, "dogs/3");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<InvalidQueryException>(() =>
+                        session.Advanced.RawQuery<JObject>(@"
+                        match (a:Dogs)-[:Likes]->(b:Dogs)-[:Likes]->(c:dogs)
+                        select a.Name,b.Name") // <- this is wrong because we have two implicit "Name" aliases in select clause
+                            .ToList());
+                }
+            }
+        }
+
+        [Fact]
+        public void Query_with_duplicate_explicit_aliases_in_select_should_fail_properly()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var arava = new Dog
+                    {
+                        Name = "Arava",
+                        Likes = new[] {"dogs/1", "dogs/2"}
+                    }; //dogs/1
+                    var oscar = new Dog
+                    {
+                        Name = "Oscar"
+                    }; //dogs/2
+                    var pheobe = new Dog
+                    {
+                        Name = "Pheobe",
+                        Likes = new[] {"dogs/2"}
+                    }; //dogs/3
+
+                    session.Store(arava, "dogs/1");
+                    session.Store(oscar, "dogs/2");
+                    session.Store(pheobe, "dogs/3");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<InvalidQueryException>(() =>
+                        session.Advanced.RawQuery<JObject>(@"
+                        match (a:Dogs)-[:Likes]->(b:Dogs)-[:Likes]->(c:dogs)
+                        select a.Name AS Foo,b.Name AS Foo") // <- this is wrong because we have two explicit "Foo" aliases in select clause
+                            .ToList());
+                }
+            }
+        }
+
+        [Fact(Skip = "WIP, should not pass yet")]
+        public void Query_with_multiple_hops_in_the_same_direction_should_work()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var arava = new Dog
+                    {
+                        Name = "Arava",
+                        Likes = new []{ "dogs/1","dogs/2" }
+                    }; //dogs/1
+                    var oscar = new Dog
+                    {
+                        Name = "Oscar"
+                    }; //dogs/2
+                    var pheobe = new Dog
+                    {
+                        Name = "Pheobe",
+                        Likes = new []{ "dogs/2" }
+                    }; //dogs/3
+
+                    session.Store(arava,"dogs/1");
+                    session.Store(oscar,"dogs/2");
+                    session.Store(pheobe, "dogs/3");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {                   
+                    //note : such query implies implicit intersection between
+                    // a -[likes]-> b and b -[likes]-> c
+                    var friends = session.Advanced.RawQuery<JObject>(@"
+                        match (a:Dogs)-[:Likes]->(b:Dogs)-[:Likes]->(c:dogs)
+                        select a.Name as A,b.Name as B,c.Name as C
+                        ")
+                        .ToList();
+
+                    var resultPairs = friends.Select(x => new
+                    {
+                        A = x["A"]?.Value<string>(),
+                        B = x["B"]?.Value<string>(),
+                        C = x["C"]?.Value<string>()
+                    }).ToArray();
+
+                    Assert.Equal(1,resultPairs.Length);
+                    Assert.Contains(resultPairs, item => item.A == "Arava" && item.B == "Arava" && item.B == "Arava");
+                }
+            }
+        }
 
         [Fact]
         public void FindTwoFriendliesWhoPointToTheSameVertex()
@@ -616,20 +786,20 @@ namespace FastTests.Graph
                     var friends = session.Advanced.RawQuery<JObject>(@"match (fst:Dogs)-[:Likes]->(snd:Dogs) select { a : fst, b: snd }")
                         .ToList();
 
-                    //var resultPairs = friends.Select(x => new
-                    //{
-                    //    From = x["fst"]["Name"].Value<string>(),
-                    //    To = x["snd"]["Name"].Value<string>()
-                    //}).ToArray();
-                    
-                    ////arava -> oscar
-                    ////oscar -> oscar, phoebe
-                    ////phoebe -> oscar
-                    //Assert.Equal(4,resultPairs.Length);
-                    //Assert.Contains(resultPairs, item => item.From == "Arava" && item.To == "Oscar");
-                    //Assert.Contains(resultPairs, item => item.From == "Oscar" && item.To == "Oscar");
-                    //Assert.Contains(resultPairs, item => item.From == "Oscar" && item.To == "Pheobe");
-                    //Assert.Contains(resultPairs, item => item.From == "Pheobe" && item.To == "Oscar");
+                    var resultPairs = friends.Select(x => new
+                    {
+                        From = x["a"]["Name"].Value<string>(),
+                        To = x["b"]["Name"].Value<string>()
+                    }).ToArray();
+
+                    //arava -> oscar
+                    //oscar -> oscar, phoebe
+                    //phoebe -> oscar
+                    Assert.Equal(4, resultPairs.Length);
+                    Assert.Contains(resultPairs, item => item.From == "Arava" && item.To == "Oscar");
+                    Assert.Contains(resultPairs, item => item.From == "Oscar" && item.To == "Oscar");
+                    Assert.Contains(resultPairs, item => item.From == "Oscar" && item.To == "Pheobe");
+                    Assert.Contains(resultPairs, item => item.From == "Pheobe" && item.To == "Oscar");
                 }
             }
         }
@@ -681,7 +851,7 @@ namespace FastTests.Graph
             }
         }
 
-        [Fact(Skip = "Should not work until RavenDB-12072 is implemented")]
+        [Fact]
         public void Matching_with_edge_defined_in_embedded_collection_with_array_brackets_syntax_and_edge_filter_should_work()
         {
             using (var store = GetDocumentStore())
@@ -715,7 +885,7 @@ namespace FastTests.Graph
             }
         }
 
-        [Fact(Skip = "Should not work until RavenDB-12072 is implemented")]
+        [Fact]
         public void Matching_with_edge_defined_in_embedded_collection_without_array_brackets_syntax_and_edge_filter_should_work()
         {
             using (var store = GetDocumentStore())

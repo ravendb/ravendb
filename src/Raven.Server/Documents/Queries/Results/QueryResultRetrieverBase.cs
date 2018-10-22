@@ -431,6 +431,7 @@ namespace Raven.Server.Documents.Queries.Results
             //_loadedDocuments.Clear(); - explicitly not clearing this, we want to cache this for the duration of the query
 
             _loadedDocuments[document.Id ?? string.Empty] = document;
+
             if (fieldToFetch.QueryField.SourceAlias != null)
             {
                 if (fieldToFetch.QueryField.IsQuoted)

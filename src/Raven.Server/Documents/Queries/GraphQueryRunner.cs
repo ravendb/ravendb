@@ -80,12 +80,9 @@ namespace Raven.Server.Documents.Queries
                         documentsContext,
                         fieldsToFetch, null);
 
-
-
                     foreach (var match in matchResults)
                     {
                         var result = resultRetriever.ProjectFromMatch(match, documentsContext);
-
                         final.AddResult(result);
                     }
                 }
@@ -180,31 +177,30 @@ namespace Raven.Server.Documents.Queries
 
             public override void VisitCompoundWhereExpression(BinaryExpression @where)
             {                
-                if (!(@where.Left is PatternMatchElementExpression left) || 
-                    !(@where.Right is PatternMatchElementExpression right))
+                if (!(@where.Left is PatternMatchElementExpression left))
                 {
                     base.VisitCompoundWhereExpression(@where);
-                }
+                }               
                 else
                 {
-                   
+                    
                     VisitExpression(left);
-                    VisitExpression(right);
+                    VisitExpression(@where.Right);
 
                     switch (where.Operator)
                     {
                         case OperatorType.And:
-                            //if(right is NegatedExpression n)
-                            //{
-                            //    IntersectExpressions<Except>(where, left, n.Expression);
-                            //}
-                            //else
+                            if (@where.Right is NegatedExpression n)
                             {
-                                IntersectExpressions<Intersection>(where, left, right);
+                                IntersectExpressions<Except>(where, left, (PatternMatchElementExpression)n.Expression);
+                            }
+                            else
+                            {
+                                IntersectExpressions<Intersection>(where, left, (PatternMatchElementExpression)@where.Right);
                             }
                             break;
                         case OperatorType.Or:
-                            IntersectExpressions<Union>(where, left, right);
+                            IntersectExpressions<Union>(where, left, (PatternMatchElementExpression)@where.Right);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -329,7 +325,7 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            private unsafe void IntersectExpressions<TOp>(QueryExpression parent,
+            private void IntersectExpressions<TOp>(QueryExpression parent,
                 PatternMatchElementExpression left, 
                 PatternMatchElementExpression right)
                 where TOp : struct, ISetOp
@@ -369,7 +365,6 @@ namespace Raven.Server.Documents.Queries
                         _tempIntersect[key] = matches = new List<Match>(); // TODO: pool these
                     matches.Add(xMatch);
                 }
-
 
                 var output = new List<Match>();
 
