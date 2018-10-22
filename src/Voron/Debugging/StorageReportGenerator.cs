@@ -31,6 +31,7 @@ namespace Voron.Debugging
         public int CountOfTrees { get; set; }
         public int CountOfTables { get; set; }
         public VoronPathSetting TempPath { get; set; }
+        public VoronPathSetting JournalPath { get; set; }
     }
 
     public class DetailedReportInput
@@ -45,6 +46,7 @@ namespace Voron.Debugging
         public ScratchBufferPoolInfo ScratchBufferPoolInfo { get; set; }
         public bool CalculateExactSizes { get; set; }
         public VoronPathSetting TempPath { get; set; }
+        public VoronPathSetting JournalPath { get; set; }
     }
 
     public unsafe class StorageReportGenerator
@@ -62,7 +64,7 @@ namespace Voron.Debugging
 
             var journals = GenerateJournalsReport(input.Journals);
 
-            var tempBuffers = GenerateTempBuffersReport(input.TempPath);
+            var tempBuffers = GenerateTempBuffersReport(input.TempPath, input.JournalPath);
 
             return new StorageReport
             {
@@ -102,7 +104,7 @@ namespace Voron.Debugging
             }
 
             var journals = GenerateJournalsReport(input.Journals);
-            var tempBuffers = GenerateTempBuffersReport(input.TempPath);
+            var tempBuffers = GenerateTempBuffersReport(input.TempPath, input.JournalPath);
 
             return new DetailedStorageReport
             {
@@ -137,9 +139,9 @@ namespace Voron.Debugging
             }).ToList();
         }
 
-        private List<TempBufferReport> GenerateTempBuffersReport(VoronPathSetting tempPath)
+        private List<TempBufferReport> GenerateTempBuffersReport(VoronPathSetting tempPath, VoronPathSetting journalPath)
         {
-            return Directory.GetFiles(tempPath.FullPath, "*.buffers").Select(filePath =>
+            var tempFiles = Directory.GetFiles(tempPath.FullPath, "*.buffers").Select(filePath =>
             {
                 var file = new FileInfo(filePath);
 
@@ -149,6 +151,24 @@ namespace Voron.Debugging
                     AllocatedSpaceInBytes = file.Length
                 };
             }).ToList();
+
+            if (journalPath != null)
+            {
+                var recyclableJournals = Directory.GetFiles(journalPath.FullPath, $"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}.*").Select(filePath =>
+                {
+                    var file = new FileInfo(filePath);
+
+                    return new TempBufferReport
+                    {
+                        Name = file.Name,
+                        AllocatedSpaceInBytes = file.Length
+                    };
+                }).ToList();
+
+                tempFiles.AddRange(recyclableJournals);
+            }
+
+            return tempFiles;
         }
 
         public static TreeReport GetReport(FixedSizeTree fst, bool calculateExactSizes)
