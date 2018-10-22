@@ -17,6 +17,7 @@ function CreateServerPackage ( $projectDir, $releaseDir, $packOpts ) {
     
     Remove-Item -Recurse -ErrorAction SilentlyContinue "$($packOpts.OutDirs.Server)"
     Remove-Item -Recurse -ErrorAction SilentlyContinue "$($packOpts.OutDirs.Rvn)"
+    Remove-Item -Recurse -ErrorAction SilentlyContinue "$($packOpts.OutDirs.Debug)"
 }
 
 function CreateToolsPackage( $projectDir, $releaseDir, $packOpts ) {
@@ -105,6 +106,7 @@ function CopyDaemonScripts ( $projectDir, $packageDir ) {
 
 function CopyServerToolsToServerOutputDirectory ( $outDirs ) {
     CopyDirectoryContents "RVN" $outDirs.Rvn $outDirs.Server
+    CopyDirectoryContents "Debug" $outDirs.Debug $outDirs.Server
 }
 
 function LayoutServerDirectory ( $projectDir, $serverOutDir, $packageDir, $target ) {
