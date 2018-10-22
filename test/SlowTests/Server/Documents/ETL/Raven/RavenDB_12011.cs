@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
@@ -8,6 +7,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.ServerWide.Context;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace SlowTests.Server.Documents.ETL.Raven
@@ -90,6 +90,69 @@ loadToOrders(orderData);
                 using (var session = store.OpenAsyncSession())
                 {
                     Assert.NotNull(session.Query<Order>("orders/1-A"));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanOutputInDeleteBehaviorFunction()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User()
+                    {
+                        Name = "Joe"
+                    }, "users/1");
+
+                    await session.SaveChangesAsync();
+
+                    var database = GetDatabase(store.Database).Result;
+
+                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        var result = (RavenEtlTestScriptResult)RavenEtl.TestScript(new TestRavenEtlScript
+                        {
+                            DocumentId = "users/1",
+                            IsDelete = true,
+                            Configuration = new RavenEtlConfiguration()
+                            {
+                                Name = "simulate",
+                                Transforms =
+                                {
+                                    new Transformation()
+                                    {
+                                        Collections =
+                                        {
+                                            "Users"
+                                        },
+                                        Name = "Users",
+                                        Script =
+                                            @"
+loadToUsers(this);
+
+function deleteDocumentsOfUsersBehavior(docId) {
+    output('document: ' + docId);
+    return false;
+}
+"
+                                    }
+                                }
+                            }
+                        }, database, database.ServerStore, context);
+
+                        Assert.Equal(0, result.TransformationErrors.Count);
+
+                        Assert.Equal(0, result.Commands.Count);
+
+                        Assert.Equal("document: users/1", result.DebugOutput[0]);
+                    }
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    Assert.NotNull(session.Query<Order>("users/1"));
                 }
             }
         }

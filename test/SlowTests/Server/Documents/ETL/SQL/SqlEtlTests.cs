@@ -718,7 +718,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                                 {
                                     Collections = {"Orders"},
                                     Name = "OrdersAndLines",
-                                    Script = defaultScript + "output('test output')"
+                                    Script = defaultScript
                                 }
                             }
                         }
