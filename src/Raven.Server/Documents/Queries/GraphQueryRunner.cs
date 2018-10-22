@@ -209,8 +209,7 @@ namespace Raven.Server.Documents.Queries
 
             public override void VisitCompoundWhereExpression(BinaryExpression @where)
             {                
-                if (!(@where.Left is PatternMatchElementExpression left) || 
-                    !(@where.Right is PatternMatchElementExpression right))
+                if (!(@where.Left is PatternMatchElementExpression left))
                 {
                     base.VisitCompoundWhereExpression(@where);
                 }
@@ -218,22 +217,22 @@ namespace Raven.Server.Documents.Queries
                 {
                    
                     VisitExpression(left);
-                    VisitExpression(right);
+                    VisitExpression(@where.Right);
 
                     switch (where.Operator)
                     {
                         case OperatorType.And:
-                            //if(right is NegatedExpression n)
-                            //{
-                            //    IntersectExpressions<Except>(where, left, n.Expression);
-                            //}
-                            //else
+                           if (@where.Right is NegatedExpression n)
+                           {
+                                IntersectExpressions<Except>(where, left, (PatternMatchElementExpression)n.Expression);
+                           }
+                           else
                             {
-                                IntersectExpressions<Intersection>(where, left, right);
+                                IntersectExpressions<Intersection>(where, left, (PatternMatchElementExpression)@where.Right);
                             }
                             break;
                         case OperatorType.Or:
-                            IntersectExpressions<Union>(where, left, right);
+                            IntersectExpressions<Union>(where, left, (PatternMatchElementExpression)@where.Right);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
