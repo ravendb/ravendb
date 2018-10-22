@@ -53,10 +53,10 @@ namespace Raven.Debug
 
             _app.Command("stacktraces", cmd =>
             {
-                cmd.ExtendedHelpText = cmd.Description = "Print stacktraces of the attached process.";
+                cmd.ExtendedHelpText = cmd.Description = "Prints stacktraces for the given process.";
                 cmd.HelpOption(HelpOptionString);
 
-                var pidOption = cmd.Option("--pid", "Process ID to which the tool will attach", CommandOptionType.SingleValue);
+                var pidOption = cmd.Option("--pid", "Process ID to which the tool will attach to", CommandOptionType.SingleValue);
                 var attachTimeoutOption = cmd.Option("--timeout", "Attaching to process timeout in milliseconds. Default 15000", CommandOptionType.SingleValue);
                 var outputOption = cmd.Option("--output", "Output file path", CommandOptionType.SingleValue);
 

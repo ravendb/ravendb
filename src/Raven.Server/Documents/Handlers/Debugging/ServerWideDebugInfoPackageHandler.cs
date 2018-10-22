@@ -31,8 +31,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
         //this endpoint is intended to be called by /debug/cluster-info-package only
         [RavenAction("/admin/debug/remote-cluster-info-package", "GET", AuthorizationStatus.Operator)]
-        public async Task GetClusterwideInfoPackageForRemote()
+        public async Task GetClusterWideInfoPackageForRemote()
         {
+            var stacktraces = Stacktraces();
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
             using (transactionOperationContext.OpenReadTransaction())
@@ -49,7 +51,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             requestHeader = JsonDeserializationServer.NodeDebugInfoRequestHeader(requestHeaderJson);
                         }
 
-                        await WriteServerWide(archive, jsonOperationContext, localEndpointClient, stacktraces: false);
+                        await WriteServerWide(archive, jsonOperationContext, localEndpointClient, stacktraces);
                         foreach (var databaseName in requestHeader.DatabaseNames)
                         {
                             await WriteForDatabase(archive, jsonOperationContext, localEndpointClient, databaseName);
@@ -64,8 +66,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
         [RavenAction("/admin/debug/cluster-info-package", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
-        public async Task GetClusterwideInfoPackage()
+        public async Task GetClusterWideInfoPackage()
         {
+            var stacktraces = Stacktraces();
+
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} Cluster Wide.zip";
 
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
@@ -87,7 +91,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                             using (var localArchive = new ZipArchive(localMemoryStream, ZipArchiveMode.Create, true))
                             {
-                                await WriteServerWide(localArchive, jsonOperationContext, localEndpointClient, stacktraces: false);
+                                await WriteServerWide(localArchive, jsonOperationContext, localEndpointClient, stacktraces);
                                 await WriteForAllLocalDatabases(localArchive, jsonOperationContext, localEndpointClient);
                             }
 
@@ -121,7 +125,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                         tag: tagWithUrl.Key,
                                         url: tagWithUrl.Value,
                                         certificate: Server.Certificate.Certificate,
-                                        databaseNames: null);
+                                        databaseNames: null,
+                                        stacktraces: stacktraces);
                                 }
                                 catch (Exception e)
                                 {
@@ -146,7 +151,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                         tag: urlToDatabaseNamesMap.Value.Item2,
                                         url: urlToDatabaseNamesMap.Key,
                                         databaseNames: urlToDatabaseNamesMap.Value.Item1,
-                                        certificate: Server.Certificate.Certificate);
+                                        certificate: Server.Certificate.Certificate,
+                                        stacktraces: stacktraces);
                                 }
                                 catch (Exception e)
                                 {
@@ -169,13 +175,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
             string tag,
             string url,
             IEnumerable<string> databaseNames,
-            X509Certificate2 certificate)
+            X509Certificate2 certificate,
+            bool stacktraces)
         {
             //note : theoretically GetDebugInfoFromNodeAsync() can throw, error handling is done at the level of WriteDebugInfoPackageForNodeAsync() calls
             using (var responseStream = await GetDebugInfoFromNodeAsync(
                 jsonOperationContext,
                 url,
-                databaseNames ?? EmptyStringArray, certificate))
+                databaseNames ?? EmptyStringArray, certificate,
+                stacktraces))
             {
                 var entry = archive.CreateEntry($"Node - [{tag}].zip");
                 entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;
@@ -191,7 +199,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/admin/debug/info-package", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task GetInfoPackage()
         {
-            var stacktraces = (GetBoolValueQueryString("stacktraces", required: false) ?? false) && PlatformDetails.RunningOnPosix == false;
+            var stacktraces = Stacktraces();
 
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Node [{ServerStore.NodeTag}].zip";
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
@@ -214,7 +222,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
         private void DumpStacktraces(ZipArchive archive, string prefix)
         {
-            var stacktrace = archive.CreateEntry($"{prefix}/stacktraces.json", CompressionLevel.Optimal);
+            var stacktraces = archive.CreateEntry($"{prefix}/stacktraces.json", CompressionLevel.Optimal);
 
             var tempPath = ServerStore.Configuration.Storage.TempPath?.FullPath ?? Path.GetTempPath();
 
@@ -225,7 +233,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var jsonSerializer = DocumentConventions.Default.CreateSerializer();
             jsonSerializer.Formatting = Formatting.Indented;
 
-            using (var stacktraceStream = stacktrace.Open())
+            using (var stacktraceStream = stacktraces.Open())
             {
                 try
                 {
@@ -288,8 +296,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private async Task<Stream> GetDebugInfoFromNodeAsync(JsonOperationContext jsonOperationContext,
-            string url, IEnumerable<string> databaseNames, X509Certificate2 certificate)
+        private async Task<Stream> GetDebugInfoFromNodeAsync(
+            JsonOperationContext jsonOperationContext,
+            string url,
+            IEnumerable<string> databaseNames,
+            X509Certificate2 certificate,
+            bool stacktraces)
         {
             var bodyJson = new DynamicJsonValue
             {
@@ -307,7 +319,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate);
                 requestExecutor.DefaultTimeout = ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan;
 
-                var rawStreamCommand = new GetRawStreamResultCommand("admin/debug/remote-cluster-info-package", ms);
+                var rawStreamCommand = new GetRawStreamResultCommand($"admin/debug/remote-cluster-info-package?stacktraces={stacktraces}", ms);
 
                 await requestExecutor.ExecuteAsync(rawStreamCommand, jsonOperationContext);
                 rawStreamCommand.Result.Position = 0;
@@ -429,6 +441,14 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
 
             return nodeUrlToDatabaseNames;
+        }
+        
+        private bool Stacktraces()
+        {
+            if (PlatformDetails.RunningOnPosix)
+                return false;
+
+            return GetBoolValueQueryString("stacktraces", required: false) ?? false;
         }
 
         internal class NodeDebugInfoRequestHeader
