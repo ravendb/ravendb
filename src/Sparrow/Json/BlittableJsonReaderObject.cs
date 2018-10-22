@@ -1153,7 +1153,7 @@ NotFound:
 
         public override int GetHashCode()
         {
-            return _isRoot ? _size ^ _propCount : _propCount;
+            return _propCount;
         }
 
         private bool HasSamePropertyNames(BlittableJsonReaderObject other)
