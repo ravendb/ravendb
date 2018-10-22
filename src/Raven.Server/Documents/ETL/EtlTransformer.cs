@@ -39,8 +39,13 @@ namespace Raven.Server.Documents.ETL
         public virtual void Initialize(bool debugMode)
         {
             if (_behaviorFunctions != null)
+            {
                 _behaviorFunctionsRun = Database.Scripts.GetScriptRunner(_behaviorFunctions, true, out BehaviorsScript);
 
+                if (debugMode)
+                    BehaviorsScript.DebugMode = true;
+            }
+            
             _returnMainRun = Database.Scripts.GetScriptRunner(_mainScript, true, out DocumentScript);
             if (DocumentScript == null)
                 return;
@@ -284,7 +289,15 @@ namespace Raven.Server.Documents.ETL
 
         public List<string> GetDebugOutput()
         {
-            return DocumentScript?.DebugOutput ?? new List<string>();
+            var outputs = new List<string>();
+
+            if (DocumentScript?.DebugOutput != null)
+                outputs.AddRange(DocumentScript.DebugOutput);
+
+            if (BehaviorsScript?.DebugOutput != null)
+                outputs.AddRange(BehaviorsScript.DebugOutput);
+
+            return outputs;
         }
     }
 }
