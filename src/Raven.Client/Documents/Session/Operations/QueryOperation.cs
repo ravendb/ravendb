@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -190,29 +191,30 @@ namespace Raven.Client.Documents.Session.Operations
             return result;
         }
 
+        private static ConcurrentDictionary<Type, Type> _wrapperTypes;
+        private const string DummyPropertyName = "Result";
+
         private static T DeserializeInnerArray<T>(BlittableJsonReaderObject document, string fieldToFetch, InMemoryDocumentSessionOperations session,
             BlittableJsonReaderArray blittableArray)
         {
-            const string dummyPropertyName = "Result";
-
             document.Modifications = new DynamicJsonValue(document)
             {
-                [dummyPropertyName] = blittableArray
+                [DummyPropertyName] = blittableArray
             };
 
             document.Modifications.Remove(fieldToFetch);
 
-            var dummyObject = new
+            _wrapperTypes = _wrapperTypes ?? new ConcurrentDictionary<Type, Type>();
+
+            var wrapperType = _wrapperTypes.GetOrAdd(typeof(T), new
             {
                 Result = Activator.CreateInstance<T>()
-            };
+            }.GetType());
 
-            var deserialized = session.Conventions.DeserializeEntityFromBlittable(dummyObject.GetType(), document);
-            var property = deserialized.GetType().GetProperty(dummyPropertyName);
+            var property = wrapperType.GetProperty(DummyPropertyName);
+            var deserialized = session.Conventions.DeserializeEntityFromBlittable(wrapperType, document);
 
-            return property != null 
-                ? (T)property.GetValue(deserialized) 
-                : default;
+            return (T)property.GetValue(deserialized);
         }
 
         [Obsolete("Use NoTracking instead")]
