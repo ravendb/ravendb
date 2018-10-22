@@ -20,6 +20,7 @@ using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Json;
 using Raven.Server.Utils;
 using Sparrow;
 
