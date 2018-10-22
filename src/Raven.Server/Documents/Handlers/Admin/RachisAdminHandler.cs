@@ -198,6 +198,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 context.Write(writer, json);
                 writer.Flush();
             }
+
             return Task.CompletedTask;
         }
 
@@ -334,6 +335,16 @@ namespace Raven.Server.Documents.Handlers.Admin
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, Server.Certificate.Certificate))
             {
                 requestExecutor.DefaultTimeout = ServerStore.Engine.OperationTimeout;
+
+                // test connection to remote.
+                var result = await ServerStore.TestConnectionToRemote(nodeUrl, database: null);
+                if (result.Success)
+                {
+                    // test connection from remote to destination
+                    result = await ServerStore.TestConnectionFromRemote(requestExecutor, ctx, nodeUrl);
+                    if(result.Success == false)
+                        throw new InvalidOperationException(result.Error);
+                }
 
                 var infoCmd = new GetNodeInfoCommand();
                 try
