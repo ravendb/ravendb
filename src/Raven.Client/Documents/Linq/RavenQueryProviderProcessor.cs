@@ -563,11 +563,22 @@ namespace Raven.Client.Documents.Linq
                 selectPath += ".Length";
             }
 
-            var propertyName = IndexName == null && _collectionName != null
-                ? QueryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof(T), IndexName, CurrentPath,
-                    selectPath)
-                : QueryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), IndexName, CurrentPath,
+            string propertyName;
+            if (IndexName == null && _collectionName != null)
+            {
+                propertyName = QueryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof(T), IndexName, CurrentPath, 
                     selectPath);
+            }
+            else if (_insideSelect > 0 && QueryGenerator.Conventions.FindProjectedPropertyNameForIndex != null)
+            {
+                propertyName = QueryGenerator.Conventions.FindProjectedPropertyNameForIndex(typeof(T), IndexName, CurrentPath,
+                    selectPath);
+            }
+            else
+            {
+                propertyName = QueryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), IndexName, CurrentPath,
+                    selectPath);
+            }
 
             return AddAliasToPathIfNeeded(alias, propertyName);
         }
@@ -1507,7 +1518,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             _groupByElementSelector = null;
                         }
                         else
+                        {
+                            _insideSelect++;
                             VisitSelect(operand);
+                            _insideSelect--;
+                        }
                         break;
                     }
                 case "Skip":
@@ -1875,7 +1890,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 _documentQuery.OrderBy(fieldName, ordering);
         }
 
-        private bool _insideSelect;
+        private int _insideSelect;
         private readonly bool _isMapReduce;
         private readonly Type _originalQueryType;
         private readonly DocumentConventions _conventions;
@@ -1887,14 +1902,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
             switch (body.NodeType)
             {
                 case ExpressionType.Convert:
-                    _insideSelect = true;
+                    _insideSelect++;
                     try
                     {
                         VisitSelect(((UnaryExpression)body).Operand);
                     }
                     finally
                     {
-                        _insideSelect = false;
+                        _insideSelect--;
                     }
                     break;
                 case ExpressionType.MemberAccess:
@@ -1903,7 +1918,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     AddToFieldsToFetch(selectPath, selectPath);
 
-                    if (_insideSelect == false)
+                    if (_insideSelect == 1)
                     {
                         foreach (var fieldToFetch in FieldsToFetch)
                         {
