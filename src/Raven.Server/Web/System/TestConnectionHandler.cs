@@ -5,6 +5,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Sparrow.Json;
@@ -116,9 +117,9 @@ namespace Raven.Server.Web.System
 
         public static string GetError(string source, string dest)
         {
-            return $"You are able to reach '{dest}', but he failed to reach you back on {source}.{Environment.NewLine}" +
-                   $"Please validate the correctness of your 'PublicServerUrl'/'PublicServerUrl.Tcp' configuration and the firewall rules.{Environment.NewLine}" +
-                   $"Please visit https://ravendb.net/docs/article-page/4.1/csharp/start/installation/setup-wizard#installation--setup-wizard-walkthrough for the RavenDB setup instructions.";
+            return $"You are able to reach '{dest}', but the remote node failed to reach you back on '{source}'.{Environment.NewLine}" +
+                   $"Please validate the correctness of your '{RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)}', '{RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)}' configuration and the firewall rules.{Environment.NewLine}" +
+                   $"Please visit https://ravendb.net/l/QUPWS7/4.1 for the RavenDB setup instructions.";
         }
     }
 
