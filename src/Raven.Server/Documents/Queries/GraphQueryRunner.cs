@@ -48,8 +48,8 @@ namespace Raven.Server.Documents.Queries
                 foreach (var documentQuery in q.GraphQuery.WithDocumentQueries)
                 {
                     var queryMetadata = new QueryMetadata(documentQuery.Value, query.QueryParameters, 0);
-                    var results = await Database.QueryRunner.ExecuteQuery(new IndexQueryServerSide(queryMetadata),
-                        documentsContext, existingResultEtag, token);
+                    var indexQuery = new IndexQueryServerSide(queryMetadata);
+                    var results = await Database.QueryRunner.ExecuteQuery(indexQuery, documentsContext, existingResultEtag, token).ConfigureAwait(false);
 
                     ir.EnsureExists(documentQuery.Key);
 
@@ -132,6 +132,12 @@ namespace Raven.Server.Documents.Queries
                 if (matchResults[0].Empty)
                     continue;
 
+                if (match.Count == 1) //if we don't have multiple results in each row, we can "flatten" the row
+                {
+                    final.AddResult(match.GetFirstResult());
+                    continue;
+                }
+
                 var resultAsJson = new DynamicJsonValue();
                 match.PopulateVertices(resultAsJson);
 
@@ -144,7 +150,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private IEnumerable<Match> ExecutePatternMatch(DocumentsOperationContext documentsContext, IndexQueryServerSide query, IntermediateResults ir)
+        private List<Match> ExecutePatternMatch(DocumentsOperationContext documentsContext, IndexQueryServerSide query, IntermediateResults ir)
         {
             var visitor = new GraphExecuteVisitor(ir, query, documentsContext);
             visitor.VisitExpression(query.Metadata.Query.GraphQuery.MatchClause);
@@ -378,12 +384,12 @@ namespace Raven.Server.Documents.Queries
                 // ensure that we start processing from the smaller side
                 if(xOutput.Count < yOutput.Count && operation.CanOptimizeSides)
                 {
-                    var tmp = xOutput;
+                    var tmp = yOutput;
                     yOutput = xOutput;
                     xOutput = tmp;
-                    var tmpAliases = xAliases;
-                    xAliases = yAliases;
-                    yAliases = tmpAliases;
+                    var tmpAliases = yAliases;
+                    yAliases = xAliases;
+                    xAliases = tmpAliases;
                 }
 
                 for (int l = 0; l < xOutput.Count; l++)
@@ -395,7 +401,6 @@ namespace Raven.Server.Documents.Queries
                         _tempIntersect[key] = matches = new List<Match>(); // TODO: pool these
                     matches.Add(xMatch);
                 }
-
 
                 var output = new List<Match>();
 
@@ -466,10 +471,14 @@ namespace Raven.Server.Documents.Queries
             public override void VisitPatternMatchElementExpression(PatternMatchElementExpression ee)
             {                
                 Debug.Assert(ee.Path[0].EdgeType == EdgeType.Right);
-                if (_source.TryGetByAlias(ee.Path[0].Alias, out var nodeResults) == false || 
+                if (_source.TryGetByAlias(ee.Path[0].Alias, out var nodeResults) == false ||
                     nodeResults.Count == 0)
+                {
+                    _intermediateOutputs.Add(ee,new List<Match>());
+                    _aliasesInMatch.Add(ee, new HashSet<StringSegment>());
                     return; // if root is empty, the entire thing is empty
-                
+                }
+
                 var currentResults = new List<Match>();
 
                 foreach (var item in nodeResults)
