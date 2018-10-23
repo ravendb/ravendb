@@ -157,6 +157,8 @@ namespace Raven.Client.Documents.Conventions
         private Func<string, string> _findIdentityPropertyNameFromCollectionName;
         private Func<Type, string, string, string, string> _findPropertyNameForDynamicIndex;
         private Func<Type, string, string, string, string> _findPropertyNameForIndex;
+        private Func<Type, string, string, string, string> _findProjectedPropertyNameForIndex;
+
         private Func<dynamic, string> _findCollectionNameForDynamic;
         private Func<Type, string> _findCollectionName;
         private IContractResolver _jsonContractResolver;
@@ -391,6 +393,20 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _findPropertyNameForIndex = value;
+            }
+        }
+
+        /// <summary>
+        ///     Gets or sets the function to find the projected property name for index,
+        ///     given the indexed document type, the index name, the current path and the property path.
+        /// </summary>
+        public Func<Type, string, string, string, string> FindProjectedPropertyNameForIndex
+        {
+            get => _findProjectedPropertyNameForIndex;
+            set
+            {
+                AssertNotFrozen();
+                _findProjectedPropertyNameForIndex = value;
             }
         }
 
