@@ -9,21 +9,58 @@ namespace Raven.Server.Documents.Queries
 {
     public partial class GraphQueryRunner
     {
-        public struct Match // using struct because we have a single field 
+        public unsafe struct Match // using struct because we have a single field 
         {
             private Dictionary<string, Document> _inner;
 
             public object Key => _inner;
 
+            public int Count => _inner?.Count ?? 0;
+
             public IEnumerable<string> Aliases => _inner.Keys;
+
+            public bool Empty => _inner == null || _inner.Count == 0;
+
+            public override string ToString()
+            {
+                if (_inner == null)
+                    return "<empty>";
+                return string.Join(", ", _inner.Select(x=> x.Key + " - " + (x.Value.Id ?? x.Value.Data.ToString())));
+            }
+
+            public Match(Match other)
+            {
+                if (other._inner == null)
+                {
+                    _inner = null;
+                }
+                else
+                {
+                    _inner = new Dictionary<string, Document>(other._inner);
+                }
+            }
 
             public Document Get(string alias)
             {
                 Document result = null;
                 _inner?.TryGetValue(alias, out result);
-                result?.EnsureMetadata();
+                if(result?.Id != null)
+                {
+                    result.EnsureMetadata();
+                }
                 return result;
             }           
+
+            public bool TryGetAliasId(string alias, out long id)
+            {
+                id = -1;
+                var hasKey = _inner.TryGetValue(alias, out var doc);
+
+                if (hasKey)
+                    id = (long)doc.Data.BasePointer;
+
+                return hasKey;
+            }
 
             public bool TryGetKey(string alias, out string key)
             {
@@ -36,6 +73,17 @@ namespace Raven.Server.Documents.Queries
                 return hasKey;
             }
 
+            //try to set, but don't overwrite
+            public long? TrySet(StringSegment alias, Document val)
+            {
+                if (_inner == null)
+                    _inner = new Dictionary<string, Document>();
+
+                if (_inner.TryAdd(alias, val) == false)
+                    return null;
+                return (long)val.Data.BasePointer;
+            }
+
             public void Set(StringSegment alias, Document val)
             {
                 if (_inner == null)
@@ -44,30 +92,6 @@ namespace Raven.Server.Documents.Queries
                 _inner.Add(alias, val);
             }            
 
-            public void Populate(DynamicJsonValue j, string[] aliases, GraphQuery gq)
-            {
-                if (_inner == null)
-                    return;
-
-                var edgeAliases = aliases.Except(_inner.Keys).ToArray();
-                foreach (var item in _inner)
-                {
-                    item.Value.EnsureMetadata();
-                    j[item.Key] = item.Value.Data;
-
-                    foreach (var alias in edgeAliases)
-                    {
-                        if (gq.WithEdgePredicates.TryGetValue(alias, out var edge) && 
-                            edge.FromAlias.GetValueOrDefault() == item.Key &&
-                            //TODO: Handle complex fields
-                            item.Value.Data.TryGet(edge.Path.Compound[0], out object property))
-                        {
-                            j[alias] = property;
-                        }
-                    }
-                }
-            }
-
             public void PopulateVertices(DynamicJsonValue j)
             {
                 if (_inner == null)
@@ -75,7 +99,10 @@ namespace Raven.Server.Documents.Queries
 
                 foreach (var item in _inner)
                 {
-                    item.Value.EnsureMetadata();
+                    if (item.Value.Id != null)
+                    {
+                        item.Value.EnsureMetadata();
+                    }
                     j[item.Key] = item.Value.Data;                    
                 }
             }
@@ -95,7 +122,10 @@ namespace Raven.Server.Documents.Queries
             {
                 foreach (var item in _inner)
                 {
-                    item.Value.EnsureMetadata();
+                    if (item.Value.Id != null)
+                    {
+                        item.Value.EnsureMetadata();
+                    }
 
                     return item.Value;
                 }
@@ -105,7 +135,10 @@ namespace Raven.Server.Documents.Queries
             internal Document GetResult(string alias)
             {
                 var val = _inner[alias];
-                val.EnsureMetadata();
+                if (val.Id != null)
+                {
+                    val.EnsureMetadata();
+                }
                 return val;
             }
         }

@@ -16,8 +16,35 @@ namespace Raven.Server.Utils
         private static readonly char[] PrefixSeparatorChar = { PrefixSeparator };
         private static readonly char[] SuffixSeparatorChar = { SuffixSeparator };
         
+        public interface IIncludeOp
+        {
+            void Include(BlittableJsonReaderObject parent, string id);
+        }
+
+        private struct HashSetIncludeOp : IIncludeOp
+        {
+            HashSet<string> _items;
+
+            public HashSetIncludeOp(HashSet<string> items)
+            {
+                _items = items;
+            }
+
+            public void Include(BlittableJsonReaderObject parent, string id)
+            {
+                _items.Add(id);
+            }
+        }
+
         public static void GetDocIdFromInclude(BlittableJsonReaderObject docReader, StringSegment includePath,
             HashSet<string> includedIds)
+        {
+            var op = new HashSetIncludeOp(includedIds);
+            GetDocIdFromInclude(docReader, includePath, op);
+        }
+
+        public static void GetDocIdFromInclude<TIncludeOp>(BlittableJsonReaderObject docReader, StringSegment includePath, TIncludeOp op)
+            where TIncludeOp : struct, IIncludeOp
         {
             Func<object, StringSegment, string> valueHandler = null;
 
@@ -64,7 +91,9 @@ namespace Raven.Server.Utils
                             json.GetPropertyByIndex(propertyIndex, ref property);
                             var val = isKey ? property.Name : property.Value;
                             if (val != null)
-                                includedIds.Add(val.ToString());
+                            {
+                                op.Include(null, val.ToString());
+                            }
                         }
                     }
                 }
@@ -73,7 +102,7 @@ namespace Raven.Server.Utils
                     foreach (var item in array)
                     {
                         if (item is BlittableJsonReaderObject inner)
-                            GetDocIdFromInclude(inner, leftPath, includedIds);
+                            GetDocIdFromInclude(inner, leftPath, op);
                     }
                 }
 
@@ -92,9 +121,9 @@ namespace Raven.Server.Utils
                     {
                         var includedId = valueHandler(item, addition.Value);
                         if (includedId != null)
-                            includedIds.Add(includedId);
+                            op.Include(null, includedId);
                     }
-                    includedIds.Add(BlittableValueToString(item));
+                    op.Include(null, BlittableValueToString(item));
                 }
             }
             else
@@ -103,9 +132,9 @@ namespace Raven.Server.Utils
                 {
                     var includedId = valueHandler(value, addition.Value);
                     if (includedId != null)
-                        includedIds.Add(includedId);
+                        op.Include(docReader, includedId);
                 }
-                includedIds.Add(BlittableValueToString(value));
+                op.Include(docReader, BlittableValueToString(value));
             }
         }
 

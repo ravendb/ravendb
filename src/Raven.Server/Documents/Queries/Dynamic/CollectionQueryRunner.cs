@@ -104,6 +104,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     fillScope = includesScope.For(nameof(QueryTimingsScope.Names.Fill), start: false);
                 }
 
+                if (string.IsNullOrEmpty(collection))
+                    collection = Constants.Documents.Collections.AllDocumentsCollection;
+
                 var isAllDocsCollection = collection == Constants.Documents.Collections.AllDocumentsCollection;
 
                 // we optimize for empty queries without sorting options, appending CollectionIndexPrefix to be able to distinguish index for collection vs. physical index

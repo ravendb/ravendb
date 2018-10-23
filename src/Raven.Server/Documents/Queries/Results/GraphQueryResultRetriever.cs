@@ -84,6 +84,11 @@ namespace Raven.Server.Documents.Queries.Results
                 else
                 {
                     item = match.Get(fieldToFetch.QueryField.ExpressionField.Compound[0]);
+                    if (item == null)
+                    {
+                        result[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = null;
+                        continue;
+                    }
                     if (TryGetValue(fieldToFetch, item, null, null, out key, out fieldVal) == false)
                         continue;
                 }

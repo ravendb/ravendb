@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Queries
         public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey, QueryType queryType = QueryType.Select)
             : this(ParseQuery(query, queryType), parameters, cacheKey)
         {
-
+            
         }
 
         private static Query ParseQuery(string q, QueryType queryType)
@@ -255,7 +255,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     ThrowMissingVertexMatchClauses();
                 }
-
+              
                 if (Query.Select != null)
                 {
                     foreach (var projection in Query.Select)
@@ -266,7 +266,7 @@ namespace Raven.Server.Documents.Queries
                         var alias = field.Compound[0];
                         if (!edgePredicateKeys.ContainsKey(alias) && !documentQueryKeys.ContainsKey(alias))
                         {
-                            ThrowOneUndefinedAlias(alias);
+                            ThrowOnUndefinedAlias(alias);
                         }
                     }
                 }
@@ -330,7 +330,7 @@ namespace Raven.Server.Documents.Queries
                 HandleDeclaredFunctions();
         }
 
-        private static void ThrowOneUndefinedAlias(StringSegment alias)
+        private static void ThrowOnUndefinedAlias(StringSegment alias)
         {
             throw new InvalidQueryException($"Could not find alias '{alias}' defined the query. SELECT clause must include an alias that refers to either a vertex or an edge");
         }
@@ -411,7 +411,7 @@ namespace Raven.Server.Documents.Queries
             {
                 var expressionPath = ParseExpressionPath(include, path, Query.From.Alias);
 
-                if (expressionPath.LoadFromAlias != null &&
+                if (expressionPath.LoadFromAlias != null && 
                     NotInRootAliasPaths(expressionPath.LoadFromAlias))
                     ThrowUnknownAlias(expressionPath.LoadFromAlias, parameters);
 
@@ -540,7 +540,7 @@ namespace Raven.Server.Documents.Queries
             if (Query.Select != null && Query.Select.Count > 0)
                 ThrowInvalidFunctionSelectWithMoreFields(parameters);
 
-            if (RootAliasPaths.Count == 0 && IsGraph == false)
+            if (RootAliasPaths.Count == 0 && IsGraph == false )
                 ThrowMissingAliasOnSelectFunctionBody(parameters);
 
             // validate that this is valid JS code
@@ -562,8 +562,8 @@ namespace Raven.Server.Documents.Queries
 
             sb.Append("function ").Append(name).Append("(");
             int index = 0;
-            var args = new SelectField[IsGraph ?
-                Query.GraphQuery.WithDocumentQueries.Count + Query.GraphQuery.WithEdgePredicates.Count :
+            var args = new SelectField[IsGraph ? 
+                Query.GraphQuery.WithDocumentQueries.Count + Query.GraphQuery.WithEdgePredicates.Count : 
                 RootAliasPaths.Count];
 
             foreach (var alias in RootAliasPaths)
@@ -746,7 +746,7 @@ namespace Raven.Server.Documents.Queries
                 string loadFromAlias;
                 (path, loadFromAlias) = ParseExpressionPath(load.Expression, path, Query.From.Alias);
 
-                if (loadFromAlias != null &&
+                if (loadFromAlias != null && 
                     NotInRootAliasPaths(loadFromAlias))
                 {
                     ThrowUnknownAlias(loadFromAlias, parameters);
@@ -914,7 +914,7 @@ namespace Raven.Server.Documents.Queries
             try
             {
                 SelectFields = new SelectField[Query.Select.Count];
-
+                
                 for (var index = 0; index < Query.Select.Count; index++)
                 {
                     var fieldInfo = Query.Select[index];
@@ -961,6 +961,7 @@ namespace Raven.Server.Documents.Queries
 
         private SelectField GetSelectField(BlittableJsonReaderObject parameters, QueryExpression expression, string alias)
         {
+
             if (expression is ValueExpression ve)
             {
                 if (HasFacet)
@@ -1540,6 +1541,7 @@ namespace Raven.Server.Documents.Queries
         {
             throw new InvalidQueryException("Cannot use GROUP BY in a suggestion query", QueryText, parameters);
         }
+
 
         private void ThrowSuggestMethodArgumentMustBeValue(int index, QueryExpression argument, BlittableJsonReaderObject parameters)
         {

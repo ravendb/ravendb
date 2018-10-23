@@ -77,6 +77,9 @@ namespace Raven.Server.Documents.Queries.AST
             if (q.MatchClause != null)
                 VisitMatchExpression(q.MatchClause);
 
+            if (q.Where != null)
+                VisitExpression(q.Where);
+
             if (q.Include != null)
                 VisitInclude(q.Include);
 
@@ -174,7 +177,7 @@ namespace Raven.Server.Documents.Queries.AST
             VisitExpression(where);
         }
 
-        private void VisitBinaryExpression(BinaryExpression @where)
+        protected virtual void VisitBinaryExpression(BinaryExpression @where)
         {
             switch (@where.Operator)
             {
@@ -282,7 +285,7 @@ namespace Raven.Server.Documents.Queries.AST
             throw new ArgumentOutOfRangeException(expr.Type.ToString());
         }
 
-        private static void ThrowInvalidOperationType(BinaryExpression @where)
+        protected static void ThrowInvalidOperationType(BinaryExpression @where)
         {
             throw new ArgumentOutOfRangeException(@where.Operator.ToString());
         }
