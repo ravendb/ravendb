@@ -331,7 +331,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                        with { from index 'Orders/ByCompany' order by Count as long desc } as o
+                        with { from index 'Orders/ByCompany' } as o
                         match (o)-[:Company]->(c:Companies)
                     ").ToList();
 
