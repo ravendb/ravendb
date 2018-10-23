@@ -338,13 +338,15 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 // test connection to remote.
                 var result = await ServerStore.TestConnectionToRemote(nodeUrl, database: null);
-                if (result.Success)
+                if (result.Success == false)
                 {
-                    // test connection from remote to destination
-                    result = await ServerStore.TestConnectionFromRemote(requestExecutor, ctx, nodeUrl);
-                    if(result.Success == false)
-                        throw new InvalidOperationException(result.Error);
+                    throw new InvalidOperationException(result.Error);
                 }
+                
+                // test connection from remote to destination
+                result = await ServerStore.TestConnectionFromRemote(requestExecutor, ctx, nodeUrl);
+                if(result.Success == false)
+                    throw new InvalidOperationException(result.Error);
 
                 var infoCmd = new GetNodeInfoCommand();
                 try
