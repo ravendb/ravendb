@@ -70,7 +70,6 @@ namespace Raven.Server.Documents.Queries
 
                 if (IsDynamic == false || IsGroupBy)
                     IsCollectionQuery = false;
-                                    && IsDistinct == false;
             }
             else
             {
