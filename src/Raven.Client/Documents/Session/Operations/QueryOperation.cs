@@ -174,7 +174,7 @@ namespace Raven.Client.Documents.Session.Operations
                     else if (inner is BlittableJsonReaderArray bjra && 
                              JavascriptConversionExtensions.LinqMethodsSupport.IsCollection(type))
                     {
-                        return DeserializeInnerArray<T>(document, fieldsToFetch.FieldsToFetch[0], session, bjra);
+                        return DeserializeInnerArray<T>(document, id, fieldsToFetch.FieldsToFetch[0], session, bjra);
                     }
                 }
             }
@@ -206,7 +206,7 @@ namespace Raven.Client.Documents.Session.Operations
             return (wrapperType, wrapperType.GetProperty(DummyPropertyName));
         }
 
-        private static T DeserializeInnerArray<T>(BlittableJsonReaderObject document, string fieldToFetch, InMemoryDocumentSessionOperations session,
+        private static T DeserializeInnerArray<T>(BlittableJsonReaderObject document, string id, string fieldToFetch, InMemoryDocumentSessionOperations session,
             BlittableJsonReaderArray blittableArray)
         {
             document.Modifications = new DynamicJsonValue(document)
@@ -215,6 +215,8 @@ namespace Raven.Client.Documents.Session.Operations
             };
 
             document.Modifications.Remove(fieldToFetch);
+
+            document = session.Context.ReadObject(document, id);
 
             _wrapperTypes = _wrapperTypes ?? new ConcurrentDictionary<Type, (Type, PropertyInfo)>();
 
