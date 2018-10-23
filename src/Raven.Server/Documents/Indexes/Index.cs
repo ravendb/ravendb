@@ -1127,6 +1127,19 @@ namespace Raven.Server.Documents.Indexes
                 {
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations($"Unexpected error in '{Name}' index. This should never happen.", e);
+
+                    try
+                    {
+                        DocumentDatabase.NotificationCenter.Add(AlertRaised.Create(DocumentDatabase.Name, $"Unexpected error in '{Name}' index",
+                            "Unexpected error in indexing thread. See details.", AlertType.UnexpectedIndexingThreadError, NotificationSeverity.Error,
+                            details: new ExceptionDetails(e)));
+                    }
+                    catch (Exception)
+                    {
+                        // ignore if we can't create notification
+                    }
+
+                    State = IndexState.Error;
                 }
                 finally
                 {
