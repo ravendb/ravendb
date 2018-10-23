@@ -21,8 +21,19 @@ namespace Raven.Server.Documents.Queries
 
             public void Add(string alias, Match match, Document instance)
             {
-                //TODO: need to handle map/reduce results?
-                MatchesByAlias[alias][instance.Id] = match;
+                //we have map/reduce result that has no id since it is not a document
+                //in such case we have no choice but to use map/reduce result json as key since we have no other way to generate a key
+                //TODO : discuss with Oren & guys - perhaps there is a better way? (see http://issues.hibernatingrhinos.com/issue/RavenDB-12164)
+                //perhaps we can generate for map/reduce query results some sort of unique ids? perhaps even a auto-increment number?
+                if (instance.Id == null) 
+                {
+                    
+                    MatchesByAlias[alias][instance.Data.ToString()] = match;
+                }
+                else
+                {
+                    MatchesByAlias[alias][instance.Id] = match;
+                }
             }
 
             public bool TryGetByAlias(string alias, out Dictionary<string,Match> value)

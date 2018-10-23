@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Queries.Parser;
 using Tests.Infrastructure;
 using Xunit;
 using Order = FastTests.Server.Basic.Entities.Order;
@@ -218,6 +219,139 @@ namespace FastTests.Graph
         }
 
         [Fact]
+        public void Can_flatten_result_for_single_vertex_in_row()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateMoviesData(store);
+                using (var session = store.OpenSession())
+                {
+                    var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (v)").ToList();
+                    Assert.False(allVerticesQuery.Any(row => row.ContainsKey("v"))); //we have "flat" results
+                }
+            }
+        }
+
+        [Fact]
+        public void Mutliple_results_in_row_wont_flatten_results()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateMoviesData(store);
+                using (var session = store.OpenSession())
+                {
+                    var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (u)-[:HasRated.Movie]->(m)").ToList();
+                    Assert.True(allVerticesQuery.All(row => row.ContainsKey("m")));
+                    Assert.True(allVerticesQuery.All(row => row.ContainsKey("u")));
+                }
+            }
+        }
+
+
+        [Fact]
+        public void Can_query_without_collection_identifier()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateMoviesData(store);
+                using (var session = store.OpenSession())
+                {
+                    var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (v)").ToList();
+                    
+                    Assert.Equal(9,allVerticesQuery.Count);
+                    var docTypes = allVerticesQuery.Select(x => x["@metadata"]["@collection"].Value<string>()).ToArray();
+
+                    Assert.Equal(3,docTypes.Count(t => t == "Genres"));
+                    Assert.Equal(3,docTypes.Count(t => t == "Movies"));
+                    Assert.Equal(3,docTypes.Count(t => t == "Users"));
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_use_explicit_with_clause()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateMoviesData(store);
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                        with {from Users} as u
+                        match (u)").ToList();
+                    
+                    Assert.Equal(3,results.Count);
+                    var docTypes = results.Select(x => x["@metadata"]["@collection"].Value<string>()).ToArray();
+                    Assert.Equal(3,docTypes.Count(t => t == "Users"));
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_filter_vertices_with_explicit_with_clause()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateMoviesData(store);
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                        with {from Users where id() = 'users/2'} as u
+                        match (u) select u.Name").ToList().Select(x => x["Name"].Value<string>()).ToArray();
+                    
+                    Assert.Equal(1,results.Length);
+                    results[0] = "Jill";
+                }
+            }
+        }
+
+
+        [Fact]
+        public void Empty_vertex_node_should_fail_the_query()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateMoviesData(store);
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<Movie>(@"
+                        match ()-[:HasRated.Movie]->(m:Movies) select m
+                    ").ToList());
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_query_with_vertices_from_map_reduce_index()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                WaitForIndexing(store);
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                        with { from index 'Orders/ByCompany' order by Count as long desc } as o
+                        match (o)-[:Company]->(c:Companies)
+                    ").ToList();
+
+                    Assert.NotEmpty(results); //sanity check
+
+                    var companiesInIndex = session.Advanced.RawQuery<JObject>(@"from index 'Orders/ByCompany' select Company").ToList();
+                    var companyNames = session.Load<dynamic>(companiesInIndex.Select(x => x["Company"].Value<string>()))
+                                              .Select(x => (string)x.Value.Name).ToArray();
+                    Assert.Equal(companyNames.Length,results.Count);
+
+                    var companiesFetchedFromGraphQuery = results.Select(x => x["c"]["Name"].Value<string>()).ToArray();
+                    foreach (var c in companyNames)
+                    {
+                        Assert.Contains(c, companiesFetchedFromGraphQuery);
+                    }
+                }
+            }
+        }
+
+        [Fact]
         public void Graph_query_can_handle_edges_defined_in_property_with_whitespaces()
         {
             using (var store = GetDocumentStore())
@@ -348,6 +482,365 @@ namespace FastTests.Graph
         }
 
         [Fact]
+        public void Can_query_multiple_match_clauses_with_intersection_no_intersecting_results()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Movie
+                    {
+                        Name = "M1"
+                    },"movies/1");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M2"
+                    },"movies/2");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M3"
+                    },"movies/3");
+
+                    session.Store(new User
+                    {
+                        Name = "A",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/1" }
+                        }
+                    });
+                    session.Store(new User
+                    {
+                        Name = "B",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/2" }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                       match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
+                             AND
+                             (u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
+                       select u1.Name as u1, m.Name as movie, u2.Name as u2
+                    ").ToList();
+
+                    //when doing intersection (AND) and there is no intersection in match clause results
+                    Assert.Empty(results);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_query_multiple_match_clauses_with_intersection_no_intersecting_results_and_right_clause_has_no_results()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Movie
+                    {
+                        Name = "M1"
+                    },"movies/1");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M2"
+                    },"movies/2");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M3"
+                    },"movies/3");
+
+                    session.Store(new User
+                    {
+                        Name = "A",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/1" }
+                        }
+                    });
+                    session.Store(new User
+                    {
+                        Name = "B",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/2" }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                       match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
+                             AND
+                             (u2:Users(Name = 'NON-EXISTENT'))-[:HasRated.Movie]->(m:Movies)
+                       select u1.Name as u1, m.Name as movie, u2.Name as u2
+                    ").ToList();
+
+                    Assert.Empty(results);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_query_multiple_match_clauses_with_intersection_no_intersecting_results_and_left_clause_has_no_results()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Movie
+                    {
+                        Name = "M1"
+                    },"movies/1");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M2"
+                    },"movies/2");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M3"
+                    },"movies/3");
+
+                    session.Store(new User
+                    {
+                        Name = "A",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/1" }
+                        }
+                    });
+                    session.Store(new User
+                    {
+                        Name = "B",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/2" }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                       match (u1:Users(Name = 'NON-EXISTENT'))-[:HasRated.Movie]->(m:Movies)
+                             AND
+                             (u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
+                       select u1.Name as u1, m.Name as movie, u2.Name as u2
+                    ").ToList();
+
+                    Assert.Empty(results);
+                }
+            }
+        }
+
+        [Fact]
+        public void And_Not_should_return_empty_results_where_ALL_results_intersect()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Movie
+                    {
+                        Name = "M1"
+                    },"movies/1");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M2"
+                    },"movies/2");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M3"
+                    },"movies/3");
+
+                    session.Store(new User
+                    {
+                        Name = "A",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/1" },
+                            new User.Rating{ Movie = "movies/2" }
+                        }
+                    });
+                    session.Store(new User
+                    {
+                        Name = "B",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/1" },
+                            new User.Rating{ Movie = "movies/2" }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                       match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
+                             AND 
+NOT
+                             (u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
+                       select u1.Name as u1, m.Name as movie, u2.Name as u2
+                    ").ToList();
+
+                    //when doing intersection (AND) and there is no intersection in match clause results
+                    Assert.Empty(results);
+                }
+            }
+        }
+
+        [Fact]
+        public void And_Not_should_return_only_results_that_dont_intersect()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Movie
+                    {
+                        Name = "M1"
+                    },"movies/1");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M2"
+                    },"movies/2");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M3"
+                    },"movies/3");
+
+                    session.Store(new User
+                    {
+                        Name = "A",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/1" },
+                            new User.Rating{ Movie = "movies/2" }
+                        }
+                    });
+                    session.Store(new User
+                    {
+                        Name = "B",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/1" },
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                       match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
+                             AND NOT
+                             (u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
+                       select u1.Name as u1, m.Name as movie, u2.Name as u2
+                    ").ToList().Select(x => new
+                    {
+                        u1 = x["u1"]?.Value<string>(),
+                        u2 = x["u2"]?.Value<string>(),
+                        m = x["movie"].Value<string>()
+                    }).ToList();
+                    
+                    Assert.NotEmpty(results);
+                    Assert.Equal(1,results.Count);
+                    Assert.True(results.Any(x => x.u1 == "A" && x.m == "M2" && x.u2 == null));
+                }
+            }
+        }
+
+         [Fact]
+        public void And_Not_should_return_only_results_that_dont_intersect_even_if_right_clause_has_empty_results()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Movie
+                    {
+                        Name = "M1"
+                    },"movies/1");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M2"
+                    },"movies/2");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M3"
+                    },"movies/3");
+
+                    session.Store(new User
+                    {
+                        Name = "A",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/1" },
+                            new User.Rating{ Movie = "movies/2" }
+                        }
+                    });
+                    session.Store(new User
+                    {
+                        Name = "B",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/1" },
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                       match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
+                             AND NOT
+                             (u2:Users(Name = 'NON-EXISTENT'))-[:HasRated.Movie]->(m:Movies)
+                       select u1.Name as u1, m.Name as movie, u2.Name as u2
+                    ").ToList().Select(x => new
+                    {
+                        u1 = x["u1"]?.Value<string>(),
+                        u2 = x["u2"]?.Value<string>(),
+                        m = x["movie"].Value<string>()
+                    }).ToList();
+                    
+                    Assert.NotEmpty(results);
+                    Assert.Equal(2,results.Count);
+                    Assert.True(results.Any(x => x.u1 == "A" && x.m == "M1" && x.u2 == null));
+                    Assert.True(results.Any(x => x.u1 == "A" && x.m == "M2" && x.u2 == null));
+                }
+            }
+        }
+
+        
+        [Fact]
         public void Can_query_multiple_match_clauses_with_union_partial()
         {
             using (var store = GetDocumentStore())
@@ -395,7 +888,7 @@ namespace FastTests.Graph
                     var results = session.Advanced.RawQuery<JObject>(@"
                        match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
                              OR
-                             ( u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
+                             (u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
                        select u1.Name as u1, m.Name as movie, u2.Name as u2
                     ").ToList().Select(x => new
                     {
@@ -415,11 +908,374 @@ namespace FastTests.Graph
         }
 
         [Fact]
+        public void Can_query_multiple_match_clauses_with_union_and_left_clause_results_are_empty()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Movie
+                    {
+                        Name = "M1"
+                    },"movies/1");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M2"
+                    },"movies/2");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M3"
+                    },"movies/3");
+
+                    session.Store(new User
+                    {
+                        Name = "A",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/1" },
+                            new User.Rating{ Movie = "movies/3" }
+                        }
+                    });
+                    session.Store(new User
+                    {
+                        Name = "B",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/2" },
+                            new User.Rating{ Movie = "movies/3" }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                       match (u1:Users(Name = 'NON-EXISTENT'))-[:HasRated.Movie]->(m:Movies)
+                             OR
+                             (u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
+                       select u1.Name as u1, m.Name as movie, u2.Name as u2
+                    ").ToList().Select(x => new
+                    {
+                        u1 = x["u1"]?.Value<string>(),
+                        u2 = x["u2"]?.Value<string>(),
+                        m = x["movie"].Value<string>()
+                    }).ToList();
+
+                    Assert.NotEmpty(results);
+                    Assert.Equal(2,results.Count);
+                    Assert.True(results.Any(x => x.u1 == null && x.m == "M3" && x.u2 == "B"));
+                    Assert.True(results.Any(x => x.u1 == null && x.m == "M2" && x.u2 == "B"));
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_query_multiple_match_clauses_with_union_and_both_clause_results_are_empty()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Movie
+                    {
+                        Name = "M1"
+                    },"movies/1");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M2"
+                    },"movies/2");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M3"
+                    },"movies/3");
+
+                    session.Store(new User
+                    {
+                        Name = "A",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/1" },
+                            new User.Rating{ Movie = "movies/3" }
+                        }
+                    });
+                    session.Store(new User
+                    {
+                        Name = "B",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/2" },
+                            new User.Rating{ Movie = "movies/3" }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                       match (u1:Users(Name = 'NON-EXISTENT'))-[:HasRated.Movie]->(m:Movies)
+                             OR
+                             (u2:Users(Name = 'NON-EXISTENT2'))-[:HasRated.Movie]->(m:Movies)
+                       select u1.Name as u1, m.Name as movie, u2.Name as u2
+                    ").ToList();
+
+                    Assert.Empty(results);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_query_multiple_match_clauses_with_intersect_and_both_clause_results_are_empty()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Movie
+                    {
+                        Name = "M1"
+                    },"movies/1");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M2"
+                    },"movies/2");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M3"
+                    },"movies/3");
+
+                    session.Store(new User
+                    {
+                        Name = "A",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/1" },
+                            new User.Rating{ Movie = "movies/3" }
+                        }
+                    });
+                    session.Store(new User
+                    {
+                        Name = "B",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/2" },
+                            new User.Rating{ Movie = "movies/3" }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                       match (u1:Users(Name = 'NON-EXISTENT'))-[:HasRated.Movie]->(m:Movies)
+                             AND
+                             (u2:Users(Name = 'NON-EXISTENT2'))-[:HasRated.Movie]->(m:Movies)
+                       select u1.Name as u1, m.Name as movie, u2.Name as u2
+                    ").ToList();
+
+                    Assert.Empty(results);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_query_multiple_match_clauses_with_except_and_both_clause_results_are_empty()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Movie
+                    {
+                        Name = "M1"
+                    },"movies/1");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M2"
+                    },"movies/2");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M3"
+                    },"movies/3");
+
+                    session.Store(new User
+                    {
+                        Name = "A",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/1" },
+                            new User.Rating{ Movie = "movies/3" }
+                        }
+                    });
+                    session.Store(new User
+                    {
+                        Name = "B",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/2" },
+                            new User.Rating{ Movie = "movies/3" }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                       match (u1:Users(Name = 'NON-EXISTENT'))-[:HasRated.Movie]->(m:Movies)
+                             AND NOT
+                             (u2:Users(Name = 'NON-EXISTENT2'))-[:HasRated.Movie]->(m:Movies)
+                       select u1.Name as u1, m.Name as movie, u2.Name as u2
+                    ").ToList();
+
+                    Assert.Empty(results);
+                }
+            }
+        }
+
+        [Fact]
+        public void Invalid_intersection_operator_in_match_clauyse_should_fail_properly()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Movie
+                    {
+                        Name = "M1"
+                    },"movies/1");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M2"
+                    },"movies/2");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M3"
+                    },"movies/3");
+
+                    session.Store(new User
+                    {
+                        Name = "A",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/1" },
+                            new User.Rating{ Movie = "movies/3" }
+                        }
+                    });
+                    session.Store(new User
+                    {
+                        Name = "B",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/2" },
+                            new User.Rating{ Movie = "movies/3" }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<RavenException>(() => 
+                        session.Advanced.RawQuery<JObject>(@"
+                           match (u1:Users(Name = 'NON-EXISTENT'))-[:HasRated.Movie]->(m:Movies)
+                                  FOOBAR 
+                                 (u2:Users(Name = 'NON-EXISTENT2'))-[:HasRated.Movie]->(m:Movies)
+                           select u1.Name as u1, m.Name as movie, u2.Name as u2
+                        ").ToList());
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_query_multiple_match_clauses_with_union_and_right_clause_results_are_empty()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Movie
+                    {
+                        Name = "M1"
+                    },"movies/1");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M2"
+                    },"movies/2");
+
+                    session.Store(new Movie
+                    {
+                        Name = "M3"
+                    },"movies/3");
+
+                    session.Store(new User
+                    {
+                        Name = "A",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/1" },
+                            new User.Rating{ Movie = "movies/3" }
+                        }
+                    });
+                    session.Store(new User
+                    {
+                        Name = "B",
+                        HasRated = new List<User.Rating>
+                        {
+                            new User.Rating{ Movie = "movies/2" },
+                            new User.Rating{ Movie = "movies/3" }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                       match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
+                             OR
+                             (u2:Users(Name = 'NON-EXISTENT'))-[:HasRated.Movie]->(m:Movies)
+                       select u1.Name as u1, m.Name as movie, u2.Name as u2
+                    ").ToList().Select(x => new
+                    {
+                        u1 = x["u1"]?.Value<string>(),
+                        u2 = x["u2"]?.Value<string>(),
+                        m = x["movie"].Value<string>()
+                    }).ToList();
+
+                    Assert.NotEmpty(results);
+                    Assert.Equal(2,results.Count);
+                    Assert.True(results.Any(x => x.u1 == "A" && x.m == "M3" && x.u2 == null));
+                    Assert.True(results.Any(x => x.u1 == "A" && x.m == "M1" && x.u2 == null));
+                }
+            }
+        }
+
+        [Fact]
         public void Can_query_multiple_match_clauses_with_explicit_intersection()
         {
             using (var store = GetDocumentStore())
             {
                 CreateMoviesData(store);
+                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
@@ -438,7 +1294,7 @@ namespace FastTests.Graph
                     Assert.Contains(results, item => item.u1 == "Jack" && item.u2 == "Jill");
                     Assert.Contains(results, item => item.u1 == "Jack" && item.u2 == "Jack");
                     Assert.Contains(results, item => item.u1 == "Jill" && item.u2 == "Jill");
-                    Assert.Contains(results, item => item.u1 == "Jack" && item.u2 == "Jack");
+                    Assert.Contains(results, item => item.u1 == "Jill" && item.u2 == "Jack");
                 }
             }
         }
@@ -617,7 +1473,7 @@ namespace FastTests.Graph
             }
         }
 
-        [Fact(Skip = "WIP, should not pass yet")]
+        [Fact]
         public void Query_with_multiple_hops_in_the_same_direction_should_work()
         {
             using (var store = GetDocumentStore())
@@ -649,7 +1505,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {                   
                     //note : such query implies implicit intersection between
-                    // a -[likes]-> b and b -[likes]-> c
+                    // a -[likes]-> b and b -[likes]-> c, but it doesn't execute interesection-related code
                     var friends = session.Advanced.RawQuery<JObject>(@"
                         match (a:Dogs)-[:Likes]->(b:Dogs)-[:Likes]->(c:dogs)
                         select a.Name as A,b.Name as B,c.Name as C
@@ -663,8 +1519,65 @@ namespace FastTests.Graph
                         C = x["C"]?.Value<string>()
                     }).ToArray();
 
-                    Assert.Equal(1,resultPairs.Length);
-                    Assert.Contains(resultPairs, item => item.A == "Arava" && item.B == "Arava" && item.B == "Arava");
+                    Assert.Equal(2,resultPairs.Length);
+                    Assert.Contains(resultPairs, item => item.A == "Arava" && item.B == "Arava" && item.C == "Arava");
+                    Assert.Contains(resultPairs, item => item.A == "Arava" && item.B == "Arava" && item.C == "Oscar");
+                }
+            }
+        }
+
+        [Fact]
+        public void Query_with_multiple_hops_that_are_cycle_should_work()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var arava = new Dog
+                    {
+                        Name = "Arava",
+                        Likes = new []{ "dogs/2" }
+                    }; //dogs/1
+                    var oscar = new Dog
+                    {
+                        Name = "Oscar",
+                        Likes = new []{ "dogs/3" }
+
+                    }; //dogs/2
+                    var pheobe = new Dog
+                    {
+                        Name = "Pheobe",
+                        Likes = new []{ "dogs/1" }
+                    }; //dogs/3
+
+                    session.Store(arava,"dogs/1");
+                    session.Store(oscar,"dogs/2");
+                    session.Store(pheobe,"dogs/3");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {                   
+                    //note : such query implies implicit intersection between
+                    // a -[likes]-> b and b -[likes]-> c, but it doesn't execute interesection-related code
+                    var friends = session.Advanced.RawQuery<JObject>(@"
+                        match (a:Dogs)-[:Likes]->(b:Dogs)-[:Likes]->(c:dogs)
+                        select a.Name as A,b.Name as B,c.Name as C
+                        ")
+                        .ToList();
+
+                    var resultPairs = friends.Select(x => new
+                    {
+                        A = x["A"]?.Value<string>(),
+                        B = x["B"]?.Value<string>(),
+                        C = x["C"]?.Value<string>()
+                    }).ToArray();
+
+                    Assert.Equal(3,resultPairs.Length);
+                    Assert.Contains(resultPairs, item => item.A == "Arava" && item.B == "Oscar" && item.C == "Pheobe");
+                    Assert.Contains(resultPairs, item => item.A == "Oscar" && item.B == "Pheobe" && item.C == "Arava");
+                    Assert.Contains(resultPairs, item => item.A == "Pheobe" && item.B == "Arava" && item.C == "Oscar");
                 }
             }
         }
