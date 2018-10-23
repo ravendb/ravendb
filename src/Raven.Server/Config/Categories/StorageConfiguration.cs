@@ -64,5 +64,15 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.PrefetchResetThresholdInGb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size PrefetchResetThreshold { get; set; }
 
+        [Description("Minimal available free space in percentages on any disk used by a database before creating an alert. Set to null to disable.")]
+        [DefaultValue(15)]
+        [ConfigurationEntry("Storage.FreeSpaceAlertThresholdInPercentages", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int? FreeSpaceAlertThresholdInPercentages { get; set; }
+
+        [Description("Minimal available free space in megabytes on any disk used by a database before creating an alert. Set to null to disable.")]
+        [DefaultValue(1024)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Storage.FreeSpaceAlertThresholdInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size? FreeSpaceAlertThresholdInMb { get; set; }
     }
 }
