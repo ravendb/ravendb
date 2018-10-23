@@ -639,6 +639,15 @@ class serverDashboard extends viewModelBase {
     clusterManager = clusterTopologyManager.default;
     accessManager = accessManager.default.dashboardView;
     
+    osIcon = ko.pureComputed(() => {
+        const nodeInfo = this.clusterManager.nodeInfo();
+        if (nodeInfo) {
+            const type = nodeInfo.OsInfo.Type;
+            return clusterNode.osIcon(type);    
+        }
+        return null;
+    });
+    
     formattedUpTime: KnockoutComputed<string>;
     formattedStartTime: KnockoutComputed<string>;
     node: KnockoutComputed<clusterNode>;

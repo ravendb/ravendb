@@ -52,22 +52,22 @@ namespace Raven.Client.Documents.Session
             DocumentConventions conventions,
             JsonOperationContext context,
             JsonSerializer serializer,
-            DocumentInfo documentInfo)
+            DocumentInfo documentInfo,
+            bool removeIdentityProperty = true)
         {
-            if (value is ValueType || 
-                value is string || 
-                value is BlittableJsonReaderArray || 
+            if (value is ValueType ||
+                value is string ||
                 value is BlittableJsonReaderArray)
                 return value;
 
-            if (value is IEnumerable && !(value is IDictionary))
+            if (value is IEnumerable enumerable && !(enumerable is IDictionary))
             {
-                return ((IEnumerable)value).Cast<object>()
-                    .Select(v=> ConvertToBlittableIfNeeded(v, conventions, context, serializer, documentInfo));
+                return enumerable.Cast<object>()
+                    .Select(v => ConvertToBlittableIfNeeded(v, conventions, context, serializer, documentInfo, removeIdentityProperty));
             }
-            
+
             using (var writer = new BlittableJsonWriter(context, documentInfo))
-                return ConvertEntityToBlittableInternal(value, conventions, context, serializer, writer);
+                return ConvertEntityToBlittableInternal(value, conventions, context, serializer, writer, removeIdentityProperty);
         }
 
         internal static BlittableJsonReaderObject ConvertEntityToBlittable(
@@ -102,14 +102,15 @@ namespace Raven.Client.Documents.Session
             DocumentConventions conventions,
             JsonOperationContext context,
             JsonSerializer serializer,
-            BlittableJsonWriter writer)
+            BlittableJsonWriter writer,
+            bool removeIdentityProperty = true)
         {
             serializer.Serialize(writer, entity);
             writer.FinalizeDocument();
             var reader = writer.CreateReader();
             var type = entity.GetType();
 
-            var changes = TryRemoveIdentityProperty(reader, type, conventions);
+            var changes = removeIdentityProperty && TryRemoveIdentityProperty(reader, type, conventions);
             changes |= TrySimplifyJson(reader);
 
             if (changes)

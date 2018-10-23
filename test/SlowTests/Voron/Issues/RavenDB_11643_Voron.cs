@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron.Data.BTrees;
 using Xunit;
 
@@ -8,7 +9,7 @@ namespace SlowTests.Voron.Issues
 {
     public class RavenDB_11643_Voron : StorageTest
     {
-        [Fact]
+        [Fact64Bit]
         public void PageRefValidationOnBranchPagesShouldNotThrow()
         {
             using (var tx = Env.WriteTransaction())

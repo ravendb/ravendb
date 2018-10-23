@@ -49,6 +49,15 @@ class hyperlinkColumn<T> extends textColumn<T> {
             return super.renderCell(item, isSelected);
         }
     }
+
+    toDto(): virtualColumnDto {
+        return {
+            type: "hyperlink",
+            header: this.header,
+            width: this.width,
+            serializedValue: this.valueAccessor.toString()
+        };
+    }
 }
 
 export = hyperlinkColumn;

@@ -1,7 +1,6 @@
 import setupStep = require("viewmodels/wizard/setupStep");
 import router = require("plugins/router");
 import registrationInfoCommand = require("commands/wizard/registrationInfoCommand");
-import placeholderUtils = require("common/placeholderUtils");
 
 class license extends setupStep {
 
@@ -21,12 +20,6 @@ class license extends setupStep {
         return $.when({ redirect: "#welcome" });
     }
     
-    attached() {
-        super.attached();
-        
-        placeholderUtils.fixPlaceholders($("body"));
-    }
-
     save() {
         if (this.isValid(this.model.license().validationGroup)) {
             const model = this.model;

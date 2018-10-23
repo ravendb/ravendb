@@ -126,7 +126,7 @@ class query extends viewModelBase {
     criteria = ko.observable<queryCriteria>(queryCriteria.empty());
     cacheEnabled = ko.observable<boolean>(true);
 
-    private indexEntrieStateWasTrue: boolean = false; // Used to save current query settings when switching to a 'dynamic' index
+    private indexEntriesStateWasTrue: boolean = false; // Used to save current query settings when switching to a 'dynamic' index
 
     columnsSelector = new columnsSelector<document>();
 
@@ -562,12 +562,12 @@ class query extends viewModelBase {
 
         if (this.isCollectionQuery() && this.criteria().indexEntries()) {
             this.criteria().indexEntries(false);
-            this.indexEntrieStateWasTrue = true; // save the state..
+            this.indexEntriesStateWasTrue = true; // save the state..
         }
 
-        if (!this.isCollectionQuery() && this.indexEntrieStateWasTrue) {
+        if (!this.isCollectionQuery() && this.indexEntriesStateWasTrue) {
             this.criteria().indexEntries(true);
-            this.indexEntrieStateWasTrue = false;
+            this.indexEntriesStateWasTrue = false;
         }
 
         this.runQuery();

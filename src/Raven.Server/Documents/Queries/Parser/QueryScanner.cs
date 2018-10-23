@@ -417,6 +417,33 @@ namespace Raven.Server.Documents.Queries.Parser
                         // need to go back to stay in the same place :-)
                         _pos--;
                         break;
+                    case '/':
+                        // Detect // from the second /, we know that there is at least the { before us,
+                        // so no need to do range check
+                        if(_q[_pos-1] == '/')
+                        {
+                            for (; _pos < _q.Length; _pos++)
+                            {
+                                if (_q[_pos] == '\r' || _q[_pos] == '\n')
+                                    break;
+                            }
+                        }
+                        break;
+                    case '*':
+                        // Detect /* from the second *, we know that there is at least the { before us,
+                        // so no need to do range check
+                        if (_q[_pos - 1] == '/')
+                        {
+                            for (; _pos < _q.Length; _pos++)
+                            {
+                                if (_q[_pos] == '*' && _pos +1 < _q.Length && _q[_pos+1] == '/')
+                                {
+                                    _pos++;
+                                    break;
+                                }
+                            }
+                        }
+                        break;
                     case '{':
                         nested++;
                         break;

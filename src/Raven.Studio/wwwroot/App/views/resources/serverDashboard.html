@@ -5,7 +5,7 @@
                 <div class="panel panel-default">
                     <div class="panel-body">
                         <h2 title="Node Tag" class="text-primary">
-                            <i class="icon-server"></i><span data-bind="text: 'Node ' + clusterManager.localNodeTag()"></span>
+                            <i data-bind="attr: { class: osIcon }"></i><span data-bind="text: 'Node ' + clusterManager.localNodeTag()"></span>
                         </h2>
                         <div title="Node url">
                             <i class="icon-link"></i><span data-bind="text: clusterManager.localNodeUrl"></span>

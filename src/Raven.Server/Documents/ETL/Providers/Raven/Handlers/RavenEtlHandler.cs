@@ -17,8 +17,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Handlers
         {
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                context.OpenReadTransaction();
-
                 var testConfig = context.ReadForMemory(RequestBodyStream(), "TestRavenEtlScript");
 
                 var testScript = JsonDeserializationServer.TestRavenEtlScript(testConfig);

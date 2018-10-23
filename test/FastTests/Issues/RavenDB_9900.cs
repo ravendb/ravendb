@@ -10,14 +10,14 @@ namespace FastTests.Issues
         [Fact]
         public void Database_creation_using_relative_path_creates_directories_incorrectly()
         {
-            var server = new RavenConfiguration(null, ResourceType.Server);
+            var server = RavenConfiguration.CreateForServer(null);
 
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true");
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), "RavenData");
 
             server.Initialize();
 
-            var database = RavenConfiguration.CreateFrom(server, "foo", ResourceType.Database);
+            var database = RavenConfiguration.CreateForDatabase(server, "foo");
 
             database.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true");
             database.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), @"MyWork\MyDatabaseFolder");
