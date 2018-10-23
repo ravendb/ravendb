@@ -13,8 +13,8 @@
     -ms-transform: translateX(100%);
     transform: translateX(100%);
     z-index: @zindex-notification-center;
-    background-color: @gray-base;
-    border-left: 1px solid @gray-dark;
+    background-color: @notification-center-bg;
+    border-left: 1px solid @layout-border;
     -webkit-transition: transform @menu-transition-ease;
     -moz-transition: transform @menu-transition-ease;
     -ms-transition: transform @menu-transition-ease;
@@ -29,7 +29,7 @@
 
     .notification-actions {
         flex-shrink: 0;
-        background-color: @gray-darker;
+        background-color: @panel-bg;
         position: relative;
         z-index: 1;
         margin-bottom: @notification-margin;
@@ -71,7 +71,7 @@
             background-color: transparent;
 
             &.active {
-                background-color: @gray-base;
+                background-color: @notification-center-bg;
             }
 
             &:not(.active) {
@@ -110,14 +110,14 @@
         .text-progress {
             font-size: 11px;
         }
-        
+
         .close {
             position: absolute;
             top: 0;
             right: 0;
             padding: 6px;
             font-size: 14px;
-            color: @gray-light;
+            color: @text-color;
 
             &:hover {
                 color: @gray-lighter;
@@ -197,16 +197,17 @@
             .time {
                 font-size: 12px;
                 line-height: 12px;
-                color: @gray;
+                color: @text-muted;
                 margin-bottom: @grid-gutter-width /2;
             }
 
             p {
                 line-height: 1.35;
                 font-size: 14px;
-                color: @gray-lighter;
+                color: @text-emphasis;
                 word-wrap: break-word;
             }
+
             h4,
             h5 {
                 margin-top: 0;

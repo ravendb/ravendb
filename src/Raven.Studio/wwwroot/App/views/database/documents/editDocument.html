@@ -19,7 +19,7 @@
                             <!--<a class="reset-color btn-toggle markFavourite" data-bind="click: connectedDocuments.toggleStar">-->
                                 <!--<span data-bind="attr: { class: connectedDocuments.currentDocumentIsStarred()?'icon-star-filled favorite':'icon-star' }"></span>-->
                             <!--</a>-->
-                            <span class="obj-name" data-bind="text: userSpecifiedId"></span>
+                            <span class="obj-name on-base-background" data-bind="text: userSpecifiedId"></span>
                             
                             <span data-bind="visible: inReadOnlyMode() && !isDeleteRevision()" class="text-primary revision"> | REVISION</span>
                             <span data-bind="visible: inReadOnlyMode() && isDeleteRevision()" class="text-primary revision"> | DELETED REVISION</span>
@@ -29,7 +29,7 @@
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <p class="pull-right-md text-right-md padding padding-xs" data-bind="if: displayLastModifiedDate()">
+                    <p class="pull-right-md text-right-md padding padding-xs on-base-background" data-bind="if: displayLastModifiedDate()">
                         <i class="icon-recent"></i>
                         <small>Last modified <span data-bind="text: $root.lastModifiedAsAgo"></span></small>
                     </p>

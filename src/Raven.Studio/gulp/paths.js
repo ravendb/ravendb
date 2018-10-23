@@ -45,7 +45,7 @@ var paths = {
         'wwwroot/lib/Durandal/css/durandal.css',
         'wwwroot/lib/animate.css/animate.css',
         'wwwroot/lib/prism/themes/prism-dark.css',
-        'wwwroot/Content/css/styles.css',
+        'wwwroot/Content/css/styles-light.css',
         'wwwroot/Content/css/legacy_styles.css'
     ],
     externalLibs: [

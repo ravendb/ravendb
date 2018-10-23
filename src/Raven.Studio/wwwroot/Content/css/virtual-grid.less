@@ -1,5 +1,5 @@
 ﻿.virtual-grid, .static-grid {
-    background-color: @gray-darker;
+    background-color: @panel-bg;
     padding: @grid-gutter-width/4;
     overflow-x: hidden;
 
@@ -49,10 +49,6 @@
         margin-left: -1px;
     }
 
-    @token-number: #CCCCCC;
-    @token-boolean: #20c0e6;
-    @token-string: #eca136;
-
     .token-number {
         color: @token-number;
     }
@@ -65,9 +61,7 @@
         color: @token-string;
     }
 
-    @row-bg: @gray-base;
-    @row-bg-selection-preview: @gray-darker;
-    @row-bg-selected: @gray-dark;
+
 
     .virtual-row {
         position: absolute;
@@ -165,27 +159,27 @@
     .text-cell {
         text-overflow: ellipsis;
         overflow: hidden;
-        
+
         &.flags-cell {
             i {
-                opacity: 0.2;
+                opacity: 0.4;
                 font-size: 100%;
             }
-            
+
             &.attachments {
                 i[class=icon-attachment] {
                     opacity: 1;
                     color: @color-attachments;
                 }
             }
-            
+
             &.revisions {
                 i[class=icon-revisions] {
                     opacity: 1;
                     color: @color-revisions;
                 }
             }
-            
+
             &.counters {
                 i[class=icon-new-counter] {
                     opacity: 1;
@@ -194,8 +188,8 @@
             }
         }
     }
-    
-    
+
+
 
     .eval-error {
         color: @brand-danger;
@@ -210,19 +204,19 @@
 
     .viewport.flex-window-scroll {
         overflow-x: auto;
-        background-color: @gray-base;
+        background-color: @well-bg;
     }
-    
+
     &.condensed {
         .column {
             line-height: 25px;
         }
-        
+
         .cell {
             font-size: 11px;
             line-height: 25px;
         }
-        
+
         .column-container {
             .column {
                 line-height: 25px;
@@ -240,7 +234,7 @@
             overflow: hidden;
 
             & + .cell {
-                border-left: 1px solid @gray-darker;
+                border-left: 1px solid @hr-border;
 
                 &:before {
                     content: '';
@@ -257,11 +251,11 @@
 
         .column {
             position: relative;
-            overflow:hidden;
-            text-overflow:ellipsis;
+            overflow: hidden;
+            text-overflow: ellipsis;
 
             + .column {
-                border-left: 1px solid @gray-dark;
+                border-left: 1px solid @hr-border;
 
                 &:before {
                     content: '';

@@ -1,6 +1,6 @@
 <div class="content-margin">
     <div class="flex-vertical absolute-fill">
-        <div class="flex-horizontal margin-bottom margin-bottom-sm" role="form" style="position:relative">
+        <div class="flex-horizontal flex-wrap margin-bottom margin-bottom-sm" role="form">
             <div class="form-inline">
                 <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter indexes (Alt+/)" data-bind="textInput: searchText, enable: hasAnyData" />
 
@@ -26,7 +26,7 @@
                 <small>Buffer is full, clear graph data to continue</small>
             </div>
             <div class="flex-separator"></div>
-            
+
             <button class="btn btn-default btn-sm margin-right margin-right-sm" data-bind="click: clearBrush, visible: clearSelectionVisible">
                 <span>Clear selection</span>
             </button>
@@ -54,7 +54,7 @@
                             <i class="icon-xl global-spinner text-muted"></i>
                             <h2 class="text-center">Loading ...</h2>
                         </div>
-                        
+
                     </div>
                 </div>
             </div>

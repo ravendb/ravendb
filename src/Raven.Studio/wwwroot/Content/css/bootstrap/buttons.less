@@ -14,10 +14,10 @@
   vertical-align: middle;
   touch-action: manipulation;
   cursor: pointer;
-  color:@gray-light;
-  background-color:transparent;
+  color:inherit;
+  background-color: @panel-bg;
   background-image: none; // Reset unusual Firefox-on-Android default style; see https://github.com/necolas/normalize.css/issues/214
-  border: 1px solid @gray-dark;
+  border: 1px solid @hr-border;
   white-space: nowrap;
   .button-size(@padding-base-vertical; @padding-base-horizontal; @font-size-small; @line-height-base; @btn-border-radius-base);
   .user-select(none);
@@ -34,17 +34,16 @@
   &:hover,
   &:focus,
   &.focus {
-    color: @btn-default-color;
     text-decoration: none;
   }
 
   &:active {
-      background-color: fadeout(@gray-base,50%);
+      background-color: fadeout(@gray,50%);
   }
   &.active {
     outline: 0;
     background-image: none;
-    .box-shadow(inset 0 3px 5px rgba(0,0,0,.125));
+    .box-shadow(inset 0 -1px 0px rgba(0,0,0,.125));
     background-color: fadeout(@gray,50%);
     color: @gray-lighter;
 

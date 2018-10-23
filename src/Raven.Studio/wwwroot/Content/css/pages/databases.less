@@ -113,11 +113,6 @@
             }
         }
 
-        &:hover {
-            background-color: lighten(@gray-darker, 3%);
-            transition: background-color 0.15s ease;
-        }
-
         .database-encryption-status {
             text-align: center;
             width: 21px;
@@ -130,10 +125,10 @@
             flex-wrap: wrap;
 
             a {
-                color: @gray-light;
+                color: @text-color;
 
                 &:hover {
-                    color: @gray-lighter;
+                    color: @text-emphasis;
                 }
             }
         }
@@ -242,11 +237,11 @@
             height: 22px;
         }
 
-        .text-disabled {
-            color: @gray-light;
+        a {
+            color: @text-color;
 
             &:hover {
-                color: lighten(@gray-light, 25%);
+                color: @text-emphasis;
                 transition: color .15s ease;
             }
         }
