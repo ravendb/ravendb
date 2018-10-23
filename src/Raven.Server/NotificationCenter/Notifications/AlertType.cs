@@ -48,6 +48,8 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         ReplicationMissingAttachments,
 
-        OutOfMemoryException
+        OutOfMemoryException,
+
+        UnexpectedIndexingThreadError
     }
 }
