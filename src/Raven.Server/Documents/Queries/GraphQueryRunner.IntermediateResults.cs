@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -8,7 +9,7 @@ namespace Raven.Server.Documents.Queries
         {
             private Dictionary<string, Dictionary<string, Match>> _matchesByAlias;
             private Dictionary<string, Dictionary<string, Match>> MatchesByAlias => 
-                _matchesByAlias ??( _matchesByAlias = new Dictionary<string, Dictionary<string, Match>>());
+                _matchesByAlias ??( _matchesByAlias = new Dictionary<string, Dictionary<string, Match>>(StringComparer.OrdinalIgnoreCase));
 
             public void Add(Match match)
             {
@@ -32,7 +33,7 @@ namespace Raven.Server.Documents.Queries
             public void EnsureExists(string alias)
             {
                 if (MatchesByAlias.TryGetValue(alias, out _) == false)
-                    MatchesByAlias[alias] =  new Dictionary<string, Match>();
+                    MatchesByAlias[alias] =  new Dictionary<string, Match>(StringComparer.OrdinalIgnoreCase);
             }
         }
     }

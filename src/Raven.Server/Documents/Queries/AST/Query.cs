@@ -52,9 +52,21 @@ namespace Raven.Server.Documents.Queries.AST
                 GraphQuery.WithDocumentQueries = new Dictionary<StringSegment, Query>();
             }
 
-            if (GraphQuery.WithDocumentQueries.ContainsKey(alias)  )
-                throw new InvalidQueryException($"Allias {alias} is already in use on a diffrent 'With' clause", 
+            if (GraphQuery.WithDocumentQueries.TryGetValue(alias, out var existing))
+            {
+                if (query.From.From.Compound.Count == 0)
+                    return; // reusing an alias defined explicitly before
+
+                if(existing.From.From.Compound.Count == 0)
+                {
+                    // using an alias that is defined _later_ in the query
+                    GraphQuery.WithDocumentQueries[alias] = query;
+                    return;
+                }
+
+                throw new InvalidQueryException($"Allias {alias} is already in use on a diffrent 'With' clause",
                     QueryText, null);
+            }
 
             GraphQuery.WithDocumentQueries.Add(alias, query);
         }
@@ -72,8 +84,13 @@ namespace Raven.Server.Documents.Queries.AST
             }
 
             if (GraphQuery.WithEdgePredicates.ContainsKey(alias))
+            {
+                if (expr.Path.Compound.Count == 0 && expr.OrderBy == null && expr.Where == null)
+                    return;
+
                 throw new InvalidQueryException($"Allias {alias} is already in use on a diffrent 'With' clause",
                     QueryText, null);
+            }
 
             GraphQuery.WithEdgePredicates.Add(alias, expr);
         }
