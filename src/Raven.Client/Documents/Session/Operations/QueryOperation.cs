@@ -193,8 +193,18 @@ namespace Raven.Client.Documents.Session.Operations
             return result;
         }
 
-        private static ConcurrentDictionary<Type, Type> _wrapperTypes;
+        private static ConcurrentDictionary<Type, (Type, PropertyInfo)> _wrapperTypes;
         private const string DummyPropertyName = "Result";
+
+        private static (Type, PropertyInfo) AddWrapperTypeAndPropertyToCache<T>()
+        {
+            var wrapperType = new
+            {
+                Result = Activator.CreateInstance<T>()
+            }.GetType();
+
+            return (wrapperType, wrapperType.GetProperty(DummyPropertyName));
+        }
 
         private static T DeserializeInnerArray<T>(BlittableJsonReaderObject document, string fieldToFetch, InMemoryDocumentSessionOperations session,
             BlittableJsonReaderArray blittableArray)
@@ -206,14 +216,9 @@ namespace Raven.Client.Documents.Session.Operations
 
             document.Modifications.Remove(fieldToFetch);
 
-            _wrapperTypes = _wrapperTypes ?? new ConcurrentDictionary<Type, Type>();
+            _wrapperTypes = _wrapperTypes ?? new ConcurrentDictionary<Type, (Type, PropertyInfo)>();
 
-            var wrapperType = _wrapperTypes.GetOrAdd(typeof(T), new
-            {
-                Result = Activator.CreateInstance<T>()
-            }.GetType());
-
-            var property = wrapperType.GetProperty(DummyPropertyName);
+            var (wrapperType, property) = _wrapperTypes.GetOrAdd(typeof(T), AddWrapperTypeAndPropertyToCache<T>());
             var deserialized = session.Conventions.DeserializeEntityFromBlittable(wrapperType, document);
 
             return (T)property.GetValue(deserialized);
