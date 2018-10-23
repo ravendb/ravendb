@@ -1117,8 +1117,8 @@ namespace Voron
         public byte[] MasterKey;
 
         public string OnCreateDirectoryExec;
-        public string OnCreateDirectoryArguments;
-        public TimeSpan OnCreateDirectoryExecTimeout;
+        public string OnCreateDirectoryExecArguments;
+        public TimeSpan OnCreateDirectoryExecTimeoutInSec;
         public string DatabaseName;
         public EnvironmentType Type;
 
@@ -1211,6 +1211,7 @@ namespace Voron
         System,
         Database,
         Index,
-        Configuration
+        Configuration,
+        Compaction
     }
 }

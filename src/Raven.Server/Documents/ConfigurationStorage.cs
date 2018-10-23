@@ -43,8 +43,8 @@ namespace Raven.Server.Documents
             options.NumOfConcurrentSyncsPerPhysDrive = db.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             options.MasterKey = db.MasterKey?.ToArray();
             options.OnCreateDirectoryExec = db.Configuration.Storage.OnCreateDirectoryExec;
-            options.OnCreateDirectoryArguments = db.Configuration.Storage.OnCreateDirectoryArguments;
-            options.OnCreateDirectoryExecTimeout = db.Configuration.Storage.OnCreateDirectoryExecTimeout.AsTimeSpan;
+            options.OnCreateDirectoryExecArguments = db.Configuration.Storage.OnCreateDirectoryExecArguments;
+            options.OnCreateDirectoryExecTimeoutInSec = db.Configuration.Storage.OnCreateDirectoryExecTimeoutInSec.AsTimeSpan;
             options.DatabaseName = db.Name;
             options.Type = EnvironmentType.Configuration;
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = db.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
