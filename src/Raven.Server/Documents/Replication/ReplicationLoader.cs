@@ -15,6 +15,7 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -162,6 +163,67 @@ namespace Raven.Server.Documents.Replication
 
         public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
+            var supportedVersions =
+                TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Replication, tcpConnectionOptions.ProtocolVersion);
+            if (supportedVersions.Replication.CanPull)
+            {
+                // wait for replication type
+                using (tcpConnectionOptions.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (var readerObject = context.ParseToMemory(
+                    tcpConnectionOptions.Stream,
+                    "IncomingReplication/get-last-etag-message read",
+                    BlittableJsonDocumentBuilder.UsageMode.None,
+                    buffer))
+                {
+                    var initialRequest = JsonDeserializationServer.ReplicationInitialRequest(readerObject);
+                    if (initialRequest.PullReplication)
+                    {
+                        var externalReplication = new ExternalReplication
+                        {
+                            Database = Database.Name
+                        };
+                        var outgoingReplication = new OutgoingReplicationHandler(this, Database, externalReplication, external: true, initialRequest.Info);
+                        outgoingReplication.Failed += OnOutgoingSendingFailed;
+                        outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
+                        _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
+
+                        outgoingReplication.StartPullReplication(tcpConnectionOptions.Stream, supportedVersions);
+                        OutgoingReplicationAdded?.Invoke(outgoingReplication);
+                        return;
+                    }
+                }
+            }
+
+            CreateIncomingInstance(tcpConnectionOptions, buffer);
+        }
+
+        public void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer)
+        {
+            var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, buffer);
+
+            var newIncoming = new IncomingReplicationHandler(
+                tcpConnectionOptions,
+                getLatestEtagMessage,
+                this,
+                buffer);
+
+            newIncoming.Failed += OnIncomingReceiveFailed;
+            newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
+
+            // need to safeguard against two concurrent connection attempts
+            var newConnection = _incoming.GetOrAdd(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming);
+            if (newConnection == newIncoming)
+            {
+                newIncoming.Start();
+                IncomingReplicationAdded?.Invoke(newIncoming);
+                ForceTryReconnectAll();
+            }
+            else
+                newIncoming.Dispose();
+        }
+
+        private ReplicationLatestEtagRequest IncomingInitialHandshake(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer)
+        {
             ReplicationLatestEtagRequest getLatestEtagMessage;
             using (tcpConnectionOptions.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var readerObject = context.ParseToMemory(
@@ -190,7 +252,7 @@ namespace Raven.Server.Documents.Replication
 
                 var incomingConnectionRejectionInfos = _incomingRejectionStats.GetOrAdd(connectionInfo,
                     _ => new ConcurrentQueue<IncomingConnectionRejectionInfo>());
-                incomingConnectionRejectionInfos.Enqueue(new IncomingConnectionRejectionInfo { Reason = e.ToString() });
+                incomingConnectionRejectionInfos.Enqueue(new IncomingConnectionRejectionInfo {Reason = e.ToString()});
 
                 try
                 {
@@ -242,32 +304,15 @@ namespace Raven.Server.Documents.Replication
                 {
                     // do nothing   
                 }
+
                 throw;
             }
-
-            var newIncoming = new IncomingReplicationHandler(
-                tcpConnectionOptions,
-                getLatestEtagMessage,
-                this,
-                buffer);
-
-            newIncoming.Failed += OnIncomingReceiveFailed;
-            newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
 
             if (_log.IsInfoEnabled)
                 _log.Info(
                     $"Initialized document replication connection from {connectionInfo.SourceDatabaseName} located at {connectionInfo.SourceUrl}");
 
-            // need to safeguard against two concurrent connection attempts
-            var newConnection = _incoming.GetOrAdd(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming);
-            if (newConnection == newIncoming)
-            {
-                newIncoming.Start();
-                IncomingReplicationAdded?.Invoke(newIncoming);
-                ForceTryReconnectAll();
-            }
-            else
-                newIncoming.Dispose();
+            return getLatestEtagMessage;
         }
 
         private void ForceTryReconnectAll()

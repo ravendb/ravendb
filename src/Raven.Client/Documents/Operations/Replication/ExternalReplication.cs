@@ -15,6 +15,7 @@ namespace Raven.Client.Documents.Operations.Replication
         public string ConnectionStringName;
         public string MentorNode;
         public TimeSpan DelayReplicationFor;
+        public bool PullReplication;
 
         [JsonDeserializationIgnore]
         public RavenConnectionString ConnectionString; // this is in memory only
@@ -52,6 +53,7 @@ namespace Raven.Client.Documents.Operations.Replication
             json[nameof(MentorNode)] = MentorNode;
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(DelayReplicationFor)] = DelayReplicationFor;
+            json[nameof(PullReplication)] = PullReplication;
             return json;
         }
 

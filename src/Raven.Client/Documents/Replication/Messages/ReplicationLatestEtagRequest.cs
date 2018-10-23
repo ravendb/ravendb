@@ -1,4 +1,6 @@
-﻿namespace Raven.Client.Documents.Replication.Messages
+﻿using Raven.Client.ServerWide.Commands;
+
+namespace Raven.Client.Documents.Replication.Messages
 {
     public class ReplicationLatestEtagRequest
     {
@@ -11,5 +13,12 @@
         public string SourceTag { get; set; }
 
         public string SourceMachineName { get; set; }
+    }
+
+    public class ReplicationInitialRequest
+    {
+        public bool PullReplication { get; set; }
+
+        public TcpConnectionInfo Info { get; set; }
     }
 }

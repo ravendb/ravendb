@@ -42,6 +42,31 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
+        public async Task PullExternalReplicationShouldWork()
+        {
+            using (var store1 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_FooBar-1"
+            }))
+            using (var store2 = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_FooBar-2"
+            }))
+            {
+                await SetupPullReplicationAsync(store1, store2);
+
+                using (var s2 = store2.OpenSession())
+                {
+                    s2.Store(new User(), "foo/bar");
+                    s2.SaveChanges();
+                }
+
+                var timeout = 3000;
+                Assert.True(WaitForDocument(store1, "foo/bar", timeout), store1.Identifier);
+            }
+        }
+
+        [Fact]
         public async Task DelayedExternalReplication()
         {
             using (var store1 = GetDocumentStore())

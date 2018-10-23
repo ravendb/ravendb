@@ -246,6 +246,27 @@ namespace FastTests.Server.Replication
             return resList;
         }
 
+        public async Task<List<ModifyOngoingTaskResult>> SetupPullReplicationAsync(DocumentStore fromStore, params DocumentStore[] toStores)
+        {
+            var tasks = new List<Task<ModifyOngoingTaskResult>>();
+            var resList = new List<ModifyOngoingTaskResult>();
+            foreach (var store in toStores)
+            {
+                var databaseWatcher = new ExternalReplication(store.Database, $"ConnectionString-{store.Identifier}")
+                {
+                    PullReplication = true
+                };
+                ModifyReplicationDestination(databaseWatcher);
+                tasks.Add(AddWatcherToReplicationTopology(fromStore, databaseWatcher));
+            }
+            await Task.WhenAll(tasks);
+            foreach (var task in tasks)
+            {
+                resList.Add(await task);
+            }
+            return resList;
+        }
+
         public static async Task SetScriptResolutionAsync(DocumentStore store, string script, string collection)
         {
             var resolveByCollection = new Dictionary<string, ScriptResolver>
