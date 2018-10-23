@@ -127,7 +127,19 @@ namespace Sparrow.Utils
         
         private static byte* ThrowFailedToAllocate(long size, ThreadStats thread, OutOfMemoryException e)
         {
-            throw new OutOfMemoryException($"Failed to allocate additional {new Size(size, SizeUnit.Bytes)} to already allocated {new Size(thread.Allocations, SizeUnit.Bytes)}", e);
+            long allocated = 0;
+            foreach (var threadAllocationsValue in AllThreadStats)
+            {
+                allocated += threadAllocationsValue.TotalAllocated;
+            }
+
+            var managed = MemoryInformation.GetManagedMemoryInBytes();
+            var unmanagedMemory = MemoryInformation.GetUnManagedAllocationsInBytes();
+            throw new OutOfMemoryException($"Failed to allocate additional {new Size(size, SizeUnit.Bytes)} " +
+                                           $"to already allocated {new Size(thread.TotalAllocated, SizeUnit.Bytes)} by this thread. " +
+                                           $"Total allocated by all threads: {new Size(allocated, SizeUnit.Bytes)}, " +
+                                           $"Managed memory: {new Size(managed, SizeUnit.Bytes)}, " +
+                                           $"Un-managed memory: {new Size(unmanagedMemory, SizeUnit.Bytes)}", e);
         }
 
         private static void FixupReleasesFromOtherThreads(ThreadStats thread)
