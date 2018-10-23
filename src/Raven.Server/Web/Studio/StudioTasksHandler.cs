@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Formatting;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
@@ -54,6 +55,55 @@ namespace Raven.Server.Web.Studio
             }
 
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/studio-tasks/offline-migration-test", "GET", AuthorizationStatus.Operator)]
+        public Task OfflineMigrationTest()
+        {
+            var mode = GetStringQueryString("mode");
+            var path = GetStringQueryString("path");
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                bool isValid = true;
+                string errorMessage = null;
+                
+                try
+                {
+                    switch (mode)
+                    {
+                        case "dataDir":
+                            OfflineMigrationConfiguration.ValidateDataDirectory(path);
+                            break;
+                        case "migratorPath":
+                            OfflineMigrationConfiguration.ValidateExporterPath(path);
+                            break;
+                        default:
+                            throw new BadRequestException("Unknown mode: " + mode);
+                    }
+                }
+                catch (Exception e)
+                {
+                    isValid = false;
+                    errorMessage = e.Message;
+                }
+                
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(OfflineMigrationValidation.IsValid)] = isValid,
+                        [nameof(OfflineMigrationValidation.ErrorMessage)] = errorMessage
+                    });
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+        
+        public class OfflineMigrationValidation
+        {
+            public bool IsValid { get; set; } 
+            public string ErrorMessage { get; set; }
         }
 
         [RavenAction("/studio-tasks/is-valid-name", "GET", AuthorizationStatus.ValidUser)]

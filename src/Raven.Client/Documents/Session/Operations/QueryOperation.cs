@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -10,7 +11,9 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Client.Documents.Session.Operations
@@ -163,8 +166,16 @@ namespace Raven.Client.Documents.Session.Operations
 
                 if (fieldsToFetch.FieldsToFetch != null && fieldsToFetch.FieldsToFetch[0] == fieldsToFetch.Projections[0])
                 {
-                    if (inner is BlittableJsonReaderObject innerJson) //extraction from original type
+                    if (inner is BlittableJsonReaderObject innerJson)
+                    {
+                        //extraction from original type
                         document = innerJson;
+                    }
+                    else if (inner is BlittableJsonReaderArray bjra && 
+                             JavascriptConversionExtensions.LinqMethodsSupport.IsCollection(type))
+                    {
+                        return DeserializeInnerArray<T>(document, fieldsToFetch.FieldsToFetch[0], session, bjra);
+                    }
                 }
             }
 
@@ -180,6 +191,37 @@ namespace Raven.Client.Documents.Session.Operations
             }
 
             return result;
+        }
+
+        private static ConcurrentDictionary<Type, (Type, PropertyInfo)> _wrapperTypes;
+        private const string DummyPropertyName = "Result";
+
+        private static (Type, PropertyInfo) AddWrapperTypeAndPropertyToCache<T>()
+        {
+            var wrapperType = new
+            {
+                Result = Activator.CreateInstance<T>()
+            }.GetType();
+
+            return (wrapperType, wrapperType.GetProperty(DummyPropertyName));
+        }
+
+        private static T DeserializeInnerArray<T>(BlittableJsonReaderObject document, string fieldToFetch, InMemoryDocumentSessionOperations session,
+            BlittableJsonReaderArray blittableArray)
+        {
+            document.Modifications = new DynamicJsonValue(document)
+            {
+                [DummyPropertyName] = blittableArray
+            };
+
+            document.Modifications.Remove(fieldToFetch);
+
+            _wrapperTypes = _wrapperTypes ?? new ConcurrentDictionary<Type, (Type, PropertyInfo)>();
+
+            var (wrapperType, property) = _wrapperTypes.GetOrAdd(typeof(T), AddWrapperTypeAndPropertyToCache<T>());
+            var deserialized = session.Conventions.DeserializeEntityFromBlittable(wrapperType, document);
+
+            return (T)property.GetValue(deserialized);
         }
 
         [Obsolete("Use NoTracking instead")]

@@ -1,15 +1,19 @@
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/resources/database")
-import setCounterCommand = require("commands/database/documents/counters/setCounterCommand");
 import eventsCollector = require("common/eventsCollector");
-import getCountersCommand = require("commands/database/documents/counters/getCountersCommand");
+import CountersDetail = Raven.Client.Documents.Operations.Counters.CountersDetail;
+
+type setCounterDialogSaveAction = (newCounter: boolean, counterName: string, newValue: number,
+                                   db: database, onCounterNameError: (error: string) => void) => JQueryPromise<CountersDetail>;
 
 class setCounterDialog extends dialogViewModelBase {
    
-    result = $.Deferred<void>();
-
+    private readonly saveAction: setCounterDialogSaveAction;
+    
     createNewCounter = ko.observable<boolean>();
     counterName = ko.observable<string>();
+
+    showPerNodeValues: boolean;
     
     totalValue = ko.observable<number>(0);
     newTotalValue = ko.observable<number>();
@@ -25,8 +29,11 @@ class setCounterDialog extends dialogViewModelBase {
         newTotalValue: this.newTotalValue
     });
 
-    constructor(counter: counterItem, private documentId: string,  private db: database) {
+    constructor(counter: counterItem, private db: database, showPerNodeValues: boolean, saveAction: setCounterDialogSaveAction) {
         super();
+        
+        this.saveAction = saveAction;
+        this.showPerNodeValues = showPerNodeValues;
         
         if (counter) {
             this.createNewCounter(false);
@@ -48,34 +55,13 @@ class setCounterDialog extends dialogViewModelBase {
             
             this.spinners.update(true);
 
-            const counterDeltaValue = this.newTotalValue() - this.totalValue();
-            
-            const saveTask = () => {
-                new setCounterCommand(counterName, counterDeltaValue, this.documentId, this.db)
-                    .execute()
-                    .done(() => this.result.resolve())
-                    .always(() => {
-                        this.spinners.update(false);
-                        this.close();
-                    });
-            };
-
-            if (this.createNewCounter()) {
-                new getCountersCommand(this.documentId, this.db)
-                    .execute()
-                    .done((counters: Raven.Client.Documents.Operations.Counters.CountersDetail) => {
-                        if (counters.Counters.find(x => x.CounterName === counterName)) {
-                            this.spinners.update(false);
-                            
-                            this.counterName.setError("Counter '" + counterName + "' already exists.");
-                        } else {
-                            saveTask();
-                        }
-                    })
-                    .fail(() => this.spinners.update(false))
-            } else {
-                saveTask();
-            }
+            this.saveAction(this.createNewCounter(), counterName, this.newTotalValue(), this.db,
+                error => this.counterName.setError(error))
+                .done(() => {
+                    this.close();
+                })
+                .always(() => this.spinners.update(false));
+           
         }
     }
     

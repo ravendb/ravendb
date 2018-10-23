@@ -1,7 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
-import columnsSelector = require("viewmodels/partial/columnsSelector");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import generalUtils = require("common/generalUtils");
@@ -23,7 +22,6 @@ class clusterObserverLog extends viewModelBase {
     noLeader = ko.observable<boolean>(false);
 
     private gridController = ko.observable<virtualGridController<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>>();
-    columnsSelector = new columnsSelector<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>();
     private columnPreview = new columnPreviewPlugin<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>();
 
     termChanged: KnockoutComputed<boolean>;

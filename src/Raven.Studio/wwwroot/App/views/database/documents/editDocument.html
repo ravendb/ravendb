@@ -146,14 +146,14 @@
                         <button type="button" class="btn btn-xs btn-default doc-attachments" data-bind="css: { active: isAttachmentsActive() }, click: activateAttachments, disable: !$root.canViewAttachments()">
                             <div class="icon-attachment"></div>
                             Attachments
-                            <div class="badge" data-bind="text: $root.attachmentsCount() || ''"></div>
+                            <div class="badge" data-bind="text: $root.crudActionsProvider().attachmentsCount() || ''"></div>
                         </button>
                     </div>
                     <div class="btn-group" role="group">
                         <button type="button" class="btn btn-xs btn-default doc-counters" data-bind="css: { active: isCountersActive() }, click: activateCounters, disable: !$root.canViewCounters()">
                             <div class="icon-new-counter"></div>
                             Counters
-                            <div class="badge" data-bind="text: $root.countersCount() || ''"></div>
+                            <div class="badge" data-bind="text: $root.crudActionsProvider().countersCount() || ''"></div>
                         </button>
                     </div>
                     <div class="btn-group" id="revisions_pane" role="group" data-bind="visible: revisionsEnabled">
@@ -183,7 +183,7 @@
                 </div>
                 <div class="flex-window-head" data-bind="visible: isCountersActive() && $root.canViewCounters() && !$root.inReadOnlyMode()">
                     <div class="padding padding-xs margin-top margin-top-sm">
-                        <button type="button" class="btn btn-sm btn-primary btn-block" data-bind="click: _.partial($root.connectedDocuments.setCounter, null)">
+                        <button type="button" class="btn btn-sm btn-primary btn-block" data-bind="click: _.partial($root.crudActionsProvider().setCounter, null)">
                             <i class="icon-new-counter"></i>
                             <span>Add Counter</span>
                         </button>

@@ -58,6 +58,10 @@ class actionColumn<T> implements virtualColumn {
         </div>`;
     }
 
+    toDto(): virtualColumnDto {
+        throw new Error("Action column does not support serialization");
+    }
+
 }
 
 export = actionColumn;

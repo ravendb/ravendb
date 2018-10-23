@@ -71,42 +71,51 @@ namespace Raven.Client.Json
 
             if (current.Object != null)
             {
-                if (current.Buffers == null)
+                while (true)
                 {
-                    current.Buffers = GetPropertiesInsertionBuffer();
-                    current.Object.GetPropertiesByInsertionOrder(current.Buffers);
-                    SetToken(JsonToken.StartObject);
-                    return true;
-                }
-                var modifications = current.Object.Modifications;
-                if (modifications != null && modifications.Properties.Count < modifications.ModificationsIndex)
-                {
-                    (string Name, object Value) property;
-                    if (CurrentState != State.Property)
+                    if (current.Buffers == null)
                     {
-                        property = modifications.Properties[modifications.ModificationsIndex];
-                        SetToken(JsonToken.PropertyName, property.Item1);
+                        current.Buffers = GetPropertiesInsertionBuffer();
+                        current.Object.GetPropertiesByInsertionOrder(current.Buffers);
+                        SetToken(JsonToken.StartObject);
                         return true;
                     }
-                    property = modifications.Properties[modifications .ModificationsIndex++]; // move to next property
-                    return SetToken(GetTokenFromType(property.Item2), property.Item2);
+                    var modifications = current.Object.Modifications;
+                    if (modifications != null && modifications.ModificationsIndex < modifications.Properties.Count)
+                    {
+                        (string Name, object Value) property;
+                        if (CurrentState != State.Property)
+                        {
+                            property = modifications.Properties[modifications.ModificationsIndex];
+                            SetToken(JsonToken.PropertyName, property.Item1);
+                            return true;
+                        }
+                        property = modifications.Properties[modifications.ModificationsIndex++]; // move to next property
+                        return SetToken(GetTokenFromType(property.Item2), property.Item2);
+                    }
+                    if (current.Position == current.Object.Count)
+                    {
+                        SetToken(JsonToken.EndObject);
+                        _buffers.Push(current.Buffers);
+                        _items.Pop();
+                        return true;
+                    }
+                    if (CurrentState != State.Property)
+                    {
+                        int propIndex = current.Buffers.Properties[current.Position];
+                        current.Object.GetPropertyByIndex(propIndex,
+                            ref current.PropertyDetails);
+                        if (modifications?.Removals?.Contains(propIndex) == true)
+                        {
+                            current.Position++; // skip removed property
+                            continue; // now move to the next property...
+                        }
+                        SetToken(JsonToken.PropertyName, current.PropertyDetails.Name.ToString());
+                        return true;
+                    }
+                    current.Position++; // move to next property
+                    return SetToken(current.PropertyDetails.Token, current.PropertyDetails.Value);
                 }
-                if (current.Position == current.Object.Count)
-                {
-                    SetToken(JsonToken.EndObject);
-                    _buffers.Push(current.Buffers);
-                    _items.Pop();
-                    return true;
-                }
-                if (CurrentState != State.Property)
-                {
-                    current.Object.GetPropertyByIndex(current.Buffers.Properties[current.Position],
-                        ref current.PropertyDetails);
-                    SetToken(JsonToken.PropertyName, current.PropertyDetails.Name.ToString());
-                    return true;
-                }
-                current.Position++; // move to next property
-                return SetToken(current.PropertyDetails.Token, current.PropertyDetails.Value);
             }
             if (current.Array != null)
             {

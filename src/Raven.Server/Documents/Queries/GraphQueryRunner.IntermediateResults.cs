@@ -5,11 +5,12 @@ namespace Raven.Server.Documents.Queries
 {
     public partial class GraphQueryRunner
     {
-        public struct IntermediateResults// using struct because we have a single field 
+        public struct IntermediateResults// using struct because the size is 16 bytes only
         {
+            private Dictionary<string, List<Match>> _anonymousMatchesByAlias;
             private Dictionary<string, Dictionary<string, Match>> _matchesByAlias;
-            private Dictionary<string, Dictionary<string, Match>> MatchesByAlias => 
-                _matchesByAlias ??( _matchesByAlias = new Dictionary<string, Dictionary<string, Match>>(StringComparer.OrdinalIgnoreCase));
+
+
 
             public void Add(Match match)
             {
@@ -21,19 +22,50 @@ namespace Raven.Server.Documents.Queries
 
             public void Add(string alias, Match match, Document instance)
             {
-                //TODO: need to handle map/reduce results?
-                MatchesByAlias[alias][instance.Id] = match;
+                //we have map/reduce result that has no id since it is not a document
+                if (instance.Id == null) 
+                {
+                    _anonymousMatchesByAlias[alias].Add(match);
+                }
+                else
+                {
+                    _matchesByAlias[alias][instance.Id] = match;
+                }
             }
 
             public bool TryGetByAlias(string alias, out Dictionary<string,Match> value)
             {
-                return MatchesByAlias.TryGetValue(alias, out value);
+                return _matchesByAlias.TryGetValue(alias, out value);
             }
+
+            public bool TryGetMatchesForAlias(string alias, out ICollection<Match> value)
+            {
+                if(_anonymousMatchesByAlias.TryGetValue(alias, out var anonymousAliases) && 
+                    anonymousAliases.Count > 0)
+                {
+                    value = anonymousAliases;
+                    return true;
+                }
+                if(_matchesByAlias.TryGetValue(alias, out var dic) == false)
+                {
+                    value = null;
+                    return false;
+                }
+                value = dic.Values;
+                return true;
+            }
+
 
             public void EnsureExists(string alias)
             {
-                if (MatchesByAlias.TryGetValue(alias, out _) == false)
-                    MatchesByAlias[alias] =  new Dictionary<string, Match>(StringComparer.OrdinalIgnoreCase);
+                if (_matchesByAlias == null)
+                    _matchesByAlias = new Dictionary<string, Dictionary<string, Match>>(StringComparer.OrdinalIgnoreCase);
+                if (_anonymousMatchesByAlias == null)
+                    _anonymousMatchesByAlias = new Dictionary<string, List<Match>>(StringComparer.OrdinalIgnoreCase);
+                if (_anonymousMatchesByAlias.TryGetValue(alias, out _) == false)
+                    _anonymousMatchesByAlias[alias] = new List<Match>();
+                if (_matchesByAlias.TryGetValue(alias, out _) == false)
+                    _matchesByAlias[alias] =  new Dictionary<string, Match>(StringComparer.OrdinalIgnoreCase);
             }
         }
     }
