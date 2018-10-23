@@ -1218,11 +1218,16 @@ namespace Voron
             }
         }
 
-        public void Cleanup()
+        public void Cleanup(bool deleteRecyclableJournals = false)
         {
             Journal.TryReduceSizeOfCompressionBufferIfNeeded();
             ScratchBufferPool.Cleanup();
             DecompressionBuffers.Cleanup();
+
+            if (deleteRecyclableJournals && Options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions dirOptions)
+            {
+                dirOptions.DeleteRecyclableJournals();
+            }
         }
 
         public override string ToString()

@@ -538,6 +538,30 @@ namespace Voron
                 }
             }
 
+            public void DeleteRecyclableJournals()
+            {
+                lock (_journalsForReuse)
+                {
+                    foreach (var recyclableJournal in _journalsForReuse)
+                    {
+                        try
+                        {
+                            var fileInfo = new FileInfo(recyclableJournal.Value);
+
+                            if (fileInfo.Exists)
+                                TryDelete(fileInfo.FullName);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info($"Couldn't delete recyclable journal: {recyclableJournal.Value}", ex);
+                        }
+                    }
+
+                    _journalsForReuse.Clear();
+                }
+            }
+
             private void TryDelete(string file)
             {
                 try

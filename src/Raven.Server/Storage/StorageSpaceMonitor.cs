@@ -61,7 +61,7 @@ namespace Raven.Server.Storage
                         {
                             foreach (var storageEnvironment in lowSpaceDisk.Value)
                             {
-                                storageEnvironment.Cleanup();
+                                storageEnvironment.Cleanup(deleteRecyclableJournals: true);
                             }
 
                             didCleanup = true;
