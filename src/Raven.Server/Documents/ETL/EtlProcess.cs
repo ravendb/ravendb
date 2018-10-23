@@ -65,6 +65,8 @@ namespace Raven.Server.Documents.ETL
 
         public abstract EtlPerformanceStats[] GetPerformanceStats();
 
+        public string TombstoneCleanerIdentifier => $"ETL '{Name}'";
+
         public abstract Dictionary<string, long> GetLastProcessedTombstonesPerCollection();
 
         public abstract OngoingTaskConnectionStatus GetConnectionStatus();

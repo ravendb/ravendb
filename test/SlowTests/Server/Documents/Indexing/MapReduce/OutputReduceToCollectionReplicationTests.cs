@@ -93,6 +93,8 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             //replicationNode.SkipIndexReplication = true;
         }
 
+        public string TombstoneCleanerIdentifier => nameof(OutputReduceToCollectionReplicationTests);
+
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
             return new Dictionary<string, long>
