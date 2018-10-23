@@ -1,17 +1,11 @@
-import app = require("durandal/app");
 import router = require("plugins/router");
 
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
 import recentDocumentsCtr = require("models/database/documents/recentDocuments");
-import eventsCollector = require("common/eventsCollector");
 
 import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDocumentsIDsCommand");
 import getDocumentRevisionsCommand = require("commands/database/documents/getDocumentRevisionsCommand");
-import deleteAttachmentCommand = require("commands/database/documents/attachments/deleteAttachmentCommand");
-import deleteCounterCommand = require("commands/database/documents/counters/deleteCounterCommand");
-import getCountersCommand = require("commands/database/documents/counters/getCountersCommand");
-import setCounterDialog = require("viewmodels/database/documents/setCounterDialog");
 
 import appUrl = require("common/appUrl");
 import endpoints = require("endpoints");
@@ -29,12 +23,6 @@ import editDocumentUploader = require("viewmodels/database/documents/editDocumen
 
 type connectedDocsTabs = "attachments" | "counters" | "revisions" | "related" | "recent";
 
-interface attachmentItem {
-    documentId: string;
-    name: string;
-    contentType: string;
-    size: number;
-}
 
 interface connectedDocumentItem { 
     id: string;
@@ -57,12 +45,14 @@ class connectedDocuments {
     gridResetSubscription: KnockoutSubscription;
     revisionsCount = ko.observable<number>();   
 
+    crudActionsProvider: () => editDocumentCrudActions;
+    
     docsColumns: virtualColumn[];
     attachmentsColumns: virtualColumn[];
     attachmentsInReadOnlyModeColumns: virtualColumn[];
     countersColumns: virtualColumn[];
     revisionCountersColumns: virtualColumn[];
-
+    
     private downloader = new downloader();
     currentDocumentIsStarred = ko.observable<boolean>(false);
 
@@ -95,6 +85,7 @@ class connectedDocuments {
         db: KnockoutObservable<database>,
         loadDocument: (docId: string) => void,
         isCreatingNewDocument: KnockoutObservable<boolean>,
+        crudActionsProvider: () => editDocumentCrudActions,
         inReadOnlyMode: KnockoutObservable<boolean>) {
 
         _.bindAll(this, "toggleStar" as keyof this);
@@ -105,6 +96,7 @@ class connectedDocuments {
         this.document.subscribe((doc) => this.onDocumentLoaded(doc));
         this.loadDocumentAction = loadDocument;
         this.uploader = new editDocumentUploader(document, db, () => this.afterUpload());
+        this.crudActionsProvider = crudActionsProvider;
 
         this.isUploaderActive = ko.pureComputed(() => {
             const onAttachmentsPane = this.isAttachmentsActive();
@@ -136,6 +128,7 @@ class connectedDocuments {
                     extraClass: item => item.deletedRevision ? "deleted-revision" : ""
                 })
         ];
+        
 
         this.attachmentsColumns = [
             new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.downloadAttachment(x), "Name", x => x.name, "160px",
@@ -144,7 +137,7 @@ class connectedDocuments {
                     title: (item: attachmentItem) => "Download file: " + item.name
                 }),
             new textColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatBytesToSize(x.size), "Size", "70px", { extraClass: () => 'filesize' }),
-            new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.deleteAttachment(x),
+            new actionColumn<attachmentItem>(this.gridController() as virtualGridController<any>, x => this.crudActionsProvider().deleteAttachment(x),
                 "Delete",
                 `<i class="icon-trash"></i>`,
                 "35px",
@@ -166,13 +159,13 @@ class connectedDocuments {
             new textColumn<counterItem>(this.gridController() as virtualGridController<any>, x => x.totalCounterValue, "Counter total value", "100px", 
                 { title: (x) => "Total value is: " + x.totalCounterValue.toLocaleString() }),
             new actionColumn<counterItem>(this.gridController() as virtualGridController<any>, 
-                 x => this.setCounter(x),
+                 x => this.crudActionsProvider().setCounter(x),
                 "Edit",
                 `<i class="icon-edit"></i>`,
                 "35px",
                 { title: () => 'Edit counter' }),  
             new actionColumn<counterItem>(this.gridController() as virtualGridController<any>, 
-                 x => this.deleteCounter(x),
+                 x => this.crudActionsProvider().deleteCounter(x),
                 "Delete",
                 `<i class="icon-trash"></i>`,
                 "35px",
@@ -223,13 +216,13 @@ class connectedDocuments {
             case "related":
                 return this.fetchRelatedDocs(skip, take);
             case "attachments":
-                return this.fetchAttachments(skip, take);
+                return this.crudActionsProvider().fetchAttachments(this.searchInput().toLocaleLowerCase(), skip, take);
             case "recent":
                 return this.fetchRecentDocs(skip, take);
             case "revisions":
                 return this.fetchRevisionDocs(skip, take);
             case "counters": 
-                return this.fetchCounters(skip, take); 
+                return this.crudActionsProvider().fetchCounters(this.searchInput().toLocaleLowerCase(), skip, take); 
             default: return connectedDocuments.emptyDocResult<connectedDocumentItem | attachmentItem | counterItem>();
         }
     }
@@ -256,102 +249,7 @@ class connectedDocuments {
 
         return deferred.promise();
     }
-
-    fetchCounters(skip: number, take: number): JQueryPromise<pagedResult<counterItem>> {
-        const doc = this.document();
-        const search = this.searchInput().toLocaleLowerCase();
-
-        if (doc.__metadata.hasFlag("Revision")) {
-            let counters = doc.__metadata.revisionCounters();
-
-            if (search) {
-                counters = counters.filter(c => c.name.toLocaleLowerCase().includes(search));
-            }
-            
-            return $.when({
-                items: counters.map(x => {
-                    return {
-                            documentId: doc.getId(),
-                            counterName: x.name,
-                            totalCounterValue: x.value,
-                            counterValuesPerNode: []
-                    } as counterItem;
-                }),
-                totalResultCount: counters.length
-            });
-        }
-        
-        if (!doc.__metadata.hasFlag("HasCounters")) {
-            return connectedDocuments.emptyDocResult<counterItem>();
-        }
-
-        const fetchTask = $.Deferred<pagedResult<counterItem>>();
-        new getCountersCommand(doc.getId(), this.db())
-            .execute()
-            .done(result => {
-                if (search) {
-                    result.Counters = result.Counters.filter(x => x.CounterName.toLocaleLowerCase().includes(search));
-                }
-                const mappedResults = result.Counters
-                    .map(x => this.resultItemToCounterItem(x));               
-              
-                fetchTask.resolve({
-                    items: mappedResults,
-                    totalResultCount: result.Counters.length
-                });
-               
-            })
-            .fail(xhr => fetchTask.reject(xhr));
-
-        return fetchTask.promise();
-    }
-
-    private resultItemToCounterItem(counterDetail: Raven.Client.Documents.Operations.Counters.CounterDetail): counterItem {
-        const counter = counterDetail;
-        
-        let valuesPerNode = Array<nodeCounterValue>();
-        for (var nodeDetails in counter.CounterValues){
-            valuesPerNode.unshift({
-                nodeTag: nodeDetails[0],
-                nodeFullId: _.split(nodeDetails,':')[1],
-                nodeShortId: _.split(nodeDetails,'-')[0],
-                nodeCounterValue: counter.CounterValues[nodeDetails]
-            })
-        }
-        
-        const counterItem = {
-            documentId: counter.DocumentId,
-            counterName: counter.CounterName,
-            totalCounterValue: counter.TotalValue,
-            counterValuesPerNode: valuesPerNode
-        };
-
-        return counterItem;
-    }
     
-    fetchAttachments(skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>> { 
-        const doc = this.document();
-        const search = this.searchInput().toLocaleLowerCase();
-        
-        let attachments: documentAttachmentDto[] = doc.__metadata.attachments() || [];
-
-        if (search) {
-            attachments = attachments.filter(file => file.Name.toLocaleLowerCase().includes(search));
-        }
-
-        const mappedFiles = attachments.map(file => ({
-            documentId: doc.getId(),
-            name: file.Name,
-            contentType: file.ContentType,
-            size: file.Size
-        } as attachmentItem));
-
-        return $.Deferred<pagedResult<attachmentItem>>().resolve({
-            items: mappedFiles,
-            totalResultCount: mappedFiles.length
-        });
-    }
-
     fetchRecentDocs(skip: number, take: number): JQueryPromise<pagedResult<connectedDocumentItem>> {
         const doc = this.document();
 
@@ -401,7 +299,7 @@ class connectedDocuments {
         };
     }
 
-    private static emptyDocResult<T>(): JQueryPromise<pagedResult<T>> {
+    static emptyDocResult<T>(): JQueryPromise<pagedResult<T>> {
         return $.Deferred<pagedResult<T>>().resolve({
             items: [],
             totalResultCount: 0
@@ -438,41 +336,6 @@ class connectedDocuments {
         
         $changeVector.val(JSON.stringify(payload));
         $form.submit();
-    }
-
-    private deleteAttachment(file: attachmentItem) {
-        eventsCollector.default.reportEvent("attachments", "delete");
-        viewHelpers.confirmationMessage("Delete attachment", `Are you sure you want to delete attachment: ${file.name}?`, ["Cancel", "Delete"])
-            .done((result) => {
-                if (result.can) {
-                    new deleteAttachmentCommand(file.documentId, file.name, this.db())
-                        .execute()
-                        .done(() => this.loadDocumentAction(file.documentId));
-                }
-            });
-    }
-    
-    private deleteCounter(counter: counterItem) {
-        eventsCollector.default.reportEvent("counter", "delete");
-        viewHelpers.confirmationMessage("Delete counter", `Are you sure you want to delete counter ${counter.counterName}?`, ["Cancel", "Delete"])
-            .done((result) => {
-                if (result.can) {
-                    new deleteCounterCommand(counter.counterName, counter.documentId, this.db())
-                        .execute()
-                        .done(() => this.loadDocumentAction(counter.documentId));
-                }
-            });
-    }
-
-    private setCounter(counter: counterItem) {
-        eventsCollector.default.reportEvent("counters", "set");
-        const setCounterView = new setCounterDialog(counter, this.document().getId(), this.db());        
-                
-        app.showBootstrapDialog(setCounterView);
-
-        setCounterView.result.done(() => {
-            this.loadDocumentAction(this.document().getId());
-        });
     }
 
     private afterUpload() {
@@ -539,6 +402,10 @@ class connectedDocuments {
         if (connectedDocuments.currentTab() === "revisions") {
             this.gridController().reset();
         }
+    }
+    
+    reload() {
+        this.gridController().reset(false);
     }
 
     private docIdToConnectedDoc(docId: string): connectedDocumentItem {
