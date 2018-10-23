@@ -106,8 +106,8 @@
     </div>
     <div class="flex-grow scroll" data-bind="if: databases().sortedDatabases().length, visible: databases().sortedDatabases().length">
         <div data-bind="foreach: databases().sortedDatabases">
-            <div id="databaseItem" class="panel database-item" data-bind="click: $root.databasePanelClicked, scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(),
-                                                                          attr: { class: 'panel database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') + ' ' + ($root.createIsLocalDatabaseObservable(name)() ? 'relevant' : '') }">
+            <div id="databaseItem" class="panel panel-hover database-item" data-bind="click: $root.databasePanelClicked, scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(),
+                                                                          attr: { class: 'panel panel-hover database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') + ' ' + ($root.createIsLocalDatabaseObservable(name)() ? 'relevant' : '') }">
                 <div data-bind="attr: { 'data-state-text': $root.createIsLocalDatabaseObservable(name)() ? badgeText : 'remote', class: 'state ' + ($root.createIsLocalDatabaseObservable(name)() ? badgeClass() : 'state-remote') }"></div>
                 <div class="padding padding-sm database-info">
                     <div class="info-grow" data-bind="style: { width: $root.databaseNameWidth() +'px'}">
@@ -244,7 +244,7 @@
 <script type="text/html" id="valid-database-properties-template">
     <div class="properties-item" data-bind="visible: (totalSize() || totalTempBuffersSize()) && $root.createIsLocalDatabaseObservable(name)()">
         <div class="properties-value value-only">
-            <a class="set-size text-disabled" data-toggle="size-tooltip" data-bind="attr: { href: $root.storageReportUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
+            <a class="set-size" data-toggle="size-tooltip" data-bind="attr: { href: $root.storageReportUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
                 <i class="icon-drive"></i>
                 <span data-bind="text: $root.formatBytes(totalSize() + totalTempBuffersSize())"></span>
             </a>
@@ -252,12 +252,12 @@
     </div>
     <div class="properties-item" data-bind="visible: $root.createIsLocalDatabaseObservable(name)()">
         <div class="properties-value value-only">
-            <a class="set-size text-disabled" title="Number of documents. Click to view documents list"
+            <a class="set-size" title="Number of documents. Click to view documents list"
                data-bind="attr: { href: $root.createAllDocumentsUrlObservable($data)}, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }, if: documentsCount()">
                 <i class="icon-document-group"></i>
                 <span data-bind="text: documentsCount().toLocaleString()"></span>
             </a>
-            <a class="set-size text-disabled" title="Number of indexes. Click to view indexes list" data-bind="attr: { href: $root.indexesUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }, if: indexesCount()">
+            <a class="set-size" title="Number of indexes. Click to view indexes list" data-bind="attr: { href: $root.indexesUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }, if: indexesCount()">
                 <i class="icon-index"></i>
                 <span data-bind="text: indexesCount().toLocaleString()"></span>
             </a>

@@ -1,0 +1,138 @@
+﻿.ace-pastel-dark-raven {
+    background-color: @pre-bg;
+    border-color: @pre-bg;
+    color: @pre-color;
+
+    .ace_gutter {
+        background: darken(@pre-bg,5%);
+        color: fadeout(@pre-color,30%);
+    }
+
+    .ace_print-margin {
+        width: 1px;
+        background: @hr-border;
+    }
+
+    .ace-pastel-dark-raven {
+        background-color: @pre-bg;
+        color: @pre-color;
+    }
+
+    .ace_cursor {
+        color: @pre-color;
+    }
+
+    .ace_marker-layer .ace_selection {
+        background: fadeout(@color-4,70%);
+    }
+
+
+    &.ace_multiselect .ace_selection.ace_start {
+        box-shadow: 0 0 3px 0px #2C2828;
+    }
+
+    .ace_marker-layer .ace_step {
+        background: rgb(102, 82, 0)
+    }
+
+    .ace_marker-layer .ace_bracket {
+        margin: -1px 0 0 -1px;
+        border: 1px solid rgba(255, 255, 255, 0.25)
+    }
+
+    .ace_marker-layer .ace_active-line {
+        background: darken(@pre-bg,10%);
+    }
+
+    .ace_gutter-active-line {
+        background-color: darken(@pre-bg,10%);
+    }
+
+    .ace_marker-layer .ace_selected-word {
+        border: 1px solid rgba(221, 240, 255, 0.20)
+    }
+
+    .ace_invisible {
+        color: rgba(255, 255, 255, 0.25)
+    }
+
+    .ace_keyword, .ace-pastel-dark-raven .ace_type, .ace-pastel-dark-raven .ace_meta {
+        color: @color-4-2;
+    }
+
+    .ace_constant, .ace-pastel-dark-raven .ace_constant.ace_character, .ace-pastel-dark-raven .ace_constant.ace_character.ace_escape, .ace-pastel-dark-raven .ace_constant.ace_other {
+        color: @color-3-2;
+    }
+
+    .ace_keyword.ace_operator {
+        color: @color-1;
+    }
+
+    .ace_operator {
+        color: @color-1;
+    }
+
+    .ace_name {
+        color: @color-3-1;
+    }
+
+    .ace_constant.ace_character {
+        color: @color-2-2;
+    }
+
+    .ace_constant.ace_language {
+        color: @color-3;
+    }
+
+    .ace_constant.ace_numeric {
+        color: @token-number;
+    }
+
+    .ace_invalid, .ace_invalid.ace_illegal {
+        color: #F8F8F8;
+        background-color: rgba(86, 45, 86, 0.75)
+    }
+
+    .ace_invalid.ace_deprecated {
+        text-decoration: underline;
+        font-style: italic;
+        color: @color-4-2;
+    }
+
+    .ace_fold {
+        background-color: #757aD8;
+        border-color: #8F938F
+    }
+
+    .ace_function {
+        color: @color-4-1;
+    }
+
+    .ace_string {
+        color: @token-string;
+    }
+
+    .ace_string.ace_regexp {
+        color: @color-2;
+    }
+
+    .ace_comment {
+        color: @color-3-3;
+    }
+
+    .ace_variable {
+        color: @token-keyword;
+    }
+
+    .ace_variable.ace_language {
+        color: @color-2-3;
+    }
+
+    .ace_xml-pe {
+        color: #494949
+    }
+
+    .ace-pastel-dark-raven .ace_indent-guide {
+        background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAYAAACZgbYnAAAAEklEQVQImWNgYGBgYIiPj/8PAARgAh2NTMh8AAAAAElFTkSuQmCC) right repeat-y
+    }
+}

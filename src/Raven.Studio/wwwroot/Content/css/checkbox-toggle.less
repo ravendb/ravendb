@@ -240,7 +240,7 @@
             left: 0;
             top: 3px;
             margin-left: -23px;
-            border: 1px solid @gray;
+            border: 1px solid @checkbox-border;
             background-color: transparent;
             cursor: pointer;
             .transition(~"border 0.15s ease-in-out, color 0.15s ease-in-out, background-color 0.15s ease-in-out");
@@ -271,8 +271,8 @@
         }
 
         &:checked + label::before {
-            border-color: @gray;
-            background-color: @gray;
+            border-color: @checkbox-border;
+            background-color: @checkbox-border;
         }
 
 
@@ -302,15 +302,15 @@
         }
 
         &:checked:disabled + label, &:checked.disabled + label {
-             &::before {
-                 background-color: @gray !important;
-                 border-color: @gray !important;
-                 opacity: .3;
-             }
-   
-             &::after {
-                 opacity: .4
-             }
+            &::before {
+                background-color: @checkbox-border !important;
+                border-color: @checkbox-border !important;
+                opacity: .3;
+            }
+
+            &::after {
+                opacity: .4
+            }
         }
     }
 

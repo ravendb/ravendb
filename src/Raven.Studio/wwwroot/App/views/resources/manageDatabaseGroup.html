@@ -39,7 +39,7 @@
             </div>
             <div class="scroll flex-grow nodes-list" data-bind="css: { 'sort-mode' : inSortableMode }">
                 <div class="not-deleted-nodes" data-bind="foreach: nodes">
-                    <div class="panel destination-item">
+                    <div class="panel destination-item panel-hover">
                         <div data-bind="attr: { 'data-state-text': badgeText,  class: 'state ' + badgeClass() +' nowrap' } "></div>
                         <div class="padding padding-sm destination-info">
                             <div class="info-container flex-horizontal flex-grow">
@@ -106,7 +106,7 @@
                     </div>
                 </div>
                 <div class="deleted-nodes" data-bind="foreach: deletionInProgress">
-                    <div class="panel destination-item">
+                    <div class="panel destination-item panel-hover">
                         <div data-state-text="Deleting" class="state state-warning"></div>
                         <div class="padding padding-sm destination-info">
                             <div class="info-container flex-horizontal flex-grow">
@@ -125,7 +125,7 @@
         </div>
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="flex-horizontal flex-header">
-                <div></div><h3>Database Group Topology</h3>
+                <h3 class="on-base-background">Database Group Topology</h3>
                 <div class="flex-separator"></div>
                 <button data-bind="click: graph.enterFullScreen" class="btn btn-default">
                     <i class="icon-fullscreen"></i>

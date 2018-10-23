@@ -114,7 +114,7 @@
 
 .destinations, .cluster {
     .legend {
-        background-color: @gray-darker;
+        background-color: @panel-bg;
         font-size: 12px;
         .padding;
 
@@ -235,11 +235,6 @@
             //margin-left: @grid-gutter-width/3;
         }
 
-        &:hover {
-            background-color: lighten(@gray-darker, 3%);
-            transition: background-color 0.15s ease;
-        }
-
         .destination-info {
             display: flex;
             flex-wrap: wrap;
@@ -337,7 +332,7 @@
         font-size: 13px;
 
         &:hover {
-            background-color: @gray-base-light;
+            background-color: @well-bg-2;
         }
 
         .name {
@@ -380,22 +375,22 @@
 .etl-collections, .transformation-scripts-list {
 
     .collection-color-0 {
-        color: #a6e20e;
+        color: @color-3;
     }
     .collection-color-1 {
-        color: blueviolet;
+        color: @color-5;
     }
     .collection-color-2 {
-        color: #ffd800;
+        color: @color-2;
     }
     .collection-color-3 {
-        color: #ff6a00;
+        color: @color-1-2;
     }
     .collection-color-4 {
-        color: #0094ff;
+        color: @color-4;
     }
     .collection-color-5 {
-        color: #ff006e;
+        color: @color-5-3;
     }
 }
 

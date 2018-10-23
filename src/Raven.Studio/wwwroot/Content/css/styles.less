@@ -1,3 +1,4 @@
+@import "bootstrap/variables.less";
 @import "bootstrap/bootstrap.less";
 @import "fonts.less";
 @import "checkbox-toggle.less";
@@ -18,8 +19,6 @@
 
 @tooltip-inner-min-width:     100px;
 @tooltip-inner-max-width:     200px;
-@tooltip-inner-bg-color:      rgba(18, 18, 18, 0.95);
-@tooltip-inner-color:         #ececf3;
 
 .text-revisions {
     color: @color-revisions !important;
@@ -47,14 +46,13 @@ a.text-revisions:hover {
 /* LOCAL VARIABLES AND KEYFRAMES*/
 
 .shadow-style {
-    box-shadow: 0 10px 20px 2px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 10px 20px 2px fadeout(@gray-base, 55%);
 }
 
 /* GLOBAL ITEMS */
 h1,
 h2,
 h3 {
-    font-weight: 300;
     margin-top: 3px;
 
     [class*=" icon-"],
@@ -64,7 +62,7 @@ h3 {
 }
 
 strong {
-    color: @gray-lighter;
+    color: @text-emphasis;
 }
 
 kbd {
@@ -157,7 +155,6 @@ h6 {
 }
 
 .btn {
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 
     &:not(.dropdown-toggle), &.btn-block {
         .caret {
@@ -610,7 +607,7 @@ hr {
         padding: 0;
         font-size: inherit;
         line-height: inherit;
-        color: #e9eaea;
+        color: @gray-lighter;
         background-color: #333c3c;
         background-image: none;
         -webkit-transition: box-shadow 0.2s ease-in-out;
@@ -659,7 +656,7 @@ hr {
 .btn-group-label {
     margin-top: -5px;
     padding-top: 4px;
-    border-top: 1px solid @gray-dark;
+    border-top: 1px solid @text-muted;
     display: inline-block;
     position: relative;
 
@@ -669,7 +666,7 @@ hr {
 
 
     &:before {
-        color: @gray;
+        color: @text-muted;
         position: absolute;
         left: 0;
         top: -14px;
@@ -680,10 +677,10 @@ hr {
     }
 
     &.active {
-        border-color: @gray-light;
+        border-color: @text-emphasis;
 
         &:before {
-            color: @gray-light;
+            color: @text-emphasis;
         }
     }
 }
@@ -715,7 +712,7 @@ hr {
         }
 
         &.active {
-            background-color: @gray-darker;
+            background-color: @panel-bg;
 
             .badge {
                 opacity: 1;
@@ -723,11 +720,16 @@ hr {
         }
 
         &:not(.active) {
-            background-color: @gray-base;
+            background-color: @body-bg;
         }
 
         &:not(.active):not(:hover) {
-            color: @gray;
+            color: @text-muted;
+        }
+
+        &:disabled, &[disabled] {
+            opacity: 1;
+            color: fadeout(@text-muted, 50%) !important;
         }
     }
 
@@ -977,10 +979,6 @@ input[type=file] + .form-control {
 .dropdown-menu {
     .form-control {
         border-color: #4b545f;
-        
-        &.has-error {
-            border-color: @state-danger-text;
-        }
     }
 
     a.btn-spinner {
@@ -1081,12 +1079,6 @@ input[type=file] + .form-control {
     }
 }
 
-
-pre {
-    border-color: @gray-darker;
-    background-color: @gray-dark;
-    color: @gray-light;
-}
 /* SCROLLBARS */
 ::-webkit-scrollbar-track {
     background-color: @gray;
@@ -1095,7 +1087,7 @@ pre {
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
-    background-color: #F5F5F5;
+    background-color: @gray-lighter;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -1380,11 +1372,11 @@ pre {
 .panel {
 
     .panel {
-        background-color: @gray-dark;
+        background-color: @panel-bg-2;
     }
 
     .actions {
-        flex-shrink:0;
+        flex-shrink: 0;
     }
 
 
@@ -1410,8 +1402,8 @@ pre {
     }
 
     .panel-addon {
-        border-top: 1px solid darken(@gray-darker,4%);
-        background-color: darken(@gray-darker,3%);
+        border-top: 1px solid darken(@panel-bg,4%);
+        background-color: darken(@panel-bg,3%);
     }
 
     .property {
@@ -1728,7 +1720,7 @@ pre {
 }
 
 ul.item-list {
-    background: @gray-base;
+    background: @well-bg;
     display: block;
     overflow-y: auto;
     width: 300px;
@@ -1831,8 +1823,6 @@ ul.properties {
     .tooltip-inner {
         min-width: @tooltip-inner-min-width;
         max-width: @tooltip-inner-max-width;
-        background-color: @tooltip-inner-bg-color;
-        color: @tooltip-inner-color;
     }
 }
 @state-experimental-text: @color-5-2;
@@ -1843,6 +1833,16 @@ ul.properties {
     .bg-variant(@state-experimental-bg, @state-experimental-text);
 }
 
+.on-base-background {
+    color: @on-base-background-color;
+
+    strong { 
+        color: @on-base-background-color-emphasis;
+    }
+}
+
+@import "prism.less";
+@import "ace.less";
 @import "pages/tasks-sampleData";
 @import "pages/tasks-csvImport";
 @import "pages/tasks-subscriptions";
@@ -1853,7 +1853,6 @@ ul.properties {
 @import "pages/indexes-terms.less";
 @import "pages/indexes-maintenance.less";
 @import "pages/index-errors.less";
-@import "pages/traffic-watch.less";
 @import "pages/storage-report.less";
 @import "pages/sample-data.less";
 @import "pages/about.less";

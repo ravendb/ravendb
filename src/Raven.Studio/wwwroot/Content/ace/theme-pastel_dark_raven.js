@@ -2,7 +2,8 @@ ace.define("ace/theme/pastel_dark_raven",["require","exports","module","ace/lib/
 
 exports.isDark = true;
 exports.cssClass = "ace-pastel-dark-raven";
-exports.cssText = ".ace-pastel-dark-raven .ace_gutter {\
+    exports.cssText = "";
+    /*".ace-pastel-dark-raven .ace_gutter {\
 background: #2c343a;\
 color: #546175\
 }\
@@ -109,7 +110,7 @@ color: #494949\
 .ace-pastel-dark-raven .ace_indent-guide {\
 background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAYAAACZgbYnAAAAEklEQVQImWNgYGBgYIiPj/8PAARgAh2NTMh8AAAAAElFTkSuQmCC) right repeat-y\
 }\
-";
+"; */
 
 var dom = require("../lib/dom");
 dom.importCssString(exports.cssText, exports.cssClass);
