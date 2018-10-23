@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Operations.Counters;
@@ -16,6 +17,7 @@ using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers
@@ -46,6 +48,7 @@ namespace Raven.Server.Documents.Handlers
             public string DestinationId;
             public string DestinationName;
             public string ContentType;
+            public AttachmentType AttachmentType;
 
             #endregion
 
@@ -496,6 +499,23 @@ namespace Raven.Server.Documents.Handlers
 
                         commandData.FromEtl = state.CurrentTokenType == JsonParserToken.True;
                         break;
+                    case CommandPropertyName.AttachmentType:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        if (state.CurrentTokenType == JsonParserToken.Null)
+                        {
+                            commandData.AttachmentType = AttachmentType.Document;
+                        }
+                        else
+                        {
+                            if (state.CurrentTokenType != JsonParserToken.String)
+                            {
+                                ThrowUnexpectedToken(JsonParserToken.String, state);
+                            }
+
+                            commandData.AttachmentType = GetAttachmentType(state, ctx);
+                        }
+                        break;
                     case CommandPropertyName.NoSuchProperty:
                         // unknown command - ignore it
                         while (parser.Read() == false)
@@ -637,6 +657,7 @@ namespace Raven.Server.Documents.Handlers
             DestinationId,
             DestinationName,
             ContentType,
+            AttachmentType,
 
             #endregion
 
@@ -685,15 +706,20 @@ namespace Raven.Server.Documents.Handlers
                         return CommandPropertyName.Index;
                     return CommandPropertyName.NoSuchProperty;
                 case 14:
-                    if (*(int*)state.StringBuffer == 1668571472 ||
-                        *(long*)(state.StringBuffer + sizeof(int)) == 7598543892411468136 ||
+                    if (*(int*)state.StringBuffer == 1668571472 &&
+                        *(long*)(state.StringBuffer + sizeof(int)) == 7598543892411468136 &&
                         *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 26478)
                         return CommandPropertyName.PatchIfMissing;
-
-                    if (*(int*)state.StringBuffer == 1970562386 ||
-                        *(long*)(state.StringBuffer + sizeof(int)) == 7308626840221150834 ||
+                    
+                    if (*(int*)state.StringBuffer == 1970562386 &&
+                        *(long*)(state.StringBuffer + sizeof(int)) == 7308626840221150834 &&
                         *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 29806)
                         return CommandPropertyName.ReturnDocument;
+
+                    if (*(int*)state.StringBuffer == 1635021889 && 
+                        *(long*)(state.StringBuffer + sizeof(int)) == 8742740794129868899 &&
+                        *(short*)(state.StringBuffer + sizeof(int) + sizeof(long)) == 25968)
+                        return CommandPropertyName.AttachmentType;
 
                     return CommandPropertyName.NoSuchProperty;
                 case 10:
@@ -741,6 +767,28 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        private static unsafe AttachmentType GetAttachmentType(JsonParserState state, JsonOperationContext ctx)
+        {
+            // here we confirm that the value is matching our expectation, in order to save CPU instructions
+            // we compare directly against the precomputed values
+            switch (state.StringSize)
+            {
+                case 8:
+                    if (*(long*)state.StringBuffer == 8389754676633104196)
+                        return AttachmentType.Document;
+                    if (*(long*)state.StringBuffer == 7957695010998478162)
+                        return AttachmentType.Revision;
+                    
+                    ThrowInvalidProperty(state, ctx);
+                    break;
+                default:
+                    ThrowInvalidProperty(state, ctx);
+                    break;
+            }
+
+            return 0;
+        }
+        
         private static unsafe CommandType GetCommandType(JsonParserState state, JsonOperationContext ctx)
         {
             // here we confirm that the value is matching our expectation, in order to save CPU instructions
