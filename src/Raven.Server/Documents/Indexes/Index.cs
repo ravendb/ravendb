@@ -2747,6 +2747,8 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public string TombstoneCleanerIdentifier => $"Index '{Name}'";
+
         public virtual Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
             using (CurrentlyInUse())

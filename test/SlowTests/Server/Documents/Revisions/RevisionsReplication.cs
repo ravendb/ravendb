@@ -297,6 +297,8 @@ namespace SlowTests.Server.Documents.Revisions
             public string Name { get; set; }
         }
 
+        public string TombstoneCleanerIdentifier => nameof(RevisionsReplication);
+
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
         {
             return new Dictionary<string, long>
