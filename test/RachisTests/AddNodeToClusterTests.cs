@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
@@ -51,7 +52,7 @@ namespace RachisTests
         }
 
         [Fact]
-        public async Task DisallowAddingNodeWithInvalidSourceUrl()
+        public async Task DisallowAddingNodeWithInvalidSourcePublicServerUrl()
         {
             var raft1 = await CreateRaftClusterAndGetLeader(1,customSettings: new Dictionary<string,string>
             {
@@ -69,6 +70,105 @@ namespace RachisTests
                 await requestExecutor.ExecuteAsync(nodeConnectionTest, context);
                 var error = NodeConnectionTestResult.GetError(raft1.ServerStore.GetNodeHttpServerUrl(), dest);
                 Assert.StartsWith(error, nodeConnectionTest.Result.Error);
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put,
+                    RequestUri = new Uri($"{source}/admin/cluster/node?url={dest}")
+                };
+                var response = await requestExecutor.HttpClient.SendAsync(request);
+                Assert.False(response.IsSuccessStatusCode);
+            }
+        }
+
+        [Fact]
+        public async Task DisallowAddingNodeWithInvalidSourcePublicTcpServerUrl()
+        {
+            var raft1 = await CreateRaftClusterAndGetLeader(1, customSettings: new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)] = "tcp://fake.url:54321"
+            });
+            var raft2 = await CreateRaftClusterAndGetLeader(1);
+
+            var source = raft1.WebUrl;
+            var dest = raft2.ServerStore.GetNodeHttpServerUrl();
+
+            using (raft1.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(source, raft1.ServerStore.Server.Certificate.Certificate))
+            {
+                var nodeConnectionTest = new TestNodeConnectionCommand(dest, bidirectional: true);
+                await requestExecutor.ExecuteAsync(nodeConnectionTest, context);
+                var error = NodeConnectionTestResult.GetError(raft1.ServerStore.GetNodeHttpServerUrl(), dest);
+                Assert.StartsWith(error, nodeConnectionTest.Result.Error);
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put,
+                    RequestUri = new Uri($"{source}/admin/cluster/node?url={dest}")
+                };
+                var response = await requestExecutor.HttpClient.SendAsync(request);
+                Assert.False(response.IsSuccessStatusCode);
+            }
+        }
+
+        [Fact]
+        public async Task DisallowAddingNodeWithInvalidDestinationPublicServerUrl()
+        {
+            var raft1 = await CreateRaftClusterAndGetLeader(1);
+            var raft2 = await CreateRaftClusterAndGetLeader(1, customSettings: new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = "http://fake.url:54321"
+            });
+
+            var source = raft1.WebUrl;
+            var dest = raft2.WebUrl;
+            
+            // here we pusblish a wrong PublicServerUrl, but connect to the ServerUrl, so the HTTP connection should be okay, but will when trying to the TCP connection.
+            using (raft1.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(source, raft1.ServerStore.Server.Certificate.Certificate))
+            {
+                var nodeConnectionTest = new TestNodeConnectionCommand(dest, bidirectional: true);
+                await requestExecutor.ExecuteAsync(nodeConnectionTest, context);
+                var error = $"Was able to connect to url {dest}, but exception was thrown while trying to connect to TCP port";
+                Assert.StartsWith(error, nodeConnectionTest.Result.Error);
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put,
+                    RequestUri = new Uri($"{source}/admin/cluster/node?url={dest}")
+                };
+                var response = await requestExecutor.HttpClient.SendAsync(request);
+                Assert.False(response.IsSuccessStatusCode);
+            }
+        }
+
+        [Fact]
+        public async Task DisallowAddingNodeWithInvalidDestinationPublicTcpServerUrl()
+        {
+            var raft1 = await CreateRaftClusterAndGetLeader(1);
+            var raft2 = await CreateRaftClusterAndGetLeader(1, customSettings: new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)] = "tcp://fake.url:54321"
+            });
+
+            var source = raft1.WebUrl;
+            var dest = raft2.ServerStore.GetNodeHttpServerUrl();
+
+            using (raft1.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(source, raft1.ServerStore.Server.Certificate.Certificate))
+            {
+                var nodeConnectionTest = new TestNodeConnectionCommand(dest, bidirectional: true);
+                await requestExecutor.ExecuteAsync(nodeConnectionTest, context);
+                var error = $"Was able to connect to url {dest}, but exception was thrown while trying to connect to TCP port";
+                Assert.StartsWith(error, nodeConnectionTest.Result.Error);
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put,
+                    RequestUri = new Uri($"{source}/admin/cluster/node?url={dest}")
+                };
+                var response = await requestExecutor.HttpClient.SendAsync(request);
+                Assert.False(response.IsSuccessStatusCode);
             }
         }
 
