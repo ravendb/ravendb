@@ -68,7 +68,8 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = s => s.Conventions.FindProjectedPropertyNameForIndex = (indexedType, indexedName, path, prop) => path + prop
+                ModifyDocumentStore = s => s.Conventions.FindProjectedPropertyNameForIndex = 
+                    (indexedType, indexedName, path, prop) => path + prop
             }))
             {
                 new UsersIndex().Execute(store);
@@ -106,6 +107,46 @@ namespace SlowTests.Issues
         public void WhenFindProjectedPropertyNameForIndexIsNullShouldFallbackToFindPropertyNameForIndex()
         {
             using (var store = GetDocumentStore())
+            {
+                new UsersIndex2().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        School = new Reference
+                        {
+                            Id = "schools/1"
+                        }
+                    });
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User, UsersIndex2>()
+                        .Select(u => u.School.Id);
+
+                    Assert.Equal("from index 'UsersIndex2' select School_Id", query.ToString());
+
+                    var items = query.ToList();
+                    Assert.Equal(1, items.Count);
+                    Assert.Equal("schools/1", items[0]);
+                }
+
+            }
+        }
+
+        [Fact]
+        public void WhenFindProjectedPropertyNameForIndexReturnsNullShouldFallbackToFindPropertyNameForIndex()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.FindProjectedPropertyNameForIndex = 
+                    (indexedType, indexedName, path, prop) => null
+            }))
             {
                 new UsersIndex2().Execute(store);
 
