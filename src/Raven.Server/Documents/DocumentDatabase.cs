@@ -36,6 +36,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Storage;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
@@ -146,6 +147,7 @@ namespace Raven.Server.Documents
                 {
                     serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId, environmentPath);
                 });
+                StorageSpaceMonitor = new StorageSpaceMonitor(this, NotificationCenter);
             }
             catch (Exception)
             {
@@ -198,6 +200,8 @@ namespace Raven.Server.Documents
         public IoChangesNotifications IoChanges { get; }
 
         public CatastrophicFailureNotification CatastrophicFailureNotification { get; }
+
+        public StorageSpaceMonitor StorageSpaceMonitor { get; }
 
         public NotificationCenter.NotificationCenter NotificationCenter { get; private set; }
 
@@ -800,8 +804,9 @@ namespace Raven.Server.Documents
                 _lastIdleTicks = DateTime.UtcNow.Ticks;
                 IndexStore?.RunIdleOperations();
                 Operations?.CleanupOperations();
-                DocumentsStorage.Environment.Journal.TryReduceSizeOfCompressionBufferIfNeeded();
-                DocumentsStorage.Environment.ScratchBufferPool.Cleanup();
+
+                DocumentsStorage.Environment.Cleanup();
+                ConfigurationStorage.Environment.Cleanup();
             }
             finally
             {
