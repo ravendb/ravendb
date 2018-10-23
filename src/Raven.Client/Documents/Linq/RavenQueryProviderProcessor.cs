@@ -579,21 +579,25 @@ namespace Raven.Client.Documents.Linq
                 selectPath += ".Length";
             }
 
-            string propertyName;
+            string propertyName = null;
             if (IndexName == null && _collectionName != null)
             {
                 propertyName = QueryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof(T), IndexName, CurrentPath, 
                     selectPath);
             }
-            else if (_insideSelect > 0 && QueryGenerator.Conventions.FindProjectedPropertyNameForIndex != null)
+            else 
             {
-                propertyName = QueryGenerator.Conventions.FindProjectedPropertyNameForIndex(typeof(T), IndexName, CurrentPath,
-                    selectPath);
-            }
-            else
-            {
-                propertyName = QueryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), IndexName, CurrentPath,
-                    selectPath);
+                if (_insideSelect > 0 && QueryGenerator.Conventions.FindProjectedPropertyNameForIndex != null)                    
+                {
+                    propertyName = QueryGenerator.Conventions.FindProjectedPropertyNameForIndex(typeof(T), IndexName, CurrentPath,
+                        selectPath);
+                }
+
+                if (propertyName == null)
+                {
+                    propertyName = QueryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), IndexName, CurrentPath,
+                        selectPath);
+                }
             }
 
             return AddAliasToPathIfNeeded(alias, propertyName);
