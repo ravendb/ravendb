@@ -2168,7 +2168,7 @@ namespace Raven.Server.ServerWide
                 Task timeoutTask = await Task.WhenAny(timeout, connectionInfo);
                 if (timeoutTask == timeout)
                 {
-                    throw new TimeoutException($"Waited for {Configuration.Cluster.OperationTimeout.AsTimeSpan} to receive tcp info from {url} and got no response");
+                    throw new TimeoutException($"Waited for {Configuration.Cluster.OperationTimeout.AsTimeSpan} to receive TCP information from '{url}' and got no response");
                 }
                 await connectionInfo;
             }
@@ -2178,7 +2178,7 @@ namespace Raven.Server.ServerWide
                 {
                     Success = false,
                     HTTPSuccess = false,
-                    Error = $"An exception was thrown while trying to connect to {url} :{Environment.NewLine}{e}"
+                    Error = $"An exception was thrown while trying to connect to '{url}':{Environment.NewLine}{e}"
                 };
             }
 
@@ -2196,7 +2196,7 @@ namespace Raven.Server.ServerWide
             catch (Exception e)
             {
                 result.Success = false;
-                result.Error = $"Was able to connect to url {url}, but exception was thrown while trying to connect to TCP port {connectionInfo.Result.Url}:{Environment.NewLine}{e}";
+                result.Error = $"Was able to connect to url '{url}', but exception was thrown while trying to connect to TCP port '{connectionInfo.Result.Url}':{Environment.NewLine}{e}";
             }
 
             return result;
