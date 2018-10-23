@@ -224,16 +224,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             var stacktraces = archive.CreateEntry($"{prefix}/stacktraces.json", CompressionLevel.Optimal);
 
-            var tempPath = ServerStore.Configuration.Storage.TempPath?.FullPath ?? Path.GetTempPath();
-
             var ravenDebugExec = Path.Combine(AppContext.BaseDirectory, "Raven.Debug.exe");
-            var ravenDebugOutput = Path.Combine(tempPath, "stacktraces.json");
-
-            var output = string.Empty;
-            var jsonSerializer = DocumentConventions.Default.CreateSerializer();
-            jsonSerializer.Formatting = Formatting.Indented;
 
             using (var stacktraceStream = stacktraces.Open())
+            using (var stacktraceWriter = new StreamWriter(stacktraceStream))
             {
                 try
                 {
@@ -249,7 +243,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         {
                             StartInfo = new ProcessStartInfo
                             {
-                                Arguments = $"stacktraces --pid {currentProcess.Id} --output {CommandLineArgumentEscaper.EscapeSingleArg(ravenDebugOutput)}",
+                                Arguments = $"stacktraces --pid {currentProcess.Id}",
                                 FileName = ravenDebugExec,
                                 WindowStyle = ProcessWindowStyle.Normal,
                                 LoadUserProfile = false,
@@ -260,8 +254,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             EnableRaisingEvents = true
                         };
 
-                        process.OutputDataReceived += (sender, args) => output += args.Data;
-                        process.ErrorDataReceived += (sender, args) => output += args.Data;
+                        process.OutputDataReceived += (sender, args) => stacktraceWriter.Write(args.Data);
+                        process.ErrorDataReceived += (sender, args) => stacktraceWriter.Write(args.Data);
 
                         process.Start();
 
@@ -271,25 +265,19 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         process.WaitForExit();
 
                         if (process.ExitCode != 0)
-                        {
-                            //Log.Error("Could not read stacktraces. Message: " + output);
                             throw new InvalidOperationException("Could not read stacktraces.");
-                        }
-
-                        using (var stackDumpOutputStream = File.Open(ravenDebugOutput, FileMode.Open))
-                        {
-                            stackDumpOutputStream.CopyTo(stacktraceStream);
-                        }
                     }
                 }
                 catch (Exception e)
                 {
                     using (var writer = new StreamWriter(stacktraceStream))
                     {
+                        var jsonSerializer = DocumentConventions.Default.CreateSerializer();
+                        jsonSerializer.Formatting = Formatting.Indented;
+
                         jsonSerializer.Serialize(writer, new
                         {
-                            Error = e.Message,
-                            Details = output
+                            Error = e.Message
                         });
                     }
                 }
@@ -442,7 +430,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             return nodeUrlToDatabaseNames;
         }
-        
+
         private bool Stacktraces()
         {
             if (PlatformDetails.RunningOnPosix)
