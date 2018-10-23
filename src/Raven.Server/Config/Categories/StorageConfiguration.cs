@@ -72,12 +72,12 @@ namespace Raven.Server.Config.Categories
         [Description("The user arguments for the 'Storage.OnCreateDirectory.Exec' command or executable.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Storage.OnCreateDirectory.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly)]
-        public string OnCreateDirectoryArguments { get; set; }
+        public string OnCreateDirectoryExecArguments { get; set; }
 
         [Description("The number of seconds to wait for the OnCreateDirectory executable to exit. Default: 30 seconds")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Storage.OnCreateDirectory.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
-        public TimeSetting OnCreateDirectoryExecTimeout { get; set; }
+        public TimeSetting OnCreateDirectoryExecTimeoutInSec { get; set; }
     }
 }

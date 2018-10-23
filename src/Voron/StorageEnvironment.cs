@@ -170,7 +170,7 @@ namespace Voron
         private void OnCreateDirectory()
         {
 
-            var userArgs = _options.OnCreateDirectoryArguments ?? string.Empty;
+            var userArgs = _options.OnCreateDirectoryExecArguments ?? string.Empty;
             var args = $"{userArgs} {_options.Type} {_options.DatabaseName} {_options.BasePath} ";
 
             var process = new Process
@@ -184,7 +184,7 @@ namespace Voron
                     RedirectStandardError = true,
                     CreateNoWindow = true,
                     Verb = "runas"
-        }
+                }
             };
 
             var sw = Stopwatch.StartNew();
@@ -212,19 +212,19 @@ namespace Voron
                 }
             }
 
-            if (process.WaitForExit((int)_options.OnCreateDirectoryExecTimeout.TotalMilliseconds) == false)
+            if (process.WaitForExit((int)_options.OnCreateDirectoryExecTimeoutInSec.TotalMilliseconds) == false)
             {
                 process.Kill();
-                throw new InvalidOperationException($"Unable to execute '{_options.OnCreateDirectoryExec} {args}', waited for {(int)_options.OnCreateDirectoryExecTimeout.TotalMilliseconds} ms but the process didn't exit. Stderr: {GetStdError()}");
+                throw new InvalidOperationException($"Unable to execute '{_options.OnCreateDirectoryExec} {args}', waited for {(int)_options.OnCreateDirectoryExecTimeoutInSec.TotalMilliseconds} ms but the process didn't exit. Stderr: {GetStdError()}");
             }
             try
             {
-                readErrors.Wait(_options.OnCreateDirectoryExecTimeout);
+                readErrors.Wait(_options.OnCreateDirectoryExecTimeoutInSec);
             }
             catch (Exception e)
             {
                 throw new InvalidOperationException(
-                    $"Unable to execute '{_options.OnCreateDirectoryExec} {args}', waited for {(int)_options.OnCreateDirectoryExecTimeout.TotalMilliseconds} ms but the process didn't exit. Stderr: {GetStdError()}",
+                    $"Unable to execute '{_options.OnCreateDirectoryExec} {args}', waited for {(int)_options.OnCreateDirectoryExecTimeoutInSec.TotalMilliseconds} ms but the process didn't exit. Stderr: {GetStdError()}",
                     e);
 
             }

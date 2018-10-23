@@ -448,8 +448,8 @@ namespace Raven.Server.Documents.Indexes
             options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             options.MasterKey = documentDatabase.MasterKey?.ToArray(); //clone
             options.OnCreateDirectoryExec = documentDatabase.Configuration.Storage.OnCreateDirectoryExec;
-            options.OnCreateDirectoryArguments = documentDatabase.Configuration.Storage.OnCreateDirectoryArguments;
-            options.OnCreateDirectoryExecTimeout = documentDatabase.Configuration.Storage.OnCreateDirectoryExecTimeout.AsTimeSpan;
+            options.OnCreateDirectoryExecArguments = documentDatabase.Configuration.Storage.OnCreateDirectoryExecArguments;
+            options.OnCreateDirectoryExecTimeoutInSec = documentDatabase.Configuration.Storage.OnCreateDirectoryExecTimeoutInSec.AsTimeSpan;
             options.DatabaseName = documentDatabase.Name;
             options.Type = EnvironmentType.Index;
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;

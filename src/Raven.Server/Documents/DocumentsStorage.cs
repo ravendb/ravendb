@@ -232,8 +232,8 @@ namespace Raven.Server.Documents
             options.AddToInitLog = _addToInitLog;
             options.MasterKey = DocumentDatabase.MasterKey?.ToArray();
             options.OnCreateDirectoryExec = DocumentDatabase.Configuration.Storage.OnCreateDirectoryExec;
-            options.OnCreateDirectoryArguments = DocumentDatabase.Configuration.Storage.OnCreateDirectoryArguments;
-            options.OnCreateDirectoryExecTimeout = DocumentDatabase.Configuration.Storage.OnCreateDirectoryExecTimeout.AsTimeSpan;
+            options.OnCreateDirectoryExecArguments = DocumentDatabase.Configuration.Storage.OnCreateDirectoryExecArguments;
+            options.OnCreateDirectoryExecTimeoutInSec = DocumentDatabase.Configuration.Storage.OnCreateDirectoryExecTimeoutInSec.AsTimeSpan;
             options.DatabaseName = DocumentDatabase.Name;
             options.Type = EnvironmentType.Database;
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = DocumentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
