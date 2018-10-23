@@ -888,6 +888,7 @@ namespace Raven.Server.Documents.Handlers
                         case CommandType.AttachmentCOPY:
                             if (cmd.AttachmentType == 0)
                             {
+                                // if attachment type is not sent, we fallback to default, which is Document
                                 cmd.AttachmentType = AttachmentType.Document;
                             }
                             var attachmentCopyResult = Database.DocumentsStorage.AttachmentsStorage.CopyAttachment(context, cmd.Id, cmd.Name, cmd.DestinationId, cmd.DestinationName, cmd.ChangeVector, cmd.AttachmentType);
