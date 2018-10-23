@@ -473,7 +473,7 @@ namespace Raven.Server.Documents.Queries
             public override void VisitPatternMatchElementExpression(PatternMatchElementExpression ee)
             {                
                 Debug.Assert(ee.Path[0].EdgeType == EdgeType.Right);
-                if (_source.TryGetByAlias(ee.Path[0].Alias, out var nodeResults) == false ||
+                if (_source.TryGetMatchesForAlias(ee.Path[0].Alias, out var nodeResults) == false ||
                     nodeResults.Count == 0)
                 {
                     _intermediateOutputs.Add(ee,new List<Match>());
@@ -485,7 +485,7 @@ namespace Raven.Server.Documents.Queries
                 foreach (var item in nodeResults)
                 {
                     var match = new Match();
-                    match.Set(ee.Path[0].Alias, item.Value.Get(ee.Path[0].Alias));
+                    match.Set(ee.Path[0].Alias, item.Get(ee.Path[0].Alias));
                     currentResults.Add(match);
                 }
                 
