@@ -56,8 +56,6 @@ namespace Raven.Server.Documents.Queries
             QueryType queryType = QueryType.Select)
         {
             IndexQueryServerSide result = null;
-            string errorMessage = null;
-
             try
             {
                 result = JsonDeserializationServer.IndexQuery(json);
@@ -67,8 +65,7 @@ namespace Raven.Server.Documents.Queries
 
                 if (string.IsNullOrWhiteSpace(result.Query))
                 {
-                    errorMessage = $"Index query does not contain '{nameof(Query)}' field.";
-                    throw new InvalidOperationException(errorMessage);
+                    throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
                 }
 
                 if (cache.TryGetMetadata(result, out var metadataHash, out var metadata))
@@ -87,23 +84,24 @@ namespace Raven.Server.Documents.Queries
 
                 return result;
             }
-            catch
+            catch(Exception e)
             {
-                errorMessage = errorMessage ?? (result == null ? $"Failed to parse index query : {json}" : $"Failed to parse query: {result.Query}");
-
+                string errorMessage;
+                if (e is InvalidOperationException)
+                    errorMessage = e.Message;
+                else
+                    errorMessage = (result == null ? $"Failed to parse index query : {json}" : $"Failed to parse query: {result.Query}");
+                
                 if (tracker != null)
                     tracker.Query = errorMessage;
-
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(httpContext, errorMessage, TrafficWatchChangeType.Queries);
-
                 throw;
             }
         }
 
         public static IndexQueryServerSide Create(HttpContext httpContext, int start, int pageSize, JsonOperationContext context, RequestTimeTracker tracker, string overrideQuery = null)
         {
-            string errorMessage = null;
             IndexQueryServerSide result = null;
             try
             {
@@ -111,8 +109,7 @@ namespace Raven.Server.Documents.Queries
                 if ((httpContext.Request.Query.TryGetValue("query", out var query) == false || query.Count == 0 || string.IsNullOrWhiteSpace(query[0])) &&
                     isQueryOverwritten == false)
                 {
-                    errorMessage = "Missing mandatory query string parameter 'query'";
-                    throw new InvalidOperationException(errorMessage);
+                    throw new InvalidOperationException("Missing mandatory query string parameter 'query'");
                 }
 
                 var actualQuery = isQueryOverwritten ? overrideQuery : query[0];
@@ -155,8 +152,7 @@ namespace Raven.Server.Documents.Queries
                     }
                     catch (Exception e)
                     {
-                        errorMessage = $"Could not handle query string parameter '{item.Key}' (value: {item.Value}) for query: {result.Query}";
-                        throw new ArgumentException(errorMessage, e);
+                        throw new ArgumentException($"Could not handle query string parameter '{item.Key}' (value: {item.Value}) for query: {result.Query}", e);
                     }
                 }
 
@@ -167,9 +163,14 @@ namespace Raven.Server.Documents.Queries
                 tracker.Query = result.Query;
                 return result;
             }
-            catch
+            catch(Exception e)
             {
-                errorMessage = errorMessage ?? $"Failed to parse query: {result.Query}";
+                string errorMessage;
+                if (e is InvalidOperationException || e is ArgumentException)
+                    errorMessage = e.Message;
+                else
+                    errorMessage = $"Failed to parse query: {result.Query}";
+
                 tracker.Query = errorMessage;
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(httpContext, errorMessage, TrafficWatchChangeType.Queries);
