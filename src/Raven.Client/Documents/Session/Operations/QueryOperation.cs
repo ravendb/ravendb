@@ -11,6 +11,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -170,7 +171,8 @@ namespace Raven.Client.Documents.Session.Operations
                         //extraction from original type
                         document = innerJson;
                     }
-                    else if (inner is BlittableJsonReaderArray bjra)
+                    else if (inner is BlittableJsonReaderArray bjra && 
+                             JavascriptConversionExtensions.LinqMethodsSupport.IsCollection(type))
                     {
                         return DeserializeInnerArray<T>(document, fieldsToFetch.FieldsToFetch[0], session, bjra);
                     }
