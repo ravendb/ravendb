@@ -1123,6 +1123,11 @@ namespace Raven.Server.Documents.Indexes
                         }
                     }
                 }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Unexpected error in '{Name}' index. This should never happen.", e);
+                }
                 finally
                 {
                     storageEnvironment.OnLogsApplied -= HandleLogsApplied;
