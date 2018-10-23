@@ -129,7 +129,7 @@ namespace RachisTests
             {
                 var nodeConnectionTest = new TestNodeConnectionCommand(dest, bidirectional: true);
                 await requestExecutor.ExecuteAsync(nodeConnectionTest, context);
-                var error = $"Was able to connect to url {dest}, but exception was thrown while trying to connect to TCP port";
+                var error = $"Was able to connect to url '{dest}', but exception was thrown while trying to connect to TCP port";
                 Assert.StartsWith(error, nodeConnectionTest.Result.Error);
 
                 var request = new HttpRequestMessage
@@ -159,7 +159,7 @@ namespace RachisTests
             {
                 var nodeConnectionTest = new TestNodeConnectionCommand(dest, bidirectional: true);
                 await requestExecutor.ExecuteAsync(nodeConnectionTest, context);
-                var error = $"Was able to connect to url {dest}, but exception was thrown while trying to connect to TCP port";
+                var error = $"Was able to connect to url '{dest}', but exception was thrown while trying to connect to TCP port";
                 Assert.StartsWith(error, nodeConnectionTest.Result.Error);
 
                 var request = new HttpRequestMessage
