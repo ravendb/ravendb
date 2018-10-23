@@ -19,6 +19,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using System.Runtime.ExceptionServices;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Json;
@@ -885,7 +886,11 @@ namespace Raven.Server.Documents.Handlers
                             });
                             break;
                         case CommandType.AttachmentCOPY:
-                            var attachmentCopyResult = Database.DocumentsStorage.AttachmentsStorage.CopyAttachment(context, cmd.Id, cmd.Name, cmd.DestinationId, cmd.DestinationName, cmd.ChangeVector);
+                            if (cmd.AttachmentType == 0)
+                            {
+                                cmd.AttachmentType = AttachmentType.Document;
+                            }
+                            var attachmentCopyResult = Database.DocumentsStorage.AttachmentsStorage.CopyAttachment(context, cmd.Id, cmd.Name, cmd.DestinationId, cmd.DestinationName, cmd.ChangeVector, cmd.AttachmentType);
 
                             LastChangeVector = attachmentCopyResult.ChangeVector;
 
