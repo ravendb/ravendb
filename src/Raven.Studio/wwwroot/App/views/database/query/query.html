@@ -63,8 +63,8 @@
                 <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }"><i class="icon-link"></i></a>
             </h2>
             <div class="clearfix">
-                <div class="results-info pull-left">
-                    <div  data-bind="visible: queryStats() && hasEditableIndex(), if: queryStats() && hasEditableIndex()"  class="dropdown" >
+                <div class="results-info pull-left btn-group">
+                    <div  data-bind="visible: queryStats() && hasEditableIndex(), if: queryStats() && hasEditableIndex()"  class="dropdown btn-group" >
                         <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                             <span>
                                 <i class="icon-index"></i> <span>Index '</span><span data-bind="text: queriedIndexLabel"></span>'
@@ -137,7 +137,7 @@
                 </div>
             </div>
         </div>
-        <div class="panel flex-window-scroll">
+        <div class="panel flex-window-scroll no-margin">
             <div class="has-error results-error" data-bind="visible: staleResult()">
                 <div class="help-block">
                     <i class="icon-danger"></i><span>Your index is stale. It's possible that not all the results are displayed. <a href="#" data-bind="click: refresh">Refresh.</a></span>
