@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                 _index.HandleDelete(tombstone, collection, indexWriter, indexContext, collectionStats);
 
-                                if (CanContinueBatch(databaseContext, indexContext, collectionStats, lastEtag, lastCollectionEtag, batchCount) == false)
+                                if (CanContinueBatch(databaseContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, batchCount) == false)
                                 {
                                     keepRunning = false;
                                     break;
@@ -142,6 +142,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             DocumentsOperationContext documentsContext,
             TransactionOperationContext indexingContext,
             IndexingStatsScope stats,
+            IndexWriteOperation indexWriteOperation,
             long currentEtag,
             long maxEtag,
             int count)
@@ -152,7 +153,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             if (currentEtag >= maxEtag && stats.Duration >= _configuration.MapTimeoutAfterEtagReached.AsTimeSpan)
                 return false;
 
-            if (_index.CanContinueBatch(stats, documentsContext, indexingContext, count) == false)
+            if (_index.CanContinueBatch(stats, documentsContext, indexingContext, indexWriteOperation, count) == false)
                 return false;
 
             return true;
