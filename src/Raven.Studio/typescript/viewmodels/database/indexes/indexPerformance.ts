@@ -161,7 +161,7 @@ class indexPerformance extends viewModelBase {
         trackNameFg: "#98a7b7",
         openedTrackArrow: "#ca1c59",
         closedTrackArrow: "#98a7b7",
-        collectionNameTextColor: "#2c343a",
+        stripeTextColor: "#2c343a",
 
         tracks: {
             "Collection": "#046293",
@@ -979,9 +979,18 @@ class indexPerformance extends viewModelBase {
                     this.hitTest.registerTrackItem(currentX, yStart, dx, indexPerformance.trackHeight, op);
                 }
                 if (op.Name.startsWith("Collection_")) {
-                    context.fillStyle = indexPerformance.colors.collectionNameTextColor;
+                    context.fillStyle = indexPerformance.colors.stripeTextColor;
                     const text = op.Name.substr("Collection_".length);
-                    const textWidth = context.measureText(text).width
+                    const textWidth = context.measureText(text).width;
+                    const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
+                    if (truncatedText) {
+                        context.font = "12px Lato";
+                        context.fillText(truncatedText, currentX + 2, yStart + 13, dx - 4);
+                    }
+                } else if ((op.Name === "Map" || op.Name === "Reduce") && dx >= 6) {
+                    context.fillStyle = indexPerformance.colors.stripeTextColor;
+                    const text = op.Name;
+                    const textWidth = context.measureText(text).width;
                     const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
                     if (truncatedText) {
                         context.font = "12px Lato";
@@ -1000,7 +1009,7 @@ class indexPerformance extends viewModelBase {
             currentX += dx;
         }
     }
-
+    
     private drawIndexNames(context: CanvasRenderingContext2D) {
         const yScale = this.yScale;
         const textShift = 14.5;
