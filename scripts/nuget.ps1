@@ -36,7 +36,7 @@ function BuildEmbeddedNuget ($projectDir, $outDir, $serverSrcDir, $studioZipPath
     
     $EMBEDDED_NUSPEC = [io.path]::combine($outDir, "RavenDB.Embedded", "RavenDB.Embedded.nuspec")
     $EMBEDDED_OUT_DIR = [io.path]::combine($outDir, "RavenDB.Embedded")
-    $EMBEDDED_TOOLS_OUT_DIR = [io.path]::combine($EMBEDDED_OUT_DIR, "tools")
+    $EMBEDDED_BUILD_OUT_DIR = [io.path]::combine($EMBEDDED_OUT_DIR, "build")
     $EMBEDDED_SERVER_OUT_DIR = [io.path]::combine($EMBEDDED_OUT_DIR, "contentFiles", "any", "any")
     
     $NETSTANDARD_TARGET = "netstandard2.0"
@@ -47,7 +47,7 @@ function BuildEmbeddedNuget ($projectDir, $outDir, $serverSrcDir, $studioZipPath
     
     write-host "Preparing Raven.Embedded NuGet package.."
     $nuspec = [io.path]::combine($EMBEDDED_SRC_DIR, "Raven.Embedded.nuspec.template")
-    & New-Item -ItemType Directory -Path $EMBEDDED_TOOLS_OUT_DIR -Force
+    & New-Item -ItemType Directory -Path $EMBEDDED_BUILD_OUT_DIR -Force
     & New-Item -ItemType Directory -Path $EMBEDDED_SERVER_OUT_DIR -Force
     & New-Item -ItemType Directory -Path $EMBEDDED_LIB_OUT_DIR_NETSTANDARD -Force
     & New-Item -ItemType Directory -Path $EMBEDDED_LIB_OUT_DIR_NET461 -Force
@@ -70,15 +70,11 @@ function BuildEmbeddedNuget ($projectDir, $outDir, $serverSrcDir, $studioZipPath
     write-host "Remove settings.default.json"
     Remove-Item $(Join-Path $serverDir -ChildPath "settings.default.json")
     write-host "Copying Studio $studioZipPath -> $serverDir"
-    Copy-Item "$studioZipPath" -Destination $
+    Copy-Item "$studioZipPath" -Destination $serverDir
     
-    $installSrc = [io.path]::combine($EMBEDDED_SRC_DIR, "install.ps1")
-    $installDst = [io.path]::combine($EMBEDDED_TOOLS_OUT_DIR, "install.ps1")
-    Copy-Item "$installSrc" -Destination "$installDst"
-    
-    $uninstallSrc = [io.path]::combine($EMBEDDED_SRC_DIR, "uninstall.ps1")
-    $uninstallDst = [io.path]::combine($EMBEDDED_TOOLS_OUT_DIR, "uninstall.ps1")
-    Copy-Item "$uninstallSrc" -Destination "$uninstallDst"
+    $targetsSrc = [io.path]::combine($EMBEDDED_SRC_DIR, "RavenDB.Embedded.targets")
+    $targetsDst = [io.path]::combine($EMBEDDED_BUILD_OUT_DIR, "RavenDB.Embedded.targets")
+    Copy-Item "$targetsSrc" -Destination "$targetsDst"
     
     try {
         Push-Location $EMBEDDED_OUT_DIR
