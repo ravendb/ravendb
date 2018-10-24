@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Queries
             {
                 IsDynamic = Query.From.Index == false;
                 var fromToken = Query.From.From;
-
+                
                 if (IsDynamic)
                     CollectionName = fromToken.FieldValue;
                 else

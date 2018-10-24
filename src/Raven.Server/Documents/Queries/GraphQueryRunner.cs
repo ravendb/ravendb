@@ -15,6 +15,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Security.Policy;
 using System.Text;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
@@ -24,11 +25,13 @@ using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Collections.LockFree;
 
 namespace Raven.Server.Documents.Queries
 {
     public partial class GraphQueryRunner : AbstractQueryRunner
     {
+        private readonly HashSet<StringSegment> _mapReduceAliases = new HashSet<StringSegment>();
         public GraphQueryRunner(DocumentDatabase database) : base(database)
         {
         }
@@ -39,7 +42,7 @@ namespace Raven.Server.Documents.Queries
             OperationCancelToken token)
         {
             var q = query.Metadata.Query;
-
+            
             using (var timingScope = new QueryTimingsScope())
             {
                 var ir = new IntermediateResults();
@@ -47,6 +50,17 @@ namespace Raven.Server.Documents.Queries
                 foreach (var documentQuery in q.GraphQuery.WithDocumentQueries)
                 {
                     var queryMetadata = new QueryMetadata(documentQuery.Value, query.QueryParameters, 0);
+                    if (documentQuery.Value.From.Index)
+                    {
+                        var index = Database.IndexStore.GetIndex(queryMetadata.IndexName);
+                        if (index.Type == IndexType.AutoMapReduce ||
+                            index.Type == IndexType.MapReduce ||
+                            index.Type == IndexType.JavaScriptMapReduce)
+                        {
+                            _mapReduceAliases.Add(documentQuery.Key);
+                        }
+                    }
+
                     var indexQuery = new IndexQueryServerSide(queryMetadata);
                     var results = await Database.QueryRunner.ExecuteQuery(indexQuery, documentsContext, existingResultEtag, token).ConfigureAwait(false);
 
@@ -155,7 +169,7 @@ namespace Raven.Server.Documents.Queries
 
         private List<Match> ExecutePatternMatch(DocumentsOperationContext documentsContext, IndexQueryServerSide query, IntermediateResults ir)
         {
-            var visitor = new GraphExecuteVisitor(ir, query, documentsContext);
+            var visitor = new GraphExecuteVisitor(ir, query, documentsContext, _mapReduceAliases);
             visitor.VisitExpression(query.Metadata.Query.GraphQuery.MatchClause);
             return visitor.Output;
         }
@@ -191,6 +205,7 @@ namespace Raven.Server.Documents.Queries
             private readonly GraphQuery _gq;
             private readonly BlittableJsonReaderObject _queryParameters;
             private readonly DocumentsOperationContext _ctx;
+            private readonly HashSet<StringSegment> _mapReduceAliases;
 
             private static List<Match> Empty = new List<Match>();
 
@@ -205,12 +220,14 @@ namespace Raven.Server.Documents.Queries
             private readonly List<Match> _results = new List<Match>();
             private readonly Dictionary<PatternMatchElementExpression,HashSet<StringSegment>> _aliasesInMatch = new Dictionary<PatternMatchElementExpression, HashSet<StringSegment>>();
             
-            public GraphExecuteVisitor(IntermediateResults source, IndexQueryServerSide query, DocumentsOperationContext documentsContext)
+            public GraphExecuteVisitor(IntermediateResults source, IndexQueryServerSide query, DocumentsOperationContext documentsContext,
+                HashSet<StringSegment> mapReduceAliases)
             {
                 _source = source;
                 _gq = query.Metadata.Query.GraphQuery;
                 _queryParameters = query.QueryParameters;
                 _ctx = documentsContext;
+                _mapReduceAliases = mapReduceAliases;
             }
 
             public override void VisitCompoundWhereExpression(BinaryExpression @where)
@@ -221,21 +238,25 @@ namespace Raven.Server.Documents.Queries
                 }
                 else
                 {
-                   
                     VisitExpression(left);
                     VisitExpression(@where.Right);
 
                     switch (where.Operator)
                     {
                         case OperatorType.And:
-                           if (@where.Right is NegatedExpression n)
+                           if (@where.Right is NegatedExpression n &&
+                               n.Expression is PatternMatchElementExpression rightNegatedPatternMatch)
                            {
-                                IntersectExpressions<Except>(where, left, (PatternMatchElementExpression)n.Expression);
+                                IntersectExpressions<Except>(where, left, rightNegatedPatternMatch);
+                           }
+                           else if(@where.Right is PatternMatchElementExpression right)
+                           {
+                                IntersectExpressions<Intersection>(where, left, right);
                            }
                            else
-                            {
-                                IntersectExpressions<Intersection>(where, left, (PatternMatchElementExpression)@where.Right);
-                            }
+                           {
+                                throw new InvalidQueryException($"Failed to execute graph query because found unexpected right clause expression type. Expected it to be either {nameof(NegatedExpression)} or {nameof(PatternMatchElementExpression)} but found expression type = {@where.Right.GetType().FullName}");
+                           }
                             break;
                         case OperatorType.Or:
                             IntersectExpressions<Union>(where, left, (PatternMatchElementExpression)@where.Right);
@@ -497,7 +518,10 @@ namespace Raven.Server.Documents.Queries
 
                     var prevNodeAlias = ee.Path[pathIndex - 1].Alias;
                     var nextNodeAlias = ee.Path[pathIndex + 1].Alias;
-
+                    if (_mapReduceAliases.Contains(nextNodeAlias))
+                    {
+                        throw new InvalidOperationException("Target vertices in a pattern match that originate from map/reduce WITH clause are not allowed. (pattern match has multiple statements in the form of (a)-[:edge]->(b) ==> in such pattern, 'b' must not originate from map/reduce index query)");
+                    }
                     var edgeAlias = ee.Path[pathIndex].Alias;
                     var edge = _gq.WithEdgePredicates[edgeAlias];
                     edge.EdgeAlias = edgeAlias;
