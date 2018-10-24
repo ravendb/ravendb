@@ -1,11 +1,9 @@
 ﻿using System.Linq;
+using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Xunit;
-using Order = FastTests.Server.Basic.Entities.Order;
-using Product = FastTests.Server.Basic.Entities.Product;
-using OrderLine = FastTests.Server.Basic.Entities.OrderLine;
 
 namespace FastTests.Graph
 {

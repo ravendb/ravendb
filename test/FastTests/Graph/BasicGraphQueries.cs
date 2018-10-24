@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Exceptions;
-using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -10,6 +11,57 @@ namespace FastTests.Graph
 {
     public class BasicGraphQueries : RavenTestBase
     {
+        
+        public class Employee
+        {
+            public string Id { get; set; }
+            public string LastName { get; set; }
+            public string FirstName { get; set; }
+            public string Title { get; set; }
+            public Address Address { get; set; }
+            public DateTime HiredAt { get; set; }
+            public DateTime Birthday { get; set; }
+            public string HomePhone { get; set; }
+            public string Extension { get; set; }
+            public string ReportsTo { get; set; }
+            public List<string> Notes { get; set; }
+            public List<string> Territories { get; set; }
+        }
+
+        public class Contact
+        {
+            public string Name { get; set; }
+            public string Title { get; set; }
+        }
+        
+        public class Address
+        {
+            public string Line1 { get; set; }
+            public string Line2 { get; set; }
+            public string City { get; set; }
+            public string Region { get; set; }
+            public string PostalCode { get; set; }
+            public string Country { get; set; }
+            public Location Location { get; set; }
+        }
+
+        public class Location
+        {
+            public double Latitude { get; set; }
+            public double Longitude { get; set; }
+        }
+
+        public class Company
+        {
+            public string Id { get; set; }
+            public string ExternalId { get; set; }
+            public string Name { get; set; }
+            public Contact Contact { get; set; }
+            public Address Address { get; set; }
+            public string Phone { get; set; }
+            public string Fax { get; set; }
+        }
+
         public List<T> Query<T>(string q)
         {
             using (var store = GetDocumentStore())
@@ -54,6 +106,108 @@ namespace FastTests.Graph
             public string OrderId;
             public string Product;
             public double Discount;
+        }
+
+        [Fact]
+        public void Query_should_support_parameterless_id_function_in_select()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"match (o:Orders) select id()").ToList()
+                        .Select(x => x["id()"].Value<string>()).OrderBy(x => x);
+                    Assert.NotEmpty(results);
+
+                    var orders = session.Query<Order>().ToList().Select(x => x.Id).OrderBy(x => x);
+                    Assert.Equal(orders,results);
+                }
+            }
+        }
+
+        [Fact]
+        public void Query_should_support_id_function_in_select()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                using (var session = store.OpenSession())
+                {
+                    var orderIdsFromGraphQuery = session.Advanced.RawQuery<JObject>(@"
+                            match (o:Orders) select { id: id(o) }").ToList()
+                        .Select(x => x["id"].Value<string>()).OrderBy(x => x);
+                    Assert.NotEmpty(orderIdsFromGraphQuery);
+
+                    var ordersIsFromDocumentQuery = session.Query<Order>().ToList().Select(x => x.Id).OrderBy(x => x);
+                    Assert.Equal(ordersIsFromDocumentQuery,orderIdsFromGraphQuery);
+                }
+            }
+        }
+
+        [Fact]
+        public void Query_should_support_multiple_id_functions_in_select()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                        match (o:Orders)-[:Company]->(c:Companies)
+                        select 
+                        { 
+                            OrderId: id(o),
+                            CompanyId : id(c)
+                        }").ToList();
+
+                    Assert.NotEmpty(results); //sanity check
+
+                    var orderIds = results.Select(x => x["OrderId"].Value<string>()).Distinct().OrderBy(x => x);
+                    var companyIds = results.Select(x => x["CompanyId"].Value<string>()).OrderBy(x => x);
+
+                    var ordersIsFromDocumentQuery = session.Query<Order>().ToList().Select(x => x.Id).OrderBy(x => x);
+                    Assert.Equal(ordersIsFromDocumentQuery,orderIds);
+
+                    var companyIsFromDocumentQuery = session.Query<Order>().ToList().Select(x => x.Company).OrderBy(x => x);
+                    Assert.Equal(companyIsFromDocumentQuery,companyIds);
+                }
+            }
+        }
+
+        [Fact]
+        public void Query_should_support_id_function_in_vertex_filter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                        match (o:Orders(id() = 'orders/829-a')-[:Company]->(c:Companies)").ToList();
+
+                    Assert.Equal(1,results.Count);
+                }
+            }
+        }
+
+        //we do not allow id() usage when there is more than one possible targets for it
+            //in this case id(o) and id(c) should be used
+            [Fact]
+        public void Query_with_parameterless_id_function_in_select_and_multiple_aliases_should_fail_properly()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                using (var session = store.OpenSession())
+                {
+                    var e = Assert.Throws<RavenException>(() => 
+                        session.Advanced.RawQuery<JObject>(@"
+                            match (o:Orders)-[:Company]->(c:Companies) select id()").ToList());
+                    
+                    Assert.IsType<InvalidOperationException>(e.InnerException);
+                }
+            }
         }
 
         [Fact]

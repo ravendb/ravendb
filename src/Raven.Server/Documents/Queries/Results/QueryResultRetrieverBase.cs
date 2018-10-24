@@ -555,7 +555,10 @@ namespace Raven.Server.Documents.Queries.Results
         {
             using (_functionScope = _functionScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.JavaScript)))
             {
-                args[args.Length - 1] = _query.QueryParameters;
+                if (args.Length > 1)
+                {
+                    args[args.Length - 1] = _query.QueryParameters;
+                }
 
                 var value = InvokeFunction(
                     fieldToFetch.QueryField.Name,

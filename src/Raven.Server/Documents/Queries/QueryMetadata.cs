@@ -562,9 +562,10 @@ namespace Raven.Server.Documents.Queries
 
             sb.Append("function ").Append(name).Append("(");
             int index = 0;
-            var args = new SelectField[IsGraph ? 
-                Query.GraphQuery.WithDocumentQueries.Count + Query.GraphQuery.WithEdgePredicates.Count : 
-                RootAliasPaths.Count];
+            var argsCount = IsGraph ? 
+                Query.GraphQuery.WithDocumentQueries.Count + (Query.GraphQuery.WithEdgePredicates?.Count ?? 0) : 
+                RootAliasPaths.Count;
+            var args = new SelectField[argsCount];
 
             foreach (var alias in RootAliasPaths)
             {

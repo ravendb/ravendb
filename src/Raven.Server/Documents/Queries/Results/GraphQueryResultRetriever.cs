@@ -1,5 +1,6 @@
 ﻿using System;
 using Lucene.Net.Store;
+using Raven.Client;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Timings;
@@ -83,7 +84,18 @@ namespace Raven.Server.Documents.Queries.Results
                 }
                 else
                 {
-                    item = match.Get(fieldToFetch.QueryField.ExpressionField.Compound[0]);
+                    //if it is id() -> we will project it from a first result in select row
+                    if (Constants.Documents.Indexing.Fields.DocumentIdFieldName == fieldToFetch.Name.Value)
+                    {
+                        if(match.Count > 1)
+                            throw new InvalidOperationException("The 'id()' function cannot be used when there are multiple results in the same row.");
+                        item = match.GetFirstResult();
+                    }
+                    else
+                    {
+                        item = match.Get(fieldToFetch.QueryField.ExpressionField.Compound[0]);
+                    }
+
                     if (item == null)
                     {
                         result[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = null;
