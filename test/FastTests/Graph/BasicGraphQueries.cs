@@ -57,6 +57,41 @@ namespace FastTests.Graph
         }
 
         [Fact]
+        public void Query_with_no_matches_and_select_should_return_empty_result()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateDogDataWithoutEdges(store);
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                            match (a:Dogs)-[:Likes]->(f:Dogs)<-[:Likes]-(b:Dogs)
+                            select {
+                                a: a,
+                                f: f,
+                                b: b
+                            }").ToList();
+
+                    Assert.Empty(results);
+                }
+            }
+        }
+
+        [Fact]
+        public void Query_with_no_matches_and_without_select_should_return_empty_result()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateDogDataWithoutEdges(store);
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"match (a:Dogs)-[:Likes]->(f:Dogs)<-[:Likes]-(b:Dogs)").ToList();
+                    Assert.Empty(results);
+                }
+            }
+        }
+
+        [Fact]
         public void Empty_vertex_node_should_fail_the_query()
         {
             using (var store = GetDocumentStore())
