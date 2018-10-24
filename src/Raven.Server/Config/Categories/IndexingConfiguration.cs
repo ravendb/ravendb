@@ -5,6 +5,7 @@ using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.ServerWide;
+using Sparrow;
 
 namespace Raven.Server.Config.Categories
 {
@@ -122,6 +123,13 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.CleanupIntervalInMin", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting CleanupInterval { get; set; }
+
+        [Description("Maximum amount of scratch space that we allow to use for an indexing batch")]
+        [DefaultValue(null)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.ScratchSpaceLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size? ScratchSpaceLimit { get; protected set; }
 
         protected override void ValidateProperty(PropertyInfo property)
         {

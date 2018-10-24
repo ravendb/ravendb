@@ -2946,6 +2946,12 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
+            if (Configuration.ScratchSpaceLimit != null && txAllocations > Configuration.ScratchSpaceLimit.Value.GetValue(SizeUnit.Bytes))
+            {
+                stats.RecordMapCompletedReason($"Reached scratch space limit. Allocated {txAllocations / 1024:#,#0} kb of scratch space in current transaction");
+                return false;
+            }
+
             var allocatedInBytes = threadAllocations +
                                    // we multiple it by two to take into account additional work
                                    // that will need to be done during the commit phase of the index
