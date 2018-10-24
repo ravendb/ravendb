@@ -147,7 +147,6 @@ namespace Raven.Server.Documents
                 {
                     serverStore.DatabasesLandlord.CatastrophicFailureHandler.Execute(name, e, environmentId, environmentPath);
                 });
-                StorageSpaceMonitor = new StorageSpaceMonitor(this, NotificationCenter);
             }
             catch (Exception)
             {
@@ -200,8 +199,6 @@ namespace Raven.Server.Documents
         public IoChangesNotifications IoChanges { get; }
 
         public CatastrophicFailureNotification CatastrophicFailureNotification { get; }
-
-        public StorageSpaceMonitor StorageSpaceMonitor { get; }
 
         public NotificationCenter.NotificationCenter NotificationCenter { get; private set; }
 
@@ -291,6 +288,8 @@ namespace Raven.Server.Documents
 
                 SubscriptionStorage.Initialize();
                 _addToInitLog("Initializing SubscriptionStorage completed");
+
+                _serverStore.StorageSpaceMonitor.Subscribe(this);
 
                 TaskExecutor.Execute((state) =>
                 {
@@ -604,6 +603,11 @@ namespace Raven.Server.Documents
                 if (lockTaken == false && _logger.IsOperationsEnabled)
                     _logger.Operations("Failed to acquire lock during database dispose for cluster notifications. Will dispose rudely...");
 
+                exceptionAggregator.Execute(() =>
+                {
+                    _serverStore.StorageSpaceMonitor.Unsubscribe(this);
+                });
+
                 foreach (var connection in RunningTcpConnections)
                 {
                     exceptionAggregator.Execute(() =>
@@ -611,7 +615,7 @@ namespace Raven.Server.Documents
                         connection.Dispose();
                     });
                 }
-
+                
                 exceptionAggregator.Execute(() =>
                 {
                     TxMerger?.Dispose();

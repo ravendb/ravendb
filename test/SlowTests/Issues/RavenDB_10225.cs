@@ -13,6 +13,8 @@ namespace SlowTests.Issues
         [Fact]
         public async Task ShouldCreateLowDiskSpaceAlert()
         {
+            UseNewLocalServer();
+
             using (var store = GetDocumentStore(new Options()
             {
                 Path = NewDataPath()
@@ -20,12 +22,14 @@ namespace SlowTests.Issues
             {
                 var database = await GetDatabase(store.Database);
 
-                database.StorageSpaceMonitor.SimulateLowDiskSpace = true;
+                var serverStore = database.ServerStore;
+
+                serverStore.StorageSpaceMonitor.SimulateLowDiskSpace = true;
 
                 var notifications = new AsyncQueue<DynamicJsonValue>();
-                using (database.NotificationCenter.TrackActions(notifications, null))
+                using (serverStore.NotificationCenter.TrackActions(notifications, null))
                 {
-                    database.StorageSpaceMonitor.Run(null);
+                    serverStore.StorageSpaceMonitor.Run(null);
 
                     var notification = await notifications.TryDequeueAsync(TimeSpan.FromSeconds(30));
 
