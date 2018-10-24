@@ -127,7 +127,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return false;
         }
 
-        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, long currentEtag, long maxEtag, int count)
+        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, 
+            IndexingStatsScope stats, IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, int count)
         {
             throw new NotSupportedException();
         }

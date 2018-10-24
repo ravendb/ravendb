@@ -52,7 +52,8 @@ namespace Raven.Server.Documents.Indexes.Workers
             return moreWorkFound;
         }
 
-        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, long currentEtag, long maxEtag, int count)
+        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, 
+            IndexingStatsScope stats, IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, int count)
         {
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
                 return false;
@@ -60,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             if (currentEtag >= maxEtag && stats.Duration >= _configuration.MapTimeoutAfterEtagReached.AsTimeSpan)
                 return false;
 
-            if (_index.CanContinueBatch(stats, documentsContext, indexingContext, count) == false)
+            if (_index.CanContinueBatch(stats, documentsContext, indexingContext, indexWriteOperation, count) == false)
                 return false;
 
             return true;
@@ -209,7 +210,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         }
                                     }
 
-                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, lastEtag, lastCollectionEtag, batchCount) == false)
+                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, batchCount) == false)
                                     {
                                         keepRunning = false;
                                         break;
