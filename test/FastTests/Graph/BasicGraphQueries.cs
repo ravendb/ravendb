@@ -184,7 +184,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                        match (o:Orders(id() = 'orders/829-a')-[:Company]->(c:Companies)").ToList();
+                        match (o:Orders(id() = 'orders/829-a'))-[:Company]->(c:Companies)").ToList();
 
                     Assert.Equal(1,results.Count);
                 }
