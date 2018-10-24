@@ -977,6 +977,10 @@ input[type=file] + .form-control {
 .dropdown-menu {
     .form-control {
         border-color: #4b545f;
+        
+        &.has-error {
+            border-color: @state-danger-text;
+        }
     }
 
     a.btn-spinner {
