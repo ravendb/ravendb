@@ -7,16 +7,18 @@ class collectionProgress {
     documentsProgress: progress;
     tombstonesProgress: progress;
 
-    constructor(name: string, collectionStats: Raven.Client.Documents.Indexes.IndexProgress.CollectionStats) {
+    constructor(name: string, collectionStats: Raven.Client.Documents.Indexes.IndexProgress.CollectionStats, runningStatus: Raven.Client.Documents.Indexes.IndexRunningStatus) {
         this.name = name;
         this.documentsProgress = new progress(
             collectionStats.TotalNumberOfDocuments - collectionStats.NumberOfDocumentsToProcess,
             collectionStats.TotalNumberOfDocuments,
-            collectionProgress.docsFormatter);
+            collectionProgress.docsFormatter, 
+            0, false, runningStatus);
         this.tombstonesProgress = new progress(
             collectionStats.TotalNumberOfTombstones - collectionStats.NumberOfTombstonesToProcess,
             collectionStats.TotalNumberOfTombstones,
-            collectionProgress.docsFormatter);
+            collectionProgress.docsFormatter,
+            0, false, runningStatus);
     }
 
     static docsFormatter(processed: number): string {
@@ -34,7 +36,7 @@ class indexProgress {
     constructor(dto: Raven.Client.Documents.Indexes.IndexProgress) {
         this.isStale = dto.IsStale;
         this.name = dto.Name.toLowerCase();;
-        this.collections = _.map(dto.Collections, (value, key) => new collectionProgress(key, value));
+        this.collections = _.map(dto.Collections, (value, key) => new collectionProgress(key, value, dto.IndexRunningStatus));
 
         const total = _.reduce(this.collections, (p, c) => {
             return p + c.documentsProgress.total + c.tombstonesProgress.total;

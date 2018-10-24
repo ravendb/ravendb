@@ -363,7 +363,7 @@
                         <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
                     </div>
                     <div class="progress" data-bind="with: globalProgress">
-                        <div data-bind="css: { 'progress-bar-striped': !completed, 'progress-bar-primary': !completed, 'active': !completed, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                        <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
                              class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
                             <span class="sr-only" data-bind="text: percentageFormatted + '% Completed'"></span>
                         </div>
@@ -379,7 +379,7 @@
                                 <small class="percentage" data-bind="text: percentageFormatted, css: { 'text-success': completed }, attr: { title: textualProgress}"></small>
                             </div>
                             <div class="progress" data-bind="with: documentsProgress">
-                                <div data-bind="css: { 'progress-bar-striped': !completed, 'progress-bar-primary': !completed, 'active': !completed, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                                <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
                                      class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
                                     <span class="sr-only" data-bind="text: percentageFormatted + '% Completed'"></span>
                                 </div>
@@ -391,7 +391,7 @@
                                 <small class="percentage" data-bind="text: percentageFormatted, css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
                             </div>
                             <div class="progress" data-bind="with: tombstonesProgress">
-                                <div data-bind="css: { 'progress-bar-striped': !completed, 'progress-bar-primary': !completed, 'active': !completed, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                                <div data-bind="css: { 'progress-bar-striped': !completed && !isDisabled, 'progress-bar-primary': !completed, 'active': !completed && !isDisabled, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
                                      class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
                                     <span class="sr-only" data-bind="text: percentageFormatted + '% Completed'"></span>
                                 </div>
