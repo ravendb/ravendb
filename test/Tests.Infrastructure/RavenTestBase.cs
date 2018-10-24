@@ -794,6 +794,42 @@ namespace FastTests
             }
         }
 
+        protected void CreateDogDataWithCycle(IDocumentStore store)
+        {
+            using (var session = store.OpenSession())
+            {
+                var arava = new Dog { Name = "Arava" }; //dogs/1
+                var oscar = new Dog { Name = "Oscar" }; //dogs/2
+                var pheobe = new Dog { Name = "Pheobe" }; //dogs/3
+
+                session.Store(arava);
+                session.Store(oscar);
+                session.Store(pheobe);
+
+                arava.Likes = new[] { oscar.Id };
+                oscar.Likes = new[] { pheobe.Id };
+                pheobe.Likes = new[] { arava.Id };
+
+                session.SaveChanges();
+            }
+        }
+
+        protected void CreateDogDataWithoutEdges(IDocumentStore store)
+        {
+            using (var session = store.OpenSession())
+            {
+                var arava = new Dog { Name = "Arava" }; //dogs/1
+                var oscar = new Dog { Name = "Oscar" }; //dogs/2
+                var pheobe = new Dog { Name = "Pheobe" }; //dogs/3
+
+                session.Store(arava);
+                session.Store(oscar);
+                session.Store(pheobe);
+
+                session.SaveChanges();
+            }
+        }
+
         protected void CreateDataWithMultipleEdgesOfTheSameType(IDocumentStore store)
         {
             using (var session = store.OpenSession())
