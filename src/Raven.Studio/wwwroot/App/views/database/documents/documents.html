@@ -44,6 +44,11 @@
             <div class="clearfix">
                 <div class="pull-right">
                     
+                    <button class="btn btn-default btn-sm" title="Query current collection" data-bind="click: $root.queryCollection"> 
+                        <i class="icon-query"></i>
+                        <span>Query</span>
+                    </button>
+                    
                     <div class="btn-group" data-bind="visible: canExportAsCsv">
                         <button type="button" class="btn btn-default btn-sm" data-bind="click: exportCsv" title="Exports collection to CSV file (visible columns only)">
                             <i class="icon-csv-export"></i>
