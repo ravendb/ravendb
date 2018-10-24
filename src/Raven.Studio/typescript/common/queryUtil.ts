@@ -26,6 +26,19 @@ class queryUtil {
         return query;
     }
 
+    static escapeCollectionOrFieldName(name: string) : string {
+        // wrap collection name in 'collection name' if it has spaces.
+        if (/^[0-9a-zA-Z_@]+$/.test(name)){
+            return name;
+        }
+
+        // escape ' char
+        if (name.includes("'")){
+            name = name.replace("'", "''")
+        }
+        return "'" + name + "'";
+    }
+
     private static readonly RQL_TOKEN_REGEX = /(?=([^{]*{[^}{]*})*[^}]*$)(?=([^']*'[^']*')*[^']*$)(?=([^"]*"[^"]*")*[^"]*$)(SELECT|WHERE|ORDER BY|LOAD|UPDATE|INCLUDE)(\s+|{)/gi;
 
     static replaceSelectAndIncludeWithFetchAllStoredFields(query: string) {

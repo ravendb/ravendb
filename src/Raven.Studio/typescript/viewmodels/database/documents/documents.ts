@@ -28,6 +28,9 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import continueTest = require("common/shell/continueTest");
+import queryCriteria = require("models/database/query/queryCriteria");
+import recentQueriesStorage = require("common/storage/savedQueriesStorage");
+import queryUtil = require("common/queryUtil");
 import endpoints = require("endpoints");
 
 class documents extends viewModelBase {
@@ -389,6 +392,24 @@ class documents extends viewModelBase {
         const url = appUrl.forDatabaseQuery(this.activeDatabase()) + endpoints.databases.streaming.streamsQueries + appUrl.urlEncodeArgs(args);
         this.$downloadForm.attr("action", url);
         this.$downloadForm.submit();
+    }
+    
+    queryCollection() {
+        const query = queryCriteria.empty();
+        const collection = this.currentCollection();
+        const queryText = "from " + queryUtil.escapeCollectionOrFieldName(collection.collectionNameForQuery);
+        
+        query.queryText(queryText);
+        query.name("Recent query (" + collection.collectionNameForQuery + ")");
+        query.recentQuery(true);
+
+        const queryDto = query.toStorageDto();
+        const recentQueries = recentQueriesStorage.getSavedQueries(this.activeDatabase());
+        recentQueriesStorage.appendQuery(queryDto, ko.observableArray(recentQueries));
+        recentQueriesStorage.storeSavedQueries(this.activeDatabase(), recentQueries);
+
+        const queryUrl = appUrl.forQuery(this.activeDatabase(), queryDto.hash);
+        this.navigate(queryUrl);
     }
 }
 
