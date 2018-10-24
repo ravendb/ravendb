@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Queries
 
             public void Add(string alias, Match match, Document instance)
             {
-                //we have map/reduce result that has no id since it is not a document
+                //we have map/reduce result that has no id since it is not a document (results of map/reduce query)
                 if (instance.Id == null) 
                 {
                     _anonymousMatchesByAlias[alias].Add(match);

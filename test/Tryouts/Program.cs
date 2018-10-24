@@ -19,7 +19,7 @@ namespace Tryouts
        
         public static void Main(string[] args)
         {
-            using (var test = new GraphQueries())
+            using (var test = new BasicGraphQueries())
             {
                 test.CanProjectSameDocumentTwice();
             }
