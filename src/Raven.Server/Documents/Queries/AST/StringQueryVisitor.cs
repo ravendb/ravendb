@@ -397,6 +397,23 @@ namespace Raven.Server.Documents.Queries.AST
                     first = false;
                     _sb.Append(item);
                 }
+
+                if(withEdgesClause.VariableLength != null)
+                {
+                    _sb.Append(" * ");
+
+                    if (withEdgesClause.VariableLength.Value.Min != null)
+                        _sb.Append(withEdgesClause.VariableLength.Value.Min);
+
+                    if (withEdgesClause.VariableLength.Value.Min != null ||
+                        withEdgesClause.VariableLength.Value.Max != null)
+                        _sb.Append("..");
+
+                    if (withEdgesClause.VariableLength.Value.Max != null)
+                        _sb.Append(withEdgesClause.VariableLength.Value.Max);
+
+                }
+
                 _sb.Append(")");
             }
 

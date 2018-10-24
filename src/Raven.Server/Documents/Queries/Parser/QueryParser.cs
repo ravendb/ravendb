@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Queries.Parser
         private int _statePos;
 
         public QueryScanner Scanner = new QueryScanner();
-        private Dictionary<StringSegment, (FieldExpression Path, QueryExpression Filter, bool IsEdge)> _synteticWithQueries;
+        private Dictionary<StringSegment, (FieldExpression Path, QueryExpression Filter, bool IsEdge, (int?Min, int?Max)? VariableLength)> _synteticWithQueries;
 
         public void Init(string q)
         {
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     {
                         if (sq.IsEdge)
                         {
-                            var with = new WithEdgesExpression(sq.Filter, sq.Path, null);
+                            var with = new WithEdgesExpression(sq.Filter, sq.Path, null, sq.VariableLength);
                             q.TryAddWithEdgePredicates(with, alias);
                         }
                         else
@@ -204,17 +204,45 @@ namespace Raven.Server.Documents.Queries.Parser
             }
         }
 
-        private FieldExpression GetEdgePath()
+        private (FieldExpression Field, (int? Min, int? Max)? VariableLength) GetEdgePath()
         {
             FieldExpression f = null;
+            (int? Min, int? Max)? variableLength = null;
             if (Scanner.TryScan('('))
             {
                 Field(out f); // okay if false
+
+                variableLength = ReadVariableLength();
+
                 if (Scanner.TryScan(')') == false)
                     ThrowParseException("With edges(<identifier>) was not closed with ')'");
             }
 
-            return f;
+            return (f, variableLength);
+        }
+
+        private (int? Min, int? Max)? ReadVariableLength()
+        {
+            if (Scanner.TryScan("*"))
+            {
+                var min = ReadEdgeVariableNumber();
+
+                if (Scanner.TryScan("..") == false)
+                {
+                    if (min != null)
+                        ThrowParseException("Edge variable length specified a minimum, but expected '..' token was not found afterward");
+
+                    if (Scanner.TryNumber() != null)
+                        ThrowParseException("Edge variable length specified a maximum, but expected '..' token was not found beforehand");
+                }
+
+                var max = ReadEdgeVariableNumber();
+
+                return (min, max);
+
+            }
+
+            return null;
         }
 
         private (WithEdgesExpression Expression, StringSegment Allias) WithEdges()
@@ -225,7 +253,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 if (Alias(true, out var shortAlias) && shortAlias.HasValue)
                 {
-                    var shortWithEdges = new WithEdgesExpression(null, edgeField, null);
+                    var shortWithEdges = new WithEdgesExpression(null, edgeField.Field, null, edgeField.VariableLength);
                     return (shortWithEdges, shortAlias.Value);
                 }
 
@@ -248,8 +276,22 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Alias(true, out var alias) == false || alias.HasValue == false)
                 throw new InvalidQueryException("With clause must contain alias but none was provided", Scanner.Input, null);
 
-            var wee = new WithEdgesExpression(qe, edgeField, orderBy);
+            var wee = new WithEdgesExpression(qe, edgeField.Field, orderBy, edgeField.VariableLength);
             return (wee, alias.Value);
+        }
+
+        private int? ReadEdgeVariableNumber()
+        {
+            var num = Scanner.TryNumber();
+            if (num == null)
+                return null;
+            var token = Scanner.Input.AsSpan().Slice(Scanner.TokenStart, Scanner.TokenLength);
+            if (num.Value != NumberToken.Long)
+                ThrowParseException("Edge variable length cannot be a double, but got: " + token.ToString());
+            if (int.TryParse(token, out var i) == false)
+                ThrowParseException("Edge variable length must be a valid integer, but got: " + token.ToString());
+
+            return i;
         }
 
         public static readonly string[] EdgeOps = new[] { "<-", ">", "[", "-", "<", "(" };
@@ -322,20 +364,28 @@ namespace Raven.Server.Documents.Queries.Parser
                     f = new FieldExpression(new List<StringSegment> { firstPropOnPath });
                 }
 
-                AddWithQuery(f, alias, filter, isEdge, start);
+                (int? Min, int? Max)? variableLen = null;
+                if (isEdge)
+                    variableLen = ReadVariableLength();
+
+                AddWithQuery(f, alias, filter, isEdge, variableLen, start);
 
             }
             else
             {
-                AddWithQuery(new FieldExpression(new List<StringSegment>()), alias, null, isEdge, start);
+                (int? Min, int? Max)? variableLen = null;
+                if (isEdge)
+                    variableLen = ReadVariableLength();
+
+                AddWithQuery(new FieldExpression(new List<StringSegment>()), alias, null, isEdge, variableLen, start);
             }
             return true;
         }
 
-        private void AddWithQuery(FieldExpression path, StringSegment alias, QueryExpression filter, bool isEdge, int start)
+        private void AddWithQuery(FieldExpression path, StringSegment alias, QueryExpression filter, bool isEdge, (int? Min, int? Max)? variableLength, int start)
         {
             if (_synteticWithQueries == null)
-                _synteticWithQueries = new Dictionary<StringSegment, (FieldExpression Collection, QueryExpression Filter, bool IsEdge)>(StringSegmentEqualityComparer.Instance);
+                _synteticWithQueries = new Dictionary<StringSegment, (FieldExpression Collection, QueryExpression Filter, bool IsEdge, (int?Min, int?Max)? VariableLength)>(StringSegmentEqualityComparer.Instance);
 
             if (_synteticWithQueries.TryGetValue(alias, out var existing))
             {
@@ -363,7 +413,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 return;
             }
 
-            _synteticWithQueries.Add(alias, (path, filter, isEdge));
+            _synteticWithQueries.Add(alias, (path, filter, isEdge, variableLength));
         }
 
         private void ThrowDuplicateAliasWithoutSameBody(int start)

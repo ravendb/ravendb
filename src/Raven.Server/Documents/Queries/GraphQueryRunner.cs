@@ -631,6 +631,9 @@ namespace Raven.Server.Documents.Queries
                     return hasResults;
 
                 }
+                if(edge.VariableLength != null)
+                    return TryGetVariableLengthMatchesAfterFiltering(prev.Data, edge.Path.FieldValue, edgeResults, alias, edge.EdgeAlias);
+
                 return TryGetMatchesAfterFiltering(prev.Data, edge.Path.FieldValue, edgeResults, alias, edge.EdgeAlias);
             }
 
@@ -652,6 +655,59 @@ namespace Raven.Server.Documents.Queries
                         Data = edge,
                     };
                 }
+            }
+
+            private bool TryGetVariableLengthMatchesAfterFiltering(BlittableJsonReaderObject src, string path, Dictionary<string, Match> edgeResults, string docAlias, string edgeAlias)
+            {
+                _includedEdges.Clear();
+                var op = new IncludeEdgeOp(this);
+                IncludeUtil.GetDocIdFromInclude(src,
+                   path,
+                   op);
+
+
+                if (_includedEdges.Count == 0)
+                    return false;
+
+                if (edgeResults == null)
+                {
+                    foreach (var kvp in _includedEdges)
+                    {
+                        var doc = _ctx.DocumentDatabase.DocumentsStorage.Get(_ctx, kvp.Key, false);
+                        if (doc == null)
+                            continue;
+
+                        var m = new Match();
+
+                        m.Set(docAlias, doc);
+                        if (kvp.Value != null)
+                            m.Set(edgeAlias, kvp.Value);
+
+                        _results.Add(m);
+                    }
+                }
+                else
+                {
+
+                    foreach (var kvp in _includedEdges)
+                    {
+
+                        if (kvp.Key == null)
+                            continue;
+
+                        if (!edgeResults.TryGetValue(kvp.Key, out var m))
+                            continue;
+
+                        var clone = new Match(m);
+
+                        if (kvp.Value != null)
+                            clone.Set(edgeAlias, kvp.Value);
+
+                        _results.Add(clone);
+                    }
+                }
+
+                return true;
             }
 
             private bool TryGetMatchesAfterFiltering(BlittableJsonReaderObject src, string path, Dictionary<string, Match> edgeResults, string docAlias, string edgeAlias)
