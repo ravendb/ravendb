@@ -20,5 +20,7 @@ namespace Raven.Client.Documents.Replication.Messages
         public bool PullReplication { get; set; }
 
         public TcpConnectionInfo Info { get; set; }
+
+        public string Database { get; set; }
     }
 }

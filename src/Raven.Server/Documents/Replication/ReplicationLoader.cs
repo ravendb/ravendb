@@ -180,7 +180,7 @@ namespace Raven.Server.Documents.Replication
                     {
                         var externalReplication = new ExternalReplication
                         {
-                            Database = Database.Name
+                            Database = initialRequest.Database
                         };
                         var outgoingReplication = new OutgoingReplicationHandler(this, Database, externalReplication, external: true, initialRequest.Info);
                         outgoingReplication.Failed += OnOutgoingSendingFailed;
@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.Replication
             CreateIncomingInstance(tcpConnectionOptions, buffer);
         }
 
-        public void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer)
+        public IncomingReplicationHandler CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
             var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, buffer);
 
@@ -220,6 +220,8 @@ namespace Raven.Server.Documents.Replication
             }
             else
                 newIncoming.Dispose();
+
+            return newIncoming;
         }
 
         private ReplicationLatestEtagRequest IncomingInitialHandshake(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer)
@@ -729,7 +731,7 @@ namespace Raven.Server.Documents.Replication
             return _server.LoadDatabaseRecord(Database.Name, out _);
         }
 
-        private void AddAndStartOutgoingReplication(ReplicationNode node, bool external)
+        internal void AddAndStartOutgoingReplication(ReplicationNode node, bool external)
         {
             var info = GetConnectionInfo(node, external);
 

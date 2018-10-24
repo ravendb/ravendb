@@ -187,6 +187,7 @@ namespace Raven.Server.Documents.Replication
                         if (isPullReplication)
                         {
                             request[nameof(ReplicationInitialRequest.Info)] = _parent._server.GetTcpInfoAndCertificates(null);
+                            request[nameof(ReplicationInitialRequest.Database)] = _parent.Database.Name;
                         }
 
                         using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
@@ -206,13 +207,21 @@ namespace Raven.Server.Documents.Replication
                                 TcpClient = _tcpClient,
                                 Operation = TcpConnectionHeaderMessage.OperationTypes.Replication,
                                 DocumentDatabase = _database,
-                                ProtocolVersion = supportedFeatures.ProtocolVersion
+                                ProtocolVersion = supportedFeatures.ProtocolVersion,
                             };
                             using (_parent._server.Server._tcpContextPool.AllocateOperationContext(out var ctx))
                             using (ctx.GetManagedBuffer(out var copyBuffer))
                             {
-                                _parent.CreateIncomingInstance(tcpOptions, copyBuffer);
+                                var incoming = _parent.CreateIncomingInstance(tcpOptions, copyBuffer);
+                                incoming.Failed += RetryPullReplication;
                                 return;
+                            }
+
+                            void RetryPullReplication(IncomingReplicationHandler incomingReplicationHandler, Exception exception)
+                            {
+                                // if the central node failed, it is our duty to reconnect
+                                incomingReplicationHandler.Failed -= RetryPullReplication;
+                                _parent.AddAndStartOutgoingReplication(Destination, true);
                             }
                         }
                     }
