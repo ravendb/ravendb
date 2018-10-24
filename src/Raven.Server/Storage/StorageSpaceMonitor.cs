@@ -130,15 +130,21 @@ namespace Raven.Server.Storage
 
                         AddEnvironmentIfLowSpace(dataDisk);
 
-                        var journalDisk = DiskSpaceChecker.GetFreeDiskSpace(options.JournalPath.FullPath, drives);
+                        if (options.JournalPath != null)
+                        {
+                            var journalDisk = DiskSpaceChecker.GetFreeDiskSpace(options.JournalPath.FullPath, drives);
 
-                        if (dataDisk?.DriveName != journalDisk?.DriveName)
-                            AddEnvironmentIfLowSpace(journalDisk);
+                            if (dataDisk?.DriveName != journalDisk?.DriveName)
+                                AddEnvironmentIfLowSpace(journalDisk);
+                        }
 
-                        var tempDisk = DiskSpaceChecker.GetFreeDiskSpace(options.TempPath.FullPath, drives);
+                        if (options.TempPath != null)
+                        {
+                            var tempDisk = DiskSpaceChecker.GetFreeDiskSpace(options.TempPath.FullPath, drives);
 
-                        if (dataDisk?.DriveName != tempDisk?.DriveName)
-                            AddEnvironmentIfLowSpace(tempDisk);
+                            if (dataDisk?.DriveName != tempDisk?.DriveName)
+                                AddEnvironmentIfLowSpace(tempDisk);
+                        }
 
                         void AddEnvironmentIfLowSpace(DiskSpaceResult diskSpace)
                         {
