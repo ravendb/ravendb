@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Utils;
@@ -13,28 +15,43 @@ namespace Raven.Server.Storage
 {
     public class StorageSpaceMonitor : IDisposable
     {
-        private readonly DocumentDatabase _database;
-        private readonly NotificationCenter.NotificationCenter _notificationCenter;
         private static readonly TimeSpan CheckFrequency = TimeSpan.FromMinutes(10);
-        private readonly Logger _logger;
-        private readonly object _lock = new object();
+
+        private readonly Logger _logger = LoggingSource.Instance.GetLogger<StorageSpaceMonitor>(nameof(StorageSpaceMonitor));
+        private readonly LinkedList<DocumentDatabase> _databases = new LinkedList<DocumentDatabase>();
+
+        private readonly object _runLock = new object();
+        private readonly object _subscribeLock = new object();
+
+        private readonly NotificationCenter.NotificationCenter _notificationCenter;
+
         private Timer _timer;
+
         internal bool SimulateLowDiskSpace;
 
-        public StorageSpaceMonitor(DocumentDatabase database, NotificationCenter.NotificationCenter notificationCenter)
+        public StorageSpaceMonitor(NotificationCenter.NotificationCenter notificationCenter)
+        {
+            _notificationCenter = notificationCenter;
+
+            _timer = new Timer(Run, null, CheckFrequency, CheckFrequency);
+        }
+
+        public void Subscribe(DocumentDatabase database)
         {
             if (database.Configuration.Core.RunInMemory)
                 return;
 
-            if (database.Configuration.Storage.FreeSpaceAlertThresholdInPercentages == null &&
-                database.Configuration.Storage.FreeSpaceAlertThresholdInMb == null)
+            lock (_subscribeLock)
+                _databases.AddLast(database);
+        }
+
+        public void Unsubscribe(DocumentDatabase database)
+        {
+            if (database.Configuration.Core.RunInMemory)
                 return;
 
-            _database = database;
-            _notificationCenter = notificationCenter;
-            _logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
-
-            _timer = new Timer(Run, null, CheckFrequency, CheckFrequency);
+            lock (_subscribeLock)
+                _databases.Remove(database);
         }
 
         internal void Run(object state)
@@ -42,57 +59,41 @@ namespace Raven.Server.Storage
             if (_notificationCenter.IsInitialized == false)
                 return;
 
-            if (Monitor.TryEnter(_lock) == false)
+            if (Monitor.TryEnter(_runLock) == false)
                 return;
 
             try
             {
-                List<LowDiskSpace> lowSpaceDisks = null;
+                var environmentsRunningOnLowSpaceDisks = GetLowSpaceDisksAndRelevantEnvironments().Environments;
 
-                var repeat = false;
+                // let's try to cleanup first and maybe recover from low disk space issue
 
-                do
+                foreach (var storageEnvironment in environmentsRunningOnLowSpaceDisks)
                 {
-                    var didCleanup = false;
-
-                    foreach (var lowSpaceDisk in GetLowSpaceDisks())
+                    try
                     {
-                        if (repeat == false)
-                        {
-                            foreach (var storageEnvironment in lowSpaceDisk.Value)
-                            {
-                                storageEnvironment.Cleanup(deleteRecyclableJournals: true);
-                            }
-
-                            didCleanup = true;
-                        }
-                        else
-                        {
-                            if (lowSpaceDisks == null)
-                                lowSpaceDisks = new List<LowDiskSpace>();
-
-                            lowSpaceDisks.Add(lowSpaceDisk.Key);
-
-                            repeat = false;
-                        }
-
-                        if (didCleanup)
-                            repeat = true;
+                        storageEnvironment.Cleanup(deleteRecyclableJournals: true);
                     }
-
-                } while (repeat);
-
-                if (lowSpaceDisks != null && lowSpaceDisks.Count > 0)
-                {
-                    var message =
-                        $"The following disks are running out of space:{Environment.NewLine} {string.Join(Environment.NewLine, lowSpaceDisks)}";
-
-                    _notificationCenter.Add(AlertRaised.Create(_database.Name, "Low free disk space", message, AlertType.LowDiskSpace, NotificationSeverity.Warning,
-                        "low-disk-space"));
-
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations(message);
+                    catch (Exception e)
+                    {
+                        if (_logger.IsOperationsEnabled)
+                            _logger.Operations($"Failed to cleanup storage environment after detecting low disk space. Environment: {storageEnvironment}", e);
+                    }
                 }
+
+                var lowSpaceDisks = GetLowSpaceDisksAndRelevantEnvironments().Disks;
+
+                if (lowSpaceDisks.Count == 0)
+                    return;
+
+                var message =
+                    $"The following disks are running out of space:{Environment.NewLine} {string.Join(Environment.NewLine, lowSpaceDisks)}";
+
+                _notificationCenter.Add(AlertRaised.Create(null, "Low free disk space", message, AlertType.LowDiskSpace, NotificationSeverity.Warning,
+                    "low-disk-space"));
+
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations(message);
             }
             catch (Exception e)
             {
@@ -101,67 +102,86 @@ namespace Raven.Server.Storage
             }
             finally
             {
-                Monitor.Exit(_lock);
+                Monitor.Exit(_runLock);
             }
         }
 
-        private Dictionary<LowDiskSpace, List<StorageEnvironment>> GetLowSpaceDisks()
+        private (HashSet<LowDiskSpace> Disks, HashSet<StorageEnvironment> Environments) GetLowSpaceDisksAndRelevantEnvironments()
         {
-            var result = new Dictionary<LowDiskSpace, List<StorageEnvironment>>();
-
             var drives = DriveInfo.GetDrives();
-            
-            foreach (var item in _database.GetAllStoragesEnvironment())
+
+            var lowSpaceDisks = new HashSet<LowDiskSpace>();
+            var environmentsRunningOnLowSpaceDisks = new HashSet<StorageEnvironment>();
+
+            var current = _databases.First;
+
+            while (current != null)
             {
-                var dataDrive = DiskSpaceChecker.GetFreeDiskSpace(item.Environment.Options.BasePath.FullPath, drives);
+                var database = current.Value;
+                var storageConfig = database.Configuration.Storage;
 
-                if (IsLowSpace(dataDrive, out var reason))
+                try
                 {
-                    var lowSpace = new LowDiskSpace(dataDrive, reason);
-
-                    if (result.TryGetValue(lowSpace, out var environments) == false)
+                    foreach (var item in database.GetAllStoragesEnvironment())
                     {
-                        result[lowSpace] = environments = new List<StorageEnvironment>();
-                    }
+                        var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)item.Environment.Options;
 
-                    environments.Add(item.Environment);
-                }
+                        var dataDisk = DiskSpaceChecker.GetFreeDiskSpace(options.BasePath.FullPath, drives);
 
-                if (item.Environment.Options.TempPath != null)
-                {
-                    var tempDrive = DiskSpaceChecker.GetFreeDiskSpace(item.Environment.Options.TempPath.FullPath, drives);
+                        AddEnvironmentIfLowSpace(dataDisk);
 
-                    if (dataDrive.DriveName != tempDrive.DriveName && IsLowSpace(tempDrive, out reason))
-                    {
-                        var lowSpace = new LowDiskSpace(dataDrive, reason);
+                        var journalDisk = DiskSpaceChecker.GetFreeDiskSpace(options.JournalPath.FullPath, drives);
 
-                        if (result.TryGetValue(lowSpace, out var environments) == false)
+                        if (dataDisk?.DriveName != journalDisk?.DriveName)
+                            AddEnvironmentIfLowSpace(journalDisk);
+
+                        var tempDisk = DiskSpaceChecker.GetFreeDiskSpace(options.TempPath.FullPath, drives);
+
+                        if (dataDisk?.DriveName != tempDisk?.DriveName)
+                            AddEnvironmentIfLowSpace(tempDisk);
+
+                        void AddEnvironmentIfLowSpace(DiskSpaceResult diskSpace)
                         {
-                            result[lowSpace] = environments = new List<StorageEnvironment>();
-                        }
+                            if (diskSpace == null)
+                                return;
 
-                        environments.Add(item.Environment);
+                            if (IsLowSpace(diskSpace, storageConfig, out var reason) == false)
+                                return;
+
+                            var lowSpace = new LowDiskSpace(diskSpace, reason);
+
+                            lowSpaceDisks.Add(lowSpace);
+
+                            environmentsRunningOnLowSpaceDisks.Add(item.Environment);
+                        }
                     }
                 }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Failed to check disk usage for '{database.Name}' database", e);
+                }
+
+                current = current.Next;
             }
 
-            return result;
+            return (lowSpaceDisks, environmentsRunningOnLowSpaceDisks);
 
-            bool IsLowSpace(DiskSpaceResult diskSpace, out string reason)
+            bool IsLowSpace(DiskSpaceResult diskSpace, StorageConfiguration config, out string reason)
             {
-                if (_database.Configuration.Storage.FreeSpaceAlertThresholdInMb != null &&
-                    diskSpace.TotalFreeSpace < _database.Configuration.Storage.FreeSpaceAlertThresholdInMb.Value)
+                if (config.FreeSpaceAlertThresholdInMb != null &&
+                    diskSpace.TotalFreeSpace < config.FreeSpaceAlertThresholdInMb.Value)
                 {
-                    reason = $"has {diskSpace.TotalFreeSpace} free what is below configured threshold ({_database.Configuration.Storage.FreeSpaceAlertThresholdInMb.Value})";
+                    reason = $"has {diskSpace.TotalFreeSpace} free what is below configured threshold ({config.FreeSpaceAlertThresholdInMb.Value})";
                     return true;
                 }
 
                 var availableInPercentages = diskSpace.TotalFreeSpace.GetValue(SizeUnit.Bytes) * 100f / diskSpace.TotalSize.GetValue(SizeUnit.Bytes);
 
-                if (_database.Configuration.Storage.FreeSpaceAlertThresholdInPercentages != null &&
-                    availableInPercentages < _database.Configuration.Storage.FreeSpaceAlertThresholdInPercentages.Value)
+                if (config.FreeSpaceAlertThresholdInPercentages != null &&
+                    availableInPercentages < config.FreeSpaceAlertThresholdInPercentages.Value)
                 {
-                    reason = $"has {availableInPercentages:#.#}% free what is below configured threshold ({_database.Configuration.Storage.FreeSpaceAlertThresholdInPercentages}%)";
+                    reason = $"has {availableInPercentages:#.#}% free what is below configured threshold ({config.FreeSpaceAlertThresholdInPercentages}%)";
                     return true;
                 }
 
@@ -186,35 +206,37 @@ namespace Raven.Server.Storage
         {
             public LowDiskSpace(DiskSpaceResult diskSpace, string reason)
             {
-                DiskSpace = diskSpace;
-                Reason = reason;
+                Debug.Assert(diskSpace != null);
+
+                _diskSpace = diskSpace;
+                _reason = reason;
             }
 
-            public readonly DiskSpaceResult DiskSpace;
+            private readonly DiskSpaceResult _diskSpace;
 
-            public readonly string Reason;
+            private readonly string _reason;
 
             public override int GetHashCode()
             {
-                return DiskSpace.DriveName.GetHashCode();
+                return _diskSpace.DriveName.GetHashCode();
             }
 
             public override bool Equals(object obj)
             {
                 if (obj is LowDiskSpace lds)
-                    return DiskSpace.DriveName == lds.DiskSpace.DriveName;
+                    return _diskSpace.DriveName == lds._diskSpace.DriveName;
 
                 return false;
             }
 
             public override string ToString()
             {
-                var drive = DiskSpace.DriveName;
+                var drive = _diskSpace.DriveName;
 
-                if (string.IsNullOrWhiteSpace(DiskSpace.VolumeLabel) == false)
-                    drive += $" ({DiskSpace.VolumeLabel})";
+                if (string.IsNullOrWhiteSpace(_diskSpace.VolumeLabel) == false)
+                    drive += $" ({_diskSpace.VolumeLabel})";
 
-                return $" - '{drive}' {Reason}";
+                return $" - '{drive}' {_reason}";
             }
         }
     }

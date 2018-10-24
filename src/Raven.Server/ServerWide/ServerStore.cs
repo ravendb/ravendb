@@ -49,6 +49,7 @@ using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Storage;
 using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
@@ -94,6 +95,7 @@ namespace Raven.Server.ServerWide
         public readonly ServerDashboardNotifications ServerDashboardNotifications;
         public readonly LicenseManager LicenseManager;
         public readonly FeedbackSender FeedbackSender;
+        public readonly StorageSpaceMonitor StorageSpaceMonitor;
         public readonly SecretProtection Secrets;
         public readonly AsyncManualResetEvent InitializationCompleted;
         public bool Initialized;
@@ -128,6 +130,8 @@ namespace Raven.Server.ServerWide
             LicenseManager = new LicenseManager(this);
 
             FeedbackSender = new FeedbackSender();
+
+            StorageSpaceMonitor = new StorageSpaceMonitor(NotificationCenter);
 
             DatabaseInfoCache = new DatabaseInfoCache();
 
@@ -1470,13 +1474,14 @@ namespace Raven.Server.ServerWide
                     var toDispose = new List<IDisposable>
                     {
                         _engine,
+                        StorageSpaceMonitor,
                         NotificationCenter,
                         LicenseManager,
                         DatabasesLandlord,
                         _env,
                         _clusterRequestExecutor,
                         ContextPool,
-                        ByteStringMemoryCache.Cleaner
+                        ByteStringMemoryCache.Cleaner,
                     };
 
                     var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {nameof(ServerStore)}.");
