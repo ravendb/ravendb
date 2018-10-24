@@ -194,6 +194,14 @@ namespace Raven.Server.Documents.Queries
                 IEnumerable<Document> documents;
                 if (_startsWith != null)
                 {
+                    var countQuery = false;
+
+                    if (_query.PageSize == 0)
+                    {
+                        countQuery = true;
+                        _query.PageSize = int.MaxValue;
+                    }
+
                     if (_isAllDocsCollection)
                     {
                         documents = _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, null, _start, _query.PageSize);
@@ -201,6 +209,19 @@ namespace Raven.Server.Documents.Queries
                     else
                     {
                         documents = _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, null, _start, _query.PageSize, _collection);
+                    }
+
+                    if (countQuery)
+                    {
+                        foreach (var document in documents)
+                        {
+                            using (document.Data)
+                                _totalResults.Value++;
+                        }
+
+                        documents = Enumerable.Empty<Document>();
+
+                        _query.PageSize = 0;
                     }
                 }
                 else if (_ids != null)

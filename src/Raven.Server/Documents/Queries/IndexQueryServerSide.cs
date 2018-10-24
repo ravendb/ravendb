@@ -2,10 +2,13 @@
 using System.IO;
 using System.Text;
 using Microsoft.AspNetCore.Http;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter;
+using Raven.Server.TrafficWatch;
 using Raven.Server.Web;
 using Sparrow.Json;
 
@@ -18,6 +21,15 @@ namespace Raven.Server.Documents.Queries
 
         [JsonDeserializationIgnore]
         public QueryTimingsScope Timings { get; private set; }
+
+        /// <summary>
+        /// puts the given string in TrafficWatch property of HttpContext.Items
+        /// puts the given type in TrafficWatchChangeType property of HttpContext.Items
+        /// </summary>
+        public static void AddStringToHttpContext(HttpContext httpContext, string str, TrafficWatchChangeType type)
+        {
+            httpContext.Items["TrafficWatch"] = (str, type);
+        }
 
         private IndexQueryServerSide()
         {
@@ -37,85 +49,133 @@ namespace Raven.Server.Documents.Queries
         }
 
         public static IndexQueryServerSide Create(
+            HttpContext httpContext,
             BlittableJsonReaderObject json,
             QueryMetadataCache cache,
+            RequestTimeTracker tracker,
             QueryType queryType = QueryType.Select)
         {
-            var result = JsonDeserializationServer.IndexQuery(json);
-
-            if (result.PageSize == 0 && json.TryGet(nameof(PageSize), out int _) == false)
-                result.PageSize = int.MaxValue;
-
-            if (string.IsNullOrWhiteSpace(result.Query))
-                throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
-
-            if (cache.TryGetMetadata(result, out var metadataHash, out var metadata))
+            IndexQueryServerSide result = null;
+            try
             {
-                result.Metadata = metadata;
+                result = JsonDeserializationServer.IndexQuery(json);
+
+                if (result.PageSize == 0 && json.TryGet(nameof(PageSize), out int _) == false)
+                    result.PageSize = int.MaxValue;
+
+                if (string.IsNullOrWhiteSpace(result.Query))
+                {
+                    throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
+                }
+
+                if (cache.TryGetMetadata(result, out var metadataHash, out var metadata))
+                {
+                    result.Metadata = metadata;
+                    return result;
+                }
+
+                result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, queryType);
+
+                if (result.Metadata.HasTimings)
+                    result.Timings = new QueryTimingsScope(start: false);
+
+                if (tracker != null)
+                    tracker.Query = result.Query;
+
                 return result;
             }
-
-            result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, queryType);
-            if (result.Metadata.HasTimings)
-                result.Timings = new QueryTimingsScope(start: false);
-
-            return result;
+            catch(Exception e)
+            {
+                string errorMessage;
+                if (e is InvalidOperationException)
+                    errorMessage = e.Message;
+                else
+                    errorMessage = (result == null ? $"Failed to parse index query : {json}" : $"Failed to parse query: {result.Query}");
+                
+                if (tracker != null)
+                    tracker.Query = errorMessage;
+                if (TrafficWatchManager.HasRegisteredClients)
+                    AddStringToHttpContext(httpContext, errorMessage, TrafficWatchChangeType.Queries);
+                throw;
+            }
         }
 
-        public static IndexQueryServerSide Create(HttpContext httpContext, int start, int pageSize, JsonOperationContext context, string overrideQuery = null)
+        public static IndexQueryServerSide Create(HttpContext httpContext, int start, int pageSize, JsonOperationContext context, RequestTimeTracker tracker, string overrideQuery = null)
         {
-            var isQueryOverwritten = !string.IsNullOrEmpty(overrideQuery);
-            if ((httpContext.Request.Query.TryGetValue("query", out var query) == false || query.Count == 0 || string.IsNullOrWhiteSpace(query[0])) && isQueryOverwritten == false)
-                throw new InvalidOperationException("Missing mandatory query string parameter 'query'.");
-
-            var actualQuery = isQueryOverwritten ? overrideQuery : query[0];
-            var result = new IndexQueryServerSide
+            IndexQueryServerSide result = null;
+            try
             {
-                Query = Uri.UnescapeDataString(actualQuery),
-                // all defaults which need to have custom value
-                Start = start,
-                PageSize = pageSize,
-            };
-            
-            foreach (var item in httpContext.Request.Query)
-            {
-                try
+                var isQueryOverwritten = !string.IsNullOrEmpty(overrideQuery);
+                if ((httpContext.Request.Query.TryGetValue("query", out var query) == false || query.Count == 0 || string.IsNullOrWhiteSpace(query[0])) &&
+                    isQueryOverwritten == false)
                 {
-                    switch (item.Key)
+                    throw new InvalidOperationException("Missing mandatory query string parameter 'query'");
+                }
+
+                var actualQuery = isQueryOverwritten ? overrideQuery : query[0];
+                result = new IndexQueryServerSide
+                {
+                    Query = Uri.UnescapeDataString(actualQuery),
+                    // all defaults which need to have custom value
+                    Start = start,
+                    PageSize = pageSize,
+                };
+
+                foreach (var item in httpContext.Request.Query)
+                {
+                    try
                     {
-                        case "query":
-                            continue;
-                        case "parameters":
-                            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(item.Value[0])))
-                            {
-                                result.QueryParameters = context.Read(stream, "query parameters");
-                            }
-                            continue;
-                        case RequestHandler.StartParameter:
-                        case RequestHandler.PageSizeParameter:
-                            break;
-                        case "waitForNonStaleResults":
-                            result.WaitForNonStaleResults = bool.Parse(item.Value[0]);
-                            break;
-                        case "waitForNonStaleResultsTimeoutInMs":
-                            result.WaitForNonStaleResultsTimeout = TimeSpan.FromMilliseconds(long.Parse(item.Value[0]));
-                            break;
-                        case "skipDuplicateChecking":
-                            result.SkipDuplicateChecking = bool.Parse(item.Value[0]);
-                            break;
+                        switch (item.Key)
+                        {
+                            case "query":
+                                continue;
+                            case "parameters":
+                                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(item.Value[0])))
+                                {
+                                    result.QueryParameters = context.Read(stream, "query parameters");
+                                }
+
+                                continue;
+                            case RequestHandler.StartParameter:
+                            case RequestHandler.PageSizeParameter:
+                                break;
+                            case "waitForNonStaleResults":
+                                result.WaitForNonStaleResults = bool.Parse(item.Value[0]);
+                                break;
+                            case "waitForNonStaleResultsTimeoutInMs":
+                                result.WaitForNonStaleResultsTimeout = TimeSpan.FromMilliseconds(long.Parse(item.Value[0]));
+                                break;
+                            case "skipDuplicateChecking":
+                                result.SkipDuplicateChecking = bool.Parse(item.Value[0]);
+                                break;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        throw new ArgumentException($"Could not handle query string parameter '{item.Key}' (value: {item.Value}) for query: {result.Query}", e);
                     }
                 }
-                catch (Exception e)
-                {
-                    throw new ArgumentException($"Could not handle query string parameter '{item.Key}' (value: {item.Value})", e);
-                }
+
+                result.Metadata = new QueryMetadata(result.Query, null, 0);
+                if (result.Metadata.HasTimings)
+                    result.Timings = new QueryTimingsScope(start: false);
+
+                tracker.Query = result.Query;
+                return result;
             }
+            catch(Exception e)
+            {
+                string errorMessage;
+                if (e is InvalidOperationException || e is ArgumentException)
+                    errorMessage = e.Message;
+                else
+                    errorMessage = $"Failed to parse query: {result.Query}";
 
-            result.Metadata = new QueryMetadata(result.Query, null, 0);
-
-            if (result.Metadata.HasTimings)
-                result.Timings = new QueryTimingsScope(start: false);
-            return result;
+                tracker.Query = errorMessage;
+                if (TrafficWatchManager.HasRegisteredClients)
+                    AddStringToHttpContext(httpContext, errorMessage, TrafficWatchChangeType.Queries);
+                throw;
+            }
         }
     }
 }

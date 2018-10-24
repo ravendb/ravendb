@@ -275,6 +275,19 @@
                                     <i class="icon-import"></i> <span>Load document</span>
                                 </button>
                             </div>
+                            <div class="form-group">
+                                <label class="control-label">Mode:</label>
+                                <div class="flex-grow">
+                                    <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                        <span data-bind="text: testDelete() ? 'Document delete' : 'Document put / update'"></span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a href="#" data-bind="click: _.partial(testDelete, false)">Document put / update</a></li>
+                                        <li><a href="#" data-bind="click: _.partial(testDelete, true)">Document delete</a></li>
+                                    </ul>
+                                </div>
+                            </div>
 
                             <div class="flex-horizontal">
                                 <div class="flex-separator"></div>

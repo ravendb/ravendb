@@ -1036,13 +1036,10 @@ namespace Raven.Server.Web.System
             }
 
             var dataDir = configuration.DataDirectory;
-            if (Directory.Exists(dataDir) == false)
-                throw new DirectoryNotFoundException($"Could not find directory {dataDir}");
-
-            var dataExporter = configuration.DataExporterFullPath.Trim('"');
-            if (File.Exists(dataExporter) == false)
-                throw new FileNotFoundException($"Could not find file {dataExporter}");
-
+            OfflineMigrationConfiguration.ValidateDataDirectory(dataDir);
+            var dataExporter = OfflineMigrationConfiguration.EffectiveDataExporterFullPath(configuration.DataExporterFullPath);
+            OfflineMigrationConfiguration.ValidateExporterPath(dataExporter);
+            
             var databaseName = configuration.DatabaseRecord.DatabaseName;
             if (ResourceNameValidator.IsValidResourceName(databaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);

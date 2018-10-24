@@ -12,8 +12,10 @@ class saveDocumentCommand extends commandBase {
     execute(): JQueryPromise<saveDocumentResponseDto> {
         this.document.__metadata.id = this.id;
 
-        const commands: Array<Raven.Server.Documents.Handlers.BatchRequestParser.CommandData> = [this.document.toBulkDoc("PUT")];
-
+        const commands: Array<Raven.Server.Documents.Handlers.BatchRequestParser.CommandData> = [
+            this.document.toBulkDoc("PUT")
+        ];
+        
         const args = ko.toJSON({ Commands: commands });
         const url = endpoints.databases.batch.bulk_docs;
         const saveTask = this.post<saveDocumentResponseDto>(url, args, this.db);

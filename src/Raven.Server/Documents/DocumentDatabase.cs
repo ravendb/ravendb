@@ -66,6 +66,7 @@ namespace Raven.Server.Documents
 
         private readonly object _idleLocker = new object();
 
+        private readonly object _clusterLocker = new object();
         /// <summary>
         /// The current lock, used to make sure indexes have a unique names
         /// </summary>
@@ -100,6 +101,9 @@ namespace Raven.Server.Documents
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
             try
             {
+                if (configuration.Initialized == false)
+                    throw new InvalidOperationException("Cannot create a new document database instance without initialized configuration");
+
                 TryAcquireWriteLock();
 
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -402,7 +406,7 @@ namespace Raven.Server.Documents
                     try
                     {
                         var batch = new List<ClusterTransactionCommand.SingleClusterDatabaseCommand>(
-                            ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take:  256));
+                            ClusterTransactionCommand.ReadCommandsBatch(context, Name, fromCount: _nextClusterCommand, take: 256));
 
                         if (batch.Count == 0)
                         {
@@ -452,7 +456,7 @@ namespace Raven.Server.Documents
                 {
                     await TxMerger.Enqueue(mergedCommand).WithCancellation(DatabaseShutdown);
                     OnClusterTransactionCompletion(command, mergedCommand);
-                    
+
                     _clusterTransactionDelayOnFailure = 1000;
                 }
                 catch (Exception e)
@@ -462,7 +466,7 @@ namespace Raven.Server.Documents
                         Name,
                         "Cluster transaction failed to execute",
                         $"Failed to execute cluster transactions with raft index: {command.Index}. {Environment.NewLine}" +
-                        $"With the following document ids involved: {string.Join(", ",command.Commands.Select(item => JsonDeserializationServer.ClusterTransactionDataCommand((BlittableJsonReaderObject)item).Id))} {Environment.NewLine}" +
+                        $"With the following document ids involved: {string.Join(", ", command.Commands.Select(item => JsonDeserializationServer.ClusterTransactionDataCommand((BlittableJsonReaderObject)item).Id))} {Environment.NewLine}" +
                         "Performing cluster transactions on this database will be stopped until the issue is resolved.",
                         AlertType.ClusterTransactionFailure,
                         NotificationSeverity.Error,
@@ -588,125 +592,138 @@ namespace Raven.Server.Documents
 
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(DocumentDatabase)} {Name}");
 
-            foreach (var connection in RunningTcpConnections)
+            var lockTaken = false;
+            Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref lockTaken);
+
+            try
             {
+                if (lockTaken == false && _logger.IsOperationsEnabled)
+                    _logger.Operations("Failed to acquire lock during database dispose for cluster notifications. Will dispose rudely...");
+
+                foreach (var connection in RunningTcpConnections)
+                {
+                    exceptionAggregator.Execute(() =>
+                    {
+                        connection.Dispose();
+                    });
+                }
+
                 exceptionAggregator.Execute(() =>
                 {
-                    connection.Dispose();
+                    TxMerger?.Dispose();
                 });
-            }
 
-            exceptionAggregator.Execute(() =>
-            {
-                TxMerger?.Dispose();
-            });
+                if (_indexStoreTask != null)
+                {
+                    exceptionAggregator.Execute(() =>
+                    {
+                        _indexStoreTask.Wait(DatabaseShutdown);
+                    });
+                }
 
-            if (_indexStoreTask != null)
-            {
                 exceptionAggregator.Execute(() =>
                 {
-                    _indexStoreTask.Wait(DatabaseShutdown);
+                    IndexStore?.Dispose();
                 });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    ExpiredDocumentsCleaner?.Dispose();
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    PeriodicBackupRunner?.Dispose();
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    TombstoneCleaner?.Dispose();
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    ReplicationLoader?.Dispose();
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    EtlLoader?.Dispose();
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    Operations?.Dispose(exceptionAggregator);
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    NotificationCenter?.Dispose();
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    SubscriptionStorage?.Dispose();
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    ConfigurationStorage?.Dispose();
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    DocumentsStorage?.Dispose();
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    _databaseShutdown.Dispose();
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    if (MasterKey == null)
+                        return;
+                    fixed (byte* pKey = MasterKey)
+                    {
+                        Sodium.sodium_memzero(pKey, (UIntPtr)MasterKey.Length);
+                    }
+                });
+
+                exceptionAggregator.Execute(() =>
+                {
+                    if (_writeLockFile != null)
+                    {
+                        try
+                        {
+                            _writeLockFile.Unlock(0, 1);
+                        }
+                        catch (PlatformNotSupportedException)
+                        {
+                            // Unlock isn't supported on macOS
+                        }
+
+                        _writeLockFile.Dispose();
+
+                        try
+                        {
+                            if (File.Exists(_lockFile))
+                                File.Delete(_lockFile);
+                        }
+                        catch (IOException)
+                        {
+                        }
+                    }
+                });
+
+                exceptionAggregator.ThrowIfNeeded();
             }
-
-            exceptionAggregator.Execute(() =>
+            finally
             {
-                IndexStore?.Dispose();
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                ExpiredDocumentsCleaner?.Dispose();
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                PeriodicBackupRunner?.Dispose();
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                TombstoneCleaner?.Dispose();
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                ReplicationLoader?.Dispose();
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                EtlLoader?.Dispose();
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                Operations?.Dispose(exceptionAggregator);
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                NotificationCenter?.Dispose();
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                SubscriptionStorage?.Dispose();
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                ConfigurationStorage?.Dispose();
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                DocumentsStorage?.Dispose();
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                _databaseShutdown.Dispose();
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                if (MasterKey == null)
-                    return;
-                fixed (byte* pKey = MasterKey)
-                {
-                    Sodium.sodium_memzero(pKey, (UIntPtr)MasterKey.Length);
-                }
-            });
-
-            exceptionAggregator.Execute(() =>
-            {
-                if (_writeLockFile != null)
-                {
-                    try
-                    {
-                        _writeLockFile.Unlock(0, 1);
-                    }
-                    catch (PlatformNotSupportedException)
-                    {
-                        // Unlock isn't supported on macOS
-                    }
-                    
-                    _writeLockFile.Dispose();
-                    
-                    try
-                    {
-                        if (File.Exists(_lockFile))
-                            File.Delete(_lockFile);
-                    }
-                    catch (IOException)
-                    {
-                    }
-                }
-            });
-
-            exceptionAggregator.ThrowIfNeeded();
-
+                if (lockTaken)
+                    Monitor.Exit(_clusterLocker);
+            }
         }
 
         public DynamicJsonValue GenerateDatabaseInfo()
@@ -1034,8 +1051,10 @@ namespace Raven.Server.Documents
 
         private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
         {
-            lock (this)
+            lock (_clusterLocker)
             {
+                DatabaseShutdown.ThrowIfCancellationRequested();
+
                 Debug.Assert(string.Equals(Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
                     $"{Name} != {record.DatabaseName}");
 
@@ -1059,7 +1078,7 @@ namespace Raven.Server.Documents
                     ReplicationLoader?.HandleDatabaseRecordChange(record);
                     EtlLoader?.HandleDatabaseRecordChange(record);
                     OnDatabaseRecordChanged(record);
-                    SubscriptionStorage?.HandleDatabaseValueChange(record);
+                    SubscriptionStorage?.HandleDatabaseRecordChange(record);
 
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
@@ -1075,9 +1094,11 @@ namespace Raven.Server.Documents
 
         private void NotifyFeaturesAboutValueChange(DatabaseRecord record)
         {
-            lock (this)
+            lock (_clusterLocker)
             {
-                SubscriptionStorage?.HandleDatabaseValueChange(record);
+                DatabaseShutdown.ThrowIfCancellationRequested();
+
+                SubscriptionStorage?.HandleDatabaseRecordChange(record);
                 EtlLoader?.HandleDatabaseValueChanged(record);
             }
         }

@@ -479,3 +479,37 @@ interface periodicBackupServerLimitsResponse {
     AllowedAwsRegions: Array<string>;
     AllowedDestinations: Array<backupOptions>;
 }
+
+interface serializedColumnDto {
+    visible: boolean;
+    editable: boolean;
+    column: virtualColumnDto;
+}
+
+
+interface virtualColumnDto {
+    type: "flags" | "checkbox" | "text" | "hyperlink" | "custom"
+    width: string;
+    header: string;
+    serializedValue: string;
+}
+
+interface attachmentItem {
+    documentId: string;
+    name: string;
+    contentType: string;
+    size: number;
+}
+
+interface editDocumentCrudActions {
+    setCounter(counter: counterItem): void;
+    deleteAttachment(file: attachmentItem): void;
+    deleteCounter(counter: counterItem): void;
+    fetchCounters(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<counterItem>>;
+    fetchAttachments(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>>;
+    saveRelatedItems(targetDocumentId: string): JQueryPromise<void>;
+    attachmentsCount: KnockoutComputed<number>;
+    countersCount: KnockoutComputed<number>;
+    onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any): void;
+}
+

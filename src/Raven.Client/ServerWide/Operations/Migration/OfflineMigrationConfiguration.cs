@@ -8,6 +8,11 @@ namespace Raven.Client.ServerWide.Operations.Migration
 {
     public class OfflineMigrationConfiguration
     {
+        private const string StorageExporterExecutable = "Raven.StorageExporter.exe";
+        private const string EsentDBDataFile = "Data";
+        private const string EsentFSDataFile = "Data.ravenfs";
+        private const string VoronDataFile = "Raven.voron";
+        
         private OfflineMigrationConfiguration()
         {
             // for deserialization
@@ -46,6 +51,40 @@ namespace Raven.Client.ServerWide.Operations.Migration
 
             if (string.IsNullOrWhiteSpace(DatabaseRecord.DatabaseName))
                 throw new ArgumentNullException(nameof(DatabaseRecord.DatabaseName));
+        }
+
+        internal static string EffectiveDataExporterFullPath(string fullPath)
+        {
+            var path = fullPath.Trim('"');
+            if (Directory.Exists(path))
+            {
+                // looks like user provided dir instead of full path
+                // try to add executable name
+                return Path.Combine(path, StorageExporterExecutable);
+            }
+
+            //otherwise return what we have
+            return path;
+        }
+        
+        internal static void ValidateDataDirectory(string dataDirectory)
+        {
+            if (Directory.Exists(dataDirectory) == false)
+                throw new DirectoryNotFoundException($"Could not find directory {dataDirectory}");
+
+            var esentDataDbFile = Path.Combine(dataDirectory, EsentDBDataFile);
+            var esentDataFsFile = Path.Combine(dataDirectory, EsentFSDataFile);
+            var voronDataFile = Path.Combine(dataDirectory, VoronDataFile);
+            if (!File.Exists(esentDataDbFile) && !File.Exists(esentDataFsFile) && !File.Exists(voronDataFile))
+                throw new FileNotFoundException($"Data directory should contain file '{EsentDBDataFile}', '{EsentFSDataFile}' or '{VoronDataFile}'");
+        }
+
+        internal static void ValidateExporterPath(string dataExporterPath)
+        {
+            var effectivePath = EffectiveDataExporterFullPath(dataExporterPath);
+            
+            if (File.Exists(effectivePath) == false)
+                throw new FileNotFoundException($"Could not find file {StorageExporterExecutable} at given location");
         }
 
         internal (string Commandline, string TmpFile) GenerateExporterCommandLine()

@@ -151,15 +151,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         Logger.Info(msg);
                 });
 
-                using (var database = new DocumentDatabase(databaseName,
-                    new RavenConfiguration(databaseName, ResourceType.Database)
-                    {
-                        Core =
-                        {
-                            DataDirectory = new PathSetting(_restoreConfiguration.DataDirectory),
-                            RunInMemory = false
-                        }
-                    }, _serverStore, addToInitLog))
+                var configuration = _serverStore
+                    .DatabasesLandlord
+                    .CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord);
+
+                using (var database = new DocumentDatabase(databaseName, configuration, _serverStore, addToInitLog))
                 {
                     // smuggler needs an existing document database to operate
                     var options = InitializeOptions.SkipLoadingDatabaseRecord;
@@ -456,7 +452,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var destination = new DatabaseDestination(database);
             for (var i = 0; i < _filesToRestore.Count - 1; i++)
             {
-                result.AddInfo($"Restoring file {(i+1):#,#;;0}/{_filesToRestore.Count:#,#;;0}");
+                result.AddInfo($"Restoring file {(i + 1):#,#;;0}/{_filesToRestore.Count:#,#;;0}");
                 onProgress.Invoke(result.Progress);
 
                 var filePath = Path.Combine(backupDirectory, _filesToRestore[i]);

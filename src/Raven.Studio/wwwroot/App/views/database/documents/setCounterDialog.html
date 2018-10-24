@@ -53,11 +53,11 @@
                                 <label for="counterTotalInput" class="control-label">Set New Value<i class="required"></i></label>
                             </div>
                             <div class="col-md-9">
-                                <input type="number" id="counterTotalInput" data-bind="textInput: newTotalValue" placeholder="Enter new counter value" class="form-control" autofocus>
+                                <input type="number" id="counterTotalInput" data-bind="numericValue: newTotalValue" placeholder="Enter new counter value" class="form-control" autofocus>
                             </div>
                         </div>
                     </div>
-                    <div class="panel padding">
+                    <div class="panel padding" data-bind="visible: showPerNodeValues">
                         <div class="form-group">
                             <div data-bind="foreach: counterValuesPerNode">
                                 <div class="row">

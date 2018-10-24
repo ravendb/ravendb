@@ -797,7 +797,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        public AttachmentDetails CopyAttachment(DocumentsOperationContext context, string documentId, string name, string destinationId, string destinationName, LazyStringValue changeVector)
+        public AttachmentDetails CopyAttachment(DocumentsOperationContext context, string documentId, string name, string destinationId, string destinationName, LazyStringValue changeVector, AttachmentType attachmentType)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentException("Argument cannot be null or whitespace.", nameof(documentId));
@@ -810,7 +810,7 @@ namespace Raven.Server.Documents
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Copy", nameof(context));
 
-            var attachment = GetAttachment(context, documentId, name, AttachmentType.Document, changeVector);
+            var attachment = GetAttachment(context, documentId, name, attachmentType, changeVector);
             if (attachment == null)
                 AttachmentDoesNotExistException.ThrowFor(documentId, name);
 

@@ -7,6 +7,8 @@ namespace Raven.Server.Documents.ETL.Test
     {
         public string DocumentId;
 
+        public bool IsDelete;
+
         public TConfiguration Configuration;
     }
 }

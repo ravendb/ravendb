@@ -82,6 +82,8 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var kvp in record.AutoIndexes)
             {
+                _documentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();
+
                 var name = kvp.Key;
                 try
                 {
@@ -210,6 +212,8 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var kvp in record.Indexes)
             {
+                _documentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();
+
                 var name = kvp.Key;
                 var definition = kvp.Value;
 
@@ -324,6 +328,8 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var index in _indexes)
             {
+                _documentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();
+
                 var indexNormalizedName = index.Name;
                 if (indexNormalizedName.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix))
                 {

@@ -28,7 +28,7 @@
         </ul>
     </div>
     <div class="flex-footer">
-        <div class="error-message bg-danger padding padding-sm margin margin-bottom margin-bottom-sm" data-bind="visible: !hasAtLeastOneColumn()">
+        <div class="error-message bg-danger padding padding-sm margin margin-bottom margin-bottom-sm" data-bind="visible: allVisibleColumns().length && !hasAtLeastOneColumn()">
             Please select at least one column
         </div>
         
@@ -61,8 +61,11 @@
 
         <div class="clearfix">
             <div class="pull-left">
-                <!-- TODO <button class="btn btn-sm">Set as default</button>-->
                 <button class="btn btn-primary btn-sm" data-bind="click: showAddCustomColumnForm"><i class="icon-plus"></i> <span>Add a custom column</span></button>
+                <button class="btn btn-sm close-panel" title="Reset visible columns and its order to default" data-bind="click: useDefaults">
+                    <i class="icon-reset"></i>
+                    <span>Reset to default</span>
+                </button>
             </div>
             <div class="pull-right">
                 <button class="btn btn-sm close-panel">Close</button>

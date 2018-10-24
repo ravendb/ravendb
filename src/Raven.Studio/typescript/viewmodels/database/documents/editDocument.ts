@@ -5,19 +5,27 @@ import document = require("models/database/documents/document");
 import documentMetadata = require("models/database/documents/documentMetadata");
 import collection = require("models/database/documents/collection");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
+import cloneAttachmentsAndCountersCommand = require("commands/database/documents/cloneAttachmentsAndCountersCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import getDocumentPhysicalSizeCommand = require("commands/database/documents/getDocumentPhysicalSizeCommand");
 import getDocumentsFromCollectionCommand = require("commands/database/documents/getDocumentsFromCollectionCommand");
 import getRevisionsBinDocumentMetadataCommand = require("commands/database/documents/getRevisionsBinDocumentMetadataCommand");
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
+import getCountersCommand = require("commands/database/documents/counters/getCountersCommand");
+import setCounterDialog = require("viewmodels/database/documents/setCounterDialog");
 import appUrl = require("common/appUrl");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 import jsonUtil = require("common/jsonUtil");
 import messagePublisher = require("common/messagePublisher");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import deleteCounterCommand = require("commands/database/documents/counters/deleteCounterCommand");
 import genUtils = require("common/generalUtils");
 import changeSubscription = require("common/changeSubscription");
 import documentHelpers = require("common/helpers/database/documentHelpers");
 import copyToClipboard = require("common/copyToClipboard");
+import deleteAttachmentCommand = require("commands/database/documents/attachments/deleteAttachmentCommand");
+import setCounterCommand = require("commands/database/documents/counters/setCounterCommand");
+import CountersDetail = Raven.Client.Documents.Operations.Counters.CountersDetail;
 
 import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import viewModelBase = require("viewmodels/viewModelBase");
@@ -28,6 +36,7 @@ import changeVectorUtils = require("common/changeVectorUtils");
 
 import eventsCollector = require("common/eventsCollector");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import database = require("models/resources/database");
 
 class editDocument extends viewModelBase {
 
@@ -46,8 +55,6 @@ class editDocument extends viewModelBase {
     
     lastModifiedAsAgo: KnockoutComputed<string>;    
     latestRevisionUrl: KnockoutComputed<string>;
-    attachmentsCount: KnockoutComputed<number>;
-    countersCount: KnockoutComputed<number>;
     rawJsonUrl: KnockoutComputed<string>;
     isDeleteRevision: KnockoutComputed<boolean>;
 
@@ -79,7 +86,13 @@ class editDocument extends viewModelBase {
 
     private changeNotification: changeSubscription;
 
-    connectedDocuments = new connectedDocuments(this.document, this.activeDatabase, (docId) => this.loadDocument(docId), this.isCreatingNewDocument, this.inReadOnlyMode);
+    private normalActionProvider = new normalCrudActions(this.document, this.activeDatabase, 
+            docId => this.loadDocument(docId), (saveResult: saveDocumentResponseDto, localDoc: any) => this.onDocumentSaved(saveResult, localDoc));
+    
+    // it represents effective actions provider - normally it uses normalActionProvider, in clone document node it overrides actions on attachments/counter to 'in-memory' implementation 
+    private crudActionsProvider = ko.observable<editDocumentCrudActions>(this.normalActionProvider); 
+
+    connectedDocuments = new connectedDocuments(this.document, this.activeDatabase, (docId) => this.loadDocument(docId), this.isCreatingNewDocument, this.crudActionsProvider, this.inReadOnlyMode);
 
     isSaveEnabled: KnockoutComputed<boolean>;
     
@@ -98,6 +111,7 @@ class editDocument extends viewModelBase {
     
     constructor() {
         super();
+        
         aceEditorBindingHandler.install();
         this.initializeObservables();
         this.initValidation();
@@ -245,29 +259,6 @@ class editDocument extends viewModelBase {
             return true;
         });         
 
-        this.attachmentsCount = ko.pureComputed(() => { 
-            const doc = this.document();
-            if (!doc || !doc.__metadata || !doc.__metadata.attachments()) {
-                return 0;
-            }
-
-            return doc.__metadata.attachments().length;
-        });
-       
-        this.countersCount = ko.pureComputed(() => {
-            const doc = this.document();
-            
-            if (doc && doc.__metadata && doc.__metadata.revisionCounters().length) {
-                return doc.__metadata.revisionCounters().length;
-            }
-            
-            if (!doc || !doc.__metadata || !doc.__metadata.counters()) {
-                return 0;
-            }
-            
-            return doc.__metadata.counters().length;
-        });
-        
         this.rawJsonUrl = ko.pureComputed(() => {
             const newDocMode = this.isCreatingNewDocument();
             if (newDocMode) {
@@ -385,10 +376,16 @@ class editDocument extends viewModelBase {
         });
 
         this.canViewAttachments = ko.pureComputed(() => {
+            if (this.isClone()) {
+                return true;
+            }
             return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument() && !this.isDeleteRevision();
         });
 
         this.canViewCounters = ko.pureComputed(() => {
+            if (this.isClone()) {
+                return true;
+            }
             return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument() && !this.isDeleteRevision();
         });
 
@@ -430,7 +427,7 @@ class editDocument extends viewModelBase {
         }
     }
 
-    setupKeyboardShortcuts() {       
+    setupKeyboardShortcuts() {
         this.createKeyboardShortcut("alt+shift+r", () => this.refreshDocument(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+c", () => this.focusOnEditor(), editDocument.editDocSelector);
         this.createKeyboardShortcut("alt+shift+del", () => this.deleteDocument(), editDocument.editDocSelector);
@@ -517,15 +514,35 @@ class editDocument extends viewModelBase {
     }
 
     createClone() {
-        // 1. Show current document as a new document..
+        const attachments = this.document().__metadata.attachments() 
+            ? this.document().__metadata.attachments().map(x => editDocument.mapToAttachmentItem(this.editedDocId(), x))
+            : [];
+        
+        if (this.crudActionsProvider().countersCount() > 0) {
+            // looks like we have at least one counter - download current values before doing clone
+            this.normalActionProvider.fetchCounters("", 0, 1024 * 1024)
+                .then(counters => {
+                    this.createCloneInternal(attachments, counters.items);
+                })
+        } else {
+            this.createCloneInternal(attachments, []);
+        }
+    }
+    
+    private createCloneInternal(attachments: attachmentItem[], counters: counterItem[]) {
+        // Show current document as a new document...
+        this.crudActionsProvider(new clonedDocumentCrudActions(this, this.activeDatabase, 
+            attachments, counters, () => this.connectedDocuments.reload()));
+
         this.isCreatingNewDocument(true);
         this.isClone(true);
+        this.inReadOnlyMode(false);
 
         this.syncChangeNotification();
-        
+
         eventsCollector.default.reportEvent("document", "clone");
 
-        // 2. Remove the '@change-vector' & '@flags' from metadata view for the clone 
+        // Remove the '@change-vector' & '@flags' from metadata view for the clone 
         const docDto = this.document().toDto(true);
         const metaDto = docDto["@metadata"];
         let docId = "";
@@ -535,14 +552,14 @@ class editDocument extends viewModelBase {
             const docText = this.stringify(docDto);
             this.documentText(docText);
 
-            // 3. Suggest initial document Id 
+            // Suggest initial document Id 
             docId = this.defaultNameForNewDocument(metaDto["@collection"]);
         }
 
-        // 4. Clear data..
-        this.document().__metadata.clearFlags();      
+        // Clear data..
+        this.document().__metadata.clearFlags();
         this.connectedDocuments.revisionsCount(0);
-        
+
         this.connectedDocuments.gridController().reset(true);
         this.metadata().changeVector(undefined);
 
@@ -609,19 +626,26 @@ class editDocument extends viewModelBase {
             delete meta[skippedHeader];
         }
 
+        // we split save of cloned document into 2 calls, as default id convention creates ids like: users/
+        // as result we don't know exact destination document id.
         const newDoc = new document(updatedDto);
-        const saveCommand = new saveDocumentCommand(documentId, newDoc, this.activeDatabase());
+        const saveCommand = new saveDocumentCommand(documentId, newDoc, this.activeDatabase(), true);
         this.isSaving(true);
         saveCommand
             .execute()
-            .done((saveResult: saveDocumentResponseDto) => this.onDocumentSaved(saveResult, updatedDto))
+            .then((saveResult: saveDocumentResponseDto) => {
+                return this.crudActionsProvider().saveRelatedItems(saveResult.Results[0]["@id"])
+                    .then(() => saveResult);
+            })
+            .then((saveResult: saveDocumentResponseDto) => this.crudActionsProvider().onDocumentSaved(saveResult, updatedDto))
             .fail(() => {
                 this.isSaving(false);
             });
     }
-
+    
     private onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any) {
         this.isClone(false);
+        this.crudActionsProvider(this.normalActionProvider);
         
         const savedDocumentDto: changedOnlyMetadataFieldsDto = saveResult.Results[0];
         const currentSelection = this.docEditor.getSelectionRange();
@@ -844,7 +868,353 @@ class editDocument extends viewModelBase {
         } else {
             this.connectedDocuments.activateAttachments();
         }
-    }    
+    }
+
+    static mapToAttachmentItem(documentId: string, file: documentAttachmentDto): attachmentItem {
+        return {
+            documentId: documentId,
+            name: file.Name,
+            contentType: file.ContentType,
+            size: file.Size
+        } as attachmentItem;
+    }
+
+}
+
+class normalCrudActions implements editDocumentCrudActions {
+    
+    private readonly document: KnockoutObservable<document>;
+    private readonly db: KnockoutObservable<database>;
+    private readonly loadDocument: (id: string) => JQueryPromise<document>;
+    private readonly onDocumentSavedAction: (saveResult: saveDocumentResponseDto, localDoc: any) => void | JQueryPromise<void>;
+
+    attachmentsCount: KnockoutComputed<number>;
+    countersCount: KnockoutComputed<number>;
+
+    constructor(document: KnockoutObservable<document>, db: KnockoutObservable<database>, loadDocument: (id: string) => JQueryPromise<document>,
+                onDocumentSaved: (saveResult: saveDocumentResponseDto, localDoc: any) => void | JQueryPromise<void>) {
+        this.document = document;
+        this.db = db;
+        this.loadDocument = loadDocument;
+        this.onDocumentSavedAction = onDocumentSaved;
+        
+        _.bindAll(this, "setCounter");
+
+        this.attachmentsCount = ko.pureComputed(() => {
+            const doc = this.document();
+            if (!doc || !doc.__metadata || !doc.__metadata.attachments()) {
+                return 0;
+            }
+
+            return doc.__metadata.attachments().length;
+        });
+
+        this.countersCount = ko.pureComputed(() => {
+            const doc = this.document();
+
+            if (doc && doc.__metadata && doc.__metadata.revisionCounters().length) {
+                return doc.__metadata.revisionCounters().length;
+            }
+
+            if (!doc || !doc.__metadata || !doc.__metadata.counters()) {
+                return 0;
+            }
+
+            return doc.__metadata.counters().length;
+        });
+    }
+    
+    setCounter(counter: counterItem) {
+        const saveAction = (newCounter: boolean, counterName: string, newValue: number, 
+            db: database, onCounterNameError: (error: string) => void): JQueryPromise<CountersDetail> => {
+            const documentId = this.document().getId();
+            
+            const saveTask = () => {
+                const previousValue = counter ? counter.totalCounterValue : 0;
+                const counterDeltaValue = newValue - previousValue;
+                return new setCounterCommand(counterName, counterDeltaValue, documentId, db)
+                    .execute()
+                    .done(() => {
+                        this.loadDocument(this.document().getId());
+                    })
+            };
+    
+            if (newCounter) {
+                return new getCountersCommand(documentId, db)
+                    .execute()
+                    .then((counters: Raven.Client.Documents.Operations.Counters.CountersDetail) => {
+                        if (counters.Counters.find(x => x.CounterName === counterName)) {
+                            const error = "Counter '" + counterName + "' already exists.";
+                            onCounterNameError(error);
+                            return $.Deferred<CountersDetail>().reject(error);
+                        } else {
+                            return saveTask();
+                        }
+                    })
+            } else {
+                return saveTask();
+            }
+        };
+        
+        eventsCollector.default.reportEvent("counters", "set");
+        const setCounterView = new setCounterDialog(counter, this.db(), true, saveAction);
+
+        app.showBootstrapDialog(setCounterView);
+    }
+
+    deleteAttachment(file: attachmentItem) {
+        eventsCollector.default.reportEvent("attachments", "delete");
+        viewHelpers.confirmationMessage("Delete attachment", `Are you sure you want to delete attachment: ${file.name}?`, ["Cancel", "Delete"])
+            .done((result) => {
+                if (result.can) {
+                    new deleteAttachmentCommand(file.documentId, file.name, this.db())
+                        .execute()
+                        .done(() => this.loadDocument(file.documentId));
+                }
+            });
+    }
+
+    deleteCounter(counter: counterItem) {
+        eventsCollector.default.reportEvent("counter", "delete");
+        viewHelpers.confirmationMessage("Delete counter", `Are you sure you want to delete counter ${counter.counterName}?`, ["Cancel", "Delete"])
+            .done((result) => {
+                if (result.can) {
+                    new deleteCounterCommand(counter.counterName, counter.documentId, this.db())
+                        .execute()
+                        .done(() => this.loadDocument(counter.documentId));
+                }
+            });
+    }
+
+    fetchAttachments(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>> {
+        const doc = this.document();
+
+        let attachments: documentAttachmentDto[] = doc.__metadata.attachments() || [];
+
+        if (nameFilter) {
+            attachments = attachments.filter(file => file.Name.toLocaleLowerCase().includes(nameFilter));
+        }
+
+        const mappedFiles = attachments.map(file => editDocument.mapToAttachmentItem(doc.getId(), file));
+
+        return $.Deferred<pagedResult<attachmentItem>>().resolve({
+            items: mappedFiles,
+            totalResultCount: mappedFiles.length
+        });
+    }
+    
+    fetchCounters(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<counterItem>> {
+        const doc = this.document();
+
+        if (doc.__metadata.hasFlag("Revision")) {
+            let counters = doc.__metadata.revisionCounters();
+
+            if (nameFilter) {
+                counters = counters.filter(c => c.name.toLocaleLowerCase().includes(nameFilter));
+            }
+
+            return $.when({
+                items: counters.map(x => {
+                    return {
+                        documentId: doc.getId(),
+                        counterName: x.name,
+                        totalCounterValue: x.value,
+                        counterValuesPerNode: []
+                    } as counterItem;
+                }),
+                totalResultCount: counters.length
+            });
+        }
+
+        if (!doc.__metadata.hasFlag("HasCounters")) {
+            return connectedDocuments.emptyDocResult<counterItem>();
+        }
+
+        const fetchTask = $.Deferred<pagedResult<counterItem>>();
+        new getCountersCommand(doc.getId(), this.db())
+            .execute()
+            .done(result => {
+                if (nameFilter) {
+                    result.Counters = result.Counters
+                        .filter(x => x.CounterName.toLocaleLowerCase().includes(nameFilter));
+                }
+                const mappedResults = result.Counters
+                    .map(x => normalCrudActions.resultItemToCounterItem(x));
+
+                fetchTask.resolve({
+                    items: mappedResults,
+                    totalResultCount: result.Counters.length
+                });
+
+            })
+            .fail(xhr => fetchTask.reject(xhr));
+
+        return fetchTask.promise();
+    }
+
+    private static resultItemToCounterItem(counterDetail: Raven.Client.Documents.Operations.Counters.CounterDetail): counterItem {
+        const counter = counterDetail;
+
+        let valuesPerNode = Array<nodeCounterValue>();
+        for (const nodeDetails in counter.CounterValues) {
+            valuesPerNode.unshift({
+                nodeTag: nodeDetails[0],
+                nodeFullId: _.split(nodeDetails, ':')[1],
+                nodeShortId: _.split(nodeDetails, '-')[0],
+                nodeCounterValue: counter.CounterValues[nodeDetails]
+            })
+        }
+
+        return {
+            documentId: counter.DocumentId,
+            counterName: counter.CounterName,
+            totalCounterValue: counter.TotalValue,
+            counterValuesPerNode: valuesPerNode
+        };
+    }
+    
+    saveRelatedItems(targetDocumentId: string) {
+        // no action required
+        return $.when<void>(null);
+    }
+    
+    onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any): void | JQueryPromise<void> {
+        this.onDocumentSavedAction(saveResult, localDoc);
+    }
+}
+
+class clonedDocumentCrudActions implements editDocumentCrudActions {
+    counters = ko.observableArray<counterItem>();
+    attachments = ko.observableArray<attachmentItem>();
+    
+    attachmentsCount: KnockoutComputed<number>;
+    countersCount: KnockoutComputed<number>;
+    
+    private readonly parentView: editDocument;
+    private readonly sourceDocumentId: string;
+    private readonly db: KnockoutObservable<database>;
+    private readonly reload: () => void;
+    
+    private changeVector: string;
+    private fromRevision: boolean;
+    
+    constructor(parentView: editDocument, db: KnockoutObservable<database>, attachments: attachmentItem[], counters: counterItem[], reload: () => void) {
+        this.parentView = parentView;
+        this.sourceDocumentId = parentView.editedDocId();
+        
+        this.db = db;
+        this.reload = reload;
+
+        const sourceDocument = parentView.document();
+        this.fromRevision = sourceDocument.__metadata.hasFlag("Revision");
+        this.changeVector = sourceDocument.__metadata.changeVector();
+        
+        this.attachments(attachments);
+        this.counters(counters);
+
+        _.bindAll(this, "setCounter");
+        
+        this.attachmentsCount = ko.pureComputed(() => this.attachments().length);
+        this.countersCount = ko.pureComputed(() => this.counters().length);
+    }
+    
+    setCounter(counter: counterItem) {
+        const saveAction = (newCounter: boolean, counterName: string, newValue: number,
+                            db: database, onCounterNameError: (error: string) => void): JQueryPromise<CountersDetail> => {
+
+            const task = $.Deferred<CountersDetail>();
+            
+            const existing = this.counters().find(x => x.counterName === counterName);
+            
+            if (newCounter) {
+                if (existing) {
+                    const error = "Counter '" + counterName + "' already exists.";
+                    onCounterNameError(error);
+                    task.reject(error);
+                } else {
+                    this.counters.push({
+                        counterName: counterName,
+                        totalCounterValue: newValue,
+                        documentId: null,
+                        counterValuesPerNode: []
+                    })
+                }
+            } else {
+                existing.totalCounterValue = newValue;
+            }
+            
+            this.reload();
+            return task.resolve(null);
+        };
+        
+        eventsCollector.default.reportEvent("counters", "set");
+        const setCounterView = new setCounterDialog(counter, this.db(), false, saveAction);
+
+        app.showBootstrapDialog(setCounterView);
+    }
+
+    deleteAttachment(file: attachmentItem) {
+        this.attachments.remove(file);
+        this.reload();
+    }
+
+    deleteCounter(counter: counterItem) {
+        this.counters.remove(counter);
+        this.reload();
+    }
+
+    fetchAttachments(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<attachmentItem>> {
+        let attachments: attachmentItem[] = this.attachments();
+
+        if (nameFilter) {
+            attachments = attachments.filter(file => file.name.toLocaleLowerCase().includes(nameFilter));
+        }
+
+        return $.Deferred<pagedResult<attachmentItem>>().resolve({
+            items: attachments,
+            totalResultCount: attachments.length
+        });
+    }
+
+    fetchCounters(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<counterItem>> {
+        let counters: counterItem[] = this.counters();
+
+        if (nameFilter) {
+            counters = counters.filter(counter => counter.counterName.toLocaleLowerCase().includes(nameFilter));
+        }
+
+        return $.Deferred<pagedResult<counterItem>>().resolve({
+            items: counters,
+            totalResultCount: counters.length
+        });
+    }
+    
+    saveRelatedItems(targetDocumentId: string): JQueryPromise<void> {
+        const hasAttachments = this.attachmentsCount() > 0;
+        const hasCounters = this.countersCount() > 0;
+        if (hasAttachments || hasCounters) {
+            
+            const attachmentNames = this.attachments().map(x => x.name);
+            const counters: Array<{ name: string, value: number }> = this.counters().map(x => {
+                return {
+                    name: x.counterName,
+                    value: x.totalCounterValue
+                }
+            });
+            
+            return new cloneAttachmentsAndCountersCommand(this.sourceDocumentId, this.fromRevision, this.changeVector, 
+                targetDocumentId, this.db(), attachmentNames, counters)
+                .execute();
+        } else {
+            // no need for extra call
+            return $.when<void>(null);
+        }
+    }
+    
+    onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any) {
+        this.parentView.dirtyFlag().reset();
+        router.navigate(appUrl.forEditDoc(saveResult.Results[0]["@id"], this.db()));
+    }
 }
 
 export = editDocument;

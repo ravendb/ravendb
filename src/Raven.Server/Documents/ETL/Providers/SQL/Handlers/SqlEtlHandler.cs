@@ -68,8 +68,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
         {
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                context.OpenReadTransaction();
-
                 var dbDoc = context.ReadForMemory(RequestBodyStream(), "TestSqlEtlScript");
                 var testScript = JsonDeserializationServer.TestSqlEtlScript(dbDoc);
 

@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.TransactionsRecording;
-using Raven.Client.Documents.Session;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -51,29 +49,24 @@ namespace Raven.Server.Documents.Handlers
             try
             {
                 long commandsProgress = 0;
-                var stopwatch = Stopwatch.StartNew();
-                stopwatch.Start();
                 foreach (var replayProgress in ReplayTxCommandHelper.Replay(Database, replayStream))
                 {
                     commandsProgress = replayProgress.CommandsProgress;
                     if (replayProgress.CommandsProgress > commandAmountForNextRespond)
                     {
                         commandAmountForNextRespond = replayProgress.CommandsProgress + commandAmountBetweenResponds;
-                        onProgress(new ReplayTxProgress
+                        onProgress(new IndeterminateProgressCount
                         {
-                            ProcessedCommand = replayProgress.CommandsProgress,
-                            PassedTime = stopwatch.Elapsed
+                            Processed = replayProgress.CommandsProgress,
                         });
                     }
 
                     token.ThrowIfCancellationRequested();
                 }
-                stopwatch.Stop();
 
                 return new ReplayTxOperationResult
                 {
-                    ExecutedCommandsAmount = commandsProgress,
-                    PassedTime = stopwatch.Elapsed
+                    ExecutedCommandsAmount = commandsProgress
                 };
             }
             catch (Exception e)

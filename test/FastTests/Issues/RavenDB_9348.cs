@@ -9,7 +9,7 @@ namespace FastTests.Issues
         [Fact]
         public void IfConfigurationKeyIsStringArrayThenItShouldSupportValuesWithSemicolonPropely()
         {
-            var configuration = new RavenConfiguration("Foo", ResourceType.Server);
+            var configuration = RavenConfiguration.CreateForServer("Foo");
             configuration.SetSetting(RavenConfiguration.GetKey(x => x.Core.ServerUrls), "http://123.123.123.123:10105;http://123.123.123.124:10105");
             configuration.SetSetting(RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), "http://public.url.com");
             configuration.Initialize();

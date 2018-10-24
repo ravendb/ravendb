@@ -91,8 +91,7 @@ namespace Raven.Server.Documents.Handlers
                         }
                     }
                 }
-                var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context, overrideQuery);
-                tracker.Query = query.Query;
+                var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context, tracker, overrideQuery);
                 var format = GetStringQueryString("format", false);
                 var properties = GetStringValuesQueryString("field", false);
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
@@ -121,8 +120,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var stream = TryGetRequestFromStream("ExportOptions") ?? RequestBodyStream();
                 var queryJson = await context.ReadForMemoryAsync(stream, "index/query");
-                var query = IndexQueryServerSide.Create(queryJson, Database.QueryMetadataCache);
-                tracker.Query = query.Query;
+                var query = IndexQueryServerSide.Create(HttpContext, queryJson, Database.QueryMetadataCache, tracker);
 
                 if (TrafficWatchManager.HasRegisteredClients)
                 {

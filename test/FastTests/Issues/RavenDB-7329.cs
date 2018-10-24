@@ -140,7 +140,7 @@ namespace FastTests.Issues
 
         public RavenConfiguration GetConfiguration(string publicServerUrl = null, string publicTcpServerUrl = null, string serverUrl = null, string tcpServerUrl = null, string certPath = null, string unsecuredAccessAddressRange = nameof(UnsecuredAccessAddressRange.Local))
         {
-            var configuration = new RavenConfiguration(null, ResourceType.Server);
+            var configuration = RavenConfiguration.CreateForServer(null);
             configuration.SetSetting(
                 RavenConfiguration.GetKey(x => x.Core.ServerUrls), serverUrl);
             configuration.SetSetting(
