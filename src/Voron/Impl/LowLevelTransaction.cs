@@ -394,16 +394,13 @@ namespace Voron.Impl
             Page newPage;
             if (currentPage.IsOverflow)
             {
-                int numberOfAllocatedPages;
-                newPage = AllocateOverflowRawPage(currentPage.OverflowSize, out numberOfAllocatedPages, num, currentPage, zeroPage: false);
+                newPage = AllocateOverflowRawPage(currentPage.OverflowSize, out var numberOfAllocatedPages, num, currentPage, zeroPage: false);
                 pageSize = Constants.Storage.PageSize * numberOfAllocatedPages;
-                _numberOfModifiedPages += numberOfAllocatedPages;
             }
             else
             {
                 newPage = AllocatePage(1, num, currentPage, zeroPage: false); // allocate new page in a log file but with the same number			
                 pageSize = Environment.Options.PageSize;
-                _numberOfModifiedPages += 1;
             }
 
             Memory.Copy(newPage.Pointer, currentPage.Pointer, pageSize);
