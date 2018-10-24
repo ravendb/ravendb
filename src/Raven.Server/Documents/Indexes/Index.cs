@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucene.Net.Index;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -2879,9 +2880,15 @@ namespace Raven.Server.Documents.Indexes
             IndexingStatsScope stats,
             DocumentsOperationContext documentsOperationContext,
             TransactionOperationContext indexingContext,
+            IndexWriteOperation indexWriteOperation,
             int count)
         {
-            stats.RecordMapAllocations(_threadAllocations.TotalAllocated);
+            var threadAllocations = _threadAllocations.TotalAllocated;
+            var txAllocations = indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages *
+                                Voron.Global.Constants.Storage.PageSize;
+            var indexWriterAllocations = indexWriteOperation?.GetUsedMemory() ?? 0;
+
+            stats.RecordMapAllocations(threadAllocations + txAllocations + indexWriterAllocations);
 
             if (_indexDisabled)
             {
@@ -2933,13 +2940,12 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            var allocated = new Size(_threadAllocations.TotalAllocated +
-                // this is the number of modified pages in the transaction, we multiple that by the page 
-                // size to get the number in bytes and then multiple it by two again to take into account
-                // additional work that will need to be done during the commit phase of the index
-                (2 * (indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages *
-                      Voron.Global.Constants.Storage.PageSize)), SizeUnit.Bytes);
+            var allocatedInBytes = threadAllocations +
+                                   // we multiple it by two to take into account additional work
+                                   // that will need to be done during the commit phase of the index
+                                   2 * (indexWriterAllocations + txAllocations);
 
+            var allocated = new Size(allocatedInBytes, SizeUnit.Bytes);
             if (allocated > _currentMaximumAllowedMemory)
             {
                 var canContinue = true;
@@ -2950,7 +2956,7 @@ namespace Raven.Server.Documents.Indexes
                     allocated,
                     _environment.Options.RunningOn32Bits,
                     _logger,
-                    out ProcessMemoryUsage memoryUsage) == false)
+                    out var memoryUsage) == false)
                 {
                     _allocationCleanupNeeded = true;
 
