@@ -77,6 +77,19 @@ namespace Raven.Client.ServerWide
 
         public long TruncatedClusterTransactionCommandsCount;
 
+        public void AddSorter(SorterDefinition definition)
+        {
+            if (Sorters == null)
+                Sorters = new Dictionary<string, SorterDefinition>(StringComparer.OrdinalIgnoreCase);
+
+            Sorters[definition.Name] = definition;
+        }
+
+        public void DeleteSorter(string sorterName)
+        {
+            Sorters?.Remove(sorterName);
+        }
+
         public void AddIndex(IndexDefinition definition)
         {
             var lockMode = IndexLockMode.Unlock;
