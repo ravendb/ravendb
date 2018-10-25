@@ -38,9 +38,9 @@ namespace Raven.Server.Documents.Indexes.Sorting
 
             foreach (var kvp in databaseRecord.Sorters)
             {
-                var key = new CacheKey(databaseRecord.DatabaseName, kvp.Key, kvp.Value);
+                var key = new CacheKey(databaseRecord.DatabaseName, kvp.Value.Name, kvp.Value.Code);
 
-                var result = SorterCache.GetOrAdd(key, _ => new Lazy<Func<string, int, int, bool, FieldComparator>>(() => GenerateSorter(kvp.Key, kvp.Value)));
+                var result = SorterCache.GetOrAdd(key, _ => new Lazy<Func<string, int, int, bool, FieldComparator>>(() => GenerateSorter(kvp.Value.Name, kvp.Value.Code)));
 
                 if (result.IsValueCreated)
                     continue;
