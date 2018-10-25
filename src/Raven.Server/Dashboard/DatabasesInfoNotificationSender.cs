@@ -18,6 +18,8 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
+using Sparrow.Platform;
+using Sparrow.Utils;
 
 namespace Raven.Server.Dashboard
 {
@@ -166,7 +168,6 @@ namespace Raven.Server.Dashboard
             yield return indexingSpeed;
             yield return trafficWatch;
             yield return drivesUsage;
-            
         }
 
         private static void UpdateMountPoint(
@@ -258,10 +259,16 @@ namespace Raven.Server.Dashboard
             if (databaseInfo.MountPointsUsage == null)
                 return;
 
-            var drives = DriveInfo.GetDrives();
             foreach (var mountPointUsage in databaseInfo.MountPointsUsage)
             {
-                var diskSpaceResult = DiskSpaceChecker.GetFreeDiskSpace(mountPointUsage.DiskSpaceResult.DriveName, drives);
+                var driveName = mountPointUsage.DiskSpaceResult.DriveName;
+                var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(
+                    mountPointUsage.DiskSpaceResult.DriveName,
+                    new DriveInfoBase
+                    {
+                        DriveName = driveName
+                    });
+
                 if (diskSpaceResult != null)
                 {
                     // update the latest drive info

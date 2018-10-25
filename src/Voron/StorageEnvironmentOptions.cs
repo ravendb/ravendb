@@ -34,9 +34,13 @@ namespace Voron
 
         public VoronPathSetting TempPath { get; }
 
+        public VoronPathSetting JournalPath { get; private set; }
+
         public IoMetrics IoMetrics { get; set; }
 
         public bool GenerateNewDatabaseId { get; set; }
+
+        public DriveInfoByPath DriveInfoByPath { get; set; }
 
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
         public event EventHandler<NonDurabilitySupportEventArgs> OnNonDurableFileSystemError;
@@ -311,7 +315,6 @@ namespace Voron
 
         public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {
-            private readonly VoronPathSetting _journalPath;
             private readonly VoronPathSetting _basePath;
 
             private readonly Lazy<AbstractPager> _dataPager;
@@ -327,7 +330,7 @@ namespace Voron
                 Debug.Assert(journalPath != null);
 
                 _basePath = basePath;
-                _journalPath = journalPath;
+                JournalPath = journalPath;
 
                 if (Directory.Exists(_basePath.FullPath) == false)
                     Directory.CreateDirectory(_basePath.FullPath);
@@ -335,8 +338,8 @@ namespace Voron
                 if (Equals(_basePath, TempPath) == false && Directory.Exists(TempPath.FullPath) == false)
                     Directory.CreateDirectory(TempPath.FullPath);
 
-                if (Equals(_journalPath, TempPath) == false && Directory.Exists(_journalPath.FullPath) == false)
-                    Directory.CreateDirectory(_journalPath.FullPath);
+                if (Equals(JournalPath, TempPath) == false && Directory.Exists(JournalPath.FullPath) == false)
+                    Directory.CreateDirectory(JournalPath.FullPath);
 
                 _dataPager = new Lazy<AbstractPager>(() =>
                 {
@@ -348,9 +351,24 @@ namespace Voron
                 // have to be before the journal check, so we'll fail on files in use
                 DeleteAllTempBuffers();
 
-
                 GatherRecyclableJournalFiles(); // if there are any (e.g. after a rude db shut down) let us reuse them
 
+                InitializePathsInfo();
+            }
+
+            private void InitializePathsInfo()
+            {
+                var basePath = _basePath.FullPath;
+                var journalPath = JournalPath.FullPath;
+                var tempPath = TempPath.FullPath;
+
+                var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
+                DriveInfoByPath = new DriveInfoByPath
+                {
+                    BasePath = DiskSpaceChecker.GetDriveInfo(basePath, drivesInfo),
+                    JournalPath = DiskSpaceChecker.GetDriveInfo(journalPath, drivesInfo),
+                    TempPath = DiskSpaceChecker.GetDriveInfo(tempPath, drivesInfo)
+                };
             }
 
             private void GatherRecyclableJournalFiles()
@@ -389,7 +407,7 @@ namespace Voron
             {
                 try
                 {
-                    return Directory.GetFiles(_journalPath.FullPath, $"{RecyclableJournalFileNamePrefix}.*");
+                    return Directory.GetFiles(JournalPath.FullPath, $"{RecyclableJournalFileNamePrefix}.*");
                 }
                 catch (Exception)
                 {
@@ -408,18 +426,15 @@ namespace Voron
 
             public override VoronPathSetting BasePath => _basePath;
 
-            public VoronPathSetting JournalPath => _journalPath;
-
             public override AbstractPager OpenPager(VoronPathSetting filename)
             {
                 return GetMemoryMapPagerInternal(this, null, filename);
             }
 
-
             public override IJournalWriter CreateJournalWriter(long journalNumber, long journalSize)
             {
                 var name = JournalName(journalNumber);
-                var path = _journalPath.Combine(name);
+                var path = JournalPath.Combine(name);
                 if (File.Exists(path.FullPath) == false)
                     AttemptToReuseJournal(path, journalSize);
 
@@ -463,7 +478,7 @@ namespace Voron
             public override VoronPathSetting GetJournalPath(long journalNumber)
             {
                 var name = JournalName(journalNumber);
-                return _journalPath.Combine(name);
+                return JournalPath.Combine(name);
             }
 
             private static readonly long TickInHour = TimeSpan.FromHours(1).Ticks;
@@ -586,7 +601,7 @@ namespace Voron
                 if (_journals.TryRemove(name, out lazy) && lazy.IsValueCreated)
                     lazy.Value.Dispose();
 
-                var file = _journalPath.Combine(name);
+                var file = JournalPath.Combine(name);
                 if (File.Exists(file.FullPath) == false)
                     return false;
 
@@ -747,7 +762,7 @@ namespace Voron
             public override AbstractPager OpenJournalPager(long journalNumber)
             {
                 var name = JournalName(journalNumber);
-                var path = _journalPath.Combine(name);
+                var path = JournalPath.Combine(name);
                 var fileInfo = new FileInfo(path.FullPath);
                 if (fileInfo.Exists == false)
                     throw new InvalidJournalException(journalNumber, path.FullPath);
@@ -826,6 +841,12 @@ namespace Voron
 
                     if (Directory.Exists(tempPath.FullPath) == false)
                         Directory.CreateDirectory(tempPath.FullPath);
+
+                    var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
+                    DriveInfoByPath = new DriveInfoByPath
+                    {
+                        TempPath = DiskSpaceChecker.GetDriveInfo(tempPath.FullPath, drivesInfo)
+                    };
 
                     _dataPager = new Lazy<AbstractPager>(() => GetTempMemoryMapPager(this, TempPath.Combine(filename), InitialFileSize,
                         Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary), true);
@@ -1128,7 +1149,8 @@ namespace Voron
         {
             if (PlatformDetails.RunningOnPosix == false)
                 return;
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+
+            if (PlatformDetails.RunningOnMacOsx)
                 return; // osx supports F_NOCACHE
 
             if (BasePath != null && StorageEnvironment.IsStorageSupportingO_Direct(_log, BasePath.FullPath) == false)
