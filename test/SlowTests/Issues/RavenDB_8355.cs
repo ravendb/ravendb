@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.Sorters;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions;
 using Xunit;
@@ -73,78 +74,114 @@ namespace SlowTests.Issues
                 }
             }))
             {
-                using (var session = store.OpenSession())
+                CanUseSorterInternal(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True");
+            }
+        }
+
+        [Fact]
+        public void CanUseCustomSorter2()
+        {
+            using (var store = GetDocumentStore(new Options()))
+            {
+                store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
                 {
-                    session.Store(new Company { Name = "C1" });
-                    session.Store(new Company { Name = "C2" });
+                    Name = "MySorter",
+                    Code = SorterCode
+                }));
 
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenSession())
+                // checking if we can send again same sorter
+                store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
                 {
-                    var e = Assert.Throws<RavenException>(() =>
-                    {
-                        session
-                            .Advanced
-                            .RawQuery<Company>("from Companies order by custom(Name, 'MySorter')")
-                            .ToList();
-                    });
+                    Name = "MySorter",
+                    Code = SorterCode
+                }));
 
-                    Assert.Contains("Catch me: Name:2:0:False", e.Message);
+                CanUseSorterInternal(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True");
 
-                    e = Assert.Throws<RavenException>(() =>
-                    {
-                        session
-                            .Query<Company>()
-                            .OrderBy(x => x.Name, "MySorter")
-                            .ToList();
-                    });
+                // checking if we can update sorter
+                store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
+                {
+                    Name = "MySorter",
+                    Code = SorterCode
+                }));
 
-                    Assert.Contains("Catch me: Name:2:0:False", e.Message);
+                CanUseSorterInternal(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True");
+            }
+        }
 
-                    e = Assert.Throws<RavenException>(() =>
-                    {
-                        session
-                            .Advanced
-                            .DocumentQuery<Company>()
-                            .OrderBy(x => x.Name, "MySorter")
-                            .ToList();
-                    });
+        private static void CanUseSorterInternal(DocumentStore store, string asc, string desc)
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Company { Name = "C1" });
+                session.Store(new Company { Name = "C2" });
 
-                    Assert.Contains("Catch me: Name:2:0:False", e.Message);
+                session.SaveChanges();
+            }
 
-                    e = Assert.Throws<RavenException>(() =>
-                    {
-                        session
-                            .Advanced
-                            .RawQuery<Company>("from Companies order by custom(Name, 'MySorter') desc")
-                            .ToList();
-                    });
+            using (var session = store.OpenSession())
+            {
+                var e = Assert.Throws<RavenException>(() =>
+                {
+                    session
+                        .Advanced
+                        .RawQuery<Company>("from Companies order by custom(Name, 'MySorter')")
+                        .ToList();
+                });
 
-                    Assert.Contains("Catch me: Name:2:0:True", e.Message);
+                Assert.Contains(asc, e.Message);
 
-                    e = Assert.Throws<RavenException>(() =>
-                    {
-                        session
-                            .Query<Company>()
-                            .OrderByDescending(x => x.Name, "MySorter")
-                            .ToList();
-                    });
+                e = Assert.Throws<RavenException>(() =>
+                {
+                    session
+                        .Query<Company>()
+                        .OrderBy(x => x.Name, "MySorter")
+                        .ToList();
+                });
 
-                    Assert.Contains("Catch me: Name:2:0:True", e.Message);
+                Assert.Contains(asc, e.Message);
 
-                    e = Assert.Throws<RavenException>(() =>
-                    {
-                        session
-                            .Advanced
-                            .DocumentQuery<Company>()
-                            .OrderByDescending(x => x.Name, "MySorter")
-                            .ToList();
-                    });
+                e = Assert.Throws<RavenException>(() =>
+                {
+                    session
+                        .Advanced
+                        .DocumentQuery<Company>()
+                        .OrderBy(x => x.Name, "MySorter")
+                        .ToList();
+                });
 
-                    Assert.Contains("Catch me: Name:2:0:True", e.Message);
-                }
+                Assert.Contains(asc, e.Message);
+
+                e = Assert.Throws<RavenException>(() =>
+                {
+                    session
+                        .Advanced
+                        .RawQuery<Company>("from Companies order by custom(Name, 'MySorter') desc")
+                        .ToList();
+                });
+
+                Assert.Contains(desc, e.Message);
+
+                e = Assert.Throws<RavenException>(() =>
+                {
+                    session
+                        .Query<Company>()
+                        .OrderByDescending(x => x.Name, "MySorter")
+                        .ToList();
+                });
+
+                Assert.Contains(desc, e.Message);
+
+                e = Assert.Throws<RavenException>(() =>
+                {
+                    session
+                        .Advanced
+                        .DocumentQuery<Company>()
+                        .OrderByDescending(x => x.Name, "MySorter")
+                        .ToList();
+                });
+
+                Assert.Contains(desc, e.Message);
             }
         }
     }
