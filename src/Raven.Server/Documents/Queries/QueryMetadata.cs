@@ -239,9 +239,17 @@ namespace Raven.Server.Documents.Queries
 
             if (IsGraph)
             {
+                var recursivePatterns = Query.GraphQuery.RecursiveMatches;
                 var edgePredicateKeys = Query.GraphQuery.WithEdgePredicates ?? EmptyEdges;
                 var documentQueryKeys = Query.GraphQuery.WithDocumentQueries;
 
+                if (recursivePatterns != null)
+                {
+                    foreach (var alias in recursivePatterns)
+                    {
+                        RootAliasPaths.TryAdd(alias, (null, false, false, false, null));
+                    }
+                }
                 foreach (var edge in edgePredicateKeys)
                 {
                     RootAliasPaths.TryAdd(edge.Key, (null, false, false, false, null));
@@ -264,7 +272,8 @@ namespace Raven.Server.Documents.Queries
                             continue;
 
                         var alias = field.Compound[0];
-                        if (!edgePredicateKeys.ContainsKey(alias) && !documentQueryKeys.ContainsKey(alias))
+                        if (!edgePredicateKeys.ContainsKey(alias) && !documentQueryKeys.ContainsKey(alias) &&
+                            recursivePatterns?.Contains(alias) != true)
                         {
                             ThrowOnUndefinedAlias(alias);
                         }
@@ -563,7 +572,7 @@ namespace Raven.Server.Documents.Queries
             sb.Append("function ").Append(name).Append("(");
             int index = 0;
             var args = new SelectField[IsGraph ? 
-                Query.GraphQuery.WithDocumentQueries.Count + Query.GraphQuery.WithEdgePredicates.Count : 
+                Query.GraphQuery.WithDocumentQueries.Count + Query.GraphQuery.WithEdgePredicates.Count + Query.GraphQuery.RecursiveMatches.Count : 
                 RootAliasPaths.Count];
 
             foreach (var alias in RootAliasPaths)

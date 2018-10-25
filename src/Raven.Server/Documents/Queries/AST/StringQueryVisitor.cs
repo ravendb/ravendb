@@ -398,22 +398,6 @@ namespace Raven.Server.Documents.Queries.AST
                     _sb.Append(item);
                 }
 
-                if(withEdgesClause.MultiHop != null)
-                {
-                    _sb.Append(" * ");
-
-                    if (withEdgesClause.MultiHop.Value.Min != null)
-                        _sb.Append(withEdgesClause.MultiHop.Value.Min);
-
-                    if (withEdgesClause.MultiHop.Value.Min != null ||
-                        withEdgesClause.MultiHop.Value.Max != null)
-                        _sb.Append("..");
-
-                    if (withEdgesClause.MultiHop.Value.Max != null)
-                        _sb.Append(withEdgesClause.MultiHop.Value.Max);
-
-                }
-
                 _sb.Append(")");
             }
 

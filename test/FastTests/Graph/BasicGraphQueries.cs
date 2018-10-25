@@ -108,7 +108,7 @@ namespace FastTests.Graph
                     ").ToList());
                 }
             }
-        }    
+        }
 
         [Fact]
         public void Can_flatten_result_for_single_vertex_in_row()
@@ -301,7 +301,7 @@ select manager
         public void CanUseMultiHopInQueries()
         {
             var results = Query<EmployeeRelations>(@"
-match (e:Employees (id() = 'employees/7-A'))-[m:ReportsTo *]->(boss:Employees)
+match (e:Employees (id() = 'employees/7-A'))-recursive([m:ReportsTo])->(boss:Employees)
 select e.FirstName as Employee, m.FirstName as MiddleManagement, boss.FirstName as Boss
 ");
             Assert.Equal(1, results.Count);
@@ -317,7 +317,7 @@ select e.FirstName as Employee, m.FirstName as MiddleManagement, boss.FirstName 
         public void CanUseMultiHopInQueriesWithScript()
         {
             var results = Query<EmployeeRelations>(@"
-match (e:Employees (id() = 'employees/7-A'))-[m:ReportsTo *]->(boss:Employees)
+match (e:Employees (id() = 'employees/7-A'))-recursive([m:ReportsTo])->(boss:Employees)
 select {
     Employee: e.FirstName + ' ' + e.LastName,
     MiddleManagement: m.map(f => f.FirstName + ' ' + f.LastName),
@@ -337,7 +337,7 @@ select {
         public void CanHandleCyclesInGraph()
         {
             var results = Query<EmployeeRelations>(@"
-match (e:Employees (id() = 'employees/7-A'))-[m:ReportsTo *]->(boss:Employees)
+match (e:Employees (id() = 'employees/7-A'))-recursive([m:ReportsTo])->(boss:Employees)
 select e.FirstName as Employee, m.FirstName as MiddleManagement, boss.FirstName as Boss
 ", store =>
             {
@@ -357,5 +357,125 @@ select e.FirstName as Employee, m.FirstName as MiddleManagement, boss.FirstName 
             }
         }
 
+        public class Person
+        {
+            public class Parent
+            {
+                public string Id;
+                public string Gender;
+            }
+
+            public Parent[] Parents;
+            public string BornAt;
+            public string Name;
+        }
+
+        [Fact]
+        public void CanHandleFiltersInMultiHopQueryWithEndNode()
+        {
+            using (var store = GetDocumentStore())
+            {
+                HobbitAncestry(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.RawQuery<JObject>(@"
+match (son:People)-recursive([:Parents(Gender = 'Male').Id]->(ancestor:People (BornAt='Shire')))->(evil:People (BornAt = 'Mordor'))
+");
+                }
+            }
+        }
+
+        [Fact]
+        public void CanHandleFiltersInMultiHopQuery()
+        {
+            using (var store = GetDocumentStore())
+            {
+                HobbitAncestry(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.RawQuery<JObject>(@"
+match (son:People)-recursive([:Parents(Gender = 'Male').Id]->(ancestor:People (BornAt='Shire')))
+");
+                }
+            }
+        }
+
+        private static void HobbitAncestry(DocumentStore store)
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Person
+                {
+                    Name = "Balbo Baggins",
+                    BornAt = "Shire",
+                }, "people/balbo");
+
+                session.Store(new Person
+                {
+                    Name = "Berylla Boffin",
+                    BornAt = "Shire",
+                }, "people/berylla");
+
+
+                session.Store(new Person
+                {
+                    Name = "Mungo",
+                    BornAt = "Shire",
+                    Parents = new[]
+                    {
+                            new Person.Parent{Gender = "Male", Id = "people/balbo"},
+                            new Person.Parent{Gender = "Female", Id = "people/berylla"},
+                        }
+                }, "people/mungo");
+
+                session.Store(new Person
+                {
+                    Name = "Longo",
+                    BornAt = "Mordor",
+                    Parents = new[]
+                    {
+                            new Person.Parent{Gender = "Male", Id = "people/balbo"},
+                            new Person.Parent{Gender = "Female", Id = "people/berylla"},
+                        }
+                }, "people/longo");
+
+                session.Store(new Person
+                {
+                    Name = "Otho Sackville-Baggins",
+                    BornAt = "Shire",
+                    Parents = new[]
+                    {
+                            new Person.Parent{Gender = "Male", Id = "people/longo"},
+                            new Person.Parent{Gender = "Female", Id = "people/camellia"},
+                        }
+                }, "people/otho");
+
+                session.Store(new Person
+                {
+                    Name = "Bungo",
+                    BornAt = "Shire",
+                    Parents = new[]
+                   {
+                            new Person.Parent{Gender = "Male", Id = "people/mungo"},
+                            new Person.Parent{Gender = "Female", Id = "people/laura"},
+                        }
+                }, "people/bungo");
+
+                session.Store(new Person
+                {
+                    Name = "Bilbo Baggins",
+                    BornAt = "Shire",
+                    Parents = new[]
+                  {
+                            new Person.Parent{Gender = "Male", Id = "people/bungo"},
+                            new Person.Parent{Gender = "Female", Id = "people/belladonna"},
+                        }
+                }, "people/bilbo");
+
+                session.SaveChanges();
+            }
+        }
     }
 }

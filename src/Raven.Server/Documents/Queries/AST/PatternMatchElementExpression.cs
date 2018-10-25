@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using Sparrow;
 
@@ -24,6 +25,12 @@ namespace Raven.Server.Documents.Queries.AST
 
                 if (i + 1 < Path.Length)
                 {
+                    if(Path[i+1].Recursive != null)
+                    {
+                        sb.Append(Path[i + 1].Recursive);
+                        continue;
+                    }
+
                     switch (Path[i + 1].EdgeType)
                     {
                         case EdgeType.Right:
@@ -64,14 +71,33 @@ namespace Raven.Server.Documents.Queries.AST
         Left
     }
 
+    public struct RecursiveMatch
+    {
+        public StringSegment Alias;
+        public List<MatchPath> Pattern;
+        public HashSet<StringSegment> Aliases;
+        public int? Min;
+        public int? Max;
+
+        public override string ToString()
+        {
+            return " recursive { " + string.Join("", Pattern) + " } ";
+        }
+    }
+
     public struct MatchPath
     {
         public StringSegment Alias;
         public EdgeType EdgeType;
         public bool IsEdge;
+        public RecursiveMatch? Recursive;
 
         public override string ToString()
         {
+            if(Recursive != null)
+            {
+                return Recursive.Value.ToString();
+            }
 
             return (IsEdge ? "[" : "(") +  Alias + (IsEdge ? "]" : ")") + (EdgeType == EdgeType.Left ? "<-" : "->"); 
         }

@@ -170,6 +170,8 @@ namespace Sparrow.Json
 
         public ulong DebugHash => Hashing.XXHash64.Calculate(_mem, (ulong)_size);
 
+        public long Location => (long)_objStart;
+
 
         /// <summary>
         /// Returns an array of property names, ordered in the order it was stored 

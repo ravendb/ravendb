@@ -9,16 +9,9 @@ namespace Raven.Server.Documents.Queries
 {
     public partial class GraphQueryRunner
     {
-        public unsafe struct Match // using struct because we have a single field 
+        public unsafe struct Match
         {
-            public struct Result
-            {
-                public Document Single;
-                public List<Document> Multiple;
-            }
-            private Dictionary<string, Result> _inner;
-
-            public object Key => _inner;
+            private Dictionary<string, object> _inner;
 
             public int Count => _inner?.Count ?? 0;
 
@@ -30,7 +23,7 @@ namespace Raven.Server.Documents.Queries
             {
                 if (_inner == null)
                     return "<empty>";
-                return string.Join(", ", _inner.Select(x=> x.Key + " - " + (x.Value.Single?.Id ?? x.Value.Single?.Data?.ToString()) ?? "multi"));
+                return string.Join(", ", _inner.Select(x=> x.Key + " - " + x.Value));
             }
 
             public Match(Match other)
@@ -41,26 +34,32 @@ namespace Raven.Server.Documents.Queries
                 }
                 else
                 {
-                    _inner = new Dictionary<string, Result>(other._inner);
+                    _inner = new Dictionary<string, object>(other._inner);
                 }
             }
 
-            public Result GetResult(string alias)
+            public object GetResult(string alias)
             {
-                Result result = default;
+                object result = default;
                 _inner?.TryGetValue(alias, out result);
                 return result;
             }
 
             public Document GetSingleDocumentResult(string alias)
             {
-                Result result = default;
+                object result = default;
                 _inner?.TryGetValue(alias, out result);
-                if(result.Single?.Id != null)
+                if(result is Document d)
                 {
-                    result.Single.EnsureMetadata();
+                    d.EnsureMetadata();
+                    return d;
                 }
-                return result.Single;
+                else if(result is List<Match> m)
+                {
+                    // TODO: this is wrong
+                    return m.Last().GetSingleDocumentResult(alias);
+                }
+                return null;
             }           
 
             public bool TryGetAliasId(string alias, out long id)
@@ -69,9 +68,9 @@ namespace Raven.Server.Documents.Queries
 
                 if (_inner.TryGetValue(alias, out var result))
                 {
-                    if (result.Single != null)
+                    if (result is Document d)
                     {
-                        id = (long)result.Single.Data.BasePointer;
+                        id = (long)d.Data.BasePointer;
                         return true;
                     }
                 }
@@ -84,7 +83,7 @@ namespace Raven.Server.Documents.Queries
             {
                 EnsureInnerInitialized();
 
-                if (_inner.TryAdd(alias, new Result { Single = val }) == false)
+                if (_inner.TryAdd(alias, val) == false)
                     return null;
                 return (long)val.Data.BasePointer;
             }
@@ -92,30 +91,14 @@ namespace Raven.Server.Documents.Queries
             private void EnsureInnerInitialized()
             {
                 if (_inner == null)
-                    _inner = new Dictionary<string, Result>();
+                    _inner = new Dictionary<string, object>();
             }
 
-            public void Set(StringSegment alias, Document val)
+            public void Set(StringSegment alias, object val)
             {
                 EnsureInnerInitialized();
-
-                _inner.Add(alias, new Result { Single = val });
+                _inner[alias] = val;
             }
-
-            public void Set(StringSegment alias, Result r)
-            {
-                EnsureInnerInitialized();
-
-                _inner.Add(alias, r);
-            }
-
-            public void ForceSet(StringSegment alias, List<Document> vals)
-            {
-                EnsureInnerInitialized();
-
-                _inner[alias] = new Result { Multiple = vals };
-            }
-
 
             public void PopulateVertices(DynamicJsonValue j)
             {
@@ -124,21 +107,28 @@ namespace Raven.Server.Documents.Queries
 
                 foreach (var item in _inner)
                 {
-                    if(item.Value.Single != null)
+                    if(item.Value is Document d)
                     {
-                        var doc = item.Value.Single;
-                        if (doc.Id != null)
-                        {
-                            doc.EnsureMetadata();
-                        }
-                        j[item.Key] = doc.Data;
+                        j[item.Key] = d.Data;
                     }
-                    else 
+                    else  if(item.Value is List<Match> matches)
                     {
-                        j[item.Key] = item.Value.Multiple;
+                        var array = new DynamicJsonArray();
+                        foreach (var m in matches)
+                        {
+                            var djv = new DynamicJsonValue();
+                            m.PopulateVertices(djv);
+                            array.Add(djv);
+                        }
+                        j[item.Key] = array;
+                    }
+                    else if(item.Value is string s)
+                    {
+                        j[item.Key] = s;
                     }
                 }
             }
+
 
             public void PopulateVertices(ref IntermediateResults i)
             {
@@ -147,9 +137,9 @@ namespace Raven.Server.Documents.Queries
 
                 foreach (var item in _inner)
                 {
-                    if(item.Value.Single != null)
+                    if (item.Value is Document d)
                     {
-                        i.Add(item.Key, this, item.Value.Single);
+                        i.Add(item.Key, this, d);
                     }
                 }
             }
@@ -158,15 +148,10 @@ namespace Raven.Server.Documents.Queries
             {
                 foreach (var item in _inner)
                 {
-                    var doc = item.Value.Single;
-                    if (doc == null)
-                        continue;
-                    if (doc.Id != null)
+                    if(item.Value is Document d)
                     {
-                        doc.EnsureMetadata();
+                        return d;
                     }
-
-                    return doc;
                 }
                 throw new InvalidOperationException("Cannot return single result when there are no results");
             }
