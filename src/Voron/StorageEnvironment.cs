@@ -119,8 +119,6 @@ namespace Voron
 
         private readonly long[] _validPages;
 
-        public event Action<StorageEnvironmentOptions> OnCreateDirectory;
-
         public StorageEnvironment(StorageEnvironmentOptions options)
         {
             try
