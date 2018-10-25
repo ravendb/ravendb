@@ -302,14 +302,14 @@ select manager
         {
             var results = Query<EmployeeRelations>(@"
 match (e:Employees (id() = 'employees/7-A'))-recursive as n { [m:ReportsTo] }->(boss:Employees)
-select e.FirstName as Employee, n.m.FirstName as MiddleManagement, boss.FirstName as Boss
+select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
 ");
             Assert.Equal(1, results.Count);
             foreach (var item in results)
             {
                 Assert.Equal("Andrew", item.Boss);
                 Assert.Equal("Robert", item.Employee);
-                Assert.Equal(new[] { "Steven" }, item.MiddleManagement);
+                Assert.Equal(new[] {  "employees/5-A", "employees/2-A" }, item.MiddleManagement);
             }
         }
 
@@ -320,7 +320,7 @@ select e.FirstName as Employee, n.m.FirstName as MiddleManagement, boss.FirstNam
 match (e:Employees (id() = 'employees/7-A'))-recursive as n { [m:ReportsTo] }->(boss:Employees)
 select {
     Employee: e.FirstName + ' ' + e.LastName,
-    MiddleManagement: n.map(f => f.m.FirstName + ' ' + f.m.LastName),
+    MiddleManagement: n.map(f => load(f.m)).map(f => f.FirstName + ' ' + f.LastName),
     Boss: boss.FirstName + ' ' + boss.LastName
 }
 ");
@@ -329,7 +329,7 @@ select {
             {
                 Assert.Equal("Andrew Fuller", item.Boss);
                 Assert.Equal("Robert King", item.Employee);
-                Assert.Equal(new[] { "Steven Buchanan" }, item.MiddleManagement);
+                Assert.Equal(new[] { "Steven Buchanan", "Andrew Fuller" }, item.MiddleManagement);
             }
         }
 
@@ -338,7 +338,7 @@ select {
         {
             var results = Query<EmployeeRelations>(@"
 match (e:Employees (id() = 'employees/7-A'))-recursive as n { [m:ReportsTo] }->(boss:Employees)
-select e.FirstName as Employee, n.m.FirstName as MiddleManagement, boss.FirstName as Boss
+select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
 ", store =>
             {
                 using (var s = store.OpenSession())
@@ -353,7 +353,7 @@ select e.FirstName as Employee, n.m.FirstName as MiddleManagement, boss.FirstNam
             {
                 Assert.Equal("Andrew", item.Boss);
                 Assert.Equal("Robert", item.Employee);
-                Assert.Equal(new[] { "Steven" }, item.MiddleManagement);
+                Assert.Equal(new[] { "employees/5-A" }, item.MiddleManagement);
             }
         }
 
@@ -370,22 +370,38 @@ select e.FirstName as Employee, n.m.FirstName as MiddleManagement, boss.FirstNam
             public string Name;
         }
 
+        public class Tragedy
+        {
+            public string Evil;
+            public string Son;
+        }
+
         [Fact]
         public void CanHandleFiltersInMultiHopQueryWithEndNode()
         {
             using (var store = GetDocumentStore())
             {
-                HobbitAncestry(store);
+                SetupHobbitAncestry(store);
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.RawQuery<JObject>(@"
-match (son:People)-recursive { [:Parents(Gender = 'Male').Id]->(ancestor:People (BornAt='Shire')) } ->(evil:People (BornAt = 'Mordor'))
-");
+                    var results = session.Advanced.RawQuery<Tragedy>(@"
+match (son:People (Name = 'Otho Sackville-Baggins'))-recursive (0) { [:Parents(Gender = 'Male').Id]->(ancestor:People (BornAt='Shire'))-[:Parents(Gender = 'Male').Id] } ->(evil:People (BornAt = 'Mordor'))
+select son.Name as Son, evil.Name as Evil")
+                        .ToList();
 
-                    Assert.False(true);
+                    WaitForUserToContinueTheTest(store);
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal("Longo", results[0].Evil);
+                    Assert.Equal("Otho Sackville-Baggins", results[0].Son);
                 }
             }
+        }
+
+        public class HobbitAncestry
+        {
+            public string Name;
+            public string[] PaternalAncestors;
         }
 
         [Fact]
@@ -393,19 +409,26 @@ match (son:People)-recursive { [:Parents(Gender = 'Male').Id]->(ancestor:People 
         {
             using (var store = GetDocumentStore())
             {
-                HobbitAncestry(store);
+                SetupHobbitAncestry(store);
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.RawQuery<JObject>(@"
-match (son:People)-recursive{ [:Parents(Gender = 'Male').Id]->(ancestor:People (BornAt='Shire')) } 
-");
-                    Assert.False(true);
+                    var results = session.Advanced.RawQuery<HobbitAncestry>(@"
+match (son:People )-recursive as ancestry (2) { [:Parents(Gender = 'Male').Id]->(paternal:People (BornAt='Shire')) } 
+select ancestry.paternal.Name as PaternalAncestors, son.Name")
+.ToList();
+                    results.Sort((x, y) => x.Name.CompareTo(y.Name)); // we didn't implement order by yet
+                    Assert.Equal(2, results.Count);
+                    Assert.Equal("Bilbo Baggins", results[0].Name);
+                    Assert.Equal(new[] {"Bungo","Mungo"}, results[0].PaternalAncestors);
+
+                    Assert.Equal("Bungo", results[1].Name);
+                    Assert.Equal(new[] { "Mungo", "Balbo Baggins" }, results[1].PaternalAncestors);
                 }
             }
         }
 
-        private static void HobbitAncestry(DocumentStore store)
+        private static void SetupHobbitAncestry(DocumentStore store)
         {
             using (var session = store.OpenSession())
             {

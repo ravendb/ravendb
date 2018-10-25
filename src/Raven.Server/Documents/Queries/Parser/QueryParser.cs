@@ -545,6 +545,33 @@ namespace Raven.Server.Documents.Queries.Parser
                             }
 
                             gq.RecursiveMatches.Add(recursiveAlias);
+                            int? min = null, max = null;
+                            if (Scanner.TryScan('('))
+                            {
+                                if(Scanner.TryNumber() != NumberToken.Long)
+                                    throw new InvalidQueryException("'recursive' missing min length specification, but one was expected", Scanner.Input, null);
+                                var num = Scanner.Input.AsSpan().Slice(Scanner.TokenStart, Scanner.TokenLength);
+                                if (int.TryParse(num, out var i) == false || i < 0)
+                                    throw new InvalidQueryException("'recursive' has invalid min length specification: " + num.ToString(), Scanner.Input, null);
+                                min = i;
+
+                                if(Scanner.TryScan(",") == false)
+                                {
+                                    max = i;
+                                }
+                                else
+                                {
+                                    if (Scanner.TryNumber() != NumberToken.Long)
+                                        throw new InvalidQueryException("'recursive' missing max length specification, but one was expected", Scanner.Input, null);
+                                    num = Scanner.Input.AsSpan().Slice(Scanner.TokenStart, Scanner.TokenLength);
+                                    if (int.TryParse(num, out i) == false || i < 0)
+                                        throw new InvalidQueryException("'recursive' has invalid maxlength specification: " + num.ToString(), Scanner.Input, null);
+                                    max = i;
+                                }
+                                if (Scanner.TryScan(")") == false)
+                                    throw new InvalidQueryException("'recursive' missing closing paranthesis for length specification, but one was expected", Scanner.Input, null);
+
+                            }
 
                             if (Scanner.TryScan("{") == false)
                                 throw new InvalidQueryException("'recursive' must be followed by a '{', but wasn't", Scanner.Input, null);
@@ -570,6 +597,8 @@ namespace Raven.Server.Documents.Queries.Parser
                                 {
                                     Alias = recursiveAlias,
                                     Pattern = repeated,
+                                    Max = max,
+                                    Min = min,
                                     Aliases = new HashSet<StringSegment>(repeated.Select(x => x.Alias), StringSegmentEqualityComparer.Instance)
                                 },
                                 IsEdge = true

@@ -506,12 +506,9 @@ namespace Raven.Server.Documents.Queries
                     if (matchPath.Recursive == null)
                     {
                         var nextNodeAlias = ee.Path[pathIndex + 1].Alias;
-                        if (_mapReduceAliases.Contains(nextNodeAlias))
-                        {
-                            throw new InvalidOperationException("Target vertices in a pattern match that originate from map/reduce WITH clause are not allowed. (pattern match has multiple statements in the form of (a)-[:edge]->(b) ==> in such pattern, 'b' must not originate from map/reduce index query)");
-                        }
+                        EnsureValidNextAlias(nextNodeAlias);
 
-                        ProcessSingleMatchPart(currentResults, aliases, matchPath, prevNodeAlias, nextNodeAlias);
+                        ProcessSingleMatchPart(currentResults, aliases, matchPath, prevNodeAlias, nextNodeAlias, new DirectExtrator());
                         pathIndex += 2;
                     }
                     else
@@ -525,7 +522,6 @@ namespace Raven.Server.Documents.Queries
                                 throw new InvalidOperationException("Recursive expression that is the last element in the MATCH clause must end with a node, not an edge.");
 
                             nextNodeAlias = pattern[pattern.Count - 1].Alias;
-                            pathIndex++;
                         }
                         else
                         {
@@ -533,16 +529,26 @@ namespace Raven.Server.Documents.Queries
                                 throw new InvalidOperationException("Recursive expression that is not the last element in the MATCH clause must end with an ege, not a node.");
 
                             nextNodeAlias = ee.Path[pathIndex + 1].Alias;
-                            pathIndex += 2;
                         }
 
-                        if (_mapReduceAliases.Contains(nextNodeAlias))
+                        EnsureValidNextAlias(nextNodeAlias);
+
+                        ProcessRecursiveMatchPart(currentResults, aliases, matchPath.Recursive.Value, prevNodeAlias, nextNodeAlias);
+
+                        pathIndex+=2;
+
+                        if(!atEnd && pathIndex >= ee.Path.Length)
                         {
-                            throw new InvalidOperationException("Target vertices in a pattern match that originate from map/reduce WITH clause are not allowed. (pattern match has multiple statements in the form of (a)-[:edge]->(b) ==> in such pattern, 'b' must not originate from map/reduce index query)");
+                            // we aren't the last item in the pattern, but 
+                            // the next one is a node, so we need to process the edges 
+                            // from the recursive to it
+
+                            MatchPath lastMatch = matchPath.Recursive.Value.Pattern.Last();
+                            var extrator = new RecursiveExtrator(matchPath.Recursive.Value.Alias, lastMatch.Alias, nextNodeAlias);
+                            ProcessSingleMatchPart(currentResults, aliases, lastMatch, prevNodeAlias, nextNodeAlias, extrator);
                         }
-                        ProcessRecursiveMatchPart(currentResults, aliases, matchPath.Recursive.Value, prevNodeAlias, nextNodeAlias,
-                            !atEnd);
-                        
+
+
                     }
 
                 }
@@ -557,9 +563,16 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
+            private void EnsureValidNextAlias(StringSegment nextNodeAlias)
+            {
+                if (_mapReduceAliases.Contains(nextNodeAlias))
+                {
+                    throw new InvalidOperationException("Target vertices in a pattern match that originate from map/reduce WITH clause are not allowed. (pattern match has multiple statements in the form of (a)-[:edge]->(b) ==> in such pattern, 'b' must not originate from map/reduce index query)");
+                }
+            }
+
             private void ProcessRecursiveMatchPart(List<Match> currentResults, HashSet<StringSegment> aliases, 
-                RecursiveMatch recursive, StringSegment prevNodeAlias, StringSegment nextNodeAlias,
-                bool addNextAlias)
+                RecursiveMatch recursive, StringSegment prevNodeAlias, StringSegment nextNodeAlias)
             {
                 var currentResultsStartingSize = currentResults.Count;
                 var matches = new List<Match>();
@@ -573,8 +586,6 @@ namespace Raven.Server.Documents.Queries
                         {
                             var clone = new Match(currentResults[resultIndex]);
                             clone.Set(recursive.Alias, match.GetResult(recursive.Alias));
-                            if(addNextAlias)
-                                clone.Set(nextNodeAlias, match.GetResult(nextNodeAlias));
 
                             if (reusedSlot)
                             {
@@ -599,7 +610,7 @@ namespace Raven.Server.Documents.Queries
             {
                 var visited = new HashSet<long>();
                 var path = new Stack<(BlittableJsonReaderObject Src, List<Match> Matches, Match Match)>();
-                var min = recursive.Min ?? 0;
+                var min = recursive.Min ?? 1;
                 var max = recursive.Max ?? int.MaxValue;
                 visited.Clear();
                 path.Clear();
@@ -614,15 +625,17 @@ namespace Raven.Server.Documents.Queries
                 bool hasResults = false;
                 while (true)
                 {
-                    if (path.Count + 1 == max)
+                    // the first item is always the root
+                    if (path.Count -1 == max)
                     {
                         AddMatch();
+                        path.Pop();
                     }
                     else
                     {
                         if (SingleMatchInRecursivePattern(recursive, cur.Data, prevNodeAlias, nextNodeAlias, currentMatch, out var currentMatches) == false)
                         {
-                            if (min <= path.Count)
+                            if (min < path.Count)
                                 AddMatch();
                             path.Pop();
                         }
@@ -640,7 +653,7 @@ namespace Raven.Server.Documents.Queries
                             return hasResults;
 
                         var top = path.Peek();
-                        if (top.Matches.Count == 0)
+                        if (top.Matches == null || top.Matches.Count == 0)
                         {
                             path.Pop();
                             visited.Remove(top.Src.Location);
@@ -724,7 +737,56 @@ namespace Raven.Server.Documents.Queries
                 return true;
             }
 
-            private void ProcessSingleMatchPart(List<Match> currentResults, HashSet<StringSegment> aliases, MatchPath matchPath, StringSegment prevNodeAlias, StringSegment nextNodeAlias)
+            private interface IExtractNextSource
+            {
+                BlittableJsonReaderObject Get(Match m, StringSegment alias, Dictionary<string, Match> edgeResults);
+            }
+
+            private struct DirectExtrator : IExtractNextSource
+            {
+                public BlittableJsonReaderObject Get(Match m, StringSegment alias, Dictionary<string, Match> edgeResults)
+                {
+                    return m.GetSingleDocumentResult(alias).Data;
+                }
+            }
+
+            private struct RecursiveExtrator : IExtractNextSource
+            {
+                private readonly StringSegment _recursiveAlias;
+                private readonly StringSegment _edgeAlias;
+                private readonly StringSegment _nextAlias;
+
+                public RecursiveExtrator(StringSegment recursiveAlias, StringSegment edgeAlias, StringSegment nextAlias)
+                {
+                    _recursiveAlias = recursiveAlias;
+                    _edgeAlias = edgeAlias;
+                    _nextAlias = nextAlias;
+                }
+
+                public BlittableJsonReaderObject Get(Match m, StringSegment alias, Dictionary<string, Match> edgeResults)
+                {
+                    var matches = (List<Match>)m.GetResult(_recursiveAlias);
+                    if (matches.Count == 0)
+                    {
+                        var result = m.GetSingleDocumentResult(alias);
+                        return result?.Data;
+                    }
+                    int index = matches.Count - 2;
+                    if (matches.Count == 1)
+                        index = 0;
+
+                    // the last item in the list is the _next_ item, we need to go back another round
+                    var key = (string)matches[index].GetResult(_edgeAlias);
+                    if (edgeResults.TryGetValue(key, out var match))
+                        return match.GetSingleDocumentResult(_nextAlias).Data;
+                    return null;
+                }
+            }
+
+
+            private void ProcessSingleMatchPart<TExtrator>(List<Match> currentResults, HashSet<StringSegment> aliases, MatchPath matchPath, StringSegment prevNodeAlias, StringSegment nextNodeAlias,
+                TExtrator extrator)
+                where TExtrator : struct, IExtractNextSource
             {
                 var edgeAlias = matchPath.Alias;
                 var edge = _gq.WithEdgePredicates[edgeAlias];
@@ -746,7 +808,8 @@ namespace Raven.Server.Documents.Queries
                         continue;
 
                     _results.Clear();
-                    if (TryGetMatches(edge, edgeResult.GetSingleDocumentResult(edge.FromAlias).Data, nextNodeAlias, edgeResults, edgeResult, _results))
+                    var src = extrator.Get(edgeResult, prevNodeAlias, edgeResults);
+                    if (src  != null && TryGetMatches(edge, src, nextNodeAlias, edgeResults, edgeResult, _results))
                     {
                         bool reusedSlot = false;
                         foreach (var match in _results)
@@ -787,14 +850,14 @@ namespace Raven.Server.Documents.Queries
                                 if (item is BlittableJsonReaderObject json &&
                                     edge.Where.IsMatchedBy(json, _queryParameters))
                                 {
-                                    hasResults |= TryGetMatchesAfterFiltering(json, edge.Path.FieldValueWithoutAlias, edgeResults, alias, edge.EdgeAlias, relatedMatches);
+                                    hasResults |= TryGetMatchesAfterFiltering(edgeResult, json, edge.Path.FieldValueWithoutAlias, edgeResults, alias, edge.EdgeAlias, relatedMatches);
                                 }
                             }
                             break;
                         case BlittableJsonReaderObject json:
                             if (edge.Where.IsMatchedBy(json, _queryParameters))
                             {
-                                hasResults |= TryGetMatchesAfterFiltering(json, edge.Path.FieldValueWithoutAlias, edgeResults, alias, edge.EdgeAlias, relatedMatches);
+                                hasResults |= TryGetMatchesAfterFiltering(edgeResult, json, edge.Path.FieldValueWithoutAlias, edgeResults, alias, edge.EdgeAlias, relatedMatches);
                             }
                             break;
                     }
@@ -802,7 +865,7 @@ namespace Raven.Server.Documents.Queries
                 }
                 else
                 {
-                    hasResults = TryGetMatchesAfterFiltering(src, edge.Path.FieldValue, edgeResults, alias, edge.EdgeAlias, relatedMatches);
+                    hasResults = TryGetMatchesAfterFiltering(edgeResult, src, edge.Path.FieldValue, edgeResults, alias, edge.EdgeAlias, relatedMatches);
                 }
 
                 if (hasResults)
@@ -847,6 +910,7 @@ namespace Raven.Server.Documents.Queries
             }
 
             private unsafe bool TryGetMatchesAfterFiltering(
+                Match previous,
                 BlittableJsonReaderObject src,
                 string path,
                 Dictionary<string, Match> edgeResults,
@@ -872,7 +936,7 @@ namespace Raven.Server.Documents.Queries
                         if (doc == null)
                             continue;
 
-                        var m = new Match();
+                        var m = new Match(previous);
 
                         m.Set(docAlias, doc);
                         if (kvp.Value != null && kvp.Value.Data != src)
@@ -896,7 +960,8 @@ namespace Raven.Server.Documents.Queries
                         if (!edgeResults.TryGetValue(kvp.Key, out var m))
                             continue;
 
-                        var clone = new Match(m);
+                        var clone = new Match(previous);
+                        clone.Merge(m);
 
                         if (kvp.Value != null && kvp.Value.Data != src)
                             clone.Set(edgeAlias, kvp.Value);

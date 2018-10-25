@@ -38,6 +38,17 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
+            public void Merge(Match other)
+            {
+                if(other._inner == null)
+                    return;
+                EnsureInnerInitialized();
+                foreach (var item in other._inner)
+                {
+                    _inner[item.Key] = item.Value;
+                }
+            }
+
             public object GetResult(string alias)
             {
                 object result = default;
@@ -107,6 +118,9 @@ namespace Raven.Server.Documents.Queries
 
                 foreach (var item in _inner)
                 {
+                    if (item.Key.StartsWith("_"))
+                        continue;
+
                     if(item.Value is Document d)
                     {
                         j[item.Key] = d.Data;
@@ -137,6 +151,9 @@ namespace Raven.Server.Documents.Queries
 
                 foreach (var item in _inner)
                 {
+                    if (item.Key.StartsWith("_"))
+                        continue;
+
                     if (item.Value is Document d)
                     {
                         i.Add(item.Key, this, d);
@@ -148,7 +165,10 @@ namespace Raven.Server.Documents.Queries
             {
                 foreach (var item in _inner)
                 {
-                    if(item.Value is Document d)
+                    if (item.Key.StartsWith("_"))
+                        continue;
+
+                    if (item.Value is Document d)
                     {
                         return d;
                     }
