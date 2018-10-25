@@ -22,7 +22,7 @@
             <input class="styled" id="onlyErrors" type="checkbox" data-bind="checked: onlyErrors">
             <label for="onlyErrors">Only errors</label>
         </div>
-        <div class="flex-end text-muted flex-horizontal flex-grow">
+        <div class="text-muted flex-horizontal flex-grow">
             <div class="flex-separator"></div>
             <div>
                 <div class="text-center"><small>Requests:</small></div>
@@ -30,22 +30,39 @@
                     <small><strong data-bind="text: stats.count"></strong></small>
                 </div>
             </div>
-            <div class="flex-end text-muted">
+            <div class="text-muted">
                 <div class="text-center"><small>Minimum duration:</small></div>
                 <div class="text-center">
                     <small><strong data-bind="text: stats.min"></strong></small>
                 </div>
             </div>
-            <div class="flex-end text-muted" data-toggle="tooltip" title="Average request duration (excluding web sockets)" data-placement="right" >
+            <div class="text-muted" data-toggle="tooltip" title="Average request duration (excluding web sockets)" data-placement="right" >
                 <div class="text-center"><small>Average duration:</small></div>
                 <div class="text-center">
                     <small><strong data-bind="text: stats.avg"></strong></small>
                 </div>
             </div>
-            <div class="flex-end text-muted">
+            <div class="text-muted">
                 <div class="text-center"><small>Maximum duration:</small></div>
                 <div class="text-center">
                     <small><strong data-bind="text: stats.max"></strong></small>
+                </div>
+            </div>
+            <div class="flex-separator"></div>
+            <div>
+                <div class="flex-horizontal text-center percentiles-container" data-label="Percentiles">
+                    <div>
+                        <div class="text-muted">90%</div>
+                        <small><strong data-bind="text: stats.percentile_90"></strong></small>
+                    </div>
+                    <div>
+                        <div class="text-muted">99%</div>
+                        <small><strong data-bind="text: stats.percentile_99"></strong></small>
+                    </div>
+                    <div>
+                        <div class="text-muted">99.9%</div>
+                        <small><strong data-bind="text: stats.percentile_99_9"></strong></small>
+                    </div>
                 </div>
             </div>
             <div class="flex-separator"></div>
