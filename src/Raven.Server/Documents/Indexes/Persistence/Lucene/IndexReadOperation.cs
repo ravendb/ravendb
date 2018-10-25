@@ -25,6 +25,7 @@ using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
+using Raven.Server.Documents.Queries.Sorting.Custom;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
@@ -567,7 +568,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return false;
         }
 
-        private static Sort GetSort(IndexQueryServerSide query, Index index, Func<string, SpatialField> getSpatialField, DocumentsOperationContext documentsContext)
+        private Sort GetSort(IndexQueryServerSide query, Index index, Func<string, SpatialField> getSpatialField, DocumentsOperationContext documentsContext)
         {
             if (query.PageSize == 0) // no need to sort when counting only
                 return null;
@@ -601,7 +602,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     if (field.Ascending)
                         sort.Add(SortField.FIELD_SCORE);
                     else
-                        sort.Add(new SortField((string)null, 0, true));
+                        sort.Add(new SortField(null, 0, true));
                     continue;
                 }
 
@@ -646,6 +647,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 switch (field.OrderingType)
                 {
+                    case OrderByFieldType.Custom:
+                        var cName = field.Arguments[0].NameOrValue;
+                        var cSort = new CustomComparatorSource(cName, _index.DocumentDatabase.Name);
+                        sort.Add(new SortField(fieldName, cSort, field.Ascending == false));
+                        continue;
                     case OrderByFieldType.AlphaNumeric:
                         var anSort = new AlphaNumericComparatorSource(documentsContext);
                         sort.Add(new SortField(fieldName, anSort, field.Ascending == false));

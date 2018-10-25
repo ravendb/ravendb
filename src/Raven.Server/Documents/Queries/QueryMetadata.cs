@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Queries
         public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey, QueryType queryType = QueryType.Select)
             : this(ParseQuery(query, queryType), parameters, cacheKey)
         {
-            
+
         }
 
         private static Query ParseQuery(string q, QueryType queryType)
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Queries
             {
                 IsDynamic = Query.From.Index == false;
                 var fromToken = Query.From.From;
-                
+
                 if (IsDynamic)
                     CollectionName = fromToken.FieldValue;
                 else
@@ -164,6 +164,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasIncludeOrLoad;
 
+        public bool HasOrderByCustom;
+
         public bool HasOrderByRandom;
 
         public DateTime CreatedAt;
@@ -263,7 +265,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     ThrowMissingVertexMatchClauses();
                 }
-              
+
                 if (Query.Select != null)
                 {
                     foreach (var projection in Query.Select)
@@ -420,7 +422,7 @@ namespace Raven.Server.Documents.Queries
             {
                 var expressionPath = ParseExpressionPath(include, path, Query.From.Alias);
 
-                if (expressionPath.LoadFromAlias != null && 
+                if (expressionPath.LoadFromAlias != null &&
                     NotInRootAliasPaths(expressionPath.LoadFromAlias))
                     ThrowUnknownAlias(expressionPath.LoadFromAlias, parameters);
 
@@ -549,7 +551,7 @@ namespace Raven.Server.Documents.Queries
             if (Query.Select != null && Query.Select.Count > 0)
                 ThrowInvalidFunctionSelectWithMoreFields(parameters);
 
-            if (RootAliasPaths.Count == 0 && IsGraph == false )
+            if (RootAliasPaths.Count == 0 && IsGraph == false)
                 ThrowMissingAliasOnSelectFunctionBody(parameters);
 
             // validate that this is valid JS code
@@ -571,7 +573,7 @@ namespace Raven.Server.Documents.Queries
 
             sb.Append("function ").Append(name).Append("(");
             int index = 0;
-            var args = new SelectField[IsGraph ? 
+            var args = new SelectField[IsGraph ?
                 Query.GraphQuery.WithDocumentQueries.Count + Query.GraphQuery.WithEdgePredicates.Count + Query.GraphQuery.RecursiveMatches.Count : 
                 RootAliasPaths.Count];
 
@@ -755,7 +757,7 @@ namespace Raven.Server.Documents.Queries
                 string loadFromAlias;
                 (path, loadFromAlias) = ParseExpressionPath(load.Expression, path, Query.From.Alias);
 
-                if (loadFromAlias != null && 
+                if (loadFromAlias != null &&
                     NotInRootAliasPaths(loadFromAlias))
                 {
                     ThrowUnknownAlias(loadFromAlias, parameters);
@@ -783,6 +785,31 @@ namespace Raven.Server.Documents.Queries
             {
                 return new OrderByField(new QueryFieldName("id()", false), OrderByFieldType.String, asc, MethodType.Id);
             }
+
+            if (me.Name.Equals("custom", StringComparison.OrdinalIgnoreCase))
+            {
+                HasOrderByCustom = true;
+
+                if (me.Arguments.Count != 2)
+                    throw new InvalidQueryException("Invalid ORDER BY 'custom()' call, expected two arguments, got " + me.Arguments.Count, QueryText, parameters);
+
+                var fieldName = ExtractFieldNameFromFirstArgument(me.Arguments, "custom", parameters);
+
+                var token = me.Arguments[1] as ValueExpression;
+                if (token == null)
+                    throw new InvalidQueryException("Invalid ORDER BY 'custom()' call, expected value token , got " + me.Arguments[1], QueryText, parameters);
+
+                return new OrderByField(
+                    fieldName,
+                    OrderByFieldType.Custom,
+                    asc,
+                    null,
+                    new[]
+                    {
+                        new OrderByField.Argument(token.Token, ValueTokenType.String)
+                    });
+            }
+
             if (me.Name.Equals("random", StringComparison.OrdinalIgnoreCase))
             {
                 HasOrderByRandom = true;
@@ -923,7 +950,7 @@ namespace Raven.Server.Documents.Queries
             try
             {
                 SelectFields = new SelectField[Query.Select.Count];
-                
+
                 for (var index = 0; index < Query.Select.Count; index++)
                 {
                     var fieldInfo = Query.Select[index];
