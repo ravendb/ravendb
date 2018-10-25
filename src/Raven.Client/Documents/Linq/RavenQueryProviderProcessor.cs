@@ -1157,18 +1157,25 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     VisitExpression(expression.Arguments[0]);
 
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var orderByPath);
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var orderByOrderingType);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var orderByOrderingTypeOrSorterName);
 
-                    _documentQuery.OrderBy((string)orderByPath, (OrderingType)orderByOrderingType);
+                    if (orderByOrderingTypeOrSorterName is string orderByOrderingTypeOrSorterNameAsString)
+                        _documentQuery.OrderBy((string)orderByPath, orderByOrderingTypeOrSorterNameAsString);
+                    else
+                        _documentQuery.OrderBy((string)orderByPath, (OrderingType)orderByOrderingTypeOrSorterName);
                     break;
                 case nameof(LinqExtensions.OrderByDescending):
                 case nameof(LinqExtensions.ThenByDescending):
                     VisitExpression(expression.Arguments[0]);
 
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var orderByDescendingPath);
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var orderByDescendingOrderingType);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var orderByDescendingOrderingTypeOrSorterName);
 
-                    _documentQuery.OrderByDescending((string)orderByDescendingPath, (OrderingType)orderByDescendingOrderingType);
+                    if (orderByDescendingOrderingTypeOrSorterName is string orderByDescendingOrderingTypeOrSorterNameAsString)
+                        _documentQuery.OrderByDescending((string)orderByDescendingPath, orderByDescendingOrderingTypeOrSorterNameAsString);
+                    else
+                        _documentQuery.OrderByDescending((string)orderByDescendingPath, (OrderingType)orderByDescendingOrderingTypeOrSorterName);
+
                     break;
                 case nameof(LinqExtensions.MoreLikeThis):
                     VisitExpression(expression.Arguments[0]);
