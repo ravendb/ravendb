@@ -1,3 +1,5 @@
+using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 namespace Sparrow
@@ -162,6 +164,8 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Copy(byte* dest, byte* src, uint n)
         {
+            Debug.Assert(Math.Abs(dest - src) >= n, "overlapped copy using memcopy");
+
             Unsafe.CopyBlock(dest, src, n);
         }
 
@@ -169,6 +173,8 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Copy(byte* dest, byte* src, int n)
         {
+            Debug.Assert(Math.Abs(dest-src) >= n, "overlapped copy using memcopy");
+
             Unsafe.CopyBlock(dest, src, (uint)n);
         }
 
