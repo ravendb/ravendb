@@ -1240,7 +1240,7 @@ namespace Raven.Server.Documents
                     if (fullPath == null)
                         continue;
 
-                    var driveInfo = environment.Environment.Options.DriveInfoByPath;
+                    var driveInfo = environment.Environment.Options.DriveInfoByPath?.Value;
                     var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(fullPath, driveInfo?.BasePath);
                     if (diskSpaceResult == null)
                         continue;
