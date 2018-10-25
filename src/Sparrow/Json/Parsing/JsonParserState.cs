@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using Sparrow.Collections;
+using Sparrow.Platform.Win32;
 
 namespace Sparrow.Json.Parsing
 {
@@ -62,8 +63,8 @@ namespace Sparrow.Json.Parsing
                 // 12 => '\f' => 0000 1100
                 // 13 => '\r' => 0000 1101
 
-                // 34 => '\\' => 0010 0010
-                // 92 =>  '"' => 0101 1100
+                // 34 => '"'  => 0010 0010
+                // 92 => '\\' => 0101 1100
 
                 if (value == 92 || value == 34 || (value >= 8 && value <= 13 && value != 11))
                 {
@@ -113,8 +114,8 @@ namespace Sparrow.Json.Parsing
                 // 13 => '\r' => 0000 1101
                 // 10 => '\n' => 0000 1010
                 // 12 => '\f' => 0000 1100
-                // 34 => '\\' => 0010 0010
-                // 92 =>  '"' => 0101 1100
+                // 34 => '"'  => 0010 0010
+                // 92 => '\\' => 0101 1100
 
                 if (value == 92 || value == 34 || (value >= 8 && value <= 13 && value != 11))
                 {
@@ -122,7 +123,6 @@ namespace Sparrow.Json.Parsing
                     lastEscape = i + 1;
                     continue;
                 }
-
                 //Control character ascii values
                 if (value < 32)
                 {
@@ -136,8 +136,8 @@ namespace Sparrow.Json.Parsing
                     var to = str + i + 1 + ControlCharacterItemSize;
                     var sizeToCopy = len - i -1;
                     //here we only shifting by 5 bytes since we are going to override the byte at the current position.
-                    Memory.Copy(to, from, sizeToCopy);
-                   
+                    // source and destination blocks may overlap so we using Buffer.MemoryCopy to handle that scenario.
+                    Buffer.MemoryCopy(from, to, (uint)sizeToCopy, (uint)sizeToCopy);
                     str[i] = (byte)'\\';
                     str[i+1] = (byte)'u';
                     fixed (byte* controlString = AbstractBlittableJsonTextWriter.ControlCodeEscapes[value])

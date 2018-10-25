@@ -2,22 +2,20 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.SlowTests.Bugs
 {
     public class VeryBigResultSet : RavenTestBase
     {
-        [Theory64Bit]
-        [InlineData(15000)]
-        public void CanGetVeryBigResultSetsEvenThoughItIsBadForYou(int num)
+        [Fact]
+        public void CanGetVeryBigResultSetsEvenThoughItIsBadForYou()
         {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    for (int i = 0; i < num; i++)
+                    for (int i = 0; i < 15000; i++)
                     {
                         session.Store(new User());
                     }
@@ -28,12 +26,12 @@ namespace SlowTests.SlowTests.Bugs
                 {
                     var users = session.Query<User>()
                                        .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(1)))
-                                       .Take(num + 5_000)
+                                       .Take(20000)
                                        .ToArray();
 
                     try
                     {
-                        Assert.Equal(num, users.Length);
+                        Assert.Equal(15000, users.Length);
                     }
                     catch (Exception)
                     {
@@ -42,12 +40,6 @@ namespace SlowTests.SlowTests.Bugs
                     }
                 }
             }
-        }
-
-        [Fact32Bit]
-        public void CanGetVeryBigResultSetsEvenThoughItIsBadForYou32()
-        {
-            CanGetVeryBigResultSetsEvenThoughItIsBadForYou(10_000);
         }
 
         private static void PrintMissedDocuments(User[] users)
