@@ -40,7 +40,7 @@ namespace Voron
 
         public bool GenerateNewDatabaseId { get; set; }
 
-        public DriveInfoByPath DriveInfoByPath { get; set; }
+        public Lazy<DriveInfoByPath> DriveInfoByPath { get; private set; }
 
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
         public event EventHandler<NonDurabilitySupportEventArgs> OnNonDurableFileSystemError;
@@ -358,17 +358,16 @@ namespace Voron
 
             private void InitializePathsInfo()
             {
-                var basePath = _basePath.FullPath;
-                var journalPath = JournalPath.FullPath;
-                var tempPath = TempPath.FullPath;
-
-                var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
-                DriveInfoByPath = new DriveInfoByPath
+                DriveInfoByPath = new Lazy<DriveInfoByPath>(() =>
                 {
-                    BasePath = DiskSpaceChecker.GetDriveInfo(basePath, drivesInfo),
-                    JournalPath = DiskSpaceChecker.GetDriveInfo(journalPath, drivesInfo),
-                    TempPath = DiskSpaceChecker.GetDriveInfo(tempPath, drivesInfo)
-                };
+                    var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
+                    return new DriveInfoByPath
+                    {
+                        BasePath = DiskSpaceChecker.GetDriveInfo(BasePath.FullPath, drivesInfo),
+                        JournalPath = DiskSpaceChecker.GetDriveInfo(JournalPath.FullPath, drivesInfo),
+                        TempPath = DiskSpaceChecker.GetDriveInfo(TempPath.FullPath, drivesInfo)
+                    };
+                });
             }
 
             private void GatherRecyclableJournalFiles()
