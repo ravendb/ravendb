@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using Lucene.Net.Search;
+using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions.Documents.Sorters;
 using Raven.Client.ServerWide;
 using Raven.Server.Utils;
@@ -9,13 +10,15 @@ namespace Raven.Server.Documents.Indexes.Sorting
 {
     public class SorterCompilationCache
     {
-        private static readonly ConcurrentDictionary<CacheKey, Lazy<Func<string, int, int, bool, FieldComparator>>> SorterCache = new ConcurrentDictionary<CacheKey, Lazy<Func<string, int, int, bool, FieldComparator>>>();
+        private static readonly ConcurrentDictionary<CacheKey, Lazy<Func<string, int, int, bool, FieldComparator>>> SortersCache = new ConcurrentDictionary<CacheKey, Lazy<Func<string, int, int, bool, FieldComparator>>>();
+
+        private static readonly ConcurrentDictionary<CacheKey, Lazy<Func<string, int, int, bool, FieldComparator>>> SortersPerDatabaseCache = new ConcurrentDictionary<CacheKey, Lazy<Func<string, int, int, bool, FieldComparator>>>();
 
         public static Func<string, int, int, bool, FieldComparator> GetSorter(string name, string databaseName)
         {
             var key = new CacheKey(databaseName, name, null);
 
-            if (SorterCache.TryGetValue(key, out var result) == false)
+            if (SortersPerDatabaseCache.TryGetValue(key, out var result) == false)
                 SorterDoesNotExistException.ThrowFor(name);
 
             try
@@ -24,51 +27,64 @@ namespace Raven.Server.Documents.Indexes.Sorting
             }
             catch (Exception)
             {
-                SorterCache.TryRemove(key, out _);
+                SortersPerDatabaseCache.TryRemove(key, out _);
                 throw;
             }
         }
 
-        public static void UpdateCache(DatabaseRecord databaseRecord)
+        public static void RemoveSorter(string name, string databaseName)
+        {
+            var key = new CacheKey(databaseName, name, null);
+            SortersPerDatabaseCache.TryRemove(key, out _);
+        }
+
+        public static void AddSorter(SorterDefinition definition, string databaseName)
+        {
+            AddSorterInternal(definition.Name, definition.Code, databaseName);
+        }
+
+        public static void AddSorters(DatabaseRecord databaseRecord)
         {
             if (databaseRecord.Sorters == null || databaseRecord.Sorters.Count == 0)
                 return;
 
-            ExceptionAggregator aggregator = null;
+            var aggregator = new ExceptionAggregator("Could not update sorters cache");
 
             foreach (var kvp in databaseRecord.Sorters)
             {
-                var key = new CacheKey(databaseRecord.DatabaseName, kvp.Value.Name, kvp.Value.Code);
-
-                var result = SorterCache.GetOrAdd(key, _ => new Lazy<Func<string, int, int, bool, FieldComparator>>(() => GenerateSorter(kvp.Value.Name, kvp.Value.Code)));
-
-                if (result.IsValueCreated)
-                    continue;
-
-                if (aggregator == null)
-                    aggregator = new ExceptionAggregator("Could not update sorters cache");
-
                 aggregator.Execute(() =>
                 {
-                    try
-                    {
-                        // compile sorter
-                        var value = result.Value;
-                    }
-                    catch (Exception)
-                    {
-                        SorterCache.TryRemove(key, out _);
-                        throw;
-                    }
+                    AddSorterInternal(kvp.Value.Name, kvp.Value.Code, databaseRecord.DatabaseName);
                 });
             }
 
-            aggregator?.ThrowIfNeeded();
+            aggregator.ThrowIfNeeded();
         }
 
-        private static Func<string, int, int, bool, FieldComparator> GenerateSorter(string name, string sorterCode)
+        private static void AddSorterInternal(string name, string sorterCode, string databaseName)
         {
-            return SorterCompiler.Compile(name, sorterCode);
+            var key = new CacheKey(databaseName, name, sorterCode);
+
+            var result = SortersPerDatabaseCache.GetOrAdd(key, _ => new Lazy<Func<string, int, int, bool, FieldComparator>>(() => CompileSorter(name, sorterCode)));
+            if (result.IsValueCreated)
+                return;
+
+            try
+            {
+                // compile sorter
+                var value = result.Value;
+            }
+            catch (Exception)
+            {
+                SortersPerDatabaseCache.TryRemove(key, out _);
+                throw;
+            }
+        }
+
+        private static Func<string, int, int, bool, FieldComparator> CompileSorter(string name, string sorterCode)
+        {
+            var result = SortersCache.GetOrAdd(new CacheKey(null, null, sorterCode), _ => new Lazy<Func<string, int, int, bool, FieldComparator>>(() => SorterCompiler.Compile(name, sorterCode)));
+            return result.Value;
         }
 
         private class CacheKey : IEquatable<CacheKey>
@@ -92,7 +108,7 @@ namespace Raven.Server.Documents.Indexes.Sorting
                     return true;
 
                 var equals = string.Equals(_databaseName, other._databaseName, StringComparison.OrdinalIgnoreCase)
-                       && string.Equals(_sorterName, other._sorterName, StringComparison.OrdinalIgnoreCase);
+                             && string.Equals(_sorterName, other._sorterName, StringComparison.OrdinalIgnoreCase);
 
                 if (equals == false)
                     return false;
@@ -118,7 +134,9 @@ namespace Raven.Server.Documents.Indexes.Sorting
             {
                 unchecked
                 {
-                    return (_databaseName.GetHashCode() * 397) ^ _sorterName.GetHashCode();
+                    var hashCode = (_databaseName != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(_databaseName) : 0);
+                    hashCode = (hashCode * 397) ^ (_sorterName != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(_sorterName) : 0);
+                    return hashCode;
                 }
             }
         }

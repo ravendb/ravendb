@@ -1,18 +1,16 @@
 ﻿using System;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
-using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -22,10 +20,8 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Debugging;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
@@ -52,8 +48,6 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseStatusReport> DatabaseStatusReport = GenerateJsonDeserializationRoutine<DatabaseStatusReport>();
 
-        public static readonly Func<BlittableJsonReaderObject, TcpConnectionInfo> TcpConnectionInfo = GenerateJsonDeserializationRoutine<TcpConnectionInfo>();
-
         public static readonly Func<BlittableJsonReaderObject, DatabaseSmugglerOptionsServerSide> DatabaseSmugglerOptions = GenerateJsonDeserializationRoutine<DatabaseSmugglerOptionsServerSide>();
 
         public static readonly Func<BlittableJsonReaderObject, ReplicationMessageReply> ReplicationMessageReply = GenerateJsonDeserializationRoutine<ReplicationMessageReply>();
@@ -69,8 +63,6 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, ConflictSolver> ConflictSolver = GenerateJsonDeserializationRoutine<ConflictSolver>();
         public static readonly Func<BlittableJsonReaderObject, ScriptResolver> ScriptResolver = GenerateJsonDeserializationRoutine<ScriptResolver>();
 
-        public static readonly Func<BlittableJsonReaderObject, EtlProcessState> EtlProcessStatus = GenerateJsonDeserializationRoutine<EtlProcessState>();
-
         public static readonly Func<BlittableJsonReaderObject, TestSqlEtlScript> TestSqlEtlScript = GenerateJsonDeserializationRoutine<TestSqlEtlScript>();
 
         public static readonly Func<BlittableJsonReaderObject, TestRavenEtlScript> TestRavenEtlScript = GenerateJsonDeserializationRoutine<TestRavenEtlScript>();
@@ -83,13 +75,11 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, ExpirationConfiguration> ExpirationConfiguration = GenerateJsonDeserializationRoutine<ExpirationConfiguration>();
 
-        public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> PeriodicBackupConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
-
-        public static readonly Func<BlittableJsonReaderObject, PeriodicBackupStatus> PeriodicBackupStatus = GenerateJsonDeserializationRoutine<PeriodicBackupStatus>();
-
         public static readonly Func<BlittableJsonReaderObject, DatabaseRestorePath> DatabaseRestorePath = GenerateJsonDeserializationRoutine<DatabaseRestorePath>();
 
         public static readonly Func<BlittableJsonReaderObject, IndexDefinition> IndexDefinition = GenerateJsonDeserializationRoutine<IndexDefinition>();
+
+        public static readonly Func<BlittableJsonReaderObject, SorterDefinition> SorterDefinition = GenerateJsonDeserializationRoutine<SorterDefinition>();
 
         public static readonly Func<BlittableJsonReaderObject, AutoIndexDefinition> AutoIndexDefinition = GenerateJsonDeserializationRoutine<AutoIndexDefinition>();
 
@@ -117,8 +107,6 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, CertificateDefinition> CertificateDefinition = GenerateJsonDeserializationRoutine<CertificateDefinition>();
 
-        public static readonly Func<BlittableJsonReaderObject, UserDomainsResult> UserDomainsResult = GenerateJsonDeserializationRoutine<UserDomainsResult>();
-
         public static readonly Func<BlittableJsonReaderObject, UserDomainsWithIps> UserDomainsWithIps = GenerateJsonDeserializationRoutine<UserDomainsWithIps>();
 
         public static readonly Func<BlittableJsonReaderObject, SetupInfo> SetupInfo = GenerateJsonDeserializationRoutine<SetupInfo>();
@@ -127,11 +115,7 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, UnsecuredSetupInfo> UnsecuredSetupInfo = GenerateJsonDeserializationRoutine<UnsecuredSetupInfo>();
 
-        public static readonly Func<BlittableJsonReaderObject, ClaimDomainInfo> ClaimDomainInfo = GenerateJsonDeserializationRoutine<ClaimDomainInfo>();
-
         public static readonly Func<BlittableJsonReaderObject, SourceSqlDatabase> SourceSqlDatabase = GenerateJsonDeserializationRoutine<SourceSqlDatabase>();
-
-        public static readonly Func<BlittableJsonReaderObject, ListDomainsInfo> ListDomainsInfo = GenerateJsonDeserializationRoutine<ListDomainsInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, RestoreSettings> RestoreSettings = GenerateJsonDeserializationRoutine<RestoreSettings>();
 

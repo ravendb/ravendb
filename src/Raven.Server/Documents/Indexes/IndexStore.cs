@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Indexes
         {
             try
             {
-                SorterCompilationCache.UpdateCache(record);
+                SorterCompilationCache.AddSorters(record);
             }
             catch (Exception e)
             {
