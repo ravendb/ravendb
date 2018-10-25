@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions;
 using Xunit;
 
@@ -62,9 +63,13 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = record => record.Sorters = new Dictionary<string, string>
+                ModifyDatabaseRecord = record => record.Sorters = new Dictionary<string, SorterDefinition>
                 {
-                    { "MySorter", SorterCode}
+                    { "MySorter", new SorterDefinition
+                    {
+                        Name = "MySorter",
+                        Code = SorterCode
+                    }}
                 }
             }))
             {

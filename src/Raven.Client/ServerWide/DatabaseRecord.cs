@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions.Documents.Indexes;
 
 namespace Raven.Client.ServerWide
@@ -46,7 +47,7 @@ namespace Raven.Client.ServerWide
 
         public ConflictSolver ConflictSolverConfig;
 
-        public Dictionary<string, string> Sorters;
+        public Dictionary<string, SorterDefinition> Sorters;
 
         public Dictionary<string, IndexDefinition> Indexes;
 
