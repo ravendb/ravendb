@@ -60,6 +60,11 @@ namespace Sparrow.Platform.Posix
         public static extern int sprintf(char* str, char* format);
 
         [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int readlink(
+            [MarshalAs(UnmanagedType.LPStr)] string path,
+            byte* buffer, int bufferSize);
+
+        [DllImport(LIBC_6, SetLastError = true)]
         public static extern int mkdir(
             [MarshalAs(UnmanagedType.LPStr)] string filename,
             [MarshalAs(UnmanagedType.U2)] ushort mode);
@@ -476,27 +481,6 @@ namespace Sparrow.Platform.Posix
             {
                 ArrayPool<byte>.Shared.Return(realpathToDir);
             }
-        }
-
-        public static string GetRootMountString(DriveInfo[] drivesInfo, string filePath)
-        {
-            string root = null;
-            var matchSize = 0;
-
-            foreach (var driveInfo in drivesInfo)
-            {
-                var mountNameSize = driveInfo.Name.Length;
-                if (filePath.StartsWith(driveInfo.Name) == false)
-                    continue;
-
-                if (matchSize >= mountNameSize)
-                    continue;
-
-                matchSize = mountNameSize;
-                root = driveInfo.Name;
-            }
-
-            return root;
         }
     }
 
