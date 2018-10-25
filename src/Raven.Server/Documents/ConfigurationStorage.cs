@@ -18,8 +18,6 @@ namespace Raven.Server.Documents
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ConfigurationStorage>(ResourceName);
 
-        private readonly DocumentDatabase _documentDatabase;
-
         public TransactionContextPool ContextPool { get; }
 
         public NotificationsStorage NotificationsStorage { get; }
@@ -30,7 +28,6 @@ namespace Raven.Server.Documents
 
         public ConfigurationStorage(DocumentDatabase db)
         {
-            _documentDatabase = db;
             var path = db.Configuration.Core.DataDirectory.Combine("Configuration");
             string tempPath = null;
             if (db.Configuration.Storage.TempPath != null)

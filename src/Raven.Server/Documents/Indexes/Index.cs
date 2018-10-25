@@ -3097,24 +3097,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var options = CreateStorageEnvironmentOptions(DocumentDatabase, Configuration);
 
-                if (string.IsNullOrEmpty(DocumentDatabase.Configuration.Storage.OnCreateDirectoryExec) == false)
-                {
-                    var directoryParameters = new DirectoryExecUtils.DirectoryParameters()
-                    {
-                        OnCreateDirectoryExec = DocumentDatabase.Configuration.Storage.OnCreateDirectoryExec,
-                        OnCreateDirectoryExecArguments = DocumentDatabase.Configuration.Storage.OnCreateDirectoryExecArguments,
-                        OnCreateDirectoryExecTimeout = DocumentDatabase.Configuration.Storage.OnCreateDirectoryExecTimeout.AsTimeSpan,
-                        DatabaseName = DocumentDatabase.Name,
-                        Type = DirectoryExecUtils.EnvironmentType.Index
-                    };
-
-                    void OnDirectory(StorageEnvironmentOptions internalOptions)
-                    {
-                        DirectoryExecUtils.OnCreateDirectory(internalOptions, directoryParameters, _logger);
-                    }
-
-                    options.OnCreateDirectory += OnDirectory;
-                }
+                DirectoryExecUtils.SubscribeToOnDirectoryExec(options, DocumentDatabase.Configuration.Storage, DocumentDatabase.Name, DirectoryExecUtils.EnvironmentType.Index, _logger);
 
                 try
                 {
