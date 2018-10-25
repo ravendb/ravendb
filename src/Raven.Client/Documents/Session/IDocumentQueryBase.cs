@@ -586,6 +586,8 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         TSelf Intersect();
 
+        TSelf OrderBy(string field, string sorterName);
+
         /// <summary>
         ///     Order the results by the specified fields
         ///     The field is the name of the field to sort, defaulting to sorting by ascending.
@@ -597,6 +599,8 @@ If you really want to do in memory filtering on the data returned from the query
         ///     The field is the name of the field to sort, defaulting to sorting by ascending.
         /// </summary>
         TSelf OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector);
+
+        TSelf OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector, string sorterName);
 
         /// <summary>
         ///     Order the results by the specified fields
@@ -611,6 +615,8 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="propertySelectors">Property selectors for the fields.</param>
         TSelf OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
 
+        TSelf OrderByDescending(string field, string sorterName);
+
         /// <summary>
         ///     Order the results by the specified fields
         ///     The field is the name of the field to sort, defaulting to sorting by descending.
@@ -622,6 +628,8 @@ If you really want to do in memory filtering on the data returned from the query
         ///     The field is the name of the field to sort, defaulting to sorting by ascending.
         /// </summary>
         TSelf OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector);
+
+        TSelf OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector, string sorterName);
 
         /// <summary>
         ///     Order the results by the specified fields

@@ -229,12 +229,16 @@ namespace Raven.Client.Documents.Session
         /// </remarks>
         void Proximity(int proximity);
 
+        void OrderBy(string field, string sorterName);
+
         /// <summary>
         ///   Order the results by the specified fields
         ///   The field is the name of the field to sort, defaulting to sorting by ascending.
         /// </summary>
         /// <param name = "field">The fields.</param>
         void OrderBy(string field, OrderingType ordering = OrderingType.String);
+
+        void OrderByDescending(string field, string sorterName);
 
         void OrderByDescending(string field, OrderingType ordering = OrderingType.String);
 
