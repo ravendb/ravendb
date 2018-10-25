@@ -638,5 +638,236 @@ namespace FastTests.Graph
                 }
             }
         }
-    }
+
+        [Fact]
+        public void Multi_hop_query_with_unlimited_hops_and_no_matching_paths_and_single_destination_should_return_empty_results()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    //intentionally, no edges between vertices
+                    session.Store(new Dog
+                    {
+                        Name = "Arava"
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Oscar"
+                    });
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<Dog>(@"
+                       match (d1:Dogs(id() = 'dogs/1-A'))-recursive{ [l:Likes ]} ->(d2:Dogs(id() = 'dogs/2-A'))").ToList();
+                    Assert.Empty(results);
+                }
+            }
+        }
+        [Fact]
+        public void Multi_hop_query_with_unlimited_hops_and_no_matching_paths_and_multiple_possible_destination_should_return_empty_results()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    //intentionally, no edges between vertices
+                    session.Store(new Dog
+                    {
+                        Name = "Arava"
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Oscar"
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Pheobe"
+                    });
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<Dog>(@"
+                       match (d1:Dogs)-recursive { [l:Likes ] } ->(d2:Dogs)").ToList();
+                    Assert.Empty(results);
+                }
+            }
+        }
+        [Fact]
+        public void Make_sure_cycles_are_handled_in_multi_hop_queries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Dog
+                    {
+                        Name = "Arava",
+                        Likes = new[] { "dogs/2-A" }
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Oscar",
+                        Likes = new[] { "dogs/3-A" }
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Pheobe",
+                        Likes = new[] { "dogs/1-A" }
+                    });
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                       match (d1:Dogs)-recursive { [l:Likes ] } ->(d2:Dogs) 
+                       select d1.Name as d1,l.Name as l, d2.Name as d2").ToList();
+                    Assert.NotEmpty(results); //sanity check
+                    var interpretedResults = results.Select(x => new
+                    {
+                        D1 = x["d1"].Value<string>(),
+                        L = x["l"].First.Value<string>(), //we have only one item in pathes in this use-case
+                        D2 = x["d2"].Value<string>()
+                    }).ToArray();
+                    Assert.Contains(interpretedResults, item => item.D1 == "Arava" && item.L == "Oscar" && item.D2 == "Arava");
+                    Assert.Contains(interpretedResults, item => item.D1 == "Oscar" && item.L == "Pheobe" && item.D2 == "Oscar");
+                    Assert.Contains(interpretedResults, item => item.D1 == "Pheobe" && item.L == "Arava" && item.D2 == "Pheobe");
+                }
+            }
+        }
+        [Fact(Skip = "Should work when RavenDB-12187 is fixed")]
+        public void Make_sure_cycles_and_where_expression_are_handled_in_multi_hop_queries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Dog
+                    {
+                        Name = "Arava",
+                        Likes = new[] { "dogs/2-A" }
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Oscar",
+                        Likes = new[] { "dogs/3-A" }
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Pheobe",
+                        Likes = new[] { "dogs/1-A" }
+                    });
+                    session.SaveChanges();
+                }
+                WaitForUserToContinueTheTest(store);
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                       match (d1:Dogs)-recursive { [l:Likes ] } ->(d2:Dogs) 
+                       where d1 <> d2
+                       select d1.Name as d1,l.Name as l, d2.Name as d2").ToList();
+                    Assert.NotEmpty(results); //sanity check
+                    var interpretedResults = results.Select(x => new
+                    {
+                        D1 = x["d1"].Value<string>(),
+                        L = x["l"].First.Value<string>(), //we have only one item in pathes in this use-case
+                        D2 = x["d2"].Value<string>()
+                    }).ToArray();
+                    Assert.Contains(interpretedResults, item => item.D1 == "Arava" && item.L == "Oscar" && item.D2 == "Pheobe");
+                    Assert.Contains(interpretedResults, item => item.D1 == "Oscar" && item.L == "Pheobe" && item.D2 == "Arava");
+                    Assert.Contains(interpretedResults, item => item.D1 == "Pheobe" && item.L == "Arava" && item.D2 == "Oscar");
+                }
+            }
+        }
+        public class Person
+        {
+            public string Name { get; set; }
+            public string Ancestor { get; set; }
+        }
+
+        [Fact]
+        public void Multi_hop_without_select_should_work()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "John",
+                        Ancestor = "people/2-a"
+                    });
+                    session.Store(new Person
+                    {
+                        Name = "Jill",
+                        Ancestor = "people/3-a"
+                    });
+                    session.Store(new Person
+                    {
+                        Name = "Joe"
+                    });
+                    session.SaveChanges();
+                }
+                WaitForUserToContinueTheTest(store);
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>("match (s:People)-recursive { [:Ancestor ] }->(a:People)").ToArray();
+                    Assert.NotEmpty(results);
+                    var stronglyTypedResults = results.Select(x => new
+                    {
+                        S = x["s"].ToObject<Person>(),
+                        A = x["a"].ToObject<Person>()
+                    }).ToArray();
+                    //we have only two distinct paths that have ancestors (Joe doesn't have ancestors)
+                    Assert.Equal(2, stronglyTypedResults.Length);
+                    Assert.Contains(stronglyTypedResults, item => item.S.Name == "John" && item.A.Name == "Joe");
+                    Assert.Contains(stronglyTypedResults, item => item.S.Name == "Jill" && item.A.Name == "Joe");
+                }
+            }
+        }
+        [Fact]
+        public void Make_sure_cycles_are_handled_in_multi_hop_queries_with_multiple_multihop_edge_clauses()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Dog
+                    {
+                        Name = "Arava",
+                        Likes = new[] { "dogs/2-A" }
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Oscar",
+                        Likes = new[] { "dogs/3-A" }
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Pheobe",
+                        Likes = new[] { "dogs/1-A" }
+                    });
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                       match (d1:Dogs)-recursive { [l:Likes ] } ->(d2:Dogs)- recursive { [l2:Likes ] } ->(d3:Dogs)
+                       select d1.Name as d1,l.Name as l, d2.Name as d2, l2.Name as l2, d3.Name as d3").ToList();
+                    Assert.NotEmpty(results); //sanity check
+                    var interpretedResults = results.Select(x => new
+                    {
+                        D1 = x["d1"].Value<string>(),
+                        L = x["l"].First.Value<string>(), //we have only one item in pathes in this use-case
+                        D2 = x["d2"].Value<string>(),
+                        L2 = x["l2"].First.Value<string>(),
+                        D3 = x["d3"].Value<string>()
+                    }).ToArray();
+                    Assert.Contains(interpretedResults, item => item.D1 == "Arava" && item.L == "Oscar" && item.D2 == "Arava" && item.L2 == "Oscar" && item.D3 == "Arava");
+                    Assert.Contains(interpretedResults, item => item.D1 == "Oscar" && item.L == "Pheobe" && item.D2 == "Oscar" && item.L2 == "Pheobe" && item.D3 == "Oscar");
+                    Assert.Contains(interpretedResults, item => item.D1 == "Pheobe" && item.L == "Arava" && item.D2 == "Pheobe" && item.L2 == "Arava" && item.D3 == "Pheobe");
+                }
+            }
 }
