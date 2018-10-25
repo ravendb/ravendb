@@ -15,6 +15,7 @@ using Voron.Global;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
+using Voron.Impl.Scratch;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Util;
@@ -130,6 +131,8 @@ namespace Voron
         public int SchemaVersion { get; set; }
 
         public UpgraderDelegate SchemaUpgrader { get; set; }
+
+        public IScratchSpaceUsageMonitor ScratchSpaceUsageMonitor { get; set; }
 
         public long MaxScratchBufferSize
         {

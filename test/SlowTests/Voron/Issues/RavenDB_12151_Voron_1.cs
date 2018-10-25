@@ -3,7 +3,7 @@ using Xunit;
 
 namespace SlowTests.Voron.Issues
 {
-    public class RavenDB_12151 : StorageTest
+    public class RavenDB_12151_Voron_1 : StorageTest
     {
         [Fact]
         public void ShouldProperlyReportNumberOfModifiedPagesInTransaction()

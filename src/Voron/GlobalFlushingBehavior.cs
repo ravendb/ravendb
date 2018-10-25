@@ -53,7 +53,7 @@ namespace Voron
         public bool HasLowNumberOfFlushingResources => _concurrentFlushes.CurrentCount <= _lowNumberOfFlushingResources;
 
 
-        public void VoronEnvironmentFlushing()
+        private void VoronEnvironmentFlushing()
         {
             NativeMemory.EnsureRegistered();
             // We want this to always run, even if we dispose / create new storage env, this is 
@@ -303,7 +303,7 @@ namespace Voron
             });
         }
 
-        public void ForceFlushAndSyncEnvironment(StorageEnvironment env)
+        public void ForceSyncEnvironment(StorageEnvironment env)
         {
             _syncIsRequired.Enqueue(new EnvSyncReq
             {
