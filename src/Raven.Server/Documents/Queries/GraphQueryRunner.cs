@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Queries
 
                 if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
                 {
-                    HandleResultsWithoutSelect(documentsContext, matchResults.ToList(), final);
+                    HandleResultsWithoutSelect(documentsContext, matchResults, final);
                 }
                 else if (q.Select != null)
                 {
@@ -135,18 +135,9 @@ namespace Raven.Server.Documents.Queries
             DocumentsOperationContext documentsContext, 
             List<Match> matchResults, DocumentQueryResult final)
         {
-            if(matchResults.Count == 1)
-            {
-                if (matchResults[0].Empty)
-                    return;
-
-                final.AddResult(matchResults[0].GetFirstResult());
-                return;
-            }
-
             foreach (var match in matchResults)
             {
-                if (matchResults[0].Empty)
+                if (match.Empty)
                     continue;
 
                 if (match.Count == 1) //if we don't have multiple results in each row, we can "flatten" the row
@@ -468,7 +459,7 @@ namespace Raven.Server.Documents.Queries
             {
                 foreach (var alias in aliases)
                 {
-                    var doc = src.Get(alias);
+                    var doc = src.GetSingleDocumentResult(alias);
                     if(doc == null)
                         continue;
                     dst.TrySet(alias, doc);
@@ -506,7 +497,7 @@ namespace Raven.Server.Documents.Queries
                 foreach (var item in nodeResults)
                 {
                     var match = new Match();
-                    match.Set(ee.Path[0].Alias, item.Get(ee.Path[0].Alias));
+                    match.Set(ee.Path[0].Alias, item.GetSingleDocumentResult(ee.Path[0].Alias));
                     currentResults.Add(match);
                 }
                 
@@ -562,19 +553,18 @@ namespace Raven.Server.Documents.Queries
                     if (edgeResult.Empty)
                         continue;
 
-                    var prev = edgeResult.Get(prevNodeAlias);
+                    var prev = edgeResult.GetSingleDocumentResult(prevNodeAlias);
 
                     if (TryGetMatches(edge, nextNodeAlias, edgeResults, prev, out var multipleRelatedMatches))
                     {
                         bool reusedSlot = false;
                         foreach (var match in multipleRelatedMatches)
                         {
-                            var related = match.Get(nextNodeAlias);
-                            var relatedEdge = match.Get(edgeAlias);
+                            var related = match.GetSingleDocumentResult(nextNodeAlias);
+                            var relatedEdge = match.GetResult(edgeAlias);
                             var updatedMatch = new Match(edgeResult);
 
-                            if (relatedEdge != null)
-                                updatedMatch.Set(edgeAlias, relatedEdge);
+                            updatedMatch.Set(edgeAlias, relatedEdge);
                             updatedMatch.Set(nextNodeAlias, related);
 
                             if (reusedSlot)
@@ -616,14 +606,14 @@ namespace Raven.Server.Documents.Queries
                                 if(item is BlittableJsonReaderObject json &&
                                     edge.Where.IsMatchedBy(json, _queryParameters))
                                 {
-                                    hasResults |= TryGetMatchesAfterFiltering(json, edge.Path.FieldValueWithoutAlias, edgeResults, alias, edge.EdgeAlias);
+                                    hasResults |= TryGetMatchesAfterFiltering(json, edge.Path.FieldValueWithoutAlias, edgeResults, alias, edge.EdgeAlias, _results);
                                 }
                             }
                             break;
                         case BlittableJsonReaderObject json:
                             if (edge.Where.IsMatchedBy(json, _queryParameters))
                             {
-                                hasResults |= TryGetMatchesAfterFiltering(json, edge.Path.FieldValueWithoutAlias, edgeResults, alias, edge.EdgeAlias);
+                                hasResults |= TryGetMatchesAfterFiltering(json, edge.Path.FieldValueWithoutAlias, edgeResults, alias, edge.EdgeAlias, _results);
                             }
                             break;
                     }
@@ -632,9 +622,9 @@ namespace Raven.Server.Documents.Queries
 
                 }
                 if(edge.VariableLength != null)
-                    return TryGetVariableLengthMatchesAfterFiltering(prev.Data, edge.Path.FieldValue, edgeResults, alias, edge.EdgeAlias);
+                    return TryGetVariableLengthMatchesAfterFiltering(prev.Data, edge, edgeResults, alias);
 
-                return TryGetMatchesAfterFiltering(prev.Data, edge.Path.FieldValue, edgeResults, alias, edge.EdgeAlias);
+                return TryGetMatchesAfterFiltering(prev.Data, edge.Path.FieldValue, edgeResults, alias, edge.EdgeAlias, _results);
             }
 
              private struct IncludeEdgeOp : IncludeUtil.IIncludeOp
@@ -657,7 +647,80 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            private bool TryGetVariableLengthMatchesAfterFiltering(BlittableJsonReaderObject src, string path, Dictionary<string, Match> edgeResults, string docAlias, string edgeAlias)
+            private bool TryGetVariableLengthMatchesAfterFiltering(BlittableJsonReaderObject src, WithEdgesExpression edge, Dictionary<string, Match> edgeResults, string docAlias)
+            {
+                var min = edge.VariableLength.Value.Min ?? 0;
+                var max = edge.VariableLength.Value.Max ?? int.MaxValue;
+            
+                var pathMembers = new Stack<(BlittableJsonReaderObject Src, List<Match> Matches)>();
+                var cur = src;
+                Match currentMatch = default;
+                bool hasResults = false;
+                while(true)
+                {
+                    var tmp = new List<Match>();
+                    if (pathMembers.Count + 1 == max)// max path we can handle
+                    {
+                        AddMatch();
+                    }
+                    else
+                    {
+                        if (TryGetMatchesAfterFiltering(cur, edge.Path.FieldValue,edgeResults, docAlias, edge.EdgeAlias, tmp) == false)
+                        {
+                            if (min <= pathMembers.Count)
+                            {
+                                AddMatch();
+                            }
+                        }
+                        else
+                        {
+                            pathMembers.Push((cur, tmp));
+                        }
+                    }
+
+                    while (true)
+                    {
+                        if (pathMembers.Count == 0)
+                            return hasResults;
+
+                        var top = pathMembers.Peek();
+                        if (top.Matches.Count == 0)
+                        {
+                            pathMembers.Pop();
+                            continue;
+                        }
+                        currentMatch = top.Matches[top.Matches.Count - 1];
+                        cur = currentMatch.GetSingleDocumentResult(docAlias).Data;
+                        top.Matches.RemoveAt(top.Matches.Count - 1);
+                        break;
+                    }
+                } 
+
+                void AddMatch()
+                {
+                    hasResults = true;
+                    var list = new List<Document>(pathMembers.Count-1);
+                    foreach (var item in pathMembers)
+                    {
+                        list.Add(new Document { Data = item.Src });
+                        if (list.Count == list.Capacity)
+                            break;// s
+                    }
+                    list.Reverse();
+                    var match = new Match(currentMatch);
+                    match.ForceSet(edge.EdgeAlias, list);
+                    _results.Add(match);
+                }
+            }
+
+
+            private bool TryGetMatchesAfterFiltering(
+                BlittableJsonReaderObject src, 
+                string path, 
+                Dictionary<string, Match> edgeResults, 
+                string docAlias, 
+                string edgeAlias, 
+                List<Match> results)
             {
                 _includedEdges.Clear();
                 var op = new IncludeEdgeOp(this);
@@ -683,12 +746,11 @@ namespace Raven.Server.Documents.Queries
                         if (kvp.Value != null)
                             m.Set(edgeAlias, kvp.Value);
 
-                        _results.Add(m);
+                        results.Add(m);
                     }
                 }
                 else
                 {
-
                     foreach (var kvp in _includedEdges)
                     {
 
@@ -703,60 +765,7 @@ namespace Raven.Server.Documents.Queries
                         if (kvp.Value != null)
                             clone.Set(edgeAlias, kvp.Value);
 
-                        _results.Add(clone);
-                    }
-                }
-
-                return true;
-            }
-
-            private bool TryGetMatchesAfterFiltering(BlittableJsonReaderObject src, string path, Dictionary<string, Match> edgeResults, string docAlias, string edgeAlias)
-            {
-                _includedEdges.Clear();
-                var op = new IncludeEdgeOp(this);
-                IncludeUtil.GetDocIdFromInclude(src,
-                   path,
-                   op);
-
-
-                if (_includedEdges.Count == 0)
-                    return false;
-
-                if(edgeResults == null)
-                {
-                    foreach (var kvp in _includedEdges)
-                    {
-                        var doc = _ctx.DocumentDatabase.DocumentsStorage.Get(_ctx, kvp.Key, false);
-                        if (doc == null)
-                            continue;
-
-                        var m = new Match();
-
-                        m.Set(docAlias, doc);
-                        if(kvp.Value != null)
-                            m.Set(edgeAlias, kvp.Value);
-
-                        _results.Add(m);
-                    }
-                }
-                else
-                {
-
-                    foreach (var kvp in _includedEdges)
-                    {
-
-                        if (kvp.Key == null)
-                            continue;
-
-                        if (!edgeResults.TryGetValue(kvp.Key, out var m))
-                            continue;
-
-                        var clone = new Match(m);
-
-                        if (kvp.Value != null)
-                            clone.Set(edgeAlias, kvp.Value);
-
-                        _results.Add(clone);
+                        results.Add(clone);
                     }
                 }
 

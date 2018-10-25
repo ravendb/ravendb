@@ -214,6 +214,12 @@ namespace Raven.Server.Documents.Queries.Results
                 return newDoc;
             }
 
+            AddProjectionToResult(result, key, fieldVal);
+            return null;
+        }
+
+        protected static void AddProjectionToResult(DynamicJsonValue result, string key, object fieldVal)
+        {
             if (fieldVal is List<object> list)
             {
                 var array = new DynamicJsonArray();
@@ -230,7 +236,6 @@ namespace Raven.Server.Documents.Queries.Results
                 fieldVal = d2.Data;
 
             result[key] = fieldVal;
-            return null;
         }
 
         private static void ThrowInvalidQueryBodyResponse(object fieldVal)

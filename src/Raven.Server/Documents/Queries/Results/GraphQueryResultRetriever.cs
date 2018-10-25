@@ -64,38 +64,67 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 [Raven.Client.Constants.Documents.Metadata.Projection] = true
             };
-
+            var item = new Document();
             foreach (var fieldToFetch in FieldsToFetch.Fields.Values)
             {
                 object fieldVal;
-                string key;
-                Document item;
-                if(fieldToFetch.QueryField.Function != null)
+                string key = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
+                if (fieldToFetch.QueryField.Function != null)
                 {
                     var args = new object[fieldToFetch.FunctionArgs.Length + 1];
                     for (int i = 0; i < fieldToFetch.FunctionArgs.Length; i++)
                     {
-                        args[i] = match.Get(fieldToFetch.FunctionArgs[i].ProjectedName);
+                        var dual = match.GetResult(fieldToFetch.FunctionArgs[i].ProjectedName);
+                        if(dual.Single != null)
+                        {
+                            args[i] = dual.Single;
+                        }
+                        else
+                        {
+                            args[i] = dual.Multiple;
+                        }
                     }
-                    item = new Document();
                     key = fieldToFetch.ProjectedName;
                     fieldVal = GetFunctionValue(fieldToFetch, args);
+
+
+                    var immediateResult = AddProjectionToResult(item, 1f, FieldsToFetch, result, key, fieldVal);
+                    if (immediateResult != null)
+                        return immediateResult;
                 }
                 else
                 {
-                    item = match.Get(fieldToFetch.QueryField.ExpressionField.Compound[0]);
-                    if (item == null)
+                    var dual = match.GetResult(fieldToFetch.QueryField.ExpressionField.Compound[0]);
+                    if (dual.Single != null)
+                    {
+                        if (TryGetValue(fieldToFetch, dual.Single, null, null, out key, out fieldVal) == false)
+                            continue;
+
+                        var immediateResult = AddProjectionToResult(dual.Single, 1f, FieldsToFetch, result, key, fieldVal);
+                        if (immediateResult != null)
+                            return immediateResult;
+                    }
+                    else if (dual.Multiple != null)
+                    {
+                        var array = new DynamicJsonArray();
+                        foreach (var m in dual.Multiple)
+                        {
+                            if(!(m is Document d))
+                                continue;
+
+                            if (TryGetValue(fieldToFetch, d, null, null, out key, out fieldVal) == false)
+                                continue;
+                            array.Add(fieldVal);
+                        }
+                        AddProjectionToResult(result, key, array);
+                    }
+                    else
                     {
                         result[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = null;
                         continue;
                     }
-                    if (TryGetValue(fieldToFetch, item, null, null, out key, out fieldVal) == false)
-                        continue;
                 }
 
-                var immediateResult = AddProjectionToResult(item, 1f, FieldsToFetch, result, key, fieldVal);
-                if (immediateResult != null)
-                    return immediateResult;
             }
 
             return new Document

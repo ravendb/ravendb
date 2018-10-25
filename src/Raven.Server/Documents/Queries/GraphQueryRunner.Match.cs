@@ -11,7 +11,12 @@ namespace Raven.Server.Documents.Queries
     {
         public unsafe struct Match // using struct because we have a single field 
         {
-            private Dictionary<string, Document> _inner;
+            public struct Result
+            {
+                public Document Single;
+                public List<Document> Multiple;
+            }
+            private Dictionary<string, Result> _inner;
 
             public object Key => _inner;
 
@@ -25,7 +30,7 @@ namespace Raven.Server.Documents.Queries
             {
                 if (_inner == null)
                     return "<empty>";
-                return string.Join(", ", _inner.Select(x=> x.Key + " - " + (x.Value.Id ?? x.Value.Data.ToString())));
+                return string.Join(", ", _inner.Select(x=> x.Key + " - " + (x.Value.Single?.Id ?? x.Value.Single?.Data?.ToString()) ?? "multi"));
             }
 
             public Match(Match other)
@@ -36,61 +41,81 @@ namespace Raven.Server.Documents.Queries
                 }
                 else
                 {
-                    _inner = new Dictionary<string, Document>(other._inner);
+                    _inner = new Dictionary<string, Result>(other._inner);
                 }
             }
 
-            public Document Get(string alias)
+            public Result GetResult(string alias)
             {
-                Document result = null;
+                Result result = default;
                 _inner?.TryGetValue(alias, out result);
-                if(result?.Id != null)
-                {
-                    result.EnsureMetadata();
-                }
                 return result;
+            }
+
+            public Document GetSingleDocumentResult(string alias)
+            {
+                Result result = default;
+                _inner?.TryGetValue(alias, out result);
+                if(result.Single?.Id != null)
+                {
+                    result.Single.EnsureMetadata();
+                }
+                return result.Single;
             }           
 
             public bool TryGetAliasId(string alias, out long id)
             {
                 id = -1;
-                var hasKey = _inner.TryGetValue(alias, out var doc);
 
-                if (hasKey)
-                    id = (long)doc.Data.BasePointer;
+                if (_inner.TryGetValue(alias, out var result))
+                {
+                    if (result.Single != null)
+                    {
+                        id = (long)result.Single.Data.BasePointer;
+                        return true;
+                    }
+                }
 
-                return hasKey;
-            }
-
-            public bool TryGetKey(string alias, out string key)
-            {
-                key = null;
-                var hasKey = _inner.TryGetValue(alias, out var doc);
-
-                if (hasKey)
-                    key = doc.Id;
-
-                return hasKey;
+                return false;
             }
 
             //try to set, but don't overwrite
             public long? TrySet(StringSegment alias, Document val)
             {
-                if (_inner == null)
-                    _inner = new Dictionary<string, Document>();
+                EnsureInnerInitialized();
 
-                if (_inner.TryAdd(alias, val) == false)
+                if (_inner.TryAdd(alias, new Result { Single = val }) == false)
                     return null;
                 return (long)val.Data.BasePointer;
             }
 
-            public void Set(StringSegment alias, Document val)
+            private void EnsureInnerInitialized()
             {
                 if (_inner == null)
-                    _inner = new Dictionary<string, Document>();
+                    _inner = new Dictionary<string, Result>();
+            }
 
-                _inner.Add(alias, val);
-            }            
+            public void Set(StringSegment alias, Document val)
+            {
+                EnsureInnerInitialized();
+
+                _inner.Add(alias, new Result { Single = val });
+            }
+
+            public void Set(StringSegment alias, Result r)
+            {
+                EnsureInnerInitialized();
+
+                _inner.Add(alias, r);
+            }
+
+            public void ForceSet(StringSegment alias, List<Document> vals)
+            {
+                EnsureInnerInitialized();
+
+                _inner[alias] = new Result { Multiple = vals };
+            }
+
 
             public void PopulateVertices(DynamicJsonValue j)
             {
@@ -99,11 +124,19 @@ namespace Raven.Server.Documents.Queries
 
                 foreach (var item in _inner)
                 {
-                    if (item.Value.Id != null)
+                    if(item.Value.Single != null)
                     {
-                        item.Value.EnsureMetadata();
+                        var doc = item.Value.Single;
+                        if (doc.Id != null)
+                        {
+                            doc.EnsureMetadata();
+                        }
+                        j[item.Key] = doc.Data;
                     }
-                    j[item.Key] = item.Value.Data;                    
+                    else 
+                    {
+                        j[item.Key] = item.Value.Multiple;
+                    }
                 }
             }
 
@@ -114,7 +147,10 @@ namespace Raven.Server.Documents.Queries
 
                 foreach (var item in _inner)
                 {
-                    i.Add(item.Key, this, item.Value);
+                    if(item.Value.Single != null)
+                    {
+                        i.Add(item.Key, this, item.Value.Single);
+                    }
                 }
             }
 
@@ -122,24 +158,17 @@ namespace Raven.Server.Documents.Queries
             {
                 foreach (var item in _inner)
                 {
-                    if (item.Value.Id != null)
+                    var doc = item.Value.Single;
+                    if (doc == null)
+                        continue;
+                    if (doc.Id != null)
                     {
-                        item.Value.EnsureMetadata();
+                        doc.EnsureMetadata();
                     }
 
-                    return item.Value;
+                    return doc;
                 }
                 throw new InvalidOperationException("Cannot return single result when there are no results");
-            }
-
-            internal Document GetResult(string alias)
-            {
-                var val = _inner[alias];
-                if (val.Id != null)
-                {
-                    val.EnsureMetadata();
-                }
-                return val;
             }
         }
     }

@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Queries
             {
                 foreach (var alias in match.Aliases)
                 {
-                    Add(alias, match, match.Get(alias));
+                    Add(alias, match, match.GetSingleDocumentResult(alias));
                 }
             }
 

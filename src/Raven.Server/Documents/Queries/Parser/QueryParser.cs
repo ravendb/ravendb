@@ -290,7 +290,8 @@ namespace Raven.Server.Documents.Queries.Parser
                 ThrowParseException("Edge variable length cannot be a double, but got: " + token.ToString());
             if (int.TryParse(token, out var i) == false)
                 ThrowParseException("Edge variable length must be a valid integer, but got: " + token.ToString());
-
+            if(i < 0)
+                ThrowParseException("Edge variable length must be larger than zero, but got: " + token.ToString());
             return i;
         }
 
