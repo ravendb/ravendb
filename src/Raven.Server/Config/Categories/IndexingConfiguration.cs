@@ -131,6 +131,20 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.ScratchSpaceLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size? ScratchSpaceLimit { get; protected set; }
 
+        [Description("Maximum amount of scratch space that we allow to use for entire indexing work per server")]
+        [DefaultValue(null)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.GlobalScratchSpaceLimitInMb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size? GlobalScratchSpaceLimit { get; protected set; }
+
+        [Description("Max time to wait when forcing the environment flush and sync after exceeding global scratch buffer limit")]
+        [DefaultValue(5)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.MaxTimeToWaitAfterFlushAndSyncWhenExceedingGlobalScratchSpaceLimit", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting MaxTimeToWaitAfterFlushAndSyncWhenExceedingGlobalScratchSpaceLimit { get; protected set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             var updateTypeAttribute = property.GetCustomAttribute<IndexUpdateTypeAttribute>();
