@@ -398,19 +398,19 @@ namespace Raven.Server.Documents.Queries.AST
                     _sb.Append(item);
                 }
 
-                if(withEdgesClause.VariableLength != null)
+                if(withEdgesClause.MultiHop != null)
                 {
                     _sb.Append(" * ");
 
-                    if (withEdgesClause.VariableLength.Value.Min != null)
-                        _sb.Append(withEdgesClause.VariableLength.Value.Min);
+                    if (withEdgesClause.MultiHop.Value.Min != null)
+                        _sb.Append(withEdgesClause.MultiHop.Value.Min);
 
-                    if (withEdgesClause.VariableLength.Value.Min != null ||
-                        withEdgesClause.VariableLength.Value.Max != null)
+                    if (withEdgesClause.MultiHop.Value.Min != null ||
+                        withEdgesClause.MultiHop.Value.Max != null)
                         _sb.Append("..");
 
-                    if (withEdgesClause.VariableLength.Value.Max != null)
-                        _sb.Append(withEdgesClause.VariableLength.Value.Max);
+                    if (withEdgesClause.MultiHop.Value.Max != null)
+                        _sb.Append(withEdgesClause.MultiHop.Value.Max);
 
                 }
 

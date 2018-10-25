@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Queries.AST
     {
         public QueryExpression Where;
 
-        public (int? Min, int? Max)? VariableLength;
+        public (int? Min, int? Max)? MultiHop;
 
         public StringSegment? FromAlias;
 
@@ -18,13 +18,13 @@ namespace Raven.Server.Documents.Queries.AST
 
         public StringSegment EdgeAlias;
 
-        public WithEdgesExpression(QueryExpression @where, FieldExpression path, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy, (int? Min, int? Max)? variableLength)
+        public WithEdgesExpression(QueryExpression @where, FieldExpression path, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy, (int? Min, int? Max)? multiHop)
         {
             Where = @where;
             OrderBy = orderBy;
             Type = ExpressionType.WithEdge;
             Path = path;
-            VariableLength = variableLength;
+            MultiHop = multiHop;
         }
 
         public override string ToString() => GetText();

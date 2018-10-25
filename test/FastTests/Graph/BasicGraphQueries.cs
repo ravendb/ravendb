@@ -285,7 +285,48 @@ select manager
                 ("match( e: Employees(Territories all in ('60179', '60601') ) )", 1),
                 ("match(e: Employees(Territories in ('60179', '60601')) )", 1)
             );
+        }
 
+        public class EmployeeRelations
+        {
+            public string Employee, Boss;
+            public string[] MiddleManagement;
+        }
+
+        [Fact]
+        public void CanUseMultiHopInQueries()
+        {
+            var results = Query<EmployeeRelations>(@"
+match (e:Employees (id() = 'employees/7-A'))-[m:ReportsTo *]->(boss:Employees)
+select e.FirstName as Employee, m.FirstName as MiddleManagement, boss.FirstName as Boss
+");
+            Assert.Equal(1, results.Count);
+            foreach (var item in results)
+            {
+                Assert.Equal("Andrew", item.Boss);
+                Assert.Equal("Robert", item.Employee);
+                Assert.Equal(new[] { "Steven" }, item.MiddleManagement);
+            }
+        }
+
+        [Fact]
+        public void CanUseMultiHopInQueriesWithScript()
+        {
+            var results = Query<EmployeeRelations>(@"
+match (e:Employees (id() = 'employees/7-A'))-[m:ReportsTo *]->(boss:Employees)
+select {
+    Employee: e.FirstName + ' ' + e.LastName,
+    MiddleManagement: m.map(f => f.FirstName + ' ' + f.LastName),
+    Boss: boss.FirstName + ' ' + boss.LastName
+}
+");
+            Assert.Equal(1, results.Count);
+            foreach (var item in results)
+            {
+                Assert.Equal("Andrew Fuller", item.Boss);
+                Assert.Equal("Robert King", item.Employee);
+                Assert.Equal(new[] { "Steven Buchanan" }, item.MiddleManagement);
+            }
         }
     }
 }

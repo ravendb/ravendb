@@ -621,7 +621,7 @@ namespace Raven.Server.Documents.Queries
                     return hasResults;
 
                 }
-                if(edge.VariableLength != null)
+                if(edge.MultiHop != null)
                     return TryGetVariableLengthMatchesAfterFiltering(prev.Data, edge, edgeResults, alias);
 
                 return TryGetMatchesAfterFiltering(prev.Data, edge.Path.FieldValue, edgeResults, alias, edge.EdgeAlias, _results);
@@ -649,8 +649,8 @@ namespace Raven.Server.Documents.Queries
 
             private bool TryGetVariableLengthMatchesAfterFiltering(BlittableJsonReaderObject src, WithEdgesExpression edge, Dictionary<string, Match> edgeResults, string docAlias)
             {
-                var min = edge.VariableLength.Value.Min ?? 0;
-                var max = edge.VariableLength.Value.Max ?? int.MaxValue;
+                var min = edge.MultiHop.Value.Min ?? 0;
+                var max = edge.MultiHop.Value.Max ?? int.MaxValue;
             
                 var pathMembers = new Stack<(BlittableJsonReaderObject Src, List<Match> Matches)>();
                 var cur = src;

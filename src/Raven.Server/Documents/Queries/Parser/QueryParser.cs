@@ -204,24 +204,24 @@ namespace Raven.Server.Documents.Queries.Parser
             }
         }
 
-        private (FieldExpression Field, (int? Min, int? Max)? VariableLength) GetEdgePath()
+        private (FieldExpression Field, (int? Min, int? Max)? MultiHop) GetEdgePath()
         {
             FieldExpression f = null;
-            (int? Min, int? Max)? variableLength = null;
+            (int? Min, int? Max)? multiHop = null;
             if (Scanner.TryScan('('))
             {
                 Field(out f); // okay if false
 
-                variableLength = ReadVariableLength();
+                multiHop = ReadMultiHop();
 
                 if (Scanner.TryScan(')') == false)
                     ThrowParseException("With edges(<identifier>) was not closed with ')'");
             }
 
-            return (f, variableLength);
+            return (f, multiHop);
         }
 
-        private (int? Min, int? Max)? ReadVariableLength()
+        private (int? Min, int? Max)? ReadMultiHop()
         {
             if (Scanner.TryScan("*"))
             {
@@ -253,7 +253,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 if (Alias(true, out var shortAlias) && shortAlias.HasValue)
                 {
-                    var shortWithEdges = new WithEdgesExpression(null, edgeField.Field, null, edgeField.VariableLength);
+                    var shortWithEdges = new WithEdgesExpression(null, edgeField.Field, null, edgeField.MultiHop);
                     return (shortWithEdges, shortAlias.Value);
                 }
 
@@ -276,7 +276,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Alias(true, out var alias) == false || alias.HasValue == false)
                 throw new InvalidQueryException("With clause must contain alias but none was provided", Scanner.Input, null);
 
-            var wee = new WithEdgesExpression(qe, edgeField.Field, orderBy, edgeField.VariableLength);
+            var wee = new WithEdgesExpression(qe, edgeField.Field, orderBy, edgeField.MultiHop);
             return (wee, alias.Value);
         }
 
@@ -367,7 +367,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
                 (int? Min, int? Max)? variableLen = null;
                 if (isEdge)
-                    variableLen = ReadVariableLength();
+                    variableLen = ReadMultiHop();
 
                 AddWithQuery(f, alias, filter, isEdge, variableLen, start);
 
@@ -376,7 +376,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 (int? Min, int? Max)? variableLen = null;
                 if (isEdge)
-                    variableLen = ReadVariableLength();
+                    variableLen = ReadMultiHop();
 
                 AddWithQuery(new FieldExpression(new List<StringSegment>()), alias, null, isEdge, variableLen, start);
             }
