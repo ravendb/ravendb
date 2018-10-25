@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -38,7 +39,6 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Sparrow.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
@@ -645,7 +645,7 @@ namespace Raven.Server.Documents
                         StorageEnvironmentWithType.StorageEnvironmentType.Configuration, configurationStorage.Environment);
 
             //check for null to prevent NRE when disposing the DocumentDatabase
-            foreach (var index in (IndexStore?.GetIndexes()))
+            foreach (var index in (IndexStore?.GetIndexes()).EmptyIfNull())
             {
                 var env = index?._indexStorage?.Environment();
                 if (env != null)
