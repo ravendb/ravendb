@@ -653,6 +653,7 @@ namespace Raven.Server.Documents.Queries
                 var max = edge.MultiHop.Value.Max ?? int.MaxValue;
             
                 var pathMembers = new Stack<(BlittableJsonReaderObject Src, List<Match> Matches)>();
+                var visited = new HashSet<BlittableJsonReaderObject> { src };
                 var cur = src;
                 Match currentMatch = default;
                 bool hasResults = false;
@@ -668,9 +669,7 @@ namespace Raven.Server.Documents.Queries
                         if (TryGetMatchesAfterFiltering(cur, edge.Path.FieldValue,edgeResults, docAlias, edge.EdgeAlias, tmp) == false)
                         {
                             if (min <= pathMembers.Count)
-                            {
                                 AddMatch();
-                            }
                         }
                         else
                         {
@@ -687,11 +686,20 @@ namespace Raven.Server.Documents.Queries
                         if (top.Matches.Count == 0)
                         {
                             pathMembers.Pop();
+                            visited.Remove(top.Src);
                             continue;
                         }
                         currentMatch = top.Matches[top.Matches.Count - 1];
                         cur = currentMatch.GetSingleDocumentResult(docAlias).Data;
                         top.Matches.RemoveAt(top.Matches.Count - 1);
+                        if (visited.Add(cur) == false)
+                        {
+                            pathMembers.Pop();
+                            if (min <= pathMembers.Count)
+                                AddMatch();
+
+                            continue;
+                        }
                         break;
                     }
                 } 
@@ -704,7 +712,7 @@ namespace Raven.Server.Documents.Queries
                     {
                         list.Add(new Document { Data = item.Src });
                         if (list.Count == list.Capacity)
-                            break;// s
+                            break;// skip the last item, which is the node pointed by the last edge
                     }
                     list.Reverse();
                     var match = new Match(currentMatch);

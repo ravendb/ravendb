@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Documents;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -10,11 +12,13 @@ namespace FastTests.Graph
 {
     public class BasicGraphQueries : RavenTestBase
     {
-        public List<T> Query<T>(string q)
+        public List<T> Query<T>(string q, Action<IDocumentStore> mutate = null)
         {
             using (var store = GetDocumentStore())
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
+
+                mutate?.Invoke(store);
 
                 WaitForIndexing(store);
 
@@ -328,5 +332,30 @@ select {
                 Assert.Equal(new[] { "Steven Buchanan" }, item.MiddleManagement);
             }
         }
+
+        [Fact]
+        public void CanHandleCyclesInGraph()
+        {
+            var results = Query<EmployeeRelations>(@"
+match (e:Employees (id() = 'employees/7-A'))-[m:ReportsTo *]->(boss:Employees)
+select e.FirstName as Employee, m.FirstName as MiddleManagement, boss.FirstName as Boss
+", store =>
+            {
+                using (var s = store.OpenSession())
+                {
+                    var e = s.Load<Employee>("employees/2-A");
+                    e.ReportsTo = e.Id;
+                    s.SaveChanges();
+                }
+            });
+            Assert.Equal(1, results.Count);
+            foreach (var item in results)
+            {
+                Assert.Equal("Andrew", item.Boss);
+                Assert.Equal("Robert", item.Employee);
+                Assert.Equal(new[] { "Steven" }, item.MiddleManagement);
+            }
+        }
+
     }
 }
