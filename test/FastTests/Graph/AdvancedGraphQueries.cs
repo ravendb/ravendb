@@ -22,13 +22,13 @@ namespace FastTests.Graph
                     var moviesQueryResult = session.Advanced.RawQuery<Movie>(@"
                         match (u:Users(id() = 'users/2'))-[:HasRated.Movie]->(m:Movies) select m
                     ").ToList();
-                    
-                    Assert.Equal(2,moviesQueryResult.Count);
+
+                    Assert.Equal(2, moviesQueryResult.Count);
                     Assert.Contains(moviesQueryResult.Select(x => x.Name), name => name == "Firefly Serenity" || name == "Indiana Jones and the Temple Of Doom");
                 }
             }
         }
-        
+
 
         [Fact]
         public void Graph_query_can_handle_edges_defined_in_property_with_whitespaces()
@@ -46,7 +46,7 @@ namespace FastTests.Graph
                                       {
                                           o['Order Lines'] = o.Lines
                                       }"));
-                    
+
                 operation.WaitForCompletion();
 
                 using (var session = store.OpenSession())
@@ -56,7 +56,7 @@ namespace FastTests.Graph
                     var resultsAsJson = session.Advanced
                         .RawQuery<JObject>(@"match (o:Orders (id() = 'orders/825-A'))-[:'Order Lines'.Product]->(p:Products) select p.Name as Name").ToList();
                     var productNamesFromMatch = resultsAsJson.Select(r => r["Name"].Value<string>()).ToArray();
-                    Assert.Equal(4,productNamesFromMatch.Length); //sanity check
+                    Assert.Equal(4, productNamesFromMatch.Length); //sanity check
 
                     var query = session.Advanced.RawQuery<JObject>(@"from Orders where id() = 'orders/825-A' select Lines").ToArray();
                     var productsIdsFromDocumentQuery = query.Select(r => r["Lines"])
@@ -64,9 +64,9 @@ namespace FastTests.Graph
                         .Select(x => x.ToObject<OrderLine>().Product).ToArray();
 
                     var productNamesFromDocumentQuery = session.Load<Product>(productsIdsFromDocumentQuery).Select(x => x.Value.Name);
-                    
+
                     //note : OrderByDescending is required because graph and document queries may give results in different order
-                    Assert.Equal(productNamesFromDocumentQuery.OrderByDescending(x => x),productNamesFromMatch.OrderByDescending(x => x));
+                    Assert.Equal(productNamesFromDocumentQuery.OrderByDescending(x => x), productNamesFromMatch.OrderByDescending(x => x));
                 }
                 //
             }
@@ -84,9 +84,9 @@ namespace FastTests.Graph
                     var moviesQueryResult = session.Advanced.RawQuery<Movie>(@"
                         match (u:Users(id() = 'users/2'))-[:HasRated.Movie]->(m:Movies) select m
                     ").ToList();
-                        
-                    Assert.Equal(2,moviesQueryResult.Count); //sanity check
-                    
+
+                    Assert.Equal(2, moviesQueryResult.Count); //sanity check
+
                     //If the data retrieved has proper json format, Ids here won't be null as they will be populated
                     //by the same client-side code that handles document query results
                     Assert.False(moviesQueryResult.Any(x => x.Id == null));
@@ -96,7 +96,7 @@ namespace FastTests.Graph
             }
         }
 
-  
+
 
         [Fact(Skip = "Should not work until RavenDB-12075 is implemented")]
         public void Graph_query_missing_FROM_vertex_should_fail_properly()
@@ -140,7 +140,7 @@ namespace FastTests.Graph
                     var arava = new Dog
                     {
                         Name = "Arava",
-                        Likes = new[] {"dogs/1", "dogs/2"}
+                        Likes = new[] { "dogs/1", "dogs/2" }
                     }; //dogs/1
                     var oscar = new Dog
                     {
@@ -149,7 +149,7 @@ namespace FastTests.Graph
                     var pheobe = new Dog
                     {
                         Name = "Pheobe",
-                        Likes = new[] {"dogs/2"}
+                        Likes = new[] { "dogs/2" }
                     }; //dogs/3
 
                     session.Store(arava, "dogs/1");
@@ -180,7 +180,7 @@ namespace FastTests.Graph
                     var arava = new Dog
                     {
                         Name = "Arava",
-                        Likes = new[] {"dogs/1", "dogs/2"}
+                        Likes = new[] { "dogs/1", "dogs/2" }
                     }; //dogs/1
                     var oscar = new Dog
                     {
@@ -189,7 +189,7 @@ namespace FastTests.Graph
                     var pheobe = new Dog
                     {
                         Name = "Pheobe",
-                        Likes = new[] {"dogs/2"}
+                        Likes = new[] { "dogs/2" }
                     }; //dogs/3
 
                     session.Store(arava, "dogs/1");
@@ -220,7 +220,7 @@ namespace FastTests.Graph
                     var arava = new Dog
                     {
                         Name = "Arava",
-                        Likes = new []{ "dogs/1","dogs/2" }
+                        Likes = new[] { "dogs/1", "dogs/2" }
                     }; //dogs/1
                     var oscar = new Dog
                     {
@@ -229,18 +229,18 @@ namespace FastTests.Graph
                     var pheobe = new Dog
                     {
                         Name = "Pheobe",
-                        Likes = new []{ "dogs/2" }
+                        Likes = new[] { "dogs/2" }
                     }; //dogs/3
 
-                    session.Store(arava,"dogs/1");
-                    session.Store(oscar,"dogs/2");
+                    session.Store(arava, "dogs/1");
+                    session.Store(oscar, "dogs/2");
                     session.Store(pheobe, "dogs/3");
 
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
-                {                   
+                {
                     //note : such query implies implicit intersection between
                     // a -[likes]-> b and b -[likes]-> c, but it doesn't execute interesection-related code
                     var friends = session.Advanced.RawQuery<JObject>(@"
@@ -256,7 +256,7 @@ namespace FastTests.Graph
                         C = x["C"]?.Value<string>()
                     }).ToArray();
 
-                    Assert.Equal(2,resultPairs.Length);
+                    Assert.Equal(2, resultPairs.Length);
                     Assert.Contains(resultPairs, item => item.A == "Arava" && item.B == "Arava" && item.C == "Arava");
                     Assert.Contains(resultPairs, item => item.A == "Arava" && item.B == "Arava" && item.C == "Oscar");
                 }
@@ -273,29 +273,29 @@ namespace FastTests.Graph
                     var arava = new Dog
                     {
                         Name = "Arava",
-                        Likes = new []{ "dogs/2" }
+                        Likes = new[] { "dogs/2" }
                     }; //dogs/1
                     var oscar = new Dog
                     {
                         Name = "Oscar",
-                        Likes = new []{ "dogs/3" }
+                        Likes = new[] { "dogs/3" }
 
                     }; //dogs/2
                     var pheobe = new Dog
                     {
                         Name = "Pheobe",
-                        Likes = new []{ "dogs/1" }
+                        Likes = new[] { "dogs/1" }
                     }; //dogs/3
 
-                    session.Store(arava,"dogs/1");
-                    session.Store(oscar,"dogs/2");
-                    session.Store(pheobe,"dogs/3");
+                    session.Store(arava, "dogs/1");
+                    session.Store(oscar, "dogs/2");
+                    session.Store(pheobe, "dogs/3");
 
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
-                {                   
+                {
                     //note : such query implies implicit intersection between
                     // a -[likes]-> b and b -[likes]-> c, but it doesn't execute interesection-related code
                     var friends = session.Advanced.RawQuery<JObject>(@"
@@ -311,7 +311,7 @@ namespace FastTests.Graph
                         C = x["C"]?.Value<string>()
                     }).ToArray();
 
-                    Assert.Equal(3,resultPairs.Length);
+                    Assert.Equal(3, resultPairs.Length);
                     Assert.Contains(resultPairs, item => item.A == "Arava" && item.B == "Oscar" && item.C == "Pheobe");
                     Assert.Contains(resultPairs, item => item.A == "Oscar" && item.B == "Pheobe" && item.C == "Arava");
                     Assert.Contains(resultPairs, item => item.A == "Pheobe" && item.B == "Arava" && item.C == "Oscar");
@@ -344,7 +344,7 @@ namespace FastTests.Graph
                 }
 
                 using (var session = store.OpenSession())
-                {                   
+                {
                     var friends = session.Advanced.RawQuery<JObject>(@"match (fst:Dogs)-[:Likes]->(snd:Dogs)")
                         .ToList();
 
@@ -354,7 +354,7 @@ namespace FastTests.Graph
                         To = x["snd"]["Name"].Value<string>()
                     }).ToArray();
 
-                    Assert.Equal(2,resultPairs.Length);
+                    Assert.Equal(2, resultPairs.Length);
                     Assert.Contains(resultPairs, item => item.From == "Arava" && item.To == "Pheobe");
                     Assert.Contains(resultPairs, item => item.From == "Oscar" && item.To == "Pheobe");
                 }
@@ -369,7 +369,7 @@ namespace FastTests.Graph
                 CreateDataWithMultipleEdgesOfTheSameType(store);
 
                 using (var session = store.OpenSession())
-                {                   
+                {
                     var friends = session.Advanced.RawQuery<JObject>(@"match (fst:Dogs)-[:Likes]->(snd:Dogs)")
                                                   .ToList();
 
@@ -378,11 +378,11 @@ namespace FastTests.Graph
                         From = x["fst"]["Name"].Value<string>(),
                         To = x["snd"]["Name"].Value<string>()
                     }).ToArray();
-                    
+
                     //arava -> oscar
                     //oscar -> oscar, phoebe
                     //phoebe -> oscar
-                    Assert.Equal(4,resultPairs.Length);
+                    Assert.Equal(4, resultPairs.Length);
                     Assert.Contains(resultPairs, item => item.From == "Arava" && item.To == "Oscar");
                     Assert.Contains(resultPairs, item => item.From == "Oscar" && item.To == "Oscar");
                     Assert.Contains(resultPairs, item => item.From == "Oscar" && item.To == "Pheobe");
@@ -401,7 +401,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     //should throw because "foobar" is not defined in the query
-                    Assert.Throws<InvalidQueryException>(() => 
+                    Assert.Throws<InvalidQueryException>(() =>
                         session.Advanced.RawQuery<JObject>(@"match (fst:Dogs)-[:Likes]->(snd:Dogs) select foobar").ToArray());
                 }
             }
@@ -417,7 +417,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     //should throw because "foobar" is not defined in the query
-                    Assert.Throws<InvalidQueryException>(() => 
+                    Assert.Throws<InvalidQueryException>(() =>
                         session.Advanced.RawQuery<JObject>(@"match (fst:Dogs)-[:Likes]->(snd:Dogs) select fst,foobar,snd").ToArray());
                 }
             }
@@ -432,7 +432,7 @@ namespace FastTests.Graph
                 WaitForUserToContinueTheTest(store);
 
                 using (var session = store.OpenSession())
-                {                   
+                {
                     var friends = session.Advanced.RawQuery<JObject>(@"match (fst:Dogs)-[:Likes]->(snd:Dogs) select { a : fst, b: snd }")
                         .ToList();
 
@@ -460,7 +460,7 @@ namespace FastTests.Graph
             using (var store = GetDocumentStore())
             {
                 CreateNorthwindDatabase(store);
-                using (var one= store.OpenSession())    
+                using (var one = store.OpenSession())
                 using (var two = store.OpenSession())
                 {
                     var orderFromMatch = one.Advanced.RawQuery<Order>(@"match (o:Orders (id() = 'orders/825-A'))").First();
@@ -469,8 +469,8 @@ namespace FastTests.Graph
 
                     //compare some meaningful properties, just to be sure
                     Assert.Equal(orderFromLoad.Id, orderFromMatch.Id);
-                    Assert.Equal(orderFromLoad.Company,orderFromMatch.Company);
-                    Assert.Equal(orderFromLoad.Employee,orderFromMatch.Employee);
+                    Assert.Equal(orderFromLoad.Company, orderFromMatch.Company);
+                    Assert.Equal(orderFromLoad.Employee, orderFromMatch.Employee);
                 }
             }
         }
@@ -486,7 +486,7 @@ namespace FastTests.Graph
                     var resultsAsJson = session.Advanced
                         .RawQuery<JObject>(@"match (o:Orders (id() = 'orders/825-A'))-[:Lines[].Product]->(p:Products) select p.Name as Name").ToList();
                     var productNamesFromMatch = resultsAsJson.Select(r => r["Name"].Value<string>()).ToArray();
-                    Assert.Equal(4,productNamesFromMatch.Length); //sanity check
+                    Assert.Equal(4, productNamesFromMatch.Length); //sanity check
 
                     var query = session.Advanced.RawQuery<JObject>(@"from Orders where id() = 'orders/825-A' select Lines").ToArray();
                     var productsIdsFromDocumentQuery = query.Select(r => r["Lines"])
@@ -494,9 +494,9 @@ namespace FastTests.Graph
                         .Select(x => x.ToObject<OrderLine>().Product).ToArray();
 
                     var productNamesFromDocumentQuery = session.Load<Product>(productsIdsFromDocumentQuery).Select(x => x.Value.Name);
-                    
+
                     //note : OrderByDescending is required because graph and document queries may give results in different order
-                    Assert.Equal(productNamesFromDocumentQuery.OrderByDescending(x => x),productNamesFromMatch.OrderByDescending(x => x));
+                    Assert.Equal(productNamesFromDocumentQuery.OrderByDescending(x => x), productNamesFromMatch.OrderByDescending(x => x));
                 }
             }
         }
@@ -530,7 +530,7 @@ namespace FastTests.Graph
                     var productsIdFromDocumentQuery = query[0].Product;
                     var productNameFromDocumentQuery = session.Load<Product>(productsIdFromDocumentQuery).Name;
 
-                    Assert.Equal(productNameFromDocumentQuery,productNameFromMatch);
+                    Assert.Equal(productNameFromDocumentQuery, productNameFromMatch);
                 }
             }
         }
@@ -564,7 +564,7 @@ namespace FastTests.Graph
                     var productsIdFromDocumentQuery = query[0].Product;
                     var productNameFromDocumentQuery = session.Load<Product>(productsIdFromDocumentQuery).Name;
 
-                    Assert.Equal(productNameFromDocumentQuery,productNameFromMatch);
+                    Assert.Equal(productNameFromDocumentQuery, productNameFromMatch);
                 }
             }
         }
@@ -580,7 +580,7 @@ namespace FastTests.Graph
                     var resultsAsJson = session.Advanced
                         .RawQuery<JObject>(@"match (o:Orders (id() = 'orders/825-A'))-[:Lines.Product]->(p:Products) select p.Name as Name").ToList();
                     var productNamesFromMatch = resultsAsJson.Select(r => r["Name"].Value<string>()).ToArray();
-                    Assert.Equal(4,productNamesFromMatch.Length); //sanity check
+                    Assert.Equal(4, productNamesFromMatch.Length); //sanity check
 
                     var query = session.Advanced.RawQuery<JObject>(@"from Orders where id() = 'orders/825-A' select Lines").ToArray();
                     var productsIdsFromDocumentQuery = query.Select(r => r["Lines"])
@@ -588,14 +588,14 @@ namespace FastTests.Graph
                         .Select(x => x.ToObject<OrderLine>().Product).ToArray();
 
                     var productNamesFromDocumentQuery = session.Load<Product>(productsIdsFromDocumentQuery).Select(x => x.Value.Name);
-                    
+
                     //note : OrderByDescending is required because graph and document queries may give results in different order
-                    Assert.Equal(productNamesFromDocumentQuery.OrderByDescending(x => x),productNamesFromMatch.OrderByDescending(x => x));
+                    Assert.Equal(productNamesFromDocumentQuery.OrderByDescending(x => x), productNamesFromMatch.OrderByDescending(x => x));
                 }
             }
-        }       
+        }
 
-        [Fact(Skip="Should work after RavenDB-12089 is resolved")]
+        [Fact(Skip = "Should work after RavenDB-12089 is resolved")]
         public void Matching_with_edge_defined_in_embedded_collection_and_select_should_work()
         {
             using (var store = GetDocumentStore())
@@ -870,4 +870,6 @@ namespace FastTests.Graph
                     Assert.Contains(interpretedResults, item => item.D1 == "Pheobe" && item.L == "Arava" && item.D2 == "Pheobe" && item.L2 == "Arava" && item.D3 == "Pheobe");
                 }
             }
+        }
+    }
 }

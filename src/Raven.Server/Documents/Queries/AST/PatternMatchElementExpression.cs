@@ -81,7 +81,21 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override string ToString()
         {
-            return " recursive { " + string.Join("", Pattern) + " } ";
+            var sp = new StringBuilder(" recursive ");
+            if (Alias.Length != 0)
+                sp.Append(" as ").Append(Alias).Append(" ");
+
+            sp.Append("{ ");
+
+            foreach (var item in Pattern)
+            {
+                sp.Append(item);
+                sp.Append(" ");
+            }
+
+            sp.Append("} ");
+
+            return sp.ToString();
         }
     }
 

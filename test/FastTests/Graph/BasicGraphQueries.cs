@@ -301,8 +301,8 @@ select manager
         public void CanUseMultiHopInQueries()
         {
             var results = Query<EmployeeRelations>(@"
-match (e:Employees (id() = 'employees/7-A'))-recursive([m:ReportsTo])->(boss:Employees)
-select e.FirstName as Employee, m.FirstName as MiddleManagement, boss.FirstName as Boss
+match (e:Employees (id() = 'employees/7-A'))-recursive as n { [m:ReportsTo] }->(boss:Employees)
+select e.FirstName as Employee, n.m.FirstName as MiddleManagement, boss.FirstName as Boss
 ");
             Assert.Equal(1, results.Count);
             foreach (var item in results)
@@ -317,10 +317,10 @@ select e.FirstName as Employee, m.FirstName as MiddleManagement, boss.FirstName 
         public void CanUseMultiHopInQueriesWithScript()
         {
             var results = Query<EmployeeRelations>(@"
-match (e:Employees (id() = 'employees/7-A'))-recursive([m:ReportsTo])->(boss:Employees)
+match (e:Employees (id() = 'employees/7-A'))-recursive as n { [m:ReportsTo] }->(boss:Employees)
 select {
     Employee: e.FirstName + ' ' + e.LastName,
-    MiddleManagement: m.map(f => f.FirstName + ' ' + f.LastName),
+    MiddleManagement: n.map(f => f.m.FirstName + ' ' + f.m.LastName),
     Boss: boss.FirstName + ' ' + boss.LastName
 }
 ");
@@ -337,8 +337,8 @@ select {
         public void CanHandleCyclesInGraph()
         {
             var results = Query<EmployeeRelations>(@"
-match (e:Employees (id() = 'employees/7-A'))-recursive([m:ReportsTo])->(boss:Employees)
-select e.FirstName as Employee, m.FirstName as MiddleManagement, boss.FirstName as Boss
+match (e:Employees (id() = 'employees/7-A'))-recursive as n { [m:ReportsTo] }->(boss:Employees)
+select e.FirstName as Employee, n.m.FirstName as MiddleManagement, boss.FirstName as Boss
 ", store =>
             {
                 using (var s = store.OpenSession())
@@ -380,8 +380,10 @@ select e.FirstName as Employee, m.FirstName as MiddleManagement, boss.FirstName 
                 using (var session = store.OpenSession())
                 {
                     session.Advanced.RawQuery<JObject>(@"
-match (son:People)-recursive([:Parents(Gender = 'Male').Id]->(ancestor:People (BornAt='Shire')))->(evil:People (BornAt = 'Mordor'))
+match (son:People)-recursive { [:Parents(Gender = 'Male').Id]->(ancestor:People (BornAt='Shire')) } ->(evil:People (BornAt = 'Mordor'))
 ");
+
+                    Assert.False(true);
                 }
             }
         }
@@ -396,8 +398,9 @@ match (son:People)-recursive([:Parents(Gender = 'Male').Id]->(ancestor:People (B
                 using (var session = store.OpenSession())
                 {
                     session.Advanced.RawQuery<JObject>(@"
-match (son:People)-recursive([:Parents(Gender = 'Male').Id]->(ancestor:People (BornAt='Shire')))
+match (son:People)-recursive{ [:Parents(Gender = 'Male').Id]->(ancestor:People (BornAt='Shire')) } 
 ");
+                    Assert.False(true);
                 }
             }
         }

@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Queries.Results
                         var val = match.GetResult(fieldToFetch.FunctionArgs[i].ProjectedName);
                         if(val is Document d)
                         {
-                            args[i] = d.Data;
+                            args[i] = d;
                         }
                         else if( val is List<Match> matches)
                         {
