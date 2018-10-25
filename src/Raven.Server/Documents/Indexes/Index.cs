@@ -167,6 +167,7 @@ namespace Raven.Server.Documents.Indexes
         private string _errorStateReason;
         private bool _isCompactionInProgress;
         internal TimeSpan? _firstBatchTimeout;
+        private Lazy<long?> _scratchSpaceLimitInBytes;
 
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
         private readonly MultipleUseFlag _priorityChanged = new MultipleUseFlag();
@@ -2883,6 +2884,31 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        private long? ScratchSpaceLimitInBytes
+        {
+            get
+            {
+                if (_scratchSpaceLimitInBytes != null)
+                    return _scratchSpaceLimitInBytes.Value;
+
+                if (Configuration.ScratchSpaceLimit == null)
+                {
+                    _scratchSpaceLimitInBytes = new Lazy<long?>(() => null);
+                }
+                else
+                {
+                    var limitInBytes = Configuration.ScratchSpaceLimit.Value.GetValue(SizeUnit.Bytes);
+
+                    if (Type.IsMapReduce())
+                        limitInBytes = (long)(limitInBytes * 0.75); // let's decrease the limit to take into account additional work in reduce phase
+
+                    _scratchSpaceLimitInBytes = new Lazy<long?>(() => limitInBytes);
+                }
+
+                return _scratchSpaceLimitInBytes.Value;
+            }
+        }
+
         public bool CanContinueBatch(
             IndexingStatsScope stats,
             DocumentsOperationContext documentsOperationContext,
@@ -2946,9 +2972,9 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            if (Configuration.ScratchSpaceLimit != null && txAllocations > Configuration.ScratchSpaceLimit.Value.GetValue(SizeUnit.Bytes))
+            if (ScratchSpaceLimitInBytes != null && txAllocations > ScratchSpaceLimitInBytes)
             {
-                stats.RecordMapCompletedReason($"Reached scratch space limit. Allocated {txAllocations / 1024:#,#0} kb of scratch space in current transaction");
+                stats.RecordMapCompletedReason($"Reached scratch space limit ({ScratchSpaceLimitInBytes / 1024:#,#0} kb). Allocated {txAllocations / 1024:#,#0} kb of scratch space in current transaction");
                 return false;
             }
 
