@@ -6,6 +6,7 @@ using Xunit;
 using Order = FastTests.Server.Basic.Entities.Order;
 using Product = FastTests.Server.Basic.Entities.Product;
 using OrderLine = FastTests.Server.Basic.Entities.OrderLine;
+using System.Collections.Generic;
 
 namespace FastTests.Graph
 {
@@ -722,18 +723,18 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (d1:Dogs)-recursive { [l:Likes ] } ->(d2:Dogs) 
-                       select d1.Name as d1,l.Name as l, d2.Name as d2").ToList();
+                       match (d1:Dogs)-recursive as m { [l:Likes ] } ->(d2:Dogs) 
+                       select d1.Name as d1,m.l.Name as l, d2.Name as d2").ToList();
                     Assert.NotEmpty(results); //sanity check
                     var interpretedResults = results.Select(x => new
                     {
                         D1 = x["d1"].Value<string>(),
                         L = x["l"].First.Value<string>(), //we have only one item in pathes in this use-case
                         D2 = x["d2"].Value<string>()
-                    }).ToArray();
-                    Assert.Contains(interpretedResults, item => item.D1 == "Arava" && item.L == "Oscar" && item.D2 == "Arava");
-                    Assert.Contains(interpretedResults, item => item.D1 == "Oscar" && item.L == "Pheobe" && item.D2 == "Oscar");
-                    Assert.Contains(interpretedResults, item => item.D1 == "Pheobe" && item.L == "Arava" && item.D2 == "Pheobe");
+                    }).ToArray();                                                   
+                    Assert.DoesNotContain(interpretedResults, item => item.D1 == "Arava"  && item.D2 == "Arava");
+                    Assert.DoesNotContain(interpretedResults, item => item.D1 == "Oscar"  && item.D2 == "Oscar");
+                    Assert.DoesNotContain(interpretedResults, item => item.D1 == "Pheobe"  && item.D2 == "Pheobe");
                 }
             }
         }
@@ -810,20 +811,21 @@ namespace FastTests.Graph
                     });
                     session.SaveChanges();
                 }
-                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Advanced.RawQuery<JObject>("match (s:People)-recursive { [:Ancestor ] }->(a:People)").ToArray();
+                    var results = session.Advanced.RawQuery<JObject>("match (s:People)-recursive as path { [r:Ancestor ] }->(a:People)").ToArray();
                     Assert.NotEmpty(results);
                     var stronglyTypedResults = results.Select(x => new
                     {
                         S = x["s"].ToObject<Person>(),
-                        A = x["a"].ToObject<Person>()
+                        A = x["a"].ToObject<Person>(),
+                        Path = x.Value<JArray>("path").Select(s=> s["r"].Value<string>()).ToList(),
                     }).ToArray();
-                    //we have only two distinct paths that have ancestors (Joe doesn't have ancestors)
-                    Assert.Equal(2, stronglyTypedResults.Length);
-                    Assert.Contains(stronglyTypedResults, item => item.S.Name == "John" && item.A.Name == "Joe");
-                    Assert.Contains(stronglyTypedResults, item => item.S.Name == "Jill" && item.A.Name == "Joe");
+                    // we return the single longest path here, so we get a large chain
+                    Assert.Equal(1, stronglyTypedResults.Length);
+                    Assert.Equal("Joe", stronglyTypedResults[0].A.Name);
+                    Assert.Equal("John", stronglyTypedResults[0].S.Name);
+                    Assert.Equal(new[] { "people/2-a", "people/3-a" }, stronglyTypedResults[0].Path);
                 }
             }
         }
@@ -851,11 +853,12 @@ namespace FastTests.Graph
                     });
                     session.SaveChanges();
                 }
+                WaitForUserToContinueTheTest(store);    
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (d1:Dogs)-recursive { [l:Likes ] } ->(d2:Dogs)- recursive { [l2:Likes ] } ->(d3:Dogs)
-                       select d1.Name as d1,l.Name as l, d2.Name as d2, l2.Name as l2, d3.Name as d3").ToList();
+                       match (d1:Dogs)-recursive as fst{ [l:Likes ] } ->(d2:Dogs)- recursive as snd { [l2:Likes ] } ->(d3:Dogs)
+                       select d1.Name as d1,fst.l.Name as l, d2.Name as d2, snd.l2.Name as l2, d3.Name as d3").ToList();
                     Assert.NotEmpty(results); //sanity check
                     var interpretedResults = results.Select(x => new
                     {
@@ -864,11 +867,11 @@ namespace FastTests.Graph
                         D2 = x["d2"].Value<string>(),
                         L2 = x["l2"].First.Value<string>(),
                         D3 = x["d3"].Value<string>()
-                    }).ToArray();
-                    Assert.Contains(interpretedResults, item => item.D1 == "Arava" && item.L == "Oscar" && item.D2 == "Arava" && item.L2 == "Oscar" && item.D3 == "Arava");
-                    Assert.Contains(interpretedResults, item => item.D1 == "Oscar" && item.L == "Pheobe" && item.D2 == "Oscar" && item.L2 == "Pheobe" && item.D3 == "Oscar");
-                    Assert.Contains(interpretedResults, item => item.D1 == "Pheobe" && item.L == "Arava" && item.D2 == "Pheobe" && item.L2 == "Arava" && item.D3 == "Pheobe");
-                }
+                    }).ToArray();                                                     
+                    Assert.DoesNotContain(interpretedResults, item => item.D1 == "Arava"  &&  item.D3 == "Arava");
+                    Assert.DoesNotContain(interpretedResults, item => item.D1 == "Oscar"  && item.D3 == "Oscar");
+                    Assert.DoesNotContain(interpretedResults, item => item.D1 == "Pheobe" && item.D3 == "Pheobe");
+                }                                                                     
             }
         }
     }

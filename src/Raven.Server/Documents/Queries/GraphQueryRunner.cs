@@ -537,7 +537,7 @@ namespace Raven.Server.Documents.Queries
 
                         pathIndex+=2;
 
-                        if(!atEnd && pathIndex >= ee.Path.Length)
+                        if(!atEnd)
                         {
                             // we aren't the last item in the pattern, but 
                             // the next one is a node, so we need to process the edges 
@@ -617,6 +617,8 @@ namespace Raven.Server.Documents.Queries
 
                 var originalMatch = currentMatch;
                 var startingPoint = currentMatch.GetSingleDocumentResult(prevNodeAlias);
+                if (startingPoint == null)
+                    return false;
 
                 visited.Add(startingPoint.Data.Location);
                 path.Push((startingPoint.Data, null, currentMatch));
