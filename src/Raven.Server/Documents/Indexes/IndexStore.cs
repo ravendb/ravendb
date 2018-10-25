@@ -23,6 +23,7 @@ using Raven.Server.Documents.Indexes.IndexMerging;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
+using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.NotificationCenter.Notifications;
@@ -74,9 +75,24 @@ namespace Raven.Server.Documents.Indexes
             if (record == null)
                 return;
 
+            HandleSorters(record, index);
             HandleDeletes(record, index);
             HandleChangesForStaticIndexes(record, index);
             HandleChangesForAutoIndexes(record, index);
+        }
+
+        private void HandleSorters(DatabaseRecord record, long index)
+        {
+            try
+            {
+                SorterCompilationCache.UpdateCache(record);
+            }
+            catch (Exception e)
+            {
+                _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Could not update sorters", e);
+            }
         }
 
         private void HandleChangesForAutoIndexes(DatabaseRecord record, long index)

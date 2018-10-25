@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Indexes.Static
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static.Extensions"))
         };
 
-        private static readonly MetadataReference[] References =
+        internal static readonly MetadataReference[] References =
         {
             MetadataReference.CreateFromFile(typeof(object).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(typeof(ExpressionType).GetTypeInfo().Assembly.Location),
@@ -107,7 +107,6 @@ namespace Raven.Server.Documents.Indexes.Static
             MetadataReference.CreateFromFile(typeof(Regex).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(typeof(Uri).GetTypeInfo().Assembly.Location)
         };
-
 
         public static StaticIndexBase Compile(IndexDefinition definition)
         {

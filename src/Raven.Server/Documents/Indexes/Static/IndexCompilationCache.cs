@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private class CacheKey : IEquatable<CacheKey>
+        internal class CacheKey : IEquatable<CacheKey>
         {
             private readonly int _hash;
             private readonly List<string> _items;

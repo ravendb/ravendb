@@ -46,6 +46,8 @@ namespace Raven.Client.ServerWide
 
         public ConflictSolver ConflictSolverConfig;
 
+        public Dictionary<string, string> Sorters;
+
         public Dictionary<string, IndexDefinition> Indexes;
 
         public Dictionary<string, AutoIndexDefinition> AutoIndexes;
