@@ -36,11 +36,11 @@ class nodeInfo {
         this.initValidation();
     }
     
-    static setupNodeTagValidation(target: KnockoutObservable<string>) {
+    static setupNodeTagValidation(target: KnockoutObservable<string>, required: any = true) {
         const upperRegexp = /^[A-Z]*$/;
 
         target.extend({
-            required: true,
+            required: required,
             maxLength: 4,
             validation: [
                 {
