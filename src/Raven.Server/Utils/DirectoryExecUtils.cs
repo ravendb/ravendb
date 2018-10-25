@@ -35,83 +35,99 @@ namespace Raven.Server.Utils
 
         public static void OnCreateDirectory(StorageEnvironmentOptions options, DirectoryParameters parameters, Logger log)
         {
-            var journalPath = string.Empty;
-            if (options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions dirOptions)
-                journalPath = dirOptions.JournalPath.FullPath;
-
-            var userArgs = parameters.OnCreateDirectoryExecArguments ?? string.Empty;
-            var args = $"{userArgs} {parameters.Type} {parameters.DatabaseName} " +
-                       $"{CommandLineArgumentEscaper.EscapeSingleArg(options.BasePath.ToString())} " +
-                       $"{CommandLineArgumentEscaper.EscapeSingleArg(options.TempPath.ToString())} " +
-                       $"{CommandLineArgumentEscaper.EscapeSingleArg(journalPath)}";
-
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = parameters.OnCreateDirectoryExec,
-                    Arguments = args,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = false,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                }
-            };
-
-            var sw = Stopwatch.StartNew();
-
+            Process process = null;
             try
             {
-                process.Start();
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException($"Unable to execute '{parameters.OnCreateDirectoryExec} {args}'. Failed to start process.", e);
-            }
+                var journalPath = string.Empty;
+                if (options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions dirOptions)
+                    journalPath = dirOptions.JournalPath.FullPath;
 
-            var readErrors = process.StandardError.ReadToEndAsync();
+                var userArgs = parameters.OnCreateDirectoryExecArguments ?? string.Empty;
+                var args = $"{userArgs} {parameters.Type} {parameters.DatabaseName} " +
+                           $"{CommandLineArgumentEscaper.EscapeSingleArg(options.BasePath.ToString())} " +
+                           $"{CommandLineArgumentEscaper.EscapeSingleArg(options.TempPath.ToString())} " +
+                           $"{CommandLineArgumentEscaper.EscapeSingleArg(journalPath)}";
 
-            string GetStdError()
-            {
+                process = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = parameters.OnCreateDirectoryExec,
+                        Arguments = args,
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true
+                    }
+                };
+                
+                var sw = Stopwatch.StartNew();
+
                 try
                 {
-                    return readErrors.Result;
+                    process.Start();
                 }
-                catch
+                catch (Exception e)
                 {
-                    return "Unable to get stderr";
+                    throw new InvalidOperationException($"Unable to execute '{parameters.OnCreateDirectoryExec} {args}'. Failed to start process.", e);
+                }
+
+                var readStdOut = process.StandardOutput.ReadToEndAsync();
+                var readErrors = process.StandardError.ReadToEndAsync();
+
+                string GetStdError()
+                {
+                    try
+                    {
+                        return readErrors.Result;
+                    }
+                    catch
+                    {
+                        return "Unable to get stderr";
+                    }
+                }
+
+                string GetStdOut()
+                {
+                    try
+                    {
+                        return readStdOut.Result;
+                    }
+                    catch
+                    {
+                        return "Unable to get stdout";
+                    }
+                }
+
+                if (process.WaitForExit((int)parameters.OnCreateDirectoryExecTimeout.TotalMilliseconds) == false)
+                {
+                    process.Kill();
+                    throw new InvalidOperationException($"Unable to execute '{parameters.OnCreateDirectoryExec} {args}', waited for {(int)parameters.OnCreateDirectoryExecTimeout.TotalMilliseconds} ms but the process didn't exit. Output: {GetStdOut()}{Environment.NewLine}Errors: {GetStdError()}");
+                }
+
+                try
+                {
+                    readStdOut.Wait(parameters.OnCreateDirectoryExecTimeout);
+                    readErrors.Wait(parameters.OnCreateDirectoryExecTimeout);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Unable to read redirected stderr and stdout when executing '{parameters.OnCreateDirectoryExec} {args}'", e);
+                }
+
+                // Can have exit code o (success) but still get errors. We log the errors anyway.
+                if (log.IsOperationsEnabled)
+                    log.Operations(string.Format($"Executing '{parameters.OnCreateDirectoryExec} {args}' took {sw.ElapsedMilliseconds:#,#;;0} ms. Exit code: {process.ExitCode}{Environment.NewLine}Output: {GetStdOut()}{Environment.NewLine}Errors: {GetStdError()}{Environment.NewLine}"));
+
+                if (process.ExitCode != 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Command or executable '{parameters.OnCreateDirectoryExec} {args}' failed. Exit code: {process.ExitCode}{Environment.NewLine}Output: {GetStdOut()}{Environment.NewLine}Errors: {GetStdError()}{Environment.NewLine}");
                 }
             }
-
-            if (process.WaitForExit((int)parameters.OnCreateDirectoryExecTimeout.TotalMilliseconds) == false)
+            finally 
             {
-                process.Kill();
-                throw new InvalidOperationException($"Unable to execute '{parameters.OnCreateDirectoryExec} {args}', waited for {(int)parameters.OnCreateDirectoryExecTimeout.TotalMilliseconds} ms but the process didn't exit. Stderr: {GetStdError()}");
-            }
-            try
-            {
-                readErrors.Wait(parameters.OnCreateDirectoryExecTimeout);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException(
-                    $"Unable to execute '{parameters.OnCreateDirectoryExec} {args}', waited for {(int)parameters.OnCreateDirectoryExecTimeout.TotalMilliseconds} ms but the process didn't exit. Stderr: {GetStdError()}",
-                    e);
-
-            }
-
-            if (log.IsOperationsEnabled)
-            {
-                var errors = GetStdError();
-                if (string.IsNullOrEmpty(errors))
-                    errors = "none";
-                log.Operations(string.Format($"Executing '{parameters.OnCreateDirectoryExec} {args}' took {sw.ElapsedMilliseconds:#,#;;0} ms. Exit code: {process.ExitCode}. Errors: {errors}"));
-            }
-
-            if (process.ExitCode != 0)
-            {
-                throw new InvalidOperationException(
-                    $"Command or executable '{parameters.OnCreateDirectoryExec} {args}' failed. The exit code is {process.ExitCode}. Stderr: {GetStdError()}");
+                process?.Dispose();
             }
         }
 
