@@ -845,12 +845,6 @@ namespace Voron
                     if (Directory.Exists(tempPath.FullPath) == false)
                         Directory.CreateDirectory(tempPath.FullPath);
 
-                    var drivesInfo = PlatformDetails.RunningOnPosix ? DriveInfo.GetDrives() : null;
-                    DriveInfoByPath = new DriveInfoByPath
-                    {
-                        TempPath = DiskSpaceChecker.GetDriveInfo(tempPath.FullPath, drivesInfo)
-                    };
-
                     _dataPager = new Lazy<AbstractPager>(() => GetTempMemoryMapPager(this, TempPath.Combine(filename), InitialFileSize,
                         Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary), true);
                 }
