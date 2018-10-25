@@ -231,11 +231,6 @@ namespace Raven.Server.Documents
             options.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             options.AddToInitLog = _addToInitLog;
             options.MasterKey = DocumentDatabase.MasterKey?.ToArray();
-            options.OnCreateDirectoryExec = DocumentDatabase.Configuration.Storage.OnCreateDirectoryExec;
-            options.OnCreateDirectoryExecArguments = DocumentDatabase.Configuration.Storage.OnCreateDirectoryExecArguments;
-            options.OnCreateDirectoryExecTimeoutInSec = DocumentDatabase.Configuration.Storage.OnCreateDirectoryExecTimeoutInSec.AsTimeSpan;
-            options.DatabaseName = DocumentDatabase.Name;
-            options.Type = EnvironmentType.Database;
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = DocumentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
             if (DocumentDatabase.Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = DocumentDatabase.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
@@ -278,6 +273,8 @@ namespace Raven.Server.Documents
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Documents, null, this);
             try
             {
+                DirectoryExecUtils.SubscribeToOnDirectoryExec(options, DocumentDatabase.Configuration.Storage, DocumentDatabase.Name, DirectoryExecUtils.EnvironmentType.Database, _logger);
+
                 ContextPool = new DocumentsContextPool(DocumentDatabase);
                 Environment = LayoutUpdater.OpenEnvironment(options);
 

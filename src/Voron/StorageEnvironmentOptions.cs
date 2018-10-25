@@ -178,6 +178,8 @@ namespace Voron
 
         public Action<string> AddToInitLog;
 
+        public event Action<StorageEnvironmentOptions> OnCreateDirectory;
+
         protected StorageEnvironmentOptions(VoronPathSetting tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
         {
             SafePosixOpenFlags = SafePosixOpenFlags | DefaultPosixFlags;
@@ -1116,12 +1118,6 @@ namespace Voron
 
         public byte[] MasterKey;
 
-        public string OnCreateDirectoryExec;
-        public string OnCreateDirectoryExecArguments;
-        public TimeSpan OnCreateDirectoryExecTimeoutInSec;
-        public string DatabaseName;
-        public EnvironmentType Type;
-
         public const Win32NativeFileAttributes SafeWin32OpenFlags = Win32NativeFileAttributes.Write_Through | Win32NativeFileAttributes.NoBuffering;
         public OpenFlags DefaultPosixFlags = PlatformDetails.Is32Bits ? PerPlatformValues.OpenFlags.O_LARGEFILE : 0;
         public OpenFlags SafePosixOpenFlags = PerPlatformValues.OpenFlags.O_DSYNC | PerPlatformValues.OpenFlags.O_DIRECT;
@@ -1204,14 +1200,12 @@ namespace Voron
         {
             _environmentId = environmentId;
         }
+
+        public void InvokeOnCreateDirectory()
+        {
+            OnCreateDirectory?.Invoke(this);
+        }
     }
 
-    public enum EnvironmentType
-    {
-        System,
-        Database,
-        Index,
-        Configuration,
-        Compaction
-    }
+    
 }

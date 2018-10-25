@@ -64,20 +64,20 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.PrefetchResetThresholdInGb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size PrefetchResetThreshold { get; set; }
 
-        [Description("A command or executable to run when creating a new directory (storage environment). RavenDB will execute: command [user-arg-1] ... [user-arg-n] <environment-type> <database-name> <path-to-dir>")]
+        [Description("EXPERT: A command or executable to run when creating a new directory (storage environment). RavenDB will execute: command [user-arg-1] ... [user-arg-n] <environment-type> <database-name> <data-dir-path> <temp-dir-path> <journal-dir-path>")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Storage.OnCreateDirectory.Exec", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Storage.OnCreateDirectory.Exec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public string OnCreateDirectoryExec { get; set; }
 
-        [Description("The user arguments for the 'Storage.OnCreateDirectory.Exec' command or executable.")]
+        [Description("EXPERT: The user arguments for the 'Storage.OnCreateDirectory.Exec' command or executable. The arguments must be escaped for the command line.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Storage.OnCreateDirectory.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Storage.OnCreateDirectory.Exec.Arguments", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public string OnCreateDirectoryExecArguments { get; set; }
 
-        [Description("The number of seconds to wait for the OnCreateDirectory executable to exit. Default: 30 seconds")]
+        [Description("EXPERT: The number of seconds to wait for the OnCreateDirectory executable to exit. Default: 30 seconds")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Storage.OnCreateDirectory.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
-        public TimeSetting OnCreateDirectoryExecTimeoutInSec { get; set; }
+        [ConfigurationEntry("Storage.OnCreateDirectory.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting OnCreateDirectoryExecTimeout { get; set; }
     }
 }

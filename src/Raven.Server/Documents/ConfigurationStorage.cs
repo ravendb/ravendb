@@ -5,13 +5,21 @@ using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
+using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Logging;
 using Voron;
 
 namespace Raven.Server.Documents
 {
     public class ConfigurationStorage : IDisposable
     {
+        private const string ResourceName = nameof(ConfigurationStorage);
+
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ConfigurationStorage>(ResourceName);
+
+        private readonly DocumentDatabase _documentDatabase;
+
         public TransactionContextPool ContextPool { get; }
 
         public NotificationsStorage NotificationsStorage { get; }
@@ -22,6 +30,7 @@ namespace Raven.Server.Documents
 
         public ConfigurationStorage(DocumentDatabase db)
         {
+            _documentDatabase = db;
             var path = db.Configuration.Core.DataDirectory.Combine("Configuration");
             string tempPath = null;
             if (db.Configuration.Storage.TempPath != null)
@@ -42,18 +51,15 @@ namespace Raven.Server.Documents
             options.TimeToSyncAfterFlashInSec = (int)db.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = db.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             options.MasterKey = db.MasterKey?.ToArray();
-            options.OnCreateDirectoryExec = db.Configuration.Storage.OnCreateDirectoryExec;
-            options.OnCreateDirectoryExecArguments = db.Configuration.Storage.OnCreateDirectoryExecArguments;
-            options.OnCreateDirectoryExecTimeoutInSec = db.Configuration.Storage.OnCreateDirectoryExecTimeoutInSec.AsTimeSpan;
-            options.DatabaseName = db.Name;
-            options.Type = EnvironmentType.Configuration;
+
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = db.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
             if (db.Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = db.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = db.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = db.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
 
-
+            DirectoryExecUtils.SubscribeToOnDirectoryExec(options, db.Configuration.Storage, db.Name, DirectoryExecUtils.EnvironmentType.Configuration, Logger);
+            
             NotificationsStorage = new NotificationsStorage(db.Name);
 
             OperationsStorage = new OperationsStorage();

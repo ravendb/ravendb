@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
 using NCrontab.Advanced.Extensions;
+using Org.BouncyCastle.Security;
 using Raven.Client;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -36,6 +37,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
+using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.NotificationCenter.Notifications;
@@ -503,12 +505,9 @@ namespace Raven.Server.ServerWide
                 options.MaxScratchBufferSize = Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
-            options.OnCreateDirectoryExec = Configuration.Storage.OnCreateDirectoryExec;
-            options.OnCreateDirectoryExecArguments = Configuration.Storage.OnCreateDirectoryExecArguments;
-            options.OnCreateDirectoryExecTimeoutInSec = Configuration.Storage.OnCreateDirectoryExecTimeoutInSec.AsTimeSpan;
-            options.DatabaseName = EnvironmentType.System.ToString();
-            options.Type = EnvironmentType.System;
-            
+
+            DirectoryExecUtils.SubscribeToOnDirectoryExec(options, Configuration.Storage, nameof(DirectoryExecUtils.EnvironmentType.System), DirectoryExecUtils.EnvironmentType.System, Logger);
+
             try
             {
                 StorageEnvironment.MaxConcurrentFlushes = Configuration.Storage.MaxConcurrentFlushes;

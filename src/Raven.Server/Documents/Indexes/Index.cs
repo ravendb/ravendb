@@ -262,6 +262,8 @@ namespace Raven.Server.Documents.Indexes
 
         public static Index Open(string path, DocumentDatabase documentDatabase)
         {
+            var logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
+
             StorageEnvironment environment = null;
 
             var name = new DirectoryInfo(path).Name;
@@ -275,6 +277,8 @@ namespace Raven.Server.Documents.Indexes
             try
             {
                 InitializeOptions(options, documentDatabase, name);
+
+                DirectoryExecUtils.SubscribeToOnDirectoryExec(options, documentDatabase.Configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Index, logger);
 
                 environment = LayoutUpdater.OpenEnvironment(options);
 
@@ -446,11 +450,6 @@ namespace Raven.Server.Documents.Indexes
             options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             options.MasterKey = documentDatabase.MasterKey?.ToArray(); //clone
-            options.OnCreateDirectoryExec = documentDatabase.Configuration.Storage.OnCreateDirectoryExec;
-            options.OnCreateDirectoryExecArguments = documentDatabase.Configuration.Storage.OnCreateDirectoryExecArguments;
-            options.OnCreateDirectoryExecTimeoutInSec = documentDatabase.Configuration.Storage.OnCreateDirectoryExecTimeoutInSec.AsTimeSpan;
-            options.DatabaseName = documentDatabase.Name;
-            options.Type = EnvironmentType.Index;
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
             if (documentDatabase.Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = documentDatabase.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
@@ -3097,6 +3096,26 @@ namespace Raven.Server.Documents.Indexes
                     throw new InvalidOperationException("Expected to be called only via DrainRunningQueries");
 
                 var options = CreateStorageEnvironmentOptions(DocumentDatabase, Configuration);
+
+                if (string.IsNullOrEmpty(DocumentDatabase.Configuration.Storage.OnCreateDirectoryExec) == false)
+                {
+                    var directoryParameters = new DirectoryExecUtils.DirectoryParameters()
+                    {
+                        OnCreateDirectoryExec = DocumentDatabase.Configuration.Storage.OnCreateDirectoryExec,
+                        OnCreateDirectoryExecArguments = DocumentDatabase.Configuration.Storage.OnCreateDirectoryExecArguments,
+                        OnCreateDirectoryExecTimeout = DocumentDatabase.Configuration.Storage.OnCreateDirectoryExecTimeout.AsTimeSpan,
+                        DatabaseName = DocumentDatabase.Name,
+                        Type = DirectoryExecUtils.EnvironmentType.Index
+                    };
+
+                    void OnDirectory(StorageEnvironmentOptions internalOptions)
+                    {
+                        DirectoryExecUtils.OnCreateDirectory(internalOptions, directoryParameters, _logger);
+                    }
+
+                    options.OnCreateDirectory += OnDirectory;
+                }
+
                 try
                 {
                     _environment = LayoutUpdater.OpenEnvironment(options);
