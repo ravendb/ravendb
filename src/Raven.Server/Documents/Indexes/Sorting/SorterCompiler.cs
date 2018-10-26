@@ -16,9 +16,11 @@ using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Indexes.Sorting
 {
+    public delegate FieldComparator CreateSorter(string fieldName, int numHits, int sortPos, bool reversed, List<string> diagnostics);
+
     public static class SorterCompiler
     {
-        public static Func<string, int, int, bool, List<string>, FieldComparator> Compile(string name, string sorterCode)
+        public static CreateSorter Compile(string name, string sorterCode)
         {
             var originalName = name;
             name = GetCSharpSafeName(name) + "." + Guid.NewGuid() + ".sorter";
@@ -73,7 +75,7 @@ namespace Raven.Server.Documents.Indexes.Sorting
                     sb.AppendLine(diagnostic.ToString());
 
 
-                throw new IndexCompilationException(sb.ToString());
+                throw new SorterCompilationException(sb.ToString());
 
             }
 
@@ -105,13 +107,13 @@ namespace Raven.Server.Documents.Indexes.Sorting
             }
 
             if (type == null)
-                throw new InvalidOperationException();
+                throw new SorterCompilationException($"Could not find type '{originalName}' in given assembly.");
 
             return (fieldName, numHits, sortPos, reversed, diagnostics) =>
             {
                 var instance = Activator.CreateInstance(type, fieldName, numHits, sortPos, reversed, diagnostics) as FieldComparator;
                 if (instance == null)
-                    throw new InvalidOperationException();
+                    throw new InvalidOperationException($"Created sorter does not inherit from '{nameof(FieldComparator)}' class.");
 
                 return instance;
             };

@@ -12,6 +12,7 @@ using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Sorters;
 using Raven.Client.Http;
+using Raven.Server.Documents.Queries;
 using Sparrow.Json;
 using Xunit;
 
@@ -380,7 +381,7 @@ namespace SlowTests.Issues
                 {
                     Result = new List<string>();
 
-                    response.TryGet("Diagnostics", out BlittableJsonReaderArray array);
+                    response.TryGet(nameof(IndexQueryServerSide.Diagnostics), out BlittableJsonReaderArray array);
 
                     foreach (var item in array)
                         Result.Add(item.ToString());
