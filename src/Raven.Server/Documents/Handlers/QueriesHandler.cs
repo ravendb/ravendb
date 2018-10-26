@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -53,7 +54,9 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
-                await Query(context, token, tracker, httpMethod);
+                var diagnostics = GetBoolValueQueryString("diagnostics", required: false) ?? false;
+
+                await Query(context, token, tracker, httpMethod, diagnostics);
             }
         }
 
@@ -81,9 +84,11 @@ namespace Raven.Server.Documents.Handlers
             AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(FacetedQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs);
         }
 
-        private async Task Query(DocumentsOperationContext context, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method)
+        private async Task Query(DocumentsOperationContext context, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method, bool diagnostics)
         {
             var indexQuery = await GetIndexQuery(context, method);
+            indexQuery.Diagnostics = diagnostics ? new List<string>() : null;
+
             tracker.Query = indexQuery.Query;
             if (TrafficWatchManager.HasRegisteredClients)
                 TrafficWatchQuery(indexQuery);
@@ -128,7 +133,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
                 result.Timings = indexQuery.Timings?.ToTimings();               
-                numberOfResults = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly, CaptureServerSideQueryCallback(indexQuery, shouldReturnServerSideQuery));
+                numberOfResults = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly, WriteAdditionalData(indexQuery, shouldReturnServerSideQuery));
                 await writer.OuterFlushAsync();
             }
 
@@ -136,17 +141,26 @@ namespace Raven.Server.Documents.Handlers
             AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs);
         }
 
-        private Func<AsyncBlittableJsonTextWriter, Task> CaptureServerSideQueryCallback(IndexQueryServerSide indexQuery, bool shouldReturnServerSideQuery)
+        private Action<AsyncBlittableJsonTextWriter> WriteAdditionalData(IndexQueryServerSide indexQuery, bool shouldReturnServerSideQuery)
         {
-            return shouldReturnServerSideQuery
-                ? w =>
+            if (indexQuery.Diagnostics == null && shouldReturnServerSideQuery == false)
+                return null;
+
+            return w =>
+            {
+                if (shouldReturnServerSideQuery)
                 {
                     w.WriteComma();
                     w.WritePropertyName(nameof(indexQuery.ServerSideQuery));
                     w.WriteString(indexQuery.ServerSideQuery);
-                    return Task.CompletedTask;
                 }
-                : (Func<AsyncBlittableJsonTextWriter, Task>)null;
+
+                if (indexQuery.Diagnostics != null)
+                {
+                    w.WriteComma();
+                    w.WriteArray(nameof(indexQuery.Diagnostics), indexQuery.Diagnostics);
+                }
+            };
         }
 
         private async Task<IndexQueryServerSide> GetIndexQuery(JsonOperationContext context, HttpMethod method)
