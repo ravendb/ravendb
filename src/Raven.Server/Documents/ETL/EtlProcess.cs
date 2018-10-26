@@ -429,11 +429,15 @@ namespace Raven.Server.Documents.ETL
             {
                 if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
                         currentlyInUse,
-                        Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Logger, out ProcessMemoryUsage memoryUsage) == false)
+                        Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Logger, out var memoryUsage) == false)
                 {
-                    var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {new Size(totalAllocated, SizeUnit.Bytes)}. Current memory usage: " +
-                                 $"{nameof(memoryUsage.WorkingSet)} = {memoryUsage.WorkingSet}," +
-                                 $"{nameof(memoryUsage.PrivateMemory)} = {memoryUsage.PrivateMemory}";
+                    var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {currentlyInUse}.";
+                    if (memoryUsage != null)
+                    {
+                        reason += " Current memory usage: " +
+                                   $"{nameof(memoryUsage.WorkingSet)} = {memoryUsage.WorkingSet}," +
+                                   $"{nameof(memoryUsage.PrivateMemory)} = {memoryUsage.PrivateMemory}";
+                    }
 
                     if (Logger.IsInfoEnabled)
                         Logger.Info(reason);

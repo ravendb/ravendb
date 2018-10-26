@@ -1228,7 +1228,7 @@ namespace Raven.Server.Documents.Indexes
             var beforeFree = NativeMemory.CurrentThreadStats.TotalAllocated;
             if (_logger.IsInfoEnabled)
                 _logger.Info(
-                    $"{beforeFree / 1024:#,#0} kb is used by '{Name}', reducing memory utilization.");
+                    $"{new Size(beforeFree, SizeUnit.Bytes)} is used by '{Name}', reducing memory utilization.");
 
             DocumentDatabase.DocumentsStorage.ContextPool.Clean();
             _contextPool.Clean();
@@ -1238,7 +1238,7 @@ namespace Raven.Server.Documents.Indexes
 
             var afterFree = NativeMemory.CurrentThreadStats.TotalAllocated;
             if (_logger.IsInfoEnabled)
-                _logger.Info($"After cleanup, using {afterFree / 1024:#,#0} kb by '{Name}'.");
+                _logger.Info($"After cleanup, using {new Size(afterFree, SizeUnit.Bytes)} by '{Name}'.");
         }
 
         internal void ResetErrors()
@@ -2968,6 +2968,21 @@ namespace Raven.Server.Documents.Indexes
 
                     if (stats.MapAttempts >= Configuration.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)
                     {
+                        if (_logger.IsInfoEnabled)
+                        {
+                            var message = $"Stopping the batch because cannot budget additional memory. " +
+                                          $"Current budget: {allocated}.";
+
+                            if (memoryUsage != null)
+                            {
+                                message += " Current memory usage: " +
+                                           $"{nameof(memoryUsage.WorkingSet)} = {memoryUsage.WorkingSet}," +
+                                           $"{nameof(memoryUsage.PrivateMemory)} = {memoryUsage.PrivateMemory}";
+                            }
+
+                            _logger.Info(message);
+                        }
+
                         stats.RecordMapCompletedReason("Cannot budget additional memory for batch");
                         canContinue = false;
                     }
