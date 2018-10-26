@@ -39,7 +39,7 @@
                                                   attr: { 'title': $root.isAddingNewSubscriptionTask() ? 'Note: if no name is supplied then server will create one for you' : '' }" autocomplete="off" >
                             </div>
                             <label>Subscription RQL:</label>
-                            <div class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax help</small></a></div>
+                            <div class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></div>
                             <pre class="form-control margin-top" placeholder="Enter transform script" 
                                  data-bind="aceEditor: { code: query, lang:'ace/mode/rql', completer: $root.queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: query" style="height: 160px;">
                             </pre>
