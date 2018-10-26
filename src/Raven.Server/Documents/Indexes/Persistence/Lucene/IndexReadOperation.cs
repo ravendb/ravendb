@@ -649,7 +649,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     case OrderByFieldType.Custom:
                         var cName = field.Arguments[0].NameOrValue;
-                        var cSort = new CustomComparatorSource(cName, _index.DocumentDatabase.Name);
+                        var cSort = new CustomComparatorSource(cName, _index.DocumentDatabase.Name, query);
                         sort.Add(new SortField(fieldName, cSort, field.Ascending == false));
                         continue;
                     case OrderByFieldType.AlphaNumeric:

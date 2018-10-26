@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using Lucene.Net.Search;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions.Documents.Sorters;
@@ -10,11 +11,11 @@ namespace Raven.Server.Documents.Indexes.Sorting
 {
     public static class SorterCompilationCache
     {
-        private static readonly ConcurrentDictionary<CacheKey, Lazy<Func<string, int, int, bool, FieldComparator>>> SortersCache = new ConcurrentDictionary<CacheKey, Lazy<Func<string, int, int, bool, FieldComparator>>>();
+        private static readonly ConcurrentDictionary<CacheKey, Lazy<Func<string, int, int, bool, List<string>, FieldComparator>>> SortersCache = new ConcurrentDictionary<CacheKey, Lazy<Func<string, int, int, bool, List<string>, FieldComparator>>>();
 
-        private static readonly ConcurrentDictionary<CacheKey, Lazy<Func<string, int, int, bool, FieldComparator>>> SortersPerDatabaseCache = new ConcurrentDictionary<CacheKey, Lazy<Func<string, int, int, bool, FieldComparator>>>();
+        private static readonly ConcurrentDictionary<CacheKey, Lazy<Func<string, int, int, bool, List<string>, FieldComparator>>> SortersPerDatabaseCache = new ConcurrentDictionary<CacheKey, Lazy<Func<string, int, int, bool, List<string>, FieldComparator>>>();
 
-        public static Func<string, int, int, bool, FieldComparator> GetSorter(string name, string databaseName)
+        public static Func<string, int, int, bool, List<string>, FieldComparator> GetSorter(string name, string databaseName)
         {
             var key = new CacheKey(databaseName, name, null);
 
@@ -71,7 +72,7 @@ namespace Raven.Server.Documents.Indexes.Sorting
         {
             var key = new CacheKey(databaseName, name, sorterCode);
 
-            var result = SortersPerDatabaseCache.GetOrAdd(key, _ => new Lazy<Func<string, int, int, bool, FieldComparator>>(() => CompileSorter(name, sorterCode)));
+            var result = SortersPerDatabaseCache.GetOrAdd(key, _ => new Lazy<Func<string, int, int, bool, List<string>, FieldComparator>>(() => CompileSorter(name, sorterCode)));
             if (result.IsValueCreated)
                 return;
 
@@ -87,10 +88,10 @@ namespace Raven.Server.Documents.Indexes.Sorting
             }
         }
 
-        private static Func<string, int, int, bool, FieldComparator> CompileSorter(string name, string sorterCode)
+        private static Func<string, int, int, bool, List<string>, FieldComparator> CompileSorter(string name, string sorterCode)
         {
             var key = new CacheKey(null, null, sorterCode);
-            var result = SortersCache.GetOrAdd(key, _ => new Lazy<Func<string, int, int, bool, FieldComparator>>(() => SorterCompiler.Compile(name, sorterCode)));
+            var result = SortersCache.GetOrAdd(key, _ => new Lazy<Func<string, int, int, bool, List<string>, FieldComparator>>(() => SorterCompiler.Compile(name, sorterCode)));
 
             try
             {

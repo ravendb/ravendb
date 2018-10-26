@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using JetBrains.Annotations;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
@@ -11,16 +10,12 @@ namespace Raven.Server.Documents.Queries.Sorting.Custom
     public class TestFieldComparator : FieldComparator
     {
         private readonly FieldComparator _comparator;
+        private readonly List<string> _diagnostics;
 
-        public readonly List<string> Debug;
-
-        public TestFieldComparator([NotNull] FieldComparator comparator)
+        public TestFieldComparator(FieldComparator comparator, List<string> diagnostics)
         {
-            Debug = new List<string>();
-
             _comparator = comparator ?? throw new ArgumentNullException(nameof(comparator));
-
-            TryAddDebugToComparator();
+            _diagnostics = diagnostics;
         }
 
         public override int Compare(int slot1, int slot2)
@@ -64,40 +59,17 @@ namespace Raven.Server.Documents.Queries.Sorting.Custom
 
         private void Executed(string method, string args)
         {
-            Debug.Add($"Executed '{method}' with '{args}' arguments.");
+            _diagnostics.Add($"Executed '{method}' with '{args}' arguments.");
         }
 
         private void Executed(string method, string args, object result)
         {
-            Debug.Add($"Executed '{method}' with '{args}' arguments. Result: {result}");
+            _diagnostics.Add($"Executed '{method}' with '{args}' arguments. Result: {result}");
         }
 
         private void Executing(string method, string args)
         {
-            Debug.Add($"Executing '{method}' with '{args}' arguments");
-        }
-
-        private void TryAddDebugToComparator()
-        {
-            Debug.Add("Looking for 'public List<string> Debug { get; set;} property in comparator...");
-
-            var property = _comparator.GetType().GetProperty("Debug", BindingFlags.Instance | BindingFlags.Public);
-            if (property == null)
-            {
-                Debug.Add("Couldn't find 'Debug' property. Skipping.");
-                return;
-            }
-
-            try
-            {
-                property.SetValue(_comparator, Debug);
-
-                Debug.Add("'Debug' property set.");
-            }
-            catch (Exception e)
-            {
-                Debug.Add($"Couldn't set 'Debug' property. Message: {e.Message}");
-            }
+            _diagnostics.Add($"Executing '{method}' with '{args}' arguments");
         }
     }
 }

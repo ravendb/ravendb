@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Indexes.Sorting
 {
     public static class SorterCompiler
     {
-        public static Func<string, int, int, bool, FieldComparator> Compile(string name, string sorterCode)
+        public static Func<string, int, int, bool, List<string>, FieldComparator> Compile(string name, string sorterCode)
         {
             var originalName = name;
             name = GetCSharpSafeName(name) + "." + Guid.NewGuid() + ".sorter";
@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Indexes.Sorting
             {
                 foreach (var exportedType in assembly.GetExportedTypes())
                 {
-                    if (exportedType.Name != originalName) 
+                    if (exportedType.Name != originalName)
                         continue;
 
                     type = exportedType;
@@ -107,9 +107,9 @@ namespace Raven.Server.Documents.Indexes.Sorting
             if (type == null)
                 throw new InvalidOperationException();
 
-            return (fieldName, numHits, sortPos, reversed) =>
+            return (fieldName, numHits, sortPos, reversed, diagnostics) =>
             {
-                var instance = Activator.CreateInstance(type, fieldName, numHits, sortPos, reversed) as FieldComparator;
+                var instance = Activator.CreateInstance(type, fieldName, numHits, sortPos, reversed, diagnostics) as FieldComparator;
                 if (instance == null)
                     throw new InvalidOperationException();
 
