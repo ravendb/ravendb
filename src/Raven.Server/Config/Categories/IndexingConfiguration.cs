@@ -142,7 +142,7 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(5)]
         [TimeUnit(TimeUnit.Seconds)]
         [IndexUpdateType(IndexUpdateType.None)]
-        [ConfigurationEntry("Indexing.MaxTimeToWaitAfterFlushAndSyncWhenExceedingGlobalScratchSpaceLimit", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Indexing.MaxTimeToWaitAfterFlushAndSyncWhenExceedingGlobalScratchSpaceLimit", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting MaxTimeToWaitAfterFlushAndSyncWhenExceedingGlobalScratchSpaceLimit { get; protected set; }
 
         protected override void ValidateProperty(PropertyInfo property)

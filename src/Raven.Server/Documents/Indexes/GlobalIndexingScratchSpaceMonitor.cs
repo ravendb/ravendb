@@ -13,7 +13,11 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly long LimitInBytes;
 
+        public Size LimitAsSize => new Size(LimitInBytes, SizeUnit.Bytes);
+
         public long ScratchSpaceInBytes;
+
+        public Size ScratchSpaceAsSize => new Size(ScratchSpaceInBytes, SizeUnit.Bytes);
 
         public bool IsLimitExceeded => ScratchSpaceInBytes > LimitInBytes;
 
