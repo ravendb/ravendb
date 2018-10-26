@@ -941,7 +941,7 @@ namespace Raven.Server.Documents.Queries
                         var m = new Match(previous);
 
                         m.Set(docAlias, doc);
-                        if (kvp.Value != null && kvp.Value.Data != src)
+                        if (ShouldUseFullObjectForEdge(src, kvp.Value))
                             m.Set(edgeAlias, kvp.Value);
                         else
                             m.Set(edgeAlias, kvp.Key);
@@ -965,7 +965,7 @@ namespace Raven.Server.Documents.Queries
                         var clone = new Match(previous);
                         clone.Merge(m);
 
-                        if (kvp.Value != null && kvp.Value.Data != src)
+                        if (ShouldUseFullObjectForEdge(src, kvp.Value))
                             clone.Set(edgeAlias, kvp.Value);
                         else
                             clone.Set(edgeAlias, kvp.Key);
@@ -976,6 +976,11 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 return hasResults;
+            }
+
+            private static unsafe bool ShouldUseFullObjectForEdge(BlittableJsonReaderObject src,  Document json)
+            {
+                return json != null && (json.Data != src || src.HasParent);
             }
 
             private bool TryGetRelatedMatch(string edge, string alias, Dictionary<string, Match> edgeResults, Document prev, out Match relatedMatch)
