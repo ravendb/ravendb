@@ -25,8 +25,15 @@ namespace Sparrow.Utils
             if (PlatformDetails.RunningOnPosix)
             {
                 var statvfs = default(Statvfs);
-                if (Syscall.statvfs(pathToCheck, ref statvfs) != 0)
+                var result = Syscall.statvfs(pathToCheck, ref statvfs);
+                if (result != 0)
+                {
+                    var error = Syscall.ErrorNumberToStatusCode(result) ?? result.ToString();
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Failed to get file system statistics for path: {pathToCheck}, error: {error}");
+
                     return null;
+                }
 
                 return new DiskSpaceResult
                 {
