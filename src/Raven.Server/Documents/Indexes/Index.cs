@@ -458,7 +458,7 @@ namespace Raven.Server.Documents.Indexes
                 options.MaxScratchBufferSize = documentDatabase.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = documentDatabase.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = documentDatabase.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
-            options.ScratchSpaceUsageMonitor = documentDatabase.ServerStore.GlobalIndexingScratchSpaceUsageMonitor;
+            options.ScratchSpaceMonitor = documentDatabase.ServerStore.GlobalIndexingScratchSpaceMonitor;
 
             if (schemaUpgrader)
             {
@@ -2997,7 +2997,7 @@ namespace Raven.Server.Documents.Indexes
                 return false;
             }
 
-            var globalIndexingScratchSpaceUsage = DocumentDatabase.ServerStore.GlobalIndexingScratchSpaceUsageMonitor;
+            var globalIndexingScratchSpaceUsage = DocumentDatabase.ServerStore.GlobalIndexingScratchSpaceMonitor;
 
             if (globalIndexingScratchSpaceUsage?.IsLimitExceeded == true && count > MinBatchSize)
             {
