@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Lucene.Net.Search;
+﻿using Lucene.Net.Search;
 using Raven.Server.Documents.Indexes.Sorting;
 
 namespace Raven.Server.Documents.Queries.Sorting.Custom
@@ -8,7 +6,7 @@ namespace Raven.Server.Documents.Queries.Sorting.Custom
     public class CustomComparatorSource : FieldComparatorSource
     {
         private readonly IndexQueryServerSide _query;
-        private readonly Func<string, int, int, bool, List<string>, FieldComparator> _activator;
+        private readonly CreateSorter _activator;
 
         public CustomComparatorSource(string sorterName, string databaseName, IndexQueryServerSide query)
         {
