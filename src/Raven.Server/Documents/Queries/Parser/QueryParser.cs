@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (q.GraphQuery == null)
                     q.GraphQuery = new GraphQuery();
 
-                if (BinaryGraph(out var op) == false)
+                if (BinaryGraph(q.GraphQuery, out var op) == false)
                     ThrowParseException("Unexpected input when trying to parse the MATCH clause");
                 q.GraphQuery.MatchClause = op;
 
@@ -210,6 +210,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan('('))
             {
                 Field(out f); // okay if false
+
                 if (Scanner.TryScan(')') == false)
                     ThrowParseException("With edges(<identifier>) was not closed with ')'");
             }
@@ -252,7 +253,22 @@ namespace Raven.Server.Documents.Queries.Parser
             return (wee, alias.Value);
         }
 
-        public static readonly string[] EdgeOps = new[] { "<-", ">", "[", "-", "<", "(" };
+        private int? ReadEdgeVariableNumber()
+        {
+            var num = Scanner.TryNumber();
+            if (num == null)
+                return null;
+            var token = Scanner.Input.AsSpan().Slice(Scanner.TokenStart, Scanner.TokenLength);
+            if (num.Value != NumberToken.Long)
+                ThrowParseException("Edge variable length cannot be a double, but got: " + token.ToString());
+            if (int.TryParse(token, out var i) == false)
+                ThrowParseException("Edge variable length must be a valid integer, but got: " + token.ToString());
+            if(i < 0)
+                ThrowParseException("Edge variable length must be larger than zero, but got: " + token.ToString());
+            return i;
+        }
+
+        public static readonly string[] EdgeOps = new[] { "<-", ">", "[", "-", "<", "(", "recursive" };
 
         private bool GraphAlias(bool isEdge, out StringSegment alias)
         {
@@ -327,7 +343,7 @@ namespace Raven.Server.Documents.Queries.Parser
             }
             else
             {
-                AddWithQuery(new FieldExpression(new List<StringSegment>()), alias, null, isEdge, start);
+                AddWithQuery(new FieldExpression(new List<StringSegment>()), alias, null, isEdge,  start);
             }
             return true;
         }
@@ -374,9 +390,9 @@ namespace Raven.Server.Documents.Queries.Parser
         }
 
 
-        private bool BinaryGraph(out QueryExpression op)
+        private bool BinaryGraph(GraphQuery gq, out QueryExpression op)
         {
-            if (GraphOperation(out op) == false)
+            if (GraphOperation(gq, out op) == false)
                 return false;
 
             if (Scanner.TryScan(BinaryOperators, out var found) == false)
@@ -391,20 +407,20 @@ namespace Raven.Server.Documents.Queries.Parser
 
             var parenthesis = Scanner.TryPeek('(');
 
-            if (BinaryGraph(out var right) == false)
+            if (BinaryGraph(gq, out var right) == false)
                 ThrowParseException($"Failed to find second part of {type} expression");
 
             return TrySimplifyBinaryExpression(right, type, negate, parenthesis, ref op);
         }
 
-        private bool GraphOperation(out QueryExpression op)
+        private bool GraphOperation(GraphQuery gq, out QueryExpression op)
         {
             if (Scanner.TryScan('(') == false)
                 throw new InvalidQueryException("MATCH operator expected a '(', but didn't get it.", Scanner.Input, null);
 
             if (GraphAlias(false, out var alias) == false)
             {
-                if (BinaryGraph(out op) == false)
+                if (BinaryGraph(gq, out op) == false)
                 {
                     throw new InvalidQueryException("Invalid expression in MATCH", Scanner.Input, null);
                 }
@@ -425,11 +441,15 @@ namespace Raven.Server.Documents.Queries.Parser
                 EdgeType = EdgeType.Right
             });
 
+            return ProcessEdges(gq, out op, alias, list, allowRecursive: true, foundDash: false);
+        }
 
-            bool foundDash = false;
+        private bool ProcessEdges(GraphQuery gq, out QueryExpression op, StringSegment alias, List<MatchPath> list, bool allowRecursive, bool foundDash)
+        {
             bool expectNode = false;
             MatchPath last;
             while (true)
+
             {
                 if (Scanner.TryScan(EdgeOps, out var found))
                 {
@@ -460,7 +480,8 @@ namespace Raven.Server.Documents.Queries.Parser
                             {
                                 Alias = last.Alias,
                                 IsEdge = last.IsEdge,
-                                EdgeType = EdgeType.Left
+                                EdgeType = EdgeType.Left,
+                                Recursive = last.Recursive
                             };
                             foundDash = true;
                             expectNode = true;
@@ -475,7 +496,8 @@ namespace Raven.Server.Documents.Queries.Parser
                             {
                                 Alias = last.Alias,
                                 IsEdge = last.IsEdge,
-                                EdgeType = EdgeType.Right
+                                EdgeType = EdgeType.Right,
+                                Recursive = last.Recursive
                             };
                             if (Scanner.TryScan('(') == false)
                                 throw new InvalidQueryException("MATCH operator expected a '(', but didn't get it.", Scanner.Input, null);
@@ -498,6 +520,91 @@ namespace Raven.Server.Documents.Queries.Parser
                                 Alias = alias,
                                 EdgeType = list[list.Count - 1].EdgeType
                             });
+                            break;
+                        case "recursive":
+                            if(allowRecursive == false)
+                                throw new InvalidQueryException("Cannot call 'recusrive' inside another 'recursive', only one level is allowed", Scanner.Input, null);
+
+                            if(expectNode)
+                                throw new InvalidQueryException("'recursive' must appear only after a node, not after an edge", Scanner.Input, null);
+
+                            if (foundDash == false)
+                                throw new InvalidQueryException("Got 'recursive' when expected '-', recursive must be preceded by a '-'.", Scanner.Input, null);
+
+                            StringSegment recursiveAlias;
+
+                            if (Scanner.TryScan("as"))
+                            {
+                                if(Scanner.Identifier() == false)
+                                    throw new InvalidQueryException("Missing alias for 'recursive' after 'as'", Scanner.Input, null);
+                                recursiveAlias = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength);
+                            }
+                            else
+                            {
+                                recursiveAlias = "__alias" + (++_counter);
+                            }
+
+                            gq.RecursiveMatches.Add(recursiveAlias);
+                            int? min = null, max = null;
+                            if (Scanner.TryScan('('))
+                            {
+                                if(Scanner.TryNumber() != NumberToken.Long)
+                                    throw new InvalidQueryException("'recursive' missing min length specification, but one was expected", Scanner.Input, null);
+                                var num = Scanner.Input.AsSpan().Slice(Scanner.TokenStart, Scanner.TokenLength);
+                                if (int.TryParse(num, out var i) == false || i < 0)
+                                    throw new InvalidQueryException("'recursive' has invalid min length specification: " + num.ToString(), Scanner.Input, null);
+                                min = i;
+
+                                if(Scanner.TryScan(",") == false)
+                                {
+                                    max = i;
+                                }
+                                else
+                                {
+                                    if (Scanner.TryNumber() != NumberToken.Long)
+                                        throw new InvalidQueryException("'recursive' missing max length specification, but one was expected", Scanner.Input, null);
+                                    num = Scanner.Input.AsSpan().Slice(Scanner.TokenStart, Scanner.TokenLength);
+                                    if (int.TryParse(num, out i) == false || i < 0)
+                                        throw new InvalidQueryException("'recursive' has invalid maxlength specification: " + num.ToString(), Scanner.Input, null);
+                                    max = i;
+                                }
+                                if (Scanner.TryScan(")") == false)
+                                    throw new InvalidQueryException("'recursive' missing closing paranthesis for length specification, but one was expected", Scanner.Input, null);
+
+                            }
+
+                            if (Scanner.TryScan("{") == false)
+                                throw new InvalidQueryException("'recursive' must be followed by a '{', but wasn't", Scanner.Input, null);
+
+                            var repeated = new List<MatchPath>();
+                            repeated.Add(new MatchPath
+                            {
+                                Alias = alias,
+                                EdgeType = list[list.Count - 1].EdgeType,
+                                IsEdge = true
+                            });
+                            var result  = ProcessEdges(gq, out var repeatedPattern, alias, repeated, allowRecursive: false, foundDash: true);
+                            repeated.RemoveAt(0);
+
+                            if (Scanner.TryScan("}") == false)
+                                throw new InvalidQueryException("'recursive' must be closed by '}', but wasn't", Scanner.Input, null);
+
+                            list.Add(new MatchPath
+                            {
+                                Alias = "recursive",
+                                EdgeType = EdgeType.Right,
+                                Recursive = new RecursiveMatch
+                                {
+                                    Alias = recursiveAlias,
+                                    Pattern = repeated,
+                                    Max = max,
+                                    Min = min,
+                                    Aliases = new HashSet<StringSegment>(repeated.Select(x => x.Alias), StringSegmentEqualityComparer.Instance)
+                                },
+                                IsEdge = true
+                            });
+                            expectNode = true;
+                            foundDash = false;
                             break;
                         default:
                             throw new ArgumentOutOfRangeException("Unknown edge type: " + found);

@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Text;
-using Raven.Server.Documents.Queries.Parser;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -8,7 +7,6 @@ namespace Raven.Server.Documents.Queries.AST
     public class WithEdgesExpression : QueryExpression
     {
         public QueryExpression Where;
-
 
         public StringSegment? FromAlias;
 

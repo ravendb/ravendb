@@ -6,6 +6,8 @@ namespace Raven.Server.Documents.Queries.AST
 {
     public class GraphQuery
     {
+        public HashSet<StringSegment> RecursiveMatches = new HashSet<StringSegment>(StringSegmentEqualityComparer.Instance);
+
         public Dictionary<StringSegment, Query> WithDocumentQueries;
      
         public Dictionary<StringSegment, WithEdgesExpression> WithEdgePredicates;

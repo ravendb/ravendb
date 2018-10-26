@@ -9,11 +9,9 @@ namespace Raven.Server.Documents.Queries
 {
     public partial class GraphQueryRunner
     {
-        public unsafe struct Match // using struct because we have a single field 
+        public unsafe struct Match
         {
-            private Dictionary<string, Document> _inner;
-
-            public object Key => _inner;
+            private Dictionary<string, object> _inner;
 
             public int Count => _inner?.Count ?? 0;
 
@@ -25,7 +23,7 @@ namespace Raven.Server.Documents.Queries
             {
                 if (_inner == null)
                     return "<empty>";
-                return string.Join(", ", _inner.Select(x=> x.Key + " - " + (x.Value.Id ?? x.Value.Data.ToString())));
+                return string.Join(", ", _inner.Select(x=> x.Key + " - " + x.Value));
             }
 
             public Match(Match other)
@@ -36,61 +34,82 @@ namespace Raven.Server.Documents.Queries
                 }
                 else
                 {
-                    _inner = new Dictionary<string, Document>(other._inner);
+                    _inner = new Dictionary<string, object>(other._inner);
                 }
             }
 
-            public Document Get(string alias)
+            public void Merge(Match other)
             {
-                Document result = null;
-                _inner?.TryGetValue(alias, out result);
-                if(result?.Id != null)
+                if(other._inner == null)
+                    return;
+                EnsureInnerInitialized();
+                foreach (var item in other._inner)
                 {
-                    result.EnsureMetadata();
+                    _inner[item.Key] = item.Value;
                 }
+            }
+
+            public object GetResult(string alias)
+            {
+                object result = default;
+                _inner?.TryGetValue(alias, out result);
                 return result;
+            }
+
+            public Document GetSingleDocumentResult(string alias)
+            {
+                object result = default;
+                _inner?.TryGetValue(alias, out result);
+                if(result is Document d)
+                {
+                    d.EnsureMetadata();
+                    return d;
+                }
+                else if(result is List<Match> m)
+                {
+                    // TODO: this is wrong
+                    return m.Last().GetSingleDocumentResult(alias);
+                }
+                return null;
             }           
 
             public bool TryGetAliasId(string alias, out long id)
             {
                 id = -1;
-                var hasKey = _inner.TryGetValue(alias, out var doc);
 
-                if (hasKey)
-                    id = (long)doc.Data.BasePointer;
+                if (_inner.TryGetValue(alias, out var result))
+                {
+                    if (result is Document d)
+                    {
+                        id = (long)d.Data.BasePointer;
+                        return true;
+                    }
+                }
 
-                return hasKey;
-            }
-
-            public bool TryGetKey(string alias, out string key)
-            {
-                key = null;
-                var hasKey = _inner.TryGetValue(alias, out var doc);
-
-                if (hasKey)
-                    key = doc.Id;
-
-                return hasKey;
+                return false;
             }
 
             //try to set, but don't overwrite
             public long? TrySet(StringSegment alias, Document val)
             {
-                if (_inner == null)
-                    _inner = new Dictionary<string, Document>();
+                EnsureInnerInitialized();
 
                 if (_inner.TryAdd(alias, val) == false)
                     return null;
                 return (long)val.Data.BasePointer;
             }
 
-            public void Set(StringSegment alias, Document val)
+            private void EnsureInnerInitialized()
             {
                 if (_inner == null)
-                    _inner = new Dictionary<string, Document>();
+                    _inner = new Dictionary<string, object>();
+            }
 
-                _inner.Add(alias, val);
-            }            
+            public void Set(StringSegment alias, object val)
+            {
+                EnsureInnerInitialized();
+                _inner[alias] = val;
+            }
 
             public void PopulateVertices(DynamicJsonValue j)
             {
@@ -99,13 +118,31 @@ namespace Raven.Server.Documents.Queries
 
                 foreach (var item in _inner)
                 {
-                    if (item.Value.Id != null)
+                    if (item.Key.StartsWith("_"))
+                        continue;
+
+                    if(item.Value is Document d)
                     {
-                        item.Value.EnsureMetadata();
+                        j[item.Key] = d.Data;
                     }
-                    j[item.Key] = item.Value.Data;                    
+                    else  if(item.Value is List<Match> matches)
+                    {
+                        var array = new DynamicJsonArray();
+                        foreach (var m in matches)
+                        {
+                            var djv = new DynamicJsonValue();
+                            m.PopulateVertices(djv);
+                            array.Add(djv);
+                        }
+                        j[item.Key] = array;
+                    }
+                    else if(item.Value is string s)
+                    {
+                        j[item.Key] = s;
+                    }
                 }
             }
+
 
             public void PopulateVertices(ref IntermediateResults i)
             {
@@ -114,7 +151,13 @@ namespace Raven.Server.Documents.Queries
 
                 foreach (var item in _inner)
                 {
-                    i.Add(item.Key, this, item.Value);
+                    if (item.Key.StartsWith("_"))
+                        continue;
+
+                    if (item.Value is Document d)
+                    {
+                        i.Add(item.Key, this, d);
+                    }
                 }
             }
 
@@ -122,24 +165,15 @@ namespace Raven.Server.Documents.Queries
             {
                 foreach (var item in _inner)
                 {
-                    if (item.Value.Id != null)
-                    {
-                        item.Value.EnsureMetadata();
-                    }
+                    if (item.Key.StartsWith("_"))
+                        continue;
 
-                    return item.Value;
+                    if (item.Value is Document d)
+                    {
+                        return d;
+                    }
                 }
                 throw new InvalidOperationException("Cannot return single result when there are no results");
-            }
-
-            internal Document GetResult(string alias)
-            {
-                var val = _inner[alias];
-                if (val.Id != null)
-                {
-                    val.EnsureMetadata();
-                }
-                return val;
             }
         }
     }

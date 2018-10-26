@@ -1220,6 +1220,17 @@ namespace Raven.Server.Documents.Patch
                     }
                     return jsArray;
                 }
+                if (o is List<Document> docList)
+                {
+                    var jsArray = engine.Array.Construct(Array.Empty<JsValue>());
+                    var args = new JsValue[1];
+                    for (var i = 0; i < docList.Count; i++)
+                    {
+                        args[0] = new BlittableObjectInstance(engine, null, Clone(docList[i].Data, context), docList[i].Id, docList[i].LastModified);
+                        engine.Array.PrototypeObject.Push(jsArray, args);
+                    }
+                    return jsArray;
+                }
                 // for admin
                 if (o is RavenServer || o is DocumentDatabase)
                 {

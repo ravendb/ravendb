@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Lucene.Net.Store;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.AST;
@@ -6,6 +7,7 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using static Raven.Server.Documents.Queries.GraphQueryRunner;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -64,38 +66,91 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 [Raven.Client.Constants.Documents.Metadata.Projection] = true
             };
-
+            var item = new Document();
             foreach (var fieldToFetch in FieldsToFetch.Fields.Values)
             {
                 object fieldVal;
-                string key;
-                Document item;
-                if(fieldToFetch.QueryField.Function != null)
+                string key = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
+                if (fieldToFetch.QueryField.Function != null)
                 {
                     var args = new object[fieldToFetch.FunctionArgs.Length + 1];
                     for (int i = 0; i < fieldToFetch.FunctionArgs.Length; i++)
                     {
-                        args[i] = match.Get(fieldToFetch.FunctionArgs[i].ProjectedName);
+                        var val = match.GetResult(fieldToFetch.FunctionArgs[i].ProjectedName);
+                        if(val is Document d)
+                        {
+                            args[i] = d;
+                        }
+                        else if( val is List<Match> matches)
+                        {
+                            var array = new DynamicJsonArray();
+                            foreach (var m in matches)
+                            {
+                                var djv = new DynamicJsonValue();
+                                m.PopulateVertices(djv);
+                                array.Add(djv);
+                            }
+                            var dummy = new DynamicJsonValue();
+                            dummy["Dummy"] = array;
+                            args[i] = _context.ReadObject(dummy, "graph/arg")["Dummy"];
+                        }
+                        else if(val is string s)
+                        {
+                            args[i] = s;
+                        }
+                        else
+                        {
+                            args[i] = null;
+                        }
                     }
-                    item = new Document();
                     key = fieldToFetch.ProjectedName;
                     fieldVal = GetFunctionValue(fieldToFetch, args);
+
+
+                    var immediateResult = AddProjectionToResult(item, 1f, FieldsToFetch, result, key, fieldVal);
+                    if (immediateResult != null)
+                        return immediateResult;
                 }
                 else
                 {
-                    item = match.Get(fieldToFetch.QueryField.ExpressionField.Compound[0]);
-                    if (item == null)
+                    var val = match.GetResult(fieldToFetch.QueryField.ExpressionField.Compound[0]);
+                    if (val is Document d)
+                    {
+                        if (TryGetValue(fieldToFetch, d, null, null, out key, out fieldVal) == false)
+                            continue;
+
+                        var immediateResult = AddProjectionToResult(d, 1f, FieldsToFetch, result, key, fieldVal);
+                        if (immediateResult != null)
+                            return immediateResult;
+                    }
+                    else if (val is List<Match> matches)
+                    {
+                        var array = new DynamicJsonArray();
+                        foreach (var m in matches)
+                        {
+                            var djv = new DynamicJsonValue();
+                            m.PopulateVertices(djv);
+
+                            var matchJson = _context.ReadObject(djv, "graph/arg");
+
+                            if (TryGetValue(fieldToFetch, new Document { Data = matchJson }, null, null, out key, out fieldVal) == false)
+                                continue;
+
+                            array.Add(fieldVal);
+                        }
+                        result[key] = array;
+                    }
+                    else if (val is string s)
+                    {
+                        result[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = s;
+                    }
+                    else
                     {
                         result[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = null;
                         continue;
                     }
-                    if (TryGetValue(fieldToFetch, item, null, null, out key, out fieldVal) == false)
-                        continue;
                 }
 
-                var immediateResult = AddProjectionToResult(item, 1f, FieldsToFetch, result, key, fieldVal);
-                if (immediateResult != null)
-                    return immediateResult;
             }
 
             return new Document

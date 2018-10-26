@@ -16,13 +16,13 @@ namespace Raven.Server.Documents.Queries
             {
                 foreach (var alias in match.Aliases)
                 {
-                    Add(alias, match, match.Get(alias));
+                    Add(alias, match, match.GetSingleDocumentResult(alias));
                 }
             }
 
             public void Add(string alias, Match match, Document instance)
             {
-                //we have map/reduce result that has no id since it is not a document
+                //we have map/reduce result that has no id since it is not a document (results of map/reduce query)
                 if (instance.Id == null) 
                 {
                     _anonymousMatchesByAlias[alias].Add(match);

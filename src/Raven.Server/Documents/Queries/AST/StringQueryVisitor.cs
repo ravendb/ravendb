@@ -397,6 +397,7 @@ namespace Raven.Server.Documents.Queries.AST
                     first = false;
                     _sb.Append(item);
                 }
+
                 _sb.Append(")");
             }
 
