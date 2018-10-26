@@ -167,21 +167,28 @@
     </div>
 
     <hr />
-    <h1>Identities <small class="js-identities-header"><i class="icon-help text-info"></i> </small></h1>
-    <div class="row" data-bind="visible: identities().length === 0">
-        <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
-            <i class="icon-xl icon-empty-set text-muted"></i>
-            <h2 class="text-center">No identities have been defined for this database.</h2>
+    <div class="identities"> 
+        <div class="flex-horizontal">
+            <h1 class="flex-end">Identities</h1>
+            <small class="js-identities-header identities-header flex-end"><i class="icon-info text-info"></i> </small>
         </div>
-    </div>
-    <div class="row row-sm flex-row" data-bind="visible: identities().length">
-        <div class="col-sm-6 col-lg-4 col-xl-3 flex-vertical">
-            <div class="stats-list margin-bottom flex-grow" data-bind="foreach: identities">
-                <div class="stats-item">
-                    <div class="name" data-bind="text: Prefix, attr: { title: Prefix }"></div>
-                    <div class="value" data-bind="text: Value"></div>
+
+        <div class="row" data-bind="visible: identities().length === 0">
+            <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+                <i class="icon-xl icon-empty-set text-muted"></i>
+                <h2 class="text-center">No identities have been defined for this database.</h2>
+            </div>
+        </div>
+        <div class="row row-sm flex-row" data-bind="visible: identities().length">
+            <div class="col-sm-6 col-lg-4 col-xl-3 flex-vertical">
+                <div class="stats-list margin-bottom flex-grow" data-bind="foreach: identities">
+                    <div class="stats-item">
+                        <div class="name" data-bind="text: Prefix, attr: { title: Prefix }"></div>
+                        <div class="value" data-bind="text: Value"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+    
 </section>
