@@ -132,7 +132,7 @@ namespace Voron
 
         public UpgraderDelegate SchemaUpgrader { get; set; }
 
-        public IScratchSpaceUsageMonitor ScratchSpaceUsageMonitor { get; set; }
+        public IScratchSpaceMonitor ScratchSpaceMonitor { get; set; }
 
         public long MaxScratchBufferSize
         {

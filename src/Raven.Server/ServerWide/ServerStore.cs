@@ -97,7 +97,7 @@ namespace Raven.Server.ServerWide
         public readonly FeedbackSender FeedbackSender;
         public readonly SecretProtection Secrets;
         public readonly AsyncManualResetEvent InitializationCompleted;
-        public readonly GlobalIndexingScratchSpaceUsageMonitor GlobalIndexingScratchSpaceUsageMonitor;
+        public readonly GlobalIndexingScratchSpaceMonitor GlobalIndexingScratchSpaceMonitor;
         public bool Initialized;
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
@@ -138,7 +138,7 @@ namespace Raven.Server.ServerWide
             InitializationCompleted = new AsyncManualResetEvent(_shutdownNotification.Token);
             
             if (Configuration.Indexing.GlobalScratchSpaceLimit != null)
-                GlobalIndexingScratchSpaceUsageMonitor = new GlobalIndexingScratchSpaceUsageMonitor(Configuration.Indexing.GlobalScratchSpaceLimit.Value);
+                GlobalIndexingScratchSpaceMonitor = new GlobalIndexingScratchSpaceMonitor(Configuration.Indexing.GlobalScratchSpaceLimit.Value);
 
             _frequencyToCheckForIdleDatabases = Configuration.Databases.FrequencyToCheckForIdle.AsTimeSpan;
 

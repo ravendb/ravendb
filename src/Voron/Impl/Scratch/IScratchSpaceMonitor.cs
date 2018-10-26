@@ -1,6 +1,6 @@
 ﻿namespace Voron.Impl.Scratch
 {
-    public interface IScratchSpaceUsageMonitor
+    public interface IScratchSpaceMonitor
     {
         void Increase(long allocatedScratchSpaceInBytes);
 

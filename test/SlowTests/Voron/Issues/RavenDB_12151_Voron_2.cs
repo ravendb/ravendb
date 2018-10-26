@@ -15,7 +15,7 @@ namespace SlowTests.Voron.Issues
         {
             options.ManualFlushing = true;
             options.MaxScratchBufferSize = 2 * Constants.Size.Megabyte;
-            options.ScratchSpaceUsageMonitor = new TestScratchSpaceMonitor();
+            options.ScratchSpaceMonitor = new TestScratchSpaceMonitor();
         }
 
         [Fact]
@@ -23,7 +23,7 @@ namespace SlowTests.Voron.Issues
         {
             RequireFileBasedPager();
 
-            var scratchSpaceMonitor = (TestScratchSpaceMonitor)Env.Options.ScratchSpaceUsageMonitor;
+            var scratchSpaceMonitor = (TestScratchSpaceMonitor)Env.Options.ScratchSpaceMonitor;
 
             var r = new Random(1);
 
@@ -78,7 +78,7 @@ namespace SlowTests.Voron.Issues
             Assert.Equal(0, scratchSpaceMonitor.Size);
         }
 
-        private class TestScratchSpaceMonitor : IScratchSpaceUsageMonitor
+        private class TestScratchSpaceMonitor : IScratchSpaceMonitor
         {
             public long Size;
 
