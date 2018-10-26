@@ -47,14 +47,36 @@ namespace Sparrow.Utils
                 return null;
             }
 
-            var volumeLabel = driveInfoBase?.DriveName == null ? null : new DriveInfo(driveInfoBase.DriveName).VolumeLabel;
+            var driveName = driveInfoBase?.DriveName;
             return new DiskSpaceResult
             {
-                DriveName = driveInfoBase?.DriveName,
-                VolumeLabel = volumeLabel,
+                DriveName = driveName,
+                VolumeLabel = GetVolumeLabel(driveName),
                 TotalFreeSpace = new Size((long)freeBytesAvailable, SizeUnit.Bytes),
                 TotalSize = new Size((long)totalNumberOfBytes, SizeUnit.Bytes)
             };
+        }
+
+        private static string GetVolumeLabel(string path)
+        {
+            if (path == null)
+                return null;
+
+            if (path.StartsWith("\\", StringComparison.OrdinalIgnoreCase))
+            {
+                // network path
+                return null;
+            }
+
+            try
+            {
+                var driveInfo = new DriveInfo(path);
+                return driveInfo.VolumeLabel;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         public static DriveInfoBase GetDriveInfo(string path, DriveInfo[] drivesInfo)
@@ -132,7 +154,7 @@ namespace Sparrow.Utils
         {
             var handle = CreateFile(path,
                 FILE_READ_EA,
-                FileShare.ReadWrite | FileShare.Delete,
+                FileShare.Read,
                 IntPtr.Zero,
                 FileMode.Open,
                 FILE_FLAG_BACKUP_SEMANTICS,
@@ -165,14 +187,17 @@ namespace Sparrow.Utils
                 }
 
                 path = sb.ToString();
-                if (path.Length >= 4 &&
-                    path[0] == '\\' &&
-                    path[1] == '\\' &&
-                    path[2] == '?' &&
-                    path[3] == '\\')
+
+                //The string that is returned by this function uses the \?\ syntax
+                if (path.Length >= 8 && path.StartsWith("\\\\?\\UNC\\", StringComparison.OrdinalIgnoreCase))
                 {
-                    //The string that is returned by this function uses the \?\ syntax
-                    path = path.Substring(4); // "\\?\" remove
+                    path = "\\" + path.Substring(7);
+                    // network path, replace `\\?\UNC\` with `\\`
+                }
+                if (path.Length >= 4 && path.StartsWith("\\\\?\\", StringComparison.OrdinalIgnoreCase))
+                {
+                    // local path, remove `\\?\`
+                    path = path.Substring(4); 
                 }
 
                 return path;
