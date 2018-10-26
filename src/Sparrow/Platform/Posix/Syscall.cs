@@ -482,6 +482,11 @@ namespace Sparrow.Platform.Posix
                 ArrayPool<byte>.Shared.Return(realpathToDir);
             }
         }
+
+        public static string ErrorNumberToStatusCode(int result)
+        {
+            return Enum.GetName(typeof(Errno), result);
+        }
     }
 
     [Flags]
