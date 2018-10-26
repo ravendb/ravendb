@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Indexes
         private string _errorStateReason;
         private bool _isCompactionInProgress;
         internal TimeSpan? _firstBatchTimeout;
-        private Lazy<long?> _scratchSpaceLimitInBytes;
+        private Lazy<Size?> _scratchSpaceLimitInBytes;
         private bool _globalIndexingScratchSpaceLimitExceeded;
 
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
@@ -2903,7 +2903,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private long? ScratchSpaceLimitInBytes
+        private Size? ScratchSpaceLimit
         {
             get
             {
@@ -2912,7 +2912,7 @@ namespace Raven.Server.Documents.Indexes
 
                 if (Configuration.ScratchSpaceLimit == null)
                 {
-                    _scratchSpaceLimitInBytes = new Lazy<long?>(() => null);
+                    _scratchSpaceLimitInBytes = new Lazy<Size?>(() => null);
                 }
                 else
                 {
@@ -2921,7 +2921,7 @@ namespace Raven.Server.Documents.Indexes
                     if (Type.IsMapReduce())
                         limitInBytes = (long)(limitInBytes * 0.75); // let's decrease the limit to take into account additional work in reduce phase
 
-                    _scratchSpaceLimitInBytes = new Lazy<long?>(() => limitInBytes);
+                    _scratchSpaceLimitInBytes = new Lazy<Size?>(() => new Size(limitInBytes, SizeUnit.Bytes));
                 }
 
                 return _scratchSpaceLimitInBytes.Value;
@@ -2991,9 +2991,9 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            if (ScratchSpaceLimitInBytes != null && txAllocations > ScratchSpaceLimitInBytes)
+            if (ScratchSpaceLimit != null && txAllocations > ScratchSpaceLimit.Value.GetValue(SizeUnit.Bytes))
             {
-                stats.RecordMapCompletedReason($"Reached scratch space limit ({ScratchSpaceLimitInBytes / 1024:#,#0} kb). Allocated {txAllocations / 1024:#,#0} kb of scratch space in current transaction");
+                stats.RecordMapCompletedReason($"Reached scratch space limit ({ScratchSpaceLimit.Value}). Allocated {new Size(txAllocations, SizeUnit.Bytes)} of scratch space in current transaction");
                 return false;
             }
 
@@ -3004,7 +3004,7 @@ namespace Raven.Server.Documents.Indexes
                 _globalIndexingScratchSpaceLimitExceeded = true;
 
                 stats.RecordMapCompletedReason(
-                    $"Reached global scratch space limit for indexing ({globalIndexingScratchSpaceUsage.LimitInBytes / 1024:#,#0} kb). Current scratch space is {globalIndexingScratchSpaceUsage.ScratchSpaceInBytes / 1024:#,#0} kb");
+                    $"Reached global scratch space limit for indexing ({globalIndexingScratchSpaceUsage.LimitAsSize}). Current scratch space is {globalIndexingScratchSpaceUsage.ScratchSpaceAsSize}");
                 
                 return false;
             }
