@@ -1159,8 +1159,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var orderByPath);
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var orderByOrderingTypeOrSorterName);
 
-                    if (orderByOrderingTypeOrSorterName is string orderByOrderingTypeOrSorterNameAsString)
-                        _documentQuery.OrderBy((string)orderByPath, orderByOrderingTypeOrSorterNameAsString);
+                    if (orderByOrderingTypeOrSorterName is string orderBySorterName)
+                        _documentQuery.OrderBy((string)orderByPath, orderBySorterName);
                     else
                         _documentQuery.OrderBy((string)orderByPath, (OrderingType)orderByOrderingTypeOrSorterName);
                     break;
@@ -1171,8 +1171,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var orderByDescendingPath);
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var orderByDescendingOrderingTypeOrSorterName);
 
-                    if (orderByDescendingOrderingTypeOrSorterName is string orderByDescendingOrderingTypeOrSorterNameAsString)
-                        _documentQuery.OrderByDescending((string)orderByDescendingPath, orderByDescendingOrderingTypeOrSorterNameAsString);
+                    if (orderByDescendingOrderingTypeOrSorterName is string orderByDescendingSorterName)
+                        _documentQuery.OrderByDescending((string)orderByDescendingPath, orderByDescendingSorterName);
                     else
                         _documentQuery.OrderByDescending((string)orderByDescendingPath, (OrderingType)orderByDescendingOrderingTypeOrSorterName);
 

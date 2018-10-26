@@ -79,30 +79,30 @@ namespace SlowTests.Issues
 
         public override int Compare(int slot1, int slot2)
         {
-            throw new InvalidOperationException($""Catch me: {_args}"");
+            throw new InvalidOperationException($""Catch me 2: {_args}"");
         }
 
         public override void SetBottom(int slot)
         {
-            throw new InvalidOperationException($""Catch me: {_args}"");
+            throw new InvalidOperationException($""Catch me 2: {_args}"");
         }
 
         public override int CompareBottom(int doc, IState state)
         {
-            throw new InvalidOperationException($""Catch me: {_args}"");
+            throw new InvalidOperationException($""Catch me 2: {_args}"");
         }
 
         public override void Copy(int slot, int doc, IState state)
         {
-            throw new InvalidOperationException($""Catch me: {_args}"");
+            throw new InvalidOperationException($""Catch me 2: {_args}"");
         }
 
         public override void SetNextReader(IndexReader reader, int docBase, IState state)
         {
-            throw new InvalidOperationException($""Catch me: {_args}"");
+            throw new InvalidOperationException($""Catch me 2: {_args}"");
         }
 
-        public override IComparable this[int slot] => throw new InvalidOperationException($""Catch me: {_args}"");
+        public override IComparable this[int slot] => throw new InvalidOperationException($""Catch me 2: {_args}"");
     }
 }
 ";
@@ -171,7 +171,7 @@ namespace SlowTests.Issues
                     Code = SorterCode2
                 }));
 
-                CanUseSorterInternal<RavenException>(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True");
+                CanUseSorterInternal<RavenException>(store, "Catch me 2: Name:2:0:False:other", "Catch me 2: Name:2:0:True:other");
 
                 store.Maintenance.Send(new DeleteSorterOperation("MySorter"));
 

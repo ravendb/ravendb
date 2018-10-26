@@ -32,12 +32,6 @@ namespace Raven.Server.Documents.Indexes.Sorting
             }
         }
 
-        public static void RemoveSorter(string name, string databaseName)
-        {
-            var key = new CacheKey(databaseName, name, null);
-            SortersPerDatabaseCache.TryRemove(key, out _);
-        }
-
         public static void AddSorter(SorterDefinition definition, string databaseName)
         {
             AddSorterInternal(definition.Name, definition.Code, databaseName);
