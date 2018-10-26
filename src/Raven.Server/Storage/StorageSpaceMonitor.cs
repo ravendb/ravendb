@@ -9,6 +9,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Voron;
 
 namespace Raven.Server.Storage
@@ -87,7 +88,7 @@ namespace Raven.Server.Storage
                     return;
 
                 var message =
-                    $"The following disks are running out of space:{Environment.NewLine} {string.Join(Environment.NewLine, lowSpaceDisks)}";
+                    $"The following {(PlatformDetails.RunningOnPosix ? "mount points" : "disks")} are running out of space:{Environment.NewLine} {string.Join(Environment.NewLine, lowSpaceDisks)}";
 
                 _notificationCenter.Add(AlertRaised.Create(null, "Low free disk space", message, AlertType.LowDiskSpace, NotificationSeverity.Warning,
                     "low-disk-space"));
