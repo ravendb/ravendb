@@ -6,6 +6,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Sorters;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents.Sorters;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -59,6 +60,53 @@ namespace SlowTests.Issues
 }
 ";
 
+        private const string SorterCode2 = @"
+using System;
+using Lucene.Net.Index;
+using Lucene.Net.Search;
+using Lucene.Net.Store;
+
+namespace SlowTests.Issues
+{
+    public class MySorter : FieldComparator
+    {
+        private readonly string _args;
+
+        public MySorter(string fieldName, int numHits, int sortPos, bool reversed)
+        {
+            _args = $""{fieldName}:{numHits}:{sortPos}:{reversed}:other"";
+        }
+
+        public override int Compare(int slot1, int slot2)
+        {
+            throw new InvalidOperationException($""Catch me: {_args}"");
+        }
+
+        public override void SetBottom(int slot)
+        {
+            throw new InvalidOperationException($""Catch me: {_args}"");
+        }
+
+        public override int CompareBottom(int doc, IState state)
+        {
+            throw new InvalidOperationException($""Catch me: {_args}"");
+        }
+
+        public override void Copy(int slot, int doc, IState state)
+        {
+            throw new InvalidOperationException($""Catch me: {_args}"");
+        }
+
+        public override void SetNextReader(IndexReader reader, int docBase, IState state)
+        {
+            throw new InvalidOperationException($""Catch me: {_args}"");
+        }
+
+        public override IComparable this[int slot] => throw new InvalidOperationException($""Catch me: {_args}"");
+    }
+}
+";
+
         [Fact]
         public void CanUseCustomSorter()
         {
@@ -74,15 +122,33 @@ namespace SlowTests.Issues
                 }
             }))
             {
-                CanUseSorterInternal(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True");
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "C1" });
+                    session.Store(new Company { Name = "C2" });
+
+                    session.SaveChanges();
+                }
+
+                CanUseSorterInternal<RavenException>(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True");
             }
         }
 
         [Fact]
-        public void CanUseCustomSorter2()
+        public void CanUseCustomSorterWithOperations()
         {
             using (var store = GetDocumentStore(new Options()))
             {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "C1" });
+                    session.Store(new Company { Name = "C2" });
+
+                    session.SaveChanges();
+                }
+
+                CanUseSorterInternal<SorterDoesNotExistException>(store, "There is no sorter with 'MySorter' name", "There is no sorter with 'MySorter' name");
+
                 store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
                 {
                     Name = "MySorter",
@@ -96,32 +162,29 @@ namespace SlowTests.Issues
                     Code = SorterCode
                 }));
 
-                CanUseSorterInternal(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True");
+                CanUseSorterInternal<RavenException>(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True");
 
                 // checking if we can update sorter
                 store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
                 {
                     Name = "MySorter",
-                    Code = SorterCode
+                    Code = SorterCode2
                 }));
 
-                CanUseSorterInternal(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True");
+                CanUseSorterInternal<RavenException>(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True");
+
+                store.Maintenance.Send(new DeleteSorterOperation("MySorter"));
+
+                CanUseSorterInternal<SorterDoesNotExistException>(store, "There is no sorter with 'MySorter' name", "There is no sorter with 'MySorter' name");
             }
         }
 
-        private static void CanUseSorterInternal(DocumentStore store, string asc, string desc)
+        private static void CanUseSorterInternal<TException>(DocumentStore store, string asc, string desc)
+            where TException : RavenException
         {
             using (var session = store.OpenSession())
             {
-                session.Store(new Company { Name = "C1" });
-                session.Store(new Company { Name = "C2" });
-
-                session.SaveChanges();
-            }
-
-            using (var session = store.OpenSession())
-            {
-                var e = Assert.Throws<RavenException>(() =>
+                var e = Assert.Throws<TException>(() =>
                 {
                     session
                         .Advanced
@@ -131,7 +194,7 @@ namespace SlowTests.Issues
 
                 Assert.Contains(asc, e.Message);
 
-                e = Assert.Throws<RavenException>(() =>
+                e = Assert.Throws<TException>(() =>
                 {
                     session
                         .Query<Company>()
@@ -141,7 +204,7 @@ namespace SlowTests.Issues
 
                 Assert.Contains(asc, e.Message);
 
-                e = Assert.Throws<RavenException>(() =>
+                e = Assert.Throws<TException>(() =>
                 {
                     session
                         .Advanced
@@ -152,7 +215,7 @@ namespace SlowTests.Issues
 
                 Assert.Contains(asc, e.Message);
 
-                e = Assert.Throws<RavenException>(() =>
+                e = Assert.Throws<TException>(() =>
                 {
                     session
                         .Advanced
@@ -162,7 +225,7 @@ namespace SlowTests.Issues
 
                 Assert.Contains(desc, e.Message);
 
-                e = Assert.Throws<RavenException>(() =>
+                e = Assert.Throws<TException>(() =>
                 {
                     session
                         .Query<Company>()
@@ -172,7 +235,7 @@ namespace SlowTests.Issues
 
                 Assert.Contains(desc, e.Message);
 
-                e = Assert.Throws<RavenException>(() =>
+                e = Assert.Throws<TException>(() =>
                 {
                     session
                         .Advanced

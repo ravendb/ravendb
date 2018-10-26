@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Text;
+using System.Text.RegularExpressions;
 using Lucene.Net.Search;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -19,6 +20,9 @@ namespace Raven.Server.Documents.Indexes.Sorting
     {
         public static Func<string, int, int, bool, FieldComparator> Compile(string name, string sorterCode)
         {
+            var originalName = name;
+            name = GetCSharpSafeName(name) + "." + Guid.NewGuid() + ".sorter";
+
             var compilationUnit = SyntaxFactory.ParseCompilationUnit(sorterCode);
 
             SyntaxNode formattedCompilationUnit;
@@ -40,7 +44,7 @@ namespace Raven.Server.Documents.Indexes.Sorting
                 : SyntaxFactory.ParseSyntaxTree(formattedCompilationUnit.ToFullString());
 
             var compilation = CSharpCompilation.Create(
-                assemblyName: name + ".sorter.dll",
+                assemblyName: name + ".dll",
                 syntaxTrees: new[] { syntaxTree },
                 references: IndexCompiler.References,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
@@ -60,7 +64,7 @@ namespace Raven.Server.Documents.Indexes.Sorting
                     .Where(diagnostic => diagnostic.IsWarningAsError || diagnostic.Severity == DiagnosticSeverity.Error);
 
                 var sb = new StringBuilder();
-                sb.AppendLine($"Failed to compile sorter '{name}'");
+                sb.AppendLine($"Failed to compile sorter '{originalName}'");
                 sb.AppendLine();
                 sb.AppendLine(code);
                 sb.AppendLine();
@@ -87,12 +91,12 @@ namespace Raven.Server.Documents.Indexes.Sorting
                 assembly = AssemblyLoadContext.Default.LoadFromStream(asm);
             }
 
-            var type = assembly.GetType(name);
+            var type = assembly.GetType(originalName);
             if (type == null)
             {
                 foreach (var exportedType in assembly.GetExportedTypes())
                 {
-                    if (exportedType.Name != name) 
+                    if (exportedType.Name != originalName) 
                         continue;
 
                     type = exportedType;
@@ -111,6 +115,11 @@ namespace Raven.Server.Documents.Indexes.Sorting
 
                 return instance;
             };
+        }
+
+        private static string GetCSharpSafeName(string name)
+        {
+            return $"Sorter_{Regex.Replace(name, @"[^\w\d]", "_")}";
         }
     }
 }
