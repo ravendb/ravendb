@@ -150,7 +150,7 @@ namespace Sparrow.Utils
             return root;
         }
 
-        private static string GetWindowsRealPath(string path)
+        private static unsafe string GetWindowsRealPath(string path)
         {
             var handle = CreateFile(path,
                 FILE_READ_EA,
@@ -173,34 +173,58 @@ namespace Sparrow.Utils
 
             try
             {
-                var sb = new StringBuilder(128, maxCapacity: WindowsMaxPath);
-                var res = GetFinalPathNameByHandle(handle, sb, (uint)WindowsMaxPath, 0);
-                if (res == 0)
+                bool GetPath(uint bufferSize, out string outputPath)
                 {
-                    if (Logger.IsInfoEnabled)
+                    var charArray = new char[bufferSize];
+                    fixed (char* buffer = charArray)
                     {
-                        var error = Marshal.GetLastWin32Error();
-                        Logger.Info($"Failed to get the final path name by handle, path: {path}, error: {error}");
-                    }
+                        var result = GetFinalPathNameByHandle(handle, buffer, bufferSize, 0);
+                        if (result == 0)
+                        {
+                            if (Logger.IsInfoEnabled)
+                            {
+                                var error = Marshal.GetLastWin32Error();
+                                Logger.Info($"Failed to get the final path name by handle, path: {path}, error: {error}");
+                            }
 
-                    return path;
+                            outputPath = null;
+                            return false;
+                        }
+
+                        // return value is the size of the path
+                        if (result > bufferSize)
+                        {
+                            outputPath = null;
+                            return false;
+                        }
+
+                        outputPath = new string(charArray, 0, (int)result);
+                        return true;
+                    }
                 }
 
-                path = sb.ToString();
+                // this is called for each storage environment for the Data, Journals and Temp paths
+                // WindowsMaxPath is 32K and although this is called only once we can have a lot of storage environments
+                if (GetPath(256, out var realPath) == false)
+                {
+                    if (GetPath((uint)WindowsMaxPath, out realPath) == false)
+                        return path;
+                }
 
                 //The string that is returned by this function uses the \?\ syntax
-                if (path.Length >= 8 && path.StartsWith("\\\\?\\UNC\\", StringComparison.OrdinalIgnoreCase))
+                if (realPath.Length >= 8 && realPath.StartsWith("\\\\?\\UNC\\", StringComparison.OrdinalIgnoreCase))
                 {
-                    path = "\\" + path.Substring(7);
+                    realPath = "\\" + realPath.Substring(7);
                     // network path, replace `\\?\UNC\` with `\\`
                 }
-                if (path.Length >= 4 && path.StartsWith("\\\\?\\", StringComparison.OrdinalIgnoreCase))
+
+                if (realPath.Length >= 4 && realPath.StartsWith("\\\\?\\", StringComparison.OrdinalIgnoreCase))
                 {
                     // local path, remove `\\?\`
-                    path = path.Substring(4); 
+                    realPath = realPath.Substring(4);
                 }
 
-                return path;
+                return realPath;
             }
             finally
             {
@@ -234,9 +258,9 @@ namespace Sparrow.Utils
         private static extern bool CloseHandle(IntPtr hObject);
 
         [DllImport("Kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        private static extern uint GetFinalPathNameByHandle(
+        private static extern unsafe uint GetFinalPathNameByHandle(
             IntPtr hFile,
-            [MarshalAs(UnmanagedType.LPTStr)] StringBuilder lpszFilePath,
+            char* buffer,
             uint cchFilePath,
             uint dwFlags);
     }
