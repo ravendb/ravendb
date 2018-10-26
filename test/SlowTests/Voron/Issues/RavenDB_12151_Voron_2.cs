@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FastTests.Voron;
@@ -72,6 +73,66 @@ namespace SlowTests.Voron.Issues
                     tx.Commit();
                 }
             }
+
+            Env.Dispose();
+
+            Assert.Equal(0, scratchSpaceMonitor.Size);
+        }
+
+        [Fact]
+        public void ScratchSpaceSizeMustIncludeDecompressionBuffers()
+        {
+            RequireFileBasedPager();
+            var temp = ((StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)Env.Options).TempPath.FullPath;
+
+            var scratchSpaceMonitor = (TestScratchSpaceMonitor)Env.Options.ScratchSpaceMonitor;
+
+            long totalSize;
+            FileInfo[] scratchBuffers;
+            FileInfo[] decompressionBuffers;
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var llt = tx.LowLevelTransaction;
+                var decompressedTempPagesToDispose = new List<IDisposable>();
+
+                try
+                {
+                    for (int i = 0; i < 100; i++)
+                    {
+                        var toDispose = Env.DecompressionBuffers.GetTemporaryPage(llt, 8 * Constants.Storage.PageSize, out _);
+
+                        decompressedTempPagesToDispose.Add(toDispose);
+                    }
+
+                    scratchBuffers = new DirectoryInfo(temp).GetFiles("scratch.*");
+                    decompressionBuffers = new DirectoryInfo(temp).GetFiles("decompression.*");
+
+                    totalSize = scratchBuffers.Sum(x => x.Length) + decompressionBuffers.Sum(x => x.Length);
+
+                    Assert.Equal(totalSize, scratchSpaceMonitor.Size);
+                }
+                finally
+                {
+                    foreach (var disposable in decompressedTempPagesToDispose)
+                    {
+                        disposable.Dispose();
+                    }
+                }
+            }
+
+            Env.FlushLogToDataFile();
+            Env.ForceSyncDataFile();
+            Env.Cleanup();
+
+            Assert.True(scratchSpaceMonitor.Size < totalSize);
+
+            scratchBuffers = new DirectoryInfo(temp).GetFiles("scratch.*");
+            decompressionBuffers = new DirectoryInfo(temp).GetFiles("decompression.*");
+
+            totalSize = scratchBuffers.Sum(x => x.Length) + decompressionBuffers.Sum(x => x.Length);
+
+            Assert.Equal(totalSize, scratchSpaceMonitor.Size);
 
             Env.Dispose();
 

@@ -10,6 +10,7 @@ using Voron.Data.BTrees;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
+using Voron.Impl.Scratch;
 using Voron.Util;
 
 namespace Voron.Data.Compression
@@ -34,28 +35,45 @@ namespace Voron.Data.Compression
 
         internal int NumberOfScratchFiles => 1 + _oldPagers.Count;
 
+        private readonly IScratchSpaceMonitor _scratchSpaceMonitor;
+
         public DecompressionBuffersPool(StorageEnvironmentOptions options)
         {
             _options = options;
             _maxNumberOfPagesInScratchBufferPool = _options.MaxScratchBufferSize / Constants.Storage.PageSize;
+            _scratchSpaceMonitor = options.ScratchSpaceMonitor;
 
             _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
             {
                 if (_initialized == false)
                     return;
 
-                _compressionPager?.Dispose();
+                if (_compressionPager != null)
+                {
+                    _compressionPager.Dispose();
 
+                    _scratchSpaceMonitor?.Decrease(_compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                }
+                
                 foreach (var pager in _oldPagers)
                 {
-                    pager.Dispose();
+                    if (pager.Disposed == false)
+                    {
+                        pager.Dispose();
+
+                        _scratchSpaceMonitor?.Decrease(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                    }
                 }
             });
         }
 
-        public AbstractPager CreateDecompressionPager(long initialSize)
+        private AbstractPager CreateDecompressionPager(long initialSize)
         {
-            return _options.CreateTemporaryBufferPager($"decompression.{_decompressionPagerCounter++:D10}.buffers", initialSize);
+            var pager = _options.CreateTemporaryBufferPager($"decompression.{_decompressionPagerCounter++:D10}.buffers", initialSize);
+
+            _scratchSpaceMonitor?.Increase(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+
+            return pager;
         }
 
         public DecompressedLeafPage GetPage(LowLevelTransaction tx, int pageSize, DecompressionUsage usage, TreePage original)
@@ -134,7 +152,15 @@ namespace Voron.Data.Compression
 
                     try
                     {
+                        long numberOfPagesBeforeAllocate = -1;
+
+                        if (_scratchSpaceMonitor != null)
+                            numberOfPagesBeforeAllocate = _compressionPager.NumberOfAllocatedPages;
+
                         _compressionPager.EnsureContinuous(_lastUsedPage, allocationInPages);
+
+                        if (numberOfPagesBeforeAllocate != -1 && _compressionPager.NumberOfAllocatedPages > numberOfPagesBeforeAllocate)
+                            _scratchSpaceMonitor?.Increase((_compressionPager.NumberOfAllocatedPages - numberOfPagesBeforeAllocate) * Constants.Storage.PageSize);
                     }
                     catch (InsufficientMemoryException)
                     {
@@ -237,6 +263,8 @@ namespace Voron.Data.Compression
                 if (availablePages >= necessaryPages)
                 {
                     old.Dispose();
+                    _scratchSpaceMonitor?.Decrease(old.NumberOfAllocatedPages * Constants.Storage.PageSize);
+
                     continue;
                 }
 
