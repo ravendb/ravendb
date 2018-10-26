@@ -200,6 +200,7 @@ namespace Raven.Server.ServerWide
                         leader?.SetStateOf(index, result);
                         break;
                     case nameof(PutSortersCommand):
+                    case nameof(DeleteSorterCommand):
                     case nameof(PutIndexCommand):
                     case nameof(PutIndexesCommand):
                     case nameof(PutAutoIndexCommand):
