@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Queries.Sorting;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -37,10 +38,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                     }
 
                     if (string.IsNullOrWhiteSpace(sorterDefinition.Name))
-                        throw new ArgumentException("Sorter must have a 'Name' field");
+                        throw new ArgumentException($"Sorter must have a '{nameof(SorterDefinition.Name)}' field");
 
                     if (string.IsNullOrWhiteSpace(sorterDefinition.Code))
-                        throw new ArgumentException("Sorter must have a 'Code' field");
+                        throw new ArgumentException($"Sorter must have a '{nameof(SorterDefinition.Code)}' field");
 
                     // check if sorter is compilable
                     SorterCompilationCache.AddSorter(sorterDefinition, Database.Name);
