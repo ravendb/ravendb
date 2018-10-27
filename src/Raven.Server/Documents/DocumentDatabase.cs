@@ -42,6 +42,7 @@ using Sparrow.Logging;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
+using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Backup;
@@ -990,7 +991,6 @@ namespace Raven.Server.Documents
                 return (new Size(0), new Size(0));
 
             long dataInBytes = 0;
-            long journalsInBytes = 0;
             long tempBuffersInBytes = 0;
             foreach (var environment in storageEnvironments)
             {
@@ -1011,7 +1011,7 @@ namespace Raven.Server.Documents
 
                     var sizeOnDisk = GetSizeOnDisk(environment, tx);
                     dataInBytes += sizeOnDisk.DataInBytes + sizeOnDisk.JournalsInBytes;
-                    tempBuffersInBytes += sizeOnDisk.TempBuffersInBytes;
+                    tempBuffersInBytes += sizeOnDisk.TempBuffersInBytes + sizeOnDisk.TempRecyclableJournalsInBytes;
                 }
                 finally
                 {
@@ -1064,7 +1064,8 @@ namespace Raven.Server.Documents
                             VolumeLabel = diskSpaceResult.VolumeLabel,
                             TotalFreeSpaceInBytes = diskSpaceResult.TotalFreeSpace.GetValue(SizeUnit.Bytes),
                             TotalSizeInBytes = diskSpaceResult.TotalSize.GetValue(SizeUnit.Bytes)
-                        }
+                        },
+                        UsedSpaceByTempBuffers = 0
                     };
 
                     var journalPathUsage = DiskSpaceChecker.GetDiskSpaceInfo(environment.Environment.Options.JournalPath?.FullPath, driveInfo?.JournalPath);
@@ -1073,6 +1074,7 @@ namespace Raven.Server.Documents
                         if (diskSpaceResult.DriveName == journalPathUsage.DriveName)
                         {
                             usage.UsedSpace += sizeOnDisk.JournalsInBytes;
+                            usage.UsedSpaceByTempBuffers += sizeOnDisk.TempRecyclableJournalsInBytes;
                         }
                         else
                         {
@@ -1084,7 +1086,8 @@ namespace Raven.Server.Documents
                                     VolumeLabel = journalPathUsage.VolumeLabel,
                                     TotalFreeSpaceInBytes = journalPathUsage.TotalFreeSpace.GetValue(SizeUnit.Bytes),
                                     TotalSizeInBytes = journalPathUsage.TotalSize.GetValue(SizeUnit.Bytes)
-                                }
+                                },
+                                UsedSpaceByTempBuffers = sizeOnDisk.TempRecyclableJournalsInBytes
                             };
                         }
                     }
@@ -1094,7 +1097,7 @@ namespace Raven.Server.Documents
                     {
                         if (diskSpaceResult.DriveName == tempBuffersDiskSpaceResult.DriveName)
                         {
-                            usage.UsedSpaceByTempBuffers = sizeOnDisk.TempBuffersInBytes;
+                            usage.UsedSpaceByTempBuffers += sizeOnDisk.TempBuffersInBytes;
                         }
                         else
                         {
@@ -1121,11 +1124,30 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static (long DataInBytes, long JournalsInBytes, long TempBuffersInBytes) GetSizeOnDisk(StorageEnvironmentWithType environment, Transaction tx)
+        private static (long DataInBytes, long JournalsInBytes, long TempBuffersInBytes, long TempRecyclableJournalsInBytes) GetSizeOnDisk(StorageEnvironmentWithType environment, Transaction tx)
         {
             var storageReport = environment.Environment.GenerateReport(tx);
             var journalSize = storageReport.Journals.Sum(j => j.AllocatedSpaceInBytes);
-            return (storageReport.DataFile.AllocatedSpaceInBytes, journalSize, storageReport.TempFiles.Sum(x => x.AllocatedSpaceInBytes));
+
+            long tempBuffers = 0;
+            long tempRecyclableJournals = 0;
+
+            foreach (var file in storageReport.TempFiles)
+            {
+                switch (file.Type)
+                {
+                    case TempBufferType.Scratch:
+                        tempBuffers += file.AllocatedSpaceInBytes;
+                        break;
+                    case TempBufferType.RecyclableJournal:
+                        tempRecyclableJournals += file.AllocatedSpaceInBytes;
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Unknown temp file type: {file.Type}");
+                }
+            }
+
+            return (storageReport.DataFile.AllocatedSpaceInBytes, journalSize, tempBuffers, tempRecyclableJournals);
         }
 
         public DatabaseRecord ReadDatabaseRecord()
