@@ -148,7 +148,8 @@ namespace Voron.Debugging
                 return new TempBufferReport
                 {
                     Name = file.Name,
-                    AllocatedSpaceInBytes = file.Length
+                    AllocatedSpaceInBytes = file.Length,
+                    Type = TempBufferType.Scratch
                 };
             }).ToList();
 
@@ -161,7 +162,8 @@ namespace Voron.Debugging
                     return new TempBufferReport
                     {
                         Name = file.Name,
-                        AllocatedSpaceInBytes = file.Length
+                        AllocatedSpaceInBytes = file.Length,
+                        Type = TempBufferType.RecyclableJournal
                     };
                 }).ToList();
 

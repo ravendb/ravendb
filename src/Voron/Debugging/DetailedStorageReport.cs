@@ -47,6 +47,13 @@ namespace Voron.Debugging
     {
         public string Name { get; set; }
         public long AllocatedSpaceInBytes { get; set; }
+        public TempBufferType Type { get; set; }
+    }
+
+    public enum TempBufferType
+    {
+        Scratch,
+        RecyclableJournal
     }
 
     public class TreeReport
