@@ -18,6 +18,7 @@ namespace Raven.Server.Smuggler.Migration
         protected readonly HttpClient HttpClient;
         protected readonly string ApiKey;
         protected readonly bool EnableBasicAuthenticationOverUnsecuredHttp;
+        protected readonly bool SkipServerCertificateValidation;
         protected readonly DatabaseItemType OperateOnTypes;
         protected readonly bool RemoveAnalyzers;
         protected readonly bool ImportRavenFs;
@@ -34,6 +35,7 @@ namespace Raven.Server.Smuggler.Migration
             HttpClient = options.HttpClient;
             ApiKey = options.ApiKey;
             EnableBasicAuthenticationOverUnsecuredHttp = options.EnableBasicAuthenticationOverUnsecuredHttp;
+            SkipServerCertificateValidation = options.SkipServerCertificateValidation;
             OperateOnTypes = options.OperateOnTypes;
             RemoveAnalyzers = options.RemoveAnalyzers;
             ImportRavenFs = options.ImportRavenFs;

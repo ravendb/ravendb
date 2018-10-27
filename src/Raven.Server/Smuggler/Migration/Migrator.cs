@@ -29,6 +29,7 @@ namespace Raven.Server.Smuggler.Migration
         private readonly ServerStore _serverStore;
         private readonly string _apiKey;
         private readonly bool _enableBasicAuthenticationOverUnsecuredHttp;
+        private readonly bool _skipServerCertificateValidation;
         private MajorVersion _buildMajorVersion;
         private int _buildVersion;
 
@@ -38,10 +39,14 @@ namespace Raven.Server.Smuggler.Migration
             _serverStore = serverStore;
             _buildMajorVersion = configuration.BuildMajorVersion;
             _buildVersion = configuration.BuildVersion;
+            _skipServerCertificateValidation = configuration.SkipServerCertificateValidation;
 
             //because of backward compatibility useCompression == false here
             var httpClientHandler = RequestExecutor.CreateHttpMessageHandler(_serverStore.Server.Certificate.Certificate, setSslProtocols: false, useCompression: false);
             httpClientHandler.UseDefaultCredentials = false;
+
+            if (configuration.SkipServerCertificateValidation)
+                httpClientHandler.ServerCertificateCustomValidationCallback = (message, certificate2, arg3, arg4) => true;
 
             if (string.IsNullOrWhiteSpace(configuration.ApiKey) == false)
             {
@@ -196,7 +201,7 @@ namespace Raven.Server.Smuggler.Migration
 
             try
             {
-                return await AbstractLegacyMigrator.GetResourcesToMigrate(_serverUrl, _httpClient, true, _apiKey, _enableBasicAuthenticationOverUnsecuredHttp, null, _serverStore.ServerShutdown);
+                return await AbstractLegacyMigrator.GetResourcesToMigrate(_serverUrl, _httpClient, true, _apiKey, _enableBasicAuthenticationOverUnsecuredHttp, _skipServerCertificateValidation, null, _serverStore.ServerShutdown);
             }
             catch (Exception e) when (e is UnauthorizedAccessException || e is AuthorizationException)
             {
@@ -214,7 +219,7 @@ namespace Raven.Server.Smuggler.Migration
             {
                 return buildMajorVersion == MajorVersion.V4
                     ? await Importer.GetDatabasesToMigrate(_serverUrl, _httpClient, _serverStore.ServerShutdown)
-                    : await AbstractLegacyMigrator.GetResourcesToMigrate(_serverUrl, _httpClient, false, _apiKey, _enableBasicAuthenticationOverUnsecuredHttp, isLegacyOAuthToken, _serverStore.ServerShutdown);
+                    : await AbstractLegacyMigrator.GetResourcesToMigrate(_serverUrl, _httpClient, false, _apiKey, _enableBasicAuthenticationOverUnsecuredHttp, _skipServerCertificateValidation, isLegacyOAuthToken, _serverStore.ServerShutdown);
             }
             catch (Exception e) when (e is UnauthorizedAccessException || e is AuthorizationException)
             {
@@ -258,6 +263,7 @@ namespace Raven.Server.Smuggler.Migration
                                 HttpClient = _httpClient,
                                 ApiKey = _apiKey,
                                 EnableBasicAuthenticationOverUnsecuredHttp = _enableBasicAuthenticationOverUnsecuredHttp,
+                                SkipServerCertificateValidation = _skipServerCertificateValidation,
                                 OperateOnTypes = databaseMigrationSettings.OperateOnTypes,
                                 RemoveAnalyzers = databaseMigrationSettings.RemoveAnalyzers,
                                 ImportRavenFs = databaseMigrationSettings.ImportRavenFs,

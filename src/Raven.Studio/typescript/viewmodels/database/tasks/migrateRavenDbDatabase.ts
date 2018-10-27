@@ -35,6 +35,7 @@ class migrateRavenDbDatabase extends viewModelBase {
         this.model.password.subscribe(() => debouncedDetection(false));
         this.model.apiKey.subscribe(() => debouncedDetection(false));
         this.model.enableBasicAuthenticationOverUnsecuredHttp.subscribe(() => debouncedDetection(false));
+        this.model.skipServerCertificateValidation.subscribe(() => debouncedDetection(false));
     }
 
     activate(args: any) {
@@ -65,10 +66,11 @@ class migrateRavenDbDatabase extends viewModelBase {
         const domain = this.model.showWindowsCredentialInputs() ? this.model.domain() : "";
         const apiKey = this.model.showApiKeyCredentialInputs() ? this.model.apiKey() : "";
         const enableBasicAuthenticationOverUnsecuredHttp = this.model.showApiKeyCredentialInputs() ? this.model.enableBasicAuthenticationOverUnsecuredHttp() : false;
+        const skipServerCertificateValidation = this.model.skipServerCertificateValidation() ? this.model.skipServerCertificateValidation() : false;
 
         const url = this.model.serverUrl();
         new getRemoteServerVersionWithDatabasesCommand(url, userName, password, domain,
-                apiKey, enableBasicAuthenticationOverUnsecuredHttp)
+                apiKey, enableBasicAuthenticationOverUnsecuredHttp, skipServerCertificateValidation)
             .execute()
             .done(info => {
                 if (info.MajorVersion !== "Unknown") {

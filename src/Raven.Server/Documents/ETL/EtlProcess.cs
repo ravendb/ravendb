@@ -424,16 +424,22 @@ namespace Raven.Server.Documents.ETL
                 return false;
             }
 
-            var currentlyInUse = new Size(_threadAllocations.TotalAllocated, SizeUnit.Bytes);
+            var totalAllocated = _threadAllocations.TotalAllocated;
+            _threadAllocations.CurrentlyAllocatedForProcessing = totalAllocated;
+            var currentlyInUse = new Size(totalAllocated, SizeUnit.Bytes);
             if (currentlyInUse > _currentMaximumAllowedMemory)
             {
                 if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
                         currentlyInUse,
-                        Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Logger, out ProcessMemoryUsage memoryUsage) == false)
+                        Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Logger, out var memoryUsage) == false)
                 {
-                    var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {new Size(_threadAllocations.TotalAllocated, SizeUnit.Bytes)}. Current memory usage: " +
-                                 $"{nameof(memoryUsage.WorkingSet)} = {memoryUsage.WorkingSet}," +
-                                 $"{nameof(memoryUsage.PrivateMemory)} = {memoryUsage.PrivateMemory}";
+                    var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {currentlyInUse}.";
+                    if (memoryUsage != null)
+                    {
+                        reason += " Current memory usage: " +
+                                   $"{nameof(memoryUsage.WorkingSet)} = {memoryUsage.WorkingSet}," +
+                                   $"{nameof(memoryUsage.PrivateMemory)} = {memoryUsage.PrivateMemory}";
+                    }
 
                     if (Logger.IsInfoEnabled)
                         Logger.Info(reason);
@@ -622,7 +628,8 @@ namespace Raven.Server.Documents.ETL
                     if (didWork)
                     {
                         var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
-                            ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag, _serverStore.LicenseManager.HasHighlyAvailableTasks());
+                            ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag,
+                            _serverStore.LicenseManager.HasHighlyAvailableTasks());
 
                         var sendToLeaderTask = _serverStore.SendToLeaderAsync(command);
                         sendToLeaderTask.Wait(CancellationToken);
@@ -685,6 +692,11 @@ namespace Raven.Server.Documents.ETL
                 {
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations($"Unexpected error in {Tag} process: '{Name}'", e);
+                }
+                finally
+                {
+                    _threadAllocations.CurrentlyAllocatedForProcessing = 0;
+                    _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
                 }
             }
         }

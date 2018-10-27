@@ -5,7 +5,8 @@ class getRemoteServerVersionWithDatabasesCommand extends commandBase {
 
     constructor(private serverUrl: string,
         private userName: string, private password: string, private domain: string,
-        private apiKey: string, private enableBasicAuthenticationOverUnsecuredHttp: boolean) {
+        private apiKey: string, private enableBasicAuthenticationOverUnsecuredHttp: boolean,
+        private skipServerCertificateValidation: boolean) {
         super();
     }
 
@@ -16,7 +17,8 @@ class getRemoteServerVersionWithDatabasesCommand extends commandBase {
             password: this.password,
             domain: this.domain,
             apiKey: this.apiKey,
-            enableBasicAuthenticationOverUnsecuredHttp: this.enableBasicAuthenticationOverUnsecuredHttp
+            enableBasicAuthenticationOverUnsecuredHttp: this.enableBasicAuthenticationOverUnsecuredHttp,
+            skipServerCertificateValidation: this.skipServerCertificateValidation
         };
         
         const url = endpoints.global.databases.adminRemoteServerBuildVersion + this.urlEncodeArgs(args);

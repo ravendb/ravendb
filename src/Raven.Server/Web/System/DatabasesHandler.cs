@@ -183,6 +183,7 @@ namespace Raven.Server.Web.System
             var domain = GetStringQueryString("domain", required: false);
             var apiKey = GetStringQueryString("apiKey", required: false);
             var enableBasicAuthenticationOverUnsecuredHttp = GetBoolValueQueryString("enableBasicAuthenticationOverUnsecuredHttp", required: false);
+            var skipServerCertificateValidation = GetBoolValueQueryString("skipServerCertificateValidation", required: false);
             var migrator = new Migrator(new SingleDatabaseMigrationConfiguration
             {
                 ServerUrl = serverUrl,
@@ -190,7 +191,8 @@ namespace Raven.Server.Web.System
                 Password = password,
                 Domain = domain,
                 ApiKey = apiKey,
-                EnableBasicAuthenticationOverUnsecuredHttp = enableBasicAuthenticationOverUnsecuredHttp ?? false
+                EnableBasicAuthenticationOverUnsecuredHttp = enableBasicAuthenticationOverUnsecuredHttp ?? false,
+                SkipServerCertificateValidation = skipServerCertificateValidation ?? false
             }, ServerStore);
             
             var buildInfo = await migrator.GetBuildInfo();

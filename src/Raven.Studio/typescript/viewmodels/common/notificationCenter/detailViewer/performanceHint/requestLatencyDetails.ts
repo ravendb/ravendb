@@ -48,6 +48,8 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
                 onValue(moment.utc(details.Date), details.Date);
             } else if (_.isUndefined(value)) {
                 onValue(value);
+            } else if (column.header === "Query") {
+                onValue(details.Query);
             }
         });
     }

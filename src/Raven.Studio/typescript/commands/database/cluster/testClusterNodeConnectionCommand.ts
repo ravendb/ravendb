@@ -10,7 +10,8 @@ class testClusterNodeConnectionCommand extends commandBase {
     execute(): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
         const args = {
             url: this.serverUrl,
-            database: this.databaseName
+            database: this.databaseName,
+            bidirectional: true
         };
         const url = endpoints.global.testConnection.adminTestConnection + this.urlEncodeArgs(args);
 
