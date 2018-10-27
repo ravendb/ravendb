@@ -68,11 +68,9 @@ namespace Raven.Server.Documents.Queries.AST
 
         public void VisitGraph(GraphQuery q)
         {
-            if (q.WithDocumentQueries != null)
-                VisitWithClauses(q.WithDocumentQueries);
+            VisitWithClauses(q.WithDocumentQueries);
 
-            if (q.WithEdgePredicates != null)
-                VisitWithEdgePredicates(q.WithEdgePredicates);
+            VisitWithEdgePredicates(q.WithEdgePredicates);
 
             if (q.MatchClause != null)
                 VisitMatchExpression(q.MatchClause);

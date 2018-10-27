@@ -839,9 +839,9 @@ namespace Raven.Server.Documents.Queries
                List<Match> relatedMatches)
             {
                 bool hasResults = false;
-                if (edge.Where != null)
+                if (edge.Where != null || edge.Project != null)
                 {
-                    if (src.TryGetMember(edge.Path.Compound[0], out var value) == false)
+                    if (src.TryGetMember(edge.Path.FieldValue, out var value) == false)
                         return false;
 
                     switch (value)
@@ -850,22 +850,22 @@ namespace Raven.Server.Documents.Queries
                             foreach (var item in array)
                             {
                                 if (item is BlittableJsonReaderObject json &&
-                                    edge.Where.IsMatchedBy(json, _queryParameters))
+                                    edge.Where?.IsMatchedBy(json, _queryParameters) != false)
                                 {
-                                    hasResults |= TryGetMatchesAfterFiltering(edgeResult, json, edge.Path.FieldValueWithoutAlias, edgeResults, alias, edge.EdgeAlias, relatedMatches);
+                                    hasResults |= TryGetMatchesAfterFiltering(edgeResult, json, edge.Project.FieldValue, edgeResults, alias, edge.EdgeAlias, relatedMatches);
                                 }
                             }
                             break;
                         case BlittableJsonReaderObject json:
-                            if (edge.Where.IsMatchedBy(json, _queryParameters))
+                            if (edge.Where?.IsMatchedBy(json, _queryParameters) != false)
                             {
-                                hasResults |= TryGetMatchesAfterFiltering(edgeResult, json, edge.Path.FieldValueWithoutAlias, edgeResults, alias, edge.EdgeAlias, relatedMatches);
+                                hasResults |= TryGetMatchesAfterFiltering(edgeResult, json, edge.Project.FieldValue, edgeResults, alias, edge.EdgeAlias, relatedMatches);
                             }
                             break;
                     }
                     return hasResults;
                 }
-                else
+                else 
                 {
                     hasResults = TryGetMatchesAfterFiltering(edgeResult, src, edge.Path.FieldValue, edgeResults, alias, edge.EdgeAlias, relatedMatches);
                 }

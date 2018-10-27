@@ -21,9 +21,9 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var moviesQueryResult = session.Advanced.RawQuery<Movie>(@"
-                        match (u:Users(id() = 'users/2'))-[:HasRated.Movie]->(m:Movies) select m
+                        match (Users as u where id() = 'users/2')-[HasRated select Movie]->(Movies as m) select m
                     ").ToList();
-
+                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(2, moviesQueryResult.Count);
                     Assert.Contains(moviesQueryResult.Select(x => x.Name), name => name == "Firefly Serenity" || name == "Indiana Jones and the Temple Of Doom");
                 }
@@ -55,7 +55,7 @@ namespace FastTests.Graph
                     WaitForUserToContinueTheTest(store);
                     //note the whitespace in edge property name in the graph query
                     var resultsAsJson = session.Advanced
-                        .RawQuery<JObject>(@"match (o:Orders (id() = 'orders/825-A'))-[:'Order Lines'.Product]->(p:Products) select p.Name as Name").ToList();
+                        .RawQuery<JObject>(@"match (Orders as o where id() = 'orders/825-A')-['Order Lines' select Product]->(Products as p) select p.Name as Name").ToList();
                     var productNamesFromMatch = resultsAsJson.Select(r => r["Name"].Value<string>()).ToArray();
                     Assert.Equal(4, productNamesFromMatch.Length); //sanity check
 
@@ -83,7 +83,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var moviesQueryResult = session.Advanced.RawQuery<Movie>(@"
-                        match (u:Users(id() = 'users/2'))-[:HasRated.Movie]->(m:Movies) select m
+                        match (Users as u where id() = 'users/2')-[ HasRated select Movie]->(Movies as m) select m
                     ").ToList();
 
                     Assert.Equal(2, moviesQueryResult.Count); //sanity check
@@ -109,7 +109,7 @@ namespace FastTests.Graph
                 {
                     Assert.Throws<InvalidQueryException>(() =>
                         session.Advanced.RawQuery<JObject>(@"
-                            match [:HasRated(Score > 1).Movie]->(m:Movies) 
+                            match [HasRated where Score > 1 select Movie]->(Movies as m) 
                         ").ToList());
                 }
             }
@@ -125,7 +125,7 @@ namespace FastTests.Graph
                 {
                     Assert.Throws<InvalidQueryException>(() =>
                         session.Advanced.RawQuery<JObject>(@"
-                            match (u1:Users)-[:HasRated(Score > 1).Movie]
+                            match (Users as u1)-[HasRated where Score > 1 select Movie]
                         ").ToList());
                 }
             }
@@ -164,7 +164,7 @@ namespace FastTests.Graph
                 {
                     Assert.Throws<InvalidQueryException>(() =>
                         session.Advanced.RawQuery<JObject>(@"
-                        match (a:Dogs)-[:Likes]->(b:Dogs)-[:Likes]->(c:dogs)
+                        match (Dogs as a)-[Likes]->(Dogs as b)-[Likes]->(Dogs as c)
                         select a.Name,b.Name") // <- this is wrong because we have two implicit "Name" aliases in select clause
                             .ToList());
                 }
@@ -204,7 +204,7 @@ namespace FastTests.Graph
                 {
                     Assert.Throws<InvalidQueryException>(() =>
                         session.Advanced.RawQuery<JObject>(@"
-                        match (a:Dogs)-[:Likes]->(b:Dogs)-[:Likes]->(c:dogs)
+                        match (Dogs as a)-[Likes]->(Dogs as b)-[Likes]->(Dogs as c)
                         select a.Name AS Foo,b.Name AS Foo") // <- this is wrong because we have two explicit "Foo" aliases in select clause
                             .ToList());
                 }
@@ -245,7 +245,7 @@ namespace FastTests.Graph
                     //note : such query implies implicit intersection between
                     // a -[likes]-> b and b -[likes]-> c, but it doesn't execute interesection-related code
                     var friends = session.Advanced.RawQuery<JObject>(@"
-                        match (a:Dogs)-[:Likes]->(b:Dogs)-[:Likes]->(c:dogs)
+                        match (Dogs as a)-[Likes]->(Dogs as b)-[Likes]->(Dogs as c)
                         select a.Name as A,b.Name as B,c.Name as C
                         ")
                         .ToList();
@@ -300,7 +300,7 @@ namespace FastTests.Graph
                     //note : such query implies implicit intersection between
                     // a -[likes]-> b and b -[likes]-> c, but it doesn't execute interesection-related code
                     var friends = session.Advanced.RawQuery<JObject>(@"
-                        match (a:Dogs)-[:Likes]->(b:Dogs)-[:Likes]->(c:dogs)
+                        match (Dogs as a)-[Likes]->(Dogs as b)-[Likes]->(Dogs as c)
                         select a.Name as A,b.Name as B,c.Name as C
                         ")
                         .ToList();
@@ -346,7 +346,7 @@ namespace FastTests.Graph
 
                 using (var session = store.OpenSession())
                 {
-                    var friends = session.Advanced.RawQuery<JObject>(@"match (fst:Dogs)-[:Likes]->(snd:Dogs)")
+                    var friends = session.Advanced.RawQuery<JObject>(@"match (Dogs as fst)-[Likes]->(Dogs as snd)")
                         .ToList();
 
                     var resultPairs = friends.Select(x => new
@@ -371,7 +371,7 @@ namespace FastTests.Graph
 
                 using (var session = store.OpenSession())
                 {
-                    var friends = session.Advanced.RawQuery<JObject>(@"match (fst:Dogs)-[:Likes]->(snd:Dogs)")
+                    var friends = session.Advanced.RawQuery<JObject>(@"match (Dogs as fst)-[Likes]->(Dogs as snd)")
                                                   .ToList();
 
                     var resultPairs = friends.Select(x => new
@@ -403,7 +403,7 @@ namespace FastTests.Graph
                 {
                     //should throw because "foobar" is not defined in the query
                     Assert.Throws<InvalidQueryException>(() =>
-                        session.Advanced.RawQuery<JObject>(@"match (fst:Dogs)-[:Likes]->(snd:Dogs) select foobar").ToArray());
+                        session.Advanced.RawQuery<JObject>(@"match (Dogs as fst)-[Likes]->(Dogs as snd) select foobar").ToArray());
                 }
             }
         }
@@ -419,7 +419,7 @@ namespace FastTests.Graph
                 {
                     //should throw because "foobar" is not defined in the query
                     Assert.Throws<InvalidQueryException>(() =>
-                        session.Advanced.RawQuery<JObject>(@"match (fst:Dogs)-[:Likes]->(snd:Dogs) select fst,foobar,snd").ToArray());
+                        session.Advanced.RawQuery<JObject>(@"match (Dogs as fst)-[Likes]->(Dogs as snd) select fst,foobar,snd").ToArray());
                 }
             }
         }
@@ -434,7 +434,7 @@ namespace FastTests.Graph
 
                 using (var session = store.OpenSession())
                 {
-                    var friends = session.Advanced.RawQuery<JObject>(@"match (fst:Dogs)-[:Likes]->(snd:Dogs) select { a : fst, b: snd }")
+                    var friends = session.Advanced.RawQuery<JObject>(@"match (Dogs as fst)-[Likes]->(Dogs as snd) select { a : fst, b: snd }")
                         .ToList();
 
                     var resultPairs = friends.Select(x => new
@@ -464,7 +464,7 @@ namespace FastTests.Graph
                 using (var one = store.OpenSession())
                 using (var two = store.OpenSession())
                 {
-                    var orderFromMatch = one.Advanced.RawQuery<Order>(@"match (o:Orders (id() = 'orders/825-A'))").First();
+                    var orderFromMatch = one.Advanced.RawQuery<Order>(@"match (Orders as o where id() = 'orders/825-A')").First();
 
                     var orderFromLoad = two.Load<Order>("orders/825-A");
 
@@ -485,7 +485,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var resultsAsJson = session.Advanced
-                        .RawQuery<JObject>(@"match (o:Orders (id() = 'orders/825-A'))-[:Lines[].Product]->(p:Products) select p.Name as Name").ToList();
+                        .RawQuery<JObject>(@"match (Orders  as o where id() = 'orders/825-A')-[Lines select Product]->(Products as p) select p.Name as Name").ToList();
                     var productNamesFromMatch = resultsAsJson.Select(r => r["Name"].Value<string>()).ToArray();
                     Assert.Equal(4, productNamesFromMatch.Length); //sanity check
 
@@ -511,7 +511,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var resultsAsJson = session.Advanced
-                        .RawQuery<JObject>(@"match (o:Orders (id() = 'orders/825-A'))-[:Lines(ProductName = 'Chang')[].Product]->(p:Products) select p.Name as Name").ToList();
+                        .RawQuery<JObject>(@"match (Orders  as o where id() = 'orders/825-A')-[Lines where ProductName = 'Chang' select Product]->(Products as p) select p.Name as Name").ToList();
                     var productNameFromMatch = resultsAsJson.Select(r => r["Name"].Value<string>()).First();
 
                     var query = session.Advanced.RawQuery<OrderLine>(@"
@@ -545,7 +545,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var resultsAsJson = session.Advanced
-                        .RawQuery<JObject>(@"match (o:Orders (id() = 'orders/825-A'))-[:Lines(ProductName = 'Chang').Product]->(p:Products) select p.Name as Name").ToList();
+                        .RawQuery<JObject>(@"match (Orders as o where id() = 'orders/825-A')-[Lines where ProductName = 'Chang' select Product]->(Products as p) select p.Name as Name").ToList();
                     var productNameFromMatch = resultsAsJson.Select(r => r["Name"].Value<string>()).First();
 
                     var query = session.Advanced.RawQuery<OrderLine>(@"
@@ -579,7 +579,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var resultsAsJson = session.Advanced
-                        .RawQuery<JObject>(@"match (o:Orders (id() = 'orders/825-A'))-[:Lines.Product]->(p:Products) select p.Name as Name").ToList();
+                        .RawQuery<JObject>(@"match (Orders as o where id() = 'orders/825-A')-[Lines select Product]->(Products as p) select p.Name as Name").ToList();
                     var productNamesFromMatch = resultsAsJson.Select(r => r["Name"].Value<string>()).ToArray();
                     Assert.Equal(4, productNamesFromMatch.Length); //sanity check
 
@@ -605,7 +605,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var matchQueryResultsAsJson = session.Advanced
-                        .RawQuery<JObject>(@"match (o:Orders (id() = 'orders/825-A'))-[l:Lines.Product]->(p:Products) 
+                        .RawQuery<JObject>(@"match (Orders  as o where id() = 'orders/825-A')-[Lines as l select Product]->(Products as p) 
                                                     select o,l,p").ToList();
                     Assert.Equal(4, matchQueryResultsAsJson.Count); //sanity check                    
 
@@ -661,7 +661,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<Dog>(@"
-                       match (d1:Dogs(id() = 'dogs/1-A'))-recursive{ [l:Likes ]} ->(d2:Dogs(id() = 'dogs/2-A'))").ToList();
+                       match (Dogs as d1 where id() = 'dogs/1-A')-recursive{ [Likes as l]} ->(Dogs as d2 where id() = 'dogs/2-A')").ToList();
                     Assert.Empty(results);
                 }
             }
@@ -691,7 +691,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<Dog>(@"
-                       match (d1:Dogs)-recursive { [l:Likes ] } ->(d2:Dogs)").ToList();
+                       match (Dogs as d1)-recursive { [Likes  as l] } ->(Dogs as d2)").ToList();
                     Assert.Empty(results);
                 }
             }
@@ -723,7 +723,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (d1:Dogs)-recursive as m { [l:Likes ] } ->(d2:Dogs) 
+                       match (Dogs as d1)-recursive as m { [Likes as l] } ->(Dogs as d2) 
                        select d1.Name as d1,m.l.Name as l, d2.Name as d2").ToList();
                     Assert.NotEmpty(results); //sanity check
                     var interpretedResults = results.Select(x => new
@@ -766,7 +766,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (d1:Dogs)-recursive { [l:Likes ] } ->(d2:Dogs) 
+                       match (Dogs as d1)-recursive { [Likes as l] } ->(Dogs as d2) 
                        where d1 <> d2
                        select d1.Name as d1,l.Name as l, d2.Name as d2").ToList();
                     Assert.NotEmpty(results); //sanity check
@@ -813,7 +813,7 @@ namespace FastTests.Graph
                 }
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Advanced.RawQuery<JObject>("match (s:People)-recursive as path { [r:Ancestor ] }->(a:People)").ToArray();
+                    var results = session.Advanced.RawQuery<JObject>("match (People as s)-recursive as path { [Ancestor as r] }->(People as a)").ToArray();
                     Assert.NotEmpty(results);
                     var stronglyTypedResults = results.Select(x => new
                     {
@@ -857,7 +857,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (d1:Dogs)-recursive as fst{ [l:Likes ] } ->(d2:Dogs)- recursive as snd { [l2:Likes ] } ->(d3:Dogs)
+                       match (Dogs as d1)-recursive as fst{ [Likes as l] } ->(Dogs as d2)- recursive as snd { [Likes as l2] } ->(Dogs as d3)
                        select d1.Name as d1,fst.l.Name as l, d2.Name as d2, snd.l2.Name as l2, d3.Name as d3").ToList();
                     Assert.NotEmpty(results); //sanity check
                     var interpretedResults = results.Select(x => new

@@ -389,15 +389,7 @@ namespace Raven.Server.Documents.Queries.AST
             if (withEdgesClause.Path != null)
             {
                 _sb.Append("(");
-                bool first = true;
-                foreach (var item in withEdgesClause.Path.Compound)
-                {
-                    if (first == false)
-                        _sb.Append(".");
-                    first = false;
-                    _sb.Append(item);
-                }
-
+                VisitExpression(withEdgesClause.Path);
                 _sb.Append(")");
             }
 

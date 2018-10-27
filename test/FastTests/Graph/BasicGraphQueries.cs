@@ -69,7 +69,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                            match (a:Dogs)-[:Likes]->(f:Dogs)<-[:Likes]-(b:Dogs)
+                            match (Dogs as a)-[Likes]->(Dogs as f)<-[Likes]-(Dogs as b)
                             select {
                                 a: a,
                                 f: f,
@@ -89,23 +89,24 @@ namespace FastTests.Graph
                 CreateDogDataWithoutEdges(store);
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Advanced.RawQuery<JObject>(@"match (a:Dogs)-[:Likes]->(f:Dogs)<-[:Likes]-(b:Dogs)").ToList();
+                    var results = session.Advanced.RawQuery<JObject>(@"match (Dogs as a)-[Likes]->(Dogs as f)<-[Likes]-(Dogs as b)").ToList();
                     Assert.Empty(results);
                 }
             }
         }
 
         [Fact]
-        public void Empty_vertex_node_should_fail_the_query()
+        public void Empty_vertex_node_should_work()
         {
             using (var store = GetDocumentStore())
             {
                 CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
-                    Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<Movie>(@"
-                        match ()-[:HasRated.Movie]->(m:Movies) select m
-                    ").ToList());
+                   var results = session.Advanced.RawQuery<Movie>(@"
+                        match ()-[HasRated select Movie]->(Movies as m) select m
+                    ").ToList();
+                    Assert.Equal(5, results.Count);
                 }
             }
         }
@@ -132,7 +133,7 @@ namespace FastTests.Graph
                 CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
-                    var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (u)-[:HasRated.Movie]->(m)").ToList();
+                    var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (u)-[HasRated select Movie]->(m)").ToList();
                     Assert.True(allVerticesQuery.All(row => row.ContainsKey("m")));
                     Assert.True(allVerticesQuery.All(row => row.ContainsKey("u")));
                 }
@@ -205,7 +206,7 @@ namespace FastTests.Graph
                 CreateSimpleData(store);
                 using (var session = store.OpenSession())
                 {
-                    var result = session.Advanced.RawQuery<JObject>(@"match (e:Entities)-[:References]->(e2:Entities)").ToList();
+                    var result = session.Advanced.RawQuery<JObject>(@"match (Entities as e)-[References]->(Entities as e2)").ToList();
 
                     Assert.Equal(3, result.Count);
                     Assert.Contains(result,
@@ -225,7 +226,7 @@ namespace FastTests.Graph
         public void CanProjectSameDocumentTwice()
         {
             var results = Query<OrderAndProduct>(@"
-match (o:Orders (id() = 'orders/828-A'))-[:Lines.Product]->(p:Products)
+match (Orders as o where id() = 'orders/828-A')-[Lines select Product]->(Products as p)
 select {
     OrderId: id(o),
     Product: p.Name
@@ -243,7 +244,7 @@ select {
         public void CanProjectEdges()
         {
             var results = Query<OrderAndProduct>(@"
-match (o:Orders (id() = 'orders/821-A'))-[l:Lines.Product]->(p:Products)
+match (Orders as o where id() = 'orders/821-A')-[Lines as l select Product]->(Products as p)
 select {
     OrderId: id(o),
     Product: p.Name,
@@ -263,7 +264,7 @@ select {
         public void CanUseEmptyDocumentAlias()
         {
             var results = Query<Employee>(@"
-match (e:Employees(FirstName='Nancy'))-[:ReportsTo]->(manager)
+match (Employees as e where FirstName='Nancy')-[ReportsTo]->(manager)
 select manager
 ");
             Assert.Equal(1, results.Count);
@@ -278,16 +279,16 @@ select manager
         {
             // not a theory because I want to run all queries on a single db
             AssertQueryResults(
-                ("match (o:Orders (id() = 'orders/828-A'))-[:Lines(ProductName = 'Chang').Product]->(p:Products)", 1),
-                ("match (o:Orders (id() = 'orders/828-A'))-[:Lines(ProductName != 'Chang').Product]->(p:Products)", 2),
-                ("match (o:Orders (id() = 'orders/17-A'))-[:Lines(Discount > 0).Product]->(p:Products)", 1),
-                ("match (o:Orders (id() = 'orders/17-A'))-[:Lines(Discount >= 0).Product]->(p:Products)", 2),
-                ("match (o:Orders (id() = 'orders/17-A'))-[:Lines(Discount <= 0.15).Product]->(p:Products)", 2),
-                ("match (o:Orders (id() = 'orders/17-A'))-[:Lines(Discount < 0.15).Product]->(p:Products)", 1),
-                ("match (o:Orders (id() = 'orders/828-A'))-[:Lines(ProductName in ('Spegesild', 'Chang') ).Product]->(p:Products)", 2),
-                ("match (o:Orders (id() = 'orders/830-A'))-[:Lines(Discount between 0 and 0.1).Product]->(p:Products)", 24),
-                ("match( e: Employees(Territories all in ('60179', '60601') ) )", 1),
-                ("match(e: Employees(Territories in ('60179', '60601')) )", 1)
+                ("match (Orders as o where id() = 'orders/828-A')-[Lines where ProductName = 'Chang' select Product]->(Products as p)", 1),
+                ("match (Orders as o where id() = 'orders/828-A')-[Lines where ProductName != 'Chang' select Product]->(Products as p)", 2),
+                ("match (Orders as o where id() = 'orders/17-A')-[Lines where Discount > 0 select Product]->(Products as p)", 1),
+                ("match (Orders as o where id() = 'orders/17-A')-[Lines where Discount >= 0 select Product]->(Products as p)", 2),
+                ("match (Orders as o where id() = 'orders/17-A')-[Lines where Discount <= 0.15 select Product]->(Products as p)", 2),
+                ("match (Orders as o where id() = 'orders/17-A')-[Lines where Discount < 0.15 select Product]->(Products as p)", 1),
+                ("match (Orders as o where id() = 'orders/828-A')-[Lines where ProductName in ('Spegesild', 'Chang') select Product]->(Products as p)", 2),
+                ("match (Orders as o where id() = 'orders/830-A')-[Lines where Discount between 0 and 0.1 select Product]->(Products as p)", 24),
+                ("match (Employees as e where Territories all in ('60179', '60601' ) )", 1),
+                ("match (Employees as e where Territories in ('60179', '60601') )", 1)
             );
         }
 
@@ -301,7 +302,7 @@ select manager
         public void CanUseMultiHopInQueries()
         {
             var results = Query<EmployeeRelations>(@"
-match (e:Employees (id() = 'employees/7-A'))-recursive as n { [m:ReportsTo] }->(boss:Employees)
+match (Employees as e where id() = 'employees/7-A')-recursive as n { [ReportsTo as m] }->(Employees as boss)
 select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
 ");
             Assert.Equal(1, results.Count);
@@ -317,7 +318,7 @@ select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
         public void CanUseMultiHopInQueriesWithScript()
         {
             var results = Query<EmployeeRelations>(@"
-match (e:Employees (id() = 'employees/7-A'))-recursive as n { [m:ReportsTo] }->(boss:Employees)
+match (Employees as e where id() = 'employees/7-A')-recursive as n { [ReportsTo as m] }->(Employees as boss)
 select {
     Employee: e.FirstName + ' ' + e.LastName,
     MiddleManagement: n.map(f => load(f.m)).map(f => f.FirstName + ' ' + f.LastName),
@@ -337,7 +338,7 @@ select {
         public void CanHandleCyclesInGraph()
         {
             var results = Query<EmployeeRelations>(@"
-match (e:Employees (id() = 'employees/7-A'))-recursive as n { [m:ReportsTo] }->(boss:Employees)
+match (Employees as e where id() = 'employees/7-A')-recursive as n { [ReportsTo as m] }->(Employees as boss)
 select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
 ", store =>
             {
@@ -386,7 +387,7 @@ select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<Tragedy>(@"
-match (son:People (Name = 'Otho Sackville-Baggins'))-recursive (0) { [:Parents(Gender = 'Male').Id]->(ancestor:People (BornAt='Shire'))-[:Parents(Gender = 'Male').Id] } ->(evil:People (BornAt = 'Mordor'))
+match (People as son where Name = 'Otho Sackville-Baggins')-recursive (0) { [Parents where Gender = 'Male' select Id]->(People as ancestor where BornAt='Shire')-[Parents where Gender = 'Male' select Id] } ->(People as evil where BornAt = 'Mordor')
 select son.Name as Son, evil.Name as Evil")
                         .ToList();
 
@@ -414,7 +415,7 @@ select son.Name as Son, evil.Name as Evil")
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<HobbitAncestry>(@"
-match (son:People )-recursive as ancestry (2) { [:Parents(Gender = 'Male').Id]->(paternal:People (BornAt='Shire')) } 
+match (People as son)-recursive as ancestry (2) { [Parents where Gender = 'Male' select Id]->(People as paternal where BornAt='Shire') } 
 select ancestry.paternal.Name as PaternalAncestors, son.Name")
 .ToList();
                     results.Sort((x, y) => x.Name.CompareTo(y.Name)); // we didn't implement order by yet
