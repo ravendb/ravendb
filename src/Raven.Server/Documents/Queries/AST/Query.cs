@@ -47,11 +47,6 @@ namespace Raven.Server.Documents.Queries.AST
                 GraphQuery = new GraphQuery();                
             }
 
-            if (GraphQuery.WithDocumentQueries == null)
-            {
-                GraphQuery.WithDocumentQueries = new Dictionary<StringSegment, Query>();
-            }
-
             if (GraphQuery.WithDocumentQueries.TryGetValue(alias, out var existing))
             {
                 if (query.From.From.Compound.Count == 0)
@@ -76,11 +71,6 @@ namespace Raven.Server.Documents.Queries.AST
             if (GraphQuery == null)
             {
                 GraphQuery = new GraphQuery();               
-            }
-
-            if (GraphQuery.WithEdgePredicates == null)
-            {
-                GraphQuery.WithEdgePredicates = new Dictionary<StringSegment, WithEdgesExpression>();
             }
 
             if (GraphQuery.WithEdgePredicates.ContainsKey(alias))

@@ -151,8 +151,11 @@ namespace Raven.Server.Documents.Queries
 
                 foreach (var item in _inner)
                 {
-                    if (item.Key.StartsWith("_"))
-                        continue;
+                    // This is used as the sources for the query, and as such, we need it to
+                    // process all results, even if they are anonymous
+                    //
+                    // if (item.Key.StartsWith("_"))
+                    //    continue;
 
                     if (item.Value is Document d)
                     {

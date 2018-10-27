@@ -16,12 +16,15 @@ namespace Raven.Server.Documents.Queries.AST
 
         public StringSegment EdgeAlias;
 
-        public WithEdgesExpression(QueryExpression @where, FieldExpression path, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy)
+        public FieldExpression Project;
+
+        public WithEdgesExpression(QueryExpression @where, FieldExpression path, FieldExpression project, List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy)
         {
             Where = @where;
             OrderBy = orderBy;
             Type = ExpressionType.WithEdge;
             Path = path;
+            Project = project;
         }
 
         public override string ToString() => GetText();

@@ -54,9 +54,9 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
+                       match (Users as u1 where Name = 'A')-[HasRated select Movie]->(Movies as m)
                              OR
-                             (u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
+                             (Users as u2 where Name = 'B')-[HasRated select Movie]->(Movies as m)
                        select u1.Name as u1, m.Name as movie, u2.Name as u2
                     ").ToList().Select(x => new
                     {
@@ -118,9 +118,9 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
+                       match (Users as u1 where Name = 'A')-[HasRated select Movie]->(Movies as m)
                              AND
-                             (u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
+                             (Users as u2 where Name = 'B')-[HasRated select Movie]->(Movies as m)
                        select u1.Name as u1, m.Name as movie, u2.Name as u2
                     ").ToList();
 
@@ -175,9 +175,9 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
+                       match (Users as u1 where Name = 'A')-[HasRated select Movie]->(Movies as m)
                              AND
-                             (u2:Users(Name = 'NON-EXISTENT'))-[:HasRated.Movie]->(m:Movies)
+                             (Users as u2 where Name = 'NON-EXISTENT')-[HasRated select Movie]->(Movies as m)
                        select u1.Name as u1, m.Name as movie, u2.Name as u2
                     ").ToList();
 
@@ -231,9 +231,9 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (u1:Users(Name = 'NON-EXISTENT'))-[:HasRated.Movie]->(m:Movies)
+                       match (Users as u1 where Name = 'NON-EXISTENT')-[HasRated select Movie]->(Movies as m)
                              AND
-                             (u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
+                             (Users as u2 where Name = 'B')-[HasRated select Movie]->(Movies as m)
                        select u1.Name as u1, m.Name as movie, u2.Name as u2
                     ").ToList();
 
@@ -289,9 +289,9 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
+                       match (Users as u1 where Name = 'A')-[HasRated select Movie]->(Movies as m)
                              AND NOT
-                             (u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
+                             (Users as u2 where Name = 'B')-[HasRated select Movie]->(Movies as m)
                        select u1.Name as u1, m.Name as movie, u2.Name as u2
                     ").ToList();
 
@@ -347,9 +347,9 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
+                       match (Users as u1 where Name = 'A')-[HasRated select Movie]->(Movies as m)
                              AND NOT
-                             (u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
+                             (Users as u2 where Name = 'B')-[HasRated select Movie]->(Movies as m)
                        select u1.Name as u1, m.Name as movie, u2.Name as u2
                     ").ToList().Select(x => new
                     {
@@ -411,9 +411,9 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
+                       match (Users as u1 where Name = 'A')-[HasRated select Movie]->(Movies as m)
                              AND NOT
-                             (u2:Users(Name = 'NON-EXISTENT'))-[:HasRated.Movie]->(m:Movies)
+                             (Users as u2 where Name = 'NON-EXISTENT')-[HasRated select Movie]->(Movies as m)
                        select u1.Name as u1, m.Name as movie, u2.Name as u2
                     ").ToList().Select(x => new
                     {
@@ -477,9 +477,9 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
+                       match (Users as u1 where Name = 'A')-[HasRated select Movie]->(Movies as m)
                              OR
-                             (u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
+                             (Users as u2 where Name = 'B')-[HasRated select Movie]->(Movies as m)
                        select u1.Name as u1, m.Name as movie, u2.Name as u2
                     ").ToList().Select(x => new
                     {
@@ -545,9 +545,9 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (u1:Users(Name = 'NON-EXISTENT'))-[:HasRated.Movie]->(m:Movies)
+                       match (Users as u1 where Name = 'NON-EXISTENT')-[HasRated select Movie]->(Movies as m)
                              OR
-                             (u2:Users(Name = 'B'))-[:HasRated.Movie]->(m:Movies)
+                             (Users as u2 where Name = 'B')-[HasRated select Movie]->(Movies as m)
                        select u1.Name as u1, m.Name as movie, u2.Name as u2
                     ").ToList().Select(x => new
                     {
@@ -611,9 +611,9 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (u1:Users(Name = 'NON-EXISTENT'))-[:HasRated.Movie]->(m:Movies)
+                       match (Users as u1 where Name = 'NON-EXISTENT')-[HasRated select Movie]->(Movies as m)
                              OR
-                             (u2:Users(Name = 'NON-EXISTENT2'))-[:HasRated.Movie]->(m:Movies)
+                             (Users as u2 where Name = 'NON-EXISTENT2')-[HasRated select Movie]->(Movies as m)
                        select u1.Name as u1, m.Name as movie, u2.Name as u2
                     ").ToList();
 
@@ -669,9 +669,9 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (u1:Users(Name = 'NON-EXISTENT'))-[:HasRated.Movie]->(m:Movies)
+                       match (Users as u1 where Name = 'NON-EXISTENT')-[HasRated select Movie]->(Movies as m)
                              AND
-                             (u2:Users(Name = 'NON-EXISTENT2'))-[:HasRated.Movie]->(m:Movies)
+                             (Users as u2 where Name = 'NON-EXISTENT2')-[HasRated select Movie]->(Movies as m)
                        select u1.Name as u1, m.Name as movie, u2.Name as u2
                     ").ToList();
 
@@ -727,9 +727,9 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (u1:Users(Name = 'NON-EXISTENT'))-[:HasRated.Movie]->(m:Movies)
+                       match (Users as u1 where Name = 'NON-EXISTENT')-[HasRated select Movie]->(Movies as m)
                              AND NOT
-                             (u2:Users(Name = 'NON-EXISTENT2'))-[:HasRated.Movie]->(m:Movies)
+                             (Users as u2 where Name = 'NON-EXISTENT2')-[HasRated select Movie]->(Movies as m)
                        select u1.Name as u1, m.Name as movie, u2.Name as u2
                     ").ToList();
 
@@ -786,9 +786,9 @@ namespace FastTests.Graph
                 {
                     Assert.Throws<RavenException>(() => 
                         session.Advanced.RawQuery<JObject>(@"
-                           match (u1:Users(Name = 'NON-EXISTENT'))-[:HasRated.Movie]->(m:Movies)
+                           match (Users as u1 where Name = 'NON-EXISTENT')-[HasRated select Movie]->(Movies as m)
                                   FOOBAR 
-                                 (u2:Users(Name = 'NON-EXISTENT2'))-[:HasRated.Movie]->(m:Movies)
+                                 (Users as u2 where Name = 'NON-EXISTENT2')-[HasRated select Movie]->(Movies as m)
                            select u1.Name as u1, m.Name as movie, u2.Name as u2
                         ").ToList());
                 }
@@ -841,9 +841,9 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (u1:Users(Name = 'A'))-[:HasRated.Movie]->(m:Movies)
+                       match (Users as u1 where Name = 'A')-[HasRated select Movie]->(Movies as m)
                              OR
-                             (u2:Users(Name = 'NON-EXISTENT'))-[:HasRated.Movie]->(m:Movies)
+                             (Users as u2 where Name = 'NON-EXISTENT')-[HasRated select Movie]->(Movies as m)
                        select u1.Name as u1, m.Name as movie, u2.Name as u2
                     ").ToList().Select(x => new
                     {
@@ -870,8 +870,8 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (u1:Users)-[:HasRated(Score > 1).Movie]->(m:Movies(id() = 'movies/2'))
-                         and (u2:Users)-[:HasRated.Movie]->(m:Movies(id() = 'movies/2'))
+                       match(Users as u1)-[HasRated where Score > 1 select Movie]->(Movies as m where id() = 'movies/2')
+                         and (Users as u2)-[HasRated select Movie]->(Movies as m where id() = 'movies/2')
                        select u1.Name as U1,u2.Name as U2
                     ").ToList().Select(x => new
                     {
@@ -899,7 +899,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (u1:Users)-[:HasRated(Score > 1).Movie]->(m:Movies(id() = 'movies/2'))<-[:HasRated.Movie]-(u2:Users)                              
+                       match(Users as u1)-[HasRated where Score > 1 select Movie]->(Movies as m where id() = 'movies/2')<-[HasRated select Movie]-(Users as u2)                              
                        select u1.Name as U1,u2.Name as U2
                     ").ToList().Select(x => new
                     {
@@ -928,7 +928,7 @@ namespace FastTests.Graph
                 {
                     Assert.Throws<InvalidQueryException>(() =>
                         session.Advanced.RawQuery<JObject>(@"
-                            match (u1:Users)-[:HasRated(Score > 1).Movie]->(m:Movies) AND
+                            match(Users as u1)-[HasRated where Score > 1 select Movie]->(Movies as m) AND
                             select u1,u2
                         ").ToList());
                 }
@@ -945,7 +945,7 @@ namespace FastTests.Graph
                 {
                     Assert.Throws<InvalidQueryException>(() =>
                         session.Advanced.RawQuery<JObject>(@"
-                            match (u1:Users)-[:HasRated(Score > 1).Movie]->(m:Movies) OR
+                            match(Users as u1)-[HasRated where Score > 1 select Movie]->(Movies as m) OR
                             select u1,u2
                         ").ToList());
                 }

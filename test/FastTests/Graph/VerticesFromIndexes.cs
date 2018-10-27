@@ -20,7 +20,7 @@ namespace FastTests.Graph
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
                         with { from index 'Orders/ByCompany' } as o
-                        match (o)-[:Company]->(c:Companies)
+                        match (o)-[Company]->(Companies as c) 
                     ").ToList();
 
                     Assert.NotEmpty(results); //sanity check
@@ -50,7 +50,7 @@ namespace FastTests.Graph
                 {
                     var results = session.Advanced.RawQuery<Order>(@"
                         with { from index 'Orders/Totals' order by id() desc} as o
-                        match (o)-[:Company]->(c:Companies)
+                        match (o)-[Company]->(Companies as c)
                         select o
                     ").ToList();
 
@@ -74,7 +74,7 @@ namespace FastTests.Graph
                 {
                     var e = Assert.Throws<RavenException>(() => session.Advanced.RawQuery<JObject>(@"
                         with { from index 'Orders/ByCompany' } as byCompaniesMapReduceResults
-                        match (o:Orders)-[:Company]->(byCompaniesMapReduceResults)
+                        match (Orders as o)-[Company]->(byCompaniesMapReduceResults)
                     ").ToList());
 
                     Assert.IsType<InvalidOperationException>(e.InnerException);
@@ -94,7 +94,7 @@ namespace FastTests.Graph
                 {
                     var e = Assert.Throws<RavenException>(() => session.Advanced.RawQuery<JObject>(@"
                         with { from index 'Orders/ByCompany' } as indexQueryResults
-                        match (o:Orders)-[:Company]->(indexQueryResults)-[:Company]->(c:Companies)
+                        match (Orders as o)-[Company]->(indexQueryResults)-[Company]->(Companies as c)
                     ").ToList());
 
                     Assert.IsType<InvalidOperationException>(e.InnerException);

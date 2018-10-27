@@ -201,7 +201,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return _q[_pos] == match;
         }
 
-        public bool TryScan(string match, bool skipWhitespace = true)
+        public bool TryPeek(string match, bool skipWhitespace = true)
         {
             if (SkipWhitespace(skipWhitespace) == false)
                 return false;
@@ -218,6 +218,14 @@ namespace Raven.Server.Documents.Queries.Parser
                    char.IsLetterOrDigit(_q[_pos + match.Length]))
                     return false;
             }
+
+            return true;
+        }
+
+        public bool TryScan(string match, bool skipWhitespace = true)
+        {
+            if (TryPeek(match, skipWhitespace) == false)
+                return false;
 
             _pos += match.Length;
             Column += match.Length;

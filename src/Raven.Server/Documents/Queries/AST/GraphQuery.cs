@@ -8,9 +8,9 @@ namespace Raven.Server.Documents.Queries.AST
     {
         public HashSet<StringSegment> RecursiveMatches = new HashSet<StringSegment>(StringSegmentEqualityComparer.Instance);
 
-        public Dictionary<StringSegment, Query> WithDocumentQueries;
-     
-        public Dictionary<StringSegment, WithEdgesExpression> WithEdgePredicates;
+        public Dictionary<StringSegment, Query> WithDocumentQueries = new Dictionary<StringSegment, Query>();
+
+        public Dictionary<StringSegment, WithEdgesExpression> WithEdgePredicates = new Dictionary<StringSegment, WithEdgesExpression>();
 
         public QueryExpression MatchClause;
 
@@ -32,6 +32,17 @@ namespace Raven.Server.Documents.Queries.AST
                 DeclaredFunctions = new Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
 
             return DeclaredFunctions.TryAdd(name, func);
+        }
+
+        public bool HasAlias(StringSegment alias)
+        {
+            if (WithDocumentQueries.ContainsKey(alias))
+                return true;
+            if (WithEdgePredicates.ContainsKey(alias))
+                return true;
+            if (RecursiveMatches.Contains(alias))
+                return true;
+            return false;
         }
 
         public override string ToString()
