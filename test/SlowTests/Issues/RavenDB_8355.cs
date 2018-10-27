@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using FastTests;
@@ -20,165 +21,6 @@ namespace SlowTests.Issues
 {
     public class RavenDB_8355 : RavenTestBase
     {
-        private const string SorterCode = @"
-using System;
-using System.Collections.Generic;
-using Lucene.Net.Index;
-using Lucene.Net.Search;
-using Lucene.Net.Store;
-
-namespace SlowTests.Issues
-{
-    public class MySorter : FieldComparator
-    {
-        private readonly string _args;
-
-        public MySorter(string fieldName, int numHits, int sortPos, bool reversed, List<string> diagnostics)
-        {
-            _args = $""{fieldName}:{numHits}:{sortPos}:{reversed}"";
-        }
-
-        public override int Compare(int slot1, int slot2)
-        {
-            throw new InvalidOperationException($""Catch me: {_args}"");
-        }
-
-        public override void SetBottom(int slot)
-        {
-            throw new InvalidOperationException($""Catch me: {_args}"");
-        }
-
-        public override int CompareBottom(int doc, IState state)
-        {
-            throw new InvalidOperationException($""Catch me: {_args}"");
-        }
-
-        public override void Copy(int slot, int doc, IState state)
-        {
-            throw new InvalidOperationException($""Catch me: {_args}"");
-        }
-
-        public override void SetNextReader(IndexReader reader, int docBase, IState state)
-        {
-            throw new InvalidOperationException($""Catch me: {_args}"");
-        }
-
-        public override IComparable this[int slot] => throw new InvalidOperationException($""Catch me: {_args}"");
-    }
-}
-";
-
-        private const string SorterCode2 = @"
-using System;
-using System.Collections.Generic;
-using Lucene.Net.Index;
-using Lucene.Net.Search;
-using Lucene.Net.Store;
-
-namespace SlowTests.Issues
-{
-    public class MySorter : FieldComparator
-    {
-        private readonly string _args;
-
-        public MySorter(string fieldName, int numHits, int sortPos, bool reversed, List<string> diagnostics)
-        {
-            _args = $""{fieldName}:{numHits}:{sortPos}:{reversed}:other"";
-        }
-
-        public override int Compare(int slot1, int slot2)
-        {
-            throw new InvalidOperationException($""Catch me 2: {_args}"");
-        }
-
-        public override void SetBottom(int slot)
-        {
-            throw new InvalidOperationException($""Catch me 2: {_args}"");
-        }
-
-        public override int CompareBottom(int doc, IState state)
-        {
-            throw new InvalidOperationException($""Catch me 2: {_args}"");
-        }
-
-        public override void Copy(int slot, int doc, IState state)
-        {
-            throw new InvalidOperationException($""Catch me 2: {_args}"");
-        }
-
-        public override void SetNextReader(IndexReader reader, int docBase, IState state)
-        {
-            throw new InvalidOperationException($""Catch me 2: {_args}"");
-        }
-
-        public override IComparable this[int slot] => throw new InvalidOperationException($""Catch me 2: {_args}"");
-    }
-}
-";
-
-        private const string SorterCodeWithDiagnostics = @"
-using System;
-using System.Collections.Generic;
-using Lucene.Net.Index;
-using Lucene.Net.Search;
-using Lucene.Net.Store;
-using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
-
-namespace SlowTests.Issues
-{
-    public class MySorter : FieldComparator
-    {
-        private readonly List<string> _diagnostics;
-        private readonly AlphaNumericFieldComparator _inner;
-
-        public MySorter(string fieldName, int numHits, int sortPos, bool reversed, List<string> diagnostics)
-        {
-            _diagnostics = diagnostics;
-            _inner = new AlphaNumericFieldComparator(fieldName, new string[numHits]);
-        }
-
-        public override int Compare(int slot1, int slot2)
-        {
-            _diagnostics.Add(""Inner"");
-            return _inner.Compare(slot1, slot2);
-        }
-
-        public override void SetBottom(int slot)
-        {
-            _diagnostics.Add(""Inner"");
-            _inner.SetBottom(slot);
-        }
-
-        public override int CompareBottom(int doc, IState state)
-        {
-            _diagnostics.Add(""Inner"");
-            return _inner.CompareBottom(doc, state);
-        }
-
-        public override void Copy(int slot, int doc, IState state)
-        {
-            _diagnostics.Add(""Inner"");
-            _inner.Copy(slot, doc, state);
-        }
-
-        public override void SetNextReader(IndexReader reader, int docBase, IState state)
-        {
-            _diagnostics.Add(""Inner"");
-            _inner.SetNextReader(reader, docBase, state);
-        }
-
-        public override IComparable this[int slot]
-        {
-            get
-            {
-                _diagnostics.Add(""Inner"");
-                return _inner[slot];
-            }
-        }
-    }
-}
-";
-
         [Fact]
         public void CanUseCustomSorter()
         {
@@ -189,7 +31,7 @@ namespace SlowTests.Issues
                     { "MySorter", new SorterDefinition
                     {
                         Name = "MySorter",
-                        Code = SorterCode
+                        Code = GetSorter("RavenDB_8355.MySorter.cs")
                     }}
                 }
             }))
@@ -221,29 +63,33 @@ namespace SlowTests.Issues
 
                 CanUseSorterInternal<SorterDoesNotExistException>(store, "There is no sorter with 'MySorter' name", "There is no sorter with 'MySorter' name");
 
+                var sorterCode = GetSorter("RavenDB_8355.MySorter.cs");
+
                 store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
                 {
                     Name = "MySorter",
-                    Code = SorterCode
+                    Code = sorterCode
                 }));
 
                 // checking if we can send again same sorter
                 store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
                 {
                     Name = "MySorter",
-                    Code = SorterCode
+                    Code = sorterCode
                 }));
 
                 CanUseSorterInternal<RavenException>(store, "Catch me: Name:2:0:False", "Catch me: Name:2:0:True");
+
+                sorterCode = sorterCode.Replace("Catch me", "Catch me 2");
 
                 // checking if we can update sorter
                 store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
                 {
                     Name = "MySorter",
-                    Code = SorterCode2
+                    Code = sorterCode
                 }));
 
-                CanUseSorterInternal<RavenException>(store, "Catch me 2: Name:2:0:False:other", "Catch me 2: Name:2:0:True:other");
+                CanUseSorterInternal<RavenException>(store, "Catch me 2: Name:2:0:False", "Catch me 2: Name:2:0:True");
 
                 store.Maintenance.Send(new DeleteSorterOperation("MySorter"));
 
@@ -266,11 +112,11 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new PutSortersOperation(new SorterDefinition
                 {
-                    Name = "MySorter",
-                    Code = SorterCodeWithDiagnostics
+                    Name = "MySorterWithDiagnostics",
+                    Code = GetSorter("RavenDB_8355.MySorterWithDiagnostics.cs")
                 }));
 
-                var diagnostics = store.Operations.Send(new CustomQueryOperation("from Companies order by custom(Name, 'MySorter')"));
+                var diagnostics = store.Operations.Send(new CustomQueryOperation("from Companies order by custom(Name, 'MySorterWithDiagnostics')"));
 
                 Assert.True(diagnostics.Count > 0);
                 Assert.Contains("Inner", diagnostics);
@@ -387,6 +233,19 @@ namespace SlowTests.Issues
                         Result.Add(item.ToString());
                 }
             }
+        }
+
+        private static string GetSorter(string name)
+        {
+            using (var stream = GetDump(name))
+            using (var reader = new StreamReader(stream))
+                return reader.ReadToEnd();
+        }
+
+        private static Stream GetDump(string name)
+        {
+            var assembly = typeof(RavenDB_8355).Assembly;
+            return assembly.GetManifestResourceStream("SlowTests.Data." + name);
         }
     }
 }
