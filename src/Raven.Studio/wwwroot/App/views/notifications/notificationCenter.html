@@ -45,7 +45,7 @@
                     <h3 data-bind="text: title"></h3>
                 </div>
                 <div class="time" data-bind="text: displayDate().format('LLL')"></div>
-                <p data-bind="text: message"></p>
+                <p data-bind="html: message"></p>
                 <p data-bind="visible: isCanceled" class="text-warning">The operation was cancelled.</p>
 
                 <div class="flex-horizontal">
@@ -65,7 +65,7 @@
                     </h3>
                 </div>
                 <div class="time" data-bind="text: displayDate().format('LLL')"></div>
-                <p data-bind="text: message"></p>
+                <p data-bind="html: message"></p>
 
                 <div class="progress" data-bind="visible: isPercentageProgress(), if: isPercentageProgress()">
                     <div class="progress-bar" role="progressbar"
@@ -101,7 +101,7 @@
                 <h3 data-bind="text: title"></h3>
             </div>
             <div class="time" data-bind="text: displayDate().format('LLL')"></div>
-            <p data-bind="text: message"></p>
+            <p data-bind="html: message"></p>
             <div class="flex-horizontal">
                 <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
                         class="btn btn-sm">
@@ -157,7 +157,7 @@
                 <h3 data-bind="text: title"></h3>
             </div>
             <div class="time" data-bind="text: displayDate().format('LLL')"></div>
-            <p data-bind="text: message"></p>
+            <p data-bind="html: message"></p>
 
             <div class="flex-horizontal">
                 <button data-bind="visible: hasDetails(), click: _.partial($parent.openDetails, $data)"
@@ -199,7 +199,7 @@
             </button>
             <h3 data-bind="text: title"></h3>
             <div class="time" data-bind="text: displayDate().format('LLL')"></div>
-            <p data-bind="text: message"></p>
+            <p data-bind="html: message"></p>
 
             <div class="flex-horizontal">
                 <button data-bind="click: _.partial($parent.openDetails, $data)"
@@ -224,7 +224,7 @@
                     <h3 data-bind="text: title"></h3>
                 </div>
                 <div class="time" data-bind="text: displayDate().format('LLL')"></div>
-                <p data-bind="text: message"></p>
+                <p data-bind="html: message"></p>
                 <p data-bind="visible: isCanceled" class="text-warning">The operation was cancelled.</p>
             </div>
 
@@ -236,7 +236,7 @@
                     </h3>
                 </div>
                 <div class="time" data-bind="text: displayDate().format('LLL')"></div>
-                <p data-bind="text: message"></p>
+                <p data-bind="html: message"></p>
 
                 <div class="progress" data-bind="visible: isPercentageProgress(), if: isPercentageProgress()">
                     <div class="progress-bar" role="progressbar"
