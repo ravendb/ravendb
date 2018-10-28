@@ -430,7 +430,7 @@ namespace Raven.Server.Smuggler.Documents
             public bool IsDisposed => _isDisposed;
 
             private readonly DocumentsOperationContext _context;
-            private const string PreV4RevisionsDocumentId = "/revisions/";
+            public const string PreV4RevisionsDocumentId = "/revisions/";
 
             public MergedBatchPutCommand(DocumentDatabase database, BuildVersionType buildType, Logger log)
             {
@@ -601,7 +601,7 @@ namespace Raven.Server.Smuggler.Documents
                 if ((document.NonPersistentFlags & NonPersistentDocumentFlags.LegacyRevision) != NonPersistentDocumentFlags.LegacyRevision)
                     return false;
 
-                return id.Contains(PreV4RevisionsDocumentId);
+                return id.Contains(PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
             }
 
             private static void ThrowRevisionsDisabled()

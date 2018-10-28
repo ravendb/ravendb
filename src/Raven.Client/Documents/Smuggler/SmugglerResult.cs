@@ -218,7 +218,6 @@ namespace Raven.Client.Documents.Smuggler
 
             public long ErroredCount { get; set; }
 
-            public long TotalCount { get; set; }
 
             public virtual DynamicJsonValue ToJson()
             {
@@ -227,8 +226,7 @@ namespace Raven.Client.Documents.Smuggler
                     [nameof(Processed)] = Processed,
                     [nameof(Skipped)] = Skipped,
                     [nameof(ReadCount)] = ReadCount,
-                    [nameof(ErroredCount)] = ErroredCount,
-                    [nameof(TotalCount)] = TotalCount
+                    [nameof(ErroredCount)] = ErroredCount
                 };
             }
 

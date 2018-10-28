@@ -546,11 +546,10 @@ namespace Raven.Server.Smuggler.Documents
 
                     result.Documents.ReadCount++;
 
-                    result.Documents.TotalCount = IncreaseTotalCount(result);
-
-                    if (result.Documents.TotalCount % 1000 == 0)
+                    var totalCount = result.Documents.ReadCount + result.Documents.SkippedCount + result.Documents.ErroredCount;
+                    if (totalCount % 1000 == 0)
                     {
-                        var message = $"Total read {result.Documents.TotalCount:#,#;;0} documents.";
+                        var message = $"Total processed {totalCount:#,#;;0} documents.";
                         if (result.Documents.Attachments.ReadCount > 0)
                             message += $" Read {result.Documents.Attachments.ReadCount:#,#;;0} attachments.";
                         AddInfoToSmugglerResult(result, message);
@@ -567,11 +566,6 @@ namespace Raven.Server.Smuggler.Documents
             _onProgress.Invoke(result.Progress);
         }
 
-        private long IncreaseTotalCount(SmugglerProgressBase result)
-        {
-            return result.Documents.ReadCount + result.Documents.SkippedCount + result.Documents.ErroredCount;
-        }
-
         private void SetNonPersistentFlagsIfNeeded(BuildVersionType buildType, DocumentItem item, SmugglerResult result)
         {
             if (_options.SkipRevisionCreation)
@@ -584,7 +578,7 @@ namespace Raven.Server.Smuggler.Documents
                 item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.SkipLegacyRevision;
 
                 if ((item.Document.NonPersistentFlags & NonPersistentDocumentFlags.LegacyRevision) == NonPersistentDocumentFlags.LegacyRevision &&
-                    item.Document.Id.Contains("/revisions/"))
+                    item.Document.Id.Contains(DatabaseDestination.MergedBatchPutCommand.PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase))
                 {
                     result.Documents.SkippedCount++;
                     result.Documents.ReadCount--;
