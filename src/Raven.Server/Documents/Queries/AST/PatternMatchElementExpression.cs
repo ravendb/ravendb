@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Queries.AST
                             max = min = ValidateNumber(value);
                             break;
                         case ValueTokenType.String:
-                            if(Enum.TryParse(value.Value.ToString(), out type) == false)
+                            if(Enum.TryParse(value.Value.ToString(), true, out type) == false)
                                 throw new InvalidOperationException("Unexpected value for recursive match type option, got: " + value.Value + " but expected (all, longest, shortest) on " + this);
                             break;
                         default:
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Queries.AST
                             max = ValidateNumber(value);
                             break;
                         case ValueTokenType.String:
-                            if (Enum.TryParse(value.Value.ToString(), out type) == false)
+                            if (Enum.TryParse(value.Value.ToString(), true, out type) == false)
                                 throw new InvalidOperationException("Unexpected value for recursive match type option, got: " + value.Value + " but expected (all, longest, shortest) on " + this);
                             break;
                         default:
@@ -193,7 +193,7 @@ namespace Raven.Server.Documents.Queries.AST
                             min = ValidateNumber(value);
                             break;
                         case ValueTokenType.String:
-                            if (Enum.TryParse(value.Value.ToString(), out type) == false)
+                            if (Enum.TryParse(value.Value.ToString(), true, out type) == false)
                                 throw new InvalidOperationException("Unexpected value for recursive match type option, got: " + value.Value + " but expected (all, longest, shortest) on " + this);
                             break;
                         default:

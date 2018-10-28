@@ -670,10 +670,6 @@ namespace Raven.Server.Documents.Queries
                         top.Matches.RemoveAt(top.Matches.Count - 1);
                         if (visited.Add(cur.Data.Location) == false)
                         {
-                            path.Pop();
-                            if (options.Min <= path.Count)
-                                AddMatch();
-
                             continue;
                         }
                         path.Push((cur.Data, null, currentMatch));

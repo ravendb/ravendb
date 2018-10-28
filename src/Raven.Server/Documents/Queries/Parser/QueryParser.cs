@@ -439,7 +439,6 @@ namespace Raven.Server.Documents.Queries.Parser
             return ProcessEdges(gq, out op, alias, list, allowRecursive: true, foundDash: false);
         }
 
-        private static readonly string[] RecursiveTypes = new[] { "ALL", "SHORTEST", "LONGEST" };
 
         private bool ProcessEdges(GraphQuery gq, out QueryExpression op, StringSegment alias, List<MatchPath> list, bool allowRecursive, bool foundDash)
         {
