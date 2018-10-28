@@ -12,6 +12,7 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -844,7 +845,7 @@ namespace Raven.Server.Documents.Queries
                 bool hasResults = false;
                 if (edge.Where != null || edge.Project != null)
                 {
-                    if (src.TryGetMember(edge.Path.FieldValue, out var value) == false)
+                    if(BlittableJsonTraverser.Default.TryRead(src, edge.Path.FieldValue, out var value, out _) == false)
                         return false;
 
                     switch (value)
