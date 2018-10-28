@@ -429,6 +429,32 @@ select ancestry.paternal.Name as PaternalAncestors, son.Name")
             }
         }
 
+        [Fact]
+        public void CanHandleFiltersInMultiHopQuery_WithParameters()
+        {
+            using (var store = GetDocumentStore())
+            {
+                SetupHobbitAncestry(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<HobbitAncestry>(@"
+match (People as son)-recursive as ancestry ($min,$max) { [Parents where Gender = 'Male' select Id]->(People as paternal where BornAt='Shire') } 
+select ancestry.paternal.Name as PaternalAncestors, son.Name")
+.AddParameter("min", 2)
+.AddParameter("max", 3)
+.ToList();
+                    results.Sort((x, y) => x.Name.CompareTo(y.Name)); // we didn't implement order by yet
+                    Assert.Equal(2, results.Count);
+                    Assert.Equal("Bilbo Baggins", results[0].Name);
+                    Assert.Equal(new[] { "Bungo", "Mungo", "Balbo Baggins" }, results[0].PaternalAncestors);
+
+                    Assert.Equal("Bungo", results[1].Name);
+                    Assert.Equal(new[] { "Mungo", "Balbo Baggins" }, results[1].PaternalAncestors);
+                }
+            }
+        }
+
         private static void SetupHobbitAncestry(DocumentStore store)
         {
             using (var session = store.OpenSession())

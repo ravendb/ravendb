@@ -439,6 +439,8 @@ namespace Raven.Server.Documents.Queries.Parser
             return ProcessEdges(gq, out op, alias, list, allowRecursive: true, foundDash: false);
         }
 
+        private static readonly string[] RecursiveTypes = new[] { "ALL", "SHORTEST", "LONGEST" };
+
         private bool ProcessEdges(GraphQuery gq, out QueryExpression op, StringSegment alias, List<MatchPath> list, bool allowRecursive, bool foundDash)
         {
             bool expectNode = false;
@@ -540,32 +542,33 @@ namespace Raven.Server.Documents.Queries.Parser
                             }
 
                             gq.RecursiveMatches.Add(recursiveAlias);
-                            int? min = null, max = null;
+                            var options = new List<ValueExpression>();
                             if (Scanner.TryScan('('))
                             {
-                                if(Scanner.TryNumber() != NumberToken.Long)
-                                    throw new InvalidQueryException("'recursive' missing min length specification, but one was expected", Scanner.Input, null);
-                                var num = Scanner.Input.AsSpan().Slice(Scanner.TokenStart, Scanner.TokenLength);
-                                if (int.TryParse(num, out var i) == false || i < 0)
-                                    throw new InvalidQueryException("'recursive' has invalid min length specification: " + num.ToString(), Scanner.Input, null);
-                                min = i;
+                                while (Value(out var val))
+                                {
+                                    switch (val.Value)
+                                    {
+                                        case ValueTokenType.Parameter:
+                                        case ValueTokenType.Long:
+                                        case ValueTokenType.String:
+                                            options.Add(val);
+                                            break;
+                                        case ValueTokenType.Double:
+                                        case ValueTokenType.True:
+                                        case ValueTokenType.False:
+                                        case ValueTokenType.Null:
+                                            throw new InvalidQueryException("'recursive' options must be an integer or a recursive type (all, shortest, longest)", Scanner.Input, null);
+                                        default:
+                                            break;
+                                    }
 
-                                if(Scanner.TryScan(",") == false)
-                                {
-                                    max = i;
+                                    if (Scanner.TryScan(',') == false)
+                                        break;
                                 }
-                                else
-                                {
-                                    if (Scanner.TryNumber() != NumberToken.Long)
-                                        throw new InvalidQueryException("'recursive' missing max length specification, but one was expected", Scanner.Input, null);
-                                    num = Scanner.Input.AsSpan().Slice(Scanner.TokenStart, Scanner.TokenLength);
-                                    if (int.TryParse(num, out i) == false || i < 0)
-                                        throw new InvalidQueryException("'recursive' has invalid maxlength specification: " + num.ToString(), Scanner.Input, null);
-                                    max = i;
-                                }
+
                                 if (Scanner.TryScan(")") == false)
                                     throw new InvalidQueryException("'recursive' missing closing paranthesis for length specification, but one was expected", Scanner.Input, null);
-
                             }
 
                             if (Scanner.TryScan("{") == false)
@@ -592,8 +595,7 @@ namespace Raven.Server.Documents.Queries.Parser
                                 {
                                     Alias = recursiveAlias,
                                     Pattern = repeated,
-                                    Max = max,
-                                    Min = min,
+                                    Options = options,
                                     Aliases = new HashSet<StringSegment>(repeated.Select(x => x.Alias), StringSegmentEqualityComparer.Instance)
                                 },
                                 IsEdge = true

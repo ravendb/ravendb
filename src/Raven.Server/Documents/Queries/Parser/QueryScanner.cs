@@ -13,6 +13,8 @@ namespace Raven.Server.Documents.Queries.Parser
         public int TokenStart, TokenLength;
         public string Input => _q;
 
+        public ReadOnlySpan<char> Token => Input.AsSpan().Slice(TokenStart, TokenLength);
+
         public int Position => _pos;
         public string CurrentToken => _q.Substring(TokenStart, TokenLength);
 

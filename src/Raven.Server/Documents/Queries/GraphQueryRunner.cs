@@ -185,6 +185,7 @@ namespace Raven.Server.Documents.Queries
         private class GraphExecuteVisitor : QueryVisitor
         {
             private readonly IntermediateResults _source;
+            private IndexQueryServerSide _query;
             private readonly GraphQuery _gq;
             private readonly BlittableJsonReaderObject _queryParameters;
             private readonly DocumentsOperationContext _ctx;
@@ -207,6 +208,7 @@ namespace Raven.Server.Documents.Queries
                 HashSet<StringSegment> mapReduceAliases)
             {
                 _source = source;
+                _query = query;
                 _gq = query.Metadata.Query.GraphQuery;
                 _queryParameters = query.QueryParameters;
                 _ctx = documentsContext;
@@ -610,8 +612,9 @@ namespace Raven.Server.Documents.Queries
             {
                 var visited = new HashSet<long>();
                 var path = new Stack<(BlittableJsonReaderObject Src, List<Match> Matches, Match Match)>();
-                var min = recursive.Min ?? 1;
-                var max = recursive.Max ?? int.MaxValue;
+
+                var options = recursive.GetOptions(_query.Metadata, _queryParameters);
+
                 visited.Clear();
                 path.Clear();
 
@@ -628,7 +631,7 @@ namespace Raven.Server.Documents.Queries
                 while (true)
                 {
                     // the first item is always the root
-                    if (path.Count -1 == max)
+                    if (path.Count -1 == options.Max)
                     {
                         AddMatch();
                         path.Pop();
@@ -637,7 +640,7 @@ namespace Raven.Server.Documents.Queries
                     {
                         if (SingleMatchInRecursivePattern(recursive, cur.Data, prevNodeAlias, nextNodeAlias, currentMatch, out var currentMatches) == false)
                         {
-                            if (min < path.Count)
+                            if (options.Min < path.Count)
                                 AddMatch();
                             path.Pop();
                         }
@@ -667,7 +670,7 @@ namespace Raven.Server.Documents.Queries
                         if (visited.Add(cur.Data.Location) == false)
                         {
                             path.Pop();
-                            if (min <= path.Count)
+                            if (options.Min <= path.Count)
                                 AddMatch();
 
                             continue;

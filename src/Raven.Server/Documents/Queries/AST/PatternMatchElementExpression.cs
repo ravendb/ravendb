@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Sparrow;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.AST
 {
@@ -71,19 +72,35 @@ namespace Raven.Server.Documents.Queries.AST
         Left
     }
 
+    public enum RecursiveMatchType
+    {
+        Longest,
+        Shortest,
+        All,
+    }
+
     public struct RecursiveMatch
     {
         public StringSegment Alias;
         public List<MatchPath> Pattern;
         public HashSet<StringSegment> Aliases;
-        public int? Min;
-        public int? Max;
+        public List<ValueExpression> Options;
 
         public override string ToString()
         {
             var sp = new StringBuilder(" recursive ");
             if (Alias.Length != 0)
                 sp.Append(" as ").Append(Alias).Append(" ");
+
+            if(Options?.Count > 0)
+            {
+                sp.Append("(");
+                foreach (var item in Options)
+                {
+                    sp.Append(item);
+                }
+                sp.Append(") ");
+            }
 
             sp.Append("{ ");
 
@@ -96,6 +113,106 @@ namespace Raven.Server.Documents.Queries.AST
             sp.Append("} ");
 
             return sp.ToString();
+        }
+
+        public (int Min, int Max, RecursiveMatchType Type) GetOptions(QueryMetadata queryMetadata, BlittableJsonReaderObject queryParameters)
+        {
+            var min = 1;
+            var max = int.MaxValue;
+            var type = RecursiveMatchType.Longest;
+
+            (object Value, ValueTokenType Type) value;
+            switch (Options?.Count)
+            {
+                case null:
+                case 0:
+                    break;
+                case 1:
+                    value = QueryBuilder.GetValue(queryMetadata.Query, queryMetadata, queryParameters, Options[0]);
+                    switch (value.Type)
+                    {
+                        case ValueTokenType.Long:
+                            max = min = ValidateNumber(value);
+                            break;
+                        case ValueTokenType.String:
+                            if(Enum.TryParse(value.Value.ToString(), out type) == false)
+                                throw new InvalidOperationException("Unexpected value for recursive match type option, got: " + value.Value + " but expected (all, longest, shortest) on " + this);
+                            break;
+                        default:
+                            throw new InvalidOperationException("Unexpected type for recursive match option, got: " + value.Type + " for " + this);
+                    }
+                    break;
+                case 2:
+                    value = QueryBuilder.GetValue(queryMetadata.Query, queryMetadata, queryParameters, Options[0]);
+                    switch (value.Type)
+                    {
+                        case ValueTokenType.Long:
+                            min = ValidateNumber(value);
+                            break;
+                          default:
+                            throw new InvalidOperationException("Unexpected type for recursive match option, got: " + value.Type + ", but expected min numeric value for " + this);
+                    }
+                    value = QueryBuilder.GetValue(queryMetadata.Query, queryMetadata, queryParameters, Options[1]);
+                    switch (value.Type)
+                    {
+                        case ValueTokenType.Long:
+                            max = ValidateNumber(value);
+                            break;
+                        case ValueTokenType.String:
+                            if (Enum.TryParse(value.Value.ToString(), out type) == false)
+                                throw new InvalidOperationException("Unexpected value for recursive match type option, got: " + value.Value + " but expected (all, longest, shortest) on " + this);
+                            break;
+                        default:
+                            throw new InvalidOperationException("Unexpected type for recursive match option, got: " + value.Type + " for " + this);
+                    }
+                    break;
+
+                case 3:
+                    value = QueryBuilder.GetValue(queryMetadata.Query, queryMetadata, queryParameters, Options[0]);
+                    switch (value.Type)
+                    {
+                        case ValueTokenType.Long:
+                            min = ValidateNumber(value);
+                            break;
+                        default:
+                            throw new InvalidOperationException("Unexpected type for recursive match option, got: " + value.Type + ", but expected min numeric value for " + this);
+                    }
+                    value = QueryBuilder.GetValue(queryMetadata.Query, queryMetadata, queryParameters, Options[1]);
+                    switch (value.Type)
+                    {
+                        case ValueTokenType.Long:
+                            max= ValidateNumber(value);
+                            break;
+                        default:
+                            throw new InvalidOperationException("Unexpected type for recursive match option, got: " + value.Type + ", but expected max numeric value for " + this);
+                    }
+                    value = QueryBuilder.GetValue(queryMetadata.Query, queryMetadata, queryParameters, Options[2]);
+                    switch (value.Type)
+                    {
+                        case ValueTokenType.Long:
+                            min = ValidateNumber(value);
+                            break;
+                        case ValueTokenType.String:
+                            if (Enum.TryParse(value.Value.ToString(), out type) == false)
+                                throw new InvalidOperationException("Unexpected value for recursive match type option, got: " + value.Value + " but expected (all, longest, shortest) on " + this);
+                            break;
+                        default:
+                            throw new InvalidOperationException("Unexpected type for recursive match option, got: " + value.Type + " for " + this);
+                    }
+                    break;
+                default:
+                    throw new InvalidOperationException("Unexpected number of recursive match options, a max of three is expected, but got: " + Options.Count + " for " + this);
+            }
+            return (min, max, type);
+        }
+
+        private int ValidateNumber((object Value, ValueTokenType Type) value)
+        {
+            var l = (long)value.Value;
+            if (l < 0 || l > int.MaxValue)
+                throw new InvalidOperationException("Unexpected number for recursive match length option, got: " + l + ", but requires positive int32 on " + this);
+            var t = (int)l;
+            return t;
         }
     }
 
