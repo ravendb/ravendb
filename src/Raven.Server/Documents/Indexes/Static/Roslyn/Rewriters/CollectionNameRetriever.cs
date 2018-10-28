@@ -19,7 +19,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 if (CollectionName != null)
                     return node;
 
-                var nodeAsString = node.Expression.ToString();
+                var nodeToCheck = UnwrapNode(node);
+
+                var nodeAsString = nodeToCheck.Expression.ToString();
                 const string nodePrefix = "docs";
                 if (nodeAsString.StartsWith(nodePrefix) == false)
                     return node;
@@ -30,12 +32,26 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
                 CollectionName = nodeParts[1];
 
+                if (nodeToCheck != node)
+                    nodeAsString = node.Expression.ToString();
+
                 var collectionIndex = nodeAsString.IndexOf(CollectionName, nodePrefix.Length, StringComparison.OrdinalIgnoreCase);
                 // removing collection name: "docs.Users.Select" => "docs.Select"
                 nodeAsString = nodeAsString.Remove(collectionIndex - 1, CollectionName.Length + 1);
 
                 var newExpression = SyntaxFactory.ParseExpression(nodeAsString);
                 return node.WithExpression(newExpression);
+            }
+
+            private static InvocationExpressionSyntax UnwrapNode(InvocationExpressionSyntax node)
+            {
+                // we are unwrapping here expressions like docs.Method().Method()
+                // so as a result we will be analyzing only docs.Method() or docs.CollectionName.Method()
+                // e.g. docs.WhereEntityIs() or docs.Orders.Select()
+                if (node.Expression is MemberAccessExpressionSyntax mae && mae.Expression is InvocationExpressionSyntax ies)
+                    return UnwrapNode(ies);
+
+                return node;
             }
         }
 
