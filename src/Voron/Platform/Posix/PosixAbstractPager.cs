@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
+using Sparrow.Utils;
 using Voron.Data.BTrees;
 using Voron.Global;
 using Voron.Impl;
@@ -49,6 +52,33 @@ namespace Voron.Platform.Posix
         protected PosixAbstractPager(StorageEnvironmentOptions options, bool canPrefetchAhead, bool usePageProtection = false) : base(options, canPrefetchAhead, usePageProtection: usePageProtection)
         {
         }
+
+        protected unsafe void ReleaseAllocationInfoWithoutUnmapping(byte* baseAddress, long size)
+        {
+            // should be called from Posix32BitsMemoryMapPager in order to bypass unmapping
+            base.ReleaseAllocationInfo(baseAddress, size);
+        }
+        
+        public override unsafe void ReleaseAllocationInfo(byte* baseAddress, long size)
+        {
+            // 32 bits should override this method and call AbstractPager::ReleaseAllocationInfo
+            base.ReleaseAllocationInfo(baseAddress, size);
+            var ptr = new IntPtr(baseAddress);
+
+            if (DeleteOnClose)
+            {
+                // we can't do much with failing madvise rc
+                Syscall.madvise(ptr, new UIntPtr((ulong)size), MAdvFlags.MADV_DONTNEED);
+            }
+            
+            var result = Syscall.munmap(ptr, (UIntPtr)size);
+            if (result == -1)
+            {
+                var err = Marshal.GetLastWin32Error();
+                Syscall.ThrowLastError(err, "munmap " + FileName);
+            }
+            NativeMemory.UnregisterFileMapping(FileName.FullPath, ptr, size);
+        }        
         
         protected override void DisposeInternal()
         {
