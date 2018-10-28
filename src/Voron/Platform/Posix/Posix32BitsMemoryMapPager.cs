@@ -20,7 +20,6 @@ namespace Voron.Platform.Posix
     public sealed unsafe class Posix32BitsMemoryMapPager : PosixAbstractPager
     {
         private readonly StorageEnvironmentOptions _options;
-        private int _fd;
         private readonly bool _isSyncDirAllowed;
         private readonly bool _copyOnWriteMode;
 
@@ -508,15 +507,6 @@ namespace Voron.Platform.Posix
         public override void MaybePrefetchMemory(List<long> pagesToPrefetch)
         {
             // we never want to do this here
-        }
-
-        protected override void DisposeInternal()
-        {
-            if (_fd != -1)
-            {
-                Syscall.close(_fd);
-                _fd = -1;
-            }
         }
     }
 }
