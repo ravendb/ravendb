@@ -12,6 +12,8 @@ namespace Voron.Platform.Posix
 {
     public abstract class PosixAbstractPager : AbstractPager
     {
+        internal int _fd;
+
         public override int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState)
         {
             return CopyPageImpl(destwI4KbBatchWrites, p, pagerState);
@@ -104,6 +106,25 @@ namespace Voron.Platform.Posix
 
         protected PosixAbstractPager(StorageEnvironmentOptions options, bool usePageProtection = false) : base(options, usePageProtection: usePageProtection)
         {
+        }
+        
+        protected override void DisposeInternal()
+        {
+            if (_fd != -1)
+            {
+                // note that the orders of operations is important here, we first unlink the file
+                // we are supposed to be the only one using it, so Linux would be ready to delete it
+                // and hopefully when we close it, won't waste any time trying to sync the memory state
+                // to disk just to discard it
+                if (DeleteOnClose)
+                {
+                    Syscall.unlink(FileName.FullPath);
+                    // explicitly ignoring the result here, there isn't
+                    // much we can do to recover from being unable to delete it
+                }
+                Syscall.close(_fd);
+                _fd = -1;
+            }
         }
     }
 }
