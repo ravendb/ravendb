@@ -32,10 +32,10 @@ namespace Raven.Server.Smuggler.Migration
 
         protected LastEtagsInfo GetLastMigrationState()
         {
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (Options.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var document = Database.DocumentsStorage.Get(context, MigrationStateKey);
+                var document = Options.Database.DocumentsStorage.Get(context, Options.MigrationStateKey);
                 if (document == null)
                     return null;
 
@@ -47,12 +47,12 @@ namespace Raven.Server.Smuggler.Migration
         {
             var lastEtagsInfo = new LastEtagsInfo
             {
-                ServerUrl = ServerUrl,
-                DatabaseName = DatabaseName,
-                LastDocsEtag = Result.LegacyLastDocumentEtag ?? LastEtagsInfo.EtagEmpty,
-                LastAttachmentsEtag = Result.LegacyLastAttachmentEtag ?? LastEtagsInfo.EtagEmpty,
-                LastDocDeleteEtag = Result.LegacyLastDocumentEtag ?? LastEtagsInfo.EtagEmpty,
-                LastAttachmentsDeleteEtag = Result.LegacyLastAttachmentEtag ?? LastEtagsInfo.EtagEmpty
+                ServerUrl = Options.ServerUrl,
+                DatabaseName = Options.DatabaseName,
+                LastDocsEtag = Options.Result.LegacyLastDocumentEtag ?? LastEtagsInfo.EtagEmpty,
+                LastAttachmentsEtag = Options.Result.LegacyLastAttachmentEtag ?? LastEtagsInfo.EtagEmpty,
+                LastDocDeleteEtag = Options.Result.LegacyLastDocumentEtag ?? LastEtagsInfo.EtagEmpty,
+                LastAttachmentsDeleteEtag = Options.Result.LegacyLastAttachmentEtag ?? LastEtagsInfo.EtagEmpty
             };
 
             return lastEtagsInfo;
@@ -60,7 +60,7 @@ namespace Raven.Server.Smuggler.Migration
 
         protected async Task SaveLastOperationState(LastEtagsInfo lastEtagsInfo)
         {
-            using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (Options.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var operationStateBlittable = EntityToBlittable.ConvertCommandToBlittable(lastEtagsInfo, context);
                 await SaveLastOperationState(operationStateBlittable);
@@ -132,13 +132,13 @@ namespace Raven.Server.Smuggler.Migration
                     }
                 };
 
-                documentActions.WriteDocument(dummyDoc, Result.Documents);
+                documentActions.WriteDocument(dummyDoc, Options.Result.Documents);
             }
         }
 
         protected async Task<HttpResponseMessage> RunWithAuthRetry(Func<Task<HttpResponseMessage>> requestOperation)
         {
-            return await RunWithAuthRetryInternal(requestOperation, ApiKey, ServerUrl, EnableBasicAuthenticationOverUnsecuredHttp, SkipServerCertificateValidation, HttpClient);
+            return await RunWithAuthRetryInternal(requestOperation, Options.ApiKey, Options.ServerUrl, Options.EnableBasicAuthenticationOverUnsecuredHttp, Options.SkipServerCertificateValidation, Options.HttpClient);
         }
 
         private static async Task<HttpResponseMessage> RunWithAuthRetryInternal(

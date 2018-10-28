@@ -267,6 +267,7 @@ namespace Raven.Server.Smuggler.Migration
                                 OperateOnTypes = databaseMigrationSettings.OperateOnTypes,
                                 RemoveAnalyzers = databaseMigrationSettings.RemoveAnalyzers,
                                 ImportRavenFs = databaseMigrationSettings.ImportRavenFs,
+                                TransformScript = databaseMigrationSettings.TransformScript,
                                 Result = result,
                                 OnProgress = onProgress,
                                 Database = database,

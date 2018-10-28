@@ -27,7 +27,11 @@ namespace Raven.Server.Smuggler.Migration
 
         public bool RemoveAnalyzers { get; set; }
 
+        public bool IncludeRevisions { get; set; }
+
         public bool ImportRavenFs { get; set; }
+
+        public string TransformScript { get; set; }
 
         public SmugglerResult Result { get; set; }
 
