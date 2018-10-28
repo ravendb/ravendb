@@ -195,19 +195,6 @@ namespace Voron.Platform.Posix
             return FileName.FullPath;
         }
 
-        public override void ReleaseAllocationInfo(byte* baseAddress, long size)
-        {
-            base.ReleaseAllocationInfo(baseAddress, size);
-            var ptr = new IntPtr(baseAddress);
-            var result = Syscall.munmap(ptr, (UIntPtr)size);
-            if (result == -1)
-            {
-                var err = Marshal.GetLastWin32Error();
-                Syscall.ThrowLastError(err, "munmap " + FileName);
-            }
-            NativeMemory.UnregisterFileMapping(FileName.FullPath, ptr, size);
-        }
-
         internal override void ProtectPageRange(byte* start, ulong size, bool force = false)
         {
             if (size == 0)
