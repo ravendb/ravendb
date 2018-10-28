@@ -9,6 +9,7 @@ import popoverUtils = require("common/popoverUtils");
 import generalUtils = require("common/generalUtils");
 import recentError = require("common/notifications/models/recentError");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import lastUsedAutocomplete = require("common/storage/lastUsedAutocomplete");
 
 class migrateDatabase extends viewModelBase {
 
@@ -19,6 +20,8 @@ class migrateDatabase extends viewModelBase {
     submitButtonText: KnockoutComputed<string>;
     
     databaseNameHasFocus = ko.observable<boolean>(false);
+    
+    migratorPathAutocomplete: lastUsedAutocomplete;
 
     spinners = {
         getDatabaseNames: ko.observable<boolean>(false),
@@ -29,6 +32,9 @@ class migrateDatabase extends viewModelBase {
     constructor() {
         super();
 
+        // please notice autocomplete instance is shared across all databases
+        this.migratorPathAutocomplete = new lastUsedAutocomplete("migrator-path", this.model.migratorFullPath);
+        
         aceEditorBindingHandler.install();
         this.initObservables();
         this.initValidation();
@@ -210,6 +216,8 @@ class migrateDatabase extends viewModelBase {
             if (!this.isValid(this.model.validationGroup)) {
                 return;
             }
+
+            this.migratorPathAutocomplete.recordUsage();
 
             eventsCollector.default.reportEvent("database", "migrate");
             this.spinners.migration(true);

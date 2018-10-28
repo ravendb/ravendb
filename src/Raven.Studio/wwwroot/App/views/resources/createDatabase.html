@@ -233,9 +233,17 @@
             </div>
             <div class="col-md-8">
                 <div class="has-feedback">
-                    <input type="text" class="form-control" data-bind="textInput: dataExporterFullPath" placeholder="Raven.StorageExporter.exe location (absolute path)" />
+                    <input type="text" class="form-control" id="dataExporterFullPath" data-bind="textInput: dataExporterFullPath" placeholder="Raven.StorageExporter.exe location (absolute path)" />
                     <span class="glyphicon glyphicon-ok text-success form-control-feedback"
                           data-bind="visible: dataExporterFullPath() && dataExporterFullPath.isValid() && !dataExporterFullPath.isValidating()"></span>
+                    <ul class="dropdown-menu" role="menu"
+                        data-bind="autoComplete: '#dataExporterFullPath', foreach: $root.dataExporterAutocomplete.createCompleter()">
+                        <li role="presentation" data-bind="click: _.partial($root.dataExporterAutocomplete.complete, $data)">
+                            <a role="menuitem" tabindex="-1" href="#">
+                                <span data-bind="text: $data"></span>
+                            </a>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -341,9 +349,18 @@
                 <label class="control-label">Path</label>
             </div>
             <div class="col-md-8">
-                <input type="text" class="form-control"
+                <input type="text" class="form-control" id="dataPath"
                        data-bind="textInput: dataPath, attr: { placeholder: $root.databaseModel.name() || 'Enter database path (optional)' }"
                        title="Enter location for the database files."/>
+                
+                <ul class="dropdown-menu" role="menu"
+                    data-bind="autoComplete: '#dataPath', foreach: $root.recentPathsAutocomplete.createCompleter()">
+                    <li role="presentation" data-bind="click: _.partial($root.recentPathsAutocomplete.complete, $data)">
+                        <a role="menuitem" tabindex="-1" href="#">
+                            <span data-bind="text: $data"></span>
+                        </a>
+                    </li>
+                </ul>
             </div>
         </div>
         <div class="form-group row">
