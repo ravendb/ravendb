@@ -529,6 +529,9 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (IsPreV4Revision(id, document))
                     {
+                        if (document.NonPersistentFlags.HasFlag(NonPersistentDocumentFlags.SkipLegacyRevision))
+                            continue;
+
                         // handle old revisions
                         if (_database.DocumentsStorage.RevisionsStorage.Configuration == null)
                             ThrowRevisionsDisabled();
