@@ -14,7 +14,6 @@ namespace Voron.Platform.Posix
     public sealed unsafe class PosixMemoryMapPager : PosixAbstractPager
     {
         private readonly StorageEnvironmentOptions _options;
-        private int _fd;
         public readonly long SysPageSize;
         private long _totalAllocationSize;
         private readonly bool _isSyncDirAllowed;
@@ -234,16 +233,6 @@ namespace Voron.Platform.Posix
                     return;
                 var err = Marshal.GetLastWin32Error();
                 Debugger.Break();
-            }
-        }
-
-
-        protected override void DisposeInternal()
-        {
-            if (_fd != -1)
-            {
-                Syscall.close(_fd);
-                _fd = -1;
             }
         }
     }
