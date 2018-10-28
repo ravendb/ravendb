@@ -508,5 +508,10 @@ namespace Voron.Platform.Posix
         {
             // we never want to do this here
         }
+        
+        public override void ReleaseAllocationInfo(byte* baseAddress, long size)
+        {
+            ReleaseAllocationInfoWithoutUnmapping(baseAddress, size);            
+        }        
     }
 }
