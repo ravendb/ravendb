@@ -20,6 +20,8 @@ class storageReportItem {
     lazyLoadChildren = false;
     customSizeProvider: (header: boolean) => string;
 
+    recyclableJournal = false;
+
     constructor(name: string, type: string, showType: boolean, size: number, internalChildren: storageReportItem[] = null) {
         this.name = name;
         this.type = type;
