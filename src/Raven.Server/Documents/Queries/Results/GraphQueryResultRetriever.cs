@@ -131,6 +131,9 @@ namespace Raven.Server.Documents.Queries.Results
                             var djv = new DynamicJsonValue();
                             m.PopulateVertices(djv);
 
+                            if (djv.Properties.Count == 0)
+                                continue;
+
                             var matchJson = _context.ReadObject(djv, "graph/arg");
 
                             if (TryGetValue(fieldToFetch, new Document { Data = matchJson }, null, null, out key, out fieldVal) == false)
