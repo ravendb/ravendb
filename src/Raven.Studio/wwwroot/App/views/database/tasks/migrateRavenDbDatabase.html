@@ -188,7 +188,7 @@
                                     <input id="migrate_cmp_xch" type="checkbox" data-bind="checked: includeCompareExchange">
                                     <label for="migrate_cmp_xch">Include Compare Exchange</label>
                                 </div>
-                                <div class="toggle" data-bind="visible: !isLegacy()">
+                                <div class="toggle" data-bind="visible: isV41">
                                     <input id="migrate_counters" type="checkbox" data-bind="checked: includeCounters">
                                     <label for="migrate_counters">Include Counters</label>
                                 </div>

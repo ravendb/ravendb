@@ -496,11 +496,19 @@ namespace Raven.Server.Smuggler.Documents
                 foreach (DocumentItem item in _source.GetDocuments(_options.Collections, actions))
                 {
                     _token.ThrowIfCancellationRequested();
+                    result.Documents.ReadCount++;
+                    var totalCount = result.Documents.ReadCount - result.Documents.SkippedCount - result.Documents.ErroredCount;
+                    if (totalCount % 1000 == 0)
+                    {
+                        var message = $"Total processed {totalCount:#,#;;0} documents.";
+                        if (result.Documents.Attachments.ReadCount > 0)
+                            message += $" Read {result.Documents.Attachments.ReadCount:#,#;;0} attachments.";
+                        AddInfoToSmugglerResult(result, message);
+                    }
 
                     if (item.Document == null)
                     {
                         result.Documents.ErroredCount++;
-                        result.Documents.ReadCount--;
                         if (result.Documents.ErroredCount % 1000 == 0)
                             AddInfoToSmugglerResult(result, $"Error Count: {result.Documents.ErroredCount:#,#;;0}.");
                         continue;
@@ -528,7 +536,6 @@ namespace Raven.Server.Smuggler.Documents
                         if (item.Document == null)
                         {
                             result.Documents.SkippedCount++;
-                            result.Documents.ReadCount--;
                             if (result.Documents.SkippedCount % 1000 == 0)
                                 AddInfoToSmugglerResult(result, $"Skipped {result.Documents.SkippedCount:#,#;;0} documents.");
                             continue;
@@ -543,17 +550,6 @@ namespace Raven.Server.Smuggler.Documents
                     actions.WriteDocument(item, result.Documents);
 
                     result.Documents.LastEtag = item.Document.Etag;
-
-                    result.Documents.ReadCount++;
-
-                    var totalCount = result.Documents.ReadCount + result.Documents.SkippedCount + result.Documents.ErroredCount;
-                    if (totalCount % 1000 == 0)
-                    {
-                        var message = $"Total processed {totalCount:#,#;;0} documents.";
-                        if (result.Documents.Attachments.ReadCount > 0)
-                            message += $" Read {result.Documents.Attachments.ReadCount:#,#;;0} attachments.";
-                        AddInfoToSmugglerResult(result, message);
-                    }
                 }
             }
 
@@ -581,7 +577,6 @@ namespace Raven.Server.Smuggler.Documents
                     item.Document.Id.Contains(DatabaseDestination.MergedBatchPutCommand.PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase))
                 {
                     result.Documents.SkippedCount++;
-                    result.Documents.ReadCount--;
                     if (result.Documents.SkippedCount % 1000 == 0)
                         AddInfoToSmugglerResult(result,$"Skipped {result.Documents.SkippedCount:#,#;;0} legacy revisions.");
                 }

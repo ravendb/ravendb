@@ -27,7 +27,7 @@ namespace Raven.Server.Smuggler.Migration
         private readonly MajorVersion _majorVersion;
         private readonly int _buildVersion;
 
-        public Migrator_V3(DocumentDatabase database, MigratorOptions options, MajorVersion majorVersion, int buildVersion) : base(database, options)
+        public Migrator_V3(MigratorOptions options, MigratorParameters parameters, MajorVersion majorVersion, int buildVersion) : base(options, parameters)
         {
             _majorVersion = majorVersion;
             _buildVersion = buildVersion;
@@ -44,8 +44,8 @@ namespace Raven.Server.Smuggler.Migration
 
             if (Options.ImportRavenFs)
             {
-                Options.Result.AddInfo("Started processing RavenFS files");
-                Options.OnProgress.Invoke(Options.Result.Progress);
+                Parameters.Result.AddInfo("Started processing RavenFS files");
+                Parameters.OnProgress.Invoke(Parameters.Result.Progress);
 
                 var lastRavenFsEtag = await MigrateRavenFs(state?.LastRavenFsEtag ?? LastEtagsInfo.EtagEmpty);
                 state = GetLastMigrationState() ?? GenerateLastEtagsInfo();
@@ -57,8 +57,8 @@ namespace Raven.Server.Smuggler.Migration
             {
                 if (Options.ImportRavenFs && operateOnTypes.HasFlag(ItemType.Documents) == false)
                 {
-                    Options.Result.Documents.Processed = true;
-                    Options.OnProgress.Invoke(Options.Result.Progress);
+                    Parameters.Result.Documents.Processed = true;
+                    Parameters.OnProgress.Invoke(Parameters.Result.Progress);
                 }
 
                 var databaseMigrationOptions = new DatabaseMigrationOptions
@@ -108,18 +108,18 @@ namespace Raven.Server.Smuggler.Migration
             else
             {
                 if (Options.ImportRavenFs)
-                    Options.Result.Documents.Processed = true;
+                    Parameters.Result.Documents.Processed = true;
 
-                DatabaseSmuggler.EnsureProcessed(Options.Result);
+                DatabaseSmuggler.EnsureProcessed(Parameters.Result);
             } 
         }
 
         private async Task<string> MigrateRavenFs(string lastEtag)
         {
-            var destination = new DatabaseDestination(Options.Database);
+            var destination = new DatabaseDestination(Parameters.Database);
 
-            using (Options.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
-            using (Options.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (Parameters.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
+            using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var documentActions = destination.Documents())
             {
                 var sp = Stopwatch.StartNew();
@@ -129,12 +129,12 @@ namespace Raven.Server.Smuggler.Migration
                     var ravenFsHeadersArray = await GetRavenFsHeadersArray(lastEtag, transactionOperationContext);
                     if (ravenFsHeadersArray.Length == 0)
                     {
-                        var count = Options.Result.Documents.Attachments.ReadCount;
+                        var count = Parameters.Result.Documents.Attachments.ReadCount;
                         if (count > 0)
                         {
                             var message = $"Read {count:#,#;;0} RavenFS file{(count > 1 ? "s" : string.Empty)}.";
-                            Options.Result.AddInfo(message);
-                            Options.OnProgress.Invoke(Options.Result.Progress);
+                            Parameters.Result.AddInfo(message);
+                            Parameters.OnProgress.Invoke(Parameters.Result.Progress);
                         }
 
                         return lastEtag;
@@ -158,7 +158,7 @@ namespace Raven.Server.Smuggler.Migration
                         var dataStream = await GetRavenFsStream(key);
                         if (dataStream == null)
                         {
-                            Options.Result.Tombstones.ReadCount++;
+                            Parameters.Result.Tombstones.ReadCount++;
                             var id = StreamSource.GetLegacyAttachmentId(key);
                             documentActions.DeleteDocument(id);
                             continue;
@@ -166,13 +166,13 @@ namespace Raven.Server.Smuggler.Migration
 
                         WriteDocumentWithAttachment(documentActions, context, dataStream, key, metadata);
 
-                        Options.Result.Documents.ReadCount++;
-                        if (Options.Result.Documents.Attachments.ReadCount % 50 == 0 || sp.ElapsedMilliseconds > 3000)
+                        Parameters.Result.Documents.ReadCount++;
+                        if (Parameters.Result.Documents.Attachments.ReadCount % 50 == 0 || sp.ElapsedMilliseconds > 3000)
                         {
-                            var message = $"Read {Options.Result.Documents.Attachments.ReadCount:#,#;;0} " +
-                                          $"RavenFS file{(Options.Result.Documents.Attachments.ReadCount > 1 ? "s" : string.Empty)}.";
-                            Options.Result.AddInfo(message);
-                            Options.OnProgress.Invoke(Options.Result.Progress);
+                            var message = $"Read {Parameters.Result.Documents.Attachments.ReadCount:#,#;;0} " +
+                                          $"RavenFS file{(Parameters.Result.Documents.Attachments.ReadCount > 1 ? "s" : string.Empty)}.";
+                            Parameters.Result.AddInfo(message);
+                            Parameters.OnProgress.Invoke(Parameters.Result.Progress);
                             sp.Restart();
                         }
                     }
@@ -191,7 +191,7 @@ namespace Raven.Server.Smuggler.Migration
             {
                 var url = $"{Options.ServerUrl}/fs/{Options.DatabaseName}/files/{Uri.EscapeDataString(key)}";
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
-                var responseMessage = await Options.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, Options.CancelToken.Token);
+                var responseMessage = await Parameters.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, Parameters.CancelToken.Token);
                 return responseMessage;
             });
             
@@ -235,7 +235,7 @@ namespace Raven.Server.Smuggler.Migration
             {
                 var url = $"{Options.ServerUrl}/fs/{Options.DatabaseName}/streams/files?pageSize={RavenFsHeadersPageSize}&etag={lastEtag}";
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
-                var responseMessage = await Options.HttpClient.SendAsync(request, Options.CancelToken.Token);
+                var responseMessage = await Parameters.HttpClient.SendAsync(request, Parameters.CancelToken.Token);
                 return responseMessage;
             });
 
@@ -294,7 +294,7 @@ namespace Raven.Server.Smuggler.Migration
                     Content = content
                 };
 
-                var responseMessage = await Options.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, Options.CancelToken.Token);
+                var responseMessage = await Parameters.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, Parameters.CancelToken.Token);
                 return responseMessage;
             });
 
@@ -308,10 +308,10 @@ namespace Raven.Server.Smuggler.Migration
 
             using (var responseStream = await response.Content.ReadAsStreamAsync())
             using (var stream = new GZipStream(responseStream, mode: CompressionMode.Decompress))
-            using (Options.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var source = new StreamSource(stream, context, Options.Database))
+            using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var source = new StreamSource(stream, context, Parameters.Database))
             {
-                var destination = new DatabaseDestination(Options.Database);
+                var destination = new DatabaseDestination(Parameters.Database);
                 var options = new DatabaseSmugglerOptionsServerSide
                 {
 #pragma warning disable 618
@@ -322,7 +322,7 @@ namespace Raven.Server.Smuggler.Migration
                     OperateOnTypes = Options.OperateOnTypes
                 };
 
-                var smuggler = new DatabaseSmuggler(Options.Database, source, destination, Options.Database.Time, options, Options.Result, Options.OnProgress, Options.CancelToken.Token);
+                var smuggler = new DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 return smuggler.Execute();
             }
@@ -334,7 +334,7 @@ namespace Raven.Server.Smuggler.Migration
             {
                 var url = $"{Options.ServerUrl}/databases/{Options.DatabaseName}/studio-tasks/next-operation-id";
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
-                var responseMessage = await Options.HttpClient.SendAsync(request, Options.CancelToken.Token);
+                var responseMessage = await Parameters.HttpClient.SendAsync(request, Parameters.CancelToken.Token);
                 return responseMessage;
             });
 
@@ -353,7 +353,7 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task<LastEtagsInfo> GetLastState(bool canGetLastStateByOperationId, long operationId)
         {
-            using (Options.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (Parameters.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var lastEtagsInfo = canGetLastStateByOperationId
                     ? await GetLastStateByOperationId(operationId, context)
@@ -380,7 +380,7 @@ namespace Raven.Server.Smuggler.Migration
 
                 if (completed == false)
                 {
-                    await Task.Delay(1000, Options.CancelToken.Token);
+                    await Task.Delay(1000, Parameters.CancelToken.Token);
                     continue;
                 }
 
@@ -416,7 +416,7 @@ namespace Raven.Server.Smuggler.Migration
             {
                 var url = $"{Options.ServerUrl}/databases/{databaseName}/operation/status?id={operationId}";
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
-                var responseMessage = await Options.HttpClient.SendAsync(request, Options.CancelToken.Token);
+                var responseMessage = await Parameters.HttpClient.SendAsync(request, Parameters.CancelToken.Token);
                 return responseMessage;
             });
 

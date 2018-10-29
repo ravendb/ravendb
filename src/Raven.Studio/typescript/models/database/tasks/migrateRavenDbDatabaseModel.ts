@@ -41,6 +41,7 @@ class migrateRavenDbDatabaseModel {
     serverMajorVersionNumber: KnockoutComputed<string>;
     isRavenDb: KnockoutComputed<boolean>;
     isLegacy: KnockoutComputed<boolean>;
+    isV41: KnockoutComputed<boolean>;
     hasRavenFs: KnockoutComputed<boolean>;
     ravenFsImport: KnockoutComputed<boolean>;
     resourceTypeName: KnockoutComputed<string>;
@@ -173,6 +174,15 @@ class migrateRavenDbDatabaseModel {
         this.isLegacy = ko.pureComputed(() => {
            const version = this.serverMajorVersion();
            return version === "V2" || version === "V30" || version === "V35";
+        });
+
+        this.isV41 = ko.pureComputed(() => {
+            if (this.isLegacy()) {
+                return false;
+            }
+
+            const buildVersion = this.buildVersion();
+            return buildVersion >= 41000 || buildVersion === 41;
         });
 
         this.hasRavenFs = ko.pureComputed(() => {
