@@ -49,6 +49,7 @@ namespace Raven.Server.Smuggler.Documents
                 Flags = document.Flags,
                 NonPersistentFlags = document.NonPersistentFlags,
                 LastModified = document.LastModified,
+                ChangeVector = document.ChangeVector
             };
         }
 
