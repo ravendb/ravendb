@@ -131,7 +131,8 @@ namespace Voron.Platform.Posix
             {
                 if (Syscall.madvise(ptr, new UIntPtr((ulong)size), MAdvFlags.MADV_DONTNEED) != 0)
                 {
-                    _log.Info($"Failed to madvise MDV_DONTNEED for {FileName?.FullPath}");
+                    if (_log.IsInfoEnabled)
+                        _log.Info($"Failed to madvise MDV_DONTNEED for {FileName?.FullPath}");
                 }
             }
             
