@@ -481,10 +481,10 @@ namespace Sparrow.Json
                 AddToCache(name, result, index);
             }
 
-Return:
+        Return:
             return opResult;
 
-ThrowDisposed:
+        ThrowDisposed:
             ThrowObjectDisposed();
             result = null;
             return false;
@@ -527,10 +527,10 @@ ThrowDisposed:
                 ThrowOutOfRangeException();
 
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
-            
-            GetPropertyTypeAndPosition(index, metadataSize, 
-                out var token, 
-                out var position, 
+
+            GetPropertyTypeAndPosition(index, metadataSize,
+                out var token,
+                out var position,
                 out var propertyId);
 
             var stringValue = GetPropertyName(propertyId);
@@ -607,7 +607,7 @@ ThrowDisposed:
 
             } while (min <= max);
 
-NotFound:
+        NotFound:
             return -1;
         }
 
