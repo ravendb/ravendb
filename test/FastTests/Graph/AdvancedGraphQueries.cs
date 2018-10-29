@@ -813,7 +813,7 @@ namespace FastTests.Graph
                 }
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Advanced.RawQuery<JObject>("match (People as s)-recursive as path { [Ancestor as r] }->(People as a)").ToArray();
+                    var results = session.Advanced.RawQuery<JObject>("match (People as s)-recursive as path (longest) { [Ancestor as r] }->(People as a)").ToArray();
                     Assert.NotEmpty(results);
                     var stronglyTypedResults = results.Select(x => new
                     {
