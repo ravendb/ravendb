@@ -11,7 +11,7 @@ using static Raven.Server.Documents.Queries.GraphQueryRunner;
 
 namespace Raven.Server.Documents.Queries.Graph
 {
-    public class GraphQueryPlan : IQueryPlan
+    public class GraphQueryPlan
     {
         private IQueryStep _rootQueryStep;
         private IndexQueryServerSide _query;
@@ -35,16 +35,35 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public void BuildQueryPlan()
         {
+            _rootQueryStep = BuildQueryPlanForExpression(_query.Metadata.Query.GraphQuery.MatchClause);                       
+        }
+
+        private IQueryStep BuildQueryPlanForExpression(QueryExpression expression)
+        {
             switch (_query.Metadata.Query.GraphQuery.MatchClause)
             {
                 case PatternMatchElementExpression pme:
-                    _rootQueryStep = BuildQueryPlanForPattern(pme);
-                    return;
+                    return BuildQueryPlanForPattern(pme);
+                case BinaryExpression be:
+                    return BuildQueryPlanForBinaryExpression(be);
                 default:
-                    throw new ArgumentOutOfRangeException($"Unexpected expression({_query.Metadata.Query.GraphQuery.MatchClause.Type}) type for MatchClause");
+                    throw new ArgumentOutOfRangeException($"Unexpected expression of type {expression.Type}");
             }
+        }
 
-            
+        private IQueryStep BuildQueryPlanForBinaryExpression(BinaryExpression be)
+        {
+            var left = BuildQueryPlanForExpression(be.Left);
+            var right = BuildQueryPlanForExpression(be.Right);
+            switch (be.Operator)
+            {
+                case OperatorType.And:
+                    return new AndQueryStep(left, right);
+                case OperatorType.Or:
+                    return new OrQueryStep(left, right);
+                default:
+                    throw new ArgumentOutOfRangeException($"Unexpected binary expression of type: {be.Operator}");
+            }
         }
 
         private IQueryStep BuildQueryPlanForPattern(PatternMatchElementExpression patternExpression)
