@@ -85,9 +85,7 @@ namespace Raven.Server.Documents.Queries
                     result.PageSize = int.MaxValue;
 
                 if (string.IsNullOrWhiteSpace(result.Query))
-                {
                     throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
-                }
 
                 if (cache.TryGetMetadata(result, out var metadataHash, out var metadata))
                 {
@@ -96,45 +94,36 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, queryType);
-
                 if (result.Metadata.HasTimings)
                     result.Timings = new QueryTimingsScope(start: false);
+
+                if (result.Metadata.Query.Offset != null)
+                {
+                    var start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
+                    result.Start = result.Start != 0 || json.TryGet(nameof(Start), out int _)
+                        ? Math.Min(start, result.Start)
+                        : start;
+                }
+
+                if (result.Metadata.Query.Limit != null)
+                    result.PageSize = Math.Min((int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue), result.PageSize);
 
                 if (tracker != null)
                     tracker.Query = result.Query;
 
                 return result;
             }
-
-            result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, queryType);
-            if (result.Metadata.HasTimings)
-                result.Timings = new QueryTimingsScope(start: false);
-
-            if (result.Metadata.Query.Offset != null)
+            catch (Exception e)
             {
-                var start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
-                result.Start = result.Start != 0 || json.TryGet(nameof(Start), out int _)
-                    ? Math.Min(start, result.Start) 
-                    : start;
-            }
+                var errorMessage = e is InvalidOperationException
+                    ? e.Message : result == null ? $"Failed to parse index query : {json}" : $"Failed to parse query: {result.Query}";
 
-            if (result.Metadata.Query.Limit != null)
-                result.PageSize = Math.Min((int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue), result.PageSize);
-
-            return result;
-}
-            catch(Exception e)
-            {
-                string errorMessage;
-                if (e is InvalidOperationException)
-                    errorMessage = e.Message;
-                else
-                    errorMessage = (result == null ? $"Failed to parse index query : {json}" : $"Failed to parse query: {result.Query}");
-                
                 if (tracker != null)
                     tracker.Query = errorMessage;
+
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(httpContext, errorMessage, TrafficWatchChangeType.Queries);
+
                 throw;
             }
         }
@@ -145,11 +134,8 @@ namespace Raven.Server.Documents.Queries
             try
             {
                 var isQueryOverwritten = !string.IsNullOrEmpty(overrideQuery);
-                if ((httpContext.Request.Query.TryGetValue("query", out var query) == false || query.Count == 0 || string.IsNullOrWhiteSpace(query[0])) &&
-                    isQueryOverwritten == false)
-                {
-                    throw new InvalidOperationException("Missing mandatory query string parameter 'query'");
-                }
+                if ((httpContext.Request.Query.TryGetValue("query", out var query) == false || query.Count == 0 || string.IsNullOrWhiteSpace(query[0])) && isQueryOverwritten == false)
+                    throw new InvalidOperationException("Missing mandatory query string parameter 'query'.");
 
                 var actualQuery = isQueryOverwritten ? overrideQuery : query[0];
                 result = new IndexQueryServerSide
@@ -176,11 +162,7 @@ namespace Raven.Server.Documents.Queries
                                 {
                                     result.QueryParameters = context.Read(stream, "query parameters");
                                 }
-
                                 continue;
-                            case RequestHandler.StartParameter:
-                            case RequestHandler.PageSizeParameter:
-                                break;
                             case "waitForNonStaleResults":
                                 result.WaitForNonStaleResults = bool.Parse(item.Value[0]);
                                 break;
@@ -190,54 +172,58 @@ namespace Raven.Server.Documents.Queries
                             case "skipDuplicateChecking":
                                 result.SkipDuplicateChecking = bool.Parse(item.Value[0]);
                                 break;
+                            case RequestHandler.StartParameter:
+                                startSet = true;
+                                break;
+                            case RequestHandler.PageSizeParameter:
+                                pageSizeSet = true;
+                                break;
                         }
-                        case RequestHandler.StartParameter:
-                            startSet = true;
-                            break;
-                        case RequestHandler.PageSizeParameter:
-                            pageSizeSet = true;
-                            break;
                     }
                     catch (Exception e)
                     {
-                        throw new ArgumentException($"Could not handle query string parameter '{item.Key}' (value: {item.Value}) for query: {result.Query}", e);
+                        throw new ArgumentException($"Could not handle query string parameter '{item.Key}' (value: {item.Value})", e);
                     }
                 }
 
                 result.Metadata = new QueryMetadata(result.Query, null, 0);
+
                 if (result.Metadata.HasTimings)
                     result.Timings = new QueryTimingsScope(start: false);
 
-            if (result.Metadata.Query.Offset != null)
-            {
-                start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
-                result.Start = startSet 
-                    ? Math.Min(start, result.Start) 
-                    : start;
-            }
+                if (result.Metadata.Query.Offset != null)
+                {
+                    start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
+                    result.Start = startSet
+                        ? Math.Min(start, result.Start)
+                        : start;
+                }
 
-            if (result.Metadata.Query.Limit != null)
-            {
-                pageSize = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
-                result.Start = pageSizeSet 
-                    ? Math.Min(pageSize, result.PageSize) 
-                    : pageSize;
-            }
+                if (result.Metadata.Query.Limit != null)
+                {
+                    pageSize = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
+                    result.Start = pageSizeSet
+                        ? Math.Min(pageSize, result.PageSize)
+                        : pageSize;
+                }
 
-                tracker.Query = result.Query;
+                if (tracker != null)
+                    tracker.Query = result.Query;
+
                 return result;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                string errorMessage;
-                if (e is InvalidOperationException || e is ArgumentException)
-                    errorMessage = e.Message;
-                else
-                    errorMessage = $"Failed to parse query: {result.Query}";
+                var errorMessage = e is InvalidOperationException || e is ArgumentException
+                    ? e.Message
+                    : $"Failed to parse query: {result.Query}";
 
-                tracker.Query = errorMessage;
+                if (tracker != null)
+                    tracker.Query = errorMessage;
+
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(httpContext, errorMessage, TrafficWatchChangeType.Queries);
+
                 throw;
             }
         }

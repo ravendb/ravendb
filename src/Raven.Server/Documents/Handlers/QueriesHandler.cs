@@ -89,8 +89,6 @@ namespace Raven.Server.Documents.Handlers
             var indexQuery = await GetIndexQuery(context, method, tracker);
             indexQuery.Diagnostics = diagnostics ? new List<string>() : null;
 
-            
-
             if (TrafficWatchManager.HasRegisteredClients)
                 TrafficWatchQuery(indexQuery);
 
@@ -133,7 +131,7 @@ namespace Raven.Server.Documents.Handlers
             int numberOfResults;
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
-                result.Timings = indexQuery.Timings?.ToTimings();               
+                result.Timings = indexQuery.Timings?.ToTimings();
                 numberOfResults = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly, WriteAdditionalData(indexQuery, shouldReturnServerSideQuery));
                 await writer.OuterFlushAsync();
             }
