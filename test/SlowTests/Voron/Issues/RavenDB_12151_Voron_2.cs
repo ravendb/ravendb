@@ -12,19 +12,19 @@ namespace SlowTests.Voron.Issues
 {
     public class RavenDB_12151_Voron_2 : StorageTest
     {
+        private readonly TestScratchSpaceMonitor _scratchSpaceMonitor = new TestScratchSpaceMonitor();
+
         protected override void Configure(StorageEnvironmentOptions options)
         {
             options.ManualFlushing = true;
             options.MaxScratchBufferSize = 2 * Constants.Size.Megabyte;
-            options.ScratchSpaceMonitor = new TestScratchSpaceMonitor();
+            options.ScratchSpaceUsage.AddMonitor(_scratchSpaceMonitor);
         }
 
         [Fact]
         public void CanTrackScratchSpaceSize()
         {
             RequireFileBasedPager();
-
-            var scratchSpaceMonitor = (TestScratchSpaceMonitor)Env.Options.ScratchSpaceMonitor;
 
             var r = new Random(1);
 
@@ -48,19 +48,25 @@ namespace SlowTests.Voron.Issues
 
             var totalSize = scratches.Sum(x => x.Length);
 
-            Assert.Equal(totalSize, scratchSpaceMonitor.Size);
+            Assert.Equal(totalSize, _scratchSpaceMonitor.Size);
+            Assert.Equal(totalSize, Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes);
+            Assert.Equal(Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes, _scratchSpaceMonitor.Size);
 
             Env.FlushLogToDataFile();
             Env.ForceSyncDataFile();
             Env.Cleanup();
 
-            Assert.True(scratchSpaceMonitor.Size < totalSize);
+            Assert.True(_scratchSpaceMonitor.Size < totalSize);
+            Assert.True(Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes < totalSize);
+            Assert.Equal(Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes, _scratchSpaceMonitor.Size);
 
             scratches = new DirectoryInfo(temp).GetFiles("scratch.*");
 
             totalSize = scratches.Sum(x => x.Length);
 
-            Assert.Equal(totalSize, scratchSpaceMonitor.Size);
+            Assert.Equal(totalSize, _scratchSpaceMonitor.Size);
+            Assert.Equal(totalSize, Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes);
+            Assert.Equal(Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes, _scratchSpaceMonitor.Size);
 
             for (int i = 0; i < 1000; i++)
             {
@@ -76,7 +82,8 @@ namespace SlowTests.Voron.Issues
 
             Env.Dispose();
 
-            Assert.Equal(0, scratchSpaceMonitor.Size);
+            Assert.Equal(0, _scratchSpaceMonitor.Size);
+            Assert.Equal(0, Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes);
         }
 
         [Fact]
@@ -84,8 +91,6 @@ namespace SlowTests.Voron.Issues
         {
             RequireFileBasedPager();
             var temp = ((StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)Env.Options).TempPath.FullPath;
-
-            var scratchSpaceMonitor = (TestScratchSpaceMonitor)Env.Options.ScratchSpaceMonitor;
 
             long totalSize;
             FileInfo[] scratchBuffers;
@@ -110,7 +115,9 @@ namespace SlowTests.Voron.Issues
 
                     totalSize = scratchBuffers.Sum(x => x.Length) + decompressionBuffers.Sum(x => x.Length);
 
-                    Assert.Equal(totalSize, scratchSpaceMonitor.Size);
+                    Assert.Equal(totalSize, _scratchSpaceMonitor.Size);
+                    Assert.Equal(totalSize, Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes);
+                    Assert.Equal(Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes, _scratchSpaceMonitor.Size);
                 }
                 finally
                 {
@@ -125,18 +132,23 @@ namespace SlowTests.Voron.Issues
             Env.ForceSyncDataFile();
             Env.Cleanup();
 
-            Assert.True(scratchSpaceMonitor.Size < totalSize);
+            Assert.True(_scratchSpaceMonitor.Size < totalSize);
+            Assert.True(Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes < totalSize);
+            Assert.Equal(Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes, _scratchSpaceMonitor.Size);
 
             scratchBuffers = new DirectoryInfo(temp).GetFiles("scratch.*");
             decompressionBuffers = new DirectoryInfo(temp).GetFiles("decompression.*");
 
             totalSize = scratchBuffers.Sum(x => x.Length) + decompressionBuffers.Sum(x => x.Length);
 
-            Assert.Equal(totalSize, scratchSpaceMonitor.Size);
+            Assert.Equal(totalSize, _scratchSpaceMonitor.Size);
+            Assert.Equal(totalSize, Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes);
+            Assert.Equal(Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes, _scratchSpaceMonitor.Size);
 
             Env.Dispose();
 
-            Assert.Equal(0, scratchSpaceMonitor.Size);
+            Assert.Equal(0, _scratchSpaceMonitor.Size);
+            Assert.Equal(0, Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes);
         }
 
         private class TestScratchSpaceMonitor : IScratchSpaceMonitor

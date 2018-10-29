@@ -124,26 +124,33 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.CleanupIntervalInMin", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting CleanupInterval { get; set; }
 
-        [Description("Maximum amount of scratch space that we allow to use for an indexing batch")]
+        [Description("Transaction size limit after which an index will stop and complete the current batch")]
+        [DefaultValue(null)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.TransactionSizeLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size? TransactionSizeLimit { get; protected set; }
+
+        [Description("Amount of scratch space that we allow to use for the index storage. After exceeding this limit the current indexing batch will complete and the index will force flush and sync storage environment.")]
         [DefaultValue(null)]
         [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.ScratchSpaceLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size? ScratchSpaceLimit { get; protected set; }
 
-        [Description("Maximum amount of scratch space that we allow to use for entire indexing work per server")]
+        [Description("Maximum amount of scratch space that we allow to use for all index storages per server. After exceeding this limit the indexes will complete their current indexing batches and force flush and sync storage environments.")]
         [DefaultValue(null)]
         [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.GlobalScratchSpaceLimitInMb", ConfigurationEntryScope.ServerWideOnly)]
         public Size? GlobalScratchSpaceLimit { get; protected set; }
 
-        [Description("Max time to wait when forcing the environment flush and sync after exceeding global scratch buffer limit")]
-        [DefaultValue(5)]
+        [Description("Max time to wait when forcing the storage environment flush and sync after exceeding scratch space limit")]
+        [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         [IndexUpdateType(IndexUpdateType.None)]
-        [ConfigurationEntry("Indexing.MaxTimeToWaitAfterFlushAndSyncWhenExceedingGlobalScratchSpaceLimit", ConfigurationEntryScope.ServerWideOnly)]
-        public TimeSetting MaxTimeToWaitAfterFlushAndSyncWhenExceedingGlobalScratchSpaceLimit { get; protected set; }
+        [ConfigurationEntry("Indexing.MaxTimeToWaitAfterFlushAndSyncWhenExceedingScratchSpaceLimit", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting MaxTimeToWaitAfterFlushAndSyncWhenExceedingScratchSpaceLimit { get; protected set; }
 
         protected override void ValidateProperty(PropertyInfo property)
         {

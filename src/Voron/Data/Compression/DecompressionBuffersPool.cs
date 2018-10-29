@@ -35,13 +35,13 @@ namespace Voron.Data.Compression
 
         internal int NumberOfScratchFiles => 1 + _oldPagers.Count;
 
-        private readonly IScratchSpaceMonitor _scratchSpaceMonitor;
+        private readonly ScratchSpaceUsageMonitor _scratchSpaceMonitor;
 
         public DecompressionBuffersPool(StorageEnvironmentOptions options)
         {
             _options = options;
             _maxNumberOfPagesInScratchBufferPool = _options.MaxScratchBufferSize / Constants.Storage.PageSize;
-            _scratchSpaceMonitor = options.ScratchSpaceMonitor;
+            _scratchSpaceMonitor = options.ScratchSpaceUsage;
 
             _disposeOnceRunner = new DisposeOnce<SingleAttempt>(() =>
             {
@@ -52,7 +52,7 @@ namespace Voron.Data.Compression
                 {
                     _compressionPager.Dispose();
 
-                    _scratchSpaceMonitor?.Decrease(_compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                    _scratchSpaceMonitor.Decrease(_compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize);
                 }
                 
                 foreach (var pager in _oldPagers)
@@ -61,7 +61,7 @@ namespace Voron.Data.Compression
                     {
                         pager.Dispose();
 
-                        _scratchSpaceMonitor?.Decrease(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                        _scratchSpaceMonitor.Decrease(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
                     }
                 }
             });
@@ -71,7 +71,7 @@ namespace Voron.Data.Compression
         {
             var pager = _options.CreateTemporaryBufferPager($"decompression.{_decompressionPagerCounter++:D10}.buffers", initialSize);
 
-            _scratchSpaceMonitor?.Increase(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+            _scratchSpaceMonitor.Increase(pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
 
             return pager;
         }
@@ -152,15 +152,12 @@ namespace Voron.Data.Compression
 
                     try
                     {
-                        long numberOfPagesBeforeAllocate = -1;
-
-                        if (_scratchSpaceMonitor != null)
-                            numberOfPagesBeforeAllocate = _compressionPager.NumberOfAllocatedPages;
+                        var numberOfPagesBeforeAllocate = _compressionPager.NumberOfAllocatedPages;
 
                         _compressionPager.EnsureContinuous(_lastUsedPage, allocationInPages);
 
-                        if (numberOfPagesBeforeAllocate != -1 && _compressionPager.NumberOfAllocatedPages > numberOfPagesBeforeAllocate)
-                            _scratchSpaceMonitor?.Increase((_compressionPager.NumberOfAllocatedPages - numberOfPagesBeforeAllocate) * Constants.Storage.PageSize);
+                        if (_compressionPager.NumberOfAllocatedPages > numberOfPagesBeforeAllocate)
+                            _scratchSpaceMonitor.Increase((_compressionPager.NumberOfAllocatedPages - numberOfPagesBeforeAllocate) * Constants.Storage.PageSize);
                     }
                     catch (InsufficientMemoryException)
                     {
@@ -263,7 +260,7 @@ namespace Voron.Data.Compression
                 if (availablePages >= necessaryPages)
                 {
                     old.Dispose();
-                    _scratchSpaceMonitor?.Decrease(old.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                    _scratchSpaceMonitor.Decrease(old.NumberOfAllocatedPages * Constants.Storage.PageSize);
 
                     continue;
                 }

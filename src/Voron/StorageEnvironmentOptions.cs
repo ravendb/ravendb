@@ -132,7 +132,7 @@ namespace Voron
 
         public UpgraderDelegate SchemaUpgrader { get; set; }
 
-        public IScratchSpaceMonitor ScratchSpaceMonitor { get; set; }
+        public ScratchSpaceUsageMonitor ScratchSpaceUsage { get; }
 
         public long MaxScratchBufferSize
         {
@@ -230,6 +230,8 @@ namespace Voron
 
             PrefetchSegmentSize = 4 * Constants.Size.Megabyte;
             PrefetchResetThreshold = 8 * (long)Constants.Size.Gigabyte;
+
+            ScratchSpaceUsage = new ScratchSpaceUsageMonitor();
         }
 
         public void SetCatastrophicFailure(ExceptionDispatchInfo exception)
@@ -1071,6 +1073,9 @@ namespace Voron
                     MasterKey = null;
                 }
             }
+
+            ScratchSpaceUsage?.Dispose();
+
             Disposing();
         }
 
