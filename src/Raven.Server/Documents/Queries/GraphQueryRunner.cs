@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Graph;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
@@ -34,6 +35,10 @@ namespace Raven.Server.Documents.Queries
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag,
             OperationCancelToken token)
         {
+
+            var qp = new GraphQueryPlan(query, documentsContext, existingResultEtag, token, Database);
+            qp.BuildQueryPlan();
+            var matchResults = (await qp.ExecuteQueryPlan()).ToList();
             var q = query.Metadata.Query;
 
             using (var timingScope = new QueryTimingsScope())
@@ -67,7 +72,7 @@ namespace Raven.Server.Documents.Queries
                     }
                 }
 
-                var matchResults = ExecutePatternMatch(documentsContext, query, ir) ?? new List<Match>();
+                //var matchResults = ExecutePatternMatch(documentsContext, query, ir) ?? new List<Match>();
 
                 var filter = q.GraphQuery.Where;
                 if (filter != null)

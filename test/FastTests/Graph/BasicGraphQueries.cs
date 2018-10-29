@@ -206,18 +206,19 @@ namespace FastTests.Graph
                 CreateSimpleData(store);
                 using (var session = store.OpenSession())
                 {
-                    var result = session.Advanced.RawQuery<JObject>(@"match (Entities as e)-[References]->(Entities as e2)").ToList();
+                    var result = session.Advanced.RawQuery<JObject>(@"match (Entities as e)-[References as r]->(Entities as e2)").ToList();
 
                     Assert.Equal(3, result.Count);
                     Assert.Contains(result,
-                        item => item["e"].Value<JObject>("@metadata").Value<string>("@id") == "entity/1" &&
-                                item["e2"].Value<JObject>("@metadata").Value<string>("@id") == "entity/2");
+                        item => item["e"].Value<string>("Name") == "A" &&
+                                item["e2"].Value<string>("Name") == "B");
                     Assert.Contains(result,
-                        item => item["e"].Value<JObject>("@metadata").Value<string>("@id") == "entity/2" &&
-                                item["e2"].Value<JObject>("@metadata").Value<string>("@id") == "entity/3");
+                        item => item["e"].Value<string>("Name") == "B" &&
+                                item["e2"].Value<string>("Name") == "C");
                     Assert.Contains(result,
-                        item => item["e"].Value<JObject>("@metadata").Value<string>("@id") == "entity/3" &&
-                                item["e2"].Value<JObject>("@metadata").Value<string>("@id") == "entity/1");
+                        item => item["e"].Value<string>("Name") == "C" &&
+                                item["e2"].Value<string>("Name") == "A");
+
                 }
             }
         }
