@@ -36,6 +36,7 @@ namespace Voron.Impl.Paging
         public bool UsePageProtection { get; } = false;
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
         private readonly bool _canPrefetchAhead;
+        protected  bool _supportUnmapping;
 
         public Action<PagerState> PagerStateChanged;
 

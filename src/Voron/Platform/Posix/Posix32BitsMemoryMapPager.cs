@@ -45,6 +45,7 @@ namespace Voron.Platform.Posix
 
             _copyOnWriteMode = options.CopyOnWriteMode && file.FullPath.EndsWith(Constants.DatabaseFilename);
             _isSyncDirAllowed = Syscall.CheckSyncDirectoryAllowed(FileName.FullPath);
+            _supportUnmapping = false;
 
             PosixHelper.EnsurePathExists(FileName.FullPath);
 
@@ -497,11 +498,6 @@ namespace Voron.Platform.Posix
         protected internal override void PrefetchRanges(Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* list, int count)
         {
             // we never want to do this here
-        }
-        
-        public override void ReleaseAllocationInfo(byte* baseAddress, long size)
-        {
-            ReleaseAllocationInfoWithoutUnmapping(baseAddress, size);            
-        }        
+        }                  
     }
 }
