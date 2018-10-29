@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private IQueryStep BuildQueryPlanForExpression(QueryExpression expression)
         {
-            switch (_query.Metadata.Query.GraphQuery.MatchClause)
+            switch (expression)
             {
                 case PatternMatchElementExpression pme:
                     return BuildQueryPlanForPattern(pme);
@@ -51,16 +51,34 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
+        public async Task Initialize()
+        {
+            await _rootQueryStep.Initialize();
+        }
+
         private IQueryStep BuildQueryPlanForBinaryExpression(BinaryExpression be)
         {
+            bool negated = false;
+            var rightExpr = be.Right;
+            if(be.Right is NegatedExpression n)
+            {
+                negated = true;
+                rightExpr = n.Expression;
+            }
+
             var left = BuildQueryPlanForExpression(be.Left);
-            var right = BuildQueryPlanForExpression(be.Right);
+            var right = BuildQueryPlanForExpression(rightExpr);
             switch (be.Operator)
             {
                 case OperatorType.And:
-                    return new AndQueryStep(left, right);
-                case OperatorType.Or:
-                    return new OrQueryStep(left, right);
+                    if(negated)
+                        return new IntersectionQueryStep<Except>(left, right);
+
+                    return new IntersectionQueryStep<Intersection>(left, right);
+
+               case OperatorType.Or:
+                    return new IntersectionQueryStep<Union>(left, right);
+
                 default:
                     throw new ArgumentOutOfRangeException($"Unexpected binary expression of type: {be.Operator}");
             }
@@ -68,10 +86,10 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private IQueryStep BuildQueryPlanForPattern(PatternMatchElementExpression patternExpression)
         {
-            IQueryStep prev = BuildQueryPlanForMatchVertex(patternExpression.Path[0]);
+            IQueryStep prev = BuildQueryPlanForMatchNode(patternExpression.Path[0]);
             for (var i = 2; i < patternExpression.Path.Length; i+=2)
             {
-                var tmpVertex = BuildQueryPlanForMatchVertex(patternExpression.Path[i]);
+                var tmpVertex = BuildQueryPlanForMatchNode(patternExpression.Path[i]);
                 prev = BuildQueryPlanForEdge(prev, tmpVertex, patternExpression.Path[i-1]);
             }
 
@@ -89,14 +107,15 @@ namespace Raven.Server.Documents.Queries.Graph
             return new EdgeQueryStep(left, right, withEdge, edge, _query.QueryParameters);
         }
 
-        private IQueryStep BuildQueryPlanForMatchVertex(MatchPath vertex)
+        private IQueryStep BuildQueryPlanForMatchNode(MatchPath vertex)
         {            
             Sparrow.StringSegment alias = vertex.Alias;
             if (GraphQuery.WithDocumentQueries.TryGetValue(alias, out var query) == false)
             {
-                throw new InvalidOperationException($"BuildQueryPlanForMatchVertex was invoked for allias='{alias}' which suppose to be a vertex but no corresponding WITH clause was found.");
+                throw new InvalidOperationException($"BuildQueryPlanForMatchVertex was invoked for allias='{alias}' which is supposed to be a node but no corresponding WITH clause was found.");
             }
-            //TODO: we can tell at this point if it is a collection query or not, we might want to build a diffrent step for collection queries in the future.        
+            // TODO: we can tell at this point if it is a collection query or not,
+            // TODO: in the future, we want to build a diffrent step for collection queries in the future.        
             var queryMetadata = new QueryMetadata(query, _query.QueryParameters, 0);
             return new QueryQueryStep(_database.QueryRunner, alias, query, queryMetadata, _context, _resultEtag, _token);
         }
@@ -107,9 +126,14 @@ namespace Raven.Server.Documents.Queries.Graph
             return;
         }
 
-        public async ValueTask<IEnumerable<Match>> ExecuteQueryPlan()
-        {            
-            return await _rootQueryStep.Execute(new Dictionary<IQueryStep, IEnumerable<Match>>());
+        public List<Match> Execute()
+        {
+            var list = new List<Match>();
+            while (_rootQueryStep.GetNext(out var m))
+            {
+                list.Add(m);
+            }
+            return list;
         }
 
 

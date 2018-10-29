@@ -1,11 +1,18 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using static Raven.Server.Documents.Queries.GraphQueryRunner;
 
 namespace Raven.Server.Documents.Queries.Graph
 {
     public interface IQueryStep
     {
-        Task<IEnumerable<Match>> Execute(Dictionary<IQueryStep,IEnumerable<Match>> matches);
+        ValueTask Initialize();
+
+        HashSet<string> GetAllAliases();
+
+        string GetOuputAlias();
+
+        bool GetNext(out GraphQueryRunner.Match match);
+
+        bool TryGetById(string id, out GraphQueryRunner.Match match);
     }
 }

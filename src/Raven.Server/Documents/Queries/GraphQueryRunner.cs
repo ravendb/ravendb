@@ -38,39 +38,40 @@ namespace Raven.Server.Documents.Queries
 
             var qp = new GraphQueryPlan(query, documentsContext, existingResultEtag, token, Database);
             qp.BuildQueryPlan();
-            var matchResults = (await qp.ExecuteQueryPlan()).ToList();
+            await qp.Initialize();
+            var matchResults = qp.Execute();
             var q = query.Metadata.Query;
 
             using (var timingScope = new QueryTimingsScope())
             {
-                var ir = new IntermediateResults();
+                //var ir = new IntermediateResults();
 
-                foreach (var documentQuery in q.GraphQuery.WithDocumentQueries)
-                {
-                    var queryMetadata = new QueryMetadata(documentQuery.Value, query.QueryParameters, 0);
-                    if (documentQuery.Value.From.Index)
-                    {
-                        var index = Database.IndexStore.GetIndex(queryMetadata.IndexName);
-                        if (index.Type == IndexType.AutoMapReduce ||
-                            index.Type == IndexType.MapReduce ||
-                            index.Type == IndexType.JavaScriptMapReduce)
-                        {
-                            _mapReduceAliases.Add(documentQuery.Key);
-                        }
-                    }
+                //foreach (var documentQuery in q.GraphQuery.WithDocumentQueries)
+                //{
+                //    var queryMetadata = new QueryMetadata(documentQuery.Value, query.QueryParameters, 0);
+                //    if (documentQuery.Value.From.Index)
+                //    {
+                //        var index = Database.IndexStore.GetIndex(queryMetadata.IndexName);
+                //        if (index.Type == IndexType.AutoMapReduce ||
+                //            index.Type == IndexType.MapReduce ||
+                //            index.Type == IndexType.JavaScriptMapReduce)
+                //        {
+                //            _mapReduceAliases.Add(documentQuery.Key);
+                //        }
+                //    }
 
-                    var indexQuery = new IndexQueryServerSide(queryMetadata);
-                    var results = await Database.QueryRunner.ExecuteQuery(indexQuery, documentsContext, existingResultEtag, token).ConfigureAwait(false);
+                //    var indexQuery = new IndexQueryServerSide(queryMetadata);
+                //    var results = await Database.QueryRunner.ExecuteQuery(indexQuery, documentsContext, existingResultEtag, token).ConfigureAwait(false);
 
-                    ir.EnsureExists(documentQuery.Key);
+                //    ir.EnsureExists(documentQuery.Key);
 
-                    foreach (var result in results.Results)
-                    {
-                        var match = new Match();
-                        match.Set(documentQuery.Key, result);
-                        match.PopulateVertices(ref ir);
-                    }
-                }
+                //    foreach (var result in results.Results)
+                //    {
+                //        var match = new Match();
+                //        match.Set(documentQuery.Key, result);
+                //        match.PopulateVertices(ref ir);
+                //    }
+                //}
 
                 //var matchResults = ExecutePatternMatch(documentsContext, query, ir) ?? new List<Match>();
 
