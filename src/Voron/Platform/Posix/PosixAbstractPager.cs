@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Utils;
@@ -18,6 +19,7 @@ namespace Voron.Platform.Posix
     public abstract class PosixAbstractPager : AbstractPager
     {
         internal int _fd;
+        private Logger _log = LoggingSource.Instance.GetLogger<PosixAbstractPager>("PosixAbstractPager");
 
         public override int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState)
         {
@@ -127,8 +129,10 @@ namespace Voron.Platform.Posix
 
             if (DeleteOnClose)
             {
-                // we can't do much with failing madvise rc
-                Syscall.madvise(ptr, new UIntPtr((ulong)size), MAdvFlags.MADV_DONTNEED);
+                if (Syscall.madvise(ptr, new UIntPtr((ulong)size), MAdvFlags.MADV_DONTNEED) != 0)
+                {
+                    _log.Info($"Failed to madvise MDV_DONTNEED for {FileName?.FullPath}");
+                }
             }
             
             var result = Syscall.munmap(ptr, (UIntPtr)size);
