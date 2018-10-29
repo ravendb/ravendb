@@ -7,7 +7,7 @@ class graphHelper {
         width: 8,
         trackColor: "#63728a",
         scrollColor: "#98a7b7"
-    }
+    };
 
     static prefixStyle(value: string) {
         const prefix = "-webkit-transform" in document.body.style ? "-webkit-"
