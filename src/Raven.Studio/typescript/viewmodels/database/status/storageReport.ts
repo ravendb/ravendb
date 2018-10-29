@@ -244,14 +244,19 @@ class storageReport extends viewModelBase {
     private mapTempFiles(report: Voron.Debugging.StorageReport): storageReportItem {
         const tempFiles = report.TempFiles;
 
-        const mappedTemps = tempFiles.map(temp =>
-            new storageReportItem(
+        const mappedTemps = tempFiles.map(temp => {
+            const item = new storageReportItem(
                 temp.Name,
                 "temp",
                 false,
                 temp.AllocatedSpaceInBytes,
                 []
-            ));
+            );
+            
+            item.recyclableJournal = temp.Type === "RecyclableJournal";
+            
+            return item;
+        });
 
         return new storageReportItem("Temporary Files", "tempFiles", false, mappedTemps.reduce((p, c) => p + c.size, 0), mappedTemps);
         
@@ -297,7 +302,6 @@ class storageReport extends viewModelBase {
     }
 
     private draw(goingIn: boolean, previousNode: storageReportItem) {
-
         const levelDown = goingIn === true;
         const levelUp = goingIn === false;
 
@@ -507,9 +511,15 @@ class storageReport extends viewModelBase {
         this.node(d);
         this.draw(goingIn, prev);
 
+        this.updateTooltips();
+        
         if (d3.event) {
             (d3.event as any).stopPropagation();
         }
+    }
+    
+    private updateTooltips() {
+        $('#storage-report [data-toggle="tooltip"]').tooltip();
     }
 
     private onMouseMove(d: storageReportItem) {
