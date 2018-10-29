@@ -1,15 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Utils;
-using Voron.Data.BTrees;
-using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Platform.Win32;
@@ -19,7 +13,10 @@ namespace Voron.Platform.Posix
     public abstract class PosixAbstractPager : AbstractPager
     {
         internal int _fd;
-        private Logger _log = LoggingSource.Instance.GetLogger<PosixAbstractPager>("PosixAbstractPager");
+
+        private readonly bool _supportsUnmapping;
+
+        private readonly Logger _log = LoggingSource.Instance.GetLogger<PosixAbstractPager>("PosixAbstractPager");
 
         public override int CopyPage(I4KbBatchWrites destwI4KbBatchWrites, long p, PagerState pagerState)
         {
@@ -51,18 +48,19 @@ namespace Voron.Platform.Posix
             return base.AcquirePagePointer(tx, pageNumber, state);
         }
 
-        protected PosixAbstractPager(StorageEnvironmentOptions options, bool canPrefetchAhead, bool usePageProtection = false) : base(options, canPrefetchAhead, usePageProtection: usePageProtection)
+        protected PosixAbstractPager(StorageEnvironmentOptions options, bool canPrefetchAhead, bool usePageProtection = false, bool supportsUnmapping = true)
+            : base(options, canPrefetchAhead, usePageProtection: usePageProtection)
         {
-            _supportUnmapping = true;
+            _supportsUnmapping = supportsUnmapping;
         }
 
         public override unsafe void ReleaseAllocationInfo(byte* baseAddress, long size)
         {
             base.ReleaseAllocationInfo(baseAddress, size);
 
-            if (_supportUnmapping == false)
+            if (_supportsUnmapping == false)
                 return;
-            
+
             var ptr = new IntPtr(baseAddress);
 
             if (DeleteOnClose)
@@ -73,7 +71,7 @@ namespace Voron.Platform.Posix
                         _log.Info($"Failed to madvise MDV_DONTNEED for {FileName?.FullPath}");
                 }
             }
-            
+
             var result = Syscall.munmap(ptr, (UIntPtr)size);
             if (result == -1)
             {
@@ -81,8 +79,8 @@ namespace Voron.Platform.Posix
                 Syscall.ThrowLastError(err, "munmap " + FileName);
             }
             NativeMemory.UnregisterFileMapping(FileName.FullPath, ptr, size);
-        }        
-        
+        }
+
         protected override void DisposeInternal()
         {
             if (_fd != -1)
