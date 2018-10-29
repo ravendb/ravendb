@@ -53,18 +53,16 @@ namespace Voron.Platform.Posix
 
         protected PosixAbstractPager(StorageEnvironmentOptions options, bool canPrefetchAhead, bool usePageProtection = false) : base(options, canPrefetchAhead, usePageProtection: usePageProtection)
         {
+            _supportUnmapping = true;
         }
 
-        protected unsafe void ReleaseAllocationInfoWithoutUnmapping(byte* baseAddress, long size)
-        {
-            // should be called from Posix32BitsMemoryMapPager in order to bypass unmapping
-            base.ReleaseAllocationInfo(baseAddress, size);
-        }
-        
         public override unsafe void ReleaseAllocationInfo(byte* baseAddress, long size)
         {
-            // 32 bits should override this method and call AbstractPager::ReleaseAllocationInfo
             base.ReleaseAllocationInfo(baseAddress, size);
+
+            if (_supportUnmapping == false)
+                return;
+            
             var ptr = new IntPtr(baseAddress);
 
             if (DeleteOnClose)
