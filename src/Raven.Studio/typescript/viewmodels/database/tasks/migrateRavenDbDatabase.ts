@@ -150,33 +150,6 @@ class migrateRavenDbDatabase extends viewModelBase {
                         "<span class=\"token keyword\">this</span>.Freight = <span class=\"token number\">15.3</span>;<br />" +
                         "</pre>"
             });
-
-        this.initInlineEdit();
-    }
-    private initInlineEdit() {
-        const $body = $("body");
-
-        this.registerDisposableHandler($body, "click", (event: JQueryEventObject) => {
-            if ($(event.target).closest(".inline-edit").length === 0) {
-                // click outside edit area - close all of them
-
-                $(".inline-edit.edit-mode")
-                    .removeClass("edit-mode");
-            }
-        });
-
-        $(".migrate-database").on("click", ".inline-edit", event => {
-            event.preventDefault();
-
-            $(".inline-edit.edit-mode")
-                .removeClass("edit-mode");
-
-            const container = $(event.target).closest(".inline-edit");
-            if (!container.hasClass("edit-disabled")) {
-                container.addClass("edit-mode");
-                $("input", container).focus();
-            }
-        });
     }
 }
 
