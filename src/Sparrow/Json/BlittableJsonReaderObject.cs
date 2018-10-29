@@ -20,7 +20,6 @@ namespace Sparrow.Json
         private readonly int _propCount;
         private readonly long _currentOffsetSize;
         private readonly long _currentPropertyIdSize;
-        private readonly bool _isRoot;
         private byte* _objStart;
 
         public DynamicJsonValue Modifications;
@@ -50,7 +49,6 @@ namespace Sparrow.Json
             if (size == 0)
                 ThrowOnZeroSize(size);
 
-            _isRoot = true;
             _buffer = buffer;
             _mem = mem; // get beginning of memory pointer
             _size = size; // get document size
@@ -114,7 +112,6 @@ namespace Sparrow.Json
         public BlittableJsonReaderObject(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
             : base(parent._context)
         {
-            _isRoot = false;
             _parent = parent;
             _mem = parent._mem;
             _size = parent._size;
