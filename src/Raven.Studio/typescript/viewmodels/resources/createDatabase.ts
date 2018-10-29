@@ -20,6 +20,7 @@ import router = require("plugins/router");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import lastUsedAutocomplete = require("common/storage/lastUsedAutocomplete");
+import viewModelBase = require("viewmodels/viewModelBase");
 
 class createDatabase extends dialogViewModelBase {
     
@@ -27,6 +28,8 @@ class createDatabase extends dialogViewModelBase {
     static readonly legacyEncryptionAlgorithms = ['DES', 'RC2', 'Rijndael', 'Triple DES'] as legacyEncryptionAlgorithms[];
 
     static readonly defaultSection = "replication";
+    
+    clientVersion = viewModelBase.clientVersion;
 
     spinners = {
         create: ko.observable<boolean>(false)
