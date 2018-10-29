@@ -2,13 +2,6 @@
 <form class="flex-form" data-bind="with: model.unsecureSetup, submit: save">
     <div class="panel padding padding-lg">
         <div class="margin-bottom">
-            <div class="form-group" data-bind="validationElement: localNodeTag">
-                <label for="localNodeTag" class="control-label">Node Tag</label>
-                <div class="flex-grow">
-                    <input type="text" autocomplete="off" class="form-control" id="localNodeTag" data-bind="textInput: localNodeTag">
-                </div>
-            </div>
-            
             <div class="form-group" data-bind="validationElement: port">
                 <label for="port" class="control-label">HTTP Port</label>
                 <div class="flex-grow">
@@ -49,6 +42,25 @@
                             <div class="help-block" data-bind="validationMessage: ip"></div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div class="form-group" data-bind="validationElement: bootstrapCluster">
+                <label for="bootstrapCluster" class="control-label">&nbsp;</label>
+                <div class="flex-grow">
+                    <div class="toggle">
+                        <input id="bootstrapCluster" class="styled" type="checkbox" data-bind="checked: bootstrapCluster">
+                        <label for="bootstrapCluster">
+                            Create new cluster
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group" data-bind="validationElement: localNodeTag, visible: bootstrapCluster">
+                <label for="localNodeTag" class="control-label">Node Tag</label>
+                <div class="flex-grow">
+                    <input type="text" autocomplete="off" class="form-control" id="localNodeTag" data-bind="textInput: localNodeTag">
                 </div>
             </div>
         </div>

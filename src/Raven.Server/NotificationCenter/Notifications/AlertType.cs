@@ -52,6 +52,8 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         OutOfMemoryException,
 
-        LowDiskSpace
+        LowDiskSpace,
+
+        UnexpectedIndexingThreadError
     }
 }

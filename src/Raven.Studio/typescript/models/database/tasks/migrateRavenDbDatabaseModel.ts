@@ -33,6 +33,7 @@ class migrateRavenDbDatabaseModel {
     domain = ko.observable<string>();
     apiKey = ko.observable<string>();
     enableBasicAuthenticationOverUnsecuredHttp = ko.observable<boolean>();
+    skipServerCertificateValidation = ko.observable<boolean>();
 
     serverMajorVersionNumber: KnockoutComputed<string>;
     isRavenDb: KnockoutComputed<boolean>;
@@ -43,6 +44,7 @@ class migrateRavenDbDatabaseModel {
     showWindowsCredentialInputs: KnockoutComputed<boolean>;
     showApiKeyCredentialInputs: KnockoutComputed<boolean>;
     isUnsecuredBasicAuthentication: KnockoutComputed<boolean>;
+    isSecuredConnection: KnockoutComputed<boolean>;
 
     validationGroup: KnockoutValidationGroup;
     importDefinitionHasIncludes: KnockoutComputed<boolean>;
@@ -103,7 +105,8 @@ class migrateRavenDbDatabaseModel {
             ApiKey: this.showApiKeyCredentialInputs() ? this.apiKey() : null, 
             EnableBasicAuthenticationOverUnsecuredHttp: this.apiKey() ? this.enableBasicAuthenticationOverUnsecuredHttp() : false, 
             BuildMajorVersion: this.serverMajorVersion(),
-            BuildVersion: this.buildVersion()
+            BuildVersion: this.buildVersion(),
+            SkipServerCertificateValidation: this.isSecuredConnection() ? this.skipServerCertificateValidation() : false
         };
     }
 
@@ -181,6 +184,15 @@ class migrateRavenDbDatabaseModel {
             }
 
             return this.hasUnsecuredBasicAuthenticationOption() && url.toLowerCase().startsWith("http://");
+        });
+
+        this.isSecuredConnection = ko.pureComputed(() => {
+            const url = this.serverUrl();
+            if (!url) {
+                return false;
+            }
+
+            return url.toLowerCase().startsWith("https://");
         });
     }
     
