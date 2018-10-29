@@ -9,7 +9,7 @@ using static Raven.Server.Documents.Queries.GraphQueryRunner;
 
 namespace Raven.Server.Documents.Queries.Graph
 {
-    public class QueryQueryStep : IQueryStep
+    public class QueryQueryStep : IGraphQueryStep
     {
         private Query _query;
         private Sparrow.StringSegment _alias;
@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private QueryRunner _queryRunner;
         private QueryMetadata _queryMetadata;
 
-        private int _index  = -1;
+        private int _index;
         private List<Match> _results = new List<Match>();
         private Dictionary<string, Match> _resultsById = new Dictionary<string, Match>(StringComparer.OrdinalIgnoreCase);
 
@@ -50,7 +50,6 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public ValueTask Initialize()
         {
-            _index = 0;
             var results = _queryRunner.ExecuteQuery(new IndexQueryServerSide(_queryMetadata),
                   _context, _resultEtag, _token);
 

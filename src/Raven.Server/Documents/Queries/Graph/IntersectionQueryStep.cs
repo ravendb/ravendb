@@ -7,18 +7,18 @@ using static Raven.Server.Documents.Queries.GraphQueryRunner;
 
 namespace Raven.Server.Documents.Queries.Graph
 {
-    public class IntersectionQueryStep<TOp> : IQueryStep
+    public class IntersectionQueryStep<TOp> : IGraphQueryStep
         where TOp : struct, ISetOp
     {
         private Dictionary<long, List<Match>> _tempIntersect = new Dictionary<long, List<Match>>();
         private HashSet<string> _unionedAliases;
         private List<string> _intersectedAliases;
-        private readonly IQueryStep _left;
-        private readonly IQueryStep _right;
+        private IGraphQueryStep _left;
+        private readonly IGraphQueryStep _right;
         private readonly List<Match> _results = new List<Match>();
         private int _index;
 
-        public IntersectionQueryStep(IQueryStep left, IQueryStep right)
+        public IntersectionQueryStep(IGraphQueryStep left, IGraphQueryStep right)
         {
             _unionedAliases = new HashSet<string>();
             _unionedAliases.UnionWith(left.GetAllAliases());
@@ -138,160 +138,6 @@ namespace Raven.Server.Documents.Queries.Graph
         public bool TryGetById(string id, out Match match)
         {
             throw new System.NotSupportedException("Cannot pull results by id from an intersection operation");
-        }
-    }
-
-    public interface ISetOp
-    {
-        void Op(List<Match> output,
-            Match left,
-            Match right,
-            bool allIntersectionsMatch,
-            HashSet<Match> state);
-
-        void Set(IQueryStep left, IQueryStep right);
-
-        bool CanOptimizeSides { get; }
-        bool ShouldContinueWhenNoIntersection { get; }
-        void Complete(List<Match> output, Dictionary<long, List<Match>> intersection, HashSet<Match> state);
-    }
-
-    public struct Intersection : ISetOp
-    {
-        public bool CanOptimizeSides => true;
-        public bool ShouldContinueWhenNoIntersection => false;
-
-        private HashSet<string> _leftAliases, _rightAliases;
-
-        public void Complete(List<Match> output, Dictionary<long, List<Match>> intersection, HashSet<StringSegment> aliases, HashSet<Match> state)
-        {
-            // nothing to do
-        }
-
-        public void Op(List<Match> output,
-            Match left,
-            Match right,
-            bool allIntersectionsMatch,
-            HashSet<Match> state)
-        {
-            if (allIntersectionsMatch == false)
-                return;
-
-            var resultMatch = new Match();
-
-            Union.CopyAliases(left, ref resultMatch, _leftAliases);
-            Union.CopyAliases(right, ref resultMatch, _rightAliases);
-            output.Add(resultMatch);
-        }
-
-        public void Set(IQueryStep left, IQueryStep right)
-        {
-            _leftAliases = left.GetAllAliases();
-            _rightAliases = right.GetAllAliases();
-        }
-
-        public void Complete(List<Match> output, Dictionary<long, List<Match>> intersection, HashSet<Match> state)
-        {
-            
-        }
-    }
-
-    public struct Union : ISetOp
-    {
-        public bool CanOptimizeSides => true;
-        public bool ShouldContinueWhenNoIntersection => true;
-        private HashSet<string> _leftAliases, _rightAliases;
-
-
-        public void Set(IQueryStep left, IQueryStep right)
-        {
-            _leftAliases = left.GetAllAliases();
-            _rightAliases = right.GetAllAliases();
-        }
-
-        public void Complete(List<Match> output, Dictionary<long, List<Match>> intersection, HashSet<Match> state)
-        {
-            foreach (var kvp in intersection)
-            {
-                foreach (var item in kvp.Value)
-                {
-                    if (state.Contains(item) == false)
-                    {
-                        output.Add(item);
-                    }
-                }
-            }
-
-            foreach (var nonIntersectedItem in state)
-                output.Add(nonIntersectedItem);
-        }
-
-        public void Op(List<Match> output,
-            Match left,
-            Match right,
-            bool allIntersectionsMatch,
-            HashSet<Match> state)
-        {
-            if (allIntersectionsMatch == false)
-            {
-                output.Add(right);
-                return;
-            }
-
-            var resultMatch = new Match();
-
-            CopyAliases(left, ref resultMatch, _leftAliases);
-            CopyAliases(right, ref resultMatch, _rightAliases);
-            output.Add(resultMatch);
-            state.Add(left);
-        }
-
-        public static void CopyAliases(Match src, ref Match dst, HashSet<string> aliases)
-        {
-            foreach (var alias in aliases)
-            {
-                var doc = src.GetSingleDocumentResult(alias);
-                if (doc == null)
-                    continue;
-                dst.TrySet(alias, doc);
-            }
-        }
-
-    }
-
-    public struct Except : ISetOp
-    {
-        // for AND NOT, the sides really matter, so we can't optimize it
-        public bool CanOptimizeSides => false;
-        public bool ShouldContinueWhenNoIntersection => true;
-        private HashSet<string> _leftAliases, _rightAliases;
-
-        public void Set(IQueryStep left, IQueryStep right)
-        {
-            _leftAliases = left.GetAllAliases();
-            _rightAliases = right.GetAllAliases();
-        }
-
-        public void Complete(List<Match> output, Dictionary<long, List<Match>> intersection, HashSet<Match> state)
-        {
-            foreach (var kvp in intersection)
-            {
-                foreach (var item in kvp.Value)
-                {
-                    if (state.Contains(item) == false)
-                        output.Add(item);
-                }
-            }
-        }
-
-        public void Op(List<Match> output,
-            Match left,
-            Match right,
-            bool allIntersectionsMatch,
-            HashSet<Match> state)
-        {
-            if (allIntersectionsMatch)
-                state.Add(left);
         }
     }
 }
