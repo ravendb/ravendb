@@ -31,9 +31,6 @@ namespace SlowTests.Issues
 
                     documentId = question.Id;
                 }
-
-                WaitForUserToContinueTheTest(store);
-
                 using (var session = store.OpenAsyncSession())
                 {
                     var question = await session.LoadAsync<Question>(documentId);
@@ -42,10 +39,40 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public async Task GetStoreAndGetControlChar()
+        {
+            using (var store = GetDocumentStore())
+            {
+                string documentId;
+                using (var session = store.OpenAsyncSession())
+                {
+                    var question = new Question
+                    {
+                        Letter = '\0',
+                        Name = "Hello \0 World"
+                    };
+
+                    await session.StoreAsync(question);
+                    await session.SaveChangesAsync();
+
+                    documentId = question.Id;
+                }
+
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var question = await session.LoadAsync<Question>(documentId);
+                    Assert.Equal('\0', question.Letter);
+                    Assert.Equal("Hello \0 World", question.Name);
+                }
+            }
+        }
+
         public class Question
         {
             public string Id { get; set; }
-
+            public string Name { get; set; }
             public char Letter { get; set; }
         }
     }
