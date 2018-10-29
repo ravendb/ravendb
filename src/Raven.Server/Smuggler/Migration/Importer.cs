@@ -76,6 +76,12 @@ namespace Raven.Server.Smuggler.Migration
                     if (smugglerResult == null)
                         return;
 
+                    if ((_buildVersion >= 40000 && _buildVersion < 41000) || _buildVersion == 40)
+                    {
+                        // prevent NRE, counter were added in 4.1
+                        smugglerResult.Counters = new SmugglerProgressBase.CountsWithLastEtag();
+                    }
+
                     var importInfo = new ImportInfo
                     {
                         LastEtag = smugglerResult.GetLastEtag() + 1,
