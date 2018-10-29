@@ -165,9 +165,9 @@ namespace Raven.Server.Documents.Handlers
                         }
                     }
 
-                    if(doc != null)
+                    if (doc != null)
                     {
-                        _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc.Data, docId, kvp.Value);
+                        _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc.Data, docId);
                     }
 
                     void LoadDocument()

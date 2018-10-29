@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions.Documents.Indexes;
 
 namespace Raven.Client.ServerWide
@@ -46,6 +47,8 @@ namespace Raven.Client.ServerWide
 
         public ConflictSolver ConflictSolverConfig;
 
+        public Dictionary<string, SorterDefinition> Sorters;
+
         public Dictionary<string, IndexDefinition> Indexes;
 
         public Dictionary<string, AutoIndexDefinition> AutoIndexes;
@@ -73,6 +76,19 @@ namespace Raven.Client.ServerWide
         public StudioConfiguration Studio;
 
         public long TruncatedClusterTransactionCommandsCount;
+
+        public void AddSorter(SorterDefinition definition)
+        {
+            if (Sorters == null)
+                Sorters = new Dictionary<string, SorterDefinition>(StringComparer.OrdinalIgnoreCase);
+
+            Sorters[definition.Name] = definition;
+        }
+
+        public void DeleteSorter(string sorterName)
+        {
+            Sorters?.Remove(sorterName);
+        }
 
         public void AddIndex(IndexDefinition definition)
         {

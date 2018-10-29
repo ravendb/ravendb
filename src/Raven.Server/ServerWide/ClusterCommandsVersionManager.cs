@@ -8,6 +8,7 @@ using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Sparrow.Logging;
 
@@ -92,7 +93,9 @@ namespace Raven.Server.ServerWide
             [nameof(SetIndexStateCommand)] = Base41CommandsVersion,
             [nameof(PutServerWideStudioConfigurationCommand)] = Base41CommandsVersion,
 
-            [nameof(PutIndexesCommand)] = Base42CommandsVersion
+            [nameof(PutIndexesCommand)] = Base42CommandsVersion,
+            [nameof(PutSortersCommand)] = Base42CommandsVersion,
+            [nameof(DeleteSorterCommand)] = Base42CommandsVersion
         };
 
         public static bool CanPutCommand(string command)

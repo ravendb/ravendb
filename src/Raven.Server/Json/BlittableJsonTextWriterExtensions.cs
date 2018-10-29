@@ -225,7 +225,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static async Task<int> WriteDocumentQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result, bool metadataOnly, Func<AsyncBlittableJsonTextWriter,Task> writeAdditionalData = null)
+        public static async Task<int> WriteDocumentQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result, bool metadataOnly, Action<AsyncBlittableJsonTextWriter> writeAdditionalData = null)
         {
             writer.WriteStartObject();
 

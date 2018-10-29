@@ -1001,6 +1001,16 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             whereToken.Options.Proximity = proximity;
         }
 
+        public void OrderBy(string field, string sorterName)
+        {
+            if (string.IsNullOrWhiteSpace(sorterName)) 
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(sorterName));
+
+            AssertNoRawQuery();
+            var f = EnsureValidFieldName(field, isNestedPath: false);
+            OrderByTokens.AddLast(OrderByToken.CreateAscending(f, sorterName));
+        }
+
         /// <summary>
         ///   Order the results by the specified fields
         ///   The fields are the names of the fields to sort, defaulting to sorting by ascending.
@@ -1011,6 +1021,16 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             AssertNoRawQuery();
             var f = EnsureValidFieldName(field, isNestedPath: false);
             OrderByTokens.AddLast(OrderByToken.CreateAscending(f, ordering));
+        }
+
+        public void OrderByDescending(string field, string sorterName)
+        {
+            if (string.IsNullOrWhiteSpace(sorterName)) 
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(sorterName));
+
+            AssertNoRawQuery();
+            var f = EnsureValidFieldName(field, isNestedPath: false);
+            OrderByTokens.AddLast(OrderByToken.CreateDescending(f, sorterName));
         }
 
         /// <summary>

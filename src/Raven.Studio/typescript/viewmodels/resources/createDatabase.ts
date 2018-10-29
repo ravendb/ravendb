@@ -19,6 +19,8 @@ import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import lastUsedAutocomplete = require("common/storage/lastUsedAutocomplete");
+import viewModelBase = require("viewmodels/viewModelBase");
 
 class createDatabase extends dialogViewModelBase {
     
@@ -26,6 +28,8 @@ class createDatabase extends dialogViewModelBase {
     static readonly legacyEncryptionAlgorithms = ['DES', 'RC2', 'Rijndael', 'Triple DES'] as legacyEncryptionAlgorithms[];
 
     static readonly defaultSection = "replication";
+    
+    clientVersion = viewModelBase.clientVersion;
 
     spinners = {
         create: ko.observable<boolean>(false)
@@ -50,6 +54,9 @@ class createDatabase extends dialogViewModelBase {
     databaseLocationCalculated = ko.observable<string>();
     databaseLocationShowing: KnockoutComputed<string>;
     
+    recentPathsAutocomplete: lastUsedAutocomplete;
+    dataExporterAutocomplete: lastUsedAutocomplete;
+    
     getDatabaseByName(name: string): database {
         return databasesManager.default.getDatabaseByName(name);
     }
@@ -68,6 +75,8 @@ class createDatabase extends dialogViewModelBase {
         this.operationNotSupported = mode === "legacyMigration" && clusterTopologyManager.default.nodeInfo().OsInfo.Type !== "Windows";
         
         this.databaseModel = new databaseCreationModel(mode);
+        this.recentPathsAutocomplete = new lastUsedAutocomplete("createDatabasePath", this.databaseModel.path.dataPath);
+        this.dataExporterAutocomplete = new lastUsedAutocomplete("dataExporterPath", this.databaseModel.legacyMigration.dataExporterFullPath);
         
         switch (mode) {
             case "newDatabase": 
@@ -152,7 +161,6 @@ class createDatabase extends dialogViewModelBase {
     }
 
     protected initObservables() {
-
         this.canUseDynamicOption = ko.pureComputed(() => {
             const fromBackup = this.databaseModel.isFromBackupOrFromOfflineMigration;
             const enforceManual = this.enforceManualNodeSelection();
@@ -279,6 +287,9 @@ class createDatabase extends dialogViewModelBase {
                 // disable validation for name as it might display error: database already exists
                 // since we get async notifications during db creation
                 this.databaseModel.name.extend({validatable: false});
+                
+                this.recentPathsAutocomplete.recordUsage();
+                this.dataExporterAutocomplete.recordUsage();
 
                 switch (this.databaseModel.creationMode) {
                     case "restore":

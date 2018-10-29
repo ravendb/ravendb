@@ -58,5 +58,7 @@ namespace Raven.Server.Smuggler.Migration
         public string ApiKey { get; set; }
 
         public bool EnableBasicAuthenticationOverUnsecuredHttp { get; set; }
+
+        public bool SkipServerCertificateValidation { get; set; }
     }
 }

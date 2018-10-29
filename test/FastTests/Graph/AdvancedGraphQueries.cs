@@ -821,6 +821,7 @@ namespace FastTests.Graph
                         A = x["a"].ToObject<Person>(),
                         Path = x.Value<JArray>("path").Select(s=> s["r"].Value<string>()).ToList(),
                     }).ToArray();
+
                     // we return the single longest path here, so we get a large chain
                     Assert.Equal(1, stronglyTypedResults.Length);
                     Assert.Equal("Joe", stronglyTypedResults[0].A.Name);
@@ -829,6 +830,7 @@ namespace FastTests.Graph
                 }
             }
         }
+
         [Fact]
         public void Make_sure_cycles_are_handled_in_multi_hop_queries_with_multiple_multihop_edge_clauses()
         {
@@ -853,7 +855,6 @@ namespace FastTests.Graph
                     });
                     session.SaveChanges();
                 }
-                WaitForUserToContinueTheTest(store);    
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
@@ -874,5 +875,259 @@ namespace FastTests.Graph
                 }                                                                     
             }
         }
+
+        [Fact]
+        public void Projection_of_simple_edge_should_work()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Dog
+                    {
+                        Name = "Arava",
+                        Likes = new[] {"dogs/2-A"}
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Oscar",
+                        Likes = new[] {"dogs/3-A"}
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Pheobe",
+                        Likes = new[] {"dogs/1-A"}
+                    });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    //simple projection
+                    var results = session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l]->(Dogs) select l")
+                                                    .ToList().Select(x => x["l"].Value<string>()).ToArray();
+
+                    Assert.NotEmpty(results);
+                    Assert.Equal(3, results.Length);
+                    Assert.Contains(results, x => x == "dogs/1-A");
+                    Assert.Contains(results, x => x == "dogs/2-A");
+                    Assert.Contains(results, x => x == "dogs/3-A");
+
+                    //json projection
+                    results = session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l]->(Dogs) select { LikesEdge : l }")
+                                                    .ToList().Select(x => x["LikesEdge"].Value<string>()).ToArray();
+
+                    Assert.NotEmpty(results);
+                    Assert.Equal(3, results.Length);
+                    Assert.Contains(results, x => x == "dogs/1-A");
+                    Assert.Contains(results, x => x == "dogs/2-A");
+                    Assert.Contains(results, x => x == "dogs/3-A");                   
+                }
+            }
+        }   
+        
+
+        [Fact(Skip = "Should not work until RavenDB-12206 is fixed")]
+        public void Projection_of_simple_edge_with_filter_should_work()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Dog
+                    {
+                        Name = "Arava",
+                        Likes = new[] {"dogs/2-A"}
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Oscar",
+                        Likes = new[] {"dogs/3-A"}
+                    });
+                    session.Store(new Dog
+                    {
+                        Name = "Pheobe",
+                        Likes = new[] {"dogs/1-A"}
+                    });
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    //simple projection
+                    var results = session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l where Likes = 'dogs/2-A']->(Dogs) select l")
+                                                    .ToList().Select(x => x["l"].Value<string>()).ToArray();
+
+                    Assert.Equal(1, results.Length);
+                    Assert.Contains(results, x => x == "dogs/2-A");
+                }
+            }
+        }        
+
+        [Fact(Skip = "Should not work until RavenDB-12205 is fixed")]
+        public void Queries_with_non_existing_fields_in_vertex_filter_should_fail()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Dog
+                    {
+                        Name = "Arava",
+                        Likes = new[] {"dogs/2-A"}
+                    });                  
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<RavenException>(() =>
+                        session.Advanced.RawQuery<JObject>(@"match (Dogs as d1 where FooBar = 'dogs/2-A')-[Likes as l]->(Dogs) select l")
+                            .ToList());
+                }
+            }
+        }
+
+        [Fact(Skip = "Should not work until RavenDB-12205 is fixed")]
+        public void Queries_with_non_existing_fields_in_simple_edge_filter_should_fail()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Dog
+                    {
+                        Name = "Arava",
+                        Likes = new[] {"dogs/2-A"}
+                    });                  
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<RavenException>(() =>
+                        session.Advanced.RawQuery<JObject>(@"match (Dogs as d1)-[Likes as l where FooBar = 123]->(Dogs) select l")
+                            .ToList());
+                }
+            }
+        }
+
+        [Fact(Skip = "Should not work until RavenDB-12205 is fixed")]
+        public void Queries_with_non_existing_fields_in_complex_edge_filter_should_fail()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<RavenException>(() =>
+                        session.Advanced.RawQuery<JObject>(@"match (Orders as o)-[Lines as l where FooBar = 123 select Product]->(Products as p)")
+                            .ToList());
+                }
+            }
+        }
+
+
+        [Fact]
+        public void Projection_of_complex_edge_should_work()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    //simple projection
+                    var results = session.Advanced.RawQuery<OrderLine>(@"match (Orders as o)-[Lines.Product as l]->(Products) select l").ToArray();
+                    var ordersLines = session.Query<Order>().ToList().SelectMany(x => x.Lines).ToArray();
+
+                    Assert.Equal(ordersLines.OrderBy(x => x.ProductName).Select(x => x.Product),
+                                     results.OrderBy(x => x.ProductName).Select(x => x.Product));
+
+                    //javascript projection
+                    results = session.Advanced.RawQuery<JObject>(@"match (Orders as o)-[Lines.Product as l]->(Products) select { OrderLines : l}").ToArray()
+                                        .Select(x => x["OrderLines"].ToObject<OrderLine>()).ToArray();
+
+                    Assert.Equal(ordersLines.OrderBy(x => x.ProductName).Select(x => x.Product),
+                        results.OrderBy(x => x.ProductName).Select(x => x.Product));
+                }
+            }
+        }
+
+        [Fact]
+        public void Projection_of_complex_edge_with_filter_should_work()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                WaitForIndexing(store);
+                WaitForUserToContinueTheTest(store);
+                using (var session = store.OpenSession())
+                {
+                    //simple projection
+                    var results = session.Advanced.RawQuery<OrderLine>(@"
+                                match (Orders as o where id() = 'orders/1-A')-[Lines as l where Quantity = 5 select Product]->(Products)
+                                select l").ToArray();
+
+                    var ordersLines = session.Query<Order>().Where(x => x.Id == "orders/1-A").ToList()
+                                                            .SelectMany(x => x.Lines)
+                                                            .Where(x => x.Quantity == 5).ToArray();
+
+                    Assert.Equal(ordersLines.Length,results.Length); //sanity check
+
+                    Assert.Equal(ordersLines.OrderBy(x => x.ProductName).Select(x => x.Product),
+                        results.OrderBy(x => x.ProductName).Select(x => x.Product));
+
+                    //javascript projection
+                    results = session.Advanced.RawQuery<JObject>(@"
+                                match (Orders as o where id() = 'orders/1-A')-[Lines as l where Quantity = 5 select Product]->(Products)
+                                select { Lines : l }").ToArray().Select(x => x["Lines"].ToObject<OrderLine>()).ToArray();
+
+                    ordersLines = session.Query<Order>().Where(x => x.Id == "orders/1-A").ToList()
+                        .SelectMany(x => x.Lines)
+                        .Where(x => x.Quantity == 5).ToArray();
+
+                    Assert.Equal(ordersLines.Length,results.Length); //sanity check
+
+                    Assert.Equal(ordersLines.OrderBy(x => x.ProductName).Select(x => x.Product),
+                        results.OrderBy(x => x.ProductName).Select(x => x.Product));
+
+                }
+            }
+        }
+
+        [Fact]
+        public void Edge_projection_in_multi_hop_query_should_work()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                        match (Employees as e)- recursive as reportsTo { [ReportsTo as path] } -> (Employees as m)
+                        select e.FirstName as EmployeeName, reportsTo.path as ReportsToPath, m.FirstName as ManagerName
+                       ").ToList();
+                    Assert.NotEmpty(results); //sanity check
+                    Assert.Equal(3,results.Count);
+
+                    var stronglyTypedResults = results.Select(x => new
+                    {
+                        EmployeeName = x["EmployeeName"].Value<string>(),
+                        ReportsToPath = x["ReportsToPath"].ToArray().Select(i => i.Value<string>()).ToArray(),
+                        ManagerName = x["ManagerName"].Value<string>(),
+                    }).ToArray();
+
+                    Assert.Contains(stronglyTypedResults,
+                        x => x.EmployeeName == "Anne" && x.ManagerName == "Andrew" && x.ReportsToPath[0] == "employees/5-A" && x.ReportsToPath[1] == "employees/2-A");
+                    Assert.Contains(stronglyTypedResults,
+                        x => x.EmployeeName == "Michael" && x.ManagerName == "Andrew" && x.ReportsToPath[0] == "employees/5-A" && x.ReportsToPath[1] == "employees/2-A");
+                    Assert.Contains(stronglyTypedResults,
+                        x => x.EmployeeName == "Robert" && x.ManagerName == "Andrew" && x.ReportsToPath[0] == "employees/5-A" && x.ReportsToPath[1] == "employees/2-A");
+                }
+            }
+        }
+
     }
 }

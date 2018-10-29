@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucene.Net.Index;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -262,6 +263,8 @@ namespace Raven.Server.Documents.Indexes
 
         public static Index Open(string path, DocumentDatabase documentDatabase)
         {
+            var logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
+
             StorageEnvironment environment = null;
 
             var name = new DirectoryInfo(path).Name;
@@ -275,6 +278,8 @@ namespace Raven.Server.Documents.Indexes
             try
             {
                 InitializeOptions(options, documentDatabase, name);
+
+                DirectoryExecUtils.SubscribeToOnDirectoryExec(options, documentDatabase.Configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Index, logger);
 
                 environment = LayoutUpdater.OpenEnvironment(options);
 
@@ -961,6 +966,9 @@ namespace Raven.Server.Documents.Indexes
                                             DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Release();
                                         }
 
+                                        _threadAllocations.CurrentlyAllocatedForProcessing = 0;
+                                        _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
+
                                         _inMemoryIndexProgress.Clear();
                                         TimeSpentIndexing.Stop();
                                     }
@@ -1138,6 +1146,24 @@ namespace Raven.Server.Documents.Indexes
                         }
                     }
                 }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Unexpected error in '{Name}' index. This should never happen.", e);
+
+                    try
+                    {
+                        DocumentDatabase.NotificationCenter.Add(AlertRaised.Create(DocumentDatabase.Name, $"Unexpected error in '{Name}' index",
+                            "Unexpected error in indexing thread. See details.", AlertType.UnexpectedIndexingThreadError, NotificationSeverity.Error,
+                            details: new ExceptionDetails(e)));
+                    }
+                    catch (Exception)
+                    {
+                        // ignore if we can't create notification
+                    }
+
+                    State = IndexState.Error;
+                }
                 finally
                 {
                     storageEnvironment.OnLogsApplied -= HandleLogsApplied;
@@ -1206,7 +1232,7 @@ namespace Raven.Server.Documents.Indexes
             var beforeFree = NativeMemory.CurrentThreadStats.TotalAllocated;
             if (_logger.IsInfoEnabled)
                 _logger.Info(
-                    $"{beforeFree / 1024:#,#0} kb is used by '{Name}', reducing memory utilization.");
+                    $"{new Size(beforeFree, SizeUnit.Bytes)} is used by '{Name}', reducing memory utilization.");
 
             DocumentDatabase.DocumentsStorage.ContextPool.Clean();
             _contextPool.Clean();
@@ -1216,7 +1242,7 @@ namespace Raven.Server.Documents.Indexes
 
             var afterFree = NativeMemory.CurrentThreadStats.TotalAllocated;
             if (_logger.IsInfoEnabled)
-                _logger.Info($"After cleanup, using {afterFree / 1024:#,#0} kb by '{Name}'.");
+                _logger.Info($"After cleanup, using {new Size(afterFree, SizeUnit.Bytes)} by '{Name}'.");
         }
 
         internal void ResetErrors()
@@ -2879,9 +2905,14 @@ namespace Raven.Server.Documents.Indexes
             IndexingStatsScope stats,
             DocumentsOperationContext documentsOperationContext,
             TransactionOperationContext indexingContext,
+            IndexWriteOperation indexWriteOperation,
             int count)
         {
-            stats.RecordMapAllocations(_threadAllocations.TotalAllocated);
+            var threadAllocations = _threadAllocations.TotalAllocated;
+            var txAllocations = indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages *
+                                Voron.Global.Constants.Storage.PageSize;
+            var indexWriterAllocations = indexWriteOperation?.GetUsedMemory() ?? 0;
+            stats.RecordMapAllocations(threadAllocations + txAllocations + indexWriterAllocations);
 
             if (_indexDisabled)
             {
@@ -2933,13 +2964,13 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            var allocated = new Size(_threadAllocations.TotalAllocated +
-                // this is the number of modified pages in the transaction, we multiple that by the page 
-                // size to get the number in bytes and then multiple it by two again to take into account
-                // additional work that will need to be done during the commit phase of the index
-                (2 * (indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages *
-                      Voron.Global.Constants.Storage.PageSize)), SizeUnit.Bytes);
+            var allocatedInBytes = threadAllocations +
+                                   // we multiple it by two to take into account additional work
+                                   // that will need to be done during the commit phase of the index
+                                   2 * (indexWriterAllocations + txAllocations);
 
+            var allocated = new Size(allocatedInBytes, SizeUnit.Bytes);
+            _threadAllocations.CurrentlyAllocatedForProcessing = allocated.GetValue(SizeUnit.Bytes);
             if (allocated > _currentMaximumAllowedMemory)
             {
                 var canContinue = true;
@@ -2950,16 +2981,30 @@ namespace Raven.Server.Documents.Indexes
                     allocated,
                     _environment.Options.RunningOn32Bits,
                     _logger,
-                    out ProcessMemoryUsage memoryUsage) == false)
+                    out var memoryUsage) == false)
                 {
                     _allocationCleanupNeeded = true;
 
                     documentsOperationContext.DoNotReuse = true;
                     indexingContext.DoNotReuse = true;
 
-
                     if (stats.MapAttempts >= Configuration.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)
                     {
+                        if (_logger.IsInfoEnabled)
+                        {
+                            var message = $"Stopping the batch because cannot budget additional memory. " +
+                                          $"Current budget: {allocated}.";
+
+                            if (memoryUsage != null)
+                            {
+                                message += " Current memory usage: " +
+                                           $"{nameof(memoryUsage.WorkingSet)} = {memoryUsage.WorkingSet}," +
+                                           $"{nameof(memoryUsage.PrivateMemory)} = {memoryUsage.PrivateMemory}";
+                            }
+
+                            _logger.Info(message);
+                        }
+
                         stats.RecordMapCompletedReason("Cannot budget additional memory for batch");
                         canContinue = false;
                     }
@@ -3110,6 +3155,9 @@ namespace Raven.Server.Documents.Indexes
                     throw new InvalidOperationException("Expected to be called only via DrainRunningQueries");
 
                 var options = CreateStorageEnvironmentOptions(DocumentDatabase, Configuration);
+
+                DirectoryExecUtils.SubscribeToOnDirectoryExec(options, DocumentDatabase.Configuration.Storage, DocumentDatabase.Name, DirectoryExecUtils.EnvironmentType.Index, _logger);
+
                 try
                 {
                     _environment = LayoutUpdater.OpenEnvironment(options);

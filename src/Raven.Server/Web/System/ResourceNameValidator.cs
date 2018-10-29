@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Raven.Client;
 using Raven.Server.Utils;
+using Sparrow.Utils;
 
 namespace Raven.Server.Web.System
 {
@@ -35,12 +36,11 @@ namespace Raven.Server.Web.System
             "clock$"
         };
 
-        // from https://github.com/dotnet/corefx/blob/9c06da6a34fcefa6fb37776ac57b80730e37387c/src/Common/src/System/IO/PathInternal.Windows.cs#L52
-        public static readonly int WindowsMaxPath = short.MaxValue;
+        public static readonly int WindowsMaxPath = DiskSpaceChecker.WindowsMaxPath;
 
         public const int LinuxMaxFileNameLength = 230;
 
-        public const int LinuxMaxPath = 4096;
+        public const int LinuxMaxPath = DiskSpaceChecker.LinuxMaxPath;
 
         public static bool IsValidResourceName(string name, string dataDirectory, out string errorMessage)
         {

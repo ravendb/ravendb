@@ -9,6 +9,7 @@ class unsecureSetup {
     ip = ko.observable<ipEntry>();
     unsafeNetworkConfirm = ko.observable<boolean>(false);
     localNodeTag = ko.observable<string>("A");
+    bootstrapCluster = ko.observable<boolean>(false);
     
     validationGroup: KnockoutValidationGroup;
     shouldDisplayUnsafeModeWarning: KnockoutComputed<boolean>;
@@ -52,7 +53,9 @@ class unsecureSetup {
             ]
         });
 
-        nodeInfo.setupNodeTagValidation(this.localNodeTag);
+        nodeInfo.setupNodeTagValidation(this.localNodeTag, {
+            onlyIf: () => this.bootstrapCluster()
+        });
         
         this.unsafeNetworkConfirm.extend({
             validation: [

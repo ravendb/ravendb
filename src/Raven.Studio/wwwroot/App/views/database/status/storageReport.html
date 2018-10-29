@@ -37,6 +37,7 @@
                 <td>
                     <a href="#" data-bind="text: name, click: _.partial($root.onClick, $data, true), visible: hasChildren()"></a>
                     <span href="#" data-bind="text: name, visible: !hasChildren()"></span>
+                    <span data-bind="visible: recyclableJournal"><small data-toggle="tooltip" title="Stored in Journals directory"><i class="icon-info text-info"></i></small></span>
                 </td>
                 <td data-bind="visible: $root.showPagesColumn(), text: pageCount ? pageCount.toLocaleString() : 0"></td>
                 <td data-bind="visible: $root.showEntriesColumn(), text: numberOfEntries ? numberOfEntries.toLocaleString() : 0"></td>

@@ -227,6 +227,7 @@ namespace Raven.Server.Utils
                 _action = null;
                 _state = null;
                 _workIsDone = null;
+                NativeMemory.CurrentThreadStats.CurrentlyAllocatedForProcessing = 0;
 
                 ThreadLocalCleanup.Run();
 

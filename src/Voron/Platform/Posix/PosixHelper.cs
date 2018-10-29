@@ -10,6 +10,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Platform.Posix;
+using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Impl.FileHeaders;
 using Voron.Util.Settings;
@@ -25,17 +26,8 @@ namespace Voron.Platform.Posix
             
             if (result == (int)Errno.ENOSPC)
             {
-                int matchLen = 0;
-                DriveInfo match = null;
-                foreach (var drive in DriveInfo.GetDrives())
-                {
-                    if (file.StartsWith(drive.RootDirectory.Name))
-                    {
-                        if (drive.RootDirectory.Name.Length > matchLen)
-                            match = drive;
-                    }
-                }
-                throw new DiskFullException(file, size, match?.AvailableFreeSpace);
+                var diskSpaceResult = DiskSpaceChecker.GetDiskSpaceInfo(file);
+                throw new DiskFullException(file, size, diskSpaceResult?.TotalFreeSpace.GetValue(SizeUnit.Bytes));
             }
             if (result != 0)
                 Syscall.ThrowLastError(result, $"posix_fallocate(\"{file}\", {size})");

@@ -1,7 +1,7 @@
-﻿using Sparrow;
+﻿using System;
+using Sparrow;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
-using Sparrow.Platform.Posix;
 using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Memory
@@ -17,7 +17,7 @@ namespace Raven.Server.ServerWide.Memory
         {
             if (isRunningOn32Bits)
             {
-                currentUsage = new ProcessMemoryUsage(-1, -1);
+                currentUsage = null;
                 return false;
             }
 
@@ -58,6 +58,19 @@ namespace Raven.Server.ServerWide.Memory
                 return false;
             }
 
+            var allocatedForProcessing = GetTotalCurrentlyAllocatedForProcessing();
+            if (memoryAssumedFreeOrCheapToFree < allocatedForProcessing)
+            {
+                if (logger.IsInfoEnabled)
+                {
+                    logger.Info(
+                        $"Total allocated memory for processing: {allocatedForProcessing}, free memory: {memoryAssumedFreeOrCheapToFree}, " +
+                        $"total memory: {memoryInfo.TotalPhysicalMemory}.");
+                }
+
+                return false;
+            }
+
             // even though we have twice as much memory as we have current allocated, we will 
             // only increment by 16MB to avoid over allocation by multiple indexes. This way, 
             // we'll check often as we go along this
@@ -68,7 +81,7 @@ namespace Raven.Server.ServerWide.Memory
             {
                 logger.Info(
                     $"Increasing memory budget for {threadStats.Name} which is using  {currentlyInUse}/{oldBudget} and the system has" +
-                    $"{memoryInfo.AvailableWithoutTotalCleanMemory}/{memoryInfo.TotalPhysicalMemory} free RAM with {memoryInfo.SharedCleanMemory} in mmap " +
+                    $"{memoryAssumedFreeOrCheapToFree}/{memoryInfo.TotalPhysicalMemory} free RAM with {memoryInfo.SharedCleanMemory} in mmap " +
                     $"files that can be cleanly released. Budget increased to {currentMaximumAllowedMemory}");
             }
 
@@ -80,6 +93,21 @@ namespace Raven.Server.ServerWide.Memory
             var workingSetInBytes = memoryInfo.WorkingSet.GetValue(SizeUnit.Bytes);
             var privateMemory = MemoryInformation.GetManagedMemoryInBytes() + MemoryInformation.GetUnManagedAllocationsInBytes();
             return new ProcessMemoryUsage(workingSetInBytes, privateMemory);
+        }
+
+        private static Size GetTotalCurrentlyAllocatedForProcessing()
+        {
+            var allocated = 0L;
+
+            foreach (var stats in NativeMemory.AllThreadStats)
+            {
+                if (stats.IsThreadAlive() == false)
+                    continue;
+
+                allocated += stats.CurrentlyAllocatedForProcessing;
+            }
+
+            return new Size(allocated, SizeUnit.Bytes);
         }
     }
 }

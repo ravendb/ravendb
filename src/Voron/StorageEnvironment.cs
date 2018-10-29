@@ -140,6 +140,9 @@ namespace Voron
                 _validPages[_validPages.Length - 1] |= unchecked(((long)ulong.MaxValue << (int)remainingBits));
 
                 _decompressionBuffers = new DecompressionBuffersPool(options);
+
+                options.InvokeOnCreateDirectory();
+
                 var isNew = _headerAccessor.Initialize();
 
                 _scratchBufferPool = new ScratchBufferPool(this);

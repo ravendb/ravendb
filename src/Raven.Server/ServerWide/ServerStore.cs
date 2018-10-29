@@ -507,6 +507,9 @@ namespace Raven.Server.ServerWide
                 options.MaxScratchBufferSize = Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
+
+            DirectoryExecUtils.SubscribeToOnDirectoryExec(options, Configuration.Storage, nameof(DirectoryExecUtils.EnvironmentType.System), DirectoryExecUtils.EnvironmentType.System, Logger);
+
             try
             {
                 StorageEnvironment.MaxConcurrentFlushes = Configuration.Storage.MaxConcurrentFlushes;
@@ -2161,6 +2164,84 @@ namespace Raven.Server.ServerWide
                 ThrowInvalidTcpUrlOnStartup();
             var status = _server.GetTcpServerStatus();
             return Configuration.Core.GetNodeTcpServerUrl(ravenServerWebUrl, status.Port);
+        }
+
+        public async Task<NodeConnectionTestResult> TestConnectionFromRemote(RequestExecutor requestExecutor, JsonOperationContext context, string nodeUrl)
+        {
+            var myUrl = GetNodeHttpServerUrl();
+            NodeConnectionTestResult result;
+
+            var nodeConnectionTest = new TestNodeConnectionCommand(myUrl);
+            try
+            {
+                await requestExecutor.ExecuteAsync(nodeConnectionTest, context);
+                result = nodeConnectionTest.Result;
+
+                if (nodeConnectionTest.Result.Success == false)
+                {
+                    result.Success = false;
+                    result.Error = $"{NodeConnectionTestResult.GetError(myUrl, nodeUrl)}{Environment.NewLine}{nodeConnectionTest.Result.Error}";
+                }
+            }
+            catch (Exception e)
+            {
+                return new NodeConnectionTestResult
+                {
+                    Success = false,
+                    Error = $"{NodeConnectionTestResult.GetError(myUrl, nodeUrl)}{Environment.NewLine}{e}"
+                };
+            }
+
+            return result;
+        }
+
+        public async Task<NodeConnectionTestResult> TestConnectionToRemote(string url, string database)
+        {
+            Task<TcpConnectionInfo> connectionInfo;
+            try
+            {
+                var timeout = TimeoutManager.WaitFor(Configuration.Cluster.OperationTimeout.AsTimeSpan);
+
+                using (var cts = new CancellationTokenSource(Server.Configuration.Cluster.OperationTimeout.AsTimeSpan))
+                {
+                    connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, database, "Test-Connection", Server.Certificate.Certificate,
+                        cts.Token);
+                }
+                Task timeoutTask = await Task.WhenAny(timeout, connectionInfo);
+                if (timeoutTask == timeout)
+                {
+                    throw new TimeoutException($"Waited for {Configuration.Cluster.OperationTimeout.AsTimeSpan} to receive TCP information from '{url}' and got no response");
+                }
+                await connectionInfo;
+            }
+            catch (Exception e)
+            {
+                return new NodeConnectionTestResult
+                {
+                    Success = false,
+                    HTTPSuccess = false,
+                    Error = $"An exception was thrown while trying to connect to '{url}':{Environment.NewLine}{e}"
+                };
+            }
+
+            var result = new NodeConnectionTestResult
+            {
+                HTTPSuccess = true,
+                TcpServerUrl = connectionInfo.Result.Url
+            };
+
+            try
+            {
+                await TestConnectionHandler.ConnectToClientNodeAsync(_server, connectionInfo.Result, Engine.TcpConnectionTimeout,
+                    LoggingSource.Instance.GetLogger("testing-connection", "testing-connection"), database, result);
+            }
+            catch (Exception e)
+            {
+                result.Success = false;
+                result.Error = $"Was able to connect to url '{url}', but exception was thrown while trying to connect to TCP port '{connectionInfo.Result.Url}':{Environment.NewLine}{e}";
+            }
+
+            return result;
         }
 
         private static void ThrowInvalidTcpUrlOnStartup()
