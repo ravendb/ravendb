@@ -2,7 +2,6 @@ using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Sparrow;
-using Sparrow.Global;
 
 namespace Raven.Server.Config.Categories
 {
@@ -74,5 +73,21 @@ namespace Raven.Server.Config.Categories
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Storage.FreeSpaceAlertThresholdInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size? FreeSpaceAlertThresholdInMb { get; set; }
+
+        [Description("EXPERT: A command or executable to run when creating a new directory (storage environment). RavenDB will execute: command [user-arg-1] ... [user-arg-n] <environment-type> <database-name> <data-dir-path> <temp-dir-path> <journal-dir-path>")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Storage.OnCreateDirectory.Exec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public string OnCreateDirectoryExec { get; set; }
+
+        [Description("EXPERT: The user arguments for the 'Storage.OnCreateDirectory.Exec' command or executable. The arguments must be escaped for the command line.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Storage.OnCreateDirectory.Exec.Arguments", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public string OnCreateDirectoryExecArguments { get; set; }
+
+        [Description("EXPERT: The number of seconds to wait for the OnCreateDirectory executable to exit. Default: 30 seconds")]
+        [DefaultValue(30)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Storage.OnCreateDirectory.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting OnCreateDirectoryExecTimeout { get; set; }
     }
 }

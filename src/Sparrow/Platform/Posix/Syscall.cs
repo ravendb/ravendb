@@ -60,6 +60,11 @@ namespace Sparrow.Platform.Posix
         public static extern int sprintf(char* str, char* format);
 
         [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int readlink(
+            [MarshalAs(UnmanagedType.LPStr)] string path,
+            byte* buffer, int bufferSize);
+
+        [DllImport(LIBC_6, SetLastError = true)]
         public static extern int mkdir(
             [MarshalAs(UnmanagedType.LPStr)] string filename,
             [MarshalAs(UnmanagedType.U2)] ushort mode);
@@ -478,25 +483,9 @@ namespace Sparrow.Platform.Posix
             }
         }
 
-        public static string GetRootMountString(DriveInfo[] drivesInfo, string filePath)
+        public static string ErrorNumberToStatusCode(int result)
         {
-            string root = null;
-            var matchSize = 0;
-
-            foreach (var driveInfo in drivesInfo)
-            {
-                var mountNameSize = driveInfo.Name.Length;
-                if (filePath.StartsWith(driveInfo.Name) == false)
-                    continue;
-
-                if (matchSize >= mountNameSize)
-                    continue;
-
-                matchSize = mountNameSize;
-                root = driveInfo.Name;
-            }
-
-            return root;
+            return Enum.GetName(typeof(Errno), result);
         }
     }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -10,6 +11,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Logging;
 using Voron;
 using Voron.Exceptions;
 using Voron.Impl.Compaction;
@@ -18,6 +20,9 @@ namespace Raven.Server.Documents
 {
     public class CompactDatabaseTask
     {
+        private const string ResourceName = nameof(CompactDatabaseTask);
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<CompactDatabaseTask>(ResourceName);
+
         private readonly ServerStore _serverStore;
         private readonly string _database;
         private CancellationToken _token;
@@ -53,6 +58,7 @@ namespace Raven.Server.Documents
                 new CatastrophicFailureNotification((endId, path, exception) => throw new InvalidOperationException($"Failed to compact database {_database} ({path})", exception))))
                 {
                     InitializeOptions(src, configuration, documentDatabase);
+                    DirectoryExecUtils.SubscribeToOnDirectoryExec(src, configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Compaction, Logger);
 
                     var basePath = configuration.Core.DataDirectory.FullPath;
                     compactDirectory = basePath + "-compacting";
@@ -67,6 +73,7 @@ namespace Raven.Server.Documents
                         new CatastrophicFailureNotification((envId, path, exception) => throw new InvalidOperationException($"Failed to compact database {_database} ({path})", exception))))
                     {
                         InitializeOptions(dst, configuration, documentDatabase);
+                        DirectoryExecUtils.SubscribeToOnDirectoryExec(dst, configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Compaction, Logger);
 
                         _token.ThrowIfCancellationRequested();
                         StorageCompaction.Execute(src, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dst, progressReport =>

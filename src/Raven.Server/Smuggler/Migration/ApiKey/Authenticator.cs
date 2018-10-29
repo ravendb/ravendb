@@ -12,10 +12,14 @@ namespace Raven.Server.Smuggler.Migration.ApiKey
 {
     public class Authenticator
     {
-        public static async Task<string> GetOAuthToken(string baseUrl, string oauthSource, string apiKey)
+        public static async Task<string> GetOAuthToken(
+            string baseUrl,
+            string oauthSource, 
+            string apiKey, 
+            bool skipServerCertificateValidation)
         {
             if (oauthSource == null)
-                throw new ArgumentNullException("oauthSource");
+                throw new ArgumentNullException(nameof(oauthSource));
 
             string serverRSAExponent = null;
             string serverRSAModulus = null;
@@ -31,6 +35,9 @@ namespace Raven.Server.Smuggler.Migration.ApiKey
             {
                 tries++;
                 var handler = new HttpClientHandler();
+
+                if (skipServerCertificateValidation)
+                    handler.ServerCertificateCustomValidationCallback = (message, certificate2, arg3, arg4) => true;
 
                 using (var httpClient = new HttpClient(handler))
                 {

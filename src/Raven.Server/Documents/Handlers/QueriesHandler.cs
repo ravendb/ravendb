@@ -86,10 +86,9 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task Query(DocumentsOperationContext context, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method, bool diagnostics)
         {
-            var indexQuery = await GetIndexQuery(context, method);
+            var indexQuery = await GetIndexQuery(context, method, tracker);
             indexQuery.Diagnostics = diagnostics ? new List<string>() : null;
 
-            tracker.Query = indexQuery.Query;
             if (TrafficWatchManager.HasRegisteredClients)
                 TrafficWatchQuery(indexQuery);
 
@@ -132,7 +131,7 @@ namespace Raven.Server.Documents.Handlers
             int numberOfResults;
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
-                result.Timings = indexQuery.Timings?.ToTimings();               
+                result.Timings = indexQuery.Timings?.ToTimings();
                 numberOfResults = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly, WriteAdditionalData(indexQuery, shouldReturnServerSideQuery));
                 await writer.OuterFlushAsync();
             }
@@ -163,14 +162,14 @@ namespace Raven.Server.Documents.Handlers
             };
         }
 
-        private async Task<IndexQueryServerSide> GetIndexQuery(JsonOperationContext context, HttpMethod method)
+        private async Task<IndexQueryServerSide> GetIndexQuery(JsonOperationContext context, HttpMethod method, RequestTimeTracker tracker)
         {
             if (method == HttpMethod.Get)
-                return IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
+                return IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context, tracker);
 
             var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/query");
 
-            return IndexQueryServerSide.Create(json, Database.QueryMetadataCache);
+            return IndexQueryServerSide.Create(HttpContext, json, Database.QueryMetadataCache, tracker);
         }
 
         private async Task SuggestQuery(IndexQueryServerSide indexQuery, DocumentsOperationContext context, OperationCancelToken token)
@@ -197,9 +196,7 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task Explain(DocumentsOperationContext context, RequestTimeTracker tracker, HttpMethod method)
         {
-            var indexQuery = await GetIndexQuery(context, method);
-
-            tracker.Query = indexQuery.Query;
+            var indexQuery = await GetIndexQuery(context, method, tracker);
 
             var explanations = Database.QueryRunner.ExplainDynamicIndexSelection(indexQuery, context, out string indexName);
 
@@ -229,9 +226,7 @@ namespace Raven.Server.Documents.Handlers
                 using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "DeleteByQuery"))
                 {
                     var reader = context.Read(RequestBodyStream(), "queries/delete");
-                    var query = IndexQueryServerSide.Create(reader, Database.QueryMetadataCache);
-
-                    tracker.Query = query.Query;
+                    var query = IndexQueryServerSide.Create(HttpContext, reader, Database.QueryMetadataCache, tracker);
 
                     if (TrafficWatchManager.HasRegisteredClients)
                         TrafficWatchQuery(query);
@@ -261,7 +256,7 @@ namespace Raven.Server.Documents.Handlers
                 if (reader.TryGet("Query", out BlittableJsonReaderObject queryJson) == false || queryJson == null)
                     throw new BadRequestException("Missing 'Query' property.");
 
-                var query = IndexQueryServerSide.Create(queryJson, Database.QueryMetadataCache, QueryType.Update);
+                var query = IndexQueryServerSide.Create(HttpContext, queryJson, Database.QueryMetadataCache, null, QueryType.Update);
 
                 if (TrafficWatchManager.HasRegisteredClients)
                     TrafficWatchQuery(query);
@@ -354,7 +349,7 @@ namespace Raven.Server.Documents.Handlers
                 if (reader.TryGet("Query", out BlittableJsonReaderObject queryJson) == false || queryJson == null)
                     throw new BadRequestException("Missing 'Query' property.");
 
-                var query = IndexQueryServerSide.Create(queryJson, Database.QueryMetadataCache, QueryType.Update);
+                var query = IndexQueryServerSide.Create(HttpContext, queryJson, Database.QueryMetadataCache, null, QueryType.Update);
 
                 if (TrafficWatchManager.HasRegisteredClients)
                     TrafficWatchQuery(query);
@@ -446,8 +441,7 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task IndexEntries(DocumentsOperationContext context, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method)
         {
-            var indexQuery = await GetIndexQuery(context, method);
-            tracker.Query = indexQuery.Query;
+            var indexQuery = await GetIndexQuery(context, method, tracker);
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
             var result = await Database.QueryRunner.ExecuteIndexEntriesQuery(indexQuery, context, existingResultEtag, token);

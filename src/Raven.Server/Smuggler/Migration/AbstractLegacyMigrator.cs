@@ -73,6 +73,7 @@ namespace Raven.Server.Smuggler.Migration
             bool isRavenFs,
             string apiKey,
             bool enableBasicAuthenticationOverUnsecuredHttp,
+            bool skipServerCertificateValidation,
             Reference<bool> isLegacyOAuthToken,
             CancellationToken cancelToken)
         {
@@ -82,7 +83,7 @@ namespace Raven.Server.Smuggler.Migration
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
                 var responseMessage = await httpClient.SendAsync(request, cancelToken);
                 return responseMessage;
-            }, apiKey, serverUrl, enableBasicAuthenticationOverUnsecuredHttp, httpClient, isLegacyOAuthToken);
+            }, apiKey, serverUrl, enableBasicAuthenticationOverUnsecuredHttp, skipServerCertificateValidation, httpClient, isLegacyOAuthToken);
             
             if (response.StatusCode == HttpStatusCode.Unauthorized)
                 throw new AuthorizationException();
@@ -137,7 +138,7 @@ namespace Raven.Server.Smuggler.Migration
 
         protected async Task<HttpResponseMessage> RunWithAuthRetry(Func<Task<HttpResponseMessage>> requestOperation)
         {
-            return await RunWithAuthRetryInternal(requestOperation, ApiKey, ServerUrl, EnableBasicAuthenticationOverUnsecuredHttp, HttpClient);
+            return await RunWithAuthRetryInternal(requestOperation, ApiKey, ServerUrl, EnableBasicAuthenticationOverUnsecuredHttp, SkipServerCertificateValidation, HttpClient);
         }
 
         private static async Task<HttpResponseMessage> RunWithAuthRetryInternal(
@@ -145,6 +146,7 @@ namespace Raven.Server.Smuggler.Migration
             string apiKey,
             string serverUrl,
             bool enableBasicAuthenticationOverUnsecuredHttp,
+            bool skipServerCertificateValidation,
             HttpClient httpClient,
             Reference<bool> isLegacyOAuthToken = null)
         {
@@ -172,7 +174,7 @@ namespace Raven.Server.Smuggler.Migration
                     }
                         
 
-                    var oAuthToken = await GetOAuthToken(response, apiKey, serverUrl, enableBasicAuthenticationOverUnsecuredHttp, isLegacyOAuthToken).ConfigureAwait(false);
+                    var oAuthToken = await GetOAuthToken(response, apiKey, serverUrl, enableBasicAuthenticationOverUnsecuredHttp, skipServerCertificateValidation, isLegacyOAuthToken).ConfigureAwait(false);
                     SetAuthorization(httpClient, oAuthToken);
                     continue;
                 }
@@ -186,6 +188,7 @@ namespace Raven.Server.Smuggler.Migration
             string apiKey,
             string serverUrl,
             bool enableBasicAuthenticationOverUnsecuredHttp,
+            bool skipServerCertificateValidation,
             Reference<bool> isLegacyOAuthToken)
         {
             var oauthSource = unauthorizedResponse.Headers.GetFirstValue("OAuth-Source");
@@ -204,7 +207,7 @@ namespace Raven.Server.Smuggler.Migration
             if (string.IsNullOrEmpty(oauthSource))
                 oauthSource = serverUrl + "/OAuth/API-Key";
 
-            return await Authenticator.GetOAuthToken(serverUrl, oauthSource, apiKey);
+            return await Authenticator.GetOAuthToken(serverUrl, oauthSource, apiKey, skipServerCertificateValidation);
         }
 
         private static void SetAuthorization(HttpClient httpClient, string oAuthToken)
