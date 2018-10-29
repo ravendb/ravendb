@@ -566,6 +566,11 @@ namespace Raven.Server.Documents.Queries.Parser
                                         break;
                                 }
 
+                                if (Scanner.Identifier()) // , longest) , etc.
+                                {
+                                    options.Add(new ValueExpression(new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength), ValueTokenType.String));
+                                }
+
                                 if (Scanner.TryScan(")") == false)
                                     throw new InvalidQueryException("'recursive' missing closing paranthesis for length specification, but one was expected", Scanner.Input, null);
                             }

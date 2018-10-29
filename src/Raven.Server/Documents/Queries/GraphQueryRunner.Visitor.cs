@@ -224,14 +224,15 @@ namespace Raven.Server.Documents.Queries
                     if (TryGetMatchRecursive(currentResults[resultIndex], recursive, prevNodeAlias, nextNodeAlias, matches))
                     {
                         bool reusedSlot = false;
+                        var origin = currentResults[resultIndex];
                         foreach (var match in matches)
                         {
-                            var clone = new Match(currentResults[resultIndex]);
+                            var clone = new Match(origin);
                             clone.Set(recursive.Alias, match.GetResult(recursive.Alias));
 
                             if (reusedSlot)
                             {
-                                currentResults.Add(match);
+                                currentResults.Add(clone);
                             }
                             else
                             {
@@ -247,11 +248,20 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
+            private class RecursionState
+            {
+                public BlittableJsonReaderObject Src;
+                public List<Match> Matches;
+                public Match Match;
+                public bool AlreadyAdded;
+            }
+
             private bool TryGetMatchRecursive(Match currentMatch, RecursiveMatch recursive, StringSegment prevNodeAlias, StringSegment nextNodeAlias,
                 List<Match> matches)
             {
+                int? bestPathLength = null;
                 var visited = new HashSet<long>();
-                var path = new Stack<(BlittableJsonReaderObject Src, List<Match> Matches, Match Match)>();
+                var path = new Stack<RecursionState>();
 
                 var options = recursive.GetOptions(_query.Metadata, _queryParameters);
 
@@ -264,7 +274,7 @@ namespace Raven.Server.Documents.Queries
                     return false;
 
                 visited.Add(startingPoint.Data.Location);
-                path.Push((startingPoint.Data, null, currentMatch));
+                path.Push(new RecursionState { Src = startingPoint.Data, Match = currentMatch });
 
                 Document cur = startingPoint;
                 bool hasResults = false;
@@ -273,21 +283,23 @@ namespace Raven.Server.Documents.Queries
                     // the first item is always the root
                     if (path.Count -1 == options.Max)
                     {
-                        AddMatch();
+                        if (AddMatch())
+                            return true;
                         path.Pop();
                     }
                     else
                     {
                         if (SingleMatchInRecursivePattern(recursive, cur.Data, prevNodeAlias, nextNodeAlias, currentMatch, out var currentMatches) == false)
                         {
-                            if (options.Min < path.Count)
-                                AddMatch();
+                            if (AddMatch())
+                            {
+                                return true;
+                            }
                             path.Pop();
                         }
                         else
                         {
-                            path.Pop();
-                            path.Push((cur.Data, currentMatches,currentMatch));
+                            path.Peek().Matches = currentMatches;
                         }
                     }
 
@@ -297,9 +309,20 @@ namespace Raven.Server.Documents.Queries
                         if (path.Count == 0)
                             return hasResults;
 
+                        if (options.Type == RecursiveMatchType.Lazy &&
+                            AddMatch())
+                        {
+                            return true;
+                        }
+
                         var top = path.Peek();
                         if (top.Matches == null || top.Matches.Count == 0)
                         {
+                            if (AddMatch())
+                            {
+                                 return true;
+                            }
+
                             path.Pop();
                             visited.Remove(top.Src.Location);
                             continue;
@@ -311,19 +334,48 @@ namespace Raven.Server.Documents.Queries
                         {
                             continue;
                         }
-                        path.Push((cur.Data, null, currentMatch));
+                        path.Push(new RecursionState { Src = cur.Data, Match = currentMatch });
                         break;
                     }
                 }
 
-                void AddMatch()
+                bool AddMatch()
                 {
-                    hasResults = true;
-                    var match = new Match();
+                    var top = path.Peek();
+                    if (top.AlreadyAdded)
+                        return false;
 
+                    if (path.Count <= options.Min)
+                        return false;
+
+                    if(bestPathLength != null)
+                    {
+                        switch (options.Type)
+                        {
+                            case RecursiveMatchType.Longest:
+                                if (path.Count <= bestPathLength.Value)
+                                    return false;
+                                matches.RemoveAt(0);
+                                break;
+                            case RecursiveMatchType.Shortest:
+                                if (path.Count >= bestPathLength.Value)
+                                    return false;
+                                matches.RemoveAt(0);
+                                break;
+                        }
+                    }
+
+                    top.AlreadyAdded = true;
+
+                    hasResults = true;
+                    bestPathLength = path.Count;
+
+                    var match = new Match();
                     var list = new List<Match>();
                     foreach (var item in path)
                     {
+                        if (options.Type != RecursiveMatchType.Shortest)
+                            item.AlreadyAdded = true;
                         var one = new Match();
                         foreach (var alias in recursive.Aliases)
                         {
@@ -342,6 +394,8 @@ namespace Raven.Server.Documents.Queries
                     match.Set(recursive.Alias, list);
                     match.Set(nextNodeAlias,cur);
                     matches.Add(match);
+
+                    return options.Type == RecursiveMatchType.Lazy;
                 }
             }
 

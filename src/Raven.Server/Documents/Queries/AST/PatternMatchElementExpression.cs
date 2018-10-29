@@ -74,6 +74,7 @@ namespace Raven.Server.Documents.Queries.AST
 
     public enum RecursiveMatchType
     {
+        Lazy,
         Longest,
         Shortest,
         All,
@@ -119,7 +120,7 @@ namespace Raven.Server.Documents.Queries.AST
         {
             var min = 1;
             var max = int.MaxValue;
-            var type = RecursiveMatchType.Longest;
+            var type = RecursiveMatchType.Lazy;
 
             (object Value, ValueTokenType Type) value;
             switch (Options?.Count)
