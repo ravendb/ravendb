@@ -197,6 +197,10 @@ namespace Raven.Client.Documents.Indexes
             if (_conventions.GetIdentityProperty(member.DeclaringType) != member)
                 return false;
 
+            // types used in LoadDocument should be translated
+            if (_loadDocumentTypes.Contains(exprType))
+                return true;
+
             // only translate from the root type or derivatives
             if (_queryRoot != null && (exprType.IsAssignableFrom(_queryRoot) == false))
                 return false;
@@ -1578,6 +1582,7 @@ namespace Raven.Client.Documents.Indexes
             if (node.Method.Name == nameof(AbstractIndexCreationTask.LoadDocument))
             {
                 var type = node.Method.GetGenericArguments()[0];
+                _loadDocumentTypes.Add(type);
                 var collection = _conventions.GetCollectionName(type);
                 Out($", \"{collection}\"");
             }
@@ -1957,6 +1962,7 @@ namespace Raven.Client.Documents.Indexes
         private bool _insideWellKnownType;
         private bool _avoidDuplicatedParameters;
         private bool _isSelectMany;
+        private readonly HashSet<Type> _loadDocumentTypes = new HashSet<Type>();
 
         /// <summary>
         ///   Visits the <see cref = "T:System.Linq.Expressions.ParameterExpression" />.
