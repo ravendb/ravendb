@@ -493,7 +493,7 @@ class visualizerGraphGlobal {
     private reduceTreeHighlightHandler: () => void = () => { };
 
     private dataWidth = 0; // total width of all virtual elements
-    private dataHeight = 0; // total heigth of all virtual elements
+    private dataHeight = 0; // total height of all virtual elements
 
     private xScale: d3.scale.Linear<number, number>;
     private yScale: d3.scale.Linear<number, number>;
