@@ -6,7 +6,6 @@ namespace Raven.Server.Documents.Queries.Graph
 {
     public interface IQueryStep
     {
-        ValueTask<IEnumerable<Match>> Execute(Dictionary<IQueryStep,IEnumerable<Match>> matches);
-        IEnumerable<IQueryStep> Dependencies { get; }
+        Task<IEnumerable<Match>> Execute(Dictionary<IQueryStep,IEnumerable<Match>> matches);
     }
 }

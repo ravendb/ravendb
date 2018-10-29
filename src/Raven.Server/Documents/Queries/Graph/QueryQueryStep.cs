@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Queries.Graph
             _token = token;
         }
 
-        public async ValueTask<IEnumerable<Match>> Execute(Dictionary<IQueryStep, IEnumerable<Match>> matches)
+        public async Task<IEnumerable<Match>> Execute(Dictionary<IQueryStep, IEnumerable<Match>> matches)
         {           
             var results = await _queryRunner.ExecuteQuery(new IndexQueryServerSide(_queryMetadata),
                 _context, _resultEtag, _token);
@@ -46,7 +46,5 @@ namespace Raven.Server.Documents.Queries.Graph
 
             return res;
         }
-
-        public IEnumerable<IQueryStep> Dependencies => Enumerable.Empty<IQueryStep>();
     }
 }

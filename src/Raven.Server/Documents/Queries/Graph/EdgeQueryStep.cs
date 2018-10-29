@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Queries.Graph
             _edgesExpression = edgesExpression;
         }
 
-        public async ValueTask<IEnumerable<Match>> Execute(Dictionary<IQueryStep, IEnumerable<Match>> matches)
+        public async Task<IEnumerable<Match>> Execute(Dictionary<IQueryStep, IEnumerable<Match>> matches)
         {
             var leftResult = await _left.Execute(matches);
             var rightResult = await _right.Execute(matches);
@@ -116,14 +116,6 @@ namespace Raven.Server.Documents.Queries.Graph
         private readonly BlittableJsonReaderObject _queryParameters;
         private WithEdgesExpression _edgesExpression;
         private Dictionary<string, BlittableJsonReaderObject> _included = new Dictionary<string, BlittableJsonReaderObject>();
-
-        public IEnumerable<IQueryStep> Dependencies => GetDependencies();
-
-        private IEnumerable<IQueryStep> GetDependencies()
-        {
-            yield return _left;
-            yield return _right;
-        }
 
         private struct EdgeIncludeOp : IncludeUtil.IIncludeOp
         {
