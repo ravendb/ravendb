@@ -858,6 +858,12 @@ ReturnFalse:
                     ThrowException("Invalid hex value , numeric value is: " + b);
                 }
             }
+            if (val < 32)
+            {
+                // control character
+                var esc = _unmanagedWriteBuffer.SizeInBytes - _prevEscapePosition;
+                _state.EscapePositions.Add(esc);
+            }
             WriteUnicodeCharacterToStringBuffer(val);
             return true;
         }

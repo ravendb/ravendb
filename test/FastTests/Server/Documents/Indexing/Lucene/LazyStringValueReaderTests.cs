@@ -58,8 +58,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             
             for (int i = 0; i < 10; i++)
             {
-                var bytes = new byte[r.Next(1, 2000)];
-                r.NextBytes(bytes);
+                var bytes = RandomString(2000);
 
                 var expected = Encoding.UTF8.GetString(bytes);
 
@@ -75,6 +74,24 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             
         }
 
+        public byte[] RandomString(int length)
+        {
+            Random random = new Random();
+            var charLength = random.Next(1, 2000);
+            var actualSize = charLength;
+            StringBuilder str = new StringBuilder(length);
+            while (charLength > 0)
+            {
+                char c = (char)random.Next(char.MinValue, char.MaxValue);
+                if (c >= 0xD800 && c <= 0xDFFF || c >= 0xE000)
+                    continue;
+                if (c < 32)
+                    c += (char)32;
+                str.Append(c);
+                charLength--;
+            }
+            return Encoding.UTF8.GetBytes(str.ToString());
+        }
 
         public override void Dispose()
         {
