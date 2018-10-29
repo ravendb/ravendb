@@ -407,7 +407,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     if (fieldNamesValidator?.Fields.Contains(groupByField) == false)
                     {
-                        throw new InvalidOperationException($"Group by field '{groupByField.Name}' was not found on the list of index fields ({string.Join(", ",fieldNamesValidator.Fields.Select(x => x.Name))})");
+                        throw new InvalidOperationException($"Group by field '{groupByField.Name}' was not found on the list of index fields ({string.Join(", ", fieldNamesValidator.Fields.Select(x => x.Name))})");
                     }
                 }
 
@@ -440,10 +440,9 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 // there are certain patterns we aren't optimizing, that is fine
             }
-            var collectionName = string.IsNullOrWhiteSpace(mapRewriter.CollectionName) ? Constants.Documents.Collections.AllDocumentsCollection : mapRewriter.CollectionName;
 
-            var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(collectionName));
             var results = new List<StatementSyntax>();
+            ExpressionSyntax mapExpression;
 
             if (optimized != null)
             {
@@ -465,21 +464,32 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 members = members.Add(method);
 
-                results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddMap)).Invoke(collection, RoslynHelper.This(method.Identifier.Text)).AsExpressionStatement()); // this.AddMap("Users", docs => from doc in docs ... )
+                mapExpression = RoslynHelper.This(method.Identifier.Text);
             }
             else
             {
-                var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("docs")), rewrittenExpression);
-
-                results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddMap)).Invoke(collection, indexingFunction).AsExpressionStatement()); // this.AddMap("Users", docs => from doc in docs ... )
+                mapExpression = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("docs")), rewrittenExpression);
             }
 
-            if (mapRewriter.ReferencedCollections != null)
+            var collectionNames = mapRewriter.CollectionNames ?? new[] { Constants.Documents.Collections.AllDocumentsCollection };
+
+            foreach (var cName in collectionNames)
             {
-                foreach (var referencedCollection in mapRewriter.ReferencedCollections)
+                var collectionName = string.IsNullOrWhiteSpace(cName) 
+                    ? Constants.Documents.Collections.AllDocumentsCollection 
+                    : cName;
+
+                var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(collectionName));
+
+                results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddMap)).Invoke(collection, mapExpression).AsExpressionStatement()); // this.AddMap("Users", docs => from doc in docs ... )
+
+                if (mapRewriter.ReferencedCollections != null)
                 {
-                    var rc = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(referencedCollection));
-                    results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddReferencedCollection)).Invoke(collection, rc).AsExpressionStatement());
+                    foreach (var referencedCollection in mapRewriter.ReferencedCollections)
+                    {
+                        var rc = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(referencedCollection));
+                        results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddReferencedCollection)).Invoke(collection, rc).AsExpressionStatement());
+                    }
                 }
             }
 
