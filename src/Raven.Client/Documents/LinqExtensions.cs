@@ -1153,6 +1153,22 @@ namespace Raven.Client.Documents
             return (IOrderedQueryable<T>)queryable;
         }
 
+        public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string sorterName)
+        {
+            return source.OrderBy(path.ToPropertyPath(), sorterName);
+        }
+
+        public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, string path, string sorterName)
+        {
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(sorterName)));
+            return (IOrderedQueryable<T>)queryable;
+        }
+
         public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
         {
             return source.OrderBy(path.ToPropertyPath(), ordering);
@@ -1168,6 +1184,25 @@ namespace Raven.Client.Documents
             var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(ordering)));
             return (IOrderedQueryable<T>)queryable;
 
+        }
+
+        public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string sorterName)
+        {
+            return source.OrderByDescending(path.ToPropertyPath(), sorterName);
+        }
+
+        public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, string path, string sorterName)
+        {
+            if (string.IsNullOrWhiteSpace(sorterName)) 
+                throw new ArgumentNullException(nameof(sorterName));
+
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(sorterName)));
+            return (IOrderedQueryable<T>)queryable;
         }
 
         public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
@@ -1186,6 +1221,22 @@ namespace Raven.Client.Documents
             return (IOrderedQueryable<T>)queryable;
         }
 
+        public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, Expression<Func<T, object>> path, string sorterName)
+        {
+            return source.ThenBy(path.ToPropertyPath(), sorterName);
+        }
+
+        public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, string path, string sorterName)
+        {
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(sorterName)));
+            return (IOrderedQueryable<T>)queryable;
+        }
+
         public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
         {
             return source.ThenBy(path.ToPropertyPath(), ordering);
@@ -1199,6 +1250,22 @@ namespace Raven.Client.Documents
             var expression = ConvertExpressionIfNecessary(source);
 
             var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(ordering)));
+            return (IOrderedQueryable<T>)queryable;
+        }
+
+        public static IOrderedQueryable<T> ThenByDescending<T>(this IOrderedQueryable<T> source, Expression<Func<T, object>> path, string sorterName)
+        {
+            return source.ThenByDescending(path.ToPropertyPath(), sorterName);
+        }
+
+        public static IOrderedQueryable<T> ThenByDescending<T>(this IOrderedQueryable<T> source, string path, string sorterName)
+        {
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(sorterName)));
             return (IOrderedQueryable<T>)queryable;
         }
 

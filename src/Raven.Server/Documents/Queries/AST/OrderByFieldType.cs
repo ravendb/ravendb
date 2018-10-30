@@ -9,6 +9,7 @@
         AlphaNumeric,
         Random,
         Score,
-        Distance
+        Distance,
+        Custom
     }
 }

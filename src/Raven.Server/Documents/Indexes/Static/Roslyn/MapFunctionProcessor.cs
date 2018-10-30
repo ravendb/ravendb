@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
             _refCollectionsRetriever = new ReferencedCollectionsRetriever();
         }
 
-        public string CollectionName => _collectionRetriever.CollectionName;
+        public string[] CollectionNames => _collectionRetriever.CollectionNames;
 
         public HashSet<string> ReferencedCollections => _refCollectionsRetriever.ReferencedCollections;
 

@@ -6,6 +6,8 @@
 
 using System.IO;
 using System.Runtime.ExceptionServices;
+using Sparrow;
+using Sparrow.Utils;
 using Voron.Platform.Win32;
 
 namespace Voron.Util
@@ -23,24 +25,16 @@ namespace Voron.Util
             _edi = edi;
         }
 
-        private static long GetAvailableFreeSpace(string path)
-        {
-            if(StorageEnvironmentOptions.RunningOnPosix == false)
-            {
-                if(Win32NativeFileMethods.GetDiskFreeSpaceEx(path, out _, out _, out var total) == false)
-                {
-                    return 0;
-                }
-                return (long)total;
-            }
-
-            return new DriveInfo(path).AvailableFreeSpace;
-        }
-
         public void AssertCanContinueWriting()
         {
-            if (GetAvailableFreeSpace(_path) > _availableSpaceWhenEventOccurred)
+            var diskInfoResult = DiskSpaceChecker.GetDiskSpaceInfo(_path);
+            if (diskInfoResult == null)
                 return;
+
+            var freeSpaceInBytes = diskInfoResult.TotalFreeSpace.GetValue(SizeUnit.Bytes);
+            if (freeSpaceInBytes > _availableSpaceWhenEventOccurred)
+                return;
+
             _edi.Throw();
         }
     }

@@ -21,6 +21,8 @@ namespace Raven.Server.Smuggler.Migration
 
         public bool EnableBasicAuthenticationOverUnsecuredHttp { get; set; }
 
+        public bool SkipServerCertificateValidation { get; set; }
+
         public DatabaseItemType OperateOnTypes { get; set; }
 
         public bool RemoveAnalyzers { get; set; }

@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Threading;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Utils;
 using Voron;
 
 namespace Raven.Server.Storage
@@ -109,8 +108,6 @@ namespace Raven.Server.Storage
 
         private (HashSet<LowDiskSpace> Disks, HashSet<StorageEnvironment> Environments) GetLowSpaceDisksAndRelevantEnvironments()
         {
-            var drives = DriveInfo.GetDrives();
-
             var lowSpaceDisks = new HashSet<LowDiskSpace>();
             var environmentsRunningOnLowSpaceDisks = new HashSet<StorageEnvironment>();
 
@@ -125,15 +122,17 @@ namespace Raven.Server.Storage
                 {
                     foreach (var item in database.GetAllStoragesEnvironment())
                     {
+                        var driveInfo = item.Environment.Options.DriveInfoByPath?.Value;
+
                         var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)item.Environment.Options;
 
-                        var dataDisk = DiskSpaceChecker.GetFreeDiskSpace(options.BasePath.FullPath, drives);
+                        var dataDisk = DiskSpaceChecker.GetDiskSpaceInfo(options.BasePath.FullPath, driveInfo?.BasePath);
 
                         AddEnvironmentIfLowSpace(dataDisk);
 
                         if (options.JournalPath != null)
                         {
-                            var journalDisk = DiskSpaceChecker.GetFreeDiskSpace(options.JournalPath.FullPath, drives);
+                            var journalDisk = DiskSpaceChecker.GetDiskSpaceInfo(options.JournalPath.FullPath, driveInfo?.JournalPath);
 
                             if (dataDisk?.DriveName != journalDisk?.DriveName)
                                 AddEnvironmentIfLowSpace(journalDisk);
@@ -141,7 +140,7 @@ namespace Raven.Server.Storage
 
                         if (options.TempPath != null)
                         {
-                            var tempDisk = DiskSpaceChecker.GetFreeDiskSpace(options.TempPath.FullPath, drives);
+                            var tempDisk = DiskSpaceChecker.GetDiskSpaceInfo(options.TempPath.FullPath, driveInfo?.TempPath);
 
                             if (dataDisk?.DriveName != tempDisk?.DriveName)
                                 AddEnvironmentIfLowSpace(tempDisk);
