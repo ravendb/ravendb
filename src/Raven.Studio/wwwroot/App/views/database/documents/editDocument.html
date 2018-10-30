@@ -129,6 +129,18 @@
                             </span>
                         </dd>
                     </div>
+                    <div data-bind="if: expirationDateInterval">
+                        <dt>Expires:</dt>
+                        <dd>
+                             <span data-placement="bottom" data-toggle="tooltip" data-html="true" data-animation="true"
+                                   data-bind="attr: { 'data-original-title': '<h4>Expiration Date</h4>' + expirationDateFullDate() }">
+                                <span data-bind="text: expirationDateInterval"></span>
+                            </span>
+                            <i class="icon-danger text-warning" data-toggle="tooltip" data-animation="true" data-html="true" 
+                               data-bind="visible: !$root.documentExpirationEnabled()"
+                               data-original-title="Document expiration is turned off. <Br />This document won't be deleted on specified point in time."></i>
+                        </dd>
+                    </div>
                     <dt>Size:</dt>
                     <dd>
                         <span data-placement="bottom" data-toggle="tooltip" data-html="true" data-animation="true"

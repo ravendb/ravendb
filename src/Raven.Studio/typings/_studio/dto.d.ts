@@ -73,6 +73,7 @@ interface documentMetadataDto {
     '@change-vector'?: string;
     '@counters'?: Array<string>;
     '@counters-snapshot'?: dictionary<number>;
+    '@expires'?: string;
 }
 
 interface updateDatabaseConfigurationsResult {
