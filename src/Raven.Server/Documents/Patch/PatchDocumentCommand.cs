@@ -1,23 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.Serialization;
-using Esprima.Ast;
-using System.Linq;using Jint.Native;
+using System.Linq;
+using Jint.Native;
 using Raven.Client;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class PatchDocumentCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
+    public abstract class PatchDocumentCommandBase : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
     {
-        private readonly string _id;
-        private readonly LazyStringValue _expectedChangeVector;
         private readonly bool _skipPatchIfChangeVectorMismatch;
 
         private readonly JsonOperationContext _externalContext;
@@ -25,6 +24,7 @@ namespace Raven.Server.Documents.Patch
         private readonly DocumentDatabase _database;
         private readonly bool _isTest;
         private readonly bool _debugMode;
+        private readonly bool _returnDocument;
 
         private ScriptRunner.SingleRun _run;
         private readonly ScriptRunner.SingleRun _runIfMissing;
@@ -38,91 +38,79 @@ namespace Raven.Server.Documents.Patch
 
         public PatchDebugActions DebugActions => _run.DebugActions;
 
-        public PatchDocumentCommand(
+        protected PatchDocumentCommandBase(
             JsonOperationContext context,
-            string id,
-            LazyStringValue expectedChangeVector,
             bool skipPatchIfChangeVectorMismatch,
-            (PatchRequest Run, BlittableJsonReaderObject Args) patch,
-            (PatchRequest Run, BlittableJsonReaderObject Args) patchIfMissing,
+            (PatchRequest run, BlittableJsonReaderObject args) patch,
+            (PatchRequest run, BlittableJsonReaderObject args) patchIfMissing,
             DocumentDatabase database,
             bool isTest,
             bool debugMode,
-            bool collectResultsNeeded)
+            bool collectResultsNeeded,
+            bool returnDocument)
         {
             _externalContext = collectResultsNeeded ? context : null;
             _patchIfMissing = patchIfMissing;
             _patch = patch;
-            _returnRun = database.Scripts.GetScriptRunner(patch.Run, false, out _run);
+            _returnRun = database.Scripts.GetScriptRunner(patch.run, false, out _run);
             _run.DebugMode = debugMode;
             if (_runIfMissing != null)
                 _runIfMissing.DebugMode = debugMode;
-            _returnRunIfMissing = database.Scripts.GetScriptRunner(patchIfMissing.Run, false, out _runIfMissing);
-            _id = id;
-            _expectedChangeVector = expectedChangeVector;
+            _returnRunIfMissing = database.Scripts.GetScriptRunner(patchIfMissing.run, false, out _runIfMissing);
             _skipPatchIfChangeVectorMismatch = skipPatchIfChangeVectorMismatch;
             _database = database;
             _isTest = isTest;
             _debugMode = debugMode;
-
-            if (string.IsNullOrEmpty(id) || id.EndsWith('/') || id.EndsWith('|'))
-            {
-                throw new ArgumentException("The id argument has invalid value: '" + id + "'", "id");
-            }
+            _returnDocument = returnDocument;
         }
 
-        public PatchResult PatchResult { get; private set; }
-
-        protected override int ExecuteCmd(DocumentsOperationContext context)
+        protected PatchResult ExecuteOnDocument(DocumentsOperationContext context, string id, LazyStringValue expectedChangeVector)
         {
-            var originalDocument = _database.DocumentsStorage.Get(context, _id);
+            var originalDocument = _database.DocumentsStorage.Get(context, id);
             _run.DebugMode = _debugMode;
-            if (_expectedChangeVector != null)
+            if (expectedChangeVector != null)
             {
                 if (originalDocument == null)
                 {
                     if (_skipPatchIfChangeVectorMismatch)
                     {
-                        PatchResult = new PatchResult
+                        return new PatchResult
                         {
                             Status = PatchStatus.Skipped
                         };
-                        return 1;
                     }
 
-                    throw new ConcurrencyException($"Could not patch document '{_id}' because non current change vector was used")
+                    throw new ConcurrencyException($"Could not patch document '{id}' because non current change vector was used")
                     {
                         ActualChangeVector = null,
-                        ExpectedChangeVector = _expectedChangeVector
+                        ExpectedChangeVector = expectedChangeVector
                     };
                 }
 
-                if (originalDocument.ChangeVector.CompareTo(_expectedChangeVector) != 0)
+                if (originalDocument.ChangeVector.CompareTo(expectedChangeVector) != 0)
                 {
                     if (_skipPatchIfChangeVectorMismatch)
                     {
-                        PatchResult = new PatchResult
+                        return new PatchResult
                         {
                             Status = PatchStatus.Skipped
                         };
-                        return 1;
                     }
 
-                    throw new ConcurrencyException($"Could not patch document '{_id}' because non current change vector was used")
+                    throw new ConcurrencyException($"Could not patch document '{id}' because non current change vector was used")
                     {
                         ActualChangeVector = originalDocument.ChangeVector,
-                        ExpectedChangeVector = _expectedChangeVector
+                        ExpectedChangeVector = expectedChangeVector
                     };
                 }
             }
 
             if (originalDocument == null && _runIfMissing == null)
             {
-                PatchResult = new PatchResult
+                return new PatchResult
                 {
                     Status = PatchStatus.DocumentDoesNotExist
                 };
-                return 1;
             }
 
             object documentInstance;
@@ -143,7 +131,7 @@ namespace Raven.Server.Documents.Patch
             // we will to access this value, and the original document data may be changed by
             // the actions of the script, so we translate (which will create a clone) then use
             // that clone later
-            using (var scriptResult = _run.Run(context, context, "execute", _id, new[] { documentInstance, args }))
+            using (var scriptResult = _run.Run(context, context, "execute", id, new[] { documentInstance, args }))
             {
                 var modifiedDocument = scriptResult.TranslateToObject(_externalContext ?? context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
@@ -157,14 +145,12 @@ namespace Raven.Server.Documents.Patch
                 if (modifiedDocument == null)
                 {
                     result.Status = PatchStatus.Skipped;
-                    PatchResult = result;
-
-                    return 1;
+                    return result;
                 }
 
                 if (_run.RefreshOriginalDocument)
                 {
-                    originalDocument = _database.DocumentsStorage.Get(context, _id);
+                    originalDocument = _database.DocumentsStorage.Get(context, id);
                     documentInstance = UpdateOriginalDocument();
                 }
 
@@ -172,7 +158,7 @@ namespace Raven.Server.Documents.Patch
                 {
                     foreach (var docId in _run.UpdatedDocumentCounterIds)
                     {
-                        if (docId.Equals(_id, StringComparison.OrdinalIgnoreCase))
+                        if (docId.Equals(id, StringComparison.OrdinalIgnoreCase))
                         {
                             Debug.Assert(originalDocument != null);
                             modifiedDocument = UpdateCountersInMetadata(context, modifiedDocument, docId, ref originalDocument.Flags);
@@ -195,7 +181,7 @@ namespace Raven.Server.Documents.Patch
                 if (originalDoc == null)
                 {
                     if (_isTest == false || _run.PutOrDeleteCalled)
-                        putResult = _database.DocumentsStorage.Put(context, _id, null, modifiedDocument);
+                        putResult = _database.DocumentsStorage.Put(context, id, null, modifiedDocument);
 
                     result.Status = PatchStatus.Created;
                 }
@@ -219,8 +205,7 @@ namespace Raven.Server.Documents.Patch
                     result.LastModified = putResult.Value.LastModified;
                 }
 
-                PatchResult = result;
-                return 1;
+                return result;
             }
 
             BlittableObjectInstance UpdateOriginalDocument()
@@ -241,6 +226,34 @@ namespace Raven.Server.Documents.Patch
                 return null;
             }
         }
+
+        protected string HandleReply(string id, PatchResult patchResult, DynamicJsonArray reply, HashSet<string> modifiedCollections)
+        {
+            if (patchResult.ModifiedDocument != null)
+                _database.HugeDocuments.AddIfDocIsHuge(id, patchResult.ModifiedDocument.Size);
+
+            if (patchResult.Collection != null)
+                modifiedCollections?.Add(patchResult.Collection);
+
+            var patchReply = new DynamicJsonValue
+            {
+                [nameof(BatchRequestParser.CommandData.Id)] = id,
+                [nameof(BatchRequestParser.CommandData.ChangeVector)] = patchResult.ChangeVector,
+                [nameof(Constants.Documents.Metadata.LastModified)] = patchResult.LastModified,
+                [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.PATCH),
+                [nameof(PatchStatus)] = patchResult.Status,
+                [nameof(PatchResult.Debug)] = patchResult.Debug
+            };
+
+            if (_returnDocument)
+                patchReply[nameof(PatchResult.ModifiedDocument)] = patchResult.ModifiedDocument;
+
+            reply.Add(patchReply);
+
+            return patchResult.ChangeVector;
+        }
+
+        public abstract string HandleReply(DynamicJsonArray reply, HashSet<string> modifiedCollections);
 
         private static BlittableJsonReaderObject UpdateCountersInMetadata(
             DocumentsOperationContext context,
@@ -264,7 +277,7 @@ namespace Raven.Server.Documents.Patch
             }
 
             modifiedDocument.Modifications = new DynamicJsonValue(modifiedDocument)
-                {[Constants.Documents.Metadata.Key] = metadata};
+            { [Constants.Documents.Metadata.Key] = metadata };
 
             modifiedDocument = context.ReadObject(modifiedDocument, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             return modifiedDocument;
@@ -275,21 +288,127 @@ namespace Raven.Server.Documents.Patch
             _returnRun.Dispose();
             _returnRunIfMissing.Dispose();
         }
+    }
+
+    public class BatchPatchDocumentCommand : PatchDocumentCommandBase
+    {
+        private readonly BlittableJsonReaderArray _ids;
+
+        private readonly List<(string Id, PatchResult PatchResult)> _patchResults = new List<(string Id, PatchResult PatchResult)>();
+
+        public BatchPatchDocumentCommand(
+            JsonOperationContext context,
+            BlittableJsonReaderArray ids,
+            bool skipPatchIfChangeVectorMismatch,
+            (PatchRequest run, BlittableJsonReaderObject args) patch,
+            (PatchRequest run, BlittableJsonReaderObject args) patchIfMissing,
+            DocumentDatabase database,
+            bool isTest,
+            bool debugMode,
+            bool collectResultsNeeded) : base(context, skipPatchIfChangeVectorMismatch, patch, patchIfMissing, database, isTest, debugMode, collectResultsNeeded, returnDocument: false)
+        {
+            _ids = ids;
+        }
+
+        protected override int ExecuteCmd(DocumentsOperationContext context)
+        {
+            if (_ids == null || _ids.Length == 0)
+                return 0;
+
+            foreach (var item in _ids)
+            {
+                if (!(item is BlittableJsonReaderObject bjro))
+                    throw new InvalidOperationException();
+
+                if (bjro.TryGet(nameof(ICommandData.Id), out string id) == false)
+                    throw new InvalidOperationException();
+
+                bjro.TryGet(nameof(ICommandData.ChangeVector), out LazyStringValue expectedChangeVector);
+
+                var patchResult = ExecuteOnDocument(context, id, expectedChangeVector);
+                _patchResults.Add((id, patchResult));
+            }
+
+            return _ids.Length;
+        }
+
+        public override string HandleReply(DynamicJsonArray reply, HashSet<string> modifiedCollections)
+        {
+            reply.Add(new DynamicJsonValue
+            {
+                [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.BatchPATCH)
+            });
+
+            return null;
+
+            /*
+            string lastChangeVector = null;
+            foreach (var patchResult in _patchResults)
+                lastChangeVector = HandleReply(patchResult.Id, patchResult.PatchResult, reply, modifiedCollections);
+
+            return lastChangeVector;
+            */
+        }
 
         public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
         {
-            return new PatchDocumentCommandDto
-            {
-                Id = _id,
-                ExpectedChangeVector = _expectedChangeVector,
-                SkipPatchIfChangeVectorMismatch = _skipPatchIfChangeVectorMismatch,
-                Patch = _patch,
-                PatchIfMissing = _patchIfMissing,
-                IsTest = _isTest,
-                DebugMode = _debugMode,
-                CollectResultsNeeded = _externalContext != null
-            };
+            return null;
+        }
     }
+
+    public class PatchDocumentCommand : PatchDocumentCommandBase
+    {
+        private readonly string _id;
+        private readonly LazyStringValue _expectedChangeVector;
+
+        public PatchResult PatchResult { get; private set; }
+
+        public PatchDocumentCommand(
+            JsonOperationContext context,
+            string id,
+            LazyStringValue expectedChangeVector,
+            bool skipPatchIfChangeVectorMismatch,
+            (PatchRequest run, BlittableJsonReaderObject args) patch,
+            (PatchRequest run, BlittableJsonReaderObject args) patchIfMissing,
+            DocumentDatabase database,
+            bool isTest,
+            bool debugMode,
+            bool collectResultsNeeded,
+            bool returnDocument) : base(context, skipPatchIfChangeVectorMismatch, patch, patchIfMissing, database, isTest, debugMode, collectResultsNeeded, returnDocument)
+        {
+            _id = id;
+            _expectedChangeVector = expectedChangeVector;
+
+            if (string.IsNullOrEmpty(id) || id.EndsWith('/') || id.EndsWith('|'))
+                throw new ArgumentException($"The ID argument has invalid value: '{id}'", nameof(id));
+        }
+
+        protected override int ExecuteCmd(DocumentsOperationContext context)
+        {
+            PatchResult = ExecuteOnDocument(context, _id, _expectedChangeVector);
+            return 1;
+        }
+
+        public override string HandleReply(DynamicJsonArray reply, HashSet<string> modifiedCollections)
+        {
+            return HandleReply(_id, PatchResult, reply, modifiedCollections);
+        }
+
+        public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
+        {
+            return null;
+            //return new PatchDocumentCommandDto
+            //{
+            //    Id = _id,
+            //    ExpectedChangeVector = _expectedChangeVector,
+            //    SkipPatchIfChangeVectorMismatch = _skipPatchIfChangeVectorMismatch,
+            //    Patch = _patch,
+            //    PatchIfMissing = _patchIfMissing,
+            //    IsTest = _isTest,
+            //    DebugMode = _debugMode,
+            //    CollectResultsNeeded = _externalContext != null
+            //};
+        }
     }
 
     public class PatchDocumentCommandDto : TransactionOperationsMerger.IReplayableCommandDto<PatchDocumentCommand>
@@ -302,6 +421,7 @@ namespace Raven.Server.Documents.Patch
         public bool IsTest;
         public bool DebugMode;
         public bool CollectResultsNeeded;
+        public bool ReturnDocument;
 
         public PatchDocumentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
@@ -315,7 +435,8 @@ namespace Raven.Server.Documents.Patch
                 database,
                 IsTest,
                 DebugMode,
-                CollectResultsNeeded);
+                CollectResultsNeeded,
+                ReturnDocument);
         }
     }
 }

@@ -232,7 +232,7 @@ namespace SlowTests.Blittable
                     (patchRequest, arg),
                     (null, null),
                     database,
-                    false, false, false);
+                    false, false, false, false);
 
                 //Action
                 var jsonSerializer = GetJsonSerializer();

@@ -133,6 +133,8 @@ namespace Raven.Client.Documents.Session.Operations
                     case CommandType.Counters:
                         HandleCounters(batchResult);
                         break;
+                    case CommandType.BatchPATCH:
+                        break;
                     default:
                         throw new NotSupportedException($"Command '{type}' is not supported.");
                 }
