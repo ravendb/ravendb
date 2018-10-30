@@ -99,7 +99,7 @@ namespace SlowTests.Bugs.Indexing
                         session.SaveChanges();
                     }
 
-                    Assert.Throws<RavenException>(() => WaitForIndexing(store));
+                    WaitForIndexing(store, allowErrors: true);
                 }
 
                 var fooIndex = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.First(x => x.Name == "foo");

@@ -25,7 +25,6 @@ namespace Voron.Platform.Posix
     public sealed unsafe class PosixTempMemoryMapPager : PosixAbstractPager
     {
         private readonly StorageEnvironmentOptions _options;
-        private int _fd;
         public readonly long SysPageSize;
         private long _totalAllocationSize;
         public override long TotalAllocationSize => _totalAllocationSize;
@@ -145,38 +144,6 @@ namespace Voron.Platform.Posix
         public override string ToString()
         {
             return FileName.FullPath;
-        }
-
-        public override void ReleaseAllocationInfo(byte* baseAddress, long size)
-        {
-            base.ReleaseAllocationInfo(baseAddress, size);
-            var ptr = new IntPtr(baseAddress);
-            var result = Syscall.munmap(ptr, (UIntPtr)size);
-            if (result == -1)
-            {
-                var err = Marshal.GetLastWin32Error();
-                Syscall.ThrowLastError(err);
-            }
-            NativeMemory.UnregisterFileMapping(FileName.FullPath, ptr, size);
-        }
-
-        protected override void DisposeInternal()
-        {
-            if (_fd != -1)
-            {
-                // note that the orders of operations is important here, we first unlink the file
-                // we are supposed to be the only one using it, so Linux would be ready to delete it
-                // and hopefully when we close it, won't waste any time trying to sync the memory state
-                // to disk just to discard it
-                if (DeleteOnClose)
-                {
-                    Syscall.unlink(FileName.FullPath);
-                    // explicitly ignoring the result here, there isn't
-                    // much we can do to recover from being unable to delete it
-                }
-                Syscall.close(_fd);
-                _fd = -1;
-            }
         }
     }
 }

@@ -15,6 +15,7 @@ using Voron.Global;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
+using Voron.Impl.Scratch;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Util;
@@ -131,6 +132,8 @@ namespace Voron
 
         public UpgraderDelegate SchemaUpgrader { get; set; }
 
+        public ScratchSpaceUsageMonitor ScratchSpaceUsage { get; }
+
         public long MaxScratchBufferSize
         {
             get => _maxScratchBufferSize;
@@ -227,6 +230,8 @@ namespace Voron
 
             PrefetchSegmentSize = 4 * Constants.Size.Megabyte;
             PrefetchResetThreshold = 8 * (long)Constants.Size.Gigabyte;
+
+            ScratchSpaceUsage = new ScratchSpaceUsageMonitor();
         }
 
         public void SetCatastrophicFailure(ExceptionDispatchInfo exception)
@@ -1092,6 +1097,9 @@ namespace Voron
                     MasterKey = null;
                 }
             }
+
+            ScratchSpaceUsage?.Dispose();
+
             Disposing();
         }
 

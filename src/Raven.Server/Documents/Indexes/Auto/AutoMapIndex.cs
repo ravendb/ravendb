@@ -42,9 +42,9 @@ namespace Raven.Server.Documents.Indexes.Auto
             SetPriority(definition.Priority);
         }
 
-        public override void SetState(IndexState state)
+        public override void SetState(IndexState state, bool inMemoryOnly = false)
         {
-            base.SetState(state);
+            base.SetState(state, inMemoryOnly);
             Definition.State = state;
         }
 
