@@ -16,7 +16,7 @@
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="xunit" Version="2.4.0" />
+    <PackageReference Include="xunit" Version="2.4.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />

@@ -52,7 +52,7 @@ namespace Voron
 
         public void ForceSyncDataFile()
         {
-            GlobalFlushingBehavior.GlobalFlusher.Value.ForceFlushAndSyncEnvironment(this);
+            GlobalFlushingBehavior.GlobalFlusher.Value.ForceSyncEnvironment(this);
         }
 
         /// <summary>

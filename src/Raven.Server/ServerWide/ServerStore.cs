@@ -33,6 +33,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Dashboard;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
@@ -98,6 +99,7 @@ namespace Raven.Server.ServerWide
         public readonly StorageSpaceMonitor StorageSpaceMonitor;
         public readonly SecretProtection Secrets;
         public readonly AsyncManualResetEvent InitializationCompleted;
+        public readonly GlobalIndexingScratchSpaceMonitor GlobalIndexingScratchSpaceMonitor;
         public bool Initialized;
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
@@ -138,6 +140,9 @@ namespace Raven.Server.ServerWide
             Secrets = new SecretProtection(configuration.Security);
 
             InitializationCompleted = new AsyncManualResetEvent(_shutdownNotification.Token);
+            
+            if (Configuration.Indexing.GlobalScratchSpaceLimit != null)
+                GlobalIndexingScratchSpaceMonitor = new GlobalIndexingScratchSpaceMonitor(Configuration.Indexing.GlobalScratchSpaceLimit.Value);
 
             _frequencyToCheckForIdleDatabases = Configuration.Databases.FrequencyToCheckForIdle.AsTimeSpan;
 
