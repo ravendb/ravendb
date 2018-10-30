@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Queries.Graph
     public class EdgeQueryStep : IGraphQueryStep
     {
         private List<Match> _results = new List<Match>();
-        private int _index = 0;
+        private int _index = -1;
 
         private HashSet<string> _aliases;
 

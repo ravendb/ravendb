@@ -49,10 +49,10 @@ namespace Raven.Server.Documents.Queries.Graph
             _outputAlias = _stepAliases.Last();
         }
 
-        internal (WithEdgesExpression Edge, StringSegment EdgeAlias, StringSegment RecursionAlias) GetOutputEdgeInfo()
+        internal (WithEdgesExpression Edge, StringSegment EdgeAlias, StringSegment RecursionAlias, string SourceAlias) GetOutputEdgeInfo()
         {
             var match = _steps[_steps.Count - 1];
-            return (match.Edge, match.EdgeAlias, _recursive.Alias);
+            return (match.Edge, match.EdgeAlias, _recursive.Alias, _left.GetOuputAlias());
         }
 
         public HashSet<string> GetAllAliases()

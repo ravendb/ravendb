@@ -393,7 +393,6 @@ match (People as son where Name = 'Otho Sackville-Baggins')-recursive (0) { [Par
 select son.Name as Son, evil.Name as Evil")
                         .ToList();
 
-                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(1, results.Count);
                     Assert.Equal("Longo", results[0].Evil);
                     Assert.Equal("Otho Sackville-Baggins", results[0].Son);

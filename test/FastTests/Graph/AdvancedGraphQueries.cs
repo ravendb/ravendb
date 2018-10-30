@@ -814,7 +814,7 @@ namespace FastTests.Graph
                 }
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Advanced.RawQuery<JObject>("match (People as s)-recursive as path (longest) { [Ancestor as r] }->(People as a)").ToArray();
+                    var results = session.Advanced.RawQuery<JObject>("match (People as s where id() ='people/1-A')-recursive as path (longest) { [Ancestor as r] }->(People as a)").ToArray();
                     Assert.NotEmpty(results);
                     var stronglyTypedResults = results.Select(x => new
                     {
@@ -1111,7 +1111,7 @@ namespace FastTests.Graph
                         select e.FirstName as EmployeeName, reportsTo.path as ReportsToPath, m.FirstName as ManagerName
                        ").ToList();
                     Assert.NotEmpty(results); //sanity check
-                    Assert.Equal(3,results.Count);
+                    Assert.Equal(8,results.Count);
 
                     var stronglyTypedResults = results.Select(x => new
                     {
@@ -1144,7 +1144,7 @@ namespace FastTests.Graph
                             select { EmployeeName: e.FirstName, ReportsToPath: reportsTo.map(x => x.path), ManagerName: m.FirstName }
                        ").ToList();
                     Assert.NotEmpty(results); //sanity check
-                    Assert.Equal(3,results.Count);
+                    Assert.Equal(8,results.Count);
 
                     var stronglyTypedResults = results.Select(x => new
                     {
@@ -1223,7 +1223,7 @@ namespace FastTests.Graph
 
             var results = session.Advanced.RawQuery<JObject>(query).ToList();
             Assert.NotEmpty(results); //sanity check
-            Assert.Equal(3, results.Count);
+            Assert.Equal(8, results.Count);
 
             var pathIds = ExtractPathIds(results);
             return pathIds;

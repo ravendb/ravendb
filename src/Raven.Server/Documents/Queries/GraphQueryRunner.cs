@@ -35,15 +35,14 @@ namespace Raven.Server.Documents.Queries
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag,
             OperationCancelToken token)
         {
-
-            var qp = new GraphQueryPlan(query, documentsContext, existingResultEtag, token, Database);
-            qp.BuildQueryPlan();
-            await qp.Initialize();
-            var matchResults = qp.Execute();
-            var q = query.Metadata.Query;
-
             using (var timingScope = new QueryTimingsScope())
             {
+                var qp = new GraphQueryPlan(query, documentsContext, existingResultEtag, token, Database);
+                qp.BuildQueryPlan();
+                await qp.Initialize();
+                var matchResults = qp.Execute();
+                var q = query.Metadata.Query;
+
                 //var q = query.Metadata.Query;
                 //var ir = new IntermediateResults();
 

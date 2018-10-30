@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Sparrow;
 using Sparrow.Json;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
 
@@ -56,7 +57,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             _index = 0;
 
-            var (edge, edgeAlias, recursionAlias) = _left.GetOutputEdgeInfo();
+            var (edge, edgeAlias, recursionAlias, sourceAlias) = _left.GetOutputEdgeInfo();
 
             edge.EdgeAlias = edgeAlias;
 
@@ -72,10 +73,21 @@ namespace Raven.Server.Documents.Queries.Graph
 
             while (_left.GetNext(out var left))
             {
-                if(left.GetResult(recursionAlias) is List<Match> list && 
-                    list.Count > 0)
+                if(left.GetResult(recursionAlias) is List<Match> list)
                 {
-                    var top = list[list.Count - 1];
+                    Match top;
+                    StringSegment actualEdgeAlias;
+                    if (list.Count == 0)
+                    {
+                        // need to handle the case of recursive(0, $num), where we can recurse zero times
+                        top = left;
+                        actualEdgeAlias = sourceAlias;
+                    }
+                    else
+                    {
+                        actualEdgeAlias = edgeAlias;
+                        top = list[list.Count - 1];
+                    }
 
                     if(top.GetResult(edgeAlias) is string id)
                     {
@@ -92,7 +104,7 @@ namespace Raven.Server.Documents.Queries.Graph
                         continue;
                     }
 
-                    processor.SingleMatch(top, edgeAlias);
+                    processor.SingleMatch(top, actualEdgeAlias);
                 }
             }
         }
