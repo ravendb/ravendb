@@ -1154,7 +1154,7 @@ namespace Raven.Server.Documents.Indexes
                     try
                     {
                         DocumentDatabase.NotificationCenter.Add(AlertRaised.Create(DocumentDatabase.Name, $"Unexpected error in '{Name}' index",
-                            "Unexpected error in indexing thread. See details.", AlertType.UnexpectedIndexingThreadError, NotificationSeverity.Error,
+                            "Unexpected error in indexing thread. See details.", AlertType.Indexing_UnexpectedIndexingThreadError, NotificationSeverity.Error,
                             details: new ExceptionDetails(e)));
                     }
                     catch (Exception)
@@ -1646,7 +1646,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual void SetState(IndexState state)
+        public virtual void SetState(IndexState state, bool inMemoryOnly = false)
         {
             if (State == state)
                 return;
@@ -1664,9 +1664,12 @@ namespace Raven.Server.Documents.Indexes
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Changing state for '{Name})' from '{State}' to '{state}'.");
 
-
                 var oldState = State;
                 State = state;
+
+                if (inMemoryOnly)
+                    return;
+
                 try
                 {
                     // this might fail if we can't write, so we first update the in memory state
