@@ -22,6 +22,9 @@ class documentMetadata {
     lastModifiedFullDate: KnockoutComputed<string>;
     lastModifiedInterval: KnockoutComputed<string>;
 
+    expirationDateInterval: KnockoutComputed<string>;
+    expirationDateFullDate: KnockoutComputed<string>;
+    
     attachments = ko.observableArray<documentAttachmentDto>();
     counters = ko.observableArray<string>();
     revisionCounters = ko.observableArray<revisionCounter>();
@@ -51,6 +54,24 @@ class documentMetadata {
                 if (this.lastModified()) {
                     const fromDuration = generalUtils.formatDurationByDate(moment.utc(lastModified), true);
                     return `${fromDuration} ago`;
+                }
+                return "";
+            });
+            
+            this.expirationDateFullDate = ko.pureComputed(() => {
+                const expiration = dto["@expires"];
+                if (expiration) {
+                    const expirationMoment = moment(expiration);
+                    return expirationMoment.utc().format(dateFormat) + "(UTC)";
+                }
+                return "";
+            });
+            
+            this.expirationDateInterval = ko.pureComputed(() => {
+                const expiration = dto["@expires"];
+                if (expiration) {
+                    const fromDuration = generalUtils.formatDurationByDate(moment.utc(expiration), false);
+                    return `in ${fromDuration}`;
                 }
                 return "";
             });
