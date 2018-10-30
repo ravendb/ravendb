@@ -12,15 +12,24 @@ using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
-using Xunit;
 
 namespace StressTests
 {
     public class Databases : RavenTestBase
     {
-        [NightlyBuildTheory64Bit]
-        [InlineData(25)]
-        public void CanHandleMultipleDatabasesOnWrite(int numberOfDatabases)
+        [NightlyBuildFact64Bit]
+        public void CanHandleMultipleDatabasesOnWrite()
+        {
+            RunTest(numberOfDatabases: 25);
+        }
+
+        [NightlyBuildFact32Bit]
+        public void CanHandleMultipleDatabasesOnWrite32()
+        {
+            RunTest(numberOfDatabases: 10);
+        }
+
+        private void RunTest(int numberOfDatabases)
         {
             UseNewLocalServer();
 
@@ -34,6 +43,7 @@ namespace StressTests
                 {
                     sampleProduct = session.Load<Product>("products/1-A");
                 }
+
                 Console.WriteLine("Starting load on the system");
                 var timeToSpin = TimeSpan.FromMinutes(5);
                 var minTimeBetweenIntervals = 500;
@@ -48,16 +58,10 @@ namespace StressTests
                 Console.WriteLine($"Results came from cache {_totalQueryUsedCachedResults} times out of {_totalQueryCount} total queries.");
             }
         }
-        [NightlyBuildTheory32Bit]
-        [InlineData(10)]
-        public void CanHandleMultipleDatabasesOnWrite32(int numberOfDatabases)
-        {
-            CanHandleMultipleDatabasesOnWrite(numberOfDatabases);
-        }
 
-        private static readonly Dictionary<int, string> DbNumToDbName = new Dictionary<int, string>();
+        private readonly Dictionary<int, string> DbNumToDbName = new Dictionary<int, string>();
 
-        private static void StartAsyncQueryTask(IDocumentStore store, int numberOfDatabases, TimeSpan timeToSpin, int minTimeBetweenIntervals)
+        private void StartAsyncQueryTask(IDocumentStore store, int numberOfDatabases, TimeSpan timeToSpin, int minTimeBetweenIntervals)
         {
             var cts = new CancellationTokenSource();
             var rand = new Random(numberOfDatabases);
@@ -119,7 +123,7 @@ namespace StressTests
         private static long _reportedMaxQueryTime;
         private static int _totalQueryUsedCachedResults;
 
-        private static void CreateLoadOnAllDatabases(int numberOfDatabases, IDocumentStore store, TimeSpan timeToSpin, int minTimeBetweenIntervals, Product sampleProduct)
+        private void CreateLoadOnAllDatabases(int numberOfDatabases, IDocumentStore store, TimeSpan timeToSpin, int minTimeBetweenIntervals, Product sampleProduct)
         {
             var sw = Stopwatch.StartNew();
             while (sw.Elapsed < timeToSpin)
@@ -142,7 +146,7 @@ namespace StressTests
 
         }
 
-        private static void CreateDatabases(int numberOfDatabases, Raven.Client.Documents.DocumentStore store)
+        private void CreateDatabases(int numberOfDatabases, Raven.Client.Documents.DocumentStore store)
         {
 
             for (var i = 0; i < numberOfDatabases; i++)
