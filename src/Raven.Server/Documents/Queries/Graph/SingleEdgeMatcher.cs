@@ -15,15 +15,14 @@ namespace Raven.Server.Documents.Queries.Graph
         public List<Match> Results;
         public IGraphQueryStep Right;
         public Dictionary<string, BlittableJsonReaderObject> IncludedEdges;
-        public string IncomingAlias;
         public WithEdgesExpression Edge;
         public StringSegment EdgeAlias;
 
-        public void SingleMatch(Match left)
+        public void SingleMatch(Match left, string alias)
         {
-            var dummy = left.GetSingleDocumentResult(IncomingAlias);
+            var dummy = left.GetSingleDocumentResult(alias);
             if (dummy == null)
-                throw new InvalidOperationException("Unable to find alias " + IncomingAlias + " in query results, this is probably a bug");
+                throw new InvalidOperationException("Unable to find alias " + alias + " in query results, this is probably a bug");
 
             var leftDoc = dummy.Data;
 
@@ -106,6 +105,9 @@ namespace Raven.Server.Documents.Queries.Graph
 
             public void Include(BlittableJsonReaderObject parent, string id)
             {
+                if (id == null)
+                    return;
+
                 _edges[id] = parent;
             }
         }

@@ -65,9 +65,11 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             var processor = GetProcessor(_results);
 
+            string alias = _left.GetOuputAlias();
+
             while (_left.GetNext(out var left))
             {
-                processor.SingleMatch(left);
+                processor.SingleMatch(left, alias);
             }
         }
 
@@ -77,14 +79,12 @@ namespace Raven.Server.Documents.Queries.Graph
             var edge = _edgesExpression;
             edge.EdgeAlias = edgeAlias;
 
-            var outputAlias = _left.GetOuputAlias();
             var processor = new SingleEdgeMatcher
             {
                 IncludedEdges = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase),
                 QueryParameters = _queryParameters,
                 Results = results,
                 Right = _right,
-                IncomingAlias = outputAlias,
                 Edge = edge,
                 EdgeAlias = edgeAlias
             };

@@ -268,7 +268,6 @@ namespace Raven.Server.Documents.Queries
                 visited.Clear();
                 path.Clear();
 
-                var originalMatch = currentMatch;
                 var startingPoint = currentMatch.GetSingleDocumentResult(prevNodeAlias);
                 if (startingPoint == null)
                     return false;

@@ -116,7 +116,13 @@ namespace Raven.Server.Documents.Queries.AST
             return sp.ToString();
         }
 
-        public (int Min, int Max, RecursiveMatchType Type) GetOptions(QueryMetadata queryMetadata, BlittableJsonReaderObject queryParameters)
+        public struct RecursiveOptions
+        {
+            public int Max, Min;
+            public RecursiveMatchType Type;
+        }
+
+        public RecursiveOptions GetOptions(QueryMetadata queryMetadata, BlittableJsonReaderObject queryParameters)
         {
             var min = 1;
             var max = int.MaxValue;
@@ -204,7 +210,12 @@ namespace Raven.Server.Documents.Queries.AST
                 default:
                     throw new InvalidOperationException("Unexpected number of recursive match options, a max of three is expected, but got: " + Options.Count + " for " + this);
             }
-            return (min, max, type);
+            return new RecursiveOptions
+            {
+                Max = max,
+                Min = min,
+                Type = type
+            };
         }
 
         private int ValidateNumber((object Value, ValueTokenType Type) value)

@@ -102,7 +102,8 @@ namespace Raven.Server.Documents.Queries.Graph
 
             if(edge.Recursive != null)
             {
-                var pattern = edge.Recursive.Value.Pattern;
+                var recursive = edge.Recursive.Value;
+                var pattern = recursive.Pattern;
                 var steps = new List<SingleEdgeMatcher>((pattern.Count+1)/2);
                 for (int i = 0; i < pattern.Count; i+=2)
                 {
@@ -117,14 +118,13 @@ namespace Raven.Server.Documents.Queries.Graph
                         IncludedEdges = new Dictionary<string, Sparrow.Json.BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase),
                         QueryParameters = _query.QueryParameters,
                         Edge = recursiveEdge,
-                        IncomingAlias = i == 0 ? left.GetOuputAlias() : (string)pattern[i-1].Alias,
                         Results = new List<Match>(),
                         Right = i + 1 < pattern.Count ? BuildQueryPlanForMatchNode(pattern[i + 1]) : right,
                         EdgeAlias = pattern[i].Alias
                     });
                 }
 
-                return new RecursionQueryStep(left, steps);
+                return new RecursionQueryStep(left, steps, recursive, recursive.GetOptions(_query.Metadata, _query.QueryParameters));
             }
 
             if (GraphQuery.WithEdgePredicates.TryGetValue(alias, out var withEdge) == false)
