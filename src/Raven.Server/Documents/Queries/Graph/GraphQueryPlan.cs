@@ -20,7 +20,6 @@ namespace Raven.Server.Documents.Queries.Graph
         private long? _resultEtag;
         private OperationCancelToken _token;
         private DocumentDatabase _database;
-        private IntermediateResults _intermediateResults;
         public GraphQuery GraphQuery => _query.Metadata.Query.GraphQuery;
 
         public GraphQueryPlan(IndexQueryServerSide query, DocumentsOperationContext context, long? resultEtag,

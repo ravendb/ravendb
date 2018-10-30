@@ -143,27 +143,6 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-
-            public void PopulateVertices(ref IntermediateResults i)
-            {
-                if (_inner == null)
-                    return;
-
-                foreach (var item in _inner)
-                {
-                    // This is used as the sources for the query, and as such, we need it to
-                    // process all results, even if they are anonymous
-                    //
-                    // if (item.Key.StartsWith("_"))
-                    //    continue;
-
-                    if (item.Value is Document d)
-                    {
-                        i.Add(item.Key, this, d);
-                    }
-                }
-            }
-
             internal Document GetFirstResult()
             {
                 foreach (var item in _inner)
