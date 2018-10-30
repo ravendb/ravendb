@@ -48,7 +48,10 @@ class deleteDocumentsDetails extends abstractOperationDetails {
 
         this.estimatedTimeLeft = ko.pureComputed(() => {
             const progress = this.progress();
-            return this.getEstimatedTimeLeftFormatted(progress.Processed, progress.Total);
+            if (progress) {
+                return this.getEstimatedTimeLeftFormatted(progress.Processed, progress.Total);    
+            }
+            return "";
         }).extend({ rateLimit : 2000 });
     }
 
