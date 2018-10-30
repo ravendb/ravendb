@@ -32,6 +32,8 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
 
@@ -88,10 +90,13 @@ namespace Raven.Server.Documents.ETL
         }
     }
 
-    public abstract class EtlProcess<TExtracted, TTransformed, TConfiguration, TConnectionString> : EtlProcess where TExtracted : ExtractedItem
+    public abstract class EtlProcess<TExtracted, TTransformed, TConfiguration, TConnectionString> : EtlProcess, ILowMemoryHandler where TExtracted : ExtractedItem
         where TConfiguration : EtlConfiguration<TConnectionString>
         where TConnectionString : ConnectionString
     {
+        private static readonly Size DefaultMaximumMemoryAllocation = new Size(32, SizeUnit.Megabytes);
+        internal const int MinBatchSize = 64;
+
         private readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim();
         private readonly CancellationTokenSource _cts;
         private readonly HashSet<string> _collections;
@@ -99,9 +104,10 @@ namespace Raven.Server.Documents.ETL
         private readonly ConcurrentQueue<EtlStatsAggregator> _lastEtlStats =
             new ConcurrentQueue<EtlStatsAggregator>();
 
-        private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
+        private Size _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
         private NativeMemory.ThreadStats _threadAllocations;
         private PoolOfThreads.LongRunningWork _longRunningWork;
+        private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
         private EtlStatsAggregator _lastStats;
         private int _statsId;
 
@@ -264,6 +270,8 @@ namespace Raven.Server.Documents.ETL
             {
                 transformer.Initialize(debugMode: _testMode != null);
 
+                var batchSize = 0;
+
                 foreach (var item in items)
                 {
                     if (AlreadyLoadedByDifferentNode(item, state))
@@ -291,7 +299,7 @@ namespace Raven.Server.Documents.ETL
 
                         try
                         {
-                            if (CanContinueBatch(stats, item, context) == false)
+                            if (CanContinueBatch(stats, item, batchSize, context) == false)
                                 break;
 
                             transformer.Transform(item);
@@ -301,6 +309,8 @@ namespace Raven.Server.Documents.ETL
                             stats.RecordTransformedItem(item.Type);
                             stats.RecordLastTransformedEtag(item.Etag, item.Type);
                             stats.RecordChangeVector(item.ChangeVector);
+
+                            batchSize++;
                         }
                         catch (JavaScriptParseException e)
                         {
@@ -379,7 +389,7 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract void LoadInternal(IEnumerable<TTransformed> items, JsonOperationContext context);
 
-        public bool CanContinueBatch(EtlStatsScope stats, TExtracted currentItem, JsonOperationContext ctx)
+        public bool CanContinueBatch(EtlStatsScope stats, TExtracted currentItem, int batchSize, JsonOperationContext ctx)
         {
             if (currentItem.Type == EtlItemType.Counter)
             {
@@ -405,7 +415,7 @@ namespace Raven.Server.Documents.ETL
                 var reason = $"Stopping the batch because it has already processed max number of items ({string.Join(',', stats.NumberOfExtractedItems.Select(x => $"{x.Key} - {x.Value}"))})";
 
                 if (Logger.IsInfoEnabled)
-                    Logger.Info(reason);
+                    Logger.Info($"[{Name}] {reason}");
 
                 stats.RecordBatchCompleteReason(reason);
 
@@ -417,10 +427,21 @@ namespace Raven.Server.Documents.ETL
                 var reason = $"Stopping the batch after {stats.Duration} due to extract and transform processing timeout";
 
                 if (Logger.IsInfoEnabled)
-                    Logger.Info(reason);
+                    Logger.Info($"[{Name}] {reason}");
 
                 stats.RecordBatchCompleteReason(reason);
 
+                return false;
+            }
+
+            if (_lowMemoryFlag.IsRaised() && batchSize >= MinBatchSize)
+            {
+                var reason = $"The batch was stopped after processing {batchSize:#,#;;0} items because of low memory";
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"[{Name}] {reason}");
+
+                stats.RecordBatchCompleteReason(reason);
                 return false;
             }
 
@@ -442,7 +463,7 @@ namespace Raven.Server.Documents.ETL
                     }
 
                     if (Logger.IsInfoEnabled)
-                        Logger.Info(reason);
+                        Logger.Info($"[{Name}] {reason}");
 
                     stats.RecordBatchCompleteReason(reason);
 
@@ -970,6 +991,17 @@ namespace Raven.Server.Documents.ETL
         private class TestMode
         {
             public readonly List<string> DebugOutput = new List<string>();
+        }
+
+        public void LowMemory()
+        {
+            _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
+            _lowMemoryFlag.Raise();
+        }
+
+        public void LowMemoryOver()
+        {
+            _lowMemoryFlag.Lower();
         }
     }
 }
