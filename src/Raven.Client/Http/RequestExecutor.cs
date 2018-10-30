@@ -48,7 +48,7 @@ namespace Raven.Client.Http
         private readonly SemaphoreSlim _updateDatabaseTopologySemaphore = new SemaphoreSlim(1, 1);
         private readonly SemaphoreSlim _updateClientConfigurationSemaphore = new SemaphoreSlim(1, 1);
 
-        private readonly ConcurrentDictionary<ServerNode, NodeStatus> _failedNodesTimers = new ConcurrentDictionary<ServerNode, NodeStatus>();
+        private readonly ConcurrentDictionary<ServerNode, Lazy<NodeStatus>> _failedNodesTimers = new ConcurrentDictionary<ServerNode, Lazy<NodeStatus>>();
 
         public X509Certificate2 Certificate { get; }
         private readonly string _databaseName;
@@ -326,7 +326,7 @@ namespace Raven.Client.Http
             foreach (var failedNodesTimers in _failedNodesTimers)
             {
                 if (_failedNodesTimers.TryRemove(failedNodesTimers.Key, out var status))
-                    status.Dispose();
+                    status.Value.Dispose();
             }
         }
 
@@ -1081,17 +1081,22 @@ namespace Raven.Client.Http
 
         private void SpawnHealthChecks(ServerNode chosenNode, int nodeIndex)
         {
-            var nodeStatus = new NodeStatus(this, nodeIndex, chosenNode);
+            var nodeStatus = new Lazy<NodeStatus>(() =>
+            {
+                var s = new NodeStatus(this, nodeIndex, chosenNode);
+                s.StartTimer();
+
+                return s;
+            });
 
             var status = _failedNodesTimers.GetOrAdd(chosenNode, nodeStatus);
-            if (status != nodeStatus)
+            if (status == nodeStatus)
             {
-                nodeStatus.Dispose();
-                status.Restart();
+                var value = status.Value; // materialize
                 return;
             }
 
-            status.StartTimer();
+            status.Value.Restart();
         }
 
         internal Task CheckNodeStatusNow(string tag)
@@ -1128,7 +1133,7 @@ namespace Raven.Client.Http
             {
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    NodeStatus status;
+                    Lazy<NodeStatus> status;
                     try
                     {
                         await PerformHealthCheck(serverNode, nodeStatus.NodeIndex, context).ConfigureAwait(false);
@@ -1139,15 +1144,14 @@ namespace Raven.Client.Http
                             Logger.Info($"{serverNode.ClusterTag} is still down", e);
 
                         if (_failedNodesTimers.TryGetValue(nodeStatus.Node, out status))
-                            status.UpdateTimer();
+                            status.Value.UpdateTimer();
 
                         return;// will wait for the next timer call
                     }
 
                     if (_failedNodesTimers.TryRemove(nodeStatus.Node, out status))
-                    {
-                        status.Dispose();
-                    }
+                            status.Value.Dispose();
+
                     _nodeSelector?.RestoreNodeIndex(nodeStatus.NodeIndex);
                 }
             }
