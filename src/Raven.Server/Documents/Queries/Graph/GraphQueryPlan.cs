@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
@@ -86,11 +87,13 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private IGraphQueryStep BuildQueryPlanForPattern(PatternMatchElementExpression patternExpression)
         {
-            IGraphQueryStep prev = BuildQueryPlanForMatchNode(patternExpression.Path[0]);
-            for (var i = 2; i < patternExpression.Path.Length; i+=2)
+            var prev = BuildQueryPlanForMatchNode(patternExpression.Path[0]);
+            for (int i = 1; i < patternExpression.Path.Length; i+=2)
             {
-                var tmpVertex = BuildQueryPlanForMatchNode(patternExpression.Path[i]);
-                prev = BuildQueryPlanForEdge(prev, tmpVertex, patternExpression.Path[i-1]);
+                var next = i + 1 < patternExpression.Path.Length ?
+                    BuildQueryPlanForMatchNode(patternExpression.Path[i + 1]) :
+                    null;
+                prev = BuildQueryPlanForEdge(prev, next, patternExpression.Path[i]);
             }
 
             return prev;
@@ -124,7 +127,13 @@ namespace Raven.Server.Documents.Queries.Graph
                     });
                 }
 
-                return new RecursionQueryStep(left, steps, recursive, recursive.GetOptions(_query.Metadata, _query.QueryParameters));
+                var recursiveStep =  new RecursionQueryStep(left, steps, recursive, recursive.GetOptions(_query.Metadata, _query.QueryParameters));
+
+                if (right == null)
+                    return recursiveStep;
+
+
+                return new EdgeFollowingRecursionQueryStep(recursiveStep, right, _query.QueryParameters);
             }
 
             if (GraphQuery.WithEdgePredicates.TryGetValue(alias, out var withEdge) == false)
@@ -163,7 +172,5 @@ namespace Raven.Server.Documents.Queries.Graph
             }
             return list;
         }
-
-
     }
 }

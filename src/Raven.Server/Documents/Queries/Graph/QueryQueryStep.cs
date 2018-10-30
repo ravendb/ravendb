@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private QueryRunner _queryRunner;
         private QueryMetadata _queryMetadata;
 
-        private int _index;
+        private int _index = -1;
         private List<Match> _results = new List<Match>();
         private Dictionary<string, Match> _resultsById = new Dictionary<string, Match>(StringComparer.OrdinalIgnoreCase);
 
@@ -50,6 +50,9 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public ValueTask Initialize()
         {
+            if (_index != -1)
+                return default;
+
             var results = _queryRunner.ExecuteQuery(new IndexQueryServerSide(_queryMetadata),
                   _context, _resultEtag, _token);
 
@@ -72,6 +75,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private void CompleteInitialization(DocumentQueryResult results)
         {
+            _index = 0;
             foreach (var result in results.Results)
             {
                 var match = new Match();
@@ -85,6 +89,9 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public bool TryGetById(string id, out Match match)
         {
+            if(_results.Count != 0 && _resultsById.Count == 0)// only reason is that we are projecting non documents here
+                throw new InvalidOperationException("Target vertices in a pattern match that originate from map/reduce WITH clause are not allowed. (pattern match has multiple statements in the form of (a)-[:edge]->(b) ==> in such pattern, 'b' must not originate from map/reduce index query)");
+              
             return _resultsById.TryGetValue(id, out match);
         }
 

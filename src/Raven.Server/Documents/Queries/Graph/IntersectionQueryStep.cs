@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private IGraphQueryStep _left;
         private readonly IGraphQueryStep _right;
         private readonly List<Match> _results = new List<Match>();
-        private int _index;
+        private int _index = -1;
 
         public IntersectionQueryStep(IGraphQueryStep left, IGraphQueryStep right)
         {
@@ -35,6 +35,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private void IntersectExpressions()
         {
+            _index = 0;
             _tempIntersect.Clear();
 
             var operation = new TOp();
@@ -107,7 +108,9 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public async ValueTask Initialize()
         {
-            //TODO:
+            if (_index != -1)
+                return;
+
             await _left.Initialize();
             await _right.Initialize();
 

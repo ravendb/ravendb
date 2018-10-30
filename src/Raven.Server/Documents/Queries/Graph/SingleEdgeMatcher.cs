@@ -77,7 +77,9 @@ namespace Raven.Server.Documents.Queries.Graph
 
             foreach (var includedEdge in IncludedEdges)
             {
-                if (Right.TryGetById(includedEdge.Key, out var rightMatch) == false)
+                Match rightMatch = default;
+                if (Right != null &&
+                    Right.TryGetById(includedEdge.Key, out rightMatch) == false)
                     continue;
 
                 var clone = new Match(left);

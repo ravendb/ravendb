@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Queries.Graph
     public class EdgeQueryStep : IGraphQueryStep
     {
         private List<Match> _results = new List<Match>();
-        private int _index;
+        private int _index = 0;
 
         private HashSet<string> _aliases;
 
@@ -33,6 +33,9 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public ValueTask Initialize()
         {
+            if (_index != -1)
+                return default;
+
             var leftTask = _left.Initialize();
             if(leftTask.IsCompleted)
             {
@@ -63,18 +66,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private void CompleteInitialization()
         {
-            var processor = GetProcessor(_results);
-
-            string alias = _left.GetOuputAlias();
-
-            while (_left.GetNext(out var left))
-            {
-                processor.SingleMatch(left, alias);
-            }
-        }
-
-        private SingleEdgeMatcher GetProcessor(List<Match> results)
-        {
+            _index = 0;
             var edgeAlias = _edgePath.Alias;
             var edge = _edgesExpression;
             edge.EdgeAlias = edgeAlias;
@@ -83,13 +75,19 @@ namespace Raven.Server.Documents.Queries.Graph
             {
                 IncludedEdges = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase),
                 QueryParameters = _queryParameters,
-                Results = results,
+                Results = _results,
                 Right = _right,
                 Edge = edge,
                 EdgeAlias = edgeAlias
             };
-            return processor;
+            string alias = _left.GetOuputAlias();
+
+            while (_left.GetNext(out var left))
+            {
+                processor.SingleMatch(left, alias);
+            }
         }
+
 
         public bool GetNext(out Match match)
         {

@@ -44,6 +44,7 @@ namespace Raven.Server.Documents.Queries
 
             using (var timingScope = new QueryTimingsScope())
             {
+                //var q = query.Metadata.Query;
                 //var ir = new IntermediateResults();
 
                 //foreach (var documentQuery in q.GraphQuery.WithDocumentQueries)
@@ -91,7 +92,7 @@ namespace Raven.Server.Documents.Queries
                     }
                 }
 
-                //TODO: handle order by, load, select clauses
+                //TODO: handle order by, load, include clauses
 
                 var final = new DocumentQueryResult();
 

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Queries.AST;
@@ -19,7 +20,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private List<Match> _results = new List<Match>();
         private readonly HashSet<long> _visited = new HashSet<long>();
         private readonly Stack<RecursionState> _path = new Stack<RecursionState>();
-        public int _index;
+        public int _index = -1;
 
         private class RecursionState
         {
@@ -29,21 +30,29 @@ namespace Raven.Server.Documents.Queries.Graph
             public bool AlreadyAdded;
         }
 
-        public RecursionQueryStep(IGraphQueryStep inner, List<SingleEdgeMatcher> steps, RecursiveMatch recursive, RecursiveMatch.RecursiveOptions options)
+        public RecursionQueryStep(IGraphQueryStep left, List<SingleEdgeMatcher> steps, RecursiveMatch recursive, RecursiveMatch.RecursiveOptions options)
         {
-            _left = inner;
+            _left = left;
             _steps = steps;
             _recursive = recursive;
             _options = options;
 
-            _stepAliases.Add(inner.GetOuputAlias());
+            _stepAliases.Add(left.GetOuputAlias());
 
             foreach (var step in _steps)
             {
+                if (step.Right == null)
+                    continue;
                 _stepAliases.Add(step.Right.GetOuputAlias());
             }
 
             _outputAlias = _stepAliases.Last();
+        }
+
+        internal (WithEdgesExpression Edge, StringSegment EdgeAlias, StringSegment RecursionAlias) GetOutputEdgeInfo()
+        {
+            var match = _steps[_steps.Count - 1];
+            return (match.Edge, match.EdgeAlias, _recursive.Alias);
         }
 
         public HashSet<string> GetAllAliases()
@@ -69,10 +78,18 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public async ValueTask Initialize()
         {
+            if (_index != -1)
+                return;
+
             await _left.Initialize();
+
+            _index = 0;
 
             foreach (var item in _steps)
             {
+                if (item.Right == null)
+                    continue;
+
                 await item.Right.Initialize();
             }
             var matches = new List<Match>();
@@ -201,6 +218,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 {
                     if (_options.Type != RecursiveMatchType.Shortest)
                         item.AlreadyAdded = true;
+
                     var one = new Match();
                     foreach (var alias in _recursive.Aliases)
                     {
@@ -248,6 +266,8 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (_steps[i].Results.Count == 0)
                     return false;
             }
+
+            results = results.ToList(); //TODO: Pool these
             return true;
         }
 

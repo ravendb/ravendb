@@ -127,6 +127,16 @@ namespace Raven.Server.Documents.Queries.Results
                         if (immediateResult != null)
                             return immediateResult;
                     }
+                    else if (val is BlittableJsonReaderObject bjro)
+                    {
+                        var doc = new Document { Data = bjro };
+                        if (TryGetValue(fieldToFetch, doc, null, null, out key, out fieldVal) == false)
+                            continue;
+
+                        var immediateResult = AddProjectionToResult(doc, 1f, FieldsToFetch, result, key, fieldVal);
+                        if (immediateResult != null)
+                            return immediateResult;
+                    }
                     else if (val is List<Match> matches)
                     {
                         var array = new DynamicJsonArray();

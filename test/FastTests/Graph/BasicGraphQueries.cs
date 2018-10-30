@@ -339,7 +339,7 @@ select {
         public void CanHandleCyclesInGraph()
         {
             var results = Query<EmployeeRelations>(@"
-match (Employees as e where id() = 'employees/7-A')-recursive as n { [ReportsTo as m] }->(Employees as boss)
+match (Employees as e where id() = 'employees/7-A')-recursive as n (longest) { [ReportsTo as m] }->(Employees as boss)
 select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
 ", store =>
             {
@@ -349,13 +349,14 @@ select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
                     e.ReportsTo = e.Id;
                     s.SaveChanges();
                 }
+
             });
             Assert.Equal(1, results.Count);
             foreach (var item in results)
             {
                 Assert.Equal("Andrew", item.Boss);
                 Assert.Equal("Robert", item.Employee);
-                Assert.Equal(new[] { "employees/5-A" }, item.MiddleManagement);
+                Assert.Equal(new[] { "employees/5-A", "employees/2-A" }, item.MiddleManagement);
             }
         }
 
