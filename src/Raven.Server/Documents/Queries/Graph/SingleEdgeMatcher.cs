@@ -39,21 +39,21 @@ namespace Raven.Server.Documents.Queries.Graph
                             if (item is BlittableJsonReaderObject json &&
                                 Edge.Where?.IsMatchedBy(json, QueryParameters) != false)
                             {
-                                AddEdgeAfterFiltering(left, json);
+                                AddEdgeAfterFiltering(left, json, Edge.Project.FieldValue);
                             }
                         }
                         break;
                     case BlittableJsonReaderObject json:
                         if (Edge.Where?.IsMatchedBy(json, QueryParameters) != false)
                         {
-                            AddEdgeAfterFiltering(left, json);
+                            AddEdgeAfterFiltering(left, json, Edge.Project.FieldValue);
                         }
                         break;
                 }
             }
             else
             {
-                AddEdgeAfterFiltering(left, leftDoc);
+                AddEdgeAfterFiltering(left, leftDoc, Edge.Path.FieldValue);
             }
         }
 
@@ -64,12 +64,12 @@ namespace Raven.Server.Documents.Queries.Graph
         }
 
 
-        private void AddEdgeAfterFiltering(Match left, BlittableJsonReaderObject leftDoc)
+        private void AddEdgeAfterFiltering(Match left, BlittableJsonReaderObject leftDoc, StringSegment path)
         {
             var edgeIncludeOp = new EdgeIncludeOp(IncludedEdges);
             IncludedEdges.Clear();
             IncludeUtil.GetDocIdFromInclude(leftDoc,
-                 Edge.Path.FieldValue,
+                 path,
                  edgeIncludeOp);
 
             if (IncludedEdges.Count == 0)

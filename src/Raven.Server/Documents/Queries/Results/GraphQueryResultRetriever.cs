@@ -81,6 +81,10 @@ namespace Raven.Server.Documents.Queries.Results
                         {
                             args[i] = d;
                         }
+                        else if (val is BlittableJsonReaderObject bjro)
+                        {
+                            args[i] = bjro;
+                        }
                         else if( val is List<Match> matches)
                         {
                             var array = new DynamicJsonArray();
