@@ -75,7 +75,8 @@ namespace Raven.Server.Documents.Queries
                     database: Database,
                     debugMode: false,
                     isTest: false,
-                    collectResultsNeeded: true);
+                    collectResultsNeeded: true,
+                    returnDocument: false);
 
                 return new BulkOperationCommand<PatchDocumentCommand>(command, retrieveDetails, x => new BulkOperationResult.PatchDetails
                 {

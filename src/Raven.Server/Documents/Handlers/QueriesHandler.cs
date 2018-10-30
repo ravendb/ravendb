@@ -246,7 +246,8 @@ namespace Raven.Server.Documents.Handlers
                     database: context.DocumentDatabase,
                     debugMode: true,
                     isTest: true,
-                    collectResultsNeeded: true);
+                    collectResultsNeeded: true,
+                    returnDocument: false);
 
                 using (context.OpenWriteTransaction())
                 {
