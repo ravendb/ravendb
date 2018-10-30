@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Queries.Graph
 {
     public class GraphQueryPlan
     {
-        private IQueryStep _rootQueryStep;
+        private IGraphQueryStep _rootQueryStep;
         private IndexQueryServerSide _query;
         private DocumentsOperationContext _context;
         private long? _resultEtag;
@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Queries.Graph
             _rootQueryStep = BuildQueryPlanForExpression(_query.Metadata.Query.GraphQuery.MatchClause);                       
         }
 
-        private IQueryStep BuildQueryPlanForExpression(QueryExpression expression)
+        private IGraphQueryStep BuildQueryPlanForExpression(QueryExpression expression)
         {
             switch (expression)
             {
@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Queries.Graph
             await _rootQueryStep.Initialize();
         }
 
-        private IQueryStep BuildQueryPlanForBinaryExpression(BinaryExpression be)
+        private IGraphQueryStep BuildQueryPlanForBinaryExpression(BinaryExpression be)
         {
             bool negated = false;
             var rightExpr = be.Right;
@@ -84,9 +84,9 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
-        private IQueryStep BuildQueryPlanForPattern(PatternMatchElementExpression patternExpression)
+        private IGraphQueryStep BuildQueryPlanForPattern(PatternMatchElementExpression patternExpression)
         {
-            IQueryStep prev = BuildQueryPlanForMatchNode(patternExpression.Path[0]);
+            IGraphQueryStep prev = BuildQueryPlanForMatchNode(patternExpression.Path[0]);
             for (var i = 2; i < patternExpression.Path.Length; i+=2)
             {
                 var tmpVertex = BuildQueryPlanForMatchNode(patternExpression.Path[i]);
@@ -96,18 +96,46 @@ namespace Raven.Server.Documents.Queries.Graph
             return prev;
         }
 
-        private IQueryStep BuildQueryPlanForEdge(IQueryStep left, IQueryStep right, MatchPath edge)
+        private IGraphQueryStep BuildQueryPlanForEdge(IGraphQueryStep left, IGraphQueryStep right, MatchPath edge)
         {
-            var allias = edge.Alias;
-            if (GraphQuery.WithEdgePredicates.TryGetValue(allias, out var withEdge) == false)
+            var alias = edge.Alias;
+
+            if(edge.Recursive != null)
             {
-                throw new InvalidOperationException($"BuildQueryPlanForEdge was invoked for allias='{allias}' which suppose to be an edge but no corresponding WITH EDGE clause was found.");
+                var pattern = edge.Recursive.Value.Pattern;
+                var steps = new List<SingleEdgeMatcher>((pattern.Count+1)/2);
+                for (int i = 0; i < pattern.Count; i+=2)
+                {
+                    if (GraphQuery.WithEdgePredicates.TryGetValue(pattern[i].Alias, out var recursiveEdge) == false)
+                    {
+                        throw new InvalidOperationException($"BuildQueryPlanForEdge was invoked for recursive alias='{pattern[i].Alias}' which suppose to be an edge but no corresponding WITH EDGE clause was found.");
+                    }
+
+
+                    steps.Add(new SingleEdgeMatcher
+                    {
+                        IncludedEdges = new Dictionary<string, Sparrow.Json.BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase),
+                        QueryParameters = _query.QueryParameters,
+                        Edge = recursiveEdge,
+                        IncomingAlias = i == 0 ? left.GetOuputAlias() : (string)pattern[i-1].Alias,
+                        Results = new List<Match>(),
+                        Right = i + 1 < pattern.Count ? BuildQueryPlanForMatchNode(pattern[i + 1]) : right,
+                        EdgeAlias = pattern[i].Alias
+                    });
+                }
+
+                return new RecursionQueryStep(left, steps);
+            }
+
+            if (GraphQuery.WithEdgePredicates.TryGetValue(alias, out var withEdge) == false)
+            {
+                throw new InvalidOperationException($"BuildQueryPlanForEdge was invoked for alias='{alias}' which suppose to be an edge but no corresponding WITH EDGE clause was found.");
             }
 
             return new EdgeQueryStep(left, right, withEdge, edge, _query.QueryParameters);
         }
 
-        private IQueryStep BuildQueryPlanForMatchNode(MatchPath vertex)
+        private IGraphQueryStep BuildQueryPlanForMatchNode(MatchPath vertex)
         {            
             Sparrow.StringSegment alias = vertex.Alias;
             if (GraphQuery.WithDocumentQueries.TryGetValue(alias, out var query) == false)

@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Raven.Server.Documents.Queries.Graph
 {
-    public interface IQueryStep
+    public interface IGraphQueryStep
     {
         ValueTask Initialize();
 
