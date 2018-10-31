@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Patch
         private readonly DocumentDatabase _database;
         private readonly bool _isTest;
         private readonly bool _debugMode;
-        private readonly bool _returnDocument;
+        protected readonly bool _returnDocument;
 
         private ScriptRunner.SingleRun _run;
         private readonly ScriptRunner.SingleRun _runIfMissing;
@@ -253,6 +253,16 @@ namespace Raven.Server.Documents.Patch
             return patchResult.ChangeVector;
         }
 
+        protected void FillDto(PatchDocumentCommandDtoBase dto)
+        {
+            dto.SkipPatchIfChangeVectorMismatch = _skipPatchIfChangeVectorMismatch;
+            dto.Patch = _patch;
+            dto.PatchIfMissing = _patchIfMissing;
+            dto.IsTest = _isTest;
+            dto.DebugMode = _debugMode;
+            dto.CollectResultsNeeded = _externalContext != null;
+        }
+
         public abstract string HandleReply(DynamicJsonArray reply, HashSet<string> modifiedCollections);
 
         private static BlittableJsonReaderObject UpdateCountersInMetadata(
@@ -340,19 +350,16 @@ namespace Raven.Server.Documents.Patch
             });
 
             return null;
-
-            /*
-            string lastChangeVector = null;
-            foreach (var patchResult in _patchResults)
-                lastChangeVector = HandleReply(patchResult.Id, patchResult.PatchResult, reply, modifiedCollections);
-
-            return lastChangeVector;
-            */
         }
 
         public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
         {
-            return null;
+            var dto = new BatchPatchDocumentCommandDto();
+            FillDto(dto);
+
+            dto.Ids = _ids;
+
+            return dto;
         }
     }
 
@@ -396,34 +403,43 @@ namespace Raven.Server.Documents.Patch
 
         public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
         {
-            return null;
-            //return new PatchDocumentCommandDto
-            //{
-            //    Id = _id,
-            //    ExpectedChangeVector = _expectedChangeVector,
-            //    SkipPatchIfChangeVectorMismatch = _skipPatchIfChangeVectorMismatch,
-            //    Patch = _patch,
-            //    PatchIfMissing = _patchIfMissing,
-            //    IsTest = _isTest,
-            //    DebugMode = _debugMode,
-            //    CollectResultsNeeded = _externalContext != null
-            //};
+            var dto = new PatchDocumentCommandDto();
+            FillDto(dto);
+
+            dto.Id = _id;
+            dto.ExpectedChangeVector = _expectedChangeVector;
+            dto.ReturnDocument = _returnDocument;
+
+            return dto;
         }
     }
 
-    public class PatchDocumentCommandDto : TransactionOperationsMerger.IReplayableCommandDto<PatchDocumentCommand>
+    public class BatchPatchDocumentCommandDto : PatchDocumentCommandDtoBase<BatchPatchDocumentCommand>
+    {
+        public BlittableJsonReaderArray Ids;
+
+        public override BatchPatchDocumentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            return new BatchPatchDocumentCommand(
+                context,
+                Ids,
+                SkipPatchIfChangeVectorMismatch,
+                Patch,
+                PatchIfMissing,
+                database,
+                IsTest,
+                DebugMode,
+                CollectResultsNeeded);
+        }
+    }
+
+    public class PatchDocumentCommandDto : PatchDocumentCommandDtoBase<PatchDocumentCommand>
     {
         public string Id;
         public LazyStringValue ExpectedChangeVector;
-        public bool SkipPatchIfChangeVectorMismatch;
-        public (PatchRequest run, BlittableJsonReaderObject args) Patch;
-        public (PatchRequest run, BlittableJsonReaderObject args) PatchIfMissing;
-        public bool IsTest;
-        public bool DebugMode;
-        public bool CollectResultsNeeded;
         public bool ReturnDocument;
 
-        public PatchDocumentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        public override PatchDocumentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             return new PatchDocumentCommand(
                 context,
@@ -438,6 +454,22 @@ namespace Raven.Server.Documents.Patch
                 CollectResultsNeeded,
                 ReturnDocument);
         }
+    }
+
+    public abstract class PatchDocumentCommandDtoBase<TCommand> : PatchDocumentCommandDtoBase, TransactionOperationsMerger.IReplayableCommandDto<TCommand>
+        where TCommand : TransactionOperationsMerger.MergedTransactionCommand
+    {
+        public abstract TCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database);
+    }
+
+    public abstract class PatchDocumentCommandDtoBase
+    {
+        public bool SkipPatchIfChangeVectorMismatch;
+        public (PatchRequest run, BlittableJsonReaderObject args) Patch;
+        public (PatchRequest run, BlittableJsonReaderObject args) PatchIfMissing;
+        public bool IsTest;
+        public bool DebugMode;
+        public bool CollectResultsNeeded;
     }
 }
 
