@@ -149,7 +149,7 @@ namespace FastTests.Graph
                 CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
-                    var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (v)").ToList();
+                    var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (_ as v)").ToList();
 
                     Assert.Equal(9, allVerticesQuery.Count);
                     var docTypes = allVerticesQuery.Select(x => x["@metadata"]["@collection"].Value<string>()).ToArray();
@@ -265,7 +265,7 @@ select {
         public void CanUseEmptyDocumentAlias()
         {
             var results = Query<Employee>(@"
-match (Employees as e where FirstName='Nancy')-[ReportsTo]->(manager)
+match (Employees as e where FirstName='Nancy')-[ReportsTo]->(_ as manager)
 select manager
 ");
             Assert.Equal(1, results.Count);
