@@ -1,0 +1,18 @@
+{
+  "name": "ravendb-ace-build",
+  "version": "1.0.0",
+  "description": "",
+  "main": "Makefile.dryice.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Marcin Lewandowski <marcin@ravendb.net>",
+  "license": "ISC",
+  "devDependencies": {
+    "ace": "https://github.com/ajaxorg/ace/archive/v1.2.5.tar.gz",
+    "architect-build": "https://github.com/c9/architect-build/tarball/17268dce65",
+    "copy-dir": "^0.4.0",
+    "dryice": "^0.4.11"
+  },
+  "dependencies": {}
+}
