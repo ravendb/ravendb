@@ -961,7 +961,7 @@ namespace Raven.Server.Web.System
                                 {
                                     var index = database.IndexStore.GetIndex(indexName);
                                     var indexCompactionResult = overallResult.IndexesResults[indexName];
-                                    index.Compact(onProgress, (CompactionResult)indexCompactionResult);
+                                    index.Compact(onProgress, (CompactionResult)indexCompactionResult, token.Token);
                                     indexCompactionResult.Processed = true;
                                 }
 
