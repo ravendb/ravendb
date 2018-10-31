@@ -216,6 +216,21 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        private async Task ServerSideQuery(DocumentsOperationContext context, RequestTimeTracker tracker, HttpMethod method)
+        {
+            var indexQuery = await GetIndexQuery(context, method, tracker);
+            using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
+            {
+                writer.WriteStartObject();
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(indexQuery.ServerSideQuery));
+                writer.WriteString(indexQuery.ServerSideQuery);
+
+                writer.WriteEndObject();
+                await writer.OuterFlushAsync();
+            }
+        }
+
         [RavenAction("/databases/*/queries", "DELETE", AuthorizationStatus.ValidUser)]
         public Task Delete()
         {
@@ -433,6 +448,12 @@ namespace Raven.Server.Documents.Handlers
             if (string.Equals(debug, "explain", StringComparison.OrdinalIgnoreCase))
             {
                 await Explain(context, tracker, method);
+                return;
+            }
+
+            if (string.Equals(debug, "serverSideQuery", StringComparison.OrdinalIgnoreCase))
+            {
+                await ServerSideQuery(context, tracker, method);
                 return;
             }
 
