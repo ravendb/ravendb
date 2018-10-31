@@ -8,7 +8,7 @@ color: #546175\
 }\
 .ace-pastel-dark-raven .ace_print-margin {\
 width: 1px;\
-background: #353030\
+background: #353030;\
 }\
 .ace-pastel-dark-raven {\
 background-color: #25272b;\
@@ -28,10 +28,10 @@ background: rgb(102, 82, 0)\
 }\
 .ace-pastel-dark-raven .ace_marker-layer .ace_bracket {\
 margin: -1px 0 0 -1px;\
-border: 1px solid rgba(255, 255, 255, 0.25)\
+border: 1px solid rgba(255, 255, 255, 0.25);\
 }\
 .ace-pastel-dark-raven .ace_marker-layer .ace_active-line {\
-background: rgba(44, 52, 58, 1)\
+background: rgba(44, 52, 58, 1);\
 }\
 .ace-pastel-dark-raven .ace_gutter-active-line {\
 background-color: rgba(44, 52, 58, 1)\
@@ -51,22 +51,22 @@ color: #757aD8\
 .ace-pastel-dark-raven .ace_constant.ace_character,\
 .ace-pastel-dark-raven .ace_constant.ace_character.ace_escape,\
 .ace-pastel-dark-raven .ace_constant.ace_other {\
-color: #4FB7C5\
+color: #4FB7C5;\
 }\
 .ace-pastel-dark-raven .ace_keyword.ace_operator {\
-color: #ff6461\
+color: #ff6461;\
 }\
 .ace-pastel-dark-raven .ace_operator {\
-color: #ff6461\
+color: #ff6461;\
 }\
 .ace-pastel-dark-raven .ace_name {\
-color: #2cb495\
+color: #2cb495;\
 }\
 .ace-pastel-dark-raven .ace_constant.ace_character {\
-color: #AFA472\
+color: #AFA472;\
 }\
 .ace-pastel-dark-raven .ace_constant.ace_language {\
-color: #20c0e6\
+color: #20c0e6;\
 }\
 .ace-pastel-dark-raven .ace_constant.ace_numeric {\
 color: #CCCCCC\
@@ -108,7 +108,8 @@ color: #494949\
 }\
 .ace-pastel-dark-raven .ace_indent-guide {\
 background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAYAAACZgbYnAAAAEklEQVQImWNgYGBgYIiPj/8PAARgAh2NTMh8AAAAAElFTkSuQmCC) right repeat-y\
-}";
+}\
+";
 
 var dom = require("../lib/dom");
 dom.importCssString(exports.cssText, exports.cssClass);
