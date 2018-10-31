@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -307,19 +308,29 @@ namespace Sparrow.Json
             while (numberOfEscapeSequences > 0)
             {
                 numberOfEscapeSequences--;
-                var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, ref escapeSequencePos);
-                WriteRawString(strBuffer, bytesToSkip);
-                strBuffer += bytesToSkip;
-                size -= bytesToSkip + 1 /*for the escaped char we skip*/;
-                var b = *(strBuffer++);
 
-                int auxPos = _pos;
-                WriteEscapeCharacter(buffer, b, ref auxPos);
+                var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, ref escapeSequencePos);
+                if (bytesToSkip > 0)
+                {
+                    WriteRawString(strBuffer, bytesToSkip);
+                    strBuffer += bytesToSkip;
+                    size -= bytesToSkip;
+                }
+
+                var escapeCharacter = *strBuffer++;
+
+                var auxPos = _pos;
+                WriteEscapeCharacter(buffer, escapeCharacter, ref auxPos);
                 _pos = auxPos;
+
+                size--;
             }
 
+            Debug.Assert(size >= 0);
+
             // write remaining (or full string) to the buffer in one shot
-            WriteRawString(strBuffer, size);
+            if (size > 0)
+                WriteRawString(strBuffer, size);
         }
 
         private void UnlikelyWriteLargeString(byte* strBuffer, int size, int numberOfEscapeSequences, int escapeSequencePos)
@@ -333,7 +344,7 @@ namespace Sparrow.Json
             {
                 numberOfEscapeSequences--;
                 var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, ref escapeSequencePos);
-                
+
                 UnlikelyWriteLargeRawString(strBuffer, bytesToSkip);
                 strBuffer += bytesToSkip;
                 size -= bytesToSkip + 1 /*for the escaped char we skip*/;
@@ -353,12 +364,12 @@ namespace Sparrow.Json
         private void WriteEscapeCharacter(byte* buffer, byte b, ref int pos)
         {
             byte r = EscapeCharacters[b];
-            if(r == 0)
+            if (r == 0)
             {
                 EnsureBuffer(6);
                 buffer[pos++] = (byte)'\\';
                 buffer[pos++] = (byte)'u';
-                fixed (byte* esc = ControlCodeEscapes[r])
+                fixed (byte* esc = ControlCodeEscapes[b])
                     Memory.Copy(buffer + pos, esc, 4);
                 pos += 4;
                 return;
@@ -368,7 +379,7 @@ namespace Sparrow.Json
             {
                 EnsureBuffer(2);
                 buffer[pos++] = (byte)'\\';
-                buffer[pos++] = EscapeCharacters[b];
+                buffer[pos++] = r;
                 return;
             }
 
@@ -422,7 +433,7 @@ namespace Sparrow.Json
 
                 return;
 
-WriteLargeCompressedString:
+            WriteLargeCompressedString:
                 UnlikelyWriteLargeString(numberOfEscapeSequences, strSrcBuffer, escapeSequencePos, strBuffer, size);
             }
             finally

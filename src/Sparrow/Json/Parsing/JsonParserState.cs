@@ -146,7 +146,7 @@ namespace Sparrow.Json.Parsing
                     }
                     //The original string already had one byte so we only added 5.
                     len += ControlCharacterItemSize;
-                    i += 6;
+                    i += ControlCharacterItemSize;
                 }
             }
         }
