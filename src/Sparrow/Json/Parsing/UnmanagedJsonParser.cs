@@ -863,6 +863,7 @@ ReturnFalse:
                 // control character
                 var esc = _unmanagedWriteBuffer.SizeInBytes - _prevEscapePosition;
                 _state.EscapePositions.Add(esc);
+                _prevEscapePosition = _unmanagedWriteBuffer.SizeInBytes + 1;
             }
             WriteUnicodeCharacterToStringBuffer(val);
             return true;
