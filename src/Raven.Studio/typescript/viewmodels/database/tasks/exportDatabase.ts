@@ -183,8 +183,8 @@ class exportDatabase extends viewModelBase {
 
     private getNextOperationId(db: database): JQueryPromise<number> {
         return new getNextOperationId(db).execute()
-            .fail((qXHR, textStatus, errorThrown) => {
-                messagePublisher.reportError("Could not get next task id.", errorThrown);
+            .fail((response: JQueryXHR) => {
+                messagePublisher.reportError("Could not get next task id.", response.responseText, response.statusText);
                 exportDatabase.isExporting(false);
             });
     }
