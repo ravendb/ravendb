@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -104,35 +100,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             if(edge.Recursive != null)
             {
-                var recursive = edge.Recursive.Value;
-                var pattern = recursive.Pattern;
-                var steps = new List<SingleEdgeMatcher>((pattern.Count+1)/2);
-                for (int i = 0; i < pattern.Count; i+=2)
-                {
-                    if (GraphQuery.WithEdgePredicates.TryGetValue(pattern[i].Alias, out var recursiveEdge) == false)
-                    {
-                        throw new InvalidOperationException($"BuildQueryPlanForEdge was invoked for recursive alias='{pattern[i].Alias}' which suppose to be an edge but no corresponding WITH EDGE clause was found.");
-                    }
-
-
-                    steps.Add(new SingleEdgeMatcher
-                    {
-                        IncludedEdges = new Dictionary<string, Sparrow.Json.BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase),
-                        QueryParameters = _query.QueryParameters,
-                        Edge = recursiveEdge,
-                        Results = new List<Match>(),
-                        Right = i + 1 < pattern.Count ? BuildQueryPlanForMatchNode(pattern[i + 1]) : right,
-                        EdgeAlias = pattern[i].Alias
-                    });
-                }
-
-                var recursiveStep =  new RecursionQueryStep(left, steps, recursive, recursive.GetOptions(_query.Metadata, _query.QueryParameters));
-
-                if (right == null)
-                    return recursiveStep;
-
-
-                return new EdgeFollowingRecursionQueryStep(recursiveStep, right, _query.QueryParameters);
+                return BuildQueryPlanForRecursiveEdge(left, right, edge);
             }
 
             if (GraphQuery.WithEdgePredicates.TryGetValue(alias, out var withEdge) == false)
@@ -141,6 +109,37 @@ namespace Raven.Server.Documents.Queries.Graph
             }
 
             return new EdgeQueryStep(left, right, withEdge, edge, _query.QueryParameters);
+        }
+
+        private IGraphQueryStep BuildQueryPlanForRecursiveEdge(IGraphQueryStep left, IGraphQueryStep right, MatchPath edge)
+        {
+            var recursive = edge.Recursive.Value;
+            var pattern = recursive.Pattern;
+            var steps = new List<SingleEdgeMatcher>((pattern.Count + 1) / 2);
+            for (int i = 0; i < pattern.Count; i += 2)
+            {
+                if (GraphQuery.WithEdgePredicates.TryGetValue(pattern[i].Alias, out var recursiveEdge) == false)
+                {
+                    throw new InvalidOperationException($"BuildQueryPlanForEdge was invoked for recursive alias='{pattern[i].Alias}' which suppose to be an edge but no corresponding WITH EDGE clause was found.");
+                }
+
+                steps.Add(new SingleEdgeMatcher
+                {
+                    IncludedEdges = new Dictionary<string, Sparrow.Json.BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase),
+                    QueryParameters = _query.QueryParameters,
+                    Edge = recursiveEdge,
+                    Results = new List<Match>(),
+                    Right = i + 1 < pattern.Count ? BuildQueryPlanForMatchNode(pattern[i + 1]) : right,
+                    EdgeAlias = pattern[i].Alias
+                });
+            }
+
+            var recursiveStep = new RecursionQueryStep(left, steps, recursive, recursive.GetOptions(_query.Metadata, _query.QueryParameters));
+
+            if (right == null)
+                return recursiveStep;
+
+            return new EdgeFollowingRecursionQueryStep(recursiveStep, right, _query.QueryParameters);
         }
 
         private IGraphQueryStep BuildQueryPlanForMatchNode(MatchPath vertex)

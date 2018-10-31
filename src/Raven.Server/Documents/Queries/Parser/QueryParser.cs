@@ -499,7 +499,10 @@ namespace Raven.Server.Documents.Queries.Parser
                                 Recursive = last.Recursive
                             };
                             if (Scanner.TryScan('(') == false)
-                                throw new InvalidQueryException("MATCH operator expected a '(', but didn't get it.", Scanner.Input, null);
+                            {
+                                var msg = $"({last.Alias})-> is not allowed, you should use ({last.Alias})-[...] instead.";
+                                throw new InvalidQueryException("MATCH operator expected a '(', but didn't get it. " + msg, Scanner.Input, null);
+                            }
                             expectNode = true;
 
                             goto case "(";

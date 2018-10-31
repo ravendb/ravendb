@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -379,6 +380,13 @@ select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
             public string Son;
         }
 
+        public class Ancestry
+        {
+            public string Name;
+            public string Eldest;
+            public string[] Parentage;
+        }
+
         [Fact]
         public void CanHandleFiltersInMultiHopQueryWithEndNode()
         {
@@ -396,6 +404,30 @@ select son.Name as Son, evil.Name as Evil")
                     Assert.Equal(1, results.Count);
                     Assert.Equal("Longo", results[0].Evil);
                     Assert.Equal("Otho Sackville-Baggins", results[0].Son);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanRecursivelyProjectObjectAsEdge()
+        {
+            using (var store = GetDocumentStore())
+            {
+                SetupHobbitAncestry(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<Ancestry>(@"
+match (People as son)-recursive as ancestry (2,5,'longest') { 
+    [Parents where Gender = 'Male' select Id]->(People as paternal where BornAt='Shire')-[Parents where Gender = 'Male' select Id]
+}->(People as paternal0 where BornAt='Shire') 
+select ancestry.paternal.Name as Parentage, son.Name, paternal0.Name as Eldest")
+                        .ToList();
+
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal("Bilbo Baggins", results[0].Name);
+                    Assert.Equal(new[] {"Bungo","Mungo"}, results[0].Parentage);
+                    Assert.Equal("Balbo Baggins", results[0].Eldest);
                 }
             }
         }

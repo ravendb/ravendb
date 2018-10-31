@@ -65,11 +65,6 @@ namespace Raven.Server.Documents.Queries
                     d.EnsureMetadata();
                     return d;
                 }
-                else if(result is List<Match> m)
-                {
-                    // TODO: this is wrong
-                    return m.Last().GetSingleDocumentResult(alias);
-                }
                 return null;
             }           
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Raven.Server.Json;
 using Sparrow;
 using Sparrow.Json;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
@@ -75,6 +76,7 @@ namespace Raven.Server.Documents.Queries.Graph
             {
                 if(left.GetResult(recursionAlias) is List<Match> list)
                 {
+                    object val;
                     Match top;
                     StringSegment actualEdgeAlias;
                     if (list.Count == 0)
@@ -82,31 +84,76 @@ namespace Raven.Server.Documents.Queries.Graph
                         // need to handle the case of recursive(0, $num), where we can recurse zero times
                         top = left;
                         actualEdgeAlias = sourceAlias;
+                        val = top.GetResult(sourceAlias);
                     }
                     else
                     {
                         actualEdgeAlias = edgeAlias;
                         top = list[list.Count - 1];
+
+                        val = top.GetResult(edgeAlias);
+
+                        // we project only if we had actual values to follow, otherwise
+                        // the source of the query is fine for us (it would be filtered by something else otherwise)
+                        if (edge.Project != null)
+                        {
+                            if (val is BlittableJsonReaderObject bjro)
+                            {
+                                if (BlittableJsonTraverser.Default.TryRead(bjro, edge.Project.FieldValue, out val, out _) == false)
+                                    continue;
+                            }
+                            else if (val is BlittableJsonReaderArray bjra)
+                            {
+                                foreach (var item in bjra)
+                                {
+                                    if (item is BlittableJsonReaderObject itemJson)
+                                        if (BlittableJsonTraverser.Default.TryRead(itemJson, edge.Project.FieldValue, out val, out _) == false)
+                                            continue;
+
+                                    ProcessValue(ref processor, left, top, actualEdgeAlias, val);
+                                }
+                                continue;
+                            }
+                            else
+                            {
+                                continue;
+                            }
+                        }
                     }
 
-                    if(top.GetResult(edgeAlias) is string id)
-                    {
-                        Match rightMatch = default;
-                        if (_right.TryGetById(id, out rightMatch) == false)
-                            continue;
 
-                        var clone = new Match(left);
-                        clone.Merge(rightMatch);
-
-                        _results.Add(clone);
-
-
-                        continue;
-                    }
-
-                    processor.SingleMatch(top, actualEdgeAlias);
+                    ProcessValue(ref processor, left, top, actualEdgeAlias, val);
                 }
             }
+        }
+
+        private void ProcessValue(ref SingleEdgeMatcher processor, Match left, Match top, StringSegment actualEdgeAlias, object val)
+        {
+            if(val is LazyStringValue lsv)
+            {
+                val = lsv.ToString();
+            }
+            else if(val is LazyCompressedStringValue lscv)
+            {
+                val = lscv.ToString();
+            }
+
+            if (val is string id)
+            {
+                Match rightMatch = default;
+                if (_right.TryGetById(id, out rightMatch) == false)
+                    return;
+
+                var clone = new Match(left);
+                clone.Merge(rightMatch);
+
+                _results.Add(clone);
+
+                return;
+            }
+
+
+            processor.SingleMatch(top, actualEdgeAlias);
         }
 
         public bool TryGetById(string id, out GraphQueryRunner.Match match)
