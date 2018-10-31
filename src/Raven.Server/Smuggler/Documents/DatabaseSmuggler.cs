@@ -497,10 +497,9 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _token.ThrowIfCancellationRequested();
                     result.Documents.ReadCount++;
-                    var totalCount = result.Documents.ReadCount - result.Documents.SkippedCount - result.Documents.ErroredCount;
-                    if (totalCount % 1000 == 0)
+                    if (result.Documents.ReadCount % 1000 == 0)
                     {
-                        var message = $"Total processed {totalCount:#,#;;0} documents.";
+                        var message = $"Processed {result.Documents.ReadCount:#,#;;0} documents.";
                         if (result.Documents.Attachments.ReadCount > 0)
                             message += $" Read {result.Documents.Attachments.ReadCount:#,#;;0} attachments.";
                         AddInfoToSmugglerResult(result, message);
@@ -569,18 +568,25 @@ namespace Raven.Server.Smuggler.Documents
                 item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreation;
             }
 
+            if (SkipRevisionDocument(item, buildType))
+            { 
+                    result.Documents.SkippedCount++;
+                    if (result.Documents.SkippedCount % 1000 == 0)
+                        AddInfoToSmugglerResult(result,$"Skipped {result.Documents.SkippedCount:#,#;;0} legacy revisions.");
+            }
+        }
+
+        private bool SkipRevisionDocument(DocumentItem item, BuildVersionType buildType)
+        {
             if (buildType == BuildVersionType.V3 && _options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false)
             {
                 item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.SkipLegacyRevision;
 
                 if ((item.Document.NonPersistentFlags & NonPersistentDocumentFlags.LegacyRevision) == NonPersistentDocumentFlags.LegacyRevision &&
                     item.Document.Id.Contains(DatabaseDestination.MergedBatchPutCommand.PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase))
-                {
-                    result.Documents.SkippedCount++;
-                    if (result.Documents.SkippedCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result,$"Skipped {result.Documents.SkippedCount:#,#;;0} legacy revisions.");
-                }
+                    return true;
             }
+            return false;
         }
 
         private SmugglerProgressBase.Counts ProcessCompareExchange(SmugglerResult result)
