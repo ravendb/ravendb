@@ -3112,7 +3112,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void Compact(Action<IOperationProgress> onProgress, CompactionResult result)
+        public void Compact(Action<IOperationProgress> onProgress, CompactionResult result, CancellationToken token)
         {
             if (_isCompactionInProgress)
                 throw new InvalidOperationException($"Index '{Name}' cannot be compacted because compaction is already in progress.");
@@ -3166,7 +3166,7 @@ namespace Raven.Server.Documents.Indexes
                                 result.Progress.GlobalTotal = progressReport.GlobalTotal;
                                 result.AddMessage(progressReport.Message);
                                 onProgress?.Invoke(result.Progress);
-                            });
+                            }, token);
                         }
 
                         // reset tree name back to null after processing
