@@ -59,8 +59,8 @@ namespace SlowTests.Server
             var commandBaseType = typeof(TransactionOperationsMerger.MergedTransactionCommand);
             var types = commandBaseType.Assembly.GetTypes();
             var commandDeriveTypes = types
-            .Where(t => commandBaseType.IsAssignableFrom(t)
-                        && exceptions.Contains(t) == false).ToList();
+                .Where(t => commandBaseType.IsAbstract == false && commandBaseType.IsAssignableFrom(t) && exceptions.Contains(t) == false)
+                .ToList();
 
             var iRecordableType = typeof(TransactionOperationsMerger.IReplayableCommandDto<>);
             var genericTypes = iRecordableType.Assembly.GetTypes()
