@@ -945,6 +945,7 @@ namespace Raven.Server.Web.System
                         try
                         {
                             using (token)
+                            using (var indexCts = CancellationTokenSource.CreateLinkedTokenSource(token.Token, database.DatabaseShutdown))
                             {
                                 var before = (await CalculateStorageSize(compactSettings.DatabaseName)).GetValue(SizeUnit.Megabytes);
                                 var overallResult = new CompactionResult(compactSettings.DatabaseName);
@@ -961,7 +962,7 @@ namespace Raven.Server.Web.System
                                 {
                                     var index = database.IndexStore.GetIndex(indexName);
                                     var indexCompactionResult = overallResult.IndexesResults[indexName];
-                                    index.Compact(onProgress, (CompactionResult)indexCompactionResult, token.Token);
+                                    index.Compact(onProgress, (CompactionResult)indexCompactionResult, indexCts.Token);
                                     indexCompactionResult.Processed = true;
                                 }
 
