@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -34,6 +32,20 @@ namespace Raven.Server.Smuggler.Documents
 
         public Action<IndexDefinitionAndType> OnIndexAction;
         public Action<DatabaseRecord> OnDatabaseRecordAction;
+
+        public const string PreV4RevisionsDocumentId = "/revisions/";
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static bool IsPreV4Revision(BuildVersionType buildType, string id, Document document)
+        {
+            if (buildType == BuildVersionType.V3 == false)
+                return false;
+
+            if ((document.NonPersistentFlags & NonPersistentDocumentFlags.LegacyRevision) != NonPersistentDocumentFlags.LegacyRevision)
+                return false;
+
+            return id.Contains(PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
+        }
 
         public DatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time,
             DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null,
@@ -499,7 +511,7 @@ namespace Raven.Server.Smuggler.Documents
                     result.Documents.ReadCount++;
                     if (result.Documents.ReadCount % 1000 == 0)
                     {
-                        var message = $"Processed {result.Documents.ReadCount:#,#;;0} documents.";
+                        var message = $"Read {result.Documents.ReadCount:#,#;;0} documents.";
                         if (result.Documents.Attachments.ReadCount > 0)
                             message += $" Read {result.Documents.Attachments.ReadCount:#,#;;0} attachments.";
                         AddInfoToSmugglerResult(result, message);
@@ -541,10 +553,15 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
 
-                    item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.FromClusterTransaction);
-                    item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+                    SetDocumentFlags(item);
 
-                    SetNonPersistentFlagsIfNeeded(buildType, item, result);
+                    if (SkipDocument(item, buildType))
+                    {
+                        result.Documents.SkippedCount++;
+                        if (result.Documents.SkippedCount % 1000 == 0)
+                            AddInfoToSmugglerResult(result, $"Skipped {result.Documents.SkippedCount:#,#;;0} documents.");
+                        continue;
+                    }
 
                     actions.WriteDocument(item, result.Documents);
 
@@ -561,31 +578,23 @@ namespace Raven.Server.Smuggler.Documents
             _onProgress.Invoke(result.Progress);
         }
 
-        private void SetNonPersistentFlagsIfNeeded(BuildVersionType buildType, DocumentItem item, SmugglerResult result)
+        private void SetDocumentFlags(DocumentItem item)
         {
-            if (_options.SkipRevisionCreation)
-            {
-                item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreation;
-            }
+            item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.FromClusterTransaction);
+            item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
-            if (SkipRevisionDocument(item, buildType))
-            { 
-                    result.Documents.SkippedCount++;
-                    if (result.Documents.SkippedCount % 1000 == 0)
-                        AddInfoToSmugglerResult(result,$"Skipped {result.Documents.SkippedCount:#,#;;0} legacy revisions.");
-            }
+            if (_options.SkipRevisionCreation)
+                item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreation;
         }
 
-        private bool SkipRevisionDocument(DocumentItem item, BuildVersionType buildType)
+        private bool SkipDocument(DocumentItem item, BuildVersionType buildType)
         {
             if (buildType == BuildVersionType.V3 && _options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false)
             {
-                item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.SkipLegacyRevision;
-
-                if ((item.Document.NonPersistentFlags & NonPersistentDocumentFlags.LegacyRevision) == NonPersistentDocumentFlags.LegacyRevision &&
-                    item.Document.Id.Contains(DatabaseDestination.MergedBatchPutCommand.PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase))
+                if (IsPreV4Revision(buildType, item.Document.Id, item.Document))
                     return true;
             }
+
             return false;
         }
 
