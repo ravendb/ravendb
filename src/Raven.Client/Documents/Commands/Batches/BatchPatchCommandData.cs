@@ -8,6 +8,10 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
+    /// <summary>
+    /// Commands that patches multiple documents using same patch script
+    /// CAUTION: This command does not update session state after .SaveChanges() call 
+    /// </summary>
     public class BatchPatchCommandData : ICommandData
     {
         private readonly HashSet<string> _seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
