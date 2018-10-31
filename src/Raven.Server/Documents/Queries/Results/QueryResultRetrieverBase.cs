@@ -516,7 +516,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 if (string.IsNullOrEmpty(fieldToFetch.Name)) // we need the whole document here
                 {
-                    buffer.Add(doc.Data);
+                    buffer.Add(doc);
                     continue;
                 }
                 if (TryGetFieldValueFromDocument(doc, fieldToFetch, out var val))
