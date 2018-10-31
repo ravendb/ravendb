@@ -78,7 +78,7 @@ function workers() {
 }
 
 function modeList() {
-	return ["csharp", "javascript", "json", "json_newline_friendly", "lucene", 
+	return ["csharp", "javascript", "json", "json_newline_friendly", 
 			"mysql", "ravenMapLinq", "ravenReduceLinq", "rql", "sql", "sqlserver", "text"];
 }
 
