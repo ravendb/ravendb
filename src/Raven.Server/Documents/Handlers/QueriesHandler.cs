@@ -194,6 +194,62 @@ namespace Raven.Server.Documents.Handlers
             AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(SuggestQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs);
         }
 
+        private  async Task Graph(DocumentsOperationContext context, RequestTimeTracker tracker, HttpMethod method)
+        {
+            var indexQuery = await GetIndexQuery(context, method, tracker);
+            var queryRunner = Database.QueryRunner.GetRunner(indexQuery);
+            if (!(queryRunner is GraphQueryRunner gqr))
+                throw new InvalidOperationException("The specified query is not a graph query.");
+
+            using (var token = CreateTimeLimitedQueryToken())
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            {
+                var results = await gqr.GetAnalyzedQueryResults(indexQuery, ctx, null, token);
+
+                var nodes = new DynamicJsonArray();
+                var edges = new DynamicJsonArray();
+                var output = new DynamicJsonValue
+                {
+                    ["Nodes"] = nodes,
+                    ["Edges"] = edges
+                };
+
+                foreach (var item in results.Nodes)
+                {
+                    var val = item.Value;
+                    if(val is Document d)
+                    {
+                        d.EnsureMetadata();
+                        val = d.Data;
+                    }
+                    nodes.Add(new DynamicJsonValue
+                    {
+                        ["Id"] = item.Key,
+                        ["Value"] = val
+                    });
+                }
+
+                foreach (var item in results.Edges)
+                {
+                    var key = item.Key;
+                    if (key is Document d)
+                    {
+                        key = d.Id?.ToString() ?? "anonymous/" + Guid.NewGuid();
+                    }
+                    edges.Add(new DynamicJsonValue
+                    {
+                        ["From"] = key,
+                        ["To"] = item.Value
+                    });
+                }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, output);
+                }
+            }
+        }
+
         private async Task Explain(DocumentsOperationContext context, RequestTimeTracker tracker, HttpMethod method)
         {
             var indexQuery = await GetIndexQuery(context, method, tracker);
@@ -433,6 +489,12 @@ namespace Raven.Server.Documents.Handlers
             if (string.Equals(debug, "explain", StringComparison.OrdinalIgnoreCase))
             {
                 await Explain(context, tracker, method);
+                return;
+            }
+
+            if (string.Equals(debug, "graph", StringComparison.OrdinalIgnoreCase))
+            {
+                await Graph(context, tracker, method);
                 return;
             }
 

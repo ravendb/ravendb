@@ -275,5 +275,31 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             throw new System.NotSupportedException("Cannot get matches by id from recursive portion");
         }
+
+        public void Analyze(Match match, Action<string, object> addNode, Action<object, string> addEdge)
+        {
+            _left.Analyze(match, addNode, addEdge);
+
+            var prev = match.GetResult(_left.GetOuputAlias());
+
+            var result = match.GetResult(_recursive.Alias);
+            if (!(result is List<Match> matches))
+                return;
+
+            foreach (var singleMatch in matches)
+            {
+                foreach (var step in _steps)
+                {
+                    if (step.Edge != null)
+                    {
+                        var next = EdgeQueryStep.AnalyzeEdge(step.Edge, step.EdgeAlias, singleMatch, prev, addEdge);
+                        if (next != null)
+                            prev = next;
+                    }
+                    step.Right?.Analyze(singleMatch, addNode, addEdge);
+                }
+            }
+
+        }
     }
 }

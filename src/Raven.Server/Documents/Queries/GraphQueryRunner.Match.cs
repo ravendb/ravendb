@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Queries
 
             public int Count => _inner?.Count ?? 0;
 
-            public IEnumerable<string> Aliases => _inner.Keys;
+            public IEnumerable<string> Aliases => _inner?.Keys ?? Enumerable.Empty<string>();
 
             public bool Empty => _inner == null || _inner.Count == 0;
 
@@ -25,6 +25,7 @@ namespace Raven.Server.Documents.Queries
                     return "<empty>";
                 return string.Join(", ", _inner.Select(x=> x.Key + " - " + x.Value));
             }
+
 
             public Match(Match other)
             {

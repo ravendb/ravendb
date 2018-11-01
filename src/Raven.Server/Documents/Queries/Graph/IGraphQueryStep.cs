@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Raven.Server.Documents.Queries.Graph
@@ -14,5 +15,9 @@ namespace Raven.Server.Documents.Queries.Graph
         bool GetNext(out GraphQueryRunner.Match match);
 
         bool TryGetById(string id, out GraphQueryRunner.Match match);
+
+        void Analyze(GraphQueryRunner.Match match,
+            Action<string, object> addNode, 
+            Action<object, string> addEdge);
     }
 }

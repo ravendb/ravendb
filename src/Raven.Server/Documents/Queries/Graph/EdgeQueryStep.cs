@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Json;
+using Sparrow;
 using Sparrow.Json;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
 
@@ -114,6 +116,55 @@ namespace Raven.Server.Documents.Queries.Graph
         public HashSet<string> GetAllAliases()
         {
             return _aliases;
+        }
+
+        public void Analyze(Match match, Action<string, object> addNode, Action<object, string> addEdge)
+        {
+            _left.Analyze(match, addNode, addEdge);
+            _right.Analyze(match, addNode, addEdge);
+
+            var prev = match.GetResult(_left.GetOuputAlias());
+
+            AnalyzeEdge(_edgesExpression, _edgePath.Alias, match, prev, addEdge);
+        }
+
+        public static string AnalyzeEdge(WithEdgesExpression _edgesExpression, StringSegment edgeAlias, Match match, object prev, Action<object, string> addEdge)
+        {
+            var edge = match.GetResult(edgeAlias);
+
+            if (edge == null || prev == null)
+                return null;
+
+            string result = null;
+
+            if (edge is string s)
+            {
+                result = s;
+            }
+            else if (edge is LazyStringValue lsv)
+            {
+                result = lsv.ToString();
+            }
+            else if (edge is BlittableJsonReaderObject bjro)
+            {
+                if (_edgesExpression.Project != null)
+                {
+                    if (BlittableJsonTraverser.Default.TryRead(bjro, _edgesExpression.Project.FieldValue, out var id, out _))
+                    {
+                        if (id != null)
+                        {
+                            result = id.ToString();
+                        }
+                    }
+                }
+            }
+
+            if (result == null)
+                return null;
+
+            addEdge(prev, result);
+
+            return result;
         }
 
         private IGraphQueryStep _left;
