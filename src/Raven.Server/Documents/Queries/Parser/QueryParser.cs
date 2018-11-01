@@ -25,7 +25,25 @@ namespace Raven.Server.Documents.Queries.Parser
         private int _statePos;
 
         public QueryScanner Scanner = new QueryScanner();
-        private Dictionary<StringSegment, (FieldExpression Path, QueryExpression Filter, FieldExpression Project, bool IsEdge)> _synteticWithQueries;
+        private Dictionary<StringSegment, SynteticWithQuery> _synteticWithQueries;
+
+        private struct SynteticWithQuery
+        {
+            public FieldExpression Path;
+            public QueryExpression Filter;
+            public FieldExpression Project;
+            public bool IsEdge;
+            public bool ImplicitAlias;
+
+            public SynteticWithQuery(FieldExpression path, QueryExpression filter, FieldExpression project, bool isEdge, bool implicitAlias)
+            {
+                Path = path;
+                Filter = filter;
+                Project = project;
+                IsEdge = isEdge;
+                ImplicitAlias = implicitAlias;
+            }
+        }
 
         public void Init(string q)
         {
@@ -267,11 +285,12 @@ namespace Raven.Server.Documents.Queries.Parser
 
         public static readonly string[] EdgeOps = new[] { "<-", ">", "[", "-", "<", "(", "recursive" };
 
-        private bool GraphAlias(GraphQuery gq,bool isEdge, out StringSegment alias)
+        private bool GraphAlias(GraphQuery gq,bool isEdge, StringSegment implicitPrefix, out StringSegment alias)
         {
             // Orders as o where id() 'orders/1-A'
             // Lines where Name = 'Chang' select Product
 
+            SynteticWithQuery prev = default;
             var start = Scanner.Position;
             if (Field(out var collection) == false)
             {
@@ -282,7 +301,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (Scanner.TryPeek(')'))// anonymous alias () accepts everything
                 {
                     alias = "__alias" + (++_counter);
-                    AddWithQuery(new FieldExpression(new List<StringSegment>()), null, alias, null, false, start);
+                    AddWithQuery(new FieldExpression(new List<StringSegment>()), null, alias, null, false, start, false);
                     return true;
                 }
                 alias = default;
@@ -290,19 +309,22 @@ namespace Raven.Server.Documents.Queries.Parser
             }
             else 
             {
-                if (gq.HasAlias(collection.FieldValue) ||
-                    _synteticWithQueries?.ContainsKey(collection.FieldValue) == true)
+                if (Scanner.TryPeek(')'))
                 {
-                    if (Scanner.TryPeek("AS") == false)
+                    alias = implicitPrefix.Length == 0 ? collection.FieldValue :
+                        implicitPrefix + "_" + collection.FieldValue;
+
+                    if (gq.HasAlias(alias))
+                        return true;
+
+                    if (_synteticWithQueries?.TryGetValue(collection.FieldValue, out prev) == true)
                     {
-                        alias = collection.FieldValue;
+                        if(prev.ImplicitAlias)
+                            ThrowRedefineSameAnonymousAlias(collection.FieldValue, start);
                         return true;
                     }
-                }
-                else if (Scanner.TryPeek(')'))
-                {
-                    alias = "__alias" + (++_counter);
-                    AddWithQuery(collection, null, alias, null, isEdge, start);
+
+                    AddWithQuery(collection, null, alias, null, isEdge, start, true);
                     return true;
                 }
             }
@@ -312,7 +334,17 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (Alias(true, out var maybeAlias) == false)
             {
-                alias = "__alias" + (++_counter);
+                if(gq.HasAlias(collection.FieldValue) ||
+                    _synteticWithQueries?.ContainsKey(collection.FieldValue) == true
+                    )
+                {
+                    alias = collection.FieldValue;
+                }
+                else
+                {
+                    alias = implicitPrefix.Length == 0 ? collection.FieldValue :
+                         implicitPrefix + "_" + collection.FieldValue;
+                }
             }
             else
             {
@@ -339,15 +371,21 @@ namespace Raven.Server.Documents.Queries.Parser
                 project = (FieldExpression)fields[0].Item1;
             }
 
-            AddWithQuery(collection, project, alias, filter, isEdge, start);
+            if (gq.HasAlias(alias))
+                return true;
+
+            if (_synteticWithQueries?.TryGetValue(alias, out prev) == true && prev.ImplicitAlias)
+                ThrowRedefineSameAnonymousAlias(collection.FieldValue, start);
+
+            AddWithQuery(collection, project, alias, filter, isEdge, start, maybeAlias == null);
 
             return true;
         }
 
-        private void AddWithQuery(FieldExpression path, FieldExpression project, StringSegment alias, QueryExpression filter, bool isEdge, int start)
+        private void AddWithQuery(FieldExpression path, FieldExpression project, StringSegment alias, QueryExpression filter, bool isEdge, int start, bool implicitAlias)
         {
             if (_synteticWithQueries == null)
-                _synteticWithQueries = new Dictionary<StringSegment, (FieldExpression Collection, QueryExpression Filter, FieldExpression Project, bool IsEdge)>(StringSegmentEqualityComparer.Instance);
+                _synteticWithQueries = new Dictionary<StringSegment, SynteticWithQuery>(StringSegmentEqualityComparer.Instance);
 
             if (_synteticWithQueries.TryGetValue(alias, out var existing))
             {
@@ -377,12 +415,19 @@ namespace Raven.Server.Documents.Queries.Parser
                 return;
             }
 
-            _synteticWithQueries.Add(alias, (path, filter, project, isEdge));
+            _synteticWithQueries.Add(alias, new SynteticWithQuery(path, filter, project, isEdge, implicitAlias));
         }
 
         private void ThrowDuplicateAliasWithoutSameBody(int start)
         {
             throw new InvalidQueryException("Duplicated alias  was found with a different definition than previous defined: " +
+                new StringSegment(Scanner.Input, start, Scanner.Position - start),
+                 Scanner.Input, null);
+        }
+
+        private void ThrowRedefineSameAnonymousAlias(string alias, int start)
+        {
+            throw new InvalidQueryException("Implicit alias '" + alias +"' was redefined in the same query, use an explicit '" + alias + " as e', instead. " + 
                 new StringSegment(Scanner.Input, start, Scanner.Position - start),
                  Scanner.Input, null);
         }
@@ -416,7 +461,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan('(') == false)
                 throw new InvalidQueryException("MATCH operator expected a '(', but didn't get it.", Scanner.Input, null);
 
-            if (GraphAlias(gq, false, out var alias) == false)
+            if (GraphAlias(gq, false, default, out var alias) == false)
             {
                 if (BinaryGraph(gq, out op) == false)
                 {
@@ -461,7 +506,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             if (foundDash == false)
                                 throw new InvalidQueryException("Got '[' when expected '-', did you forget to add '-[' ?", Scanner.Input, null);
 
-                            if (GraphAlias(gq, true, out alias) == false)
+                            if (GraphAlias(gq, true, alias, out alias) == false)
                                 throw new InvalidQueryException("MATCH identifier after '-['", Scanner.Input, null);
                             if (Scanner.TryScan(']') == false)
                                 throw new InvalidQueryException("MATCH operator expected a ']' after reading: " + alias, Scanner.Input, null);
@@ -511,7 +556,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             if (expectNode == false && list[list.Count - 1].EdgeType != EdgeType.Left)
                                 throw new InvalidQueryException("Got '(', but it wasn't expected", Scanner.Input, null);
 
-                            if (GraphAlias(gq, false, out alias) == false)
+                            if (GraphAlias(gq, false, default, out alias) == false)
                                 throw new InvalidQueryException("Couldn't get node's alias", Scanner.Input, null);
 
                             if (Scanner.TryScan(')') == false)

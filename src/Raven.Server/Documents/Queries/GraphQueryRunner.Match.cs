@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Queries
@@ -135,6 +136,10 @@ namespace Raven.Server.Documents.Queries
                     else if(item.Value is string s)
                     {
                         j[item.Key] = s;
+                    }
+                    else if(item.Value is BlittableJsonReaderBase b)
+                    {
+                        j[item.Key] = b;
                     }
                 }
             }
