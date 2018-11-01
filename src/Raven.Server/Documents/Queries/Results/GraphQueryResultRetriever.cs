@@ -81,6 +81,10 @@ namespace Raven.Server.Documents.Queries.Results
                         {
                             args[i] = d;
                         }
+                        else if (val is BlittableJsonReaderObject bjro)
+                        {
+                            args[i] = bjro;
+                        }
                         else if( val is List<Match> matches)
                         {
                             var array = new DynamicJsonArray();
@@ -123,6 +127,16 @@ namespace Raven.Server.Documents.Queries.Results
                         if (immediateResult != null)
                             return immediateResult;
                     }
+                    else if (val is BlittableJsonReaderObject bjro)
+                    {
+                        var doc = new Document { Data = bjro };
+                        if (TryGetValue(fieldToFetch, doc, null, null, out key, out fieldVal) == false)
+                            continue;
+
+                        var immediateResult = AddProjectionToResult(doc, 1f, FieldsToFetch, result, key, fieldVal);
+                        if (immediateResult != null)
+                            return immediateResult;
+                    }
                     else if (val is List<Match> matches)
                     {
                         var array = new DynamicJsonArray();
@@ -130,6 +144,9 @@ namespace Raven.Server.Documents.Queries.Results
                         {
                             var djv = new DynamicJsonValue();
                             m.PopulateVertices(djv);
+
+                            if (djv.Properties.Count == 0)
+                                continue;
 
                             var matchJson = _context.ReadObject(djv, "graph/arg");
 

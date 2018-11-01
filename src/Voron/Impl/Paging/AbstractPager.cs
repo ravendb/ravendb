@@ -2,9 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Net;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Binary;
@@ -33,7 +31,7 @@ namespace Voron.Impl.Paging
         private long _increaseSize;
         private DateTime _lastIncrease;
         private readonly object _pagerStateModificationLocker = new object();
-        public bool UsePageProtection { get; } = false;
+        public readonly bool UsePageProtection;
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
         private readonly bool _canPrefetchAhead;
 
@@ -78,14 +76,14 @@ namespace Voron.Impl.Paging
                             }
                         }
                     }
-                    catch 
+                    catch
                     {
                         // need to restore the state to the way it was, so we'll dispose the pager state
                         newState.Release();
                         throw;
                     }
                 }
-                
+
                 _debugInfo = GetSourceName();
                 var oldState = _pagerState;
                 _pagerState = newState;
@@ -113,7 +111,7 @@ namespace Voron.Impl.Paging
                 {
                     nextSize = int.MaxValue;
                 }
-                
+
                 // Minimum working set size must be less than or equal to the maximum working set size.
                 // Let's increase the max as well.
                 if (nextSize > (long)currentProcess.MaxWorkingSet)
@@ -284,8 +282,10 @@ namespace Voron.Impl.Paging
 
             return state.MapBase + pageNumber * Constants.Storage.PageSize;
 
-            AlreadyDisposed: ThrowAlreadyDisposedException();
-            InvalidPageNumber: ThrowOnInvalidPageNumber(pageNumber);
+        AlreadyDisposed:
+            ThrowAlreadyDisposedException();
+        InvalidPageNumber:
+            ThrowOnInvalidPageNumber(pageNumber);
             return null; // Will never happen. 
         }
 
@@ -305,7 +305,7 @@ namespace Voron.Impl.Paging
         }
 
         public abstract void Sync(long totalUnsynced);
-        
+
         public PagerState EnsureContinuous(long requestedPageNumber, int numberOfPages)
         {
             if (DisposeOnceRunner.Disposed)
@@ -347,7 +347,7 @@ namespace Voron.Impl.Paging
         /// so it will not go to the swap / core dumps
         /// </summary>
         public bool LockMemory;
-        
+
         /// <summary>
         /// Control whatever we should treat memory lock errors as catastrophic errors
         /// or not. By default, we consider them catastrophic and fail immediately to
@@ -412,7 +412,7 @@ namespace Voron.Impl.Paging
                 return Bits.NextPowerOf2(totalSize);
 
             // if it is over 0.5 GB, then we grow at 1 GB intervals
-            var remainder = totalSize%Constants.Size.Gigabyte;
+            var remainder = totalSize % Constants.Size.Gigabyte;
             if (remainder == 0)
                 return totalSize;
 
@@ -442,9 +442,9 @@ namespace Voron.Impl.Paging
 
         public virtual void ReleaseAllocationInfo(byte* baseAddress, long size)
         {
-            if (LockMemory == false) 
+            if (LockMemory == false)
                 return;
-            
+
             // intentionally skipping verification of the result, nothing that we
             // can do about this here, and we are going to free the memory anyway
             // that at any rate, we don't care about the memory zeroing, since
@@ -566,7 +566,7 @@ namespace Voron.Impl.Paging
             {
                 numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(pageHeader->OverflowSize);
             }
-            const int adjustPageSize = (Constants.Storage.PageSize)/(4*Constants.Size.Kilobyte);
+            const int adjustPageSize = (Constants.Storage.PageSize) / (4 * Constants.Size.Kilobyte);
             destwI4KbBatchWrites.Write(pageHeader->PageNumber * (long)adjustPageSize, numberOfPages * adjustPageSize, src);
 
             return numberOfPages;

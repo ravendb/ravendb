@@ -308,6 +308,8 @@ namespace Voron.Impl.Scratch
             _disposeOnceRunner.Dispose();
         }
 
+        public bool IsDisposed => _disposeOnceRunner.Disposed;
+
         public void BreakLargeAllocationToSeparatePages(IPagerLevelTransactionState tx, PageFromScratchBuffer value)
         {
             if (_allocatedPages.Remove(value.PositionInScratchBuffer) == false)

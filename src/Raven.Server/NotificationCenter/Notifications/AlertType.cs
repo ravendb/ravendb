@@ -54,6 +54,9 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         LowDiskSpace,
 
-        UnexpectedIndexingThreadError
+        UnexpectedIndexingThreadError,
+
+        Indexing_UnexpectedIndexingThreadError,
+        Indexing_CouldNotGetStats
     }
 }

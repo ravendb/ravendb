@@ -54,8 +54,6 @@ using Sparrow.Json;
 using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
-using Sparrow.Platform;
-using Sparrow.Platform.Posix;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
@@ -167,6 +165,8 @@ namespace Raven.Server.Documents.Indexes
         private string _errorStateReason;
         private bool _isCompactionInProgress;
         internal TimeSpan? _firstBatchTimeout;
+        private Lazy<Size?> _transactionSizeLimit;
+        private bool _scratchSpaceLimitExceeded;
 
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
         private readonly MultipleUseFlag _priorityChanged = new MultipleUseFlag();
@@ -456,6 +456,9 @@ namespace Raven.Server.Documents.Indexes
                 options.MaxScratchBufferSize = documentDatabase.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = documentDatabase.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = documentDatabase.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
+
+            if (documentDatabase.ServerStore.GlobalIndexingScratchSpaceMonitor != null)
+                options.ScratchSpaceUsage.AddMonitor(documentDatabase.ServerStore.GlobalIndexingScratchSpaceMonitor);
 
             if (schemaUpgrader)
             {
@@ -922,6 +925,8 @@ namespace Raven.Server.Documents.Indexes
                             _mre.Reset();
                         }
 
+                        _scratchSpaceLimitExceeded = false;
+
                         if (_priorityChanged)
                             ChangeIndexThreadPriority();
 
@@ -1120,6 +1125,21 @@ namespace Raven.Server.Documents.Indexes
                                     new Size(NativeMemory.CurrentThreadStats.TotalAllocated, SizeUnit.Bytes));
                             }
 
+                            if (_scratchSpaceLimitExceeded)
+                            {
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Indexing exceeded global limit for scratch space usage. Going to flush environment of '{Name}' index and forcing sync of data file");
+
+                                GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(storageEnvironment);
+                                GlobalFlushingBehavior.GlobalFlusher.Value.ForceSyncEnvironment(storageEnvironment);
+
+                                if (_logsAppliedEvent.Wait(Configuration.MaxTimeToWaitAfterFlushAndSyncWhenExceedingScratchSpaceLimit.AsTimeSpan))
+                                {
+                                    // we've just flushed let's try to cleanup scratch space immediately
+                                    storageEnvironment.Cleanup();
+                                }
+                            }
+
                             if (_mre.Wait(timeToWaitForMemoryCleanup, _indexingProcessCancellationTokenSource.Token) == false)
                             {
                                 _allocationCleanupNeeded = false;
@@ -1154,7 +1174,7 @@ namespace Raven.Server.Documents.Indexes
                     try
                     {
                         DocumentDatabase.NotificationCenter.Add(AlertRaised.Create(DocumentDatabase.Name, $"Unexpected error in '{Name}' index",
-                            "Unexpected error in indexing thread. See details.", AlertType.UnexpectedIndexingThreadError, NotificationSeverity.Error,
+                            "Unexpected error in indexing thread. See details.", AlertType.Indexing_UnexpectedIndexingThreadError, NotificationSeverity.Error,
                             details: new ExceptionDetails(e)));
                     }
                     catch (Exception)
@@ -1646,7 +1666,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual void SetState(IndexState state)
+        public virtual void SetState(IndexState state, bool inMemoryOnly = false)
         {
             if (State == state)
                 return;
@@ -1664,9 +1684,12 @@ namespace Raven.Server.Documents.Indexes
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Changing state for '{Name})' from '{State}' to '{state}'.");
 
-
                 var oldState = State;
                 State = state;
+
+                if (inMemoryOnly)
+                    return;
+
                 try
                 {
                     // this might fail if we can't write, so we first update the in memory state
@@ -2901,6 +2924,31 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        private Size? TransactionSizeLimit
+        {
+            get
+            {
+                if (_transactionSizeLimit != null)
+                    return _transactionSizeLimit.Value;
+
+                if (Configuration.TransactionSizeLimit == null)
+                {
+                    _transactionSizeLimit = new Lazy<Size?>(() => null);
+                }
+                else
+                {
+                    var limit = Configuration.TransactionSizeLimit;
+
+                    if (Type.IsMapReduce())
+                        limit = limit * 0.75; // let's decrease the limit to take into account additional work in reduce phase
+
+                    _transactionSizeLimit = new Lazy<Size?>(() => limit);
+                }
+
+                return _transactionSizeLimit.Value;
+            }
+        }
+
         public bool CanContinueBatch(
             IndexingStatsScope stats,
             DocumentsOperationContext documentsOperationContext,
@@ -2908,11 +2956,11 @@ namespace Raven.Server.Documents.Indexes
             IndexWriteOperation indexWriteOperation,
             int count)
         {
-            var threadAllocations = _threadAllocations.TotalAllocated;
-            var txAllocations = indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages *
-                                Voron.Global.Constants.Storage.PageSize;
-            var indexWriterAllocations = indexWriteOperation?.GetUsedMemory() ?? 0;
-            stats.RecordMapAllocations(threadAllocations + txAllocations + indexWriterAllocations);
+            var threadAllocations = new Size(_threadAllocations.TotalAllocated, SizeUnit.Bytes);
+            var txAllocations = new Size(indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages *
+                                Voron.Global.Constants.Storage.PageSize, SizeUnit.Bytes);
+            var indexWriterAllocations = new Size(indexWriteOperation?.GetUsedMemory() ?? 0, SizeUnit.Bytes);
+            stats.RecordMapAllocations((threadAllocations + txAllocations + indexWriterAllocations).GetValue(SizeUnit.Bytes));
 
             if (_indexDisabled)
             {
@@ -2964,13 +3012,42 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            var allocatedInBytes = threadAllocations +
+            if (TransactionSizeLimit != null && txAllocations > TransactionSizeLimit.Value)
+            {
+                stats.RecordMapCompletedReason($"Reached transaction size limit ({TransactionSizeLimit.Value}). Allocated {txAllocations} in current transaction");
+                return false;
+            }
+
+            if (Configuration.ScratchSpaceLimit != null &&
+                _environment.Options.ScratchSpaceUsage.ScratchSpaceInBytes > Configuration.ScratchSpaceLimit.Value.GetValue(SizeUnit.Bytes) && count > MinBatchSize)
+            {
+                _scratchSpaceLimitExceeded = true;
+
+                stats.RecordMapCompletedReason(
+                    $"Reached scratch space limit ({Configuration.ScratchSpaceLimit.Value}). Current scratch space is {new Size(_environment.Options.ScratchSpaceUsage.ScratchSpaceInBytes, SizeUnit.Bytes)}");
+
+                return false;
+            }
+
+            var globalIndexingScratchSpaceUsage = DocumentDatabase.ServerStore.GlobalIndexingScratchSpaceMonitor;
+
+            if (globalIndexingScratchSpaceUsage?.IsLimitExceeded == true && count > MinBatchSize)
+            {
+                _scratchSpaceLimitExceeded = true;
+
+                stats.RecordMapCompletedReason(
+                    $"Reached global scratch space limit for indexing ({globalIndexingScratchSpaceUsage.LimitAsSize}). Current scratch space is {globalIndexingScratchSpaceUsage.ScratchSpaceAsSize}");
+                
+                return false;
+            }
+
+            var allocated = threadAllocations +
                                    // we multiple it by two to take into account additional work
                                    // that will need to be done during the commit phase of the index
                                    2 * (indexWriterAllocations + txAllocations);
 
-            var allocated = new Size(allocatedInBytes, SizeUnit.Bytes);
             _threadAllocations.CurrentlyAllocatedForProcessing = allocated.GetValue(SizeUnit.Bytes);
+
             if (allocated > _currentMaximumAllowedMemory)
             {
                 var canContinue = true;

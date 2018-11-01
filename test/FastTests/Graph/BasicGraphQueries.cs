@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -149,7 +150,7 @@ namespace FastTests.Graph
                 CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
-                    var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (v)").ToList();
+                    var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (_ as v)").ToList();
 
                     Assert.Equal(9, allVerticesQuery.Count);
                     var docTypes = allVerticesQuery.Select(x => x["@metadata"]["@collection"].Value<string>()).ToArray();
@@ -206,18 +207,19 @@ namespace FastTests.Graph
                 CreateSimpleData(store);
                 using (var session = store.OpenSession())
                 {
-                    var result = session.Advanced.RawQuery<JObject>(@"match (Entities as e)-[References]->(Entities as e2)").ToList();
+                    var result = session.Advanced.RawQuery<JObject>(@"match (Entities as e)-[References as r]->(Entities as e2)").ToList();
 
                     Assert.Equal(3, result.Count);
                     Assert.Contains(result,
-                        item => item["e"].Value<JObject>("@metadata").Value<string>("@id") == "entity/1" &&
-                                item["e2"].Value<JObject>("@metadata").Value<string>("@id") == "entity/2");
+                        item => item["e"].Value<string>("Name") == "A" &&
+                                item["e2"].Value<string>("Name") == "B");
                     Assert.Contains(result,
-                        item => item["e"].Value<JObject>("@metadata").Value<string>("@id") == "entity/2" &&
-                                item["e2"].Value<JObject>("@metadata").Value<string>("@id") == "entity/3");
+                        item => item["e"].Value<string>("Name") == "B" &&
+                                item["e2"].Value<string>("Name") == "C");
                     Assert.Contains(result,
-                        item => item["e"].Value<JObject>("@metadata").Value<string>("@id") == "entity/3" &&
-                                item["e2"].Value<JObject>("@metadata").Value<string>("@id") == "entity/1");
+                        item => item["e"].Value<string>("Name") == "C" &&
+                                item["e2"].Value<string>("Name") == "A");
+
                 }
             }
         }
@@ -264,7 +266,7 @@ select {
         public void CanUseEmptyDocumentAlias()
         {
             var results = Query<Employee>(@"
-match (Employees as e where FirstName='Nancy')-[ReportsTo]->(manager)
+match (Employees as e where FirstName='Nancy')-[ReportsTo]->(_ as manager)
 select manager
 ");
             Assert.Equal(1, results.Count);
@@ -338,7 +340,7 @@ select {
         public void CanHandleCyclesInGraph()
         {
             var results = Query<EmployeeRelations>(@"
-match (Employees as e where id() = 'employees/7-A')-recursive as n { [ReportsTo as m] }->(Employees as boss)
+match (Employees as e where id() = 'employees/7-A')-recursive as n (longest) { [ReportsTo as m] }->(Employees as boss)
 select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
 ", store =>
             {
@@ -348,13 +350,14 @@ select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
                     e.ReportsTo = e.Id;
                     s.SaveChanges();
                 }
+
             });
             Assert.Equal(1, results.Count);
             foreach (var item in results)
             {
                 Assert.Equal("Andrew", item.Boss);
                 Assert.Equal("Robert", item.Employee);
-                Assert.Equal(new[] { "employees/5-A" }, item.MiddleManagement);
+                Assert.Equal(new[] { "employees/5-A", "employees/2-A" }, item.MiddleManagement);
             }
         }
 
@@ -377,6 +380,13 @@ select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
             public string Son;
         }
 
+        public class Ancestry
+        {
+            public string Name;
+            public string Eldest;
+            public string[] Parentage;
+        }
+
         [Fact]
         public void CanHandleFiltersInMultiHopQueryWithEndNode()
         {
@@ -391,10 +401,33 @@ match (People as son where Name = 'Otho Sackville-Baggins')-recursive (0) { [Par
 select son.Name as Son, evil.Name as Evil")
                         .ToList();
 
-                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(1, results.Count);
                     Assert.Equal("Longo", results[0].Evil);
                     Assert.Equal("Otho Sackville-Baggins", results[0].Son);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanRecursivelyProjectObjectAsEdge()
+        {
+            using (var store = GetDocumentStore())
+            {
+                SetupHobbitAncestry(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<Ancestry>(@"
+match (People as son)-recursive as ancestry (2,5,'longest') { 
+    [Parents where Gender = 'Male' select Id]->(People as paternal where BornAt='Shire')-[Parents where Gender = 'Male' select Id]
+}->(People as paternal0 where BornAt='Shire') 
+select ancestry.paternal.Name as Parentage, son.Name, paternal0.Name as Eldest")
+                        .ToList();
+
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal("Bilbo Baggins", results[0].Name);
+                    Assert.Equal(new[] {"Bungo","Mungo"}, results[0].Parentage);
+                    Assert.Equal("Balbo Baggins", results[0].Eldest);
                 }
             }
         }

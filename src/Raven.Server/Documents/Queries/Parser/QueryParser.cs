@@ -301,11 +301,14 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
                 else if (Scanner.TryPeek(')'))
                 {
-                    alias = collection.FieldValue;
-                    AddWithQuery(new FieldExpression(new List<StringSegment>()), null, alias, null, isEdge, start);
+                    alias = "__alias" + (++_counter);
+                    AddWithQuery(collection, null, alias, null, isEdge, start);
                     return true;
                 }
             }
+
+            if (collection.FieldValue == "_") // (_ as e) anonymous alias
+                collection = new FieldExpression(new List<StringSegment>());
 
             if (Alias(true, out var maybeAlias) == false)
             {
@@ -496,7 +499,10 @@ namespace Raven.Server.Documents.Queries.Parser
                                 Recursive = last.Recursive
                             };
                             if (Scanner.TryScan('(') == false)
-                                throw new InvalidQueryException("MATCH operator expected a '(', but didn't get it.", Scanner.Input, null);
+                            {
+                                var msg = $"({last.Alias})-> is not allowed, you should use ({last.Alias})-[...] instead.";
+                                throw new InvalidQueryException("MATCH operator expected a '(', but didn't get it. " + msg, Scanner.Input, null);
+                            }
                             expectNode = true;
 
                             goto case "(";

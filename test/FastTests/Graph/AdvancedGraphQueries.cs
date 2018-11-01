@@ -7,6 +7,7 @@ using Order = FastTests.Server.Basic.Entities.Order;
 using Product = FastTests.Server.Basic.Entities.Product;
 using OrderLine = FastTests.Server.Basic.Entities.OrderLine;
 using System.Collections.Generic;
+using Raven.Client.Documents.Session;
 
 namespace FastTests.Graph
 {
@@ -813,7 +814,7 @@ namespace FastTests.Graph
                 }
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Advanced.RawQuery<JObject>("match (People as s)-recursive as path (longest) { [Ancestor as r] }->(People as a)").ToArray();
+                    var results = session.Advanced.RawQuery<JObject>("match (People as s where id() ='people/1-A')-recursive as path (longest) { [Ancestor as r] }->(People as a)").ToArray();
                     Assert.NotEmpty(results);
                     var stronglyTypedResults = results.Select(x => new
                     {
@@ -1106,11 +1107,11 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                        match (Employees as e)- recursive as reportsTo { [ReportsTo as path] } -> (Employees as m)
+                        match (Employees as e)- recursive as reportsTo (0,5, 'all') { [ReportsTo as path] } -> (Employees as m)
                         select e.FirstName as EmployeeName, reportsTo.path as ReportsToPath, m.FirstName as ManagerName
                        ").ToList();
                     Assert.NotEmpty(results); //sanity check
-                    Assert.Equal(3,results.Count);
+                    Assert.Equal(8,results.Count);
 
                     var stronglyTypedResults = results.Select(x => new
                     {
@@ -1129,5 +1130,103 @@ namespace FastTests.Graph
             }
         }
 
+        [Fact]
+        public void Edge_projection_to_javascript_object_in_multi_hop_query_should_work()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.RawQuery<JObject>(@"
+                            match (Employees as e)- recursive as reportsTo (0,5, 'all') { [ReportsTo as path] }->(Employees as m)
+                            select { EmployeeName: e.FirstName, ReportsToPath: reportsTo.map(x => x.path), ManagerName: m.FirstName }
+                       ").ToList();
+                    Assert.NotEmpty(results); //sanity check
+                    Assert.Equal(8,results.Count);
+
+                    var stronglyTypedResults = results.Select(x => new
+                    {
+                        EmployeeName = x["EmployeeName"].Value<string>(),
+                        ReportsToPath = x["ReportsToPath"].ToArray().Select(i => i.Value<string>()).ToArray(),
+                        ManagerName = x["ManagerName"].Value<string>()
+                    }).ToArray();
+
+                    Assert.Contains(stronglyTypedResults,
+                        x => x.EmployeeName == "Anne" && x.ManagerName == "Andrew" && x.ReportsToPath[0] == "employees/5-A" && x.ReportsToPath[1] == "employees/2-A");
+                    Assert.Contains(stronglyTypedResults,
+                        x => x.EmployeeName == "Michael" && x.ManagerName == "Andrew" && x.ReportsToPath[0] == "employees/5-A" && x.ReportsToPath[1] == "employees/2-A");
+                    Assert.Contains(stronglyTypedResults,
+                        x => x.EmployeeName == "Robert" && x.ManagerName == "Andrew" && x.ReportsToPath[0] == "employees/5-A" && x.ReportsToPath[1] == "employees/2-A");
+                }
+            }
+        }   
+
+        [Fact]
+        public void Longest_recursion_should_work_properly()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                
+                using (var session = store.OpenSession())
+                {
+                    var pathIdsFromLongestStrategy = GetPathIdsForQuery(session, @"
+                            match (Employees as e)- recursive as reportsTo (1,5, 'longest') { [ReportsTo as path] }->(Employees as m)
+                            select { ReportsToPath: reportsTo.map(x => x.path) }
+                       ")[0];
+
+                    Assert.Equal(2,pathIdsFromLongestStrategy.Length);
+                    Assert.Contains(pathIdsFromLongestStrategy, x => x == "employees/2-A");
+                    Assert.Contains(pathIdsFromLongestStrategy, x => x == "employees/5-A");
+                }
+            }
+        }
+
+        [Fact]
+        public void Shortest_and_lazy_recursion_should_work_properly()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+                using (var session = store.OpenSession())
+                {
+                    var pathIdsFromShortestStrategy = GetPathIdsForQuery(session, @"
+                            match (Employees as e)- recursive as reportsTo (1,5, 'shortest') { [ReportsTo as path] }->(Employees as m)
+                            select { ReportsToPath: reportsTo.map(x => x.path) }
+                       ")[0];
+
+                    Assert.Equal(1,pathIdsFromShortestStrategy.Length);
+                    Assert.Contains(pathIdsFromShortestStrategy, x => x == "employees/5-A");
+
+                    var pathIdsFromLazyStrategy = GetPathIdsForQuery(session, @"
+                            match (Employees as e)- recursive as reportsTo (1,5, 'lazy') { [ReportsTo as path] }->(Employees as m)
+                            select { ReportsToPath: reportsTo.map(x => x.path) }
+                       ")[0];
+
+                    Assert.Equal(1,pathIdsFromLazyStrategy.Length);
+                    Assert.Contains(pathIdsFromLazyStrategy, x => x == "employees/5-A");
+                }
+            }
+        }
+
+        private static string[][] GetPathIdsForQuery(IDocumentSession session, string query)
+        {
+            string[][] ExtractPathIds(IEnumerable<JObject> jsonIds)
+            {
+                return jsonIds.Select(x => x["ReportsToPath"].ToArray()
+                                                             .Select(i => i.Value<string>())
+                                                             .ToArray())
+                              .ToArray();
+            }
+
+            var results = session.Advanced.RawQuery<JObject>(query).ToList();
+            Assert.NotEmpty(results); //sanity check
+            Assert.Equal(8, results.Count);
+
+            var pathIds = ExtractPathIds(results);
+            return pathIds;
+        }
     }
 }

@@ -21,6 +21,8 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -261,11 +263,49 @@ namespace Raven.Server.Documents.Handlers
                 using (context.OpenReadTransaction())
                 {
                     if (string.IsNullOrEmpty(name))
+                    {
                         indexStats = Database.IndexStore
                             .GetIndexes()
                             .OrderBy(x => x.Name)
-                            .Select(x => x.GetStats(calculateLag: true, calculateStaleness: true, documentsContext: context))
+                            .Select(x =>
+                            {
+                                try
+                                {
+                                    return x.GetStats(calculateLag: true, calculateStaleness: true, documentsContext: context);
+                                }
+                                catch (Exception e)
+                                {
+                                    if (Logger.IsOperationsEnabled)
+                                        Logger.Operations($"Failed to get stats of '{x.Name}' index", e);
+
+                                    Database.NotificationCenter.Add(AlertRaised.Create(Database.Name, $"Failed to get stats of '{x.Name}' index",
+                                        $"Exception was thrown on getting stats of '{x.Name}' index",
+                                        AlertType.Indexing_CouldNotGetStats, NotificationSeverity.Error, key: x.Name, details: new ExceptionDetails(e)));
+                                    
+                                    try
+                                    {
+                                        x.SetState(IndexState.Error, inMemoryOnly: true);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        if (Logger.IsOperationsEnabled)
+                                            Logger.Operations($"Failed to change state of '{x.Name}' index to error after encountering exception when getting its stats.",
+                                                ex);
+                                    }
+                                    
+                                    return new IndexStats
+                                    {
+                                        Name = x.Name,
+                                        Type = x.Type,
+                                        State = IndexState.Error,
+                                        Status = x.Status,
+                                        LockMode = x.Definition.LockMode,
+                                        Priority = x.Definition.Priority,
+                                    };
+                                }
+                            })
                             .ToArray();
+                    }
                     else
                     {
                         var index = Database.IndexStore.GetIndex(name);
@@ -275,7 +315,7 @@ namespace Raven.Server.Documents.Handlers
                             return Task.CompletedTask;
                         }
 
-                        indexStats = new[] { index.GetStats(calculateLag: true, calculateStaleness: true, documentsContext: context) };
+                        indexStats = new[] {index.GetStats(calculateLag: true, calculateStaleness: true, documentsContext: context)};
                     }
                 }
 

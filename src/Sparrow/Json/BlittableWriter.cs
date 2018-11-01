@@ -258,6 +258,7 @@ namespace Sparrow.Json
             _intBuffer?.Clear();
             _intBuffer = null;
         }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int WritePropertyNames(int rootOffset)
         {
@@ -449,7 +450,7 @@ namespace Sparrow.Json
                 fixed (char* pChars = str)
                 {
                     var stringSize = Encodings.Utf8.GetBytes(pChars, str.Length, buffer.Address, size);
-                    JsonParserState.FindEscapePositionsIn(_intBuffer, buffer.Address, stringSize, escapePositionsMaxSize);
+                    JsonParserState.FindEscapePositionsIn(_intBuffer, buffer.Address, ref stringSize, escapePositionsMaxSize);
                     return WriteValue(buffer.Address, stringSize, _intBuffer, out token, mode, null);
                 }
             }

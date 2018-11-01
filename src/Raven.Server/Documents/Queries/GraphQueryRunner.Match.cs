@@ -65,11 +65,6 @@ namespace Raven.Server.Documents.Queries
                     d.EnsureMetadata();
                     return d;
                 }
-                else if(result is List<Match> m)
-                {
-                    // TODO: this is wrong
-                    return m.Last().GetSingleDocumentResult(alias);
-                }
                 return null;
             }           
 
@@ -139,27 +134,6 @@ namespace Raven.Server.Documents.Queries
                     else if(item.Value is string s)
                     {
                         j[item.Key] = s;
-                    }
-                }
-            }
-
-
-            public void PopulateVertices(ref IntermediateResults i)
-            {
-                if (_inner == null)
-                    return;
-
-                foreach (var item in _inner)
-                {
-                    // This is used as the sources for the query, and as such, we need it to
-                    // process all results, even if they are anonymous
-                    //
-                    // if (item.Key.StartsWith("_"))
-                    //    continue;
-
-                    if (item.Value is Document d)
-                    {
-                        i.Add(item.Key, this, d);
                     }
                 }
             }
