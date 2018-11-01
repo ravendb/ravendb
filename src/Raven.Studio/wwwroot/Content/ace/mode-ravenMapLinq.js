@@ -502,7 +502,6 @@ ace.define("ace/mode/ravenMapLinq",["require","exports","module","ace/lib/oop","
     var RavenMapLinqHighlightRules = require("./ravenMapLinq_highlight_rules").RavenMapLinqHighlightRules;
     var MatchingBraceOutdent = require("./matching_brace_outdent").MatchingBraceOutdent;
     var CstyleBehaviour = require("./behaviour/cstyle").CstyleBehaviour;
-    console.log("behaviour = " + CstyleBehaviour); //TODO: delete me!
     var CStyleFoldMode = require("./folding/csharp").FoldMode;
 
     var Mode = function () {
