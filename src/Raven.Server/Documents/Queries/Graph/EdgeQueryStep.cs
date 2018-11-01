@@ -47,22 +47,26 @@ namespace Raven.Server.Documents.Queries.Graph
                     CompleteInitialization();
                     return default;
                 }
-                return InitializeRightAsync(rightTask);
+                return new ValueTask(InitializeRightAsync(rightTask));
             }
 
-            return InitializeLeftAsync(leftTask);
+            return new ValueTask(InitializeLeftAsync(leftTask));
         }
 
-        private async ValueTask InitializeRightAsync(ValueTask rightTask)
+        private async Task InitializeRightAsync(ValueTask rightTask)
         {
             await rightTask;
             CompleteInitialization();
         }
 
-        private async ValueTask InitializeLeftAsync(ValueTask leftTask)
+        private async Task InitializeLeftAsync(ValueTask leftTask)
         {
             await leftTask;
-            await _right.Initialize();
+            var rightTask = _right.Initialize();
+            if (rightTask.IsCompleted == false)
+            {
+                await rightTask;
+            }
             CompleteInitialization();
         }
 

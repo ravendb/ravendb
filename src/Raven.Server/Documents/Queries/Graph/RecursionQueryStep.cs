@@ -82,40 +82,34 @@ namespace Raven.Server.Documents.Queries.Graph
             if (_index != -1)
                 return default;
 
-            var listOfUncompletedTask = new List<Task>();
-            
             var leftTask = _left.Initialize();
-            if(leftTask.IsCompleted == false)
-                listOfUncompletedTask.Add(leftTask.AsTask());
+            if (leftTask.IsCompleted == false)
+            {
+                return new ValueTask(CompleteLeftInitializationAsync(leftTask));
+            }
 
             _index = 0;
 
-            foreach (var item in _steps)
+            return CompleteInitializationAfterLeft(0);
+        }
+
+        private ValueTask CompleteInitializationAfterLeft(int position)
+        {           
+            for (var i = position; i < _steps.Count; i++)
             {
+                var item = _steps[i];
                 if (item.Right == null)
                     continue;
 
                 var stepTask = item.Right.Initialize();
-                if(stepTask.IsCompleted == false)
-                    listOfUncompletedTask.Add(stepTask.AsTask());
+                if (stepTask.IsCompleted == false)
+                {
+                    return new ValueTask(CompleteInitializationForStepAsyc(position, stepTask));
+                }
             }
 
-            if (listOfUncompletedTask.Count == 0)
-            {
-                CompleteInitialization();
-            }
-            else
-            {
-                return new ValueTask(CompleteInitializeAsync(listOfUncompletedTask));
-            }
-
-            return default;
-        }
-
-        private async Task CompleteInitializeAsync(List<Task> listOfUncompletedTask)
-        {
-            await Task.WhenAll(listOfUncompletedTask);
             CompleteInitialization();
+            return default;
         }
 
         private void CompleteInitialization()
@@ -128,6 +122,19 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (matches.Count > 0)
                     _results.AddRange(matches);
             }
+        }
+
+        private async Task CompleteInitializationForStepAsyc(int position, ValueTask stepTask)
+        {
+            await stepTask;
+            CompleteInitializationAfterLeft(position + 1);
+        }
+
+        private async Task CompleteLeftInitializationAsync(ValueTask leftTask)
+        {
+            await leftTask;
+            _index = 0;
+            await CompleteInitializationAfterLeft(0);
         }
 
         private void ProcessSingleResultRecursive(Match currentMatch, List<Match> matches)
