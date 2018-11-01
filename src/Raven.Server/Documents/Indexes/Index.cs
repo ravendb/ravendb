@@ -2942,11 +2942,7 @@ namespace Raven.Server.Documents.Indexes
             IndexWriteOperation indexWriteOperation,
             int count)
         {
-            var threadAllocations = new Size(_threadAllocations.TotalAllocated, SizeUnit.Bytes);
-            var txAllocations = new Size(indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages *
-                                Voron.Global.Constants.Storage.PageSize, SizeUnit.Bytes);
-            var indexWriterAllocations = new Size(indexWriteOperation?.GetUsedMemory() ?? 0, SizeUnit.Bytes);
-            stats.RecordMapAllocations((threadAllocations + txAllocations + indexWriterAllocations).GetValue(SizeUnit.Bytes));
+            var txAllocationsInBytes = UpdateThreadAllocations(indexingContext, indexWriteOperation, stats, updateReduceStats: false);
 
             if (_indexDisabled)
             {
@@ -2998,10 +2994,14 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            if (TransactionSizeLimit != null && txAllocations > TransactionSizeLimit.Value)
+            if (TransactionSizeLimit != null)
             {
-                stats.RecordMapCompletedReason($"Reached transaction size limit ({TransactionSizeLimit.Value}). Allocated {txAllocations} in current transaction");
-                return false;
+                var txAllocations = new Size(txAllocationsInBytes, SizeUnit.Bytes);
+                if (txAllocations > TransactionSizeLimit.Value)
+                {
+                    stats.RecordMapCompletedReason($"Reached transaction size limit ({TransactionSizeLimit.Value}). Allocated {new Size(txAllocationsInBytes, SizeUnit.Bytes)} in current transaction");
+                    return false;
+                }
             }
 
             if (Configuration.ScratchSpaceLimit != null &&
@@ -3027,13 +3027,7 @@ namespace Raven.Server.Documents.Indexes
                 return false;
             }
 
-            var allocated = threadAllocations +
-                                   // we multiple it by two to take into account additional work
-                                   // that will need to be done during the commit phase of the index
-                                   2 * (indexWriterAllocations + txAllocations);
-
-            _threadAllocations.CurrentlyAllocatedForProcessing = allocated.GetValue(SizeUnit.Bytes);
-
+            var allocated = new Size(_threadAllocations.CurrentlyAllocatedForProcessing, SizeUnit.Bytes);
             if (allocated > _currentMaximumAllowedMemory)
             {
                 var canContinue = true;
@@ -3080,6 +3074,37 @@ namespace Raven.Server.Documents.Indexes
             }
 
             return true;
+        }
+
+        public long UpdateThreadAllocations(
+            TransactionOperationContext indexingContext,
+            IndexWriteOperation indexWriteOperation,
+            IndexingStatsScope stats,
+            bool updateReduceStats)
+        {
+            var threadAllocations = _threadAllocations.TotalAllocated;
+            var txAllocations = indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages *
+                                Voron.Global.Constants.Storage.PageSize;
+            var indexWriterAllocations = indexWriteOperation?.GetUsedMemory() ?? 0;
+
+            var allocatedForStats = threadAllocations + txAllocations + indexWriterAllocations;
+            if (updateReduceStats)
+            {
+                stats.RecordReduceAllocations(allocatedForStats);
+            }
+            else
+            {
+                stats.RecordMapAllocations(allocatedForStats);
+            }
+
+            var allocatedForProcessing = threadAllocations +
+                                   // we multiple it by two to take into account additional work
+                                   // that will need to be done during the commit phase of the index
+                                   2 * (indexWriterAllocations + txAllocations);
+
+            _threadAllocations.CurrentlyAllocatedForProcessing = allocatedForProcessing;
+
+            return txAllocations;
         }
 
         private void HandleStoppedBatchesConcurrently(IndexingStatsScope stats, int count)

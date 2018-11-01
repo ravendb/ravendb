@@ -207,6 +207,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                 if (_logger.IsInfoEnabled)
                                                     _logger.Info($"Failed to execute mapping function on '{current.Id}' for '{_index.Name}'.", e);
                                             }
+
+                                            _index.UpdateThreadAllocations(indexContext, indexWriter, stats, updateReduceStats: false);
                                         }
                                     }
 
