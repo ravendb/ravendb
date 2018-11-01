@@ -53,6 +53,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         OutOfMemoryException,
 
         Indexing_UnexpectedIndexingThreadError,
-        Indexing_CouldNotGetStats
+        Indexing_CouldNotGetStats,
+
+        CpuUsageExtensionPointError
     }
 }
