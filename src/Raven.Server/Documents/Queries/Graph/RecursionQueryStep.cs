@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Sources;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
 using Sparrow.Json;
@@ -76,12 +77,16 @@ namespace Raven.Server.Documents.Queries.Graph
             return _outputAlias;
         }
 
-        public async ValueTask Initialize()
+        public ValueTask Initialize()
         {
             if (_index != -1)
-                return;
+                return default;
 
-            await _left.Initialize();
+            var listOfUncompletedTask = new List<Task>();
+            
+            var leftTask = _left.Initialize();
+            if(leftTask.IsCompleted == false)
+                listOfUncompletedTask.Add(leftTask.AsTask());
 
             _index = 0;
 
@@ -90,14 +95,37 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (item.Right == null)
                     continue;
 
-                await item.Right.Initialize();
+                var stepTask = item.Right.Initialize();
+                if(stepTask.IsCompleted == false)
+                    listOfUncompletedTask.Add(stepTask.AsTask());
             }
+
+            if (listOfUncompletedTask.Count == 0)
+            {
+                CompleteInitialization();
+            }
+            else
+            {
+                return new ValueTask(CompleteInitializeAsync(listOfUncompletedTask));
+            }
+
+            return default;
+        }
+
+        private async Task CompleteInitializeAsync(List<Task> listOfUncompletedTask)
+        {
+            await Task.WhenAll(listOfUncompletedTask);
+            CompleteInitialization();
+        }
+
+        private void CompleteInitialization()
+        {
             var matches = new List<Match>();
-            while(_left.GetNext(out var match))
+            while (_left.GetNext(out var match))
             {
                 matches.Clear();
                 ProcessSingleResultRecursive(match, matches);
-                if(matches.Count > 0)
+                if (matches.Count > 0)
                     _results.AddRange(matches);
             }
         }
