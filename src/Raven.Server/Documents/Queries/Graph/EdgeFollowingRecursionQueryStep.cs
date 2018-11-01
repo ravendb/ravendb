@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Sources;
 using Raven.Server.Json;
 using Sparrow;
 using Sparrow.Json;
@@ -48,14 +49,45 @@ namespace Raven.Server.Documents.Queries.Graph
             return _right.GetOuputAlias();
         }
 
-        public async ValueTask Initialize()
+        public ValueTask Initialize()
         {
             if (_index != -1)
-                return;
+                return default;
 
-            await _left.Initialize();
-            await _right.Initialize();
+            var leftTask = _left.Initialize();
+            if (leftTask.IsCompleted == false)
+            {
+                return new ValueTask(InitializeLeftAsync(leftTask));
+            }
 
+            return CompleteInitializationAfterLeft();
+        }
+
+        private async Task InitializeLeftAsync(ValueTask leftTask)
+        {
+            await leftTask;
+            await CompleteInitializationAfterLeft();
+        }
+
+        private ValueTask CompleteInitializationAfterLeft()
+        {
+            var rightTask = _right.Initialize();
+            if (rightTask.IsCompleted == false)
+            {
+                return new ValueTask(CompleteRightInitializationAsync(rightTask));
+            }
+            CompleteInitialization();
+            return default;
+        }
+
+        private async Task CompleteRightInitializationAsync(ValueTask rightTask)
+        {
+            await rightTask;
+            CompleteInitialization();
+        }
+
+        private void CompleteInitialization()
+        {
             _index = 0;
 
             var (edge, edgeAlias, recursionAlias, sourceAlias) = _left.GetOutputEdgeInfo();
@@ -74,7 +106,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             while (_left.GetNext(out var left))
             {
-                if(left.GetResult(recursionAlias) is List<Match> list)
+                if (left.GetResult(recursionAlias) is List<Match> list)
                 {
                     object val;
                     Match top;
