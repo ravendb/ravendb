@@ -148,6 +148,28 @@ namespace Raven.Client.Documents.Linq
             try
             {
                 var queryInspectorGenericType = typeof(RavenQueryInspector<>).MakeGenericType(elementType);
+
+                InMemoryDocumentSessionOperations realSession = null;
+
+                switch (_queryGenerator)
+                {
+                    case DocumentSession documentSession:
+                        realSession = documentSession;
+                        break;
+                    case AsyncDocumentSession asyncDocumentSession:
+                        realSession = asyncDocumentSession;
+                        break;
+                    case DocumentQuery<T> query:
+                        realSession = query.Session as InMemoryDocumentSessionOperations;
+                        break;
+                    case AsyncDocumentQuery<T> asyncQuery:
+                        realSession = asyncQuery.AsyncSession as InMemoryDocumentSessionOperations;
+                        break;
+                    default:
+                        ThrowQueryGeneratorCastIsNotSupported();
+                        break;
+                }
+
                 var args = new object[]
                 {
                     this,
@@ -156,7 +178,7 @@ namespace Raven.Client.Documents.Linq
                     _indexName,
                     _collectionName,
                     expression,
-                    _queryGenerator,
+                    realSession,
                     _isMapReduce
                 };
                 var queryInspectorInstance = Activator.CreateInstance(queryInspectorGenericType);
@@ -168,6 +190,11 @@ namespace Raven.Client.Documents.Linq
             {
                 throw tie.InnerException;
             }
+        }
+
+        private void ThrowQueryGeneratorCastIsNotSupported()
+        {
+            throw new NotSupportedException($"Current operation is not supported, please use another query cast. {_queryGenerator?.GetType()?.FullName} cannot be casted to IDocumentSession");
         }
 
         /// <summary>
@@ -298,8 +325,8 @@ namespace Raven.Client.Documents.Linq
                 _indexName,
                 _collectionName,
                 FieldsToFetch,
-                _isMapReduce, 
-                OriginalQueryType, 
+                _isMapReduce,
+                OriginalQueryType,
                 _conventions);
         }
 
