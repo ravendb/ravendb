@@ -56,9 +56,9 @@ WITH {
     FROM Actors
 } AS actor
 WITH EDGES (Rated) AS r
-WITH EDGES (ActedOn) AS __alias1
-WITH EDGES (Likes) AS __alias2
-MATCH ((m)-[r]->(u) AND ((actor)-[__alias1]->(m) AND (u)-[__alias2]->(actor)))")]
+WITH EDGES (ActedOn) AS actor_ActedOn
+WITH EDGES (Likes) AS u_Likes
+MATCH ((m)-[r]->(u) AND ((actor)-[actor_ActedOn]->(m) AND (u)-[u_Likes]->(actor)))")]
         [InlineData(@"
 with { from Movies where Genre = $genre } as m
 match ((Users as u)<-[Rated as r]-(m) and not (Actors as actor)-[ActedOn]->(m)) or (u)-[Likes]->(actor)", @"WITH {
@@ -71,9 +71,9 @@ WITH {
     FROM Actors
 } AS actor
 WITH EDGES (Rated) AS r
-WITH EDGES (ActedOn) AS __alias1
-WITH EDGES (Likes) AS __alias2
-MATCH (((m)-[r]->(u) AND NOT ((actor)-[__alias1]->(m))) OR (u)-[__alias2]->(actor))")]
+WITH EDGES (ActedOn) AS actor_ActedOn
+WITH EDGES (Likes) AS u_Likes
+MATCH (((m)-[r]->(u) AND NOT ((actor)-[actor_ActedOn]->(m))) OR (u)-[u_Likes]->(actor))")]
         [InlineData(@"with { from Movies where Genre = $genre } as m
 match (Users as u)<-[Rated as r]-(m)", @"WITH {
     FROM Movies WHERE Genre = $genre
