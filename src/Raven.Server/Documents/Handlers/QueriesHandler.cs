@@ -222,7 +222,6 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
                 writer.WriteStartObject();
-                writer.WriteComma();
                 writer.WritePropertyName(nameof(indexQuery.ServerSideQuery));
                 writer.WriteString(indexQuery.ServerSideQuery);
 
