@@ -897,8 +897,7 @@ namespace Sparrow.Json
                 var prevEscCharOffset = 0;
                 for (var i = 0; i < escCount; i++)
                 {
-                    byte escCharOffsetLen;
-                    var escCharOffset = ReadVariableSizeInt(str + stringLength + escOffset + totalEscCharLen, out escCharOffsetLen);
+                    var escCharOffset = ReadVariableSizeInt(str + stringLength + escOffset + totalEscCharLen, out var escCharOffsetLen);
                     escCharOffset += prevEscCharOffset;
                     var escChar = (char)ReadNumber(_mem + str + escCharOffset, 1);
                     switch (escChar)

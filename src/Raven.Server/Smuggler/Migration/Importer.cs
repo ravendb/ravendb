@@ -24,8 +24,11 @@ namespace Raven.Server.Smuggler.Migration
 {
     public class Importer : AbstractMigrator
     {
-        public Importer(MigratorOptions options) : base(options)
+        private readonly int _buildVersion;
+
+        public Importer(MigratorOptions options, MigratorParameters parameters, int buildVersion) : base(options, parameters)
         {
+            _buildVersion = buildVersion;
         }
 
         public override async Task Execute()
@@ -42,11 +45,11 @@ namespace Raven.Server.Smuggler.Migration
         private async Task SaveLastState(long operationId)
         {
             var retries = 0;
-            using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (Parameters.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 while (retries++ < 15)
                 {
-                    var operationState = await GetOperationState(DatabaseName, operationId, context);
+                    var operationState = await GetOperationState(Options.DatabaseName, operationId, context);
                     if (operationState == null)
                         return;
 
@@ -55,7 +58,7 @@ namespace Raven.Server.Smuggler.Migration
 
                     if (operationStatus == OperationStatus.InProgress)
                     {
-                        await Task.Delay(1000, CancelToken.Token);
+                        await Task.Delay(1000, Parameters.CancelToken.Token);
                         continue;
                     }
 
@@ -73,11 +76,17 @@ namespace Raven.Server.Smuggler.Migration
                     if (smugglerResult == null)
                         return;
 
+                    if ((_buildVersion >= 40000 && _buildVersion < 41000) || _buildVersion == 40)
+                    {
+                        // prevent NRE, counter were added in 4.1
+                        smugglerResult.Counters = new SmugglerProgressBase.CountsWithLastEtag();
+                    }
+
                     var importInfo = new ImportInfo
                     {
                         LastEtag = smugglerResult.GetLastEtag() + 1,
-                        ServerUrl = ServerUrl,
-                        DatabaseName = DatabaseName
+                        ServerUrl = Options.ServerUrl,
+                        DatabaseName = Options.DatabaseName
                     };
 
                     var importInfoBlittable = EntityToBlittable.ConvertCommandToBlittable(importInfo, context);
@@ -90,9 +99,9 @@ namespace Raven.Server.Smuggler.Migration
         private async Task<BlittableJsonReaderObject> GetOperationState(
             string databaseName, long operationId, TransactionOperationContext context)
         {
-            var url = $"{ServerUrl}/databases/{databaseName}/operations/state?id={operationId}";
+            var url = $"{Options.ServerUrl}/databases/{databaseName}/operations/state?id={operationId}";
             var request = new HttpRequestMessage(HttpMethod.Get, url);
-            var response = await HttpClient.SendAsync(request, CancelToken.Token);
+            var response = await Parameters.HttpClient.SendAsync(request, Parameters.CancelToken.Token);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 // the operation state was deleted before we could get it
@@ -102,7 +111,7 @@ namespace Raven.Server.Smuggler.Migration
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to get operation state from server: {ServerUrl}, " +
+                throw new InvalidOperationException($"Failed to get operation state from server: {Options.ServerUrl}, " +
                                                     $"status code: {response.StatusCode}, " +
                                                     $"error: {responseString}");
             }
@@ -114,11 +123,11 @@ namespace Raven.Server.Smuggler.Migration
         private async Task MigrateDatabase(long operationId, ImportInfo importInfo)
         {
             var startDocumentEtag = importInfo?.LastEtag ?? 0;
-            var url = $"{ServerUrl}/databases/{DatabaseName}/smuggler/export?operationId={operationId}&startEtag={startDocumentEtag}";
+            var url = $"{Options.ServerUrl}/databases/{Options.DatabaseName}/smuggler/export?operationId={operationId}&startEtag={startDocumentEtag}";
             var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
             {
-                OperateOnTypes = OperateOnTypes,
-                RemoveAnalyzers = RemoveAnalyzers
+                OperateOnTypes = Options.OperateOnTypes,
+                RemoveAnalyzers = Options.RemoveAnalyzers
             };
 
             if (importInfo != null)
@@ -131,23 +140,26 @@ namespace Raven.Server.Smuggler.Migration
                 Content = content
             };
 
-            var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+            var response = await Parameters.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, Parameters.CancelToken.Token);
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to export database from server: {ServerUrl}, " +
+                throw new InvalidOperationException($"Failed to export database from server: {Options.ServerUrl}, " +
                                                     $"status code: {response.StatusCode}, " +
                                                     $"error: {responseString}");
             }
 
             using (var responseStream = await response.Content.ReadAsStreamAsync())
             using (var stream = new GZipStream(responseStream, mode: CompressionMode.Decompress))
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var source = new StreamSource(stream, context, Database))
+            using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var source = new StreamSource(stream, context, Parameters.Database))
             {
-                var destination = new DatabaseDestination(Database);
-                var options = new DatabaseSmugglerOptionsServerSide();
-                var smuggler = new Documents.DatabaseSmuggler(Database, source, destination, Database.Time, options, Result, OnProgress, CancelToken.Token);
+                var destination = new DatabaseDestination(Parameters.Database);
+                var options = new DatabaseSmugglerOptionsServerSide
+                {
+                    TransformScript = Options.TransformScript
+                };
+                var smuggler = new Documents.DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 smuggler.Execute();
             }
@@ -155,24 +167,24 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task<long> GetOperationId()
         {
-            var url = $"{ServerUrl}/databases/{DatabaseName}/operations/next-operation-id";
+            var url = $"{Options.ServerUrl}/databases/{Options.DatabaseName}/operations/next-operation-id";
             var request = new HttpRequestMessage(HttpMethod.Get, url);
-            var response = await HttpClient.SendAsync(request, CancelToken.Token);
+            var response = await Parameters.HttpClient.SendAsync(request, Parameters.CancelToken.Token);
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to get operation id from server: {ServerUrl}, " +
+                throw new InvalidOperationException($"Failed to get operation id from server: {Options.ServerUrl}, " +
                                                     $"status code: {response.StatusCode}, " +
                                                     $"error: {responseString}");
             }
 
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var responseStream = await response.Content.ReadAsStreamAsync())
             {
                 var operationIdResponse = await context.ReadForMemoryAsync(responseStream, "operation-id");
                 if (operationIdResponse.TryGet("Id", out long id) == false)
                 {
-                    throw new InvalidOperationException($"Failed to get operation id from server: {ServerUrl}, " +
+                    throw new InvalidOperationException($"Failed to get operation id from server: {Options.ServerUrl}, " +
                                                         $"response: {operationIdResponse}");
                 }
 
@@ -182,10 +194,10 @@ namespace Raven.Server.Smuggler.Migration
 
         private ImportInfo GetLastImportInfo()
         {
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var document = Database.DocumentsStorage.Get(context, MigrationStateKey);
+                var document = Parameters.Database.DocumentsStorage.Get(context, Options.MigrationStateKey);
                 if (document == null)
                     return null;
 

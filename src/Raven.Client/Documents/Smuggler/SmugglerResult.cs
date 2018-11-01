@@ -19,15 +19,15 @@ namespace Raven.Client.Documents.Smuggler
             _messages = new List<string>();
             _progress = new SmugglerProgress(this);
 
-             /*
-             *  NOTE:
-             *
-             *  About to add new/change property below?
-             *
-             *  Please remember to include this property in SmugglerProgress class
-             */
+            /*
+            *  NOTE:
+            *
+            *  About to add new/change property below?
+            *
+            *  Please remember to include this property in SmugglerProgress class
+            */
 
-            
+
             DatabaseRecord = new DatabaseRecordProgress();
             Documents = new CountsWithSkippedCountAndLastEtag();
             RevisionDocuments = new CountsWithLastEtag();
@@ -142,7 +142,7 @@ namespace Raven.Client.Documents.Smuggler
     public abstract class SmugglerProgressBase
     {
         public virtual DatabaseRecordProgress DatabaseRecord { get; set; }
-        
+
         public virtual CountsWithSkippedCountAndLastEtag Documents { get; set; }
 
         public virtual CountsWithLastEtag RevisionDocuments { get; set; }
@@ -154,7 +154,7 @@ namespace Raven.Client.Documents.Smuggler
         public virtual Counts Identities { get; set; }
 
         public virtual Counts Indexes { get; set; }
-        
+
         public virtual Counts CompareExchange { get; set; }
 
         public virtual CountsWithLastEtag Counters { get; set; }
@@ -178,15 +178,15 @@ namespace Raven.Client.Documents.Smuggler
         public class DatabaseRecordProgress : Counts
         {
             public bool RevisionsConfigurationUpdated { get; set; }
-            
+
             public bool ExpirationConfigurationUpdated { get; set; }
-            
+
             public bool RavenConnectionStringsUpdated { get; set; }
-            
+
             public bool SqlConnectionStringsUpdated { get; set; }
-            
+
             public bool ClientConfigurationUpdated { get; set; }
-            
+
             public override DynamicJsonValue ToJson()
             {
                 var json = base.ToJson();

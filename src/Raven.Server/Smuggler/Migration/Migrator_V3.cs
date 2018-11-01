@@ -27,7 +27,7 @@ namespace Raven.Server.Smuggler.Migration
         private readonly MajorVersion _majorVersion;
         private readonly int _buildVersion;
 
-        public Migrator_V3(DocumentDatabase database, MigratorOptions options, MajorVersion majorVersion, int buildVersion) : base(database, options)
+        public Migrator_V3(MigratorOptions options, MigratorParameters parameters, MajorVersion majorVersion, int buildVersion) : base(options, parameters)
         {
             _majorVersion = majorVersion;
             _buildVersion = buildVersion;
@@ -39,13 +39,13 @@ namespace Raven.Server.Smuggler.Migration
             var originalState = state;
 
             var operateOnTypes = GenerateOperateOnTypes();
-            if (operateOnTypes == ItemType.None && ImportRavenFs == false)
+            if (operateOnTypes == ItemType.None && Options.ImportRavenFs == false)
                 throw new BadRequestException("No types to import");
 
-            if (ImportRavenFs)
+            if (Options.ImportRavenFs)
             {
-                Result.AddInfo("Started processing RavenFS files");
-                OnProgress.Invoke(Result.Progress);
+                Parameters.Result.AddInfo("Started processing RavenFS files");
+                Parameters.OnProgress.Invoke(Parameters.Result.Progress);
 
                 var lastRavenFsEtag = await MigrateRavenFs(state?.LastRavenFsEtag ?? LastEtagsInfo.EtagEmpty);
                 state = GetLastMigrationState() ?? GenerateLastEtagsInfo();
@@ -55,10 +55,10 @@ namespace Raven.Server.Smuggler.Migration
 
             if (operateOnTypes != ItemType.None)
             {
-                if (ImportRavenFs && operateOnTypes.HasFlag(ItemType.Documents) == false)
+                if (Options.ImportRavenFs && operateOnTypes.HasFlag(ItemType.Documents) == false)
                 {
-                    Result.Documents.Processed = true;
-                    OnProgress.Invoke(Result.Progress);
+                    Parameters.Result.Documents.Processed = true;
+                    Parameters.OnProgress.Invoke(Parameters.Result.Progress);
                 }
 
                 var databaseMigrationOptions = new DatabaseMigrationOptions
@@ -107,19 +107,19 @@ namespace Raven.Server.Smuggler.Migration
             }
             else
             {
-                if (ImportRavenFs)
-                    Result.Documents.Processed = true;
+                if (Options.ImportRavenFs)
+                    Parameters.Result.Documents.Processed = true;
 
-                DatabaseSmuggler.EnsureProcessed(Result);
+                DatabaseSmuggler.EnsureProcessed(Parameters.Result);
             } 
         }
 
         private async Task<string> MigrateRavenFs(string lastEtag)
         {
-            var destination = new DatabaseDestination(Database);
+            var destination = new DatabaseDestination(Parameters.Database);
 
-            using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (Parameters.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
+            using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var documentActions = destination.Documents())
             {
                 var sp = Stopwatch.StartNew();
@@ -129,12 +129,12 @@ namespace Raven.Server.Smuggler.Migration
                     var ravenFsHeadersArray = await GetRavenFsHeadersArray(lastEtag, transactionOperationContext);
                     if (ravenFsHeadersArray.Length == 0)
                     {
-                        var count = Result.Documents.Attachments.ReadCount;
+                        var count = Parameters.Result.Documents.Attachments.ReadCount;
                         if (count > 0)
                         {
                             var message = $"Read {count:#,#;;0} RavenFS file{(count > 1 ? "s" : string.Empty)}.";
-                            Result.AddInfo(message);
-                            OnProgress.Invoke(Result.Progress);
+                            Parameters.Result.AddInfo(message);
+                            Parameters.OnProgress.Invoke(Parameters.Result.Progress);
                         }
 
                         return lastEtag;
@@ -158,7 +158,7 @@ namespace Raven.Server.Smuggler.Migration
                         var dataStream = await GetRavenFsStream(key);
                         if (dataStream == null)
                         {
-                            Result.Tombstones.ReadCount++;
+                            Parameters.Result.Tombstones.ReadCount++;
                             var id = StreamSource.GetLegacyAttachmentId(key);
                             documentActions.DeleteDocument(id);
                             continue;
@@ -166,13 +166,13 @@ namespace Raven.Server.Smuggler.Migration
 
                         WriteDocumentWithAttachment(documentActions, context, dataStream, key, metadata);
 
-                        Result.Documents.ReadCount++;
-                        if (Result.Documents.Attachments.ReadCount % 50 == 0 || sp.ElapsedMilliseconds > 3000)
+                        Parameters.Result.Documents.ReadCount++;
+                        if (Parameters.Result.Documents.Attachments.ReadCount % 50 == 0 || sp.ElapsedMilliseconds > 3000)
                         {
-                            var message = $"Read {Result.Documents.Attachments.ReadCount:#,#;;0} " +
-                                          $"RavenFS file{(Result.Documents.Attachments.ReadCount > 1 ? "s" : string.Empty)}.";
-                            Result.AddInfo(message);
-                            OnProgress.Invoke(Result.Progress);
+                            var message = $"Read {Parameters.Result.Documents.Attachments.ReadCount:#,#;;0} " +
+                                          $"RavenFS file{(Parameters.Result.Documents.Attachments.ReadCount > 1 ? "s" : string.Empty)}.";
+                            Parameters.Result.AddInfo(message);
+                            Parameters.OnProgress.Invoke(Parameters.Result.Progress);
                             sp.Restart();
                         }
                     }
@@ -189,9 +189,9 @@ namespace Raven.Server.Smuggler.Migration
         {
             var response = await RunWithAuthRetry(async () =>
             {
-                var url = $"{ServerUrl}/fs/{DatabaseName}/files/{Uri.EscapeDataString(key)}";
+                var url = $"{Options.ServerUrl}/fs/{Options.DatabaseName}/files/{Uri.EscapeDataString(key)}";
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
-                var responseMessage = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+                var responseMessage = await Parameters.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, Parameters.CancelToken.Token);
                 return responseMessage;
             });
             
@@ -204,7 +204,7 @@ namespace Raven.Server.Smuggler.Migration
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to get file, key: {key}, from server: {ServerUrl}, " +
+                throw new InvalidOperationException($"Failed to get file, key: {key}, from server: {Options.ServerUrl}, " +
                                                     $"status code: {response.StatusCode}, " +
                                                     $"error: {responseString}");
             }
@@ -226,23 +226,23 @@ namespace Raven.Server.Smuggler.Migration
             metadata.Modifications.Remove("Raven-Last-Modified");
             metadata.Modifications.Remove("Content-MD5");
             metadata.Modifications.Remove("ETag");
-            return context.ReadObject(metadata, MigrationStateKey);
+            return context.ReadObject(metadata, Options.MigrationStateKey);
         }
 
         private async Task<BlittableJsonReaderArray> GetRavenFsHeadersArray(string lastEtag, TransactionOperationContext context)
         {
             var response = await RunWithAuthRetry(async () =>
             {
-                var url = $"{ServerUrl}/fs/{DatabaseName}/streams/files?pageSize={RavenFsHeadersPageSize}&etag={lastEtag}";
+                var url = $"{Options.ServerUrl}/fs/{Options.DatabaseName}/streams/files?pageSize={RavenFsHeadersPageSize}&etag={lastEtag}";
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
-                var responseMessage = await HttpClient.SendAsync(request, CancelToken.Token);
+                var responseMessage = await Parameters.HttpClient.SendAsync(request, Parameters.CancelToken.Token);
                 return responseMessage;
             });
 
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to get RavenFS headers list from server: {ServerUrl}, " +
+                throw new InvalidOperationException($"Failed to get RavenFS headers list from server: {Options.ServerUrl}, " +
                                                     $"status code: {response.StatusCode}, " +
                                                     $"error: {responseString}");
             }
@@ -260,22 +260,22 @@ namespace Raven.Server.Smuggler.Migration
         private ItemType GenerateOperateOnTypes()
         {
             var itemType = ItemType.None;
-            if (OperateOnTypes.HasFlag(DatabaseItemType.Documents))
+            if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Documents))
             {
                 itemType |= ItemType.Documents;
             }
 
-            if (OperateOnTypes.HasFlag(DatabaseItemType.LegacyAttachments))
+            if (Options.OperateOnTypes.HasFlag(DatabaseItemType.LegacyAttachments))
             {
                 itemType |= ItemType.Attachments;
             }
 
-            if (OperateOnTypes.HasFlag(DatabaseItemType.Indexes))
+            if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Indexes))
             {
                 itemType |= ItemType.Indexes;
             }
 
-            if (RemoveAnalyzers)
+            if (Options.RemoveAnalyzers)
             {
                 itemType |= ItemType.RemoveAnalyzers;
             }
@@ -287,39 +287,42 @@ namespace Raven.Server.Smuggler.Migration
         {
             var response = await RunWithAuthRetry(async () =>
             {
-                var url = $"{ServerUrl}/databases/{DatabaseName}/studio-tasks/exportDatabase";
+                var url = $"{Options.ServerUrl}/databases/{Options.DatabaseName}/studio-tasks/exportDatabase";
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 var request = new HttpRequestMessage(HttpMethod.Post, url)
                 {
                     Content = content
                 };
 
-                var responseMessage = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+                var responseMessage = await Parameters.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, Parameters.CancelToken.Token);
                 return responseMessage;
             });
 
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to export database from server: {ServerUrl}, " +
+                throw new InvalidOperationException($"Failed to export database from server: {Options.ServerUrl}, " +
                                                     $"status code: {response.StatusCode}, " +
                                                     $"error: {responseString}");
             }
 
             using (var responseStream = await response.Content.ReadAsStreamAsync())
             using (var stream = new GZipStream(responseStream, mode: CompressionMode.Decompress))
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var source = new StreamSource(stream, context, Database))
+            using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var source = new StreamSource(stream, context, Parameters.Database))
             {
-                var destination = new DatabaseDestination(Database);
+                var destination = new DatabaseDestination(Parameters.Database);
                 var options = new DatabaseSmugglerOptionsServerSide
                 {
 #pragma warning disable 618
                     ReadLegacyEtag = readLegacyEtag,
 #pragma warning restore 618
-                    RemoveAnalyzers = RemoveAnalyzers
+                    RemoveAnalyzers = Options.RemoveAnalyzers,
+                    TransformScript = Options.TransformScript,
+                    OperateOnTypes = Options.OperateOnTypes
                 };
-                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, Result, OnProgress, CancelToken.Token);
+
+                var smuggler = new DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 return smuggler.Execute();
             }
@@ -329,16 +332,16 @@ namespace Raven.Server.Smuggler.Migration
         {
             var response = await RunWithAuthRetry(async () =>
             {
-                var url = $"{ServerUrl}/databases/{DatabaseName}/studio-tasks/next-operation-id";
+                var url = $"{Options.ServerUrl}/databases/{Options.DatabaseName}/studio-tasks/next-operation-id";
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
-                var responseMessage = await HttpClient.SendAsync(request, CancelToken.Token);
+                var responseMessage = await Parameters.HttpClient.SendAsync(request, Parameters.CancelToken.Token);
                 return responseMessage;
             });
 
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to get operation id from server: {ServerUrl}, " +
+                throw new InvalidOperationException($"Failed to get operation id from server: {Options.ServerUrl}, " +
                                                     $"status code: {response.StatusCode}, " +
                                                     $"error: {responseString}");
             }
@@ -350,7 +353,7 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task<LastEtagsInfo> GetLastState(bool canGetLastStateByOperationId, long operationId)
         {
-            using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (Parameters.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var lastEtagsInfo = canGetLastStateByOperationId
                     ? await GetLastStateByOperationId(operationId, context)
@@ -368,7 +371,7 @@ namespace Raven.Server.Smuggler.Migration
                 if (++retries > 15)
                     return null;
 
-                var operationStatus = await GetOperationStatus(DatabaseName, operationId, context);
+                var operationStatus = await GetOperationStatus(Options.DatabaseName, operationId, context);
                 if (operationStatus == null)
                     return null;
 
@@ -377,7 +380,7 @@ namespace Raven.Server.Smuggler.Migration
 
                 if (completed == false)
                 {
-                    await Task.Delay(1000, CancelToken.Token);
+                    await Task.Delay(1000, Parameters.CancelToken.Token);
                     continue;
                 }
 
@@ -394,8 +397,8 @@ namespace Raven.Server.Smuggler.Migration
 
                 var lastEtagsInfo = new LastEtagsInfo
                 {
-                    ServerUrl = ServerUrl,
-                    DatabaseName = DatabaseName,
+                    ServerUrl = Options.ServerUrl,
+                    DatabaseName = Options.DatabaseName,
                     LastDocsEtag = lastDocsEtag,
                     LastDocDeleteEtag = lastDocsDeleteEtag,
                     LastAttachmentsEtag = lastAttachmentsEtag,
@@ -411,9 +414,9 @@ namespace Raven.Server.Smuggler.Migration
         {
             var response = await RunWithAuthRetry(async () =>
             {
-                var url = $"{ServerUrl}/databases/{databaseName}/operation/status?id={operationId}";
+                var url = $"{Options.ServerUrl}/databases/{databaseName}/operation/status?id={operationId}";
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
-                var responseMessage = await HttpClient.SendAsync(request, CancelToken.Token);
+                var responseMessage = await Parameters.HttpClient.SendAsync(request, Parameters.CancelToken.Token);
                 return responseMessage;
             });
 
@@ -426,7 +429,7 @@ namespace Raven.Server.Smuggler.Migration
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to get operation status from server: {ServerUrl}, " +
+                throw new InvalidOperationException($"Failed to get operation status from server: {Options.ServerUrl}, " +
                                                     $"status code: {response.StatusCode}, " +
                                                     $"error: {responseString}");
             }
