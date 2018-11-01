@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private AbstractQueryRunner GetRunner(IndexQueryServerSide query)
+        public AbstractQueryRunner GetRunner(IndexQueryServerSide query)
         {
             if (query.Metadata.IsDynamic)
             {

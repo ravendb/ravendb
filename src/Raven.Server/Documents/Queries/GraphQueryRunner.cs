@@ -30,34 +30,20 @@ namespace Raven.Server.Documents.Queries
         {
         }
 
-        // this code is first draft mode, meant to start working. It is known that 
-        // there are LOT of allocations here that we'll need to get under control
+        public async Task<(Dictionary<string, object> Nodes, Dictionary<object, HashSet<string>> Edges)> GetAnalyzedQueryResults(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag,
+           OperationCancelToken token)
+        {
+            var qr = await GetQueryResults(query, documentsContext, existingResultEtag, token);
+            return qr.QueryPlan.Analyze(qr.Matches);
+        }
+
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag,
             OperationCancelToken token)
         {
             using (var timingScope = new QueryTimingsScope())
             {
-                var qp = new GraphQueryPlan(query, documentsContext, existingResultEtag, token, Database);
-                qp.BuildQueryPlan();
-                await qp.Initialize();
-                var matchResults = qp.Execute();
+                var qr = await GetQueryResults(query, documentsContext, existingResultEtag, token);
                 var q = query.Metadata.Query;
-
-                var filter = q.GraphQuery.Where;
-                if (filter != null)
-                {
-                    for (int i = 0; i < matchResults.Count; i++)
-                    {
-                        var resultAsJson = new DynamicJsonValue();
-                        matchResults[i].PopulateVertices(resultAsJson);
-
-                        using (var result = documentsContext.ReadObject(resultAsJson, "graph/result"))
-                        {
-                            if (filter.IsMatchedBy(result, query.QueryParameters) == false)
-                                matchResults[i] = default;
-                        }
-                    }
-                }
 
                 //TODO: handle order by, load, include clauses
 
@@ -65,7 +51,7 @@ namespace Raven.Server.Documents.Queries
 
                 if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
                 {
-                    HandleResultsWithoutSelect(documentsContext, matchResults, final);
+                    HandleResultsWithoutSelect(documentsContext, qr.Matches, final);
                 }
                 else if (q.Select != null)
                 {
@@ -81,7 +67,7 @@ namespace Raven.Server.Documents.Queries
 
 
 
-                    foreach (var match in matchResults)
+                    foreach (var match in qr.Matches)
                     {
                         if (match.Empty)
                             continue;
@@ -97,6 +83,32 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
+        private async Task<(List<Match> Matches, GraphQueryPlan QueryPlan)> GetQueryResults(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        {
+            var q = query.Metadata.Query;
+            var qp = new GraphQueryPlan(query, documentsContext, existingResultEtag, token, Database);
+            qp.BuildQueryPlan();
+            await qp.Initialize();
+            var matchResults = qp.Execute();
+
+            var filter = q.GraphQuery.Where;
+            if (filter != null)
+            {
+                for (int i = 0; i < matchResults.Count; i++)
+                {
+                    var resultAsJson = new DynamicJsonValue();
+                    matchResults[i].PopulateVertices(resultAsJson);
+
+                    using (var result = documentsContext.ReadObject(resultAsJson, "graph/result"))
+                    {
+                        if (filter.IsMatchedBy(result, query.QueryParameters) == false)
+                            matchResults[i] = default;
+                    }
+                }
+            }
+
+            return (matchResults, qp);
+        }
 
         private static void HandleResultsWithoutSelect(
             DocumentsOperationContext documentsContext,

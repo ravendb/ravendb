@@ -160,5 +160,11 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             throw new System.NotSupportedException("Cannot pull records from an recursive step");
         }
+
+        public void Analyze(Match match, Action<string, object> addNode, Action<object, string> addEdge)
+        {
+            _left.Analyze(match, addNode, addEdge);
+            _right.Analyze(match, addNode, addEdge);
+        }
     }
 }

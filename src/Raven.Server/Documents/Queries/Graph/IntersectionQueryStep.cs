@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Queries.AST;
@@ -141,6 +142,12 @@ namespace Raven.Server.Documents.Queries.Graph
         public bool TryGetById(string id, out Match match)
         {
             throw new System.NotSupportedException("Cannot pull results by id from an intersection operation");
+        }
+
+        public void Analyze(Match match, Action<string, object> addNode, Action<object, string> addEdge)
+        {
+            _left.Analyze(match, addNode, addEdge);
+            _right.Analyze(match, addNode, addEdge);
         }
     }
 }
