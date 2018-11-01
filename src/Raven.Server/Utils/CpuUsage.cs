@@ -18,11 +18,24 @@ namespace Raven.Server.Utils
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineResources>("Server");
         private static readonly object Locker = new object();
+        private static ExtensionPointInfo _previousExtensionPointInfo;
         private static WindowsInfo _previousWindowsInfo;
         private static LinuxInfo _previousLinuxInfo;
         private static MacInfo _previousMacInfo;
         private static (double MachineCpuUsage, double ProcessCpuUsage)? _lastCpuInfo;
         private static readonly (double MachineCpuUsage, double ProcessCpuUsage) EmptyCpuUsage = (0, 0);
+        private static CpuUsageExtensionPoint _cpuUsageExtensionPoint;
+
+
+        public static CpuUsageExtensionPoint CpuUsageExtensionPoint
+        {
+            get => _cpuUsageExtensionPoint;
+            set
+            {
+                _previousExtensionPointInfo = new ExtensionPointInfo(value.Data);
+                _cpuUsageExtensionPoint = value;
+            }
+        }
 
         static CpuUsage()
         {
@@ -49,7 +62,11 @@ namespace Raven.Server.Utils
             lock (Locker)
             {
                 (double MachineCpuUsage, double ProcessCpuUsage) cpuInfo;
-                if (PlatformDetails.RunningOnPosix == false)
+                if (CpuUsageExtensionPoint != null)
+                {
+                    cpuInfo = CalculateCpuFromExtensionPoint();
+                }
+                else if (PlatformDetails.RunningOnPosix == false)
                 {
                     cpuInfo = CalculateWindowsCpuUsage();
                 }
@@ -77,7 +94,7 @@ namespace Raven.Server.Utils
                 return _lastCpuInfo?.ProcessCpuUsage ?? 0;
             }
 
-            if (currentInfo.ActiveCores == 0)
+            if (Math.Abs(currentInfo.ActiveCores) < 0.01)
             {
                 // shouldn't happen
                 if (Logger.IsInfoEnabled)
@@ -87,13 +104,31 @@ namespace Raven.Server.Utils
             }
 
             var processCpuUsage = (processorTimeDiff * 100.0) / timeDiff / currentInfo.ActiveCores;
-            if (currentInfo.ActiveCores == ProcessorInfo.ProcessorCount)
+            if ((int)currentInfo.ActiveCores == ProcessorInfo.ProcessorCount)
             {
                 // min as sometimes +-1% due to time sampling
                 processCpuUsage = Math.Min(processCpuUsage, machineCpuUsage);
             }
 
             return Math.Min(100, processCpuUsage);
+        }
+
+        private static (double MachineCpuUsage, double ProcessCpuUsage) CalculateCpuFromExtensionPoint()
+        {
+            var extensionPoint = new ExtensionPointInfo(CpuUsageExtensionPoint.Data);
+            var machineCpuUsage = extensionPoint.MachineCpuUsage;
+            if (machineCpuUsage < 0)
+            {
+                if (Logger.IsOperationsEnabled)
+                {
+                    Logger.Operations($"Received bad data for cpu usage from extension point : {machineCpuUsage}");
+                }
+
+                machineCpuUsage = 0;
+            }
+            var processCpuUsage = CalculateProcessCpuUsage(extensionPoint, _previousExtensionPointInfo, machineCpuUsage);
+            _previousExtensionPointInfo = extensionPoint;
+            return (machineCpuUsage, processCpuUsage);
         }
 
         private static (double MachineCpuUsage, double ProcessCpuUsage) CalculateWindowsCpuUsage()
@@ -276,7 +311,25 @@ namespace Raven.Server.Utils
             ref FileTime lpKernelTime,
             ref FileTime lpUserTime);
 
-        public static long GetNumberOfActiveCores(Process process)
+        public static double GetNumberOfActiveCores(Process process, ExtensionPointRawData extensionPointRawData)
+        {
+            if (extensionPointRawData == null)
+            {
+                return GetNumberOfActiveCoresInternal(process);
+            }
+            if (extensionPointRawData.ActiveCores >= 0)
+            {
+                return extensionPointRawData.ActiveCores;
+            }
+
+            if (Logger.IsOperationsEnabled)
+            {
+                Logger.Operations($"Received bad data for active cores from extension point : {extensionPointRawData.ActiveCores}");
+            }
+            return 0;
+        }
+
+        private static long GetNumberOfActiveCoresInternal(Process process)
         {
             try
             {
@@ -363,7 +416,7 @@ namespace Raven.Server.Utils
 
         private class ProcessInfo
         {
-            protected ProcessInfo()
+            protected ProcessInfo(ExtensionPointRawData extensionPointRawData = null)
             {
                 using (var process = Process.GetCurrentProcess())
                 {
@@ -371,7 +424,7 @@ namespace Raven.Server.Utils
                     TotalProcessorTimeTicks = processTimes.TotalProcessorTimeTicks;
                     TimeTicks = processTimes.TimeTicks;
 
-                    ActiveCores = GetNumberOfActiveCores(process);
+                    ActiveCores = GetNumberOfActiveCores(process, extensionPointRawData);
                 }
             }
 
@@ -379,7 +432,17 @@ namespace Raven.Server.Utils
 
             public long TimeTicks { get; }
 
-            public long ActiveCores { get; }
+            public double ActiveCores { get; }
+        }
+
+        private class ExtensionPointInfo : ProcessInfo
+        {
+            public double MachineCpuUsage { get; }
+
+            public ExtensionPointInfo(ExtensionPointRawData extensionPointRawData) : base(extensionPointRawData)
+            {
+                MachineCpuUsage = extensionPointRawData.MachineCpuUsage;
+            }
         }
 
         private class WindowsInfo : ProcessInfo

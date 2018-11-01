@@ -120,9 +120,7 @@ namespace Raven.Server
         {
             var sp = Stopwatch.StartNew();
             Certificate = LoadCertificate() ?? new CertificateHolder();
-
-            
-
+            RunCpuUsageExtensionPoint();
             if (Logger.IsInfoEnabled)
                 Logger.Info(string.Format("Server store started took {0:#,#;;0} ms", sp.ElapsedMilliseconds));
 
@@ -294,6 +292,24 @@ namespace Raven.Server
                 throw;
             }
 
+        }
+
+        private void RunCpuUsageExtensionPoint()
+        {
+            if (string.IsNullOrEmpty(Configuration.Monitoring.CpuUsageMonitorExec))
+            {
+                return;
+            }
+
+            var inspector = new CpuUsageExtensionPoint(
+                _tcpContextPool,
+                Configuration.Monitoring.CpuUsageMonitorExec,
+                Configuration.Monitoring.CpuUsageMonitorExecArguments,
+                Logger,
+                ServerStore.NotificationCenter
+            );
+            inspector.Start();
+            CpuUsage.CpuUsageExtensionPoint = inspector;
         }
 
         private void RedirectsHttpTrafficToHttps()
@@ -1656,6 +1672,7 @@ namespace Raven.Server
                 ea.Execute(() => _clusterMaintenanceWorker?.Dispose());
 
                 ea.ThrowIfNeeded();
+                CpuUsage.CpuUsageExtensionPoint?.Dispose();
             }
         }
 
