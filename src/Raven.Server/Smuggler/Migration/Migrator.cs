@@ -260,13 +260,18 @@ namespace Raven.Server.Smuggler.Migration
                                 MigrationStateKey = migrationStateKey,
                                 ServerUrl = _serverUrl,
                                 DatabaseName = databaseName,
-                                HttpClient = _httpClient,
                                 ApiKey = _apiKey,
+                                TransformScript = databaseMigrationSettings.TransformScript,
                                 EnableBasicAuthenticationOverUnsecuredHttp = _enableBasicAuthenticationOverUnsecuredHttp,
                                 SkipServerCertificateValidation = _skipServerCertificateValidation,
-                                OperateOnTypes = databaseMigrationSettings.OperateOnTypes,
                                 RemoveAnalyzers = databaseMigrationSettings.RemoveAnalyzers,
                                 ImportRavenFs = databaseMigrationSettings.ImportRavenFs,
+                                OperateOnTypes = databaseMigrationSettings.OperateOnTypes
+                            };
+
+                            var parameters = new MigratorParameters
+                            {
+                                HttpClient = _httpClient,
                                 Result = result,
                                 OnProgress = onProgress,
                                 Database = database,
@@ -277,14 +282,14 @@ namespace Raven.Server.Smuggler.Migration
                             switch (_buildMajorVersion)
                             {
                                 case MajorVersion.V2:
-                                    migrator = new Migrator_V2(database, options);
+                                    migrator = new Migrator_V2(options, parameters);
                                     break;
                                 case MajorVersion.V30:
                                 case MajorVersion.V35:
-                                    migrator = new Migrator_V3(database, options, _buildMajorVersion, _buildVersion);
+                                    migrator = new Migrator_V3(options, parameters, _buildMajorVersion, _buildVersion);
                                     break;
                                 case MajorVersion.V4:
-                                    migrator = new Importer(options);
+                                    migrator = new Importer(options, parameters, _buildVersion);
                                     break;
                                 default:
                                     throw new ArgumentOutOfRangeException(nameof(_buildMajorVersion), _buildMajorVersion, null);

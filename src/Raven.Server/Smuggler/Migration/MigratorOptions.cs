@@ -15,19 +15,24 @@ namespace Raven.Server.Smuggler.Migration
 
         public string DatabaseName { get; set; }
 
-        public HttpClient HttpClient { get; set; }
-
         public string ApiKey { get; set; }
+
+        public string TransformScript { get; set; }
 
         public bool EnableBasicAuthenticationOverUnsecuredHttp { get; set; }
 
         public bool SkipServerCertificateValidation { get; set; }
 
-        public DatabaseItemType OperateOnTypes { get; set; }
-
         public bool RemoveAnalyzers { get; set; }
 
         public bool ImportRavenFs { get; set; }
+
+        public DatabaseItemType OperateOnTypes { get; set; }
+    }
+
+    public class MigratorParameters
+    {
+        public HttpClient HttpClient { get; set; }
 
         public SmugglerResult Result { get; set; }
 

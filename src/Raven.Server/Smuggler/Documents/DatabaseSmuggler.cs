@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -34,6 +32,20 @@ namespace Raven.Server.Smuggler.Documents
 
         public Action<IndexDefinitionAndType> OnIndexAction;
         public Action<DatabaseRecord> OnDatabaseRecordAction;
+
+        public const string PreV4RevisionsDocumentId = "/revisions/";
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static bool IsPreV4Revision(BuildVersionType buildType, string id, Document document)
+        {
+            if (buildType == BuildVersionType.V3 == false)
+                return false;
+
+            if ((document.NonPersistentFlags & NonPersistentDocumentFlags.LegacyRevision) != NonPersistentDocumentFlags.LegacyRevision)
+                return false;
+
+            return id.Contains(PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
+        }
 
         public DatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time,
             DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null,
@@ -468,10 +480,7 @@ namespace Raven.Server.Smuggler.Documents
                     result.RevisionDocuments.ReadCount++;
 
                     if (result.RevisionDocuments.ReadCount % 1000 == 0)
-                    {
-                        result.AddInfo($"Read {result.RevisionDocuments.ReadCount:#,#;;0} documents.");
-                        _onProgress.Invoke(result.Progress);
-                    }
+                        AddInfoToSmugglerResult(result, $"Read {result.RevisionDocuments.ReadCount:#,#;;0} documents.");
 
                     if (item.Document == null)
                     {
@@ -500,19 +509,19 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _token.ThrowIfCancellationRequested();
                     result.Documents.ReadCount++;
-
                     if (result.Documents.ReadCount % 1000 == 0)
                     {
                         var message = $"Read {result.Documents.ReadCount:#,#;;0} documents.";
                         if (result.Documents.Attachments.ReadCount > 0)
                             message += $" Read {result.Documents.Attachments.ReadCount:#,#;;0} attachments.";
-                        result.AddInfo(message);
-                        _onProgress.Invoke(result.Progress);
+                        AddInfoToSmugglerResult(result, message);
                     }
 
                     if (item.Document == null)
                     {
                         result.Documents.ErroredCount++;
+                        if (result.Documents.ErroredCount % 1000 == 0)
+                            AddInfoToSmugglerResult(result, $"Error Count: {result.Documents.ErroredCount:#,#;;0}.");
                         continue;
                     }
 
@@ -538,16 +547,20 @@ namespace Raven.Server.Smuggler.Documents
                         if (item.Document == null)
                         {
                             result.Documents.SkippedCount++;
+                            if (result.Documents.SkippedCount % 1000 == 0)
+                                AddInfoToSmugglerResult(result, $"Skipped {result.Documents.SkippedCount:#,#;;0} documents.");
                             continue;
                         }
                     }
 
-                    item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.FromClusterTransaction);
-                    item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+                    SetDocumentFlags(item);
 
-                    if (_options.SkipRevisionCreation)
+                    if (SkipDocument(item, buildType))
                     {
-                        item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreation;
+                        result.Documents.SkippedCount++;
+                        if (result.Documents.SkippedCount % 1000 == 0)
+                            AddInfoToSmugglerResult(result, $"Skipped {result.Documents.SkippedCount:#,#;;0} documents.");
+                        continue;
                     }
 
                     actions.WriteDocument(item, result.Documents);
@@ -557,6 +570,32 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             return result.Documents;
+        }
+
+        private void AddInfoToSmugglerResult(SmugglerResult result, string message)
+        {
+            result.AddInfo(message);
+            _onProgress.Invoke(result.Progress);
+        }
+
+        private void SetDocumentFlags(DocumentItem item)
+        {
+            item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.FromClusterTransaction);
+            item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
+
+            if (_options.SkipRevisionCreation)
+                item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreation;
+        }
+
+        private bool SkipDocument(DocumentItem item, BuildVersionType buildType)
+        {
+            if (buildType == BuildVersionType.V3 && _options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false)
+            {
+                if (IsPreV4Revision(buildType, item.Document.Id, item.Document))
+                    return true;
+            }
+
+            return false;
         }
 
         private SmugglerProgressBase.Counts ProcessCompareExchange(SmugglerResult result)
@@ -600,11 +639,7 @@ namespace Raven.Server.Smuggler.Documents
                     result.Counters.ReadCount++;
 
                     if (result.Counters.ReadCount % 1000 == 0)
-                    {
-                        var message = $"Read {result.Counters.ReadCount:#,#;;0} counters.";
-                        result.AddInfo(message);
-                        _onProgress.Invoke(result.Progress);
-                    }
+                        AddInfoToSmugglerResult(result, $"Read {result.Counters.ReadCount:#,#;;0} counters.");
 
                     actions.WriteCounter(counterDetail);
 
@@ -626,11 +661,7 @@ namespace Raven.Server.Smuggler.Documents
                     result.Documents.ReadCount++;
                     result.Documents.Attachments.ReadCount++;
                     if (result.Documents.Attachments.ReadCount % 1000 == 0)
-                    {
-                        var message = $"Read {result.Documents.Attachments.ReadCount:#,#;;0} legacy attachments.";
-                        result.AddInfo(message);
-                        _onProgress.Invoke(result.Progress);
-                    }
+                        AddInfoToSmugglerResult(result, $"Read {result.Documents.Attachments.ReadCount:#,#;;0} legacy attachments.");
 
                     if (item.Document.Id == null)
                         ThrowInvalidData();
@@ -656,11 +687,7 @@ namespace Raven.Server.Smuggler.Documents
                     counts.ReadCount++;
 
                     if (counts.ReadCount % 1000 == 0)
-                    {
-                        var message = $"Read {counts.ReadCount:#,#;;0} legacy attachment deletions.";
-                        result.AddInfo(message);
-                        _onProgress.Invoke(result.Progress);
-                    }
+                        AddInfoToSmugglerResult(result, $"Read {counts.ReadCount:#,#;;0} legacy attachment deletions.");
 
                     try
                     {
@@ -687,11 +714,7 @@ namespace Raven.Server.Smuggler.Documents
                     counts.ReadCount++;
 
                     if (counts.ReadCount % 1000 == 0)
-                    {
-                        var message = $"Read {counts.ReadCount:#,#;;0} legacy document deletions.";
-                        result.AddInfo(message);
-                        _onProgress.Invoke(result.Progress);
-                    }
+                        AddInfoToSmugglerResult(result, $"Read {counts.ReadCount:#,#;;0} legacy document deletions.");
 
                     try
                     {
@@ -718,11 +741,7 @@ namespace Raven.Server.Smuggler.Documents
                     result.Tombstones.ReadCount++;
 
                     if (result.Tombstones.ReadCount % 1000 == 0)
-                    {
-                        var message = $"Read {result.Tombstones.ReadCount:#,#;;0} tombstones.";
-                        result.AddInfo(message);
-                        _onProgress.Invoke(result.Progress);
-                    }
+                        AddInfoToSmugglerResult(result, $"Read {result.Tombstones.ReadCount:#,#;;0} tombstones.");
 
                     if (tombstone == null)
                     {
@@ -753,11 +772,7 @@ namespace Raven.Server.Smuggler.Documents
                     result.Conflicts.ReadCount++;
 
                     if (result.Conflicts.ReadCount % 1000 == 0)
-                    {
-                        var message = $"Read {result.Conflicts.ReadCount:#,#;;0} conflicts.";
-                        result.AddInfo(message);
-                        _onProgress.Invoke(result.Progress);
-                    }
+                        AddInfoToSmugglerResult(result, $"Read {result.Conflicts.ReadCount:#,#;;0} conflicts.");
 
                     if (conflict == null)
                     {

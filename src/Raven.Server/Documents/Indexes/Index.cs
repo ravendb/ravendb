@@ -1166,6 +1166,10 @@ namespace Raven.Server.Documents.Indexes
                         }
                     }
                 }
+                catch (OperationCanceledException)
+                {
+                    // expected
+                }
                 catch (Exception e)
                 {
                     if (_logger.IsOperationsEnabled)

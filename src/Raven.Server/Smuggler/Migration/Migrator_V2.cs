@@ -20,7 +20,7 @@ namespace Raven.Server.Smuggler.Migration
     {
         private const int AttachmentsPageSize = 32;
 
-        public Migrator_V2(DocumentDatabase database, MigratorOptions options) : base(database, options)
+        public Migrator_V2(MigratorOptions options, MigratorParameters parameters) : base(options, parameters)
         {
         }
 
@@ -29,13 +29,13 @@ namespace Raven.Server.Smuggler.Migration
             var state = GetLastMigrationState();
 
             var migratedDocumentsOrAttachments = false;
-            if (OperateOnTypes.HasFlag(DatabaseItemType.Documents))
+            if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Documents))
             {
                 await MigrateDocuments(state?.LastDocsEtag ?? LastEtagsInfo.EtagEmpty);
                 migratedDocumentsOrAttachments = true;
             }
 
-            if (OperateOnTypes.HasFlag(DatabaseItemType.LegacyAttachments))
+            if (Options.OperateOnTypes.HasFlag(DatabaseItemType.LegacyAttachments))
             {
                 await MigrateAttachments(state?.LastAttachmentsEtag ?? LastEtagsInfo.EtagEmpty);
                 migratedDocumentsOrAttachments = true;
@@ -43,48 +43,50 @@ namespace Raven.Server.Smuggler.Migration
 
             if (migratedDocumentsOrAttachments)
             {
-                Result.Documents.Processed = true;
-                OnProgress.Invoke(Result.Progress);
+                Parameters.Result.Documents.Processed = true;
+                Parameters.OnProgress.Invoke(Parameters.Result.Progress);
                 await SaveLastOperationState(GenerateLastEtagsInfo());
             }
 
-            if (OperateOnTypes.HasFlag(DatabaseItemType.Indexes))
+            if (Options.OperateOnTypes.HasFlag(DatabaseItemType.Indexes))
                 await MigrateIndexes();
 
-            DatabaseSmuggler.EnsureProcessed(Result);
+            DatabaseSmuggler.EnsureProcessed(Parameters.Result);
         }
 
         private async Task MigrateDocuments(string lastEtag)
         {
             var response = await RunWithAuthRetry(async () =>
             {
-                var url = $"{ServerUrl}/databases/{DatabaseName}/streams/docs?etag={lastEtag}";
+                var url = $"{Options.ServerUrl}/databases/{Options.DatabaseName}/streams/docs?etag={lastEtag}";
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
 
-                var responseMessage = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+                var responseMessage = await Parameters.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, Parameters.CancelToken.Token);
                 return responseMessage;
             });
             
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to export documents from server: {ServerUrl}, " +
+                throw new InvalidOperationException($"Failed to export documents from server: {Options.ServerUrl}, " +
                                                     $"status code: {response.StatusCode}, " +
                                                     $"error: {responseString}");
             }
 
             using (var responseStream = await response.Content.ReadAsStreamAsync())
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var source = new StreamSource(responseStream, context, Database))
+            using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var source = new StreamSource(responseStream, context, Parameters.Database))
             {
-                var destination = new DatabaseDestination(Database);
+                var destination = new DatabaseDestination(Parameters.Database);
                 var options = new DatabaseSmugglerOptionsServerSide
                 {
 #pragma warning disable 618
-                    ReadLegacyEtag = true
+                    ReadLegacyEtag = true,
 #pragma warning restore 618
+                    TransformScript = Options.TransformScript,
+                    OperateOnTypes = Options.OperateOnTypes
                 };
-                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, Result, OnProgress, CancelToken.Token);
+                var smuggler = new DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 // since we will be migrating indexes as separate task don't ensureStepsProcessed at this point
                 smuggler.Execute(ensureStepsProcessed: false);
@@ -93,10 +95,10 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task MigrateAttachments(string lastEtag)
         {
-            var destination = new DatabaseDestination(Database);
+            var destination = new DatabaseDestination(Parameters.Database);
 
-            using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (Parameters.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
+            using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var documentActions = destination.Documents())
             {
                 var sp = Stopwatch.StartNew();
@@ -106,12 +108,12 @@ namespace Raven.Server.Smuggler.Migration
                     var attachmentsArray = await GetAttachmentsList(lastEtag, transactionOperationContext);
                     if (attachmentsArray.Length == 0)
                     {
-                        var count = Result.Documents.Attachments.ReadCount;
+                        var count = Parameters.Result.Documents.Attachments.ReadCount;
                         if (count > 0)
                         {
                             var message = $"Read {count:#,#;;0} legacy attachment{(count > 1 ? "s" : string.Empty)}.";
-                            Result.AddInfo(message);
-                            OnProgress.Invoke(Result.Progress);
+                            Parameters.Result.AddInfo(message);
+                            Parameters.OnProgress.Invoke(Parameters.Result.Progress);
                         }
 
                         return;
@@ -132,7 +134,7 @@ namespace Raven.Server.Smuggler.Migration
                         var dataStream = await GetAttachmentStream(key);
                         if (dataStream == null)
                         {
-                            Result.Tombstones.ReadCount++;
+                            Parameters.Result.Tombstones.ReadCount++;
                             var id = StreamSource.GetLegacyAttachmentId(key);
                             documentActions.DeleteDocument(id);
                             continue;
@@ -140,12 +142,12 @@ namespace Raven.Server.Smuggler.Migration
 
                         WriteDocumentWithAttachment(documentActions, context, dataStream, key, metadata);
 
-                        Result.Documents.ReadCount++;
-                        if (Result.Documents.Attachments.ReadCount % 50 == 0 || sp.ElapsedMilliseconds > 3000)
+                        Parameters.Result.Documents.ReadCount++;
+                        if (Parameters.Result.Documents.Attachments.ReadCount % 50 == 0 || sp.ElapsedMilliseconds > 3000)
                         {
-                            var message = $"Read {Result.Documents.Attachments.ReadCount:#,#;;0} legacy attachments.";
-                            Result.AddInfo(message);
-                            OnProgress.Invoke(Result.Progress);
+                            var message = $"Read {Parameters.Result.Documents.Attachments.ReadCount:#,#;;0} legacy attachments.";
+                            Parameters.Result.AddInfo(message);
+                            Parameters.OnProgress.Invoke(Parameters.Result.Progress);
                             sp.Restart();
                         }
                     }
@@ -153,7 +155,7 @@ namespace Raven.Server.Smuggler.Migration
                     var lastAttachment = attachmentsArray.Last() as BlittableJsonReaderObject;
                     Debug.Assert(lastAttachment != null, "lastAttachment != null");
                     if (lastAttachment.TryGet("Etag", out string etag))
-                        lastEtag = Result.LegacyLastAttachmentEtag = etag;
+                        lastEtag = Parameters.Result.LegacyLastAttachmentEtag = etag;
                 }
             }
         }
@@ -162,16 +164,16 @@ namespace Raven.Server.Smuggler.Migration
         {
             var response = await RunWithAuthRetry(async () =>
             {
-                var url = $"{ServerUrl}/databases/{DatabaseName}/static?pageSize={AttachmentsPageSize}&etag={lastEtag}";
+                var url = $"{Options.ServerUrl}/databases/{Options.DatabaseName}/static?pageSize={AttachmentsPageSize}&etag={lastEtag}";
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
-                var responseMessage = await HttpClient.SendAsync(request, CancelToken.Token);
+                var responseMessage = await Parameters.HttpClient.SendAsync(request, Parameters.CancelToken.Token);
                 return responseMessage;
             });
             
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to get attachments list from server: {ServerUrl}, " +
+                throw new InvalidOperationException($"Failed to get attachments list from server: {Options.ServerUrl}, " +
                                                     $"status code: {response.StatusCode}, " +
                                                     $"error: {responseString}");
             }
@@ -191,9 +193,9 @@ namespace Raven.Server.Smuggler.Migration
         {
             var response = await RunWithAuthRetry(async () =>
             {
-                var url = $"{ServerUrl}/databases/{DatabaseName}/static/{Uri.EscapeDataString(attachmentKey)}";
+                var url = $"{Options.ServerUrl}/databases/{Options.DatabaseName}/static/{Uri.EscapeDataString(attachmentKey)}";
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
-                var responseMessage = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+                var responseMessage = await Parameters.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, Parameters.CancelToken.Token);
                 return responseMessage;
             });
 
@@ -206,7 +208,7 @@ namespace Raven.Server.Smuggler.Migration
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to get attachment, key: {attachmentKey}, from server: {ServerUrl}, " +
+                throw new InvalidOperationException($"Failed to get attachment, key: {attachmentKey}, from server: {Options.ServerUrl}, " +
                                                     $"status code: {response.StatusCode}, " +
                                                     $"error: {responseString}");
             }
@@ -218,31 +220,31 @@ namespace Raven.Server.Smuggler.Migration
         {
             var response = await RunWithAuthRetry(async () =>
             {
-                var url = $"{ServerUrl}/databases/{DatabaseName}/indexes";
+                var url = $"{Options.ServerUrl}/databases/{Options.DatabaseName}/indexes";
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
-                var responseMessage = await HttpClient.SendAsync(request, CancelToken.Token);
+                var responseMessage = await Parameters.HttpClient.SendAsync(request, Parameters.CancelToken.Token);
                 return responseMessage;
             });
             
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to export indexes from server: {ServerUrl}, " +
+                throw new InvalidOperationException($"Failed to export indexes from server: {Options.ServerUrl}, " +
                                                     $"status code: {response.StatusCode}, " +
                                                     $"error: {responseString}");
             }
 
             using (var responseStream = await response.Content.ReadAsStreamAsync())
             using (var indexesStream = new ArrayStream(responseStream, "Indexes")) // indexes endpoint returns an array
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var source = new StreamSource(indexesStream, context, Database))
+            using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var source = new StreamSource(indexesStream, context, Parameters.Database))
             {
-                var destination = new DatabaseDestination(Database);
+                var destination = new DatabaseDestination(Parameters.Database);
                 var options = new DatabaseSmugglerOptionsServerSide
                 {
-                    RemoveAnalyzers = RemoveAnalyzers,
+                    RemoveAnalyzers = Options.RemoveAnalyzers,
                 };
-                var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, Result, OnProgress, CancelToken.Token);
+                var smuggler = new DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
                 smuggler.Execute();
             }

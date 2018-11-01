@@ -23,19 +23,16 @@ namespace Raven.Server.Smuggler.Migration
 {
     public abstract class AbstractLegacyMigrator : AbstractMigrator
     {
-        private readonly DocumentDatabase _database;
-
-        protected AbstractLegacyMigrator(DocumentDatabase database, MigratorOptions options) : base(options)
+        protected AbstractLegacyMigrator(MigratorOptions options, MigratorParameters parameters) : base(options, parameters)
         {
-            _database = database;
         }
 
         protected LastEtagsInfo GetLastMigrationState()
         {
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (Parameters.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var document = Database.DocumentsStorage.Get(context, MigrationStateKey);
+                var document = Parameters.Database.DocumentsStorage.Get(context, Options.MigrationStateKey);
                 if (document == null)
                     return null;
 
@@ -47,12 +44,12 @@ namespace Raven.Server.Smuggler.Migration
         {
             var lastEtagsInfo = new LastEtagsInfo
             {
-                ServerUrl = ServerUrl,
-                DatabaseName = DatabaseName,
-                LastDocsEtag = Result.LegacyLastDocumentEtag ?? LastEtagsInfo.EtagEmpty,
-                LastAttachmentsEtag = Result.LegacyLastAttachmentEtag ?? LastEtagsInfo.EtagEmpty,
-                LastDocDeleteEtag = Result.LegacyLastDocumentEtag ?? LastEtagsInfo.EtagEmpty,
-                LastAttachmentsDeleteEtag = Result.LegacyLastAttachmentEtag ?? LastEtagsInfo.EtagEmpty
+                ServerUrl = Options.ServerUrl,
+                DatabaseName = Options.DatabaseName,
+                LastDocsEtag = Parameters.Result.LegacyLastDocumentEtag ?? LastEtagsInfo.EtagEmpty,
+                LastAttachmentsEtag = Parameters.Result.LegacyLastAttachmentEtag ?? LastEtagsInfo.EtagEmpty,
+                LastDocDeleteEtag = Parameters.Result.LegacyLastDocumentEtag ?? LastEtagsInfo.EtagEmpty,
+                LastAttachmentsDeleteEtag = Parameters.Result.LegacyLastAttachmentEtag ?? LastEtagsInfo.EtagEmpty
             };
 
             return lastEtagsInfo;
@@ -60,7 +57,7 @@ namespace Raven.Server.Smuggler.Migration
 
         protected async Task SaveLastOperationState(LastEtagsInfo lastEtagsInfo)
         {
-            using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (Parameters.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var operationStateBlittable = EntityToBlittable.ConvertCommandToBlittable(lastEtagsInfo, context);
                 await SaveLastOperationState(operationStateBlittable);
@@ -124,7 +121,7 @@ namespace Raven.Server.Smuggler.Migration
                         ChangeVector = string.Empty,
                         Flags = DocumentFlags.HasAttachments,
                         NonPersistentFlags = NonPersistentDocumentFlags.FromSmuggler,
-                        LastModified = _database.Time.GetUtcNow(),
+                        LastModified = Parameters.Database.Time.GetUtcNow(),
                     },
                     Attachments = new List<DocumentItem.AttachmentStream>
                     {
@@ -132,13 +129,13 @@ namespace Raven.Server.Smuggler.Migration
                     }
                 };
 
-                documentActions.WriteDocument(dummyDoc, Result.Documents);
+                documentActions.WriteDocument(dummyDoc, Parameters.Result.Documents);
             }
         }
 
         protected async Task<HttpResponseMessage> RunWithAuthRetry(Func<Task<HttpResponseMessage>> requestOperation)
         {
-            return await RunWithAuthRetryInternal(requestOperation, ApiKey, ServerUrl, EnableBasicAuthenticationOverUnsecuredHttp, SkipServerCertificateValidation, HttpClient);
+            return await RunWithAuthRetryInternal(requestOperation, Options.ApiKey, Options.ServerUrl, Options.EnableBasicAuthenticationOverUnsecuredHttp, Options.SkipServerCertificateValidation, Parameters.HttpClient);
         }
 
         private static async Task<HttpResponseMessage> RunWithAuthRetryInternal(
