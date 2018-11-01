@@ -44,7 +44,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             _providerFactory = GetDbProviderFactory(etl.Configuration);
             _commandBuilder = _providerFactory.InitializeCommandBuilder();
             _connection = _providerFactory.CreateConnection();
-            _connection.ConnectionString = etl.Configuration.Connection.ConnectionString;
+            var connectionString = etl.Configuration.Connection.ConnectionString;
+            _connection.ConnectionString = connectionString;
 
             try
             {
@@ -52,16 +53,19 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             }
             catch (Exception e)
             {
-                database.NotificationCenter.Add(AlertRaised.Create(
-                    database.Name,
-                    SqlEtl.SqlEtlTag,
-                    $"SQL ETL could not open connection to {_connection.ConnectionString}",
-                    AlertType.SqlEtl_ConnectionError,
-                    NotificationSeverity.Error,
-                    key: _connection.ConnectionString,
-                    details: new ExceptionDetails(e)));
+                using (_connection)
+                {
+                    database.NotificationCenter.Add(AlertRaised.Create(
+                        database.Name,
+                        SqlEtl.SqlEtlTag,
+                        $"SQL ETL could not open connection to {connectionString}",
+                        AlertType.SqlEtl_ConnectionError,
+                        NotificationSeverity.Error,
+                        key: connectionString,
+                        details: new ExceptionDetails(e)));
 
-                throw;
+                    throw;
+                }
             }
 
             _tx = _connection.BeginTransaction();
@@ -114,8 +118,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
         public void Dispose()
         {
-            _tx.Dispose();
-            _connection.Dispose();
+            using (_connection)
+            using (_tx)
+            {
+
+            }
         }
 
         public void Commit()
