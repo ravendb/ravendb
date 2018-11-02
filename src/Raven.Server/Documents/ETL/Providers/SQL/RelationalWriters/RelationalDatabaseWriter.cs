@@ -47,14 +47,14 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             var connectionString = etl.Configuration.Connection.ConnectionString;
             _connection.ConnectionString = connectionString;
 
-            OpenConnection(database);
+            OpenConnection(database, etl.Configuration.Name, etl.Configuration.ConnectionStringName);
 
             _tx = _connection.BeginTransaction();
 
             _stringParserList = GenerateStringParsers();
         }
 
-        private void OpenConnection(DocumentDatabase database)
+        private void OpenConnection(DocumentDatabase database, string etlConfigurationName, string connectionStringName)
         {
             const int maxRetries = 5;
             var retries = 0;
@@ -82,10 +82,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         database.NotificationCenter.Add(AlertRaised.Create(
                             database.Name,
                             SqlEtl.SqlEtlTag,
-                            $"SQL ETL could not open connection to {_connection.ConnectionString}",
+                            $"[{etlConfigurationName}] Could not open connection using '{connectionStringName}' connection string",
                             AlertType.SqlEtl_ConnectionError,
                             NotificationSeverity.Error,
-                            key: _connection.ConnectionString,
+                            key: $"{etlConfigurationName}/{connectionStringName}",
                             details: new ExceptionDetails(e)));
 
                         throw;
