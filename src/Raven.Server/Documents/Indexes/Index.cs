@@ -2947,6 +2947,16 @@ namespace Raven.Server.Documents.Indexes
 
             result.SizeBeforeCompactionInMb = CalculateIndexStorageSize().GetValue(SizeUnit.Megabytes);
 
+            if (Type.IsMapReduce())
+            {
+                result.AddMessage($"Skipping compaction of '{Name}' index because compaction of map-reduce indexes isn't supported");
+                onProgress?.Invoke(result.Progress);
+                result.TreeName = null;
+                result.SizeAfterCompactionInMb = result.SizeBeforeCompactionInMb;
+
+                return;
+            }
+
             result.AddMessage($"Starting compaction of index '{Name}'.");
             result.AddMessage($"Draining queries for {Name}.");
             onProgress?.Invoke(result.Progress);
