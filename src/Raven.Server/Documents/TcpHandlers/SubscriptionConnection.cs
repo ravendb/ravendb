@@ -10,6 +10,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries;
@@ -70,9 +71,8 @@ namespace Raven.Server.Documents.TcpHandlers
             _tcpConnectionDisposable = tcpConnectionDisposable;
             ClientUri = connectionOptions.TcpClient.Client.RemoteEndPoint.ToString();
             _logger = LoggingSource.Instance.GetLogger<SubscriptionConnection>(connectionOptions.DocumentDatabase.Name);
-            CancellationTokenSource =
-                CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
-
+            CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
+            _supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Subscription, connectionOptions.ProtocolVersion);
             _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
             Stats = new SubscriptionConnectionStats();
 
@@ -455,6 +455,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private SubscriptionDocumentsFetcher _documentsFetcher;
         private readonly IDisposable _tcpConnectionDisposable;
         private readonly (IDisposable ReleaseBuffer, JsonOperationContext.ManagedPinnedBuffer Buffer) _copiedBuffer;
+        private readonly TcpConnectionHeaderMessage.SupportedFeatures _supportedFeatures;
 
         private async Task ProcessSubscriptionAsync()
         {
@@ -615,9 +616,10 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 using (docsContext.OpenReadTransaction())
                 {
-                    var includeCmd = new IncludeDocumentsCommand(TcpConnection.DocumentDatabase.DocumentsStorage,
-                                docsContext, Subscription.Includes);
-                   
+                    IncludeDocumentsCommand includeCmd = null;
+                    if (_supportedFeatures.Subscription.Includes)
+                        includeCmd = new IncludeDocumentsCommand(TcpConnection.DocumentDatabase.DocumentsStorage, docsContext, Subscription.Includes);
+
                     foreach (var result in _documentsFetcher.GetDataToSend(docsContext, includeCmd, _startEtag))
                     {
                         _startEtag = result.Doc.Etag;
