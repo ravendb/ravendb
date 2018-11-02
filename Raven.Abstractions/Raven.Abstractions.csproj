@@ -308,6 +308,7 @@
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\MemberInfoExtensions.cs" />
     <Compile Include="Extensions\RavenDateTimeExtensions.cs" />
+    <Compile Include="FileSystem\TouchFilesResult.cs" />
     <Compile Include="MEF\DisableTriggerState.cs" />
     <Compile Include="Smuggler\Data\FilesUploadWorker.cs" />
     <Compile Include="Smuggler\Data\SmugglerDataFormat.cs" />

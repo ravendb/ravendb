@@ -226,6 +226,25 @@ namespace Raven.Client.FileSystem
             });
         }
 
+
+        public async Task<TouchFilesResult> TouchFilesAsync(Etag start, int pageSize)
+        {
+            var requestUrlString = string.Format("{0}/fs/{1}/files/touch?etag={2}&pageSize={3}", ServerUrl, Uri.EscapeDataString(FileSystemName), start, pageSize);
+
+            using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUrlString, HttpMethods.Get, PrimaryCredentials, Conventions)))
+            {
+                try
+                {
+                    var response = await request.ReadResponseJsonAsync().ConfigureAwait(false);
+                    return response.JsonDeserialization<TouchFilesResult>();
+                }
+                catch (Exception e)
+                {
+                    throw e.SimplifyException();
+                }
+            }
+        }
+
         public Task<string[]> GetSearchFieldsAsync(int start = 0, int pageSize = 25)
         {
             return ExecuteWithReplication(HttpMethods.Get, async (operation, requestTimeMetric) =>
