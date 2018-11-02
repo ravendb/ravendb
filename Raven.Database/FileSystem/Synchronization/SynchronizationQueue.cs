@@ -123,19 +123,6 @@ namespace Raven.Database.FileSystem.Synchronization
                                   workItem.GetType().Name, workItem.FileName, destinationFileSystemUrl);
                         return false;
                     }
-
-                    // if there is a work for a file of the same type but with lower file ETag just refresh existing work metadata and do not enqueue again
-                    if (pendingWork.FileName == workItem.FileName &&
-                        pendingWork.SynchronizationType == workItem.SynchronizationType &&
-                        Buffers.Compare(workItem.FileETag.ToByteArray(), pendingWork.FileETag.ToByteArray()) > 0)
-                    {
-                        pendingWork.RefreshMetadata();
-                        if (Log.IsDebugEnabled)
-                            Log.Debug(
-                            "{0} for a file {1} and a destination {2} was already existed in a pending queue but with older ETag, it's metadata has been refreshed",
-                            workItem.GetType().Name, workItem.FileName, destinationFileSystemUrl);
-                        return false;
-                    }
                 }
 
                 var activeForDestination = activeSynchronizations.GetOrAdd(destinationFileSystemUrl,
