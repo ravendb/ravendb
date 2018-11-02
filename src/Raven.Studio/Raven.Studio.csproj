@@ -51,4 +51,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\tools\TypingsGenerator\TypingsGenerator.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="aceBuild\build\demo\kitchen-sink\docs\csharp.cs" />
+    <None Include="aceBuild\build\demo\kitchen-sink\docs\csharp.cs" />
+  </ItemGroup>
 </Project>

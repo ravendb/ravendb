@@ -39,11 +39,13 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 import database = require("models/resources/database");
 import aceDiff = require("common/helpers/text/aceDiff");
 import getDocumentRevisionsCommand = require("commands/database/documents/getDocumentRevisionsCommand");
+import documentWarningsConfirm = require("viewmodels/database/documents/documentWarningsConfirm");
 
 interface revisionToCompare {
     date: string;
     changeVector: string;
 }
+
 
 class editDocument extends viewModelBase {
 
@@ -643,11 +645,32 @@ class editDocument extends viewModelBase {
 
     saveDocument() {
         if (this.isValid(this.globalValidationGroup)) {
-            eventsCollector.default.reportEvent("document", "save");
-            this.saveInternal(this.userSpecifiedId());
+            $.when<boolean>(this.maybeConfirmWarnings())
+                .then((canSave: boolean) => {
+                    if (canSave) {
+                        eventsCollector.default.reportEvent("document", "save");
+                        this.saveInternal(this.userSpecifiedId());
+                    }
+                });
         }
     }
-
+    
+    private maybeConfirmWarnings(): JQueryPromise<boolean> | boolean {
+        const warnings = this.docEditor.getSession().getAnnotations()
+            .filter((x: AceAjax.Annotation) => x.type === "warning");
+        
+        if (warnings.length) {
+            const viewModel = new documentWarningsConfirm(warnings, warning => {
+                // please note go to line is not zero based so we add 1
+                this.docEditor.gotoLine(warning.row + 1, warning.column, true);
+                this.docEditor.focus();
+            });
+            return app.showBootstrapDialog(viewModel);
+        }
+        
+        return true;
+    }
+    
     private saveInternal(documentId: string) {
         let message = "";
         let updatedDto: any;

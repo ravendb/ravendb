@@ -141,7 +141,7 @@ class editCmpXchg extends viewModelBase {
             this.valueEditor.getSession().setMode('ace/mode/json_newline_friendly');
         } else {
             this.valueText(documentHelpers.escapeNewlinesAndTabsInTextFields(this.valueText()));
-            this.valueEditor.getSession().setMode('ace/mode/json');
+            this.valueEditor.getSession().setMode('ace/mode/raven_document');
             this.formatValue();
         }
 

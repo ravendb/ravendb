@@ -47,7 +47,7 @@ function main(args) {
 	mergeAceWithCustomFiles();
 	
 	buildAce({
-            compress: false,
+            compress: false, //TODO: use true
             noconflict: true,
             shrinkwrap: false
         });
