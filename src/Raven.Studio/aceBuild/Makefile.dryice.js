@@ -47,7 +47,7 @@ function main(args) {
 	mergeAceWithCustomFiles();
 	
 	buildAce({
-            compress: false, //TODO: use true
+            compress: false,
             noconflict: true,
             shrinkwrap: false
         });
@@ -74,7 +74,7 @@ function jsFileList(path, filter) {
 }
 
 function workers() {
-	return ["javascript", "json", "rql"];
+	return ["javascript", "json", "rql", "raven_document"];
 }
 
 function modeList() {
