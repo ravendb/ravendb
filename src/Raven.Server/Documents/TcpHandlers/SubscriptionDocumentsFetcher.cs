@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.TcpHandlers
             long startEtag)
         {
             int size = 0;
-            using (_db.Scripts.GetScriptRunner(_patch,true, out var run))
+            using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
             {
                 foreach (var doc in _db.DocumentsStorage.GetDocumentsFrom(
                     docsContext,
@@ -97,8 +97,9 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                         else
                         {
-                            if(run != null)
+                            if (includesCmd != null && run != null)
                                 includesCmd.AddRange(run.Includes);
+
                             using (transformResult)
                             {
                                 if (transformResult == null)
@@ -133,7 +134,7 @@ namespace Raven.Server.Documents.TcpHandlers
             long startEtag)
         {
             int size = 0;
-            
+
             var collectionName = new CollectionName(_collection);
             using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
             {
@@ -144,8 +145,9 @@ namespace Raven.Server.Documents.TcpHandlers
 
                     if (ShouldSendDocumentWithRevisions(_subscription, run, _patch, docsContext, item, revisionTuple, out var transformResult, out var exception) == false)
                     {
-                        if(run != null)
+                        if (includesCmd != null && run != null)
                             includesCmd.AddRange(run.Includes);
+
                         if (exception != null)
                         {
                             yield return (item, exception);
@@ -264,7 +266,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             revision.Current?.ResetModifications();
             revision.Previous?.ResetModifications();
-         
+
             try
             {
                 return patch.MatchCriteria(run, dbContext, transformResult, ref transformResult);
