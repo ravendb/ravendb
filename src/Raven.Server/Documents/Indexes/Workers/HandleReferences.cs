@@ -255,7 +255,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         {
             var tx = indexContext.Transaction.InnerTransaction;
             var loweredKey = tombstone.LowerId;
-            using (Slice.External(tx.Allocator, loweredKey.Buffer, loweredKey.Size, out Slice tombstoneKeySlice))
+            using (Slice.External(tx.Allocator, loweredKey, out Slice tombstoneKeySlice))
                 _indexStorage.RemoveReferences(tombstoneKeySlice, collection, null, indexContext.Transaction);
         }
 
