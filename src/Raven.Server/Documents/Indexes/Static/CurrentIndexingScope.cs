@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                     // we intentionally don't dispose of the scope here, this is being tracked by the references
                     // and will be disposed there.
-                    Slice.External(_documentsContext.Allocator, keyLazy.Buffer, keyLazy.Size, out keySlice);
+                    Slice.External(_documentsContext.Allocator, keyLazy, out keySlice);
                 }
                 else
                 {
