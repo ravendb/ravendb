@@ -190,6 +190,9 @@ namespace Raven.Client.FileSystem
         /// <returns>A task that represents the asynchronous browse operation.</returns>
         Task<FileHeader[]> BrowseAsync(int start = 0, int pageSize = 1024);
 
+
+        Task<TouchFilesResult> TouchFilesAsync(Etag start, int pageSize);
+
         /// <summary>
         /// Get the file headers of the selected files
         /// </summary>

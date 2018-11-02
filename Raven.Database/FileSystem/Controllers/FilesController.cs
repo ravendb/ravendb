@@ -514,5 +514,85 @@ namespace Raven.Database.FileSystem.Controllers
 
             return GetEmptyMessage(HttpStatusCode.Created);
         }
+
+        [HttpGet]
+        [RavenRoute("fs/{fileSystemName}/files/touch")]
+        public HttpResponseMessage TouchFiles()
+        {
+            var startEtag = GetEtagFromQueryString();
+            var pageSize = GetPageSize(1024);
+
+            Etag lastEtag = null;
+            long touched = 0;
+            long skipped = 0;
+
+            FileUpdateResult lastTouch = null;
+
+            for (int i = 0; i < 10; i++)
+            {
+
+                try
+                {
+                    Storage.Batch(accessor =>
+                    {
+                        var fileHeaders = accessor.GetFilesAfter(startEtag, pageSize * 2);
+
+                        foreach (var file in fileHeaders)
+                        {
+                            lastEtag = file.Etag;
+
+                            if (file.Metadata.Keys.Contains(SynchronizationConstants.RavenDeleteMarker))
+                            {
+                                skipped++;
+                                continue;
+                            }
+
+                            if (file.FullPath.EndsWith(RavenFileNameHelper.DownloadingFileSuffix))
+                            {
+                                skipped++;
+                                continue;
+                            }
+
+                            if (file.FullPath.EndsWith(RavenFileNameHelper.DeletingFileSuffix))
+                            {
+                                skipped++;
+                                continue;
+                            }
+
+                            lastTouch = accessor.TouchFile(file.FullPath, null);
+
+                            touched++;
+
+                            if (touched >= pageSize)
+                                break;
+                        }
+                    });
+
+                    break;
+                }
+                catch (ConcurrencyException)
+                {
+                    // retry
+
+                    lastEtag = null;
+                    touched = 0;
+                    skipped = 0;
+
+                    Thread.Sleep(500);
+                }
+            }
+
+
+            if (touched > 0)
+                SynchronizationTask.Context.NotifyAboutWork();
+            
+            return GetMessageWithObject(new TouchFilesResult
+            {
+                NumberOfProcessedFiles = touched,
+                LastProcessedFileEtag = lastEtag,
+                NumberOfFilteredFiles = skipped,
+                LastEtagAfterTouch = lastTouch?.Etag
+            }).WithNoCache();
+        }
     }
 }

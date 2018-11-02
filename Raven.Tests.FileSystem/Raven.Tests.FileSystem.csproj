@@ -251,6 +251,7 @@
     <Compile Include="Synchronization\IO\RandomCharacterStream.cs" />
     <Compile Include="RemoteFilesHandlerTests.cs" />
     <Compile Include="PagesTests.cs" />
+    <Compile Include="TouchFilesTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
