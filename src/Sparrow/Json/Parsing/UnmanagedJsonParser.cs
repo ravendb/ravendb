@@ -724,6 +724,9 @@ NotANumber:
         private const byte Unlikely = 1;
         private static readonly byte[] ParseStringTable;
 
+        private int _unicodeValue;
+        private int _unicodeIndex;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool ParseString(ref uint currentPos)
         {
@@ -738,6 +741,12 @@ NotANumber:
 
                 while (currentPos < bufferSize)
                 {
+                    if (_unicodeIndex != 0)
+                    {
+                        if (ParseUnicodeValue(ref currentPos) == false)
+                            goto ReturnFalse;
+                    }
+
                     byte b = currentBuffer[currentPos];
                     currentPos++;
                     _charPos++;
@@ -828,14 +837,18 @@ ReturnFalse:
         private bool ParseUnicodeValue(ref uint pos)
         {
             byte b;
-            int val = 0;
+            int val = _unicodeValue;
 
             byte* inputBuffer = _inputBuffer;
             uint bufferSize = _bufSize;
-            for (int i = 0; i < 4; i++)
+            for (int i = _unicodeIndex; i < 4; i++)
             {
                 if (pos >= bufferSize)
+                {
+                    _unicodeValue = val;
+                    _unicodeIndex = i;
                     return false;
+                }
 
                 b = inputBuffer[pos];
                 pos++;
@@ -866,6 +879,10 @@ ReturnFalse:
                 _prevEscapePosition = _unmanagedWriteBuffer.SizeInBytes + 1;
             }
             WriteUnicodeCharacterToStringBuffer(val);
+
+            _unicodeIndex = 0;
+            _unicodeValue = 0;
+
             return true;
         }
 
