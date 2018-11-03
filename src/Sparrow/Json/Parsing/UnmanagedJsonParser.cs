@@ -724,6 +724,7 @@ NotANumber:
         private const byte Unlikely = 1;
         private static readonly byte[] ParseStringTable;
 
+        private bool _parsingUnicode;
         private int _unicodeValue;
         private int _unicodeIndex;
 
@@ -741,8 +742,10 @@ NotANumber:
 
                 while (currentPos < bufferSize)
                 {
-                    if (_unicodeIndex != 0)
+                    if (_parsingUnicode)
                     {
+                        // this can happen when buffer runs out and we started unicode parsing
+
                         if (ParseUnicodeValue(ref currentPos) == false)
                             goto ReturnFalse;
 
@@ -838,12 +841,12 @@ ReturnFalse:
 
         private bool ParseUnicodeValue(ref uint pos)
         {
-            byte b;
-            int val = _unicodeValue;
+            _parsingUnicode = true;
+            var val = _unicodeValue;
 
-            byte* inputBuffer = _inputBuffer;
-            uint bufferSize = _bufSize;
-            for (int i = _unicodeIndex; i < 4; i++)
+            var inputBuffer = _inputBuffer;
+            var bufferSize = _bufSize;
+            for (var i = _unicodeIndex; i < 4; i++)
             {
                 if (pos >= bufferSize)
                 {
@@ -852,7 +855,7 @@ ReturnFalse:
                     return false;
                 }
 
-                b = inputBuffer[pos];
+                var b = inputBuffer[pos];
                 pos++;
                 _currentStrStart++;
 
@@ -873,6 +876,7 @@ ReturnFalse:
                     ThrowException("Invalid hex value , numeric value is: " + b);
                 }
             }
+
             if (val < 32)
             {
                 // control character
@@ -880,8 +884,10 @@ ReturnFalse:
                 _state.EscapePositions.Add(esc);
                 _prevEscapePosition = _unmanagedWriteBuffer.SizeInBytes + 1;
             }
+
             WriteUnicodeCharacterToStringBuffer(val);
 
+            _parsingUnicode = false;
             _unicodeIndex = 0;
             _unicodeValue = 0;
 
