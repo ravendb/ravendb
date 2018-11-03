@@ -1498,7 +1498,6 @@ namespace Raven.Server.Documents.Indexes
 
                     try
                     {
-                        var disableTxCompression = false;
                         using (InitializeIndexingWork(indexContext))
                         {
                             foreach (var work in _indexWorkers)
@@ -1515,25 +1514,16 @@ namespace Raven.Server.Documents.Indexes
 
                             if (writeOperation.IsValueCreated)
                             {
-                                var modifiedBeforeCommit = GetNumberOfModifiedPages(indexContext);
-
                                 using (var indexWriteOperation = writeOperation.Value)
                                 {
                                     indexWriteOperation.Commit(stats);
                                 }
-
-                                var modifiedAfterCommit = GetNumberOfModifiedPages(indexContext);
-                                var modifiedByIndexMerge = modifiedAfterCommit - modifiedBeforeCommit;
-                                // compress the tx only if the more than 80% of modifications were made
-                                // before the index commit. we want to avoid compressing lucenes merged segments.
-                                disableTxCompression = (modifiedByIndexMerge / (double)modifiedAfterCommit) >= 0.2;
                             }
 
                             _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
                         }
 
                         using (stats.For(IndexingOperation.Storage.Commit))
-                        using (DisableTxCompressionIfNeeded(disableTxCompression))
                         {
                             tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out CommitStats commitStats);
 
@@ -1572,23 +1562,6 @@ namespace Raven.Server.Documents.Indexes
                     return mightBeMore;
                 }
             }
-        }
-
-        private IDisposable DisableTxCompressionIfNeeded(bool disableCompression)
-        {
-            var prevValue = _environment.Options.CompressTxAboveSizeInBytes;
-            if (disableCompression)
-            {
-                _environment.Options.CompressTxAboveSizeInBytes = long.MaxValue;
-            }
-
-            return new DisposableAction(() =>
-            {
-                if (disableCompression)
-                {
-                    _environment.Options.CompressTxAboveSizeInBytes = prevValue;
-                }
-            });
         }
 
         public abstract IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext,
@@ -3109,18 +3082,21 @@ namespace Raven.Server.Documents.Indexes
             bool updateReduceStats)
         {
             var threadAllocations = _threadAllocations.TotalAllocated;
-            var txAllocations = GetNumberOfModifiedPages(indexingContext) * 
-                                Voron.Global.Constants.Storage.PageSize;
+            var txAllocations = indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages
+                                * Voron.Global.Constants.Storage.PageSize;
             var indexWriterAllocations = indexWriteOperation?.GetUsedMemory() ?? 0;
 
-            var allocatedForStats = threadAllocations + txAllocations + indexWriterAllocations;
-            if (updateReduceStats)
+            if (stats != null)
             {
-                stats.RecordReduceAllocations(allocatedForStats);
-            }
-            else
-            {
-                stats.RecordMapAllocations(allocatedForStats);
+                var allocatedForStats = threadAllocations + txAllocations + indexWriterAllocations;
+                if (updateReduceStats)
+                {
+                    stats.RecordReduceAllocations(allocatedForStats);
+                }
+                else
+                {
+                    stats.RecordMapAllocations(allocatedForStats);
+                }
             }
 
             var allocatedForProcessing = threadAllocations +
@@ -3131,11 +3107,6 @@ namespace Raven.Server.Documents.Indexes
             _threadAllocations.CurrentlyAllocatedForProcessing = allocatedForProcessing;
 
             return txAllocations;
-        }
-
-        private long GetNumberOfModifiedPages(TransactionOperationContext context)
-        {
-            return context.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages;
         }
 
         private void HandleStoppedBatchesConcurrently(IndexingStatsScope stats, int count)
