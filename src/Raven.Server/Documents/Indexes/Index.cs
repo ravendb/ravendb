@@ -1517,6 +1517,8 @@ namespace Raven.Server.Documents.Indexes
                                 using (var indexWriteOperation = writeOperation.Value)
                                 {
                                     indexWriteOperation.Commit(stats);
+
+                                    UpdateThreadAllocations(indexContext, indexWriteOperation, null, false);
                                 }
                             }
 
