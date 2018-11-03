@@ -746,6 +746,8 @@ NotANumber:
                     {
                         if (ParseUnicodeValue(ref currentPos) == false)
                             goto ReturnFalse;
+
+                        continue;
                     }
 
                     byte b = currentBuffer[currentPos];
