@@ -147,14 +147,14 @@ namespace Raven.Server.Utils
                 }
 
                 var line = await nextLine;
-                if (await HandleInfoReceived(line) == false)
+                if (HandleInfoReceived(line) == false)
                 {
                     break;
                 }
             }
         }
 
-        private async Task<bool> HandleInfoReceived(string data)
+        private bool HandleInfoReceived(string data)
         {
             if (data == null)
             {
