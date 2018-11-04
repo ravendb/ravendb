@@ -88,6 +88,14 @@ namespace Raven.Server.ServerWide.Memory
             return true;
         }
 
+        public static bool CanIncreaseMemoryUsageForThread()
+        {
+            var memoryInfo = MemoryInformation.GetMemInfoUsingOneTimeSmapsReader();
+            var memoryAssumedFreeOrCheapToFree = memoryInfo.AvailableWithoutTotalCleanMemory;
+            var allocatedForProcessing = GetTotalCurrentlyAllocatedForProcessing();
+            return memoryAssumedFreeOrCheapToFree >= allocatedForProcessing;
+        }
+
         private static ProcessMemoryUsage GetProcessMemoryUsage(MemoryInfoResult memoryInfo)
         {
             var workingSetInBytes = memoryInfo.WorkingSet.GetValue(SizeUnit.Bytes);
