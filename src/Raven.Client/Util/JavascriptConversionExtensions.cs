@@ -217,7 +217,7 @@ namespace Raven.Client.Util
                 }
 
                 // Now we translate the memberExpression
-                if (_innerCallExpected != default
+                else if (_innerCallExpected != default
                     && _innerCallExpected != DictionaryInnerCall.Map
                     && typeof(IDictionary).IsAssignableFrom(context.Node.Type))
                 {
