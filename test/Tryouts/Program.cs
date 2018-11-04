@@ -26,28 +26,10 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                //using (var test = new RavenDB_12151())
-                //{
-                //    //Console.WriteLine("IndexingWhenTransactionSizeLimitExceeded32");
-                //    //test.IndexingWhenTransactionSizeLimitExceeded32();
-                //    //Console.WriteLine("IndexingWhenScratchSpaceLimitExceeded32");
-                //    //test.IndexingWhenScratchSpaceLimitExceeded32();
-                //    Console.WriteLine("IndexingWhenGlobalScratchSpaceLimitExceeded32");
-                //    test.IndexingWhenGlobalScratchSpaceLimitExceeded32();
-                //}
-                //using (var test = new SlowTests.Server.RecordingTransactionOperationsMergerTests())
-                //{
-                //    test.RecordingPatchWithParametersByQuery("Avi");
-                //}
-                //using (var test = new RachisTests.SubscriptionsFailover())
-                //{
-                //    await test.DistributedRevisionsSubscription(3);
-                //}
-                using (var test = new StressTests.Server.Replication.ExternalReplicationStressTests())
+                using (var test = new RDBC_128())
                 {
-                    test.ExternalReplicationShouldWorkWithSmallTimeoutStress32();
+                    test.IndexingOfLoadDocumentWhileChanged();
                 }
-
             }
         }
     }
