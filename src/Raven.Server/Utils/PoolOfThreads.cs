@@ -5,12 +5,14 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Raven.Client;
 using Sparrow.Binary;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Utils;
+using Constants = Voron.Global.Constants;
 
 namespace Raven.Server.Utils
 {
@@ -33,6 +35,8 @@ namespace Raven.Server.Utils
         public static PoolOfThreads GlobalRavenThreadPool => _globalRavenThreadPool.Value;
         private static Logger _log = LoggingSource.Instance.GetLogger<PoolOfThreads>("Server");
         private float _minimumFreeCommittedMemory = 0.05f;
+
+        public int TotalNumberOfThreads;
 
         public void SetMinimumFreeCommittedMemory(float min)
         {
@@ -110,7 +114,7 @@ namespace Raven.Server.Utils
                 MemoryInformation.AssertNotAboutToRunOutOfMemory(_minimumFreeCommittedMemory);
 
                 pooled = new PooledThread(this);
-                var thread = new Thread(pooled.Run)
+                var thread = new Thread(pooled.Run, 512 * Constants.Size.Kilobyte)
                 {
                     Name = name,
                     IsBackground = true,
@@ -172,6 +176,7 @@ namespace Raven.Server.Utils
             {
                 try
                 {
+                    Interlocked.Increment(ref _parent.TotalNumberOfThreads);
                     InitializeProcessThreads();
                     LongRunningWork.CurrentPooledThread = this;
 
@@ -186,6 +191,7 @@ namespace Raven.Server.Utils
                 finally
                 {
                     NativeMemory.NotifyCurrentThreadAboutToClose();
+                    Interlocked.Decrement(ref _parent.TotalNumberOfThreads);
                 }
             }
 
