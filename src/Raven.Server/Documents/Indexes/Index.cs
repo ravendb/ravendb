@@ -1847,7 +1847,7 @@ namespace Raven.Server.Documents.Indexes
 
                     var stats = _indexStorage.ReadStats(tx);
 
-                    progress.Collections = new Dictionary<string, IndexProgress.CollectionStats>();
+                    progress.Collections = new Dictionary<string, IndexProgress.CollectionStats>(StringComparer.OrdinalIgnoreCase);
                     progress.IndexRunningStatus = Status;
 
                     var indexingPerformance = _lastStats?.ToIndexingPerformanceLiveStats();
