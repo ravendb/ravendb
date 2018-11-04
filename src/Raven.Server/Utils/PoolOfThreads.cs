@@ -114,7 +114,7 @@ namespace Raven.Server.Utils
                 MemoryInformation.AssertNotAboutToRunOutOfMemory(_minimumFreeCommittedMemory);
 
                 pooled = new PooledThread(this);
-                var thread = new Thread(pooled.Run, 512 * Constants.Size.Kilobyte)
+                var thread = new Thread(pooled.Run, PlatformDetails.Is32Bits ? 512 * Constants.Size.Kilobyte : 0)
                 {
                     Name = name,
                     IsBackground = true,
