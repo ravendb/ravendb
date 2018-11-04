@@ -38,6 +38,7 @@ class indexes extends viewModelBase {
     indexesProgressRefreshThrottle: Function;
     indexProgressInterval: number;
     indexingProgresses = new Map<string, indexProgress>();  
+    requestedIndexingInProgress = false;
 
     spinners = {
         globalStartStop: ko.observable<boolean>(false),
@@ -275,28 +276,35 @@ class indexes extends viewModelBase {
             // looks like we don't have connection to server, skip index progress update 
             return $.Deferred().fail();
         }
-        
+
+        if (this.requestedIndexingInProgress) {
+            return $.Deferred().resolve();
+        }
+
+        this.requestedIndexingInProgress = true;
+
         return new getIndexesProgressCommand(this.activeDatabase())
             .execute()
             .done(indexesProgressList => {
-                const progressToProcess = Array.from(this.indexingProgresses.keys());  
-                
+                const progressToProcess = Array.from(this.indexingProgresses.keys());
+
                 for (let i = 0; i < indexesProgressList.length; i++) {
                     const dto = indexesProgressList[i];
                     this.indexingProgresses.set(dto.Name, new indexProgress(dto));
                     _.pull(progressToProcess, dto.Name);
                 }
-                
+
                 // progressToProcess contains now non-stale indexes
                 // set progress to 100%
-                
+
                 progressToProcess.forEach(name => {
                     const progress = this.indexingProgresses.get(name);
                     progress.markCompleted();
                 });
-                
+
                 this.syncIndexingProgress();
-            });
+            })
+            .always(() => this.requestedIndexingInProgress = false);
     }
     
     /* passes indexing progress to index instance */
