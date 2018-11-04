@@ -2953,7 +2953,9 @@ namespace Raven.Server.Documents.Indexes
 
             if (_lowMemoryFlag.IsRaised() && count > MinBatchSize)
             {
-                HandleStoppedBatchesConcurrently(stats, count);
+                HandleStoppedBatchesConcurrently(stats, count,
+                    canContinue: () => _lowMemoryFlag.IsRaised() == false, 
+                    reason: "low memory");
 
                 stats.RecordMapCompletedReason($"The batch was stopped after processing {count:#,#;;0} documents because of low memory");
                 return false;
@@ -3063,6 +3065,10 @@ namespace Raven.Server.Documents.Indexes
                             _logger.Info(message);
                         }
 
+                        HandleStoppedBatchesConcurrently(stats, count, 
+                            canContinue: MemoryUsageGuard.CanIncreaseMemoryUsageForThread, 
+                            reason: "cannot budget additional memory");
+
                         stats.RecordMapCompletedReason("Cannot budget additional memory for batch");
                         canContinue = false;
                     }
@@ -3111,7 +3117,9 @@ namespace Raven.Server.Documents.Indexes
             return txAllocations;
         }
 
-        private void HandleStoppedBatchesConcurrently(IndexingStatsScope stats, int count)
+        private void HandleStoppedBatchesConcurrently(
+            IndexingStatsScope stats, int count, 
+            Func<bool> canContinue, string reason)
         {
             if (_batchStopped)
             {
@@ -3123,7 +3131,8 @@ namespace Raven.Server.Documents.Indexes
             if (_batchStopped)
                 return;
 
-            var message = $"Halting processing of batch after {count:#,#;;0} and waiting because of low memory, other indexes are currently completing and index {Name} will wait for them to complete";
+            var message = $"Halting processing of batch after {count:#,#;;0} and waiting because of {reason}, " +
+                          $"other indexes are currently completing and index {Name} will wait for them to complete";
             stats.RecordMapCompletedReason(message);
             if (_logger.IsInfoEnabled)
                 _logger.Info(message);
@@ -3137,7 +3146,7 @@ namespace Raven.Server.Documents.Indexes
                 if (_batchStopped)
                     break;
 
-                if (_lowMemoryFlag.IsRaised() == false)
+                if (canContinue())
                     break;
 
                 if (_logger.IsInfoEnabled)
