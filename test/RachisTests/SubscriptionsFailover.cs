@@ -256,7 +256,7 @@ namespace RachisTests
             }
         }
 
-        [Theory]
+        [Theory64Bit]
         [InlineData(3)]
         [InlineData(5)]
         public async Task DistributedRevisionsSubscription(int nodesAmount)
@@ -365,6 +365,12 @@ namespace RachisTests
 
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime).ConfigureAwait(false), $"Doc count is {docsCount} with revisions {revisionsCount}/{expectedRevisionsCount} (3rd assert)");
             }
+        }
+
+        [Fact32Bit]
+        public async Task DistributedRevisionsSubscription32Bit()
+        {
+            await DistributedRevisionsSubscription(3);
         }
 
         private static void HandleSubscriptionBatch(int nodesAmount, SubscriptionBatch<Revision<User>> b, HashSet<string> uniqueDocs, ref int docsCount, HashSet<string> uniqueRevisions,
