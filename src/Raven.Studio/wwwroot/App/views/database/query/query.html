@@ -149,12 +149,12 @@
                 </div>
             </div>
             <div class="scroll-stretch">
-                <div class="panel-body" data-bind="visible: currentTab() !== 'timings'">
+                <div class="panel-body" data-bind="visible: currentTab() !== 'timings' && currentTab() !== 'graph'">
                     <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-query-template'"></virtual-grid>
                 </div>
                 <div class="panel-body js-timings-container absolute-fill" data-bind="visible: currentTab() === 'timings'">
                     <div class="toggle toggle-right">
-                        <input id="log-scale" class="styled" type="checkbox" data-bind="checked: graph.useLogScale">
+                        <input id="log-scale" class="styled" type="checkbox" data-bind="checked: timingsGraph.useLogScale">
                         <label for="log-scale" class="properties-label">
                             Use logarithmic scale
                         </label>
@@ -162,10 +162,13 @@
                     <div class="from-cache bg-info padding padding-sm" data-bind="visible: $root.fromCache">
                         <i class="icon-info"></i> <span>Using cached timinigs</span>
                     </div>
-                    <div class="legend" data-bind="with: graph.rootNode">
+                    <div class="legend" data-bind="with: timingsGraph.rootNode">
                         <div class="legend-item" data-bind="template: { name: 'timing-item-template' }">
                         </div>
                     </div>
+                </div>
+                <div class="panel-body js-graph-container absolute-fill" data-bind="visible: currentTab() === 'graph'">
+                    TODO
                 </div>
             </div>
         </div>
@@ -190,6 +193,9 @@
             <button type="button" class="btn btn-sm" data-bind="click: $root.goToTimingsTab, css: { active: currentTab() === 'timings' }, visible: timings()">
                 Timings
             </button> 
+            <button type="button" class="btn btn-sm" data-bind="click: $root.goToGraphTab, css: { active: currentTab() === 'graph' }"> <!-- TODO visible flag -->
+                Graph
+            </button>
         </div>
     </div>
     <div class="hidden">
@@ -200,7 +206,7 @@
 </div>
 
 <script type="text/html" id="timing-item-template">
-    <i class="item-rect" data-bind="style: { 'background-color': $root.graph.getColor(name) }"></i>
+    <i class="item-rect" data-bind="style: { 'background-color': $root.timingsGraph.getColor(name) }"></i>
     <span class="name" data-bind="text: name"></span>
     <span class="duration" data-bind="text: duration.toLocaleString() + ' ms'"></span>
     <div data-bind="foreach: children">
