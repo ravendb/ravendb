@@ -31,8 +31,10 @@ import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import explainQueryDialog = require("viewmodels/database/query/explainQueryDialog");
 import explainQueryCommand = require("commands/database/index/explainQueryCommand");
 import timingsChart = require("common/timingsChart");
+import graphQueryResults = require("common/query/graphQueryResults");
+import debugGraphOutputCommand = require("commands/database/query/debugGraphOutputCommand");
 
-type queryResultTab = "results" | "explanations" | "timings";
+type queryResultTab = "results" | "explanations" | "timings" | "graph";
 
 type stringSearchType = "Starts With" | "Ends With" | "Contains" | "Exact";
 
@@ -101,7 +103,8 @@ class query extends viewModelBase {
 
     previewItem = ko.observable<storedQueryDto>();
     
-    graph = new timingsChart(".js-timings-container");
+    timingsGraph = new timingsChart(".js-timings-container");
+    graphQueryResults = new graphQueryResults(".js-graph-container");
 
     previewCode = ko.pureComputed(() => {
         const item = this.previewItem();
@@ -208,7 +211,8 @@ class query extends viewModelBase {
         this.initObservables();
         this.initValidation();
 
-        this.bindToCurrentInstance("runRecentQuery", "previewQuery", "removeQuery", "useQuery", "useQueryItem", "goToHighlightsTab", "goToIncludesTab");
+        this.bindToCurrentInstance("runRecentQuery", "previewQuery", "removeQuery", "useQuery", "useQueryItem", 
+            "goToHighlightsTab", "goToIncludesTab", "goToGraphTab");
     }
 
     private initObservables() {
@@ -1035,7 +1039,22 @@ class query extends viewModelBase {
     goToTimingsTab() {
         this.currentTab("timings");
         
-        this.graph.draw(this.timings());
+        this.timingsGraph.draw(this.timings());
+    }
+    
+    goToGraphTab() {
+        this.currentTab("graph");
+        
+        //TODO: add spinner? 
+        
+        new debugGraphOutputCommand(this.activeDatabase(), this.criteria().queryText())
+            .execute()
+            .done((result) => {
+                console.log(result);
+            });
+        
+        //TODO: fetch nodes and edges and plot graph
+        
     }
 
     exportCsv() {

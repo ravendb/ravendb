@@ -10,6 +10,7 @@ class queryCriteria {
     queryText = ko.observable<string>("");
     metadataOnly = ko.observable<boolean>(false);
     recentQuery = ko.observable<boolean>(false);
+    graphOutput = ko.observable<boolean>(false);
     
     validationGroup: KnockoutValidationGroup;
 
