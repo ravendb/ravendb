@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Commands.Batches
             PatchIfMissing = patchIfMissing;
         }
 
-        public BatchPatchCommandData(List<string> ids, PatchRequest patch, PatchRequest patchIfMissing)
+        public BatchPatchCommandData(IList<string> ids, PatchRequest patch, PatchRequest patchIfMissing)
             : this(patch, patchIfMissing)
         {
             if (ids == null)
@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Commands.Batches
                 Add(id);
         }
 
-        public BatchPatchCommandData(List<(string Id, string ChangeVector)> ids, PatchRequest patch, PatchRequest patchIfMissing)
+        public BatchPatchCommandData(IList<(string Id, string ChangeVector)> ids, PatchRequest patch, PatchRequest patchIfMissing)
             : this(patch, patchIfMissing)
         {
             if (ids == null)
