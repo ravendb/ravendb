@@ -1610,7 +1610,7 @@ namespace Voron.Impl.Journal
 
             // the compression pager is too large, we probably had a big transaction and now can
             // free all of that and come back to more reasonable values.
-            if (_logger.IsOperationsEnabled)
+            if (forceReduce == false && _logger.IsOperationsEnabled)
             {
                 _logger.Operations(
                     $"Compression buffer: {_compressionPager} has reached size {new Size(_compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize, SizeUnit.Bytes)} which is more than the initial size " +
