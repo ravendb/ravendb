@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             curDjvItem[nameof(Queries.QueryMetadata.IsDynamic)] = true;
                         }
 
-                        if (item.SelectFields.Any(x => x.Function != null))
+                        if (item.SelectFields != null && item.SelectFields.Any(x => x.Function != null))
                         {
                             curDjvItem["IsJSProjection"] = true;
                         }

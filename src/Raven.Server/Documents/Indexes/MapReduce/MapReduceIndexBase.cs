@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public override unsafe void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            using (Slice.External(indexContext.Allocator, tombstone.LowerId.Buffer, tombstone.LowerId.Length, out Slice docKeyAsSlice))
+            using (Slice.External(indexContext.Allocator, tombstone.LowerId, out Slice docKeyAsSlice))
             {
                 MapReduceWorkContext.DocumentMapEntries.RepurposeInstance(docKeyAsSlice, clone: false);
 
@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             EnsureValidStats(stats);
 
-            using (Slice.External(indexContext.Allocator, lowerId.Buffer, lowerId.Length, out Slice docIdAsSlice))
+            using (Slice.External(indexContext.Allocator, lowerId, out Slice docIdAsSlice))
             {
                 Queue<MapEntry> existingEntries = null;
 

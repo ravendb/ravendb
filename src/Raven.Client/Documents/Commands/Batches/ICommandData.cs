@@ -35,6 +35,7 @@ namespace Raven.Client.Documents.Commands.Batches
 
         Counters,
 
+        BatchPATCH,
         // NOTE: When you add anything here, such as additional 
         // operation relating to a document but not operating on it 
         // directly, be sure to also update DeferInternal

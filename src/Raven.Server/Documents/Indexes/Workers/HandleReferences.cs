@@ -207,6 +207,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                 if (_logger.IsInfoEnabled)
                                                     _logger.Info($"Failed to execute mapping function on '{current.Id}' for '{_index.Name}'.", e);
                                             }
+
+                                            _index.UpdateThreadAllocations(indexContext, indexWriter, stats, updateReduceStats: false);
                                         }
                                     }
 
@@ -255,7 +257,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         {
             var tx = indexContext.Transaction.InnerTransaction;
             var loweredKey = tombstone.LowerId;
-            using (Slice.External(tx.Allocator, loweredKey.Buffer, loweredKey.Size, out Slice tombstoneKeySlice))
+            using (Slice.External(tx.Allocator, loweredKey, out Slice tombstoneKeySlice))
                 _indexStorage.RemoveReferences(tombstoneKeySlice, collection, null, indexContext.Transaction);
         }
 
