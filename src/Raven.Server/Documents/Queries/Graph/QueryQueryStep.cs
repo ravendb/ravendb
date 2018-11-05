@@ -62,16 +62,14 @@ namespace Raven.Server.Documents.Queries.Graph
                 CompleteInitialization(results.Result);
                 return default;
             }
-
-            return CompleteInitializeAsync(results);
+            
+            return new ValueTask(CompleteInitializeAsync(results));
         }
 
-        private async ValueTask CompleteInitializeAsync(Task<DocumentQueryResult> results)
+        private async Task CompleteInitializeAsync(Task<DocumentQueryResult> results)
         {
             CompleteInitialization(await results);
         }
-
-
 
         private void CompleteInitialization(DocumentQueryResult results)
         {
