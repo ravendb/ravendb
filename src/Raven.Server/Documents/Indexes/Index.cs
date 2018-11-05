@@ -1500,7 +1500,6 @@ namespace Raven.Server.Documents.Indexes
                     {
                         using (InitializeIndexingWork(indexContext))
                         {
-
                             foreach (var work in _indexWorkers)
                             {
                                 using (var scope = stats.For(work.Name))
@@ -1518,6 +1517,8 @@ namespace Raven.Server.Documents.Indexes
                                 using (var indexWriteOperation = writeOperation.Value)
                                 {
                                     indexWriteOperation.Commit(stats);
+
+                                    UpdateThreadAllocations(indexContext, indexWriteOperation, null, false);
                                 }
                             }
 
@@ -1846,7 +1847,7 @@ namespace Raven.Server.Documents.Indexes
 
                     var stats = _indexStorage.ReadStats(tx);
 
-                    progress.Collections = new Dictionary<string, IndexProgress.CollectionStats>();
+                    progress.Collections = new Dictionary<string, IndexProgress.CollectionStats>(StringComparer.OrdinalIgnoreCase);
                     progress.IndexRunningStatus = Status;
 
                     var indexingPerformance = _lastStats?.ToIndexingPerformanceLiveStats();
@@ -2960,11 +2961,7 @@ namespace Raven.Server.Documents.Indexes
             IndexWriteOperation indexWriteOperation,
             int count)
         {
-            var threadAllocations = new Size(_threadAllocations.TotalAllocated, SizeUnit.Bytes);
-            var txAllocations = new Size(indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages *
-                                Voron.Global.Constants.Storage.PageSize, SizeUnit.Bytes);
-            var indexWriterAllocations = new Size(indexWriteOperation?.GetUsedMemory() ?? 0, SizeUnit.Bytes);
-            stats.RecordMapAllocations((threadAllocations + txAllocations + indexWriterAllocations).GetValue(SizeUnit.Bytes));
+            var txAllocationsInBytes = UpdateThreadAllocations(indexingContext, indexWriteOperation, stats, updateReduceStats: false);
 
             if (_indexDisabled)
             {
@@ -2974,7 +2971,9 @@ namespace Raven.Server.Documents.Indexes
 
             if (_lowMemoryFlag.IsRaised() && count > MinBatchSize)
             {
-                HandleStoppedBatchesConcurrently(stats, count);
+                HandleStoppedBatchesConcurrently(stats, count,
+                    canContinue: () => _lowMemoryFlag.IsRaised() == false, 
+                    reason: "low memory");
 
                 stats.RecordMapCompletedReason($"The batch was stopped after processing {count:#,#;;0} documents because of low memory");
                 return false;
@@ -3016,10 +3015,14 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            if (TransactionSizeLimit != null && txAllocations > TransactionSizeLimit.Value)
+            if (TransactionSizeLimit != null)
             {
-                stats.RecordMapCompletedReason($"Reached transaction size limit ({TransactionSizeLimit.Value}). Allocated {txAllocations} in current transaction");
-                return false;
+                var txAllocations = new Size(txAllocationsInBytes, SizeUnit.Bytes);
+                if (txAllocations > TransactionSizeLimit.Value)
+                {
+                    stats.RecordMapCompletedReason($"Reached transaction size limit ({TransactionSizeLimit.Value}). Allocated {new Size(txAllocationsInBytes, SizeUnit.Bytes)} in current transaction");
+                    return false;
+                }
             }
 
             if (Configuration.ScratchSpaceLimit != null &&
@@ -3045,13 +3048,7 @@ namespace Raven.Server.Documents.Indexes
                 return false;
             }
 
-            var allocated = threadAllocations +
-                                   // we multiple it by two to take into account additional work
-                                   // that will need to be done during the commit phase of the index
-                                   2 * (indexWriterAllocations + txAllocations);
-
-            _threadAllocations.CurrentlyAllocatedForProcessing = allocated.GetValue(SizeUnit.Bytes);
-
+            var allocated = new Size(_threadAllocations.CurrentlyAllocatedForProcessing, SizeUnit.Bytes);
             if (allocated > _currentMaximumAllowedMemory)
             {
                 var canContinue = true;
@@ -3086,6 +3083,10 @@ namespace Raven.Server.Documents.Indexes
                             _logger.Info(message);
                         }
 
+                        HandleStoppedBatchesConcurrently(stats, count, 
+                            canContinue: MemoryUsageGuard.CanIncreaseMemoryUsageForThread, 
+                            reason: "cannot budget additional memory");
+
                         stats.RecordMapCompletedReason("Cannot budget additional memory for batch");
                         canContinue = false;
                     }
@@ -3100,7 +3101,43 @@ namespace Raven.Server.Documents.Indexes
             return true;
         }
 
-        private void HandleStoppedBatchesConcurrently(IndexingStatsScope stats, int count)
+        public long UpdateThreadAllocations(
+            TransactionOperationContext indexingContext,
+            IndexWriteOperation indexWriteOperation,
+            IndexingStatsScope stats,
+            bool updateReduceStats)
+        {
+            var threadAllocations = _threadAllocations.TotalAllocated;
+            var txAllocations = indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages
+                                * Voron.Global.Constants.Storage.PageSize;
+            var indexWriterAllocations = indexWriteOperation?.GetUsedMemory() ?? 0;
+
+            if (stats != null)
+            {
+                var allocatedForStats = threadAllocations + txAllocations + indexWriterAllocations;
+                if (updateReduceStats)
+                {
+                    stats.RecordReduceAllocations(allocatedForStats);
+                }
+                else
+                {
+                    stats.RecordMapAllocations(allocatedForStats);
+                }
+            }
+
+            var allocatedForProcessing = threadAllocations +
+                                   // we multiple it by two to take into account additional work
+                                   // that will need to be done during the commit phase of the index
+                                   2 * (indexWriterAllocations + txAllocations);
+
+            _threadAllocations.CurrentlyAllocatedForProcessing = allocatedForProcessing;
+
+            return txAllocations;
+        }
+
+        private void HandleStoppedBatchesConcurrently(
+            IndexingStatsScope stats, int count, 
+            Func<bool> canContinue, string reason)
         {
             if (_batchStopped)
             {
@@ -3112,7 +3149,8 @@ namespace Raven.Server.Documents.Indexes
             if (_batchStopped)
                 return;
 
-            var message = $"Halting processing of batch after {count:#,#;;0} and waiting because of low memory, other indexes are currently completing and index {Name} will wait for them to complete";
+            var message = $"Halting processing of batch after {count:#,#;;0} and waiting because of {reason}, " +
+                          $"other indexes are currently completing and index {Name} will wait for them to complete";
             stats.RecordMapCompletedReason(message);
             if (_logger.IsInfoEnabled)
                 _logger.Info(message);
@@ -3126,7 +3164,7 @@ namespace Raven.Server.Documents.Indexes
                 if (_batchStopped)
                     break;
 
-                if (_lowMemoryFlag.IsRaised() == false)
+                if (canContinue())
                     break;
 
                 if (_logger.IsInfoEnabled)
@@ -3134,12 +3172,22 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public void Compact(Action<IOperationProgress> onProgress, CompactionResult result)
+        public void Compact(Action<IOperationProgress> onProgress, CompactionResult result, CancellationToken token)
         {
             if (_isCompactionInProgress)
                 throw new InvalidOperationException($"Index '{Name}' cannot be compacted because compaction is already in progress.");
 
             result.SizeBeforeCompactionInMb = CalculateIndexStorageSize().GetValue(SizeUnit.Megabytes);
+
+            if (Type.IsMapReduce())
+            {
+                result.AddMessage($"Skipping compaction of '{Name}' index because compaction of map-reduce indexes isn't supported");
+                onProgress?.Invoke(result.Progress);
+                result.TreeName = null;
+                result.SizeAfterCompactionInMb = result.SizeBeforeCompactionInMb;
+
+                return;
+            }
 
             result.AddMessage($"Starting compaction of index '{Name}'.");
             result.AddMessage($"Draining queries for {Name}.");
@@ -3188,7 +3236,7 @@ namespace Raven.Server.Documents.Indexes
                                 result.Progress.GlobalTotal = progressReport.GlobalTotal;
                                 result.AddMessage(progressReport.Message);
                                 onProgress?.Invoke(result.Progress);
-                            });
+                            }, token);
                         }
 
                         // reset tree name back to null after processing

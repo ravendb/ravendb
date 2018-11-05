@@ -382,7 +382,7 @@ namespace Voron.Impl.Paging
             {
                 _lastIncrease = now;
                 // cannot return less than the minRequested
-                return Bits.NextPowerOf2(minRequested);
+                return GetNearestFileSize(minRequested);
             }
 
             TimeSpan timeSinceLastIncrease = (now - _lastIncrease);
@@ -408,18 +408,24 @@ namespace Voron.Impl.Paging
 
             // we then want to get the next power of two number, to get pretty file size
             var totalSize = current + actualIncrease;
-            if (totalSize < 512 * 1024 * 1024L)
-                return Bits.NextPowerOf2(totalSize);
-
-            // if it is over 0.5 GB, then we grow at 1 GB intervals
-            var remainder = totalSize % Constants.Size.Gigabyte;
-            if (remainder == 0)
-                return totalSize;
-
-            // above 0.5GB we need to round to the next GB number
-            return totalSize + Constants.Size.Gigabyte - remainder;
+            return GetNearestFileSize(totalSize);
         }
 
+        private static readonly long IncreaseByPowerOf2Threshold = new Size(512, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
+
+        private static long GetNearestFileSize(long neededSize)
+        {
+            if (neededSize < IncreaseByPowerOf2Threshold)
+                return Bits.NextPowerOf2(neededSize);
+
+            // if it is over 0.5 GB, then we grow at 1 GB intervals
+            var remainder = neededSize % Constants.Size.Gigabyte;
+            if (remainder == 0)
+                return neededSize;
+
+            // above 0.5GB we need to round to the next GB number
+            return neededSize + Constants.Size.Gigabyte - remainder;
+        }
 
         public abstract override string ToString();
 

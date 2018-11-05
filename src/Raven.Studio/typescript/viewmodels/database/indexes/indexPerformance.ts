@@ -1136,7 +1136,7 @@ class indexPerformance extends viewModelBase {
                 if (element.DurationInMs > 0) {
                     const durationInSec = element.DurationInMs / 1000;
                     countsDetails += `Processed Data Speed: ${generalUtils.formatBytesToSize(parentStats.DocumentsSize.SizeInBytes / durationInSec)}/sec<br/>`;
-                    countsDetails += `Document Processing Speed: ${Math.floor(parentStats.InputCount / durationInSec).toLocaleString()}/sec<br/>`;
+                    countsDetails += `Document Processing Speed: ${Math.floor(parentStats.InputCount / durationInSec).toLocaleString()} docs/sec<br/>`;
                 }
 
                 tooltipHtml += countsDetails;

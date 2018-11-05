@@ -389,7 +389,8 @@ namespace Raven.Server.Documents.Handlers
                     Database,
                     isTest,
                     debugMode,
-                    true
+                    true,
+                    returnDocument: false
                 ))
                 {
                     if (isTest == false)

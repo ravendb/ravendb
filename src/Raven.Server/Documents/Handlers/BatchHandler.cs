@@ -21,7 +21,6 @@ using Sparrow.Json.Parsing;
 using System.Runtime.ExceptionServices;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Json;
 using Raven.Server.Json;
 using Raven.Client.Documents.Operations.Counters;
@@ -148,7 +147,7 @@ namespace Raven.Server.Documents.Handlers
                         .Append(parsedCommands.Array[i].Patch.Script).Append("    ")
                         .Append(parsedCommands.Array[i].PatchArgs).AppendLine();
                 }
-                else 
+                else
                 {
                     sb.Append(parsedCommands.Array[i].Type).Append("    ")
                         .Append(parsedCommands.Array[i].Id).AppendLine();
@@ -617,7 +616,7 @@ namespace Raven.Server.Documents.Handlers
 
                 return Reply.Count;
             }
-            
+
             private CollectionName GetCollection(DocumentsOperationContext context, DocumentsStorage.DocumentOrTombstone item)
             {
                 return item.Document != null
@@ -678,7 +677,7 @@ namespace Raven.Server.Documents.Handlers
                 return sb.ToString();
             }
 
-            
+
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
                 return new MergedBatchCommandDto
@@ -755,6 +754,7 @@ namespace Raven.Server.Documents.Handlers
                             lastPutResult = putResult;
                             break;
                         case CommandType.PATCH:
+                        case CommandType.BatchPATCH:
                             try
                             {
                                 cmd.PatchCommand.ExecuteDirectly(context);
@@ -764,30 +764,11 @@ namespace Raven.Server.Documents.Handlers
                                 return 0;
                             }
 
-                            var patchResult = cmd.PatchCommand.PatchResult;
-                            if (patchResult.ModifiedDocument != null)
-                                context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, patchResult.ModifiedDocument.Size);
+                            var lastChangeVector = cmd.PatchCommand.HandleReply(Reply, ModifiedCollections);
 
-                            if (patchResult.ChangeVector != null)
-                                LastChangeVector = patchResult.ChangeVector;
+                            if (lastChangeVector != null)
+                                LastChangeVector = lastChangeVector;
 
-                            if (patchResult.Collection != null)
-                                ModifiedCollections?.Add(patchResult.Collection);
-
-                            var patchReply = new DynamicJsonValue
-                            {
-                                [nameof(BatchRequestParser.CommandData.Id)] = cmd.Id,
-                                [nameof(BatchRequestParser.CommandData.ChangeVector)] = patchResult.ChangeVector,
-                                [nameof(Constants.Documents.Metadata.LastModified)] = patchResult.LastModified,
-                                [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.PATCH),
-                                [nameof(PatchStatus)] = patchResult.Status,
-                                [nameof(PatchResult.Debug)] = patchResult.Debug
-                            };
-
-                            if (cmd.ReturnDocument)
-                                patchReply[nameof(PatchResult.ModifiedDocument)] = patchResult.ModifiedDocument;
-
-                            Reply.Add(patchReply);
                             break;
                         case CommandType.DELETE:
                             if (cmd.IdPrefixed == false)
@@ -977,8 +958,7 @@ namespace Raven.Server.Documents.Handlers
                 foreach (var cmd in ParsedCommands)
                 {
                     cmd.Document?.Dispose();
-                    if (cmd.PatchCommand != null)
-                        cmd.PatchCommand.Dispose();
+                    cmd.PatchCommand?.Dispose();
                 }
                 BatchRequestParser.ReturnBuffer(ParsedCommands);
                 AttachmentStreamsTempFile?.Dispose();
@@ -1031,8 +1011,8 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 ParsedCommands[i].PatchCommand = new PatchDocumentCommand(
-                    context: context, 
-                    id: ParsedCommands[i].Id, 
+                    context: context,
+                    id: ParsedCommands[i].Id,
                     expectedChangeVector: ParsedCommands[i].ChangeVector,
                     skipPatchIfChangeVectorMismatch: false,
                     patch: (ParsedCommands[i].Patch, ParsedCommands[i].PatchArgs),
@@ -1040,7 +1020,8 @@ namespace Raven.Server.Documents.Handlers
                     database: database,
                     isTest: false,
                     debugMode: false,
-                    collectResultsNeeded: true
+                    collectResultsNeeded: true,
+                    returnDocument: ParsedCommands[i].ReturnDocument
                 );
             }
 
