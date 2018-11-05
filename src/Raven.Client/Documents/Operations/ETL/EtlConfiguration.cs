@@ -39,9 +39,9 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public bool Disabled { get; set; }
         
-        public virtual bool Validate(out List<string> errors)
+        public virtual bool Validate(out List<string> errors, bool validateConnection = true)
         {
-            if (_initialized == false)
+            if (validateConnection && _initialized == false)
                 throw new InvalidOperationException("ETL configuration must be initialized");
 
             errors = new List<string>();
@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Operations.ETL
             if (TestMode == false && string.IsNullOrEmpty(ConnectionStringName))
                 errors.Add($"{nameof(ConnectionStringName)} cannot be empty");
 
-            if (TestMode == false)
+            if (validateConnection && TestMode == false)
                 Connection.Validate(ref errors);
 
             var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -135,6 +135,11 @@ namespace Raven.Client.Documents.Operations.ETL
                    config.Name == Name &&
                    config.MentorNode == MentorNode &&
                    config.Disabled == Disabled;
+        }
+
+        public bool AssertConnectionString(DatabaseRecord databaseRecord)
+        {
+            return EtlType == EtlType.Raven ? databaseRecord.RavenConnectionStrings.TryGetValue(ConnectionStringName, out var rvnConnection) : databaseRecord.SqlConnectionStrings.TryGetValue(ConnectionStringName, out var sqlConnection);
         }
 
         public static EtlType GetEtlType(BlittableJsonReaderObject etlConfiguration)
