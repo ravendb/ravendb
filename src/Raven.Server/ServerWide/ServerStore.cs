@@ -1324,13 +1324,19 @@ namespace Raven.Server.ServerWide
             string databaseName, BlittableJsonReaderObject etlConfiguration)
         {
             UpdateDatabaseCommand command;
+            var databaseRecord = LoadDatabaseRecord(databaseName, out var _);
+            var connectionStringName = etlConfiguration["ConnectionStringName"].ToString();
 
             switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
             {
                 case EtlType.Raven:
+                    if (databaseRecord.RavenConnectionStrings.TryGetValue(connectionStringName, out var rvnConnection) == false)
+                        ThrowUnknownConnectionStringName(connectionStringName);
                     command = new AddRavenEtlCommand(JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration), databaseName);
                     break;
                 case EtlType.Sql:
+                    if (databaseRecord.SqlConnectionStrings.TryGetValue(connectionStringName, out var sqlConnection) == false)
+                        ThrowUnknownConnectionStringName(connectionStringName);
                     command = new AddSqlEtlCommand(JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration), databaseName);
                     break;
                 default:
@@ -1338,6 +1344,11 @@ namespace Raven.Server.ServerWide
             }
 
             return await SendToLeaderAsync(command);
+        }
+
+        private static void ThrowUnknownConnectionStringName(string connectionStringName)
+        {
+            throw new ArgumentException($"Could not find a connection string named: {connectionStringName}, Please supply a correct Connection String Name.");
         }
 
         public async Task<(long, object)> UpdateEtl(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject etlConfiguration)
