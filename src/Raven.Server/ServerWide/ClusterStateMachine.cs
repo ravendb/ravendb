@@ -1029,23 +1029,6 @@ namespace Raven.Server.ServerWide
                         }
 
                         databaseRecord = JsonDeserializationCluster.DatabaseRecord(databaseRecordJson);
-                        
-                        if (type == "AddRavenEtlCommand" || type == "AddSqlEtlCommand")
-                        {
-                            if (cmd.TryGet("Configuration", out BlittableJsonReaderObject obj))
-                            {
-                                var connectionStringName = obj["ConnectionStringName"].ToString();
-                                switch (type)
-                                {
-                                    case "AddSqlEtlCommand" when databaseRecord.SqlConnectionStrings.TryGetValue(connectionStringName, out var sqlConnection) == false:
-                                        ThrowUnknownConnectionStringName(connectionStringName);
-                                        break;
-                                    case "AddRavenEtlCommand" when databaseRecord.RavenConnectionStrings.TryGetValue(connectionStringName, out var sqlConnection) == false:
-                                        ThrowUnknownConnectionStringName(connectionStringName);
-                                        break;
-                                }
-                            }
-                        }
 
                         if (updateCommand.RaftCommandIndex != null && etag != updateCommand.RaftCommandIndex.Value)
                         {
@@ -1086,11 +1069,6 @@ namespace Raven.Server.ServerWide
             {
                 NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
             }
-        }
-
-        private static void ThrowUnknownConnectionStringName(string connectionStringName)
-        {
-            throw new ArgumentException($"Could not find a connection string named: {connectionStringName}, Please supply a correct Connection String Name.");
         }
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
@@ -1658,7 +1636,7 @@ namespace Raven.Server.ServerWide
             return TcpConnectionHeaderMessage.ClusterTcpVersion;
         }
 
-        public override async Task<RachisConnection> ConnectToPeer(string url, string tag ,X509Certificate2 certificate)
+        public override async Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate)
         {
             if (url == null)
                 throw new ArgumentNullException(nameof(url));
