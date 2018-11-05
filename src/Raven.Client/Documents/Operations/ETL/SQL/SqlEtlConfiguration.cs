@@ -36,9 +36,9 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 #pragma warning restore 618
         }
 
-        public override bool Validate(out List<string> errors)
+        public override bool Validate(out List<string> errors, bool validateConnection = true)
         {
-            base.Validate(out errors);
+            base.Validate(out errors, validateConnection);
 
             if (SqlTables.Count == 0)
                 errors.Add($"{nameof(SqlTables)} cannot be empty");

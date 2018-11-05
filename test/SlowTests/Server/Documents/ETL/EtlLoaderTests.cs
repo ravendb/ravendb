@@ -160,7 +160,7 @@ namespace SlowTests.Server.Documents.ETL
                 var notifications = new AsyncQueue<DynamicJsonValue>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
-                    store.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
+                    AddEtlOperation<RavenConnectionString> operation = new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
                     {
                         ConnectionStringName = "test",
                         Name = "myEtl",
@@ -171,13 +171,16 @@ namespace SlowTests.Server.Documents.ETL
                                 Collections = {"Users"}
                             }
                         }
-                    }));
-                    
-                    var alert = await notifications.TryDequeueOfTypeAsync<DynamicJsonValue>(TimeSpan.FromSeconds(30));
+                    });
 
-                    Assert.True(alert.Item1);
-
-                    Assert.Equal("Invalid ETL configuration for 'myEtl'. Reason: Connection string named 'test' was not found for Raven ETL.", alert.Item2[nameof(AlertRaised.Message)]);
+                    try
+                    {
+                        store.Maintenance.Send(operation);
+                    }
+                    catch (Exception e)
+                    {
+                        Assert.True(e.Message.StartsWith("System.InvalidOperationException"));
+                    }
                 }
             }
         }

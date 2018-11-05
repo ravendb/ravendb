@@ -1325,30 +1325,47 @@ namespace Raven.Server.ServerWide
         {
             UpdateDatabaseCommand command;
             var databaseRecord = LoadDatabaseRecord(databaseName, out var _);
-            var connectionStringName = etlConfiguration["ConnectionStringName"].ToString();
 
             switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
             {
                 case EtlType.Raven:
-                    if (databaseRecord.RavenConnectionStrings.TryGetValue(connectionStringName, out var rvnConnection) == false)
-                        ThrowUnknownConnectionStringName(connectionStringName);
-                    command = new AddRavenEtlCommand(JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration), databaseName);
+                    var rvnEtl = JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration);
+                    rvnEtl.Validate(out var rvnEtlErr, false);
+                    if (rvnEtl.AssertConnectionString(databaseRecord) && rvnEtlErr.Count == 0)
+                        command = new AddRavenEtlCommand(rvnEtl, databaseName);
+                    else
+                    {
+                        if (rvnEtl.AssertConnectionString(databaseRecord))
+                        {
+                            var errorMessage = "";
+                            foreach (var str in rvnEtlErr)
+                                errorMessage += Environment.NewLine + str;
+                            throw new InvalidOperationException($"Unknown ETL configuration: {etlConfiguration}, errors: {errorMessage}.");
+                        }
+                        throw new InvalidOperationException($"Could not find a connection string named: {rvnEtl.ConnectionStringName}, Please supply a correct Connection String Name.");
+                    }
                     break;
                 case EtlType.Sql:
-                    if (databaseRecord.SqlConnectionStrings.TryGetValue(connectionStringName, out var sqlConnection) == false)
-                        ThrowUnknownConnectionStringName(connectionStringName);
-                    command = new AddSqlEtlCommand(JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration), databaseName);
+                    var sqlEtl = JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration);
+                    sqlEtl.Validate(out var sqlEtlErr, false);
+                    if (sqlEtl.AssertConnectionString(databaseRecord) && sqlEtlErr.Count == 0)
+                        command = new AddSqlEtlCommand(sqlEtl, databaseName);
+                    else
+                    {
+                        if (sqlEtl.AssertConnectionString(databaseRecord))
+                        {
+                            var errorMessage = "";
+                            foreach (var str in sqlEtlErr)
+                                errorMessage += Environment.NewLine + str;
+                            throw new InvalidOperationException($"Unknown ETL configuration: {etlConfiguration}, errors: {errorMessage}.");
+                        }
+                        throw new InvalidOperationException($"Could not find a connection string named: {sqlEtl.ConnectionStringName}, Please supply a correct Connection String Name.");
+                    }
                     break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
             }
-
             return await SendToLeaderAsync(command);
-        }
-
-        private static void ThrowUnknownConnectionStringName(string connectionStringName)
-        {
-            throw new ArgumentException($"Could not find a connection string named: {connectionStringName}, Please supply a correct Connection String Name.");
         }
 
         public async Task<(long, object)> UpdateEtl(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject etlConfiguration)
