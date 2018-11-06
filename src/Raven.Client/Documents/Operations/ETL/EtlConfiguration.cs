@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -14,7 +15,7 @@ namespace Raven.Client.Documents.Operations.ETL
         private bool _initialized;
 
         public long TaskId { get; set; }
-        
+
         public string Name { get; set; }
 
         public string MentorNode { get; set; }
@@ -38,15 +39,15 @@ namespace Raven.Client.Documents.Operations.ETL
         public List<Transformation> Transforms { get; set; } = new List<Transformation>();
 
         public bool Disabled { get; set; }
-        
-        public virtual bool Validate(out List<string> errors, bool validateConnection = true)
+
+        public virtual bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true)
         {
             if (validateConnection && _initialized == false)
                 throw new InvalidOperationException("ETL configuration must be initialized");
 
             errors = new List<string>();
 
-            if (string.IsNullOrEmpty(Name))
+            if (validateName && string.IsNullOrEmpty(Name))
                 errors.Add($"{nameof(Name)} of ETL configuration cannot be empty");
 
             if (TestMode == false && string.IsNullOrEmpty(ConnectionStringName))
@@ -64,7 +65,7 @@ namespace Raven.Client.Documents.Operations.ETL
                 if (uniqueNames.Add(script.Name) == false)
                     errors.Add($"Script name '{script.Name}' name is already defined. The script names need to be unique");
             }
-            
+
             return errors.Count == 0;
         }
 
@@ -124,7 +125,7 @@ namespace Raven.Client.Documents.Operations.ETL
             using (var localEnum = localTransforms.GetEnumerator())
             using (var remoteEnum = remoteTransforms.GetEnumerator())
             {
-                while(localEnum.MoveNext() && remoteEnum.MoveNext())
+                while (localEnum.MoveNext() && remoteEnum.MoveNext())
                 {
                     if (localEnum.Current.IsEqual(remoteEnum.Current) == false)
                         return false;
@@ -137,9 +138,11 @@ namespace Raven.Client.Documents.Operations.ETL
                    config.Disabled == Disabled;
         }
 
-        public bool AssertConnectionString(DatabaseRecord databaseRecord)
+        public bool ValidateConnectionString(DatabaseRecord databaseRecord)
         {
-            return EtlType == EtlType.Raven ? databaseRecord.RavenConnectionStrings.TryGetValue(ConnectionStringName, out var rvnConnection) : databaseRecord.SqlConnectionStrings.TryGetValue(ConnectionStringName, out var sqlConnection);
+            return EtlType == EtlType.Raven
+                ? databaseRecord.RavenConnectionStrings.TryGetValue(ConnectionStringName, out _)
+                : databaseRecord.SqlConnectionStrings.TryGetValue(ConnectionStringName, out _);
         }
 
         public static EtlType GetEtlType(BlittableJsonReaderObject etlConfiguration)

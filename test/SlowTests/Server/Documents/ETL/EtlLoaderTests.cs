@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Exceptions.Cluster;
-using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -21,73 +20,68 @@ namespace SlowTests.Server.Documents.ETL
                 var notifications = new AsyncQueue<DynamicJsonValue>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
-                    AddEtl(store, new RavenEtlConfiguration()
+                    var e = Assert.ThrowsAny<Exception>(() => AddEtl(store, new RavenEtlConfiguration
                     {
                         ConnectionStringName = "test",
                         Name = "myEtl",
                         Transforms =
                         {
-                            new Transformation()
+                            new Transformation
                             {
-                                Collections = {"Users"}
+                                Collections =
+                                {
+                                    "Users"
+                                }
                             }
                         }
-                    }, new RavenConnectionString()
+                    }, new RavenConnectionString
                     {
                         Name = "test",
                         TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                         Database = "Northwind",
-                    });
+                    }));
 
-                    var alert = await notifications.TryDequeueOfTypeAsync<DynamicJsonValue>(TimeSpan.FromSeconds(30));
-
-                    Assert.True(alert.Item1);
-
-                    Assert.Equal("Invalid ETL configuration for 'myEtl' (Northwind@http://127.0.0.1:8080). Reason: Script name cannot be empty.", alert.Item2[nameof(AlertRaised.Message)]);
+                    Assert.Contains("Script name cannot be empty", e.Message);
                 }
             }
         }
 
         [Fact]
-        public async Task Raises_alert_if_scipts_have_non_unique_names()
+        public void Raises_alert_if_scipts_have_non_unique_names()
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDatabase(store.Database);
-
-                var notifications = new AsyncQueue<DynamicJsonValue>();
-                using (database.NotificationCenter.TrackActions(notifications, null))
+                var e = Assert.ThrowsAny<Exception>(() => AddEtl(store, new RavenEtlConfiguration
                 {
-                    AddEtl(store, new RavenEtlConfiguration()
-                    {
-                        ConnectionStringName = "test",
-                        Name = "myEtl",
-                        Transforms =
+                    ConnectionStringName = "test",
+                    Name = "myEtl",
+                    Transforms =
                         {
-                            new Transformation()
+                            new Transformation
                             {
                                 Name = "MyEtl",
-                                Collections = { "Users"}
+                                Collections =
+                                {
+                                    "Users"
+                                }
                             },
-                            new Transformation()
+                            new Transformation
                             {
                                 Name = "MyEtl",
-                                Collections = {"People"}
+                                Collections =
+                                {
+                                    "People"
+                                }
                             }
                         }
-                    }, new RavenConnectionString()
-                    {
-                        Name = "test",
-                        TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
-                        Database = "Northwind",
-                    });
+                }, new RavenConnectionString
+                {
+                    Name = "test",
+                    TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
+                    Database = "Northwind",
+                }));
 
-                    var alert = await notifications.TryDequeueOfTypeAsync<DynamicJsonValue>(TimeSpan.FromSeconds(30));
-
-                    Assert.True(alert.Item1);
-
-                    Assert.Equal("Invalid ETL configuration for 'myEtl' (Northwind@http://127.0.0.1:8080). Reason: Script name 'MyEtl' name is already defined. The script names need to be unique.", alert.Item2[nameof(AlertRaised.Message)]);
-                }
+                Assert.Contains("Script name 'MyEtl' name is already defined. The script names need to be unique", e.Message);
             }
         }
 
@@ -102,19 +96,19 @@ namespace SlowTests.Server.Documents.ETL
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
 
-                    AddEtl(store, new RavenEtlConfiguration()
+                    AddEtl(store, new RavenEtlConfiguration
                     {
                         ConnectionStringName = "test",
                         Name = "myEtl",
                         Transforms =
                         {
-                            new Transformation()
+                            new Transformation
                             {
                                 Name = "TransformUsers",
                                 Collections = {"Users"}
                             }
                         }
-                    }, new RavenConnectionString()
+                    }, new RavenConnectionString
                     {
                         Name = "test",
                         TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
@@ -124,13 +118,13 @@ namespace SlowTests.Server.Documents.ETL
 
                     Assert.Throws<CommandExecutionException>(() =>
                     {
-                        AddEtl(store, new RavenEtlConfiguration()
+                        AddEtl(store, new RavenEtlConfiguration
                         {
                             ConnectionStringName = "test",
                             Name = "myEtl",
                             Transforms =
                             {
-                                new Transformation()
+                                new Transformation
                                 {
                                     Name = "TransformOrders",
                                     Collections =
@@ -139,17 +133,17 @@ namespace SlowTests.Server.Documents.ETL
                                     }
                                 }
                             }
-                        }, new RavenConnectionString()
+                        }, new RavenConnectionString
                         {
                             Name = "test",
-                            TopologyDiscoveryUrls = new[] {"http://127.0.0.1:8080"},
+                            TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
                             Database = "Northwind",
                         });
                     });
                 }
             }
         }
-        
+
         [Fact]
         public async Task Raises_alert_if_connection_string_was_not_found()
         {
@@ -160,27 +154,21 @@ namespace SlowTests.Server.Documents.ETL
                 var notifications = new AsyncQueue<DynamicJsonValue>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
-                    AddEtlOperation<RavenConnectionString> operation = new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
+                    var operation = new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration
                     {
                         ConnectionStringName = "test",
                         Name = "myEtl",
                         Transforms =
                         {
-                            new Transformation()
+                            new Transformation
                             {
                                 Collections = {"Users"}
                             }
                         }
                     });
 
-                    try
-                    {
-                        store.Maintenance.Send(operation);
-                    }
-                    catch (Exception e)
-                    {
-                        Assert.True(e.Message.StartsWith("System.InvalidOperationException"));
-                    }
+                    var e = Assert.ThrowsAny<Exception>(() => store.Maintenance.Send(operation));
+                    Assert.Contains("Could not find connection string named", e.Message);
                 }
             }
         }
