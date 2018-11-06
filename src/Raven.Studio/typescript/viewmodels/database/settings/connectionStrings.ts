@@ -138,9 +138,8 @@ class connectionStrings extends viewModelBase {
     }   
 
     isConnectionStringInUse(connectionStringName: string, task: string): boolean {
-        if (this.connectionStringsTasksInfo[connectionStringName].find(x => x.TaskType === task))
-            return true;
-        return false;
+        return _.includes(Object.keys(this.connectionStringsTasksInfo), connectionStringName)
+            && (typeof this.connectionStringsTasksInfo[connectionStringName].find(x => x.TaskType === task) === 'object');
     }
     
     private getAllConnectionStrings() {
@@ -219,10 +218,10 @@ class connectionStrings extends viewModelBase {
     }
     
     private getTasksThatUseThisString(connectionStringName: string, taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType): { taskName: string; taskId: number }[] {
-        if (this.connectionStringsTasksInfo[connectionStringName] == null)
+        if (!this.connectionStringsTasksInfo[connectionStringName]) {
             return [];
-        else
-        {
+        }
+        else {
             const tasksData = this.connectionStringsTasksInfo[connectionStringName].filter(x => x.TaskType === taskType);
 
             return tasksData ? _.sortBy(tasksData.map((task) => { return { taskName: task.TaskName, taskId: task.TaskId }; }),
