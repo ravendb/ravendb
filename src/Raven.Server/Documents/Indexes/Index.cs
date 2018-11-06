@@ -1824,7 +1824,8 @@ namespace Raven.Server.Documents.Indexes
                 if (documentsContext.Transaction == null)
                     throw new InvalidOperationException("Cannot calculate index progress without valid transaction.");
 
-                if (valid == false || DocumentDatabase.DatabaseShutdown.IsCancellationRequested || _disposeOne.Disposed)
+                var disposed = DocumentDatabase.DatabaseShutdown.IsCancellationRequested || _disposeOne.Disposed;
+                if (valid == false || disposed)
                 {
                     var progress = new IndexProgress
                     {
@@ -1832,10 +1833,12 @@ namespace Raven.Server.Documents.Indexes
                         Type = Type,
                         IndexRunningStatus = Status,
                         Collections = new Dictionary<string, IndexProgress.CollectionStats>(StringComparer.OrdinalIgnoreCase)
-                    };
+                };
+
+                    if (disposed)
+                        return progress;
 
                     UpdateIndexProgress(documentsContext, progress, null);
-
                     return progress;
                 }
 
