@@ -151,6 +151,8 @@ namespace Raven.Client.Documents.Subscriptions
         public string CurrentNodeTag => _redirectNode?.ClusterTag;
         public string SubscriptionName => _options?.SubscriptionName;
 
+        internal int? SubscriptionTcpVersion;
+
         private async Task<Stream> ConnectToServer(CancellationToken token)
         {
             var command = new GetTcpInfoCommand("Subscription/" + _dbName, _dbName);
@@ -191,7 +193,7 @@ namespace Raven.Client.Documents.Subscriptions
                 {
                     Database = databaseName,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
-                    Version = TcpConnectionHeaderMessage.SubscriptionTcpVersion,
+                    Version = SubscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion,
                     ReadResponseAndGetVersionCallback = ReadServerResponseAndGetVersion,
                     DestinationNodeTag = CurrentNodeTag,
                     DestinationUrl = command.Result.Url

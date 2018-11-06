@@ -120,6 +120,13 @@ namespace Raven.Server.Documents.TcpHandlers
             // first, validate details and make sure subscription exists
             SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName);
 
+            if (_supportedFeatures.Subscription.Includes == false)
+            {
+                Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
+                if (Subscription.Includes != null && Subscription.Includes.Length > 0)
+                    throw new SubscriptionInvalidStateException($"Subscription with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support Includes.");
+            }
+
             _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
             var timeout = TimeSpan.FromMilliseconds(16);
 
@@ -144,8 +151,6 @@ namespace Raven.Server.Documents.TcpHandlers
                     shouldRetry = true;
                 }
             } while (shouldRetry);
-
-
 
             // refresh subscription data (change vector may have been updated, because in the meanwhile, another subscription could have just completed a batch)            
             SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName);
