@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -43,17 +44,41 @@ namespace Raven.Server.Documents.Handlers
         public async Task HandleQuery(HttpMethod httpMethod)
         {
             using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "Query"))
-            using (var token = CreateTimeLimitedQueryToken())
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var debug = GetStringQueryString("debug", required: false);
-                if (string.IsNullOrWhiteSpace(debug) == false)
+                try
                 {
-                    await Debug(context, debug, token, tracker, httpMethod);
-                    return;
-                }
+                    using (var token = CreateTimeLimitedQueryToken())
+                    using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        var debug = GetStringQueryString("debug", required: false);
+                        if (string.IsNullOrWhiteSpace(debug) == false)
+                        {
+                            await Debug(context, debug, token, tracker, httpMethod);
+                            return;
+                        }
 
-                await Query(context, token, tracker, httpMethod);
+                        await Query(context, token, tracker, httpMethod);
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (tracker.Query == null)
+                    {
+                        string errorMessage;
+                        if (e is EndOfStreamException || e is ArgumentException)
+                        {
+                            errorMessage = "Failed: " + e.Message;
+                        }
+                        else
+                        {
+                            errorMessage = "Failed: " +
+                                           HttpContext.Request.Path.Value +
+                                           e.ToString();
+                        }
+                        tracker.Query = errorMessage;
+                    }
+                    throw;
+                }
             }
         }
 
