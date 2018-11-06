@@ -229,7 +229,7 @@ namespace Raven.Client.FileSystem
 
         public async Task<TouchFilesResult> TouchFilesAsync(Etag start, int pageSize)
         {
-            var requestUrlString = string.Format("{0}/fs/{1}/files/touch?etag={2}&pageSize={3}", ServerUrl, Uri.EscapeDataString(FileSystemName), start, pageSize);
+            var requestUrlString = string.Format("{0}/fs/{1}/files-touch?etag={2}&pageSize={3}", ServerUrl, Uri.EscapeDataString(FileSystemName), start, pageSize);
 
             using (var request = RequestFactory.CreateHttpJsonRequest(new CreateHttpJsonRequestParams(this, requestUrlString, HttpMethods.Get, PrimaryCredentials, Conventions)))
             {

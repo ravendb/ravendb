@@ -516,7 +516,7 @@ namespace Raven.Database.FileSystem.Controllers
         }
 
         [HttpGet]
-        [RavenRoute("fs/{fileSystemName}/files/touch")]
+        [RavenRoute("fs/{fileSystemName}/files-touch")]
         public HttpResponseMessage TouchFiles()
         {
             var startEtag = GetEtagFromQueryString();
