@@ -1,7 +1,5 @@
-﻿using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.ETL;
+﻿using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.ServerWide.Operations;
 using Xunit;
 
 namespace SlowTests.Server.Documents.ETL
@@ -9,26 +7,25 @@ namespace SlowTests.Server.Documents.ETL
     public class EtlTasksManagement_RavenDB_7276 : EtlTestBase
     {
         [Fact]
-        public async Task CanDeleteEtl()
+        public void CanDeleteEtl()
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDatabase(store.Database);
-
-                var configuration = new RavenEtlConfiguration()
+                var configuration = new RavenEtlConfiguration
                 {
                     ConnectionStringName = "test",
                     Name = "aaa",
                     Transforms =
                     {
-                        new Transformation()
+                        new Transformation
                         {
+                            Name = "S1",
                             Collections = {"Users"}
                         }
                     }
                 };
 
-                var result = AddEtl(store, configuration, new RavenConnectionString()
+                var result = AddEtl(store, configuration, new RavenConnectionString
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
@@ -44,30 +41,30 @@ namespace SlowTests.Server.Documents.ETL
         }
 
         [Fact]
-        public async Task CanUpdateEtl()
+        public void CanUpdateEtl()
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDatabase(store.Database);
-
-                var configuration = new RavenEtlConfiguration()
+                var configuration = new RavenEtlConfiguration
                 {
                     ConnectionStringName = "test",
                     Name = "aaa",
                     Transforms =
                     {
-                        new Transformation()
+                        new Transformation
                         {
+                            Name = "S1",
                             Collections = {"Users"}
                         },
-                        new Transformation()
+                        new Transformation
                         {
+                            Name = "S2",
                             Collections = {"Users"}
                         }
                     }
                 };
 
-                var result = AddEtl(store, configuration, new RavenConnectionString()
+                var result = AddEtl(store, configuration, new RavenConnectionString
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
@@ -85,26 +82,25 @@ namespace SlowTests.Server.Documents.ETL
         }
 
         [Fact]
-        public async Task CanDisableEtl()
+        public void CanDisableEtl()
         {
             using (var store = GetDocumentStore())
             {
-                var database = await GetDatabase(store.Database);
-
-                var configuration = new RavenEtlConfiguration()
+                var configuration = new RavenEtlConfiguration
                 {
                     ConnectionStringName = "test",
                     Name = "aaa",
                     Transforms =
                     {
-                        new Transformation()
+                        new Transformation
                         {
+                            Name = "S1",
                             Collections = {"Users"}
                         }
                     }
                 };
 
-                var result = AddEtl(store, configuration, new RavenConnectionString()
+                var result = AddEtl(store, configuration, new RavenConnectionString
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
