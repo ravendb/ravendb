@@ -34,6 +34,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         protected readonly IndexWriteOperationStats Stats = new IndexWriteOperationStats();
 
         private readonly IState _state;
+        private readonly LuceneVoronDirectory _directory;
 
         public IndexWriteOperation(Index index, LuceneVoronDirectory directory, LuceneDocumentConverterBase converter, Transaction writeTransaction, LuceneIndexPersistence persistence)
             : base(index, LoggingSource.Instance.GetLogger<IndexWriteOperation>(index._indexStorage.DocumentDatabase.Name))
@@ -59,6 +60,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _hasSuggestions = _suggestionsWriters.Count > 0;
                 
                 _locker = directory.MakeLock("writing-to-index.lock");
+                _directory = directory;
 
                 if (_locker.Obtain() == false)
                     throw new InvalidOperationException($"Could not obtain the 'writing-to-index' lock for '{_indexName}' index.");
@@ -84,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public virtual void Commit(IndexingStatsScope stats)
         {
-            if (_writer != null )
+            if (_writer != null)
             {
                 using (stats.For(IndexingOperation.Lucene.FlushToDisk))
                 {
@@ -135,9 +137,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public long GetUsedMemory()
+        public (long RamSizeInBytes, long FilesAllocationsInBytes) GetAllocations()
         {
-            return _writer.RamSizeInBytes();
+            var usedMemory = _writer.RamSizeInBytes();
+            var fileAllocations = _directory.GetFilesAllocations();
+
+            if (_hasSuggestions)
+            {
+                foreach (var item in _suggestionsWriters)
+                {
+                    usedMemory += item.Value.RamSizeInBytes();
+                    fileAllocations += item.Value.FilesAllocationsInBytes();
+                }
+            }
+
+            return (usedMemory, fileAllocations);
         }
 
         public virtual void Delete(LazyStringValue key, IndexingStatsScope stats)
