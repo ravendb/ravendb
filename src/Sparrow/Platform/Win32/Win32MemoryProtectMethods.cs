@@ -25,6 +25,9 @@ namespace Sparrow.Platform.Win32
         );
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool DiscardVirtualMemory(void* lpAddress, UIntPtr size);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
         public static extern int VirtualQueryEx(
             IntPtr hProcess,
             byte* lpAddress,

@@ -560,6 +560,34 @@ namespace Voron.Impl.Paging
             this._pagerState.CheckResetPrefetchTable();
         }
 
+        public virtual void DiscardWholeFile()
+        {
+            long size = 0;
+            void* baseAddress = null;
+            var pagerState = PagerState;
+            Debug.Assert(pagerState.AllocationInfos.Length == 1);
+
+            for (int i = 0; i < pagerState.AllocationInfos.Length; i++)
+            {
+                var allocInfo = pagerState.AllocationInfos[i];
+                size += allocInfo.Size;
+
+                if (baseAddress == null)
+                    baseAddress = allocInfo.BaseAddress;
+
+                if (i != pagerState.AllocationInfos.Length - 1 &&
+                    pagerState.AllocationInfos[i + 1].BaseAddress == allocInfo.BaseAddress + allocInfo.Size)
+                {
+                    continue; // if adjacent ranges make one syscall
+                }
+
+                Memory.Discard(baseAddress, size);
+
+                size = 0;
+                baseAddress = null;
+            }            
+        }
+
         public unsafe void TryPrefetchingWholeFile()
         {
             if (PlatformDetails.CanPrefetch == false || _canPrefetchAhead == false)

@@ -72,6 +72,8 @@ namespace Voron.Impl.Scratch
             }            
 #endif
             _freePagesBySizeAvailableImmediately.Clear();
+            _scratchPager.DiscardWholeFile();
+            
 
 #if VALIDATE
             foreach (var free in _freePagesBySize)
@@ -217,8 +219,7 @@ namespace Voron.Impl.Scratch
 
         internal void Free(long page, long asOfTxId)
         {
-            PageFromScratchBuffer value;
-            if (_allocatedPages.TryGetValue(page, out value) == false)
+            if (_allocatedPages.TryGetValue(page, out PageFromScratchBuffer value) == false)
             {
                 ThrowInvalidFreeOfUnusedPage(page);
                 return; // never called
@@ -231,9 +232,8 @@ namespace Voron.Impl.Scratch
 
             if (asOfTxId == -1)
             {
-                LinkedList<long> list;
-
-                if (_freePagesBySizeAvailableImmediately.TryGetValue(value.Size, out list) == false)
+                // We are freeing without the pages being 'visible' to any party (for ex. rollbacks)
+                if (_freePagesBySizeAvailableImmediately.TryGetValue(value.Size, out LinkedList<long> list) == false)
                 {
                     list = new LinkedList<long>();
                     _freePagesBySizeAvailableImmediately[value.Size] = list;
@@ -242,9 +242,8 @@ namespace Voron.Impl.Scratch
             }
             else
             {
-                LinkedList<PendingPage> list;
-
-                if (_freePagesBySize.TryGetValue(value.Size, out list) == false)
+                // We are freeing with the pages being 'visible' to any party (for ex. rollbacks)
+                if (_freePagesBySize.TryGetValue(value.Size, out LinkedList<PendingPage> list) == false)
                 {
                     list = new LinkedList<PendingPage>();
                     _freePagesBySize[value.Size] = list;
