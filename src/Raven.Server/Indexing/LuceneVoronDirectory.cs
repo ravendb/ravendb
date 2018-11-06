@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using Lucene.Net.Store;
 using Raven.Client.Util;
@@ -164,7 +165,8 @@ namespace Raven.Server.Indexing
 
         protected override void Dispose(bool disposing)
         {
-            _voronIndexFiles.Clear();
+            // should be empty since we remove it from the dictionary on file dispose
+            Debug.Assert(_voronIndexFiles.Count == 0);
         }
 
         public long GetFilesAllocations()
