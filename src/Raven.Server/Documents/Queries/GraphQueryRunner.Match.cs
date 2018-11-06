@@ -24,9 +24,16 @@ namespace Raven.Server.Documents.Queries
             {
                 if (_inner == null)
                     return "<empty>";
-                return string.Join(", ", _inner.Select(x=> x.Key + " - " + x.Value));
+                return string.Join(", ", _inner.Select(x => x.Key + " - " + GetNameOfValue(x.Value)));
             }
 
+            private static object GetNameOfValue(object x)
+            {
+                if (x is Document d && d.Id != null)
+                    return d.Id;
+
+                return x;
+            }
 
             public Match(Match other)
             {
