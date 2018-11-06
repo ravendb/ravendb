@@ -3,6 +3,7 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Abstractions.Data;
@@ -19,6 +20,15 @@ namespace Raven.Tests.FileSystem
         public async Task CanTouchBatchOfFiles()
         {
             var client = NewAsyncClient();
+
+            try
+            {
+                await client.DownloadAsync("doesnt-exist");
+            }
+            catch (Exception)
+            {
+                // ignore
+            }
 
             var numberOfFiles = 53;
 
