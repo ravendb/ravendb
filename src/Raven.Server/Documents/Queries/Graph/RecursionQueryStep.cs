@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Sources;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
 using Sparrow.Json;
@@ -76,30 +77,64 @@ namespace Raven.Server.Documents.Queries.Graph
             return _outputAlias;
         }
 
-        public async ValueTask Initialize()
+        public ValueTask Initialize()
         {
             if (_index != -1)
-                return;
+                return default;
 
-            await _left.Initialize();
+            var leftTask = _left.Initialize();
+            if (leftTask.IsCompleted == false)
+            {
+                return new ValueTask(CompleteLeftInitializationAsync(leftTask));
+            }
 
             _index = 0;
 
-            foreach (var item in _steps)
+            return CompleteInitializationAfterLeft(0);
+        }
+
+        private ValueTask CompleteInitializationAfterLeft(int position)
+        {           
+            for (var i = position; i < _steps.Count; i++)
             {
+                var item = _steps[i];
                 if (item.Right == null)
                     continue;
 
-                await item.Right.Initialize();
+                var stepTask = item.Right.Initialize();
+                if (stepTask.IsCompleted == false)
+                {
+                    return new ValueTask(CompleteInitializationForStepAsyc(position, stepTask));
+                }
             }
+
+            CompleteInitialization();
+            return default;
+        }
+
+        private void CompleteInitialization()
+        {
             var matches = new List<Match>();
-            while(_left.GetNext(out var match))
+            while (_left.GetNext(out var match))
             {
                 matches.Clear();
                 ProcessSingleResultRecursive(match, matches);
-                if(matches.Count > 0)
+                if (matches.Count > 0)
                     _results.AddRange(matches);
             }
+        }
+
+        private async Task CompleteInitializationForStepAsyc(int position, ValueTask stepTask)
+        {
+            await stepTask;
+            CompleteInitializationAfterLeft(position + 1);
+        }
+
+        private async Task CompleteLeftInitializationAsync(ValueTask leftTask)
+        {
+            await leftTask;
+            _index = 0;
+            await CompleteInitializationAfterLeft(0);
         }
 
         private void ProcessSingleResultRecursive(Match currentMatch, List<Match> matches)
@@ -274,6 +309,32 @@ namespace Raven.Server.Documents.Queries.Graph
         public bool TryGetById(string id, out GraphQueryRunner.Match match)
         {
             throw new System.NotSupportedException("Cannot get matches by id from recursive portion");
+        }
+
+        public void Analyze(Match match, Action<string, object> addNode, Action<object, string> addEdge)
+        {
+            _left.Analyze(match, addNode, addEdge);
+
+            var prev = match.GetResult(_left.GetOuputAlias());
+
+            var result = match.GetResult(_recursive.Alias);
+            if (!(result is List<Match> matches))
+                return;
+
+            foreach (var singleMatch in matches)
+            {
+                foreach (var step in _steps)
+                {
+                    if (step.Edge != null)
+                    {
+                        var next = EdgeQueryStep.AnalyzeEdge(step.Edge, step.EdgeAlias, singleMatch, prev, addEdge);
+                        if (next != null)
+                            prev = next;
+                    }
+                    step.Right?.Analyze(singleMatch, addNode, addEdge);
+                }
+            }
+
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Queries
@@ -15,7 +16,7 @@ namespace Raven.Server.Documents.Queries
 
             public int Count => _inner?.Count ?? 0;
 
-            public IEnumerable<string> Aliases => _inner.Keys;
+            public IEnumerable<string> Aliases => _inner?.Keys ?? Enumerable.Empty<string>();
 
             public bool Empty => _inner == null || _inner.Count == 0;
 
@@ -25,6 +26,7 @@ namespace Raven.Server.Documents.Queries
                     return "<empty>";
                 return string.Join(", ", _inner.Select(x=> x.Key + " - " + x.Value));
             }
+
 
             public Match(Match other)
             {
@@ -134,6 +136,10 @@ namespace Raven.Server.Documents.Queries
                     else if(item.Value is string s)
                     {
                         j[item.Key] = s;
+                    }
+                    else if(item.Value is BlittableJsonReaderBase b)
+                    {
+                        j[item.Key] = b;
                     }
                 }
             }

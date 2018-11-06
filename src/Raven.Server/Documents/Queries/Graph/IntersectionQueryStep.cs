@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Sources;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
 using static Raven.Server.Documents.Queries.GraphQueryRunner;
@@ -106,15 +108,41 @@ namespace Raven.Server.Documents.Queries.Graph
             return key;
         }
 
-        public async ValueTask Initialize()
+        public ValueTask Initialize()
         {
             if (_index != -1)
-                return;
+                return default;
 
-            await _left.Initialize();
-            await _right.Initialize();
+            var leftTask = _left.Initialize();
+            if (leftTask.IsCompleted == false)
+            {
+                return new ValueTask(CompleteLeftInitializationAsync(leftTask));
+            }
 
+            return CompleteInitializationAfterLeft();
+        }
+
+        private ValueTask CompleteInitializationAfterLeft()
+        {
+            var rightTask = _right.Initialize();
+            if (rightTask.IsCompleted == false)
+            {
+                return new ValueTask(CompleteRightInitializationAsync(rightTask));
+            }
             IntersectExpressions();
+            return default;
+        }
+
+        private async Task CompleteRightInitializationAsync(ValueTask rightTask)
+        {
+            await rightTask;
+            IntersectExpressions();
+        }
+
+        private async Task  CompleteLeftInitializationAsync(ValueTask leftTask)
+        {
+            await leftTask;
+            await CompleteInitializationAfterLeft();
         }
 
         public HashSet<string> GetAllAliases()
@@ -141,6 +169,12 @@ namespace Raven.Server.Documents.Queries.Graph
         public bool TryGetById(string id, out Match match)
         {
             throw new System.NotSupportedException("Cannot pull results by id from an intersection operation");
+        }
+
+        public void Analyze(Match match, Action<string, object> addNode, Action<object, string> addEdge)
+        {
+            _left.Analyze(match, addNode, addEdge);
+            _right.Analyze(match, addNode, addEdge);
         }
     }
 }

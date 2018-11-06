@@ -276,6 +276,25 @@ select manager
             }
         }
 
+        public class SimpleQueryResult
+        {
+            public Employee Employees, Boss;
+            public string Employees_ReportsTo;
+
+        }
+
+        [Fact]
+        public void CanProjectFromAnonymousAlias()
+        {
+            var results = Query<SimpleQueryResult>(@"
+match (Employees where id() ='employees/7-A')-[ReportsTo]->(Employees as Boss)
+");
+            Assert.Equal(1, results.Count);
+            Assert.Equal("employees/5-A", results[0].Employees_ReportsTo);
+            Assert.Equal("Robert", results[0].Employees.FirstName);
+            Assert.Equal("Steven", results[0].Boss.FirstName);
+        }
+
         [Fact]
         public void CanFilterIOnEdges()
         {

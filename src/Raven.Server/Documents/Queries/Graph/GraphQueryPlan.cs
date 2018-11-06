@@ -47,6 +47,38 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
+        public (Dictionary<string, object> Nodes, Dictionary<object, HashSet<string>> Edges) Analyze(List<Match> matches)
+        {
+            var edges = new Dictionary<object, HashSet<string>>();
+            var nodes = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+
+
+            foreach (var match in matches)
+            {
+                _rootQueryStep.Analyze(match, AddNode, AddEdge);
+            }
+
+            return (nodes, edges);
+
+            void AddEdge(object src, string dst)
+            {
+                if (src == null || dst == null)
+                    return;
+
+                if (edges.TryGetValue(src, out var hash) == false)
+                    edges[src] = hash = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                hash.Add(dst);
+            }
+
+            void AddNode(string key, object val)
+            {
+                key = key ?? "__anonymous__/" + Guid.NewGuid();
+                nodes[key] = val;
+            }
+        }
+
         public async Task Initialize()
         {
             await _rootQueryStep.Initialize();

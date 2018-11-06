@@ -62,16 +62,14 @@ namespace Raven.Server.Documents.Queries.Graph
                 CompleteInitialization(results.Result);
                 return default;
             }
-
-            return CompleteInitializeAsync(results);
+            
+            return new ValueTask(CompleteInitializeAsync(results));
         }
 
-        private async ValueTask CompleteInitializeAsync(Task<DocumentQueryResult> results)
+        private async Task CompleteInitializeAsync(Task<DocumentQueryResult> results)
         {
             CompleteInitialization(await results);
         }
-
-
 
         private void CompleteInitialization(DocumentQueryResult results)
         {
@@ -103,6 +101,22 @@ namespace Raven.Server.Documents.Queries.Graph
         public HashSet<string> GetAllAliases()
         {
             return _aliases;
+        }
+
+        public void Analyze(Match match, Action<string, object> addNode, Action<object, string> addEdge)
+        {
+            var result = match.GetResult(_alias);
+            if (result == null)
+                return;
+
+            if(result is Document d && d.Id != null)
+            {
+                addNode(d.Id.ToString(), d);
+            }
+            else
+            {
+                addNode(null, result);
+            }
         }
     }
 }
