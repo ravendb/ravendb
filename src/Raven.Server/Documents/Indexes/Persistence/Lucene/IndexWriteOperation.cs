@@ -52,13 +52,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             try
-            {                
+            {
                 _releaseWriteTransaction = directory.SetTransaction(writeTransaction, out _state);
                 _writer = persistence.EnsureIndexWriter(_state);
 
                 _suggestionsWriters = persistence.EnsureSuggestionIndexWriter(_state);
                 _hasSuggestions = _suggestionsWriters.Count > 0;
-                
+
                 _locker = directory.MakeLock("writing-to-index.lock");
                 _directory = directory;
 
@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         foreach (var item in _suggestionsWriters)
                             item.Value.Commit(_state);
                     }
-                }                    
+                }
             }
         }
 

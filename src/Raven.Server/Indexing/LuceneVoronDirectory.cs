@@ -15,16 +15,16 @@ namespace Raven.Server.Indexing
         private readonly string _name;
         private readonly IndexOutputFiles _indexOutputFiles;
 
-        public long GetFilesAllocations => _indexOutputFiles.CalculateTotalWritten();
+        public long GetFilesAllocations() => _indexOutputFiles.CalculateTotalWritten();
 
-        public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment) : this (tx, environment, "Files")
-        {}                
+        public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment) : this(tx, environment, "Files")
+        { }
 
         public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment, string name)
         {
             if (tx.IsWriteTransaction == false)
                 throw new InvalidOperationException($"Creation of the {nameof(LuceneVoronDirectory)} must be done under a write transaction.");
-            
+
             _environment = environment;
             _name = name;
 
@@ -145,9 +145,7 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
 
-            var voronIndexOutput = new VoronIndexOutput(_environment.Options, name, state.Transaction, _name, _indexOutputFiles);
-            _indexOutputFiles.Add(name, voronIndexOutput);
-            return voronIndexOutput;
+            return new VoronIndexOutput(_environment.Options, name, state.Transaction, _name, _indexOutputFiles);
         }
 
         public IDisposable SetTransaction(Transaction tx, out IState state)

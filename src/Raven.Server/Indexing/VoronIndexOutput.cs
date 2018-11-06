@@ -21,7 +21,7 @@ namespace Raven.Server.Indexing
         public long TotalWritten { get; private set; }
 
         public VoronIndexOutput(
-            StorageEnvironmentOptions options, 
+            StorageEnvironmentOptions options,
             string name,
             Transaction tx,
             string tree,
@@ -39,6 +39,8 @@ namespace Raven.Server.Indexing
                 _file = SafeFileStream.Create(_fileTempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096, FileOptions.DeleteOnClose);
 
             _tx.ReadTree(_tree).AddStream(name, Stream.Null); // ensure it's visible by LuceneVoronDirectory.FileExists, the actual write is inside Dispose
+
+            _indexOutputFiles.Add(name, this);
         }
 
         public override void FlushBuffer(byte[] b, int offset, int len)
@@ -64,7 +66,7 @@ namespace Raven.Server.Indexing
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            
+
             var files = _tx.ReadTree(_tree);
 
             using (Slice.From(_tx.Allocator, _name, out Slice nameSlice))
