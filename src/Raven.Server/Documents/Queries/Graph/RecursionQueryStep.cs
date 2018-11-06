@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private async Task CompleteInitializationForStepAsyc(int position, ValueTask stepTask)
         {
             await stepTask;
-            CompleteInitializationAfterLeft(position + 1);
+            await CompleteInitializationAfterLeft(position + 1);
         }
 
         private async Task CompleteLeftInitializationAsync(ValueTask leftTask)
