@@ -38,6 +38,7 @@ namespace Voron.Impl.Paging
         private const ulong MacLen = 16;
 
         public override long TotalAllocationSize => Inner.TotalAllocationSize;
+
         public override long NumberOfAllocatedPages => Inner.NumberOfAllocatedPages;
 
         public CryptoPager(AbstractPager inner) : base(inner.Options, inner.UsePageProtection)
@@ -78,6 +79,11 @@ namespace Voron.Impl.Paging
         public override void ReleaseAllocationInfo(byte* baseAddress, long size)
         {
             Inner.ReleaseAllocationInfo(baseAddress, size);
+        }
+
+        public override void DiscardWholeFile()
+        {
+            // REVIEW: Nothing to do here?.
         }
 
         protected internal override unsafe void PrefetchRanges(Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* list, int count)
