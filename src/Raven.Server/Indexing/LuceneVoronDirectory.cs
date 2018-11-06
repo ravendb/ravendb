@@ -12,7 +12,9 @@ namespace Raven.Server.Indexing
     {
         private readonly StorageEnvironment _environment;
         private readonly string _name;
-        
+        private readonly Dictionary<string, VoronIndexOutput> _voronIndexFiles =
+            new Dictionary<string, VoronIndexOutput>(StringComparer.OrdinalIgnoreCase);
+
         public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment) : this (tx, environment, "Files")
         {}                
 
@@ -131,7 +133,6 @@ namespace Raven.Server.Indexing
                 throw new ArgumentNullException(nameof(s));
 
             return new VoronIndexInput(name, state.Transaction, _name);
-            
         }
 
         public override IndexOutput CreateOutput(string name, IState s)
@@ -140,7 +141,10 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
 
-            return new VoronIndexOutput(_environment.Options, name, state.Transaction, _name);
+            var voronIndexOutput = new VoronIndexOutput(_environment.Options, name, state.Transaction, _name, 
+                beforeFileDispose: () => _voronIndexFiles.Remove(name, out _));
+            _voronIndexFiles.Add(name, voronIndexOutput);
+            return voronIndexOutput;
         }
 
         public IDisposable SetTransaction(Transaction tx, out IState state)
@@ -160,6 +164,18 @@ namespace Raven.Server.Indexing
 
         protected override void Dispose(bool disposing)
         {
+            _voronIndexFiles.Clear();
+        }
+
+        public long GetFilesAllocations()
+        {
+            var totalWritten = 0L;
+            foreach (var indexOutput in _voronIndexFiles)
+            {
+                totalWritten += indexOutput.Value.TotalWritten;
+            }
+
+            return totalWritten;
         }
     }
 }

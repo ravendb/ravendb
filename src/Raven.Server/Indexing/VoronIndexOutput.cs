@@ -11,20 +11,27 @@ namespace Raven.Server.Indexing
 {
     public class VoronIndexOutput : BufferedIndexOutput
     {
-        public static readonly int MaxFileChunkSize = 128 * 1024 * 1024;
-
         private readonly string _name;
         private readonly string _tree;
         private readonly Transaction _tx;
         private readonly Stream _file;
         private readonly string _fileTempPath;
+        private readonly Action _beforeFileDispose;
 
-        public VoronIndexOutput(StorageEnvironmentOptions options, string name, Transaction tx, string tree)
+        public long TotalWritten { get; private set; }
+
+        public VoronIndexOutput(
+            StorageEnvironmentOptions options, 
+            string name, 
+            Transaction tx, 
+            string tree,
+            Action beforeFileDispose)
         {
             _name = name;
             _tree = tree;
             _tx = tx;
             _fileTempPath = options.TempPath.Combine(name + "_" + Guid.NewGuid()).FullPath;
+            _beforeFileDispose = beforeFileDispose;
 
             if (options.EncryptionEnabled)
                 _file = new TempCryptoStream(_fileTempPath);
@@ -37,6 +44,7 @@ namespace Raven.Server.Indexing
         public override void FlushBuffer(byte[] b, int offset, int len)
         {
             _file.Write(b, offset, len);
+            TotalWritten += len;
         }
 
         /// <summary>Random-access methods </summary>
@@ -64,7 +72,8 @@ namespace Raven.Server.Indexing
                 _file.Seek(0, SeekOrigin.Begin);
                 files.AddStream(nameSlice, _file);
             }
-            
+
+            _beforeFileDispose.Invoke();
             _file.Dispose();
             PosixFile.DeleteOnClose(_fileTempPath);
         }

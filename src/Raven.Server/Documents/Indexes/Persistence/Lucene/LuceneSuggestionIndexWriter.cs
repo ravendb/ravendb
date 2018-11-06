@@ -210,6 +210,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _indexWriter.RamSizeInBytes();
         }
 
+        public long FilesAllocationsInBytes()
+        {
+            return _directory.GetFilesAllocations();
+        }
+
         private void RecreateIndexWriter(IState state)
         {
             try

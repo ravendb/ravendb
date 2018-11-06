@@ -3092,11 +3092,22 @@ namespace Raven.Server.Documents.Indexes
             var threadAllocations = _threadAllocations.TotalAllocated;
             var txAllocations = indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages
                                 * Voron.Global.Constants.Storage.PageSize;
-            var indexWriterAllocations = indexWriteOperation?.GetUsedMemory() ?? 0;
+
+            long indexWriterAllocations = 0;
+            long luceneFilesAllocations = 0;
+
+            if (indexWriteOperation != null)
+            {
+                var allocations = indexWriteOperation.GetAllocations();
+                indexWriterAllocations = allocations.RamSizeInBytes;
+                luceneFilesAllocations = allocations.FilesAllocationsInBytes;
+            }
+
+            var totalTxAllocations = txAllocations + luceneFilesAllocations;
 
             if (stats != null)
             {
-                var allocatedForStats = threadAllocations + txAllocations + indexWriterAllocations;
+                var allocatedForStats = threadAllocations + totalTxAllocations + indexWriterAllocations;
                 if (updateReduceStats)
                 {
                     stats.RecordReduceAllocations(allocatedForStats);
@@ -3107,14 +3118,14 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            var allocatedForProcessing = threadAllocations +
-                                   // we multiple it by two to take into account additional work
-                                   // that will need to be done during the commit phase of the index
-                                   2 * (indexWriterAllocations + txAllocations);
+            var allocatedForProcessing = threadAllocations + indexWriterAllocations +
+                                         // we multiple it by two to take into account additional work
+                                         // that will need to be done during the commit phase of the index
+                                         totalTxAllocations * 2;
 
             _threadAllocations.CurrentlyAllocatedForProcessing = allocatedForProcessing;
 
-            return txAllocations;
+            return totalTxAllocations;
         }
 
         private void HandleStoppedBatchesConcurrently(
