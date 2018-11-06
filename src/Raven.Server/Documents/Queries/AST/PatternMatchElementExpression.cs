@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Queries.AST
                     switch (value.Type)
                     {
                         case ValueTokenType.Long:
-                            max = min = ValidateNumber(value);
+                            min = ValidateNumber(value);
                             break;
                         case ValueTokenType.String:
                             if(Enum.TryParse(value.Value.ToString(), true, out type) == false)
