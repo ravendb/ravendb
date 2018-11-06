@@ -242,7 +242,7 @@ namespace Voron
                     // we haven't reached the point where we have to flush, but we might want to, if we have enough 
                     // resources available, if we have more than half the flushing capacity, we can do it now, otherwise, we'll wait
                     // until it is actually required.
-                    if (_concurrentFlushes.CurrentCount < StorageEnvironment.MaxConcurrentFlushes / 2)
+                    if (_concurrentFlushes.CurrentCount > StorageEnvironment.MaxConcurrentFlushes / 2)
                         continue;
 
                     // At the same time, we want to avoid excessive flushes, so we'll limit it to once in a while if we don't
