@@ -76,6 +76,8 @@ namespace Raven.Server.Documents.Handlers
                                            e.ToString();
                         }
                         tracker.Query = errorMessage;
+                        if (TrafficWatchManager.HasRegisteredClients)
+                            AddStringToHttpContext(errorMessage, TrafficWatchChangeType.Queries);
                     }
                     throw;
                 }
