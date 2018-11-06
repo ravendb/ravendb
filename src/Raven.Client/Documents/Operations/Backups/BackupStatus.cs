@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
-    public abstract class BackupStatus
+    public abstract class BackupStatus 
     {
         public DateTime? LastFullBackup { get; set; }
 
@@ -48,6 +48,19 @@ namespace Raven.Client.Documents.Operations.Backups
                 [nameof(Exception)] = Exception
             };
         }
+    }
+
+    public class LastRaftIndex : BackupStatus
+    {
+        public long? DatabaseRecord { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(DatabaseRecord)] = DatabaseRecord;
+            return json;
+        }
+
     }
 
     public class LocalBackup : BackupStatus

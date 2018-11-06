@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Dynamic;
@@ -46,6 +47,7 @@ using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
+using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
@@ -105,6 +107,8 @@ namespace Raven.Server.ServerWide
         public long LastClientConfigurationIndex { get; private set; } = -2;
 
         public Operations Operations { get; }
+
+        public ConcurrentDictionary<string, long > LastRaftIndex = new ConcurrentDictionary<string, long>();
 
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
@@ -638,6 +642,8 @@ namespace Raven.Server.ServerWide
             _engine.StateMachine.DatabaseChanged += OnDatabaseChanged;
             _engine.StateMachine.ValueChanged += OnValueChanged;
 
+            _engine.StateMachine.IndexChangedForBackup += OnIndexChangedForBackup;
+
             _engine.TopologyChanged += OnTopologyChanged;
             _engine.StateChanged += OnStateChanged;
 
@@ -748,6 +754,22 @@ namespace Raven.Server.ServerWide
                 NodeTag, _engine.CurrentTerm, _engine.CurrentState, GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails),
                 DateTime.MinValue);
             // we set the postpone time to the minimum in order to overwrite it and to send this notification every time when a new client connects. 
+        }
+
+        private void OnIndexChangedForBackup(object sender, (BlittableJsonReaderObject Cmd, long Index, string Type) t)
+        {
+            switch (t.Type)
+            {
+                case nameof(AddOrUpdateCompareExchangeCommand):
+                case nameof(RemoveCompareExchangeCommand):
+                    if (t.Cmd.TryGet(nameof(CompareExchangeCommandBase.Database), out string database))
+                        LastRaftIndex.AddOrUpdate(database, t.Index, (key, oldIndex) => t.Index);
+                    break;
+                default:
+                    if (t.Cmd.TryGet(nameof(DatabaseRecord.DatabaseName), out string databaseName))
+                        LastRaftIndex.AddOrUpdate(databaseName, t.Index, (key, oldIndex) => t.Index);
+                    break;
+            }
         }
 
         private void OnDatabaseChanged(object sender, (string DatabaseName, long Index, string Type, DatabasesLandlord.ClusterDatabaseChangeType _) t)

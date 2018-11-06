@@ -113,6 +113,8 @@ namespace Raven.Server.ServerWide
 
         public event EventHandler<(string DatabaseName, long Index, string Type, DatabasesLandlord.ClusterDatabaseChangeType ChangeType)> DatabaseChanged;
 
+        public event EventHandler<(BlittableJsonReaderObject cmd, long Index, string Type)> IndexChangedForBackup;
+
         public event EventHandler<(long Index, string Type)> ValueChanged;
 
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
@@ -177,6 +179,7 @@ namespace Raven.Server.ServerWide
 
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out object result);
                         leader?.SetStateOf(index, result);
+                        IndexChangedForBackup?.Invoke(this, (cmd, index, type));
                         break;
                     case nameof(IncrementClusterIdentitiesBatchCommand):
                         if (ValidatePropertyExistence(cmd, nameof(IncrementClusterIdentitiesBatchCommand), nameof(IncrementClusterIdentitiesBatchCommand.DatabaseName), out errorMessage) == false)
@@ -187,6 +190,7 @@ namespace Raven.Server.ServerWide
 
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
                         leader?.SetStateOf(index, result);
+                        IndexChangedForBackup?.Invoke(this, (cmd, index, type));
                         break;
                     case nameof(UpdateClusterIdentityCommand):
                         if (ValidatePropertyExistence(cmd, nameof(UpdateClusterIdentityCommand), nameof(UpdateClusterIdentityCommand.Identities), out errorMessage) == false)
@@ -197,6 +201,7 @@ namespace Raven.Server.ServerWide
 
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out result);
                         leader?.SetStateOf(index, result);
+                        IndexChangedForBackup?.Invoke(this, (cmd, index, type));
                         break;
                     case nameof(PutIndexCommand):
                     case nameof(PutAutoIndexCommand):
@@ -205,8 +210,11 @@ namespace Raven.Server.ServerWide
                     case nameof(SetIndexPriorityCommand):
                     case nameof(SetIndexStateCommand):
                     case nameof(EditRevisionsConfigurationCommand):
-                    case nameof(UpdatePeriodicBackupCommand):
                     case nameof(EditExpirationCommand):
+                        UpdateDatabase(context, type, cmd, index, leader, serverStore);
+                        IndexChangedForBackup?.Invoke(this, (cmd, index, type));
+                        break;
+                    case nameof(UpdatePeriodicBackupCommand):
                     case nameof(ModifyConflictSolverCommand):
                     case nameof(UpdateTopologyCommand):
                     case nameof(DeleteDatabaseCommand):
@@ -240,6 +248,7 @@ namespace Raven.Server.ServerWide
                     case nameof(RemoveCompareExchangeCommand):
                         ExecuteCompareExchange(context, type, cmd, index, out var removeItem);
                         leader?.SetStateOf(index, removeItem);
+                        IndexChangedForBackup?.Invoke(this, (cmd, index, type));
                         break;
                     case nameof(InstallUpdatedServerCertificateCommand):
                         InstallUpdatedServerCertificate(context, cmd, index, serverStore);
