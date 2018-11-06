@@ -19,6 +19,7 @@ namespace Sparrow.Platform
         public static readonly bool RunningOnLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
 
         public static readonly bool CanPrefetch = IsWindows8OrNewer() || RunningOnPosix;
+        public static readonly bool CanDiscardMemory = IsWindows8OrNewer() || RunningOnPosix;
 
         public static bool RunningOnDocker => string.Equals(Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER"), "true", StringComparison.OrdinalIgnoreCase);
 

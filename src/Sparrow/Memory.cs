@@ -3,6 +3,8 @@ using System.Runtime.CompilerServices;
 using Sparrow.Binary;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
+using Sparrow.Platform.Win32;
+using Voron.Platform.Posix;
 
 namespace Sparrow
 {
@@ -260,6 +262,23 @@ UnmanagedCompare:
         public static T Read<T>(byte* ptr)
         {
             return Unsafe.Read<T>(ptr);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Discard(void* baseAddress, long size)
+        {
+            if (PlatformDetails.CanDiscardMemory)
+            {
+                // We explicitely ignore the return codes because even if it fails, from all uses and purposes we dont care. 
+                if (PlatformDetails.RunningOnPosix)
+                {
+                    Syscall.madvise(new IntPtr(baseAddress), new UIntPtr((ulong)size), MAdvFlags.MADV_DONTNEED);
+                }
+                else
+                {
+                    Win32MemoryProtectMethods.DiscardVirtualMemory(baseAddress, new UIntPtr((ulong)size));
+                }
+            }            
         }
     }
 }

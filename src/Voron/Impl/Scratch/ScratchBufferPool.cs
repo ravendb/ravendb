@@ -145,9 +145,13 @@ namespace Voron.Impl.Scratch
                     // so we have to make sure that this is really unused before actually reusing it
                     recycled.File.HasActivelyUsedBytes(oldestTx) == false)
                 {
-                    recycled.File.Reset();
-                    recycled.RecycledAt = default(DateTime);
                     _recycleArea.Remove(current);
+
+                    // PERF: There is no need to call reset because we are telling the Virtual Memory Manager we dont
+                    //       care about that memory upon it entering the recycling area. 
+
+                    // We cleanup its recycle date. 
+                    recycled.RecycledAt = default(DateTime);                  
                     AddScratchBufferFile(recycled);
 
                     _scratchSpaceMonitor.Increase(recycled.File.NumberOfAllocatedPages * Constants.Storage.PageSize);
@@ -303,7 +307,9 @@ namespace Voron.Impl.Scratch
             if (IsLowMemory())
                 return;
 
-            scratch.RecycledAt = DateTime.UtcNow;
+            // PERF: We need to tell the Virtual Memory Manager we dont care about that memory before entering the recycling area. 
+            //       See http://issues.hibernatingrhinos.com/issue/RavenDB-12115#focus=streamItem-67-31998-0-0 for details. 
+            scratch.Recycle();
             _recycleArea.AddLast(scratch);
         }
 
@@ -324,6 +330,12 @@ namespace Voron.Impl.Scratch
             }
 
             public DateTime RecycledAt;
+
+            public void Recycle()
+            {
+                this.RecycledAt = DateTime.UtcNow;
+                File.Reset();
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
