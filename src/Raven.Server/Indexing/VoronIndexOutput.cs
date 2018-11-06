@@ -16,22 +16,22 @@ namespace Raven.Server.Indexing
         private readonly Transaction _tx;
         private readonly Stream _file;
         private readonly string _fileTempPath;
-        private readonly Action _beforeFileDispose;
+        private readonly IndexOutputFiles _indexOutputFiles;
 
         public long TotalWritten { get; private set; }
 
         public VoronIndexOutput(
             StorageEnvironmentOptions options, 
-            string name, 
-            Transaction tx, 
+            string name,
+            Transaction tx,
             string tree,
-            Action beforeFileDispose)
+            IndexOutputFiles indexOutputFiles)
         {
             _name = name;
             _tree = tree;
             _tx = tx;
             _fileTempPath = options.TempPath.Combine(name + "_" + Guid.NewGuid()).FullPath;
-            _beforeFileDispose = beforeFileDispose;
+            _indexOutputFiles = indexOutputFiles;
 
             if (options.EncryptionEnabled)
                 _file = new TempCryptoStream(_fileTempPath);
@@ -73,7 +73,7 @@ namespace Raven.Server.Indexing
                 files.AddStream(nameSlice, _file);
             }
 
-            _beforeFileDispose.Invoke();
+            _indexOutputFiles.Remove(_name);
             _file.Dispose();
             PosixFile.DeleteOnClose(_fileTempPath);
         }

@@ -13,15 +13,16 @@ namespace Raven.Server.Indexing
     {
         private readonly StorageEnvironment _environment;
         private readonly string _name;
-        private readonly Dictionary<string, VoronIndexOutput> _voronIndexFiles =
-            new Dictionary<string, VoronIndexOutput>(StringComparer.OrdinalIgnoreCase);
+        private readonly IndexOutputFiles _indexOutputFiles;
+
+        public long GetFilesAllocations => _indexOutputFiles.CalculateTotalWritten();
 
         public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment) : this (tx, environment, "Files")
         {}                
 
         public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment, string name)
         {
-            if ( !tx.IsWriteTransaction )
+            if (tx.IsWriteTransaction == false)
                 throw new InvalidOperationException($"Creation of the {nameof(LuceneVoronDirectory)} must be done under a write transaction.");
             
             _environment = environment;
@@ -30,6 +31,8 @@ namespace Raven.Server.Indexing
             SetLockFactory(NoLockFactory.Instance);
 
             tx.CreateTree(_name);
+
+            _indexOutputFiles = new IndexOutputFiles();
         }
 
         public override bool FileExists(string name, IState s)
@@ -142,9 +145,8 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
 
-            var voronIndexOutput = new VoronIndexOutput(_environment.Options, name, state.Transaction, _name, 
-                beforeFileDispose: () => _voronIndexFiles.Remove(name, out _));
-            _voronIndexFiles.Add(name, voronIndexOutput);
+            var voronIndexOutput = new VoronIndexOutput(_environment.Options, name, state.Transaction, _name, _indexOutputFiles);
+            _indexOutputFiles.Add(name, voronIndexOutput);
             return voronIndexOutput;
         }
 
@@ -166,18 +168,7 @@ namespace Raven.Server.Indexing
         protected override void Dispose(bool disposing)
         {
             // should be empty since we remove it from the dictionary on file dispose
-            Debug.Assert(_voronIndexFiles.Count == 0);
-        }
-
-        public long GetFilesAllocations()
-        {
-            var totalWritten = 0L;
-            foreach (var indexOutput in _voronIndexFiles)
-            {
-                totalWritten += indexOutput.Value.TotalWritten;
-            }
-
-            return totalWritten;
+            Debug.Assert(_indexOutputFiles.Count == 0);
         }
     }
 }
