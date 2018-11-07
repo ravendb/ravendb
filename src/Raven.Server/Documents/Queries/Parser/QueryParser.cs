@@ -655,6 +655,7 @@ namespace Raven.Server.Documents.Queries.Parser
                                 },
                                 IsEdge = true
                             });
+                            alias = recursiveAlias;
                             expectNode = true;
                             foundDash = false;
                             break;
