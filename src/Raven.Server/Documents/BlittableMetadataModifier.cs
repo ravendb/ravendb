@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Raven.Client;
+using Raven.Client.Documents.Smuggler;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
@@ -33,6 +34,7 @@ namespace Raven.Server.Documents
         // We'll generate a new change vector in this format: "RV:{revisionsCount}-{firstEtagOfLegacyRevision}"
         public bool ReadFirstEtagOfLegacyRevision;
         public bool ReadLegacyEtag;
+        public DatabaseItemType OperateOnTypes;
         public string LegacyEtag { get; private set; }
         private string _firstEtagOfLegacyRevision;
         private long _legacyRevisionsCount;
@@ -245,7 +247,22 @@ namespace Raven.Server.Documents
                     {
                         return true;
                     }
+                case -2: // IgnoreArrayProperty
+                    {
+                        if (state.CurrentTokenType != JsonParserToken.StartArray)
+                            ThrowInvalidArrayType(state, reader);
 
+                        while (state.CurrentTokenType != JsonParserToken.EndArray)
+                        {
+                            if (reader.Read() == false)
+                            {
+                                _state = State.IgnoreArray;
+                                aboutToReadPropertyName = false;
+                                return true;
+                            }
+                        }
+                        break;
+                    }
                 case -1: // IgnoreProperty
                     {
                         if (reader.Read() == false)
@@ -343,6 +360,27 @@ namespace Raven.Server.Documents
                     Flags = ReadFlags(state);
                     break;
 
+                case 9: // @counters
+                    if (OperateOnTypes.HasFlag(DatabaseItemType.Counters) == false)
+                    {
+                        if (state.StringBuffer[0] != (byte)'@' ||
+                        *(long*)(state.StringBuffer + 1) != 8318823012450529123)
+                        {
+                            aboutToReadPropertyName = true;
+                            return true;
+                        }
+
+                        if (reader.Read() == false)
+                        {
+                            _verifyStartArray = true;
+                            _state = State.IgnoreArray;
+                            aboutToReadPropertyName = false;
+                            return true;
+                        }
+                        goto case -2;
+                    }
+                    
+                    return true;
                 case 12: // @index-score
                     if (state.StringBuffer[0] != (byte)'@' ||
                         *(long*)(state.StringBuffer + 1) != 7166121427196997225 ||
@@ -518,18 +556,7 @@ namespace Raven.Server.Documents
                     // Raven-Replication-History is an array
                     if (isReplicationHistory)
                     {
-                        if (state.CurrentTokenType != JsonParserToken.StartArray)
-                            ThrowInvalidReplicationHistoryType(state, reader);
-
-                        do
-                        {
-                            if (reader.Read() == false)
-                            {
-                                _state = State.IgnoreArray;
-                                aboutToReadPropertyName = false;
-                                return true;
-                            }
-                        } while (state.CurrentTokenType != JsonParserToken.EndArray);
+                        goto case -2;
                     }
                     else if (state.CurrentTokenType == JsonParserToken.StartArray ||
                              state.CurrentTokenType == JsonParserToken.StartObject)
@@ -743,6 +770,11 @@ namespace Raven.Server.Documents
         private void ThrowInvalidReplicationHistoryType(JsonParserState state, IJsonParser reader)
         {
             throw new InvalidDataException($"Expected property @metadata.Raven-Replication-History to have array type, but was: {state.CurrentTokenType}. Id: '{Id ?? "N/A"}'. Around: {reader.GenerateErrorState()}");
+        }
+
+        private void ThrowInvalidArrayType(JsonParserState state, IJsonParser reader)
+        {
+            throw new InvalidDataException($"Expected property to have array type, but was: {state.CurrentTokenType}. Id: '{Id ?? "N/A"}'. Around: {reader.GenerateErrorState()}");
         }
 
         public void Dispose()

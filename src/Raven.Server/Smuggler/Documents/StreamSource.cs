@@ -47,6 +47,7 @@ namespace Raven.Server.Smuggler.Documents
         private bool _readLegacyEtag;
 
         private Size _totalObjectsRead = new Size(0, SizeUnit.Bytes);
+        private DatabaseItemType _operateOnTypes;
 
         public StreamSource(Stream stream, DocumentsOperationContext context, DocumentDatabase database)
         {
@@ -69,6 +70,7 @@ namespace Raven.Server.Smuggler.Documents
             if (_state.CurrentTokenType != JsonParserToken.StartObject)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start object, but got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
+            _operateOnTypes = options.OperateOnTypes;
             buildVersion = ReadBuildVersion();
             _buildVersionType = BuildVersion.Type(buildVersion);
 #pragma warning disable 618
@@ -709,7 +711,8 @@ namespace Raven.Server.Smuggler.Documents
             var modifier = new BlittableMetadataModifier(context)
             {
                 ReadFirstEtagOfLegacyRevision = legacyImport,
-                ReadLegacyEtag = _readLegacyEtag
+                ReadLegacyEtag = _readLegacyEtag,
+                OperateOnTypes = _operateOnTypes
             };
             var builder = CreateBuilder(context, modifier);
             try
