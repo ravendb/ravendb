@@ -75,6 +75,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             try
             {
+                Console.WriteLine($"disposed");
+                _directory.ResetAllocations();
+                if (_hasSuggestions)
+                {
+                    foreach (var suggestionIndexWriter in _suggestionsWriters)
+                        suggestionIndexWriter.Value.ResetAllocations();
+                }
+
                 _releaseWriteTransaction?.Dispose();
             }
             finally
@@ -140,7 +148,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public (long RamSizeInBytes, long FilesAllocationsInBytes) GetAllocations()
         {
             var usedMemory = _writer.RamSizeInBytes();
-            var fileAllocations = _directory.GetFilesAllocations();
+            var fileAllocations = _directory.FilesAllocations;
 
             if (_hasSuggestions)
             {
