@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Queries.Graph
             return _resultsById.TryGetValue(id, out match);
         }
 
-        public string GetOuputAlias()
+        public string GetOutputAlias()
         {
             return _alias;
         }
