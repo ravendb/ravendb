@@ -157,7 +157,8 @@ namespace Raven.Server.Smuggler.Migration
                 var destination = new DatabaseDestination(Parameters.Database);
                 var options = new DatabaseSmugglerOptionsServerSide
                 {
-                    TransformScript = Options.TransformScript
+                    TransformScript = Options.TransformScript,
+                    OperateOnTypes = Options.OperateOnTypes
                 };
                 var smuggler = new Documents.DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
