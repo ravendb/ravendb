@@ -44,9 +44,9 @@ namespace Raven.Server.Documents.Queries.Graph
             return true;
         }
 
-        public string GetOuputAlias()
+        public string GetOutputAlias()
         {
-            return _right.GetOuputAlias();
+            return _right.GetOutputAlias();
         }
 
         public ValueTask Initialize()

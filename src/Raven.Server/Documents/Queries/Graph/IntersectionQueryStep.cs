@@ -150,9 +150,9 @@ namespace Raven.Server.Documents.Queries.Graph
             return _unionedAliases;
         }
 
-        public string GetOuputAlias()
+        public string GetOutputAlias()
         {
-            return _right.GetOuputAlias();
+            return _right.GetOutputAlias();
         }
 
         public bool GetNext(out Match match)

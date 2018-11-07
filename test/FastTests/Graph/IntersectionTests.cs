@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
-using Raven.Client.Documents;
 using Raven.Client.Exceptions;
 using Xunit;
 
@@ -9,7 +8,7 @@ namespace FastTests.Graph
 {
     public class IntersectionTests : RavenTestBase
     {
-      [Fact]
+        [Fact]
         public void Can_query_multiple_match_clauses_with_union_no_intersecting_results()
         {
             using (var store = GetDocumentStore())
@@ -19,17 +18,17 @@ namespace FastTests.Graph
                     session.Store(new Movie
                     {
                         Name = "M1"
-                    },"movies/1");
+                    }, "movies/1");
 
                     session.Store(new Movie
                     {
                         Name = "M2"
-                    },"movies/2");
+                    }, "movies/2");
 
                     session.Store(new Movie
                     {
                         Name = "M3"
-                    },"movies/3");
+                    }, "movies/3");
 
                     session.Store(new User
                     {
@@ -66,7 +65,7 @@ namespace FastTests.Graph
                     }).ToList();
 
                     Assert.NotEmpty(results);
-                    Assert.Equal(2,results.Count);
+                    Assert.Equal(2, results.Count);
                     Assert.True(results.Any(x => x.u1 == "A" && x.m == "M1" && x.u2 == null));
                     Assert.True(results.Any(x => x.u1 == null && x.m == "M2" && x.u2 == "B"));
                 }
@@ -83,17 +82,17 @@ namespace FastTests.Graph
                     session.Store(new Movie
                     {
                         Name = "M1"
-                    },"movies/1");
+                    }, "movies/1");
 
                     session.Store(new Movie
                     {
                         Name = "M2"
-                    },"movies/2");
+                    }, "movies/2");
 
                     session.Store(new Movie
                     {
                         Name = "M3"
-                    },"movies/3");
+                    }, "movies/3");
 
                     session.Store(new User
                     {
@@ -140,17 +139,17 @@ namespace FastTests.Graph
                     session.Store(new Movie
                     {
                         Name = "M1"
-                    },"movies/1");
+                    }, "movies/1");
 
                     session.Store(new Movie
                     {
                         Name = "M2"
-                    },"movies/2");
+                    }, "movies/2");
 
                     session.Store(new Movie
                     {
                         Name = "M3"
-                    },"movies/3");
+                    }, "movies/3");
 
                     session.Store(new User
                     {
@@ -196,17 +195,17 @@ namespace FastTests.Graph
                     session.Store(new Movie
                     {
                         Name = "M1"
-                    },"movies/1");
+                    }, "movies/1");
 
                     session.Store(new Movie
                     {
                         Name = "M2"
-                    },"movies/2");
+                    }, "movies/2");
 
                     session.Store(new Movie
                     {
                         Name = "M3"
-                    },"movies/3");
+                    }, "movies/3");
 
                     session.Store(new User
                     {
@@ -252,17 +251,17 @@ namespace FastTests.Graph
                     session.Store(new Movie
                     {
                         Name = "M1"
-                    },"movies/1");
+                    }, "movies/1");
 
                     session.Store(new Movie
                     {
                         Name = "M2"
-                    },"movies/2");
+                    }, "movies/2");
 
                     session.Store(new Movie
                     {
                         Name = "M3"
-                    },"movies/3");
+                    }, "movies/3");
 
                     session.Store(new User
                     {
@@ -311,17 +310,17 @@ namespace FastTests.Graph
                     session.Store(new Movie
                     {
                         Name = "M1"
-                    },"movies/1");
+                    }, "movies/1");
 
                     session.Store(new Movie
                     {
                         Name = "M2"
-                    },"movies/2");
+                    }, "movies/2");
 
                     session.Store(new Movie
                     {
                         Name = "M3"
-                    },"movies/3");
+                    }, "movies/3");
 
                     session.Store(new User
                     {
@@ -357,15 +356,15 @@ namespace FastTests.Graph
                         u2 = x["u2"]?.Value<string>(),
                         m = x["movie"].Value<string>()
                     }).ToList();
-                    
+
                     Assert.NotEmpty(results);
-                    Assert.Equal(1,results.Count);
+                    Assert.Equal(1, results.Count);
                     Assert.True(results.Any(x => x.u1 == "A" && x.m == "M2" && x.u2 == null));
                 }
             }
         }
 
-         [Fact]
+        [Fact]
         public void And_Not_should_return_only_results_that_dont_intersect_even_if_right_clause_has_empty_results()
         {
             using (var store = GetDocumentStore())
@@ -375,17 +374,17 @@ namespace FastTests.Graph
                     session.Store(new Movie
                     {
                         Name = "M1"
-                    },"movies/1");
+                    }, "movies/1");
 
                     session.Store(new Movie
                     {
                         Name = "M2"
-                    },"movies/2");
+                    }, "movies/2");
 
                     session.Store(new Movie
                     {
                         Name = "M3"
-                    },"movies/3");
+                    }, "movies/3");
 
                     session.Store(new User
                     {
@@ -421,16 +420,16 @@ namespace FastTests.Graph
                         u2 = x["u2"]?.Value<string>(),
                         m = x["movie"].Value<string>()
                     }).ToList();
-                    
+
                     Assert.NotEmpty(results);
-                    Assert.Equal(2,results.Count);
+                    Assert.Equal(2, results.Count);
                     Assert.True(results.Any(x => x.u1 == "A" && x.m == "M1" && x.u2 == null));
                     Assert.True(results.Any(x => x.u1 == "A" && x.m == "M2" && x.u2 == null));
                 }
             }
         }
 
-        
+
         [Fact]
         public void Can_query_multiple_match_clauses_with_union_partial()
         {
@@ -441,17 +440,17 @@ namespace FastTests.Graph
                     session.Store(new Movie
                     {
                         Name = "M1"
-                    },"movies/1");
+                    }, "movies/1");
 
                     session.Store(new Movie
                     {
                         Name = "M2"
-                    },"movies/2");
+                    }, "movies/2");
 
                     session.Store(new Movie
                     {
                         Name = "M3"
-                    },"movies/3");
+                    }, "movies/3");
 
                     session.Store(new User
                     {
@@ -489,7 +488,7 @@ namespace FastTests.Graph
                     }).ToList();
 
                     Assert.NotEmpty(results);
-                    Assert.Equal(4,results.Count);
+                    Assert.Equal(4, results.Count);
                     Assert.True(results.Any(x => x.u1 == "A" && x.m == "M3" && x.u2 == "B"));
                     Assert.True(results.Any(x => x.u1 == "A" && x.m == "M1" && x.u2 == null));
                     Assert.True(results.Any(x => x.u1 == "A" && x.m == "M3" && x.u2 == null));
@@ -508,17 +507,17 @@ namespace FastTests.Graph
                     session.Store(new Movie
                     {
                         Name = "M1"
-                    },"movies/1");
+                    }, "movies/1");
 
                     session.Store(new Movie
                     {
                         Name = "M2"
-                    },"movies/2");
+                    }, "movies/2");
 
                     session.Store(new Movie
                     {
                         Name = "M3"
-                    },"movies/3");
+                    }, "movies/3");
 
                     session.Store(new User
                     {
@@ -557,7 +556,7 @@ namespace FastTests.Graph
                     }).ToList();
 
                     Assert.NotEmpty(results);
-                    Assert.Equal(2,results.Count);
+                    Assert.Equal(2, results.Count);
                     Assert.True(results.Any(x => x.u1 == null && x.m == "M3" && x.u2 == "B"));
                     Assert.True(results.Any(x => x.u1 == null && x.m == "M2" && x.u2 == "B"));
                 }
@@ -574,17 +573,17 @@ namespace FastTests.Graph
                     session.Store(new Movie
                     {
                         Name = "M1"
-                    },"movies/1");
+                    }, "movies/1");
 
                     session.Store(new Movie
                     {
                         Name = "M2"
-                    },"movies/2");
+                    }, "movies/2");
 
                     session.Store(new Movie
                     {
                         Name = "M3"
-                    },"movies/3");
+                    }, "movies/3");
 
                     session.Store(new User
                     {
@@ -632,17 +631,17 @@ namespace FastTests.Graph
                     session.Store(new Movie
                     {
                         Name = "M1"
-                    },"movies/1");
+                    }, "movies/1");
 
                     session.Store(new Movie
                     {
                         Name = "M2"
-                    },"movies/2");
+                    }, "movies/2");
 
                     session.Store(new Movie
                     {
                         Name = "M3"
-                    },"movies/3");
+                    }, "movies/3");
 
                     session.Store(new User
                     {
@@ -690,17 +689,17 @@ namespace FastTests.Graph
                     session.Store(new Movie
                     {
                         Name = "M1"
-                    },"movies/1");
+                    }, "movies/1");
 
                     session.Store(new Movie
                     {
                         Name = "M2"
-                    },"movies/2");
+                    }, "movies/2");
 
                     session.Store(new Movie
                     {
                         Name = "M3"
-                    },"movies/3");
+                    }, "movies/3");
 
                     session.Store(new User
                     {
@@ -748,17 +747,17 @@ namespace FastTests.Graph
                     session.Store(new Movie
                     {
                         Name = "M1"
-                    },"movies/1");
+                    }, "movies/1");
 
                     session.Store(new Movie
                     {
                         Name = "M2"
-                    },"movies/2");
+                    }, "movies/2");
 
                     session.Store(new Movie
                     {
                         Name = "M3"
-                    },"movies/3");
+                    }, "movies/3");
 
                     session.Store(new User
                     {
@@ -784,7 +783,7 @@ namespace FastTests.Graph
 
                 using (var session = store.OpenSession())
                 {
-                    Assert.Throws<RavenException>(() => 
+                    Assert.Throws<RavenException>(() =>
                         session.Advanced.RawQuery<JObject>(@"
                            match (Users as u1 where Name = 'NON-EXISTENT')-[HasRated select Movie]->(Movies as m)
                                   FOOBAR 
@@ -805,17 +804,17 @@ namespace FastTests.Graph
                     session.Store(new Movie
                     {
                         Name = "M1"
-                    },"movies/1");
+                    }, "movies/1");
 
                     session.Store(new Movie
                     {
                         Name = "M2"
-                    },"movies/2");
+                    }, "movies/2");
 
                     session.Store(new Movie
                     {
                         Name = "M3"
-                    },"movies/3");
+                    }, "movies/3");
 
                     session.Store(new User
                     {
@@ -853,7 +852,7 @@ namespace FastTests.Graph
                     }).ToList();
 
                     Assert.NotEmpty(results);
-                    Assert.Equal(2,results.Count);
+                    Assert.Equal(2, results.Count);
                     Assert.True(results.Any(x => x.u1 == "A" && x.m == "M3" && x.u2 == null));
                     Assert.True(results.Any(x => x.u1 == "A" && x.m == "M1" && x.u2 == null));
                 }
@@ -949,172 +948,6 @@ namespace FastTests.Graph
                             select u1,u2
                         ").ToList());
                 }
-            }
-        }
-
-  private void CreateSimpleData(IDocumentStore store)
-        {
-            using (var session = store.OpenSession())
-            {
-                var entityA = new Entity{ Id = "entity/1", Name = "A" };
-                var entityB = new Entity{ Id = "entity/2", Name = "B" };
-                var entityC = new Entity{ Id = "entity/3", Name = "C" };
-
-                session.Store(entityA);
-                session.Store(entityB);
-                session.Store(entityC);
-
-                entityA.References = entityB.Id;
-                entityB.References = entityC.Id;
-                entityC.References = entityA.Id;
-
-                session.SaveChanges();
-            }
-        }
-
-        private void CreateDataWithMultipleEdgesOfTheSameType(IDocumentStore store)
-        {
-            using (var session = store.OpenSession())
-            {
-                var arava = new Dog { Name = "Arava" }; //dogs/1
-                var oscar = new Dog { Name = "Oscar" }; //dogs/2
-                var pheobe = new Dog { Name = "Pheobe" }; //dogs/3
-
-                session.Store(arava);
-                session.Store(oscar);
-                session.Store(pheobe);
-
-                //dogs/1 => dogs/2
-                arava.Likes = new[] { oscar.Id };
-                arava.Dislikes = new[] { pheobe.Id };
-
-                //dogs/2 => dogs/1,dogs/3 (cycle!)
-                oscar.Likes = new[] { oscar.Id, pheobe.Id };
-                oscar.Dislikes = new string[0];
-
-                //dogs/3 => dogs/2
-                pheobe.Likes = new[] { oscar.Id };
-                pheobe.Dislikes = new[] { arava.Id };
-
-                session.SaveChanges();
-            }
-        }
-
-        private void CreateMoviesData(IDocumentStore store)
-        {
-            using (var session = store.OpenSession())
-            {
-                var scifi = new Genre
-                {
-                    Id = "genres/1",
-                    Name = "Sci-Fi"
-                };
-
-                var fantasy = new Genre
-                {
-                    Id = "genres/2",
-                    Name = "Fantasy"
-                };
-
-                var adventure = new Genre
-                {
-                    Id = "genres/3",
-                    Name = "Adventure"
-                };
-
-                session.Store(scifi);
-                session.Store(fantasy);
-                session.Store(adventure);
-
-                var starwars = new Movie
-                {
-                    Id = "movies/1",
-                    Name = "Star Wars Ep.1",
-                    Genres = new List<string>
-                    {
-                        "genres/1",
-                        "genres/2"
-                    }
-                };
-
-                var firefly = new Movie
-                {
-                    Id = "movies/2",
-                    Name = "Firefly Serenity",
-                    Genres = new List<string>
-                    {
-                        "genres/2",
-                        "genres/3"
-                    }
-                };
-
-                var indianaJones = new Movie
-                {
-                    Id = "movies/3",
-                    Name = "Indiana Jones and the Temple Of Doom",
-                    Genres = new List<string>
-                    {
-                        "genres/3"
-                    }
-                };
-
-                session.Store(starwars);
-                session.Store(firefly);
-                session.Store(indianaJones);
-
-                session.Store(new User
-                {
-                    Id = "users/1",
-                    Name = "Jack",
-                    HasRated = new List<User.Rating>
-                    {
-                        new User.Rating
-                        {
-                            Movie = "movies/1",
-                            Score = 5
-                        },
-                        new User.Rating
-                        {
-                            Movie = "movies/2",
-                            Score = 7
-                        }
-                    }
-                });
-
-                session.Store(new User
-                {
-                    Id = "users/2",
-                    Name = "Jill",
-                    HasRated = new List<User.Rating>
-                    {
-                        new User.Rating
-                        {
-                            Movie = "movies/2",
-                            Score = 7
-                        },
-                        new User.Rating
-                        {
-                            Movie = "movies/3",
-                            Score = 9
-                        }
-                    }
-                });
-
-                session.Store(new User
-                {
-                    Id = "users/3",
-                    Name = "Bob",
-                    HasRated = new List<User.Rating>
-                    {
-                        new User.Rating
-                        {
-                            Movie = "movies/3",
-                            Score = 5
-                        }
-                    }
-                });
-
-                session.SaveChanges();
             }
         }
     }

@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         HashSet<string> GetAllAliases();
 
-        string GetOuputAlias();
+        string GetOutputAlias();
 
         bool GetNext(out GraphQueryRunner.Match match);
 

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Sources;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
 using Sparrow.Json;
@@ -16,9 +15,9 @@ namespace Raven.Server.Documents.Queries.Graph
         private readonly List<SingleEdgeMatcher> _steps;
         private readonly RecursiveMatch _recursive;
         private readonly RecursiveMatch.RecursiveOptions _options;
-        private string _outputAlias;
+        private readonly string _outputAlias;
         private readonly List<string> _stepAliases = new List<string>();
-        private List<Match> _results = new List<Match>();
+        private readonly List<Match> _results = new List<Match>();
         private readonly HashSet<long> _visited = new HashSet<long>();
         private readonly Stack<RecursionState> _path = new Stack<RecursionState>();
         public int _index = -1;
@@ -38,13 +37,13 @@ namespace Raven.Server.Documents.Queries.Graph
             _recursive = recursive;
             _options = options;
 
-            _stepAliases.Add(left.GetOuputAlias());
+            _stepAliases.Add(left.GetOutputAlias());
 
             foreach (var step in _steps)
             {
                 if (step.Right == null)
                     continue;
-                _stepAliases.Add(step.Right.GetOuputAlias());
+                _stepAliases.Add(step.Right.GetOutputAlias());
             }
 
             _outputAlias = _stepAliases.Last();
@@ -53,7 +52,7 @@ namespace Raven.Server.Documents.Queries.Graph
         internal (WithEdgesExpression Edge, StringSegment EdgeAlias, StringSegment RecursionAlias, string SourceAlias) GetOutputEdgeInfo()
         {
             var match = _steps[_steps.Count - 1];
-            return (match.Edge, match.EdgeAlias, _recursive.Alias, _left.GetOuputAlias());
+            return (match.Edge, match.EdgeAlias, _recursive.Alias, _left.GetOutputAlias());
         }
 
         public HashSet<string> GetAllAliases()
@@ -63,7 +62,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public bool GetNext(out Match match)
         {
-            if(_index>= _results.Count)
+            if (_index >= _results.Count)
             {
                 match = default;
                 return false;
@@ -72,7 +71,7 @@ namespace Raven.Server.Documents.Queries.Graph
             return true;
         }
 
-        public string GetOuputAlias()
+        public string GetOutputAlias()
         {
             return _outputAlias;
         }
@@ -94,7 +93,7 @@ namespace Raven.Server.Documents.Queries.Graph
         }
 
         private ValueTask CompleteInitializationAfterLeft(int position)
-        {           
+        {
             for (var i = position; i < _steps.Count; i++)
             {
                 var item = _steps[i];
@@ -104,7 +103,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 var stepTask = item.Right.Initialize();
                 if (stepTask.IsCompleted == false)
                 {
-                    return new ValueTask(CompleteInitializationForStepAsyc(position, stepTask));
+                    return new ValueTask(CompleteInitializationForStepAsync(position, stepTask));
                 }
             }
 
@@ -124,10 +123,10 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
-        private async Task CompleteInitializationForStepAsyc(int position, ValueTask stepTask)
+        private async Task CompleteInitializationForStepAsync(int position, ValueTask stepTask)
         {
             await stepTask;
-            CompleteInitializationAfterLeft(position + 1);
+            await CompleteInitializationAfterLeft(position + 1);
         }
 
         private async Task CompleteLeftInitializationAsync(ValueTask leftTask)
@@ -144,7 +143,7 @@ namespace Raven.Server.Documents.Queries.Graph
             int? bestPathLength = null;
 
             var originalMatch = currentMatch;
-            var startingPoint = currentMatch.GetSingleDocumentResult(_left.GetOuputAlias());
+            var startingPoint = currentMatch.GetSingleDocumentResult(_left.GetOutputAlias());
             if (startingPoint == null)
                 return;
 
@@ -169,7 +168,7 @@ namespace Raven.Server.Documents.Queries.Graph
                     {
                         if (AddMatch())
                         {
-                            return ;
+                            return;
                         }
                         _path.Pop();
                     }
@@ -185,12 +184,12 @@ namespace Raven.Server.Documents.Queries.Graph
                 while (true)
                 {
                     if (_path.Count == 0)
-                        return ;
+                        return;
 
                     if (_options.Type == RecursiveMatchType.Lazy &&
                         AddMatch())
                     {
-                        return ;
+                        return;
                     }
 
                     var top = _path.Peek();
@@ -198,7 +197,7 @@ namespace Raven.Server.Documents.Queries.Graph
                     {
                         if (AddMatch())
                         {
-                            return ;
+                            return;
                         }
 
                         _path.Pop();
@@ -278,7 +277,7 @@ namespace Raven.Server.Documents.Queries.Graph
         }
 
 
-        private bool ProcessSingleResult(Match match, int aliasBaseIndex , out List<Match> results)
+        private bool ProcessSingleResult(Match match, int aliasBaseIndex, out List<Match> results)
         {
             _steps[0].Results.Clear();
             _steps[0].SingleMatch(match, _stepAliases[aliasBaseIndex]);
@@ -306,16 +305,16 @@ namespace Raven.Server.Documents.Queries.Graph
             return true;
         }
 
-        public bool TryGetById(string id, out GraphQueryRunner.Match match)
+        public bool TryGetById(string id, out Match match)
         {
-            throw new System.NotSupportedException("Cannot get matches by id from recursive portion");
+            throw new NotSupportedException("Cannot get matches by id from recursive portion");
         }
 
         public void Analyze(Match match, Action<string, object> addNode, Action<object, string> addEdge)
         {
             _left.Analyze(match, addNode, addEdge);
 
-            var prev = match.GetResult(_left.GetOuputAlias());
+            var prev = match.GetResult(_left.GetOutputAlias());
 
             var result = match.GetResult(_recursive.Alias);
             if (!(result is List<Match> matches))
