@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             var dummy = left.GetSingleDocumentResult(alias);
             if (dummy == null)
-                throw new InvalidOperationException("Unable to find alias " + alias + " in query results, this is probably a bug");
+                return;
 
             var leftDoc = dummy.Data;
 

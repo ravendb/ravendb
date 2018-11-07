@@ -70,30 +70,84 @@ namespace Raven.Server.Documents.Queries.Graph
             CompleteInitialization();
         }
 
+        public ISingleGraphStep GetSingleGraphStepExecution()
+        {
+            return new EdgeMatcher(this);
+        }
+
         private void CompleteInitialization()
         {
             _index = 0;
-            var edgeAlias = _edgePath.Alias;
-            var edge = _edgesExpression;
-            edge.EdgeAlias = edgeAlias;
 
-            var processor = new SingleEdgeMatcher
-            {
-                IncludedEdges = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase),
-                QueryParameters = _queryParameters,
-                Results = _results,
-                Right = _right,
-                Edge = edge,
-                EdgeAlias = edgeAlias
-            };
-            string alias = _left.GetOuputAlias();
+            var edgeMatcher = new EdgeMatcher(this);
 
             while (_left.GetNext(out var left))
             {
-                processor.SingleMatch(left, alias);
+                edgeMatcher.Run(left);
             }
         }
 
+        private class EdgeMatcher : ISingleGraphStep
+        {
+            private readonly EdgeQueryStep _parent;
+            SingleEdgeMatcher _processor;
+            string _alias;
+
+            public EdgeMatcher(EdgeQueryStep parent)
+            {
+                var edgeAlias = parent._edgePath.Alias;
+                var edge = parent._edgesExpression;
+                edge.EdgeAlias = edgeAlias;
+
+                _processor = new SingleEdgeMatcher
+                {
+                    IncludedEdges = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase),
+                    QueryParameters = parent._queryParameters,
+                    Results = parent._results,
+                    Right = parent._right,
+                    Edge = edge,
+                    EdgeAlias = edgeAlias
+                };
+                _alias = parent._left.GetOuputAlias();
+                _parent = parent;
+            }
+
+            public bool GetAndClearResults(List<Match> matches)
+            {
+                if (_processor.Results.Count == 0)
+                    return false;
+
+                matches.AddRange(_processor.Results);
+                _processor.Results.Clear();
+
+                return true;
+            }
+
+            public ValueTask Initialize()
+            {
+                if(_parent._left != null)
+                {
+                    var leftTask = _parent._left.GetSingleGraphStepExecution().Initialize();
+                    if(leftTask.IsCompleted == false)
+                    {
+                        return CompleteRightInitAsync(leftTask);
+                    }
+                }
+                return _parent._right.GetSingleGraphStepExecution().Initialize();
+            }
+
+            private async ValueTask CompleteRightInitAsync(ValueTask leftTask)
+            {
+                await leftTask;
+                await _parent._right.Initialize();
+            }
+
+            public void Run(GraphQueryRunner.Match src)
+            {
+                _processor.SingleMatch(src, _alias);
+            }
+        }
+        
 
         public bool GetNext(out Match match)
         {

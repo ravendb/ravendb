@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private List<Match> _results = new List<Match>();
         private Dictionary<string, Match> _resultsById = new Dictionary<string, Match>(StringComparer.OrdinalIgnoreCase);
 
-        public QueryQueryStep(QueryRunner queryRunner, Sparrow.StringSegment alias,Query query, QueryMetadata queryMetadata, DocumentsOperationContext documentsContext, long? existingResultEtag,
+        public QueryQueryStep(QueryRunner queryRunner, Sparrow.StringSegment alias, Query query, QueryMetadata queryMetadata, DocumentsOperationContext documentsContext, long? existingResultEtag,
             OperationCancelToken token)
         {
             _query = query;
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 CompleteInitialization(results.Result);
                 return default;
             }
-            
+
             return new ValueTask(CompleteInitializeAsync(results));
         }
 
@@ -87,9 +87,9 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public bool TryGetById(string id, out Match match)
         {
-            if(_results.Count != 0 && _resultsById.Count == 0)// only reason is that we are projecting non documents here
+            if (_results.Count != 0 && _resultsById.Count == 0)// only reason is that we are projecting non documents here
                 throw new InvalidOperationException("Target vertices in a pattern match that originate from map/reduce WITH clause are not allowed. (pattern match has multiple statements in the form of (a)-[:edge]->(b) ==> in such pattern, 'b' must not originate from map/reduce index query)");
-              
+
             return _resultsById.TryGetValue(id, out match);
         }
 
@@ -109,13 +109,43 @@ namespace Raven.Server.Documents.Queries.Graph
             if (result == null)
                 return;
 
-            if(result is Document d && d.Id != null)
+            if (result is Document d && d.Id != null)
             {
                 addNode(d.Id.ToString(), d);
             }
             else
             {
                 addNode(null, result);
+            }
+        }
+
+        public ISingleGraphStep GetSingleGraphStepExecution()
+        {
+            return new QuerySingleStep(this);
+        }
+
+        private class QuerySingleStep : ISingleGraphStep
+        {
+            private QueryQueryStep _queryQueryStep;
+
+            public QuerySingleStep(QueryQueryStep queryQueryStep)
+            {
+                _queryQueryStep = queryQueryStep;
+            }
+
+            public bool GetAndClearResults(List<Match> matches)
+            {
+                throw new NotSupportedException("Cannot pull single graph execution from query step, it is a source only");
+            }
+
+            public ValueTask Initialize()
+            {
+                return _queryQueryStep.Initialize();
+            }
+
+            public void Run(Match src)
+            {
+                throw new NotSupportedException("Cannot pull single graph execution from query step, it is a source only");
             }
         }
     }
