@@ -70,6 +70,14 @@ namespace Raven.Server.Documents
             if (IndexScore.HasValue)
                 mutatedMetadata[Constants.Documents.Metadata.IndexScore] = IndexScore;
 
+            if (NonPersistentFlags.HasFlag(NonPersistentDocumentFlags.FromSmuggler) &&
+                Flags.HasFlag(DocumentFlags.HasCounters) == false &&
+                metadata != null &&
+                metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray _))
+            {
+                mutatedMetadata.Remove(Constants.Documents.Metadata.Counters);
+            }
+
             _hash = null;
         }
 
