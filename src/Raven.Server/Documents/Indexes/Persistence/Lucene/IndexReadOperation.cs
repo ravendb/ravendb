@@ -95,14 +95,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var docsToGet = pageSize;
             var position = query.Start;
 
-            if (query.Metadata.IsOptimizedSortOnly && _index.Definition.HasDynamicFields == false)
-            {
-                foreach (var result in QuerySortOnly(query, retriever, position, pageSize, totalResults, token))
-                    yield return result;
-
-                yield break;
-            }
-
             QueryTimingsScope luceneScope = null;
             QueryTimingsScope highlightingScope = null;
             QueryTimingsScope explanationsScope = null;
@@ -210,117 +202,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (isDistinctCount)
                     totalResults.Value = returnedResults;
             }
-        }
-
-        private IEnumerable<(Document Result, Dictionary<string, Dictionary<string, string[]>> Highlightings, ExplanationResult Explanation)> QuerySortOnly(
-            IndexQueryServerSide query, IQueryResultRetriever retriever, int start, int pageSize, Reference<int> totalResults, CancellationToken token)
-        {
-        
-            totalResults.Value = _searcher.IndexReader.NumDocs();
-            var subReaders = _searcher.IndexReader.GetSequentialSubReaders();
-
-            var returnedResults = 0;
-
-            var order = query.Metadata.OrderBy[0];
-            var isAscending = order.Ascending;
-            var fieldName = order.Name;
-
-            var indexes = new(Reference<int> Index, HashSet<int> Seen, StringIndex Item, IndexReader IndexReader)[subReaders.Length];
-            for (var i = 0; i < subReaders.Length; i++)
-            {
-                var subReader = subReaders[i];
-                var index = FieldCache_Fields.DEFAULT.GetStringIndex(subReader, fieldName, _state);
-                indexes[i] = (new Reference<int>(), new HashSet<int>(), index, subReader);
-            }
-
-            while (true)
-            {
-                token.ThrowIfCancellationRequested();
-
-                var idx = -1;
-                var doc = -1;
-                string docTerm = null;
-
-                for (var i = 0; i < indexes.Length; i++)
-                {
-                    var tpl = indexes[i];
-
-                    var innerDoc = FindDocument(isAscending, i);
-
-                    if (innerDoc == -1)
-                        continue;
-
-                    var termIndex = tpl.Item.order[innerDoc];
-                    var term = tpl.Item.lookup[termIndex];
-
-                    if (idx == -1)
-                    {
-                        idx = i;
-                        docTerm = term;
-                        doc = innerDoc;
-                        continue;
-                    }
-
-                    var compare = string.Compare(docTerm, term, StringComparison.Ordinal);
-                    if (isAscending && compare > 0 || isAscending == false && compare < 0)
-                    {
-                        indexes[idx].Seen.Remove(doc);
-                        idx = i;
-                        docTerm = term;
-                        doc = innerDoc;
-                    }
-                    else
-                    {
-                        indexes[i].Seen.Remove(innerDoc);
-                    }
-                }
-
-                if (idx == -1)
-                    yield break;
-
-                indexes[idx].Index.Value++;
-
-                if (start-- > 0)
-                    continue;
-
-                var document = indexes[idx].IndexReader.Document(doc, _state);
-                var result = retriever.Get(document, 1.0f, _state);
-
-                returnedResults++;
-
-                yield return (result, null, null);
-
-                if (returnedResults == pageSize)
-                    yield break;
-            }
-
-            int FindDocument(bool isAsc, int i)
-            {
-                var innerDoc = -1;
-                var tpl = indexes[i];
-                var index = tpl.Index.Value;
-                while (index < tpl.Item.reverseOrder.Length)
-                {
-                    if (isAsc == false)
-                        index = tpl.Item.reverseOrder.Length - index - 1;
-
-                    innerDoc = tpl.Item.reverseOrder[index];
-
-                    if (innerDoc == -1 || 
-                        (tpl.IndexReader.HasDeletions && tpl.IndexReader.IsDeleted(innerDoc))
-                        || tpl.Seen.Add(innerDoc) == false)
-                    {
-                        innerDoc = -1;
-                        index = ++tpl.Index.Value;
-                        continue;
-                    }
-
-                    break;
-                }
-
-                return innerDoc;
-            }
-
         }
 
         private ExplanationResult GetQueryExplanations(ExplanationOptions options, Query luceneQuery, IndexSearcher searcher, ScoreDoc scoreDoc, Document document, global::Lucene.Net.Documents.Document luceneDocument)
