@@ -19,9 +19,11 @@ namespace Raven.Server.Documents.Queries.Graph
         private string _outputAlias;
         private readonly List<string> _stepAliases = new List<string>();
         private List<Match> _results = new List<Match>();
+        private List<Match> _temp = new List<Match>();
         private readonly HashSet<long> _visited = new HashSet<long>();
         private readonly Stack<RecursionState> _path = new Stack<RecursionState>();
         public int _index = -1;
+        private bool _skipMaterialization;
 
         private class RecursionState
         {
@@ -128,6 +130,11 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private void CompleteInitialization()
         {
+            if (_skipMaterialization)
+            {
+                return;
+            }
+            
             var matches = new List<Match>();
             while (_left.GetNext(out var match))
             {
@@ -161,7 +168,20 @@ namespace Raven.Server.Documents.Queries.Graph
 
             public ValueTask Initialize()
             {
-                return _parent._left.Initialize();
+                _parent._skipMaterialization = true;
+                var task = _parent.Initialize();
+                if (task.IsCompleted)
+                {
+                    _parent._skipMaterialization = false;
+                    return default;
+                }
+                return CompleteInit(task);
+            }
+
+            private async ValueTask CompleteInit(ValueTask task)
+            {
+                await task;
+                _parent._skipMaterialization = false;
             }
 
             public void Run(Match src)
@@ -366,9 +386,17 @@ namespace Raven.Server.Documents.Queries.Graph
             return true;
         }
 
-        public bool TryGetById(string id, out GraphQueryRunner.Match match)
+        public List<Match> GetById(string id)
         {
-            return _left.TryGetById(id, out match);
+            _temp.Clear();
+            var matches = _left.GetById(id);
+
+            foreach (var item in matches)
+            {
+                ProcessSingleResultRecursive(item, _temp);
+            }
+
+            return _temp;
         }
 
         public void Analyze(Match match, Action<string, object> addNode, Action<object, string> addEdge)
