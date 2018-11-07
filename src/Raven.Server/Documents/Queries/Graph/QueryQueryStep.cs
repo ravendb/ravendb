@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private OperationCancelToken _token;
         private QueryRunner _queryRunner;
         private QueryMetadata _queryMetadata;
+        private List<Match> _temp = new List<Match>();
 
         private int _index = -1;
         private List<Match> _results = new List<Match>();
@@ -99,12 +100,16 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
-        public bool TryGetById(string id, out Match match)
+        public List<Match> GetById(string id)
         {
             if(_results.Count != 0 && _resultsById.Count == 0)// only reason is that we are projecting non documents here
                 throw new InvalidOperationException("Target vertices in a pattern match that originate from map/reduce WITH clause are not allowed. (pattern match has multiple statements in the form of (a)-[:edge]->(b) ==> in such pattern, 'b' must not originate from map/reduce index query)");
               
-            return _resultsById.TryGetValue(id, out match);
+            _temp.Clear();
+            if (_resultsById.TryGetValue(id, out var match))
+                _temp.Add(match);
+            return _temp;
+
         }
 
         public string GetOutputAlias()

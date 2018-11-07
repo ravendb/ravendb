@@ -359,7 +359,7 @@ select {
         public void CanHandleCyclesInGraph()
         {
             var results = Query<EmployeeRelations>(@"
-match (Employees as e where id() = 'employees/7-A')-recursive as n (longest) { [ReportsTo as m] }->(Employees as boss)
+match (Employees as e where id() = 'employees/7-A')-recursive as n (longest) { [ReportsTo as m]->(Employees ) }-[ReportsTo]->(Employees as boss)
 select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
 ", store =>
             {
@@ -416,7 +416,7 @@ select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<Tragedy>(@"
-match (People as son where Name = 'Otho Sackville-Baggins')-recursive (0) { [Parents where Gender = 'Male' select Id]->(People as ancestor where BornAt='Shire')-[Parents where Gender = 'Male' select Id] } ->(People as evil where BornAt = 'Mordor')
+match (People as son where Name = 'Otho Sackville-Baggins')-recursive (0) { [Parents where Gender = 'Male' select Id]->(People as ancestor where BornAt='Shire') } -[Parents where Gender = 'Male' select Id]->(People as evil where BornAt = 'Mordor')
 select son.Name as Son, evil.Name as Evil")
                         .ToList();
 

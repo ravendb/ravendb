@@ -491,7 +491,6 @@ namespace Raven.Server.Documents.Queries.Parser
         private bool ProcessEdges(GraphQuery gq, out QueryExpression op, StringSegment alias, List<MatchPath> list, bool allowRecursive, bool foundDash)
         {
             bool expectNode = false;
-            bool expectEdge = true;
             MatchPath last;
             while (true)
 
@@ -508,9 +507,6 @@ namespace Raven.Server.Documents.Queries.Parser
                             if (foundDash == false)
                                 throw new InvalidQueryException("Got '[' when expected '-', did you forget to add '-[' ?", Scanner.Input, null);
 
-                            if(expectEdge == false)
-                                throw new InvalidQueryException("Got an edge when a node is expected ?", Scanner.Input, null);
-
                             if (GraphAlias(gq, true, alias, out alias) == false)
                                 throw new InvalidQueryException("MATCH identifier after '-['", Scanner.Input, null);
                             if (Scanner.TryScan(']') == false)
@@ -522,7 +518,6 @@ namespace Raven.Server.Documents.Queries.Parser
                                 EdgeType = list[list.Count - 1].EdgeType,
                                 IsEdge = true
                             });
-                            expectEdge = false;
                             break;
                         case "<-":
                             last = list[list.Count - 1];
@@ -534,8 +529,7 @@ namespace Raven.Server.Documents.Queries.Parser
                                 Recursive = last.Recursive
                             };
                             foundDash = true;
-                            expectNode = true;
-                            expectEdge = false;
+                            expectNode = false;
 
                             continue;
                         case "<":
@@ -575,7 +569,6 @@ namespace Raven.Server.Documents.Queries.Parser
                                 Alias = alias,
                                 EdgeType = list[list.Count - 1].EdgeType
                             });
-                            expectEdge = true;
                             break;
                         case "recursive":
                             if(allowRecursive == false)

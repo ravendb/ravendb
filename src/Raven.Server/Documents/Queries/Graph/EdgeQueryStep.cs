@@ -184,11 +184,7 @@ namespace Raven.Server.Documents.Queries.Graph
             match = _results[_index++];
             return true;
         }
-
-        public bool TryGetById(string id, out Match match)
-        {
-            throw new NotSupportedException("Cannot get a match by id from an edge");
-        }
+        
 
         public string GetOuputAlias()
         {
@@ -247,6 +243,11 @@ namespace Raven.Server.Documents.Queries.Graph
             addEdge(prev, result);
 
             return result;
+        }
+
+        public List<Match> GetById(string id)
+        {
+            throw new NotSupportedException("Cannot get a match by id from an edge");
         }
 
         private IGraphQueryStep _left;

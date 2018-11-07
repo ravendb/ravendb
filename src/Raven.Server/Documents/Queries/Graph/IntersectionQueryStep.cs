@@ -174,9 +174,9 @@ namespace Raven.Server.Documents.Queries.Graph
             return true;
         }
 
-        public bool TryGetById(string id, out Match match)
+        public List<Match> GetById(string id)
         {
-            throw new System.NotSupportedException("Cannot pull results by id from an intersection operation");
+            throw new NotSupportedException("Cannot get a match by id from an edge");
         }
 
         public void Analyze(Match match, Action<string, object> addNode, Action<object, string> addEdge)

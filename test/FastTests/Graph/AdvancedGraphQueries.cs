@@ -662,7 +662,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<Dog>(@"
-                       match (Dogs as d1 where id() = 'dogs/1-A')-recursive{ [Likes as l]} ->(Dogs as d2 where id() = 'dogs/2-A')").ToList();
+                       match (Dogs as d1 where id() = 'dogs/1-A')-recursive{ [Likes as l]->(Dogs)}-[Likes] ->(Dogs as d2 where id() = 'dogs/2-A')").ToList();
                     Assert.Empty(results);
                 }
             }
@@ -692,7 +692,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<Dog>(@"
-                       match (Dogs as d1)-recursive { [Likes  as l] } ->(Dogs as d2)").ToList();
+                       match (Dogs as d1)-recursive { [Likes  as l]->(Dogs) }-[Likes] ->(Dogs as d2)").ToList();
                     Assert.Empty(results);
                 }
             }
@@ -827,7 +827,7 @@ namespace FastTests.Graph
                     Assert.Equal(1, stronglyTypedResults.Length);
                     Assert.Equal("Joe", stronglyTypedResults[0].A.Name);
                     Assert.Equal("John", stronglyTypedResults[0].S.Name);
-                    Assert.Equal(new[] { "people/2-a", "people/3-a" }, stronglyTypedResults[0].Path);
+                    Assert.Equal(new[] { "people/2-a" }, stronglyTypedResults[0].Path);
                 }
             }
         }
@@ -1107,11 +1107,11 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                        match (Employees as e)- recursive as reportsTo (0,5, 'all') { [ReportsTo as path] } -> (Employees as m)
+                        match (Employees as e)- recursive as reportsTo (0,5, 'all') { [ReportsTo as path]-> (Employees ) } -[ReportsTo] -> (Employees as m)
                         select e.FirstName as EmployeeName, reportsTo.path as ReportsToPath, m.FirstName as ManagerName
                        ").ToList();
                     Assert.NotEmpty(results); //sanity check
-                    Assert.Equal(8,results.Count);
+                    Assert.Equal(3,results.Count);
 
                     var stronglyTypedResults = results.Select(x => new
                     {
@@ -1121,11 +1121,11 @@ namespace FastTests.Graph
                     }).ToArray();
 
                     Assert.Contains(stronglyTypedResults,
-                        x => x.EmployeeName == "Anne" && x.ManagerName == "Andrew" && x.ReportsToPath[0] == "employees/5-A" && x.ReportsToPath[1] == "employees/2-A");
+                        x => x.EmployeeName == "Anne" && x.ManagerName == "Andrew" && x.ReportsToPath[0] == "employees/5-A" );
                     Assert.Contains(stronglyTypedResults,
-                        x => x.EmployeeName == "Michael" && x.ManagerName == "Andrew" && x.ReportsToPath[0] == "employees/5-A" && x.ReportsToPath[1] == "employees/2-A");
+                        x => x.EmployeeName == "Michael" && x.ManagerName == "Andrew" && x.ReportsToPath[0] == "employees/5-A" );
                     Assert.Contains(stronglyTypedResults,
-                        x => x.EmployeeName == "Robert" && x.ManagerName == "Andrew" && x.ReportsToPath[0] == "employees/5-A" && x.ReportsToPath[1] == "employees/2-A");
+                        x => x.EmployeeName == "Robert" && x.ManagerName == "Andrew" && x.ReportsToPath[0] == "employees/5-A" );
                 }
             }
         }
@@ -1140,11 +1140,11 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                            match (Employees as e)- recursive as reportsTo (0,5, 'all') { [ReportsTo as path] }->(Employees as m)
+                            match (Employees as e)- recursive as reportsTo (0,5, 'all') { [ReportsTo as path]->(Employees) }-[ReportsTo]->(Employees as m)
                             select { EmployeeName: e.FirstName, ReportsToPath: reportsTo.map(x => x.path), ManagerName: m.FirstName }
                        ").ToList();
                     Assert.NotEmpty(results); //sanity check
-                    Assert.Equal(8,results.Count);
+                    Assert.Equal(3,results.Count);
 
                     var stronglyTypedResults = results.Select(x => new
                     {
@@ -1154,11 +1154,11 @@ namespace FastTests.Graph
                     }).ToArray();
 
                     Assert.Contains(stronglyTypedResults,
-                        x => x.EmployeeName == "Anne" && x.ManagerName == "Andrew" && x.ReportsToPath[0] == "employees/5-A" && x.ReportsToPath[1] == "employees/2-A");
+                        x => x.EmployeeName == "Anne" && x.ManagerName == "Andrew" && x.ReportsToPath[0] == "employees/5-A" );
                     Assert.Contains(stronglyTypedResults,
-                        x => x.EmployeeName == "Michael" && x.ManagerName == "Andrew" && x.ReportsToPath[0] == "employees/5-A" && x.ReportsToPath[1] == "employees/2-A");
+                        x => x.EmployeeName == "Michael" && x.ManagerName == "Andrew" && x.ReportsToPath[0] == "employees/5-A");
                     Assert.Contains(stronglyTypedResults,
-                        x => x.EmployeeName == "Robert" && x.ManagerName == "Andrew" && x.ReportsToPath[0] == "employees/5-A" && x.ReportsToPath[1] == "employees/2-A");
+                        x => x.EmployeeName == "Robert" && x.ManagerName == "Andrew" && x.ReportsToPath[0] == "employees/5-A" );
                 }
             }
         }   
@@ -1173,12 +1173,11 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var pathIdsFromLongestStrategy = GetPathIdsForQuery(session, @"
-                            match (Employees as e)- recursive as reportsTo (1,5, 'longest') { [ReportsTo as path] }->(Employees as m)
+                            match (Employees as e)- recursive as reportsTo (1,5, 'longest') { [ReportsTo as path]->(Employees) }-[ReportsTo]->(Employees as m)
                             select { ReportsToPath: reportsTo.map(x => x.path) }
                        ")[0];
 
-                    Assert.Equal(2,pathIdsFromLongestStrategy.Length);
-                    Assert.Contains(pathIdsFromLongestStrategy, x => x == "employees/2-A");
+                    Assert.Equal(1,pathIdsFromLongestStrategy.Length);
                     Assert.Contains(pathIdsFromLongestStrategy, x => x == "employees/5-A");
                 }
             }
@@ -1193,7 +1192,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var pathIdsFromShortestStrategy = GetPathIdsForQuery(session, @"
-                            match (Employees as e)- recursive as reportsTo (1,5, 'shortest') { [ReportsTo as path] }->(Employees as m)
+                            match (Employees as e)- recursive as reportsTo (1,5, 'shortest') { [ReportsTo as path]->(Employees) }-[ReportsTo]->(Employees as m)
                             select { ReportsToPath: reportsTo.map(x => x.path) }
                        ")[0];
 
@@ -1201,7 +1200,7 @@ namespace FastTests.Graph
                     Assert.Contains(pathIdsFromShortestStrategy, x => x == "employees/5-A");
 
                     var pathIdsFromLazyStrategy = GetPathIdsForQuery(session, @"
-                            match (Employees as e)- recursive as reportsTo (1,5, 'lazy') { [ReportsTo as path] }->(Employees as m)
+                            match (Employees as e)- recursive as reportsTo (1,5, 'lazy') { [ReportsTo as path]->(Employees) }-[ReportsTo]->(Employees as m)
                             select { ReportsToPath: reportsTo.map(x => x.path) }
                        ")[0];
 
@@ -1223,7 +1222,7 @@ namespace FastTests.Graph
 
             var results = session.Advanced.RawQuery<JObject>(query).ToList();
             Assert.NotEmpty(results); //sanity check
-            Assert.Equal(8, results.Count);
+            Assert.Equal(3, results.Count);
 
             var pathIds = ExtractPathIds(results);
             return pathIds;
