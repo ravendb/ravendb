@@ -16,22 +16,20 @@ namespace Raven.Server.Indexing
         private readonly Transaction _tx;
         private readonly Stream _file;
         private readonly string _fileTempPath;
-        private readonly IndexOutputFiles _indexOutputFiles;
-
-        public long TotalWritten { get; private set; }
+        private readonly IndexOutputFilesSummary _indexOutputFilesSummary;
 
         public VoronIndexOutput(
             StorageEnvironmentOptions options,
             string name,
             Transaction tx,
             string tree,
-            IndexOutputFiles indexOutputFiles)
+            IndexOutputFilesSummary indexOutputFilesSummary)
         {
             _name = name;
             _tree = tree;
             _tx = tx;
             _fileTempPath = options.TempPath.Combine(name + "_" + Guid.NewGuid()).FullPath;
-            _indexOutputFiles = indexOutputFiles;
+            _indexOutputFilesSummary = indexOutputFilesSummary;
 
             if (options.EncryptionEnabled)
                 _file = new TempCryptoStream(_fileTempPath);
@@ -39,14 +37,12 @@ namespace Raven.Server.Indexing
                 _file = SafeFileStream.Create(_fileTempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096, FileOptions.DeleteOnClose);
 
             _tx.ReadTree(_tree).AddStream(name, Stream.Null); // ensure it's visible by LuceneVoronDirectory.FileExists, the actual write is inside Dispose
-
-            _indexOutputFiles.Add(name, this);
         }
 
         public override void FlushBuffer(byte[] b, int offset, int len)
         {
             _file.Write(b, offset, len);
-            TotalWritten += len;
+            _indexOutputFilesSummary.Increment(len);
         }
 
         /// <summary>Random-access methods </summary>
@@ -75,7 +71,6 @@ namespace Raven.Server.Indexing
                 files.AddStream(nameSlice, _file);
             }
 
-            _indexOutputFiles.Remove(_name);
             _file.Dispose();
             PosixFile.DeleteOnClose(_fileTempPath);
         }

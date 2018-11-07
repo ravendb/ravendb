@@ -212,7 +212,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public long FilesAllocationsInBytes()
         {
-            return _directory.GetFilesAllocations();
+            return _directory.FilesAllocations;
+        }
+
+        public void ResetAllocations()
+        {
+            _directory.ResetAllocations();
         }
 
         private void RecreateIndexWriter(IState state)
