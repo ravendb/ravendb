@@ -1553,17 +1553,25 @@ namespace Raven.Server.Documents.Indexes
                     }
                     catch
                     {
-                        IndexPersistence.DisposeWriters();
+                        DisposeIndexWriterOnError(writeOperation);
                         throw;
-                    }
-                    finally
-                    {
-                        if (writeOperation.IsValueCreated)
-                            writeOperation.Value.Dispose();
                     }
 
                     return mightBeMore;
                 }
+            }
+        }
+
+        private void DisposeIndexWriterOnError(Lazy<IndexWriteOperation> writeOperation)
+        {
+            try
+            {
+                IndexPersistence.DisposeWriters();
+            }
+            finally
+            {
+                if (writeOperation.IsValueCreated)
+                    writeOperation.Value.Dispose();
             }
         }
 
