@@ -75,7 +75,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             try
             {
-                Console.WriteLine($"disposed");
                 _directory.ResetAllocations();
                 if (_hasSuggestions)
                 {
