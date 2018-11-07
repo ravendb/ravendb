@@ -184,5 +184,10 @@ namespace Raven.Server.Documents.Queries.Graph
             _left.Analyze(match, addNode, addEdge);
             _right.Analyze(match, addNode, addEdge);
         }
+
+        public ISingleGraphStep GetSingleGraphStepExecution()
+        {
+            throw new System.NotSupportedException("Cannot get single step results from an intersection operation");
+        }
     }
 }

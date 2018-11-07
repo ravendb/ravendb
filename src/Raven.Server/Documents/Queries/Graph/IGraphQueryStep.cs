@@ -21,5 +21,16 @@ namespace Raven.Server.Documents.Queries.Graph
             Action<object, string> addEdge);
 
         IGraphQueryStep Clone();
+
+        ISingleGraphStep GetSingleGraphStepExecution();
     }
+
+    public interface ISingleGraphStep
+    {
+        ValueTask Initialize();
+
+        bool GetAndClearResults(List<GraphQueryRunner.Match> matches);
+
+        void Run(GraphQueryRunner.Match src);
+}
 }

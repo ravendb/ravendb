@@ -132,5 +132,35 @@ namespace Raven.Server.Documents.Queries.Graph
                 addNode(null, result);
             }
         }
+
+        public ISingleGraphStep GetSingleGraphStepExecution()
+        {
+            return new QuerySingleStep(this);
+    }
+
+        private class QuerySingleStep : ISingleGraphStep
+        {
+            private QueryQueryStep _queryQueryStep;
+
+            public QuerySingleStep(QueryQueryStep queryQueryStep)
+            {
+                _queryQueryStep = queryQueryStep;
+}
+
+            public bool GetAndClearResults(List<Match> matches)
+            {
+                throw new NotSupportedException("Cannot pull single graph execution from query step, it is a source only");
+            }
+
+            public ValueTask Initialize()
+            {
+                return _queryQueryStep.Initialize();
+            }
+
+            public void Run(Match src)
+            {
+                throw new NotSupportedException("Cannot pull single graph execution from query step, it is a source only");
+            }
+        }
     }
 }

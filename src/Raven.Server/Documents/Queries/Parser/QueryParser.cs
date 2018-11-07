@@ -491,6 +491,7 @@ namespace Raven.Server.Documents.Queries.Parser
         private bool ProcessEdges(GraphQuery gq, out QueryExpression op, StringSegment alias, List<MatchPath> list, bool allowRecursive, bool foundDash)
         {
             bool expectNode = false;
+            bool expectEdge = true;
             MatchPath last;
             while (true)
 
@@ -501,10 +502,14 @@ namespace Raven.Server.Documents.Queries.Parser
                     {
                         case "-":
                             foundDash = true;
+                            
                             continue;
                         case "[":
                             if (foundDash == false)
                                 throw new InvalidQueryException("Got '[' when expected '-', did you forget to add '-[' ?", Scanner.Input, null);
+
+                            if(expectEdge == false)
+                                throw new InvalidQueryException("Got an edge when a node is expected ?", Scanner.Input, null);
 
                             if (GraphAlias(gq, true, alias, out alias) == false)
                                 throw new InvalidQueryException("MATCH identifier after '-['", Scanner.Input, null);
@@ -517,6 +522,7 @@ namespace Raven.Server.Documents.Queries.Parser
                                 EdgeType = list[list.Count - 1].EdgeType,
                                 IsEdge = true
                             });
+                            expectEdge = false;
                             break;
                         case "<-":
                             last = list[list.Count - 1];
@@ -529,6 +535,8 @@ namespace Raven.Server.Documents.Queries.Parser
                             };
                             foundDash = true;
                             expectNode = true;
+                            expectEdge = false;
+
                             continue;
                         case "<":
                             throw new InvalidQueryException("Got unexpected '<', did you forget to add '->' ?", Scanner.Input, null);
@@ -554,7 +562,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
                         case "(":
                             if (expectNode == false && list[list.Count - 1].EdgeType != EdgeType.Left)
-                                throw new InvalidQueryException("Got '(', but it wasn't expected", Scanner.Input, null);
+                                throw new InvalidQueryException("Got '(', but it wasn't expected, did you forgot to use -> ? ", Scanner.Input, null);
 
                             if (GraphAlias(gq, false, default, out alias) == false)
                                 throw new InvalidQueryException("Couldn't get node's alias", Scanner.Input, null);
@@ -567,6 +575,7 @@ namespace Raven.Server.Documents.Queries.Parser
                                 Alias = alias,
                                 EdgeType = list[list.Count - 1].EdgeType
                             });
+                            expectEdge = true;
                             break;
                         case "recursive":
                             if(allowRecursive == false)
@@ -636,9 +645,19 @@ namespace Raven.Server.Documents.Queries.Parser
                                 EdgeType = list[list.Count - 1].EdgeType,
                                 IsEdge = true
                             });
+                            
                             var result  = ProcessEdges(gq, out var repeatedPattern, alias, repeated, allowRecursive: false, foundDash: true);
                             repeated.RemoveAt(0);
 
+                            if(repeated.Count == 0)
+                            {
+                                throw new InvalidQueryException("empty recursive {} block is not allowed ", Scanner.Input, null);
+                            }
+
+                            if(repeated.Last().IsEdge)
+                            {
+                                throw new InvalidQueryException("'recursive' block cannot end with an end and must close with a node ( recursive { [edge]->(node) } )", Scanner.Input, null);
+                            }
                             if (Scanner.TryScan("}") == false)
                                 throw new InvalidQueryException("'recursive' must be closed by '}', but wasn't", Scanner.Input, null);
 
@@ -656,7 +675,7 @@ namespace Raven.Server.Documents.Queries.Parser
                                 IsEdge = true
                             });
                             alias = recursiveAlias;
-                            expectNode = true;
+                            expectNode = false;
                             foundDash = false;
                             break;
                         default:

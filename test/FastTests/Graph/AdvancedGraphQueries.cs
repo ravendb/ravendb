@@ -724,8 +724,8 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (Dogs as d1)-recursive as m { [Likes as l] } ->(Dogs as d2) 
-                       select d1.Name as d1,m.l.Name as l, d2.Name as d2").ToList();
+                        match (Dogs as d1)-recursive as m { [Likes as l]->(Dogs as liked) }-[Likes]->(Dogs as d2) 
+                        select d1.Name as d1,m.l.Name as l, d2.Name as d2").ToList();
                     Assert.NotEmpty(results); //sanity check
                     var interpretedResults = results.Select(x => new
                     {
@@ -814,7 +814,7 @@ namespace FastTests.Graph
                 }
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Advanced.RawQuery<JObject>("match (People as s where id() ='people/1-A')-recursive as path (longest) { [Ancestor as r] }->(People as a)").ToArray();
+                    var results = session.Advanced.RawQuery<JObject>("match (People as s where id() ='people/1-A')-recursive as path (longest) { [Ancestor as r]->(People as anc) }-[Ancestor]->(People as a)").ToArray();
                     Assert.NotEmpty(results);
                     var stronglyTypedResults = results.Select(x => new
                     {
@@ -859,7 +859,7 @@ namespace FastTests.Graph
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<JObject>(@"
-                       match (Dogs as d1)-recursive as fst{ [Likes as l] } ->(Dogs as d2)- recursive as snd { [Likes as l2] } ->(Dogs as d3)
+                       match (Dogs as d1)-recursive as fst { [Likes as l]->(Dogs as d5) }-[Likes as _]->(Dogs as d2)- recursive as snd { [Likes as l2] ->(Dogs) }-[Likes]->(Dogs as d3)
                        select d1.Name as d1,fst.l.Name as l, d2.Name as d2, snd.l2.Name as l2, d3.Name as d3").ToList();
                     Assert.NotEmpty(results); //sanity check
                     var interpretedResults = results.Select(x => new
