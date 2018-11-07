@@ -61,18 +61,23 @@ namespace Raven.Server.Indexing
 
         protected override void Dispose(bool disposing)
         {
-            base.Dispose(disposing);
-
-            var files = _tx.ReadTree(_tree);
-
-            using (Slice.From(_tx.Allocator, _name, out Slice nameSlice))
+            try
             {
-                _file.Seek(0, SeekOrigin.Begin);
-                files.AddStream(nameSlice, _file);
-            }
+                base.Dispose(disposing);
 
-            _file.Dispose();
-            PosixFile.DeleteOnClose(_fileTempPath);
+                var files = _tx.ReadTree(_tree);
+
+                using (Slice.From(_tx.Allocator, _name, out var nameSlice))
+                {
+                    _file.Seek(0, SeekOrigin.Begin);
+                    files.AddStream(nameSlice, _file);
+                }
+            }
+            finally
+            {
+                _file.Dispose();
+                PosixFile.DeleteOnClose(_fileTempPath);
+            }
         }
     }
 }
