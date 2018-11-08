@@ -81,9 +81,9 @@ namespace Raven.Server.Utils
                     {
                         return readErrors.Result;
                     }
-                    catch
+                    catch (Exception e)
                     {
-                        return "Unable to get stderr";
+                        return $"Unable to get stderr, got exception: {e}";
                     }
                 }
 
@@ -93,9 +93,9 @@ namespace Raven.Server.Utils
                     {
                         return readStdOut.Result;
                     }
-                    catch
+                    catch (Exception e)
                     {
-                        return "Unable to get stdout";
+                        return $"Unable to get stdout, got exception: {e}";
                     }
                 }
 
