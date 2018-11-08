@@ -622,9 +622,21 @@ namespace Raven.Server.Documents.Indexes
                 catch (Exception e)
                 {
                     if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Unexpected error in '{Name}' index. This should never happen.", e);
+
+                    try
                     {
-                        _logger.Operations($"Failed to execute indexing in {IndexingThreadName}", e);
+                        DocumentDatabase.NotificationCenter.Add(AlertRaised.Create(DocumentDatabase.Name, $"Unexpected error in '{Name}' index",
+                            "Unexpected error in indexing thread. See details.", AlertType.Indexing_UnexpectedIndexingThreadError, NotificationSeverity.Error,
+                            key: Name,
+                            details: new ExceptionDetails(e)));
                     }
+                    catch (Exception)
+                    {
+                        // ignore if we can't create notification
+                    }
+
+                    State = IndexState.Error;
                 }
             }, null, IndexingThreadName);
         }
@@ -661,11 +673,11 @@ namespace Raven.Server.Documents.Indexes
                 _indexingProcessCancellationTokenSource?.Cancel();
             }
 
-            if (_indexingThread == null)
+            var indexingThread = _indexingThread;
+
+            if (indexingThread == null)
                 return null;
 
-
-            var indexingThread = _indexingThread;
             _indexingThread = null;
 
             if (PoolOfThreads.LongRunningWork.Current != indexingThread)
@@ -1169,24 +1181,6 @@ namespace Raven.Server.Documents.Indexes
                 catch (OperationCanceledException)
                 {
                     // expected
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Unexpected error in '{Name}' index. This should never happen.", e);
-
-                    try
-                    {
-                        DocumentDatabase.NotificationCenter.Add(AlertRaised.Create(DocumentDatabase.Name, $"Unexpected error in '{Name}' index",
-                            "Unexpected error in indexing thread. See details.", AlertType.Indexing_UnexpectedIndexingThreadError, NotificationSeverity.Error,
-                            details: new ExceptionDetails(e)));
-                    }
-                    catch (Exception)
-                    {
-                        // ignore if we can't create notification
-                    }
-
-                    State = IndexState.Error;
                 }
                 finally
                 {
