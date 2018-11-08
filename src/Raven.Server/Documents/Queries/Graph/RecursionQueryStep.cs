@@ -20,6 +20,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private readonly List<string> _stepAliases = new List<string>();
         private List<Match> _results = new List<Match>();
         private List<Match> _temp = new List<Match>();
+        private readonly HashSet<string> _allLliases = new HashSet<string>();
         private readonly HashSet<long> _visited = new HashSet<long>();
         private readonly Stack<RecursionState> _path = new Stack<RecursionState>();
         public int _index = -1;
@@ -50,16 +51,19 @@ namespace Raven.Server.Documents.Queries.Graph
             }
 
             _outputAlias = _stepAliases.Last();
+            _allLliases.UnionWith(_left.GetAllAliases());
+            _allLliases.Add(_recursive.Alias);
         }
 
         public void SetNext(ISingleGraphStep next)
         {
             _next = next;
+            _next.AddAliases(_allLliases);
         }
 
         public HashSet<string> GetAllAliases()
         {
-            return _left.GetAllAliases();
+            return _allLliases;
         }
 
         public bool GetNext(out Match match)
@@ -184,9 +188,14 @@ namespace Raven.Server.Documents.Queries.Graph
                 _parent._skipMaterialization = false;
             }
 
-            public void Run(Match src)
+            public void Run(Match src, string alias)
             {
                 _parent.ProcessSingleResultRecursive(src, _matches);
+            }
+
+            public void AddAliases(HashSet<string> aliases)
+            {
+                aliases.UnionWith(_parent.GetAllAliases());
             }
         }
 
@@ -262,6 +271,10 @@ namespace Raven.Server.Documents.Queries.Graph
                     if (top.Matches == null || top.Matches.Count == 0)
                     {
                         var current = top.Match.GetSingleDocumentResult(_outputAlias);
+                        if(current == null && _options.Min == 0)
+                        {
+                            current = top.Match.GetSingleDocumentResult(_left.GetOuputAlias());
+                        }
                         if (current != null && AddMatch(current))
                         {
                             return;
@@ -335,7 +348,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
                 if (_next != null)
                 {
-                    _next.Run(match);
+                    _next.Run(match, _outputAlias);
                     if (_next.GetAndClearResults(matches) == false)
                         return false;
                 }
@@ -344,7 +357,7 @@ namespace Raven.Server.Documents.Queries.Graph
                     matches.Add(match);
                 }
                 top.AlreadyAdded = true;
-                if (_options.Type != RecursiveMatchType.Shortest)
+                if (_options.Type == RecursiveMatchType.Longest)
                 {
                     foreach (var item in _path)
                     {

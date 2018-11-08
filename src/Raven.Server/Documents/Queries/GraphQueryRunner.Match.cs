@@ -58,6 +58,13 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
+            public void Remove(string alias)
+            {
+                if (_inner == null)
+                    return;
+                _inner.Remove(alias);
+            }
+
             public object GetResult(string alias)
             {
                 object result = default;
@@ -91,16 +98,6 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 return false;
-            }
-
-            //try to set, but don't overwrite
-            public long? TrySet(StringSegment alias, Document val)
-            {
-                EnsureInnerInitialized();
-
-                if (_inner.TryAdd(alias, val) == false)
-                    return null;
-                return (long)val.Data.BasePointer;
             }
 
             private void EnsureInnerInitialized()
