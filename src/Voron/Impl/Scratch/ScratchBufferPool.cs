@@ -384,12 +384,12 @@ namespace Voron.Impl.Scratch
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AddScratchBufferFile(ScratchBufferItem scratch)
         {
-            RemoveInactiveScratches(scratch, cleanupRecycled: false);
+            RemoveInactiveScratches(scratch);
 
             _scratchBuffers.AddOrUpdate(scratch.Number, scratch, (_, __) => scratch);
         }
 
-        private void RemoveInactiveScratches(ScratchBufferItem except, bool cleanupRecycled)
+        private void RemoveInactiveScratches(ScratchBufferItem except)
         {
             foreach (var item in _scratchBuffers)
             {
@@ -403,12 +403,8 @@ namespace Voron.Impl.Scratch
                 if (_scratchBuffers.TryRemove(scratchBufferItem.Number, out _) == false)
                     ThrowUnableToRemoveScratch(scratchBufferItem);
 
-                var isInRecycledArea = _recycleArea.Contains(scratchBufferItem);
-                if (cleanupRecycled || isInRecycledArea == false)
+                if (_recycleArea.Contains(scratchBufferItem) == false)
                 {
-                    if (isInRecycledArea)
-                        _recycleArea.Remove(scratchBufferItem);
-
                     scratchBufferItem.File.Dispose();
 
                     _scratchSpaceMonitor.Decrease(scratchBufferItem.File.NumberOfAllocatedPages * Constants.Storage.PageSize);
@@ -480,12 +476,38 @@ namespace Voron.Impl.Scratch
             {
                 using (_env.WriteTransaction())
                 {
-                    RemoveInactiveScratches(_current, cleanupRecycled: true);
+                    RemoveInactiveScratches(_current);
+
+                    RemoveInactiveRecycledScratches();
                 }
             }
             catch (TimeoutException)
             {
                 
+            }
+        }
+
+        private void RemoveInactiveRecycledScratches()
+        {
+            if (_recycleArea.Count == 0)
+                return;
+
+            var scratchNode = _recycleArea.First;
+            while (scratchNode != null)
+            {
+                var next = scratchNode.Next;
+
+                var recycledScratch = scratchNode.Value;
+                if (recycledScratch.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction(null)) == false)
+                {
+                    _scratchBuffers.TryRemove(recycledScratch.Number, out _);
+                    recycledScratch.File.Dispose();
+                    _scratchSpaceMonitor.Decrease(recycledScratch.File.NumberOfAllocatedPages * Constants.Storage.PageSize);
+
+                    _recycleArea.Remove(scratchNode);
+                }
+
+                scratchNode = next;
             }
         }
 
