@@ -141,7 +141,7 @@ namespace Voron
 
                 _decompressionBuffers = new DecompressionBuffersPool(options);
 
-                options.InvokeOnCreateDirectory();
+                options.InvokeOnDirectoryInitialize();
 
                 var isNew = _headerAccessor.Initialize();
 

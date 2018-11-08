@@ -279,7 +279,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 InitializeOptions(options, documentDatabase, name);
 
-                DirectoryExecUtils.SubscribeToOnDirectoryExec(options, documentDatabase.Configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Index, logger);
+                DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, documentDatabase.Configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Index, logger);
 
                 environment = LayoutUpdater.OpenEnvironment(options);
 
@@ -3267,7 +3267,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var options = CreateStorageEnvironmentOptions(DocumentDatabase, Configuration);
 
-                DirectoryExecUtils.SubscribeToOnDirectoryExec(options, DocumentDatabase.Configuration.Storage, DocumentDatabase.Name, DirectoryExecUtils.EnvironmentType.Index, _logger);
+                DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, DocumentDatabase.Configuration.Storage, DocumentDatabase.Name, DirectoryExecUtils.EnvironmentType.Index, _logger);
 
                 try
                 {

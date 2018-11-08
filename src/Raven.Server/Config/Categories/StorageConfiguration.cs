@@ -64,20 +64,20 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.PrefetchResetThresholdInGb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size PrefetchResetThreshold { get; set; }
 
-        [Description("EXPERT: A command or executable to run when creating a new directory (storage environment). RavenDB will execute: command [user-arg-1] ... [user-arg-n] <environment-type> <database-name> <data-dir-path> <temp-dir-path> <journal-dir-path>")]
+        [Description("EXPERT: A command or executable to run when creating/opening a directory (storage environment). RavenDB will execute: command [user-arg-1] ... [user-arg-n] <environment-type> <database-name> <data-dir-path> <temp-dir-path> <journal-dir-path>")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Storage.OnCreateDirectory.Exec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public string OnCreateDirectoryExec { get; set; }
+        [ConfigurationEntry("Storage.OnDirectoryInitialize.Exec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public string OnDirectoryInitializeExec { get; set; }
 
-        [Description("EXPERT: The user arguments for the 'Storage.OnCreateDirectory.Exec' command or executable. The arguments must be escaped for the command line.")]
+        [Description("EXPERT: The optional user arguments for the 'Storage.OnDirectoryInitialize.Exec' command or executable. The arguments must be escaped for the command line.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Storage.OnCreateDirectory.Exec.Arguments", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public string OnCreateDirectoryExecArguments { get; set; }
+        [ConfigurationEntry("Storage.OnDirectoryInitialize.Exec.Arguments", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public string OnDirectoryInitializeExecArguments { get; set; }
 
-        [Description("EXPERT: The number of seconds to wait for the OnCreateDirectory executable to exit. Default: 30 seconds")]
+        [Description("EXPERT: The number of seconds to wait for the OnDirectoryInitialize executable to exit. Default: 30 seconds")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Storage.OnCreateDirectory.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public TimeSetting OnCreateDirectoryExecTimeout { get; set; }
+        [ConfigurationEntry("Storage.OnDirectoryInitialize.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting OnDirectoryInitializeExecTimeout { get; set; }
     }
 }

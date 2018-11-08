@@ -273,7 +273,7 @@ namespace Raven.Server.Documents
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Documents, null, this);
             try
             {
-                DirectoryExecUtils.SubscribeToOnDirectoryExec(options, DocumentDatabase.Configuration.Storage, DocumentDatabase.Name, DirectoryExecUtils.EnvironmentType.Database, _logger);
+                DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, DocumentDatabase.Configuration.Storage, DocumentDatabase.Name, DirectoryExecUtils.EnvironmentType.Database, _logger);
 
                 ContextPool = new DocumentsContextPool(DocumentDatabase);
                 Environment = LayoutUpdater.OpenEnvironment(options);
