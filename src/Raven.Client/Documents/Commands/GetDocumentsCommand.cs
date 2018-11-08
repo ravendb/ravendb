@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -125,6 +126,8 @@ namespace Raven.Client.Documents.Commands
             }
             else
             {
+                var calculateHash = CalculateHash(context, uniqueIds);
+                pathBuilder.Append("loadHash=").Append(calculateHash);
                 request.Method = HttpMethod.Post;
 
                 request.Content = new BlittableJsonContent(stream =>
@@ -136,6 +139,17 @@ namespace Raven.Client.Documents.Commands
                         writer.WriteEndObject();
                     }
                 });
+            }
+        }
+
+        private static ulong CalculateHash(JsonOperationContext ctx, HashSet<string> uniqueIds)
+        {
+            using (var hasher = new HashCalculator(ctx))
+            {
+                foreach (var x in uniqueIds)
+                    hasher.Write(x);
+
+                return hasher.GetHash();
             }
         }
 
