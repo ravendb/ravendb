@@ -1187,14 +1187,6 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private class UnusedIndexState
-        {
-            public DateTime LastQueryingTime { get; set; }
-            public Index Index { get; set; }
-            public IndexState State { get; set; }
-            public DateTime CreationDate { get; set; }
-        }
-
         public bool TryReplaceIndexes(string oldIndexName, string replacementIndexName)
         {
             if (_indexes.TryGetByName(replacementIndexName, out Index newIndex) == false)
