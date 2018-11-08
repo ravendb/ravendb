@@ -179,7 +179,7 @@ match (u)-[r]->(m)
                 Assert.Equal(3, p.Path.Length);
                 Assert.Equal("u", p.Path[0].Alias);
                 Assert.Equal(EdgeType.Right, p.Path[0].EdgeType);
-                Assert.Equal("m_r", p.Path[1].Alias);
+                Assert.Equal("r", p.Path[1].Alias);
                 Assert.Equal(EdgeType.Right, p.Path[1].EdgeType);
                 Assert.Equal("m", p.Path[2].Alias);
                 Assert.Equal(EdgeType.Right, p.Path[2].EdgeType);
@@ -209,7 +209,7 @@ match (m)<-[r]-(u)
                 Assert.Equal(3, p.Path.Length);
                 Assert.Equal("u", p.Path[0].Alias);
                 Assert.Equal(EdgeType.Right, p.Path[0].EdgeType);
-                Assert.Equal("m_r", p.Path[1].Alias);
+                Assert.Equal("r", p.Path[1].Alias);
                 Assert.Equal(EdgeType.Right, p.Path[1].EdgeType);
                 Assert.Equal("m", p.Path[2].Alias);
                 Assert.Equal(EdgeType.Right, p.Path[2].EdgeType);
@@ -236,14 +236,14 @@ match (Movies as m)<-[Rated as r]-( Users as u where City='Hadera' )
                 Assert.Equal(3, p.Path.Length);
                 Assert.Equal("u", p.Path[0].Alias);
                 Assert.Equal(EdgeType.Right, p.Path[0].EdgeType);
-                Assert.Equal("m_r", p.Path[1].Alias);
+                Assert.Equal("r", p.Path[1].Alias);
                 Assert.Equal(EdgeType.Right, p.Path[1].EdgeType);
                 Assert.Equal("m", p.Path[2].Alias);
                 Assert.Equal(EdgeType.Right, p.Path[2].EdgeType);
 
                 Assert.Equal("FROM Users WHERE City = 'Hadera'", query.GraphQuery.WithDocumentQueries["u"].ToString().Trim());
                 Assert.Equal("FROM Movies", query.GraphQuery.WithDocumentQueries["m"].ToString().Trim());
-                Assert.Equal("WITH EDGES (Rated)", query.GraphQuery.WithEdgePredicates["m_r"].ToString().Trim());
+                Assert.Equal("WITH EDGES (Rated)", query.GraphQuery.WithEdgePredicates["r"].ToString().Trim());
             }
             else
             {
