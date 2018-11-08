@@ -131,7 +131,11 @@ namespace Voron.Platform.Win32
 
             NumberOfAllocatedPages = _totalAllocationSize / Constants.Storage.PageSize;
 
-            SetPagerState(CreatePagerState());
+            var pager = CreatePagerState();
+            if (fileAttributes.HasFlag(Win32NativeFileAttributes.Temporary))
+                pager.DiscardDataOnDisk();
+
+            SetPagerState(pager);
         }
 
         public override byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
