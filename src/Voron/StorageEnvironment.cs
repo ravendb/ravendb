@@ -526,6 +526,9 @@ namespace Voron
             finally
             {
                 var errors = new List<Exception>();
+
+                OnLogsApplied = null;
+
                 foreach (var disposable in new IDisposable[]
                 {
                     _journal,
