@@ -10,6 +10,8 @@ namespace Raven.Server.Documents.Queries.AST
     {
         public MatchPath[] Path;
 
+        public bool Reversed;
+
         public override string ToString() => GetText();
 
         public override string GetText(IndexQueryServerSide parent) => GetText();
@@ -239,7 +241,10 @@ namespace Raven.Server.Documents.Queries.AST
         {
             if(Recursive != null)
             {
-                return Recursive.Value.ToString();
+                if (EdgeType == EdgeType.Left)
+                    return "<-" + Recursive.Value + "-";
+
+                return "-" + Recursive.Value.ToString() + "->";
             }
 
             return (IsEdge ? "[" : "(") +  Alias + (IsEdge ? "]" : ")") + (EdgeType == EdgeType.Left ? "<-" : "->"); 
