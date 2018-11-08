@@ -70,6 +70,13 @@ namespace Sparrow.Json.Parsing
         {
             set
             {
+#if DEBUG
+                if (value != null &&
+                    value.GetType().FullName == "Raven.Server.Documents.Document")
+                {
+                    throw new InvalidOperationException("Cannot add Document to DynamicJsonValue");
+                }
+#endif
                 if (_source != null)
                     Remove(name);
                 Properties.Add((name, value));
@@ -129,6 +136,13 @@ namespace Sparrow.Json.Parsing
 
         public void Add(object obj)
         {
+#if DEBUG
+            if (obj != null &&
+                obj.GetType().FullName == "Raven.Server.Documents.Document")
+            {
+                throw new InvalidOperationException("Cannot add Document to DynamicJsonArray");
+            }
+#endif
             Items.Add(obj);
         }
 
