@@ -18,6 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Compression;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
@@ -688,20 +689,26 @@ namespace Voron.Impl.Journal
                         {
                             break;
                         }
+                        catch (EarlyOutOfMemoryException)
+                        {
+                            // we already finished the flush process, the next step is to update
+                            // the journal state and free up the scratch buffer pool used pages.
+                            // after this process is done we'll be able to delete the scratch buffers
+                            // that we flushed and start the sync process
+
+                            if (CanContinueWaiting(token))
+                                continue;
+
+                            break;
+                        }
                         catch (TimeoutException)
                         {
                             // couldn't get the transaction lock, we'll wait for the running transaction to complete
                             // for a bit, and then try again
-                            try
-                            {
-                                if (_waitForJournalStateUpdateUnderTx.Wait(TimeSpan.FromMilliseconds(250), token))
-                                    break;
-                            }
-                            catch (OperationCanceledException)
-                            {
-                                break;
-                            }
-                            continue;
+                            if (CanContinueWaiting(token))
+                                continue;
+
+                            break;
                         }
                         var action = _updateJournalStateAfterFlush;
                         if (action != null)
@@ -717,6 +724,21 @@ namespace Voron.Impl.Journal
                     }
                     // if it was changed, this means that we are done
                 } while (currentAction == _updateJournalStateAfterFlush);
+            }
+
+            private bool CanContinueWaiting(CancellationToken token)
+            {
+                try
+                {
+                    if (_waitForJournalStateUpdateUnderTx.Wait(TimeSpan.FromMilliseconds(250), token))
+                        return false;
+                }
+                catch (OperationCanceledException)
+                {
+                    return false;
+                }
+
+                return true;
             }
 
             private void UpdateJournalStateUnderWriteTransactionLock(LowLevelTransaction txw, long lastProcessedJournal, long lastFlushedTransactionId, List<JournalFile> unusedJournals)
