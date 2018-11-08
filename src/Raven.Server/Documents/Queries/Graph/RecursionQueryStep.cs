@@ -305,25 +305,6 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (_path.Count <= _options.Min)
                     return false;
 
-                if (bestPathLength != null)
-                {
-                    switch (_options.Type)
-                    {
-                        case RecursiveMatchType.Longest:
-                            if (_path.Count <= bestPathLength.Value)
-                                return false;
-                            matches.RemoveAt(0);
-                            break;
-                        case RecursiveMatchType.Shortest:
-                            if (_path.Count >= bestPathLength.Value)
-                                return false;
-                            matches.RemoveAt(0);
-                            break;
-                    }
-                }
-
-
-
                 var match = new Match(originalMatch);
                 var list = new List<Match>();
                 foreach (var item in _path)
@@ -356,6 +337,24 @@ namespace Raven.Server.Documents.Queries.Graph
                 {
                     matches.Add(match);
                 }
+
+                if (bestPathLength != null)
+                {
+                    switch (_options.Type)
+                    {
+                        case RecursiveMatchType.Longest:
+                            if (_path.Count <= bestPathLength.Value)
+                                return false;
+                            matches.RemoveAt(0);
+                            break;
+                        case RecursiveMatchType.Shortest:
+                            if (_path.Count >= bestPathLength.Value)
+                                return false;
+                            matches.RemoveAt(0);
+                            break;
+                    }
+                }
+
                 top.AlreadyAdded = true;
                 if (_options.Type == RecursiveMatchType.Longest)
                 {
