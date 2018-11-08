@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Handlers
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     return Task.CompletedTask;
                 }
-                
+
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
                 var documentSizeDetails = new DocumentSizeDetails
@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Handlers
                     AllocatedSize = document.Value.AllocatedSize,
                     HumaneAllocatedSize = Sizes.Humane(document.Value.AllocatedSize)
                 };
-                
+
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, documentSizeDetails.ToJson());
@@ -262,7 +262,7 @@ namespace Raven.Server.Documents.Handlers
             includeCounters = new IncludeCountersCommand(database, context, counters);
         }
 
-        private async Task<int> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes, Dictionary<string, List<CounterDetail>> counters ,int numberOfResults)
+        private async Task<int> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes, Dictionary<string, List<CounterDetail>> counters, int numberOfResults)
         {
             using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
@@ -380,7 +380,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
-                using (var command = new PatchDocumentCommand(context,
+                var command = new PatchDocumentCommand(context,
                     id,
                     changeVector,
                     skipPatchIfChangeVectorMismatch,
@@ -391,75 +391,75 @@ namespace Raven.Server.Documents.Handlers
                     debugMode,
                     true,
                     returnDocument: false
-                ))
+                );
+
+
+                if (isTest == false)
                 {
-                    if (isTest == false)
+                    await Database.TxMerger.Enqueue(command);
+                }
+                else
+                {
+                    // PutDocument requires the write access to the docs storage
+                    // testing patching is rare enough not to optimize it
+                    using (context.OpenWriteTransaction())
                     {
-                        await Database.TxMerger.Enqueue(command);
+                        command.Execute(context, null);
                     }
-                    else
-                    {
-                        // PutDocument requires the write access to the docs storage
-                        // testing patching is rare enough not to optimize it
-                        using (context.OpenWriteTransaction())
-                        {
-                            command.Execute(context, null);
-                        }
-                    }
+                }
 
-                    switch (command.PatchResult.Status)
-                    {
-                        case PatchStatus.DocumentDoesNotExist:
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            return;
-                        case PatchStatus.Created:
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                            break;
-                        case PatchStatus.Skipped:
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                            return;
-                        case PatchStatus.Patched:
-                        case PatchStatus.NotModified:
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
+                switch (command.PatchResult.Status)
+                {
+                    case PatchStatus.DocumentDoesNotExist:
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        return;
+                    case PatchStatus.Created:
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                        break;
+                    case PatchStatus.Skipped:
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                        return;
+                    case PatchStatus.Patched:
+                    case PatchStatus.NotModified:
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
 
-                        writer.WritePropertyName(nameof(command.PatchResult.Status));
-                        writer.WriteString(command.PatchResult.Status.ToString());
+                    writer.WritePropertyName(nameof(command.PatchResult.Status));
+                    writer.WriteString(command.PatchResult.Status.ToString());
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(command.PatchResult.ModifiedDocument));
+                    writer.WriteObject(command.PatchResult.ModifiedDocument);
+
+                    if (debugMode)
+                    {
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(command.PatchResult.OriginalDocument));
+                        if (isTest)
+                            writer.WriteObject(command.PatchResult.OriginalDocument);
+                        else
+                            writer.WriteNull();
+
                         writer.WriteComma();
 
-                        writer.WritePropertyName(nameof(command.PatchResult.ModifiedDocument));
-                        writer.WriteObject(command.PatchResult.ModifiedDocument);
+                        writer.WritePropertyName(nameof(command.PatchResult.Debug));
 
-                        if (debugMode)
+                        context.Write(writer, new DynamicJsonValue
                         {
-                            writer.WriteComma();
-                            writer.WritePropertyName(nameof(command.PatchResult.OriginalDocument));
-                            if (isTest)
-                                writer.WriteObject(command.PatchResult.OriginalDocument);
-                            else
-                                writer.WriteNull();
-
-                            writer.WriteComma();
-
-                            writer.WritePropertyName(nameof(command.PatchResult.Debug));
-
-                            context.Write(writer, new DynamicJsonValue
-                            {
-                                ["Info"] = new DynamicJsonArray(command.DebugOutput),
-                                ["Actions"] = command.DebugActions?.GetDebugActions()
-                            });
-                        }
-
-
-                        writer.WriteEndObject();
+                            ["Info"] = new DynamicJsonArray(command.DebugOutput),
+                            ["Actions"] = command.DebugActions
+                        });
                     }
+
+
+                    writer.WriteEndObject();
                 }
             }
         }
@@ -508,7 +508,7 @@ namespace Raven.Server.Documents.Handlers
         public string HumaneActualSize { get; set; }
         public int AllocatedSize { get; set; }
         public string HumaneAllocatedSize { get; set; }
-            
+
         public virtual DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -521,7 +521,7 @@ namespace Raven.Server.Documents.Handlers
             };
         }
     }
-    
+
     public class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
     {
         private string _id;
