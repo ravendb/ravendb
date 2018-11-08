@@ -31,6 +31,8 @@ namespace Raven.Server.Documents.Queries.Graph
 
         bool GetAndClearResults(List<GraphQueryRunner.Match> matches);
 
-        void Run(GraphQueryRunner.Match src);
+        void Run(GraphQueryRunner.Match src, string alias);
+
+        void AddAliases(HashSet<string> aliases);
 }
 }

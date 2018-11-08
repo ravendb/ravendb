@@ -21,6 +21,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private QueryMetadata _queryMetadata;
         private List<Match> _temp = new List<Match>();
 
+
         private int _index = -1;
         private List<Match> _results = new List<Match>();
         private Dictionary<string, Match> _resultsById = new Dictionary<string, Match>(StringComparer.OrdinalIgnoreCase);
@@ -145,26 +146,44 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private class QuerySingleStep : ISingleGraphStep
         {
-            private QueryQueryStep _queryQueryStep;
+            private QueryQueryStep _parent;
+            private List<Match> _temp = new List<Match>(1);
 
             public QuerySingleStep(QueryQueryStep queryQueryStep)
             {
-                _queryQueryStep = queryQueryStep;
+                _parent = queryQueryStep;
 }
+
+
+            public void AddAliases(HashSet<string> aliases)
+            {
+                aliases.UnionWith(_parent.GetAllAliases());
+            }
 
             public bool GetAndClearResults(List<Match> matches)
             {
-                throw new NotSupportedException("Cannot pull single graph execution from query step, it is a source only");
+                if (_temp.Count == 0)
+                    return false;
+
+                matches.AddRange(_temp);
+
+                _temp.Clear();
+
+                return true;
             }
 
             public ValueTask Initialize()
             {
-                return _queryQueryStep.Initialize();
+                return _parent.Initialize();
             }
 
-            public void Run(Match src)
+            public void Run(Match src, string alias)
             {
-                throw new NotSupportedException("Cannot pull single graph execution from query step, it is a source only");
+                // here we already get the right match, and we do nothing with it.
+                var clone = new Match(src);
+                clone.Remove(alias);
+                clone.Set(_parent.GetOuputAlias(), src.GetResult(alias));
+                _temp.Add(clone);
             }
         }
     }

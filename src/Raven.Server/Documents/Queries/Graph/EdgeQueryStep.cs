@@ -103,10 +103,10 @@ namespace Raven.Server.Documents.Queries.Graph
             _index = 0;
 
             var edgeMatcher = new EdgeMatcher(this);
-
+            var alias = _left.GetOuputAlias();
             while (_left.GetNext(out var left))
             {
-                edgeMatcher.Run(left);
+                edgeMatcher.Run(left, alias);
             }
         }
 
@@ -114,7 +114,6 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             private readonly EdgeQueryStep _parent;
             SingleEdgeMatcher _processor;
-            string _alias;
 
             public EdgeMatcher(EdgeQueryStep parent)
             {
@@ -147,6 +146,12 @@ namespace Raven.Server.Documents.Queries.Graph
                 return true;
             }
 
+
+            public void AddAliases(HashSet<string> aliases)
+            {
+                aliases.UnionWith(_parent.GetAllAliases());
+            }
+
             public ValueTask Initialize()
             {
                 if(_parent._left != null)
@@ -166,9 +171,9 @@ namespace Raven.Server.Documents.Queries.Graph
                 await _parent._right.Initialize();
             }
 
-            public void Run(GraphQueryRunner.Match src)
+            public void Run(Match src, string alias)
             {
-                _processor.SingleMatch(src, _alias);
+                _processor.SingleMatch(src, alias);
             }
         }
         
