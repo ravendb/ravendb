@@ -13,7 +13,7 @@ namespace SlowTests.Issues
         [Fact]
         public async Task CanMigrateFromRavenDb()
         {
-            var file = Path.GetTempFileName();
+            var file = Path.Combine(NewDataPath(forceCreateDir: true), "export.ravendbdump");
             var id = "users/1";
 
             using (var store1 = GetDocumentStore())
