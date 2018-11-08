@@ -1111,7 +1111,6 @@ namespace FastTests.Graph
                         select e.FirstName as EmployeeName, reportsTo.path as ReportsToPath, m.FirstName as ManagerName
                        ").ToList();
                     Assert.NotEmpty(results); //sanity check
-                    Assert.Equal(3,results.Count);
 
                     var stronglyTypedResults = results.Select(x => new
                     {
@@ -1144,7 +1143,6 @@ namespace FastTests.Graph
                             select { EmployeeName: e.FirstName, ReportsToPath: reportsTo.map(x => x.path), ManagerName: m.FirstName }
                        ").ToList();
                     Assert.NotEmpty(results); //sanity check
-                    Assert.Equal(3,results.Count);
 
                     var stronglyTypedResults = results.Select(x => new
                     {

@@ -532,12 +532,18 @@ select {
 .ToList();
                     results.Sort((x, y) => x.Parentage.CompareTo(y.Parentage));
 
-                    Assert.Equal(2, results.Count);
+                    Assert.Equal(4, results.Count);
                     Assert.Equal("Bilbo Baggins", results[0].Name);
-                    Assert.Equal("Bungo | Mungo | Balbo Baggins", results[0].Parentage);
+                    Assert.Equal("Bungo", results[0].Parentage);
 
                     Assert.Equal("Bilbo Baggins", results[1].Name);
-                    Assert.Equal("Bungo | Mungo | Berylla Boffin", results[1].Parentage);
+                    Assert.Equal("Bungo | Mungo", results[1].Parentage);
+
+                    Assert.Equal("Bilbo Baggins", results[2].Name);
+                    Assert.Equal("Bungo | Mungo | Balbo Baggins", results[2].Parentage);
+
+                    Assert.Equal("Bilbo Baggins", results[3].Name);
+                    Assert.Equal("Bungo | Mungo | Berylla Boffin", results[3].Parentage);
                 }
             }
         }
