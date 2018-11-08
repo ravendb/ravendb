@@ -578,7 +578,7 @@ namespace Tests.Infrastructure
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
         }
 
-        public async Task<(long Index, List<RavenServer> Servers)> CreateDatabaseInCluster(DatabaseRecord record, int replicationFactor, string leadersUrl)
+        public async Task<(long Index, List<RavenServer> Servers)> CreateDatabaseInCluster(DatabaseRecord record, int replicationFactor, string leadersUrl, X509Certificate2 certificate = null)
         {
             var serverCount = Servers.Count(s => s.Disposed == false);
             if(serverCount < replicationFactor)
@@ -591,7 +591,8 @@ namespace Tests.Infrastructure
             using (var store = new DocumentStore()
             {
                 Urls = new[] { leadersUrl },
-                Database = record.DatabaseName
+                Database = record.DatabaseName,
+                Certificate = certificate
             }.Initialize())
             {
                 databaseResult = store.Maintenance.Server.Send(new CreateDatabaseOperation(record, replicationFactor));
@@ -643,9 +644,9 @@ namespace Tests.Infrastructure
             return urls;
         }
 
-        public Task<(long Index, List<RavenServer> Servers)> CreateDatabaseInCluster(string databaseName, int replicationFactor, string leadersUrl)
+        public Task<(long Index, List<RavenServer> Servers)> CreateDatabaseInCluster(string databaseName, int replicationFactor, string leadersUrl, X509Certificate2 certificate = null)
         {
-            return CreateDatabaseInCluster(new DatabaseRecord(databaseName), replicationFactor, leadersUrl);
+            return CreateDatabaseInCluster(new DatabaseRecord(databaseName), replicationFactor, leadersUrl, certificate);
         }
 
         public override void Dispose()

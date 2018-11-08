@@ -18,6 +18,28 @@ namespace Raven.Client.ServerWide.Tcp
             TestConnection
         }
 
+        public class AuthorizationInfo : IDynamicJson
+        {
+            public enum AuthorizeMethod
+            {
+                Server,
+                PullReplication
+            }
+
+            public AuthorizeMethod AuthorizeAs;
+
+            public string RemoteConnectionInfo;
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(AuthorizeAs)] = AuthorizeAs,
+                    [nameof(RemoteConnectionInfo)] = RemoteConnectionInfo
+                };
+            }
+        }
+
         public string DatabaseName { get; set; }
 
         public string SourceNodeTag { get; set; }
@@ -28,6 +50,8 @@ namespace Raven.Client.ServerWide.Tcp
 
         public string Info { get; set; }
 
+        public AuthorizationInfo AuthorizeInfo { get; set; }
+
         public static readonly int PingBaseLine = -1;
         public static readonly int NoneBaseLine = -1;
         public static readonly int DropBaseLine = -2;
@@ -37,6 +61,7 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int ReplicationBaseLine = 31;
         public static readonly int ReplicationAttachmentMissing = 40_300;
         public static readonly int ReplicationAttachmentMissingVersion41 = 41_300;
+        public static readonly int ReplicationWithPullOption = 42_000;
         public static readonly int SubscriptionBaseLine = 40;
         public static readonly int SubscriptionIncludes = 41_400;
         public static readonly int TestConnectionBaseLine = 50;
@@ -183,6 +208,7 @@ namespace Raven.Client.ServerWide.Tcp
                 public bool MissingAttachments;
                 public bool Counters;
                 public bool ClusterTransaction;
+                public bool SupportPullReplication;
             }
         }
 
@@ -208,6 +234,7 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Replication] = new List<int>
                 {
+                    ReplicationWithPullOption,
                     ReplicationAttachmentMissingVersion41,
                     ReplicationAttachmentMissing,
                     ReplicationBaseLine
@@ -267,6 +294,16 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Replication] = new Dictionary<int, SupportedFeatures>
                 {
+                    [ReplicationWithPullOption] = new SupportedFeatures(ReplicationWithPullOption)
+                    {
+                        Replication = new SupportedFeatures.ReplicationFeatures
+                        {
+                            Counters = true,
+                            ClusterTransaction = true,
+                            MissingAttachments = true,
+                            SupportPullReplication = true
+                        }
+                    },
                     [ReplicationAttachmentMissingVersion41] = new SupportedFeatures(ReplicationAttachmentMissingVersion41)
                     {
                         Replication = new SupportedFeatures.ReplicationFeatures

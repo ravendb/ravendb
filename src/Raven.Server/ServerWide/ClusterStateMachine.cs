@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
@@ -226,6 +227,7 @@ namespace Raven.Server.ServerWide
                     case nameof(PutSqlConnectionStringCommand):
                     case nameof(RemoveRavenConnectionStringCommand):
                     case nameof(RemoveSqlConnectionStringCommand):
+                    case nameof(UpdatePullReplicationCommand):
                         UpdateDatabase(context, type, cmd, index, leader, serverStore);
                         break;
                     case nameof(UpdatePeriodicBackupStatusCommand):
@@ -1429,6 +1431,39 @@ namespace Raven.Server.ServerWide
             where T : RavenTransaction
         {
             return Read(context, "db/" + name.ToLowerInvariant(), out etag);
+        }
+
+        public DatabaseTopology ReadDatabaseTopology(TransactionOperationContext context, string name)
+        {
+            using (var rawDatabaseRecord = ReadRawDatabase(context, name, out _))
+            {
+                rawDatabaseRecord.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject topology);
+                using (topology)
+                {
+                    return JsonDeserializationCluster.DatabaseTopology(topology);
+                }
+            }
+        }
+
+        public PullReplicationDefinition ReadPullReplicationDefinition(string database, string definitionName, TransactionOperationContext context)
+        {
+            var databaseRecord = ReadRawDatabase(context, database, out _);
+            if (databaseRecord == null)
+            {
+                throw new DatabaseDoesNotExistException($"The database '{database}' doesn't exists.");
+            }
+
+            if (databaseRecord.TryGet(nameof(DatabaseRecord.PullReplicationDefinition), out BlittableJsonReaderObject pullReplicationDefinitions) == false)
+            {
+                throw new InvalidOperationException($"Pull replication with the name '{definitionName}' isn't defined for the database '{database}'.");
+            }
+
+            if (pullReplicationDefinitions.TryGet(definitionName, out BlittableJsonReaderObject definition) == false)
+            {
+                throw new InvalidOperationException($"Pull replication with the name '{definitionName}' isn't defined for the database '{database}'.");
+            }
+
+            return JsonDeserializationCluster.PullReplicationDefinition(definition);
         }
 
         public DatabaseTopology ReadDatabaseTopology(BlittableJsonReaderObject rawDatabaseRecord)

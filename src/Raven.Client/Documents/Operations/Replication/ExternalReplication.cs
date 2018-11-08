@@ -16,6 +16,8 @@ namespace Raven.Client.Documents.Operations.Replication
         public string MentorNode;
         public TimeSpan DelayReplicationFor;
 
+        public PullReplicationAsEdgeSettings PullReplicationAsEdgeSettings;
+
         [JsonDeserializationIgnore]
         public RavenConnectionString ConnectionString; // this is in memory only
 
@@ -52,6 +54,7 @@ namespace Raven.Client.Documents.Operations.Replication
             json[nameof(MentorNode)] = MentorNode;
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(DelayReplicationFor)] = DelayReplicationFor;
+            json[nameof(PullReplicationAsEdgeSettings)] = PullReplicationAsEdgeSettings?.ToJson();
             return json;
         }
 
@@ -103,6 +106,33 @@ namespace Raven.Client.Documents.Operations.Replication
         public string GetTaskName()
         {
             return Name;
+        }
+    }
+
+    public class PullReplicationAsEdgeSettings
+    {
+        public bool PullReplicationEnabled = true;
+        public string CertificateThumbprint;
+        public string RemoteName;
+
+        public PullReplicationAsEdgeSettings() { }
+
+        public PullReplicationAsEdgeSettings(string remoteName)
+        {
+            RemoteName = remoteName;
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            if (string.IsNullOrEmpty(RemoteName))
+                throw new ArgumentException("Must be not empty", nameof(RemoteName));
+
+            return new DynamicJsonValue
+            {
+                [nameof(PullReplicationEnabled)] = PullReplicationEnabled,
+                [nameof(CertificateThumbprint)] = CertificateThumbprint,
+                [nameof(RemoteName)] = RemoteName
+            };
         }
     }
 }

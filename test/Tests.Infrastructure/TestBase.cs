@@ -126,28 +126,30 @@ namespace FastTests
 
         protected static volatile string _selfSignedCertFileName;
 
-        protected static string GenerateAndSaveSelfSignedCertificate()
+        protected static string GenerateAndSaveSelfSignedCertificate(bool createNew = false)
         {
-            if (_selfSignedCertFileName == null)
-                GenerateSelfSignedCertFileName();
+           if (_selfSignedCertFileName == null || createNew)
+                GenerateSelfSignedCertFileName(createNew);
 
             var tmp = Path.GetTempFileName();
             File.Copy(_selfSignedCertFileName, tmp, true);
             return tmp;
         }
 
-        private static void GenerateSelfSignedCertFileName()
+        private static int Count;
+
+        private static void GenerateSelfSignedCertFileName(bool createNew = false)
         {
             lock (typeof(TestBase))
             {
-                if (_selfSignedCertFileName != null)
+                if (_selfSignedCertFileName != null && createNew == false)
                     return;
 
                 var log = new StringBuilder();
                 byte[] certBytes;
                 try
                 {
-                    certBytes = CertificateUtils.CreateSelfSignedCertificate(Environment.MachineName, "RavenTestsServer", log);
+                    certBytes = CertificateUtils.CreateSelfSignedCertificate($"{Environment.MachineName}-{Interlocked.Increment(ref Count)}", "RavenTestsServer", log);
                 }
                 catch (Exception e)
                 {

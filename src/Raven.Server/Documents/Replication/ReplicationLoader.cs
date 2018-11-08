@@ -3,9 +3,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -15,6 +17,7 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -25,6 +28,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
@@ -160,7 +164,108 @@ namespace Raven.Server.Documents.Replication
             return null;
         }
 
-        public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer)
+        public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions, 
+            TcpConnectionHeaderMessage.OperationTypes headerOperation,
+            JsonOperationContext.ManagedPinnedBuffer buffer)
+        {
+            var supportedVersions =
+                TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Replication, tcpConnectionOptions.ProtocolVersion);
+
+            if (supportedVersions.Replication.SupportPullReplication)
+            {
+                // wait for replication type
+                using (tcpConnectionOptions.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (var readerObject = context.ParseToMemory(
+                    tcpConnectionOptions.Stream,
+                    "initial-replication-message",
+                    BlittableJsonDocumentBuilder.UsageMode.None,
+                    buffer))
+                {
+                    var initialRequest = JsonDeserializationServer.ReplicationInitialRequest(readerObject);
+                    if (initialRequest.PullReplication)
+                    {
+                        PullReplicationDefinition pullReplicationDefinition;
+                        using (_server.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        {
+                            pullReplicationDefinition = _server.Cluster.ReadPullReplicationDefinition(Database.Name, initialRequest.PullReplicationDefinition, ctx);
+                        }
+
+                        var taskId = (int)Hashing.XXHash64.Calculate(initialRequest.DatabaseGroupId, Encodings.Utf8);
+                        var externalReplication = pullReplicationDefinition.ToExternalReplication(initialRequest.Database, taskId);
+                        var outgoingReplication = new OutgoingReplicationHandler(this, Database, externalReplication, external: true, new[] {initialRequest.Info})
+                        {
+                            PullReplicationDefinitionName = initialRequest.PullReplicationDefinition
+                        };
+
+                        outgoingReplication.Failed += OnOutgoingSendingFailed;
+                        outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
+                        _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
+
+                        outgoingReplication.StartPullReplicationAsCentral(tcpConnectionOptions.Stream, supportedVersions);
+                        OutgoingReplicationAdded?.Invoke(outgoingReplication);
+                        return;
+                    }
+                }
+            }
+
+            CreateIncomingInstance(tcpConnectionOptions, buffer);
+        }
+
+        public void RunPullReplicationAsEdge(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer, ReplicationNode destination)
+        {
+            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer);
+            //TODO: Incoming need to add, known new value
+            IncomingReplicationAdded?.Invoke(newIncoming);
+            newIncoming.Failed += RetryPullReplication;
+
+            // Update current thread name
+            newIncoming.DoIncomingReplication();
+
+            void RetryPullReplication(IncomingReplicationHandler incomingReplicationHandler, Exception exception)
+            {
+                // if the stream closed, it is our duty to reconnect
+                incomingReplicationHandler.Failed -= RetryPullReplication;
+                AddAndStartOutgoingReplication(destination, true);
+            }
+        }
+
+        public IncomingReplicationHandler CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer)
+        {
+            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer);
+
+            // need to safeguard against two concurrent connection attempts
+            var newConnection = _incoming.GetOrAdd(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming);
+            if (newConnection == newIncoming)
+            {
+                newIncoming.Start();
+                IncomingReplicationAdded?.Invoke(newIncoming);
+                ForceTryReconnectAll();
+            }
+            else
+                newIncoming.Dispose();
+
+            return newIncoming;
+        }
+
+        private IncomingReplicationHandler CreateIncomingReplicationHandler(
+            TcpConnectionOptions tcpConnectionOptions, 
+            JsonOperationContext.ManagedPinnedBuffer buffer)
+        {
+            var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, buffer);
+
+            var newIncoming = new IncomingReplicationHandler(
+                tcpConnectionOptions,
+                getLatestEtagMessage,
+                this,
+                buffer);
+
+            newIncoming.Failed += OnIncomingReceiveFailed;
+            newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
+            return newIncoming;
+        }
+
+        private ReplicationLatestEtagRequest IncomingInitialHandshake(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
             ReplicationLatestEtagRequest getLatestEtagMessage;
             using (tcpConnectionOptions.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -190,7 +295,7 @@ namespace Raven.Server.Documents.Replication
 
                 var incomingConnectionRejectionInfos = _incomingRejectionStats.GetOrAdd(connectionInfo,
                     _ => new ConcurrentQueue<IncomingConnectionRejectionInfo>());
-                incomingConnectionRejectionInfos.Enqueue(new IncomingConnectionRejectionInfo { Reason = e.ToString() });
+                incomingConnectionRejectionInfos.Enqueue(new IncomingConnectionRejectionInfo {Reason = e.ToString()});
 
                 try
                 {
@@ -242,32 +347,15 @@ namespace Raven.Server.Documents.Replication
                 {
                     // do nothing   
                 }
+
                 throw;
             }
-
-            var newIncoming = new IncomingReplicationHandler(
-                tcpConnectionOptions,
-                getLatestEtagMessage,
-                this,
-                buffer);
-
-            newIncoming.Failed += OnIncomingReceiveFailed;
-            newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
 
             if (_log.IsInfoEnabled)
                 _log.Info(
                     $"Initialized document replication connection from {connectionInfo.SourceDatabaseName} located at {connectionInfo.SourceUrl}");
 
-            // need to safeguard against two concurrent connection attempts
-            var newConnection = _incoming.GetOrAdd(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming);
-            if (newConnection == newIncoming)
-            {
-                newIncoming.Start();
-                IncomingReplicationAdded?.Invoke(newIncoming);
-                ForceTryReconnectAll();
-            }
-            else
-                newIncoming.Dispose();
+            return getLatestEtagMessage;
         }
 
         private void ForceTryReconnectAll()
@@ -684,7 +772,7 @@ namespace Raven.Server.Documents.Replication
             return _server.LoadDatabaseRecord(Database.Name, out _);
         }
 
-        private void AddAndStartOutgoingReplication(ReplicationNode node, bool external)
+        internal void AddAndStartOutgoingReplication(ReplicationNode node, bool external)
         {
             var info = GetConnectionInfo(node, external);
 
@@ -703,7 +791,7 @@ namespace Raven.Server.Documents.Replication
             OutgoingReplicationAdded?.Invoke(outgoingReplication);
         }
 
-        private TcpConnectionInfo GetConnectionInfo(ReplicationNode node, bool external)
+        private TcpConnectionInfo[] GetConnectionInfo(ReplicationNode node, bool external)
         {
             var shutdownInfo = new ConnectionShutdownInfo
             {
@@ -715,11 +803,26 @@ namespace Raven.Server.Documents.Replication
             {
                 if (node is ExternalReplication exNode)
                 {
-                    using (var requestExecutor = RequestExecutor.Create(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.ConnectionString.Database, _server.Server.Certificate.Certificate, DocumentConventions.Default))
+                    var database = exNode.ConnectionString.Database;
+                    var certificate = GetCertificateForReplication(exNode, out _);
+
+                    if (exNode.PullReplicationAsEdgeSettings == null)
+                    {
+                        using (var requestExecutor = RequestExecutor.Create(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.ConnectionString.Database, certificate, DocumentConventions.Default))
+                        using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                        {
+                            var cmd = new GetTcpInfoCommand("external-replication", database);
+                            requestExecutor.Execute(cmd, ctx);
+                            node.Database = database;
+                            node.Url = requestExecutor.Url;
+                            return new []{ cmd.Result };
+                        }
+                    }
+                   
+                    using (var requestExecutor = RequestExecutor.CreateForFixedTopology(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.ConnectionString.Database, certificate, DocumentConventions.Default))
                     using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     {
-                        var database = exNode.ConnectionString.Database;
-                        var cmd = new GetTcpInfoCommand("external-replication", database);
+                        var cmd = new GetPullReplicationInfoCommand(database, Database.DatabaseGroupId, exNode.PullReplicationAsEdgeSettings.RemoteName);
                         requestExecutor.Execute(cmd, ctx);
                         node.Database = database;
                         node.Url = requestExecutor.Url;
@@ -730,7 +833,10 @@ namespace Raven.Server.Documents.Replication
                 {
                     using (var cts = new CancellationTokenSource(_server.Engine.TcpConnectionTimeout))
                     {
-                        return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, "Replication", _server.Server.Certificate.Certificate, cts.Token);
+                        return new[]
+                        {
+                            ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, "Replication", _server.Server.Certificate.Certificate, cts.Token)
+                        };
                     }
                 }
                 throw new InvalidOperationException(
@@ -745,6 +851,38 @@ namespace Raven.Server.Documents.Replication
                 _reconnectQueue.TryAdd(shutdownInfo);
             }
             return null;
+        }
+
+        public X509Certificate2 GetCertificateForReplication(ReplicationNode node, out TcpConnectionHeaderMessage.AuthorizationInfo authorizationInfo)
+        {
+            authorizationInfo = null;
+            var exNode = node as ExternalReplication;
+            if (exNode == null)
+                return _server.Server.Certificate.Certificate;
+
+            if (exNode.PullReplicationAsEdgeSettings?.CertificateThumbprint != null)
+            {
+                using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var key = Constants.Certificates.FeaturePrefix + exNode.PullReplicationAsEdgeSettings.CertificateThumbprint;
+                    var certificate = _server.Cluster.Read(context, key);
+                    if (certificate == null)
+                    {
+                        return _server.Server.Certificate.Certificate;
+                    }
+
+                    var definition = JsonDeserializationServer.CertificateDefinition(certificate);
+                    authorizationInfo = new TcpConnectionHeaderMessage.AuthorizationInfo
+                    {
+                        AuthorizeAs = TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication,
+                        RemoteConnectionInfo = exNode.PullReplicationAsEdgeSettings.RemoteName
+                    };
+                    return new X509Certificate2(Convert.FromBase64String(definition.Certificate), definition.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                }
+            }
+
+            return _server.Server.Certificate.Certificate;
         }
 
         public (string Url, OngoingTaskConnectionStatus Status) GetExternalReplicationDestination(long taskId)
@@ -773,7 +911,6 @@ namespace Raven.Server.Documents.Replication
                 instance.DocumentsReceived -= OnIncomingReceiveSucceeded;
                 if (_log.IsInfoEnabled)
                     _log.Info($"Incoming replication handler has thrown an unhandled exception. ({instance.FromToString})", e);
-
             }
         }
 

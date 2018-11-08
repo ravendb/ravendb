@@ -61,7 +61,9 @@ namespace Raven.Client.ServerWide
 
         public List<PeriodicBackupConfiguration> PeriodicBackups;
 
-        public List<ExternalReplication> ExternalReplications = new List<ExternalReplication>(); // Watcher only receives (slave)
+        public List<ExternalReplication> ExternalReplications = new List<ExternalReplication>();
+
+        public Dictionary<string, PullReplicationDefinition> PullReplicationDefinition = new Dictionary<string, PullReplicationDefinition>(); 
 
         public Dictionary<string, RavenConnectionString> RavenConnectionStrings = new Dictionary<string, RavenConnectionString>();
 

@@ -224,6 +224,28 @@ namespace Raven.Client.Http
             return executor;
         }
 
+        public static RequestExecutor CreateForFixedTopology(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
+        {
+            var urls = ValidateUrls(initialUrls, certificate);
+            var nodes = urls.Select(u => new ServerNode
+            {
+                Database = databaseName,
+                Url = u
+            }).ToList();
+            var executor = new RequestExecutor(databaseName, certificate, conventions, urls)
+            {
+                _nodeSelector = new NodeSelector(new Topology
+                {
+                    Etag = -1,
+                    Nodes = nodes
+                }),
+                TopologyEtag = -2,
+                _disableTopologyUpdates = true,
+                _disableClientConfigurationUpdates = true
+            };
+            return executor;
+        }
+
         protected virtual async Task UpdateClientConfigurationAsync()
         {
             if (Disposed)
