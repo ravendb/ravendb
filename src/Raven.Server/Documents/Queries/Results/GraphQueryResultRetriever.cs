@@ -150,8 +150,13 @@ namespace Raven.Server.Documents.Queries.Results
 
                             var matchJson = _context.ReadObject(djv, "graph/arg");
 
-                            if (TryGetValue(fieldToFetch, new Document { Data = matchJson }, null, null, out key, out fieldVal) == false)
+                            var doc = new Document { Data = matchJson };
+
+                            if (TryGetValue(fieldToFetch, doc, null, null, out key, out fieldVal) == false)
                                 continue;
+
+                            if (ReferenceEquals(doc, fieldVal))
+                                fieldVal = doc.Data;
 
                             array.Add(fieldVal);
                         }
