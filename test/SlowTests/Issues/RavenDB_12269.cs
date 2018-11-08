@@ -1,7 +1,7 @@
-﻿using System.Linq;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
@@ -68,6 +68,16 @@ namespace SlowTests.Issues
                 Thread.Sleep(500);
 
                 Assert.NotEqual(IndexState.Error, replacementIndex.State);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Foo" });
+
+                    await session.SaveChangesAsync();
+
+                    var count = await session.Query<User>("Users_ByName").Customize(x => x.WaitForNonStaleResults()).CountAsync();
+                    Assert.Equal(3, count);
+                }
             }
         }
     }

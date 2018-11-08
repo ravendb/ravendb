@@ -512,16 +512,13 @@ namespace Raven.Server.Documents.Indexes
                 Configuration = configuration;
                 PerformanceHints = performanceHints;
 
+                _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
                 _environment = environment;
                 var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name);
                 _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{safeName}");
-                _contextPool = new TransactionContextPool(_environment);
-                _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
-                _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
-                _indexStorage.Initialize(_environment);
-                IndexPersistence = new LuceneIndexPersistence(this);
-                IndexPersistence.Initialize(_environment);
 
+                InitializeComponentsUsingEnvironment(documentDatabase, _environment);
+                
                 LoadValues();
 
                 DocumentDatabase.TombstoneCleaner.Subscribe(this);
@@ -552,6 +549,20 @@ namespace Raven.Server.Documents.Indexes
                 Dispose();
                 throw;
             }
+        }
+
+        private void InitializeComponentsUsingEnvironment(DocumentDatabase documentDatabase, StorageEnvironment environment)
+        {
+            _contextPool?.Dispose();
+            _contextPool = new TransactionContextPool(environment);
+            
+            _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
+            _indexStorage.Initialize(environment);
+
+            IndexPersistence?.Dispose();
+
+            IndexPersistence = new LuceneIndexPersistence(this);
+            IndexPersistence.Initialize(environment);
         }
 
         protected virtual void OnInitialization()
@@ -1073,7 +1084,10 @@ namespace Raven.Server.Documents.Indexes
                                             while (_indexingProcessCancellationTokenSource.IsCancellationRequested == false)
                                             {
                                                 if (DocumentDatabase.IndexStore.TryReplaceIndexes(originalName, Definition.Name))
-                                                    break;
+                                                {
+                                                    StartIndexingThread();
+                                                    return;
+                                                }
                                             }
                                         }
                                         finally
@@ -3250,7 +3264,9 @@ namespace Raven.Server.Documents.Indexes
             // here we ensure that we aren't currently running any indexing,
             // because we'll shut down the environment for this index, reads
             // are handled using the DrainRunningQueries portion
-            GetWaitForIndexingThreadToExit(disableIndex: false)?.Join(Timeout.Infinite);
+            var thread = GetWaitForIndexingThreadToExit(disableIndex: false);
+            thread?.Join(Timeout.Infinite);
+
             _environment.Dispose();
 
             return new DisposableAction(() =>
@@ -3266,7 +3282,7 @@ namespace Raven.Server.Documents.Indexes
                 try
                 {
                     _environment = LayoutUpdater.OpenEnvironment(options);
-                    InitializeInternal(_environment, DocumentDatabase, Configuration, PerformanceHints);
+                    InitializeComponentsUsingEnvironment(DocumentDatabase, _environment);
                 }
                 catch
                 {
@@ -3274,7 +3290,12 @@ namespace Raven.Server.Documents.Indexes
                     options.Dispose();
                     throw;
                 }
-                StartIndexingThread();
+
+                if (thread != null)
+                {
+                    // we want to start indexing thread only if we stopped it
+                    StartIndexingThread();
+                }
             });
         }
 
