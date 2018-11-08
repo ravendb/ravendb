@@ -384,12 +384,12 @@ namespace Voron.Impl.Scratch
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AddScratchBufferFile(ScratchBufferItem scratch)
         {
-            RemoveInactiveScratches(scratch);
+            RemoveInactiveScratches(scratch, cleanupRecycled: false);
 
             _scratchBuffers.AddOrUpdate(scratch.Number, scratch, (_, __) => scratch);
         }
 
-        private void RemoveInactiveScratches(ScratchBufferItem except)
+        private void RemoveInactiveScratches(ScratchBufferItem except, bool cleanupRecycled)
         {
             foreach (var item in _scratchBuffers)
             {
@@ -403,8 +403,12 @@ namespace Voron.Impl.Scratch
                 if (_scratchBuffers.TryRemove(scratchBufferItem.Number, out _) == false)
                     ThrowUnableToRemoveScratch(scratchBufferItem);
 
-                if (_recycleArea.Contains(scratchBufferItem) == false)
+                var isInRecycledArea = _recycleArea.Contains(scratchBufferItem);
+                if (cleanupRecycled || isInRecycledArea == false)
                 {
+                    if (isInRecycledArea)
+                        _recycleArea.Remove(scratchBufferItem);
+
                     scratchBufferItem.File.Dispose();
 
                     _scratchSpaceMonitor.Decrease(scratchBufferItem.File.NumberOfAllocatedPages * Constants.Storage.PageSize);
@@ -476,22 +480,7 @@ namespace Voron.Impl.Scratch
             {
                 using (_env.WriteTransaction())
                 {
-                    RemoveInactiveScratches(_current);
-
-                    if (_recycleArea.Count == 0)
-                        return;
-
-                    while (_recycleArea.First != null)
-                    {
-                        var recycledScratch = _recycleArea.First.Value;
-
-                        ScratchBufferItem _;
-                        _scratchBuffers.TryRemove(recycledScratch.Number, out _);
-                        recycledScratch.File.Dispose();
-                        _scratchSpaceMonitor.Decrease(recycledScratch.File.NumberOfAllocatedPages * Constants.Storage.PageSize);
-
-                        _recycleArea.RemoveFirst();
-                    }
+                    RemoveInactiveScratches(_current, cleanupRecycled: true);
                 }
             }
             catch (TimeoutException)
