@@ -288,5 +288,13 @@ namespace Voron.Impl
             // prefetch state of the file. Our own size will be larger than the previous one. 
             Array.Copy(olderInstance._prefetchTable, this._prefetchTable, olderInstance._prefetchTable.Length);
         }
+
+        public void DiscardDataOnDisk()
+        {
+            if (AllocationInfos != null)
+            {
+                Sparrow.Memory.Discard(AllocationInfos[0].BaseAddress, AllocationInfos[0].Size);
+            }            
+       }
     }
 }
