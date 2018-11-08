@@ -346,6 +346,10 @@ namespace Raven.Server.Documents.Queries.Parser
                          implicitPrefix + "_" + collection.FieldValue;
                 }
             }
+            else if(maybeAlias.Value == "_")
+            {
+                alias = "__alias" + (++_counter);
+            }
             else
             {
                 alias = maybeAlias.Value;
