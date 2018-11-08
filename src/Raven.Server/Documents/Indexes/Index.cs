@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -10,7 +9,6 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Lucene.Net.Index;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -3259,7 +3257,7 @@ namespace Raven.Server.Documents.Indexes
             GetWaitForIndexingThreadToExit(disableIndex: false)?.Join(Timeout.Infinite);
             _environment.Dispose();
 
-            return new DisposableAction(() =>
+            return new Sparrow.Utils.DisposableAction(() =>
             {
                 // restart environment
                 if (_currentlyRunningQueriesLock.IsWriteLockHeld == false)

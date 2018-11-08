@@ -12,7 +12,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
-using Raven.Client.Util;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Counters;
 using Raven.Server.Documents.Queries.Explanation;

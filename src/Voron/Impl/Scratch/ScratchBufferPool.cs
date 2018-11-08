@@ -450,11 +450,13 @@ namespace Voron.Impl.Scratch
             {
                 // we've just flushed and had no more writes after that, let us bump id of next read transactions to ensure
                 // that nobody will attempt to read old scratches so we will be able to release more files
-
+                
                 try
                 {
-                    using (var tx = _env.NewLowLevelTransaction(new TransactionPersistentContext(),
-                        TransactionFlags.ReadWrite, timeout: TimeSpan.FromMilliseconds(500)))
+                    using (var tx = _env.SafeNewLowLevelTransaction(
+                        new TransactionPersistentContext(),
+                        TransactionFlags.ReadWrite,
+                        timeout: TimeSpan.FromMilliseconds(500)))
                     {
                         tx.ModifyPage(0);
                         tx.Commit();
@@ -474,7 +476,8 @@ namespace Voron.Impl.Scratch
             // and only methods that access this are used within write transaction
             try
             {
-                using (_env.WriteTransaction())
+                var transactionPersistentContext = new TransactionPersistentContext();
+                using (_env.SafeNewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite))
                 {
                     RemoveInactiveScratches(_current);
 

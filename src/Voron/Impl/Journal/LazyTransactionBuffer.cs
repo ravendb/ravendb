@@ -76,7 +76,7 @@ namespace Voron.Impl.Journal
             // This transaction is required to prevent flushing of the data from the
             // scratch file to the data file before the lazy transaction buffers have
             // actually been flushed to the journal file
-            _readTransaction = tx.Environment.NewLowLevelTransaction(_transactionPersistentContext, TransactionFlags.Read);
+            _readTransaction = tx.Environment.SafeNewLowLevelTransaction(_transactionPersistentContext, TransactionFlags.Read);
             tx.Environment.AllowDisposeWithLazyTransactionRunning(_readTransaction);
         }
 

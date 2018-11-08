@@ -542,7 +542,7 @@ namespace Raven.Server.Commercial
         private IDisposable DisableCalculatingCoresCount()
         {
             _disableCalculatingLicenseLimits = true;
-            return new DisposableAction(() =>
+            return new Sparrow.Utils.DisposableAction(() =>
             {
                 _disableCalculatingLicenseLimits = false;
             });

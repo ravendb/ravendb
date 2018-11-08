@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 using Sparrow.Platform.Posix;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -598,6 +599,17 @@ namespace Voron
             var newLowLevelTransaction = NewLowLevelTransaction(transactionPersistentContext, TransactionFlags.ReadWrite, context, timeout);
             var writeTransaction = new Transaction(newLowLevelTransaction);
             return writeTransaction;
+        }
+
+        public LowLevelTransaction SafeNewLowLevelTransaction(
+            TransactionPersistentContext transactionPersistentContext,
+            TransactionFlags transactionFlags,
+            TimeSpan? timeout = null)
+        {
+            using (MemoryInformation.DisableOutOfMemoryChecks())
+            {
+                return NewLowLevelTransaction(transactionPersistentContext, transactionFlags, timeout: timeout);
+            }
         }
 
         internal LowLevelTransaction NewLowLevelTransaction(TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, ByteStringContext context = null, TimeSpan? timeout = null)

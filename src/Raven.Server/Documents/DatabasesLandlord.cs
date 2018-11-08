@@ -6,10 +6,10 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Database;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
@@ -736,7 +736,7 @@ namespace Raven.Server.Documents
                 if (existing != null)
                     (await existing)?.Dispose();
 
-                return new DisposableAction(() =>
+                return new Sparrow.Utils.DisposableAction(() =>
                 {
                     DatabasesCache.TryRemove(dbName, out var _);
                 });

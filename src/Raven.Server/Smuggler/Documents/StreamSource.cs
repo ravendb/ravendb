@@ -75,7 +75,7 @@ namespace Raven.Server.Smuggler.Documents
             _readLegacyEtag = options.ReadLegacyEtag;
 #pragma warning restore 618
 
-            return new DisposableAction(() =>
+            return new Sparrow.Utils.DisposableAction(() =>
             {
                 _parser.Dispose();
                 _returnBuffer.Dispose();

@@ -361,7 +361,7 @@ namespace Raven.Server.Documents
         {
             Interlocked.Increment(ref _preventUnloadCounter);
 
-            return new DisposableAction(() => Interlocked.Decrement(ref _preventUnloadCounter));
+            return new Sparrow.Utils.DisposableAction(() => Interlocked.Decrement(ref _preventUnloadCounter));
         }
 
         public DatabaseUsage DatabaseInUse(bool skipUsagesCount)

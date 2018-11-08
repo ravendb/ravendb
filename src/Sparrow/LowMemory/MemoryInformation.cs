@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
@@ -80,8 +81,21 @@ namespace Sparrow.LowMemory
 
         public static bool EnableEarlyOutOfMemoryChecks = false; // we don't want this to run on the clients
 
+        [ThreadStatic]
+        private static bool _disableOutOfMemoryChecks;
+
+        public static IDisposable DisableOutOfMemoryChecks()
+        {
+            _disableOutOfMemoryChecks = true;
+
+            return new DisposableAction(() => _disableOutOfMemoryChecks = false);
+        }
+
         public static void AssertNotAboutToRunOutOfMemory(float minimumFreeCommittedMemory)
         {
+            if (_disableOutOfMemoryChecks)
+                return;
+
             if (EnableEarlyOutOfMemoryChecks == false)
                 return;
 
