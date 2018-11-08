@@ -9,13 +9,16 @@ namespace SlowTests.Voron.Issues
 {
     public class RavenDB_12268 : StorageTest
     {
+        protected override void Configure(StorageEnvironmentOptions options)
+        {
+            base.Configure(options);
+            options.ManualFlushing = true;
+            options.MaxScratchBufferSize = new Size(64, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes);
+        }
+
         [Fact]
         public void UsedScratchBuffersArentDeleted()
         {
-            // prevent the work of the global flushing behavior
-            Env.Options.MaxNumberOfPagesInJournalBeforeFlush = long.MaxValue;
-            Env.Options.MaxScratchBufferSize = new Size(64, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes);
-
             using (var tx = Env.WriteTransaction())
             {
                 tx.CreateTree("tree");
@@ -56,7 +59,8 @@ namespace SlowTests.Voron.Issues
 
                 // the number of scratch buffers cannot be smaller since we are holding a read tx
                 // but it can be larger because we are creating an empty write tx inside the cleanup
-                Assert.True(numberOfScratchBuffers <= infoForDebug.NumberOfScratchFiles);
+                Assert.True(numberOfScratchBuffers <= infoForDebug.NumberOfScratchFiles, 
+                    $"scratches before cleanup: {numberOfScratchBuffers}, after: {infoForDebug.NumberOfScratchFiles}");
             }
         }
     }
