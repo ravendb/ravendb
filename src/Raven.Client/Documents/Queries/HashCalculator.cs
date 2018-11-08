@@ -6,11 +6,11 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries
 {
-    public unsafe struct QueryHashCalculator : IDisposable
+    public unsafe struct HashCalculator : IDisposable
     {
         private UnmanagedWriteBuffer _buffer;
 
-        public QueryHashCalculator(JsonOperationContext ctx)
+        public HashCalculator(JsonOperationContext ctx)
         {
             _buffer = ctx.GetStream(JsonOperationContext.InitialStreamSize);
         }
