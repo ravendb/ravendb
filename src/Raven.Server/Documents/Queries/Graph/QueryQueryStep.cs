@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private OperationCancelToken _token;
         private QueryRunner _queryRunner;
         private QueryMetadata _queryMetadata;
+        private readonly Sparrow.Json.BlittableJsonReaderObject _queryParameters;
         private List<Match> _temp = new List<Match>();
 
 
@@ -26,7 +27,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private List<Match> _results = new List<Match>();
         private Dictionary<string, Match> _resultsById = new Dictionary<string, Match>(StringComparer.OrdinalIgnoreCase);
 
-        public QueryQueryStep(QueryRunner queryRunner, Sparrow.StringSegment alias, Query query, QueryMetadata queryMetadata, DocumentsOperationContext documentsContext, long? existingResultEtag,
+        public QueryQueryStep(QueryRunner queryRunner, Sparrow.StringSegment alias, Query query, QueryMetadata queryMetadata, Sparrow.Json.BlittableJsonReaderObject queryParameters, DocumentsOperationContext documentsContext, long? existingResultEtag,
             OperationCancelToken token)
         {
             _query = query;
@@ -34,6 +35,7 @@ namespace Raven.Server.Documents.Queries.Graph
             _aliases = new HashSet<string> { _alias };
             _queryRunner = queryRunner;
             _queryMetadata = queryMetadata;
+            _queryParameters = queryParameters;
             _context = documentsContext;
             _resultEtag = existingResultEtag;
             _token = token;
@@ -55,8 +57,11 @@ namespace Raven.Server.Documents.Queries.Graph
             if (_index != -1)
                 return default;
 
-            var results = _queryRunner.ExecuteQuery(new IndexQueryServerSide(_queryMetadata),
-                  _context, _resultEtag, _token);
+            var results = _queryRunner.ExecuteQuery(new IndexQueryServerSide(_queryMetadata)
+            {
+                QueryParameters = _queryParameters
+            },
+            _context, _resultEtag, _token);
 
             if (results.IsCompleted)
             {

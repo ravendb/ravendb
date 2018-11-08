@@ -334,8 +334,9 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (Alias(true, out var maybeAlias) == false)
             {
-                if(gq.HasAlias(collection.FieldValue) ||
-                    _synteticWithQueries?.ContainsKey(collection.FieldValue) == true
+                if(isEdge == false &&
+                    (gq.HasAlias(collection.FieldValue) ||
+                    _synteticWithQueries?.ContainsKey(collection.FieldValue) == true)
                     )
                 {
                     alias = collection.FieldValue;
