@@ -8,10 +8,11 @@ using JetBrains.Annotations;
 using Raven.Client.Extensions;
 using Raven.Server.Config;
 using Sparrow.Json.Parsing;
+using Sparrow.LowMemory;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class ScriptRunnerCache
+    public class ScriptRunnerCache : ILowMemoryHandler
     {
         private readonly DocumentDatabase _database;
         private readonly RavenConfiguration _configuration;
@@ -39,6 +40,8 @@ namespace Raven.Server.Documents.Patch
         {
             _database = database;
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+
+            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
 
         public IEnumerable<DynamicJsonValue> GetDebugInfo(bool detailed = false)
@@ -137,6 +140,15 @@ namespace Raven.Server.Documents.Patch
             }
 
             return count;
+        }
+
+        public void LowMemory()
+        {
+            _cache.Clear();
+        }
+
+        public void LowMemoryOver()
+        {
         }
     }
 }
