@@ -36,9 +36,9 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 #pragma warning restore 618
         }
 
-        public override bool Validate(out List<string> errors)
+        public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true)
         {
-            base.Validate(out errors);
+            base.Validate(out errors, validateName, validateConnection);
 
             if (SqlTables.Count == 0)
                 errors.Add($"{nameof(SqlTables)} cannot be empty");
@@ -66,7 +66,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
             switch (SqlProviderParser.GetSupportedProvider(GetFactoryName()))
             {
                 case SqlProvider.SqlClient:
-                    encrypt = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] {"Encrypt"});
+                    encrypt = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] { "Encrypt" });
 
                     if (string.IsNullOrEmpty(encrypt))
                         return false;
@@ -90,9 +90,9 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
                     }
 
                     return false;
-                
+
                 case SqlProvider.MySqlClient:
-                    encrypt = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] {"Encrypt", "UseSSL"});
+                    encrypt = SqlConnectionStringParser.GetConnectionStringValue(Connection.ConnectionString, new[] { "Encrypt", "UseSSL" });
 
                     if (string.IsNullOrEmpty(encrypt) == false)
                     {
@@ -159,7 +159,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
             result[nameof(QuoteTables)] = QuoteTables;
             result[nameof(CommandTimeout)] = CommandTimeout;
             result[nameof(SqlTables)] = new DynamicJsonArray(SqlTables.Select(x => x.ToJson()));
-            
+
             return result;
         }
     }

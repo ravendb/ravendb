@@ -58,7 +58,7 @@ namespace Raven.Server.Documents
                 new CatastrophicFailureNotification((endId, path, exception) => throw new InvalidOperationException($"Failed to compact database {_database} ({path})", exception))))
                 {
                     InitializeOptions(src, configuration, documentDatabase);
-                    DirectoryExecUtils.SubscribeToOnDirectoryExec(src, configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Compaction, Logger);
+                    DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(src, configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Compaction, Logger);
 
                     var basePath = configuration.Core.DataDirectory.FullPath;
                     compactDirectory = basePath + "-compacting";
@@ -73,7 +73,7 @@ namespace Raven.Server.Documents
                         new CatastrophicFailureNotification((envId, path, exception) => throw new InvalidOperationException($"Failed to compact database {_database} ({path})", exception))))
                     {
                         InitializeOptions(dst, configuration, documentDatabase);
-                        DirectoryExecUtils.SubscribeToOnDirectoryExec(dst, configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Compaction, Logger);
+                        DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(dst, configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Compaction, Logger);
 
                         _token.ThrowIfCancellationRequested();
                         StorageCompaction.Execute(src, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dst, progressReport =>

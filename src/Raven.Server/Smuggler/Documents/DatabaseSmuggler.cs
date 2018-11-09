@@ -553,7 +553,7 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
 
-                    SetDocumentFlags(item);
+                    SetDocumentFlags(item, buildType);
 
                     if (SkipDocument(item, buildType))
                     {
@@ -578,13 +578,22 @@ namespace Raven.Server.Smuggler.Documents
             _onProgress.Invoke(result.Progress);
         }
 
-        private void SetDocumentFlags(DocumentItem item)
+        private void SetDocumentFlags(DocumentItem item, BuildVersionType buildType)
         {
             item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.FromClusterTransaction);
             item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
             if (_options.SkipRevisionCreation)
                 item.Document.NonPersistentFlags |= NonPersistentDocumentFlags.SkipRevisionCreation;
+
+            if (buildType == BuildVersionType.V4)
+            {
+                if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false)
+                    item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasRevisions);
+
+                if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Counters) == false)
+                    item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasCounters);
+            }
         }
 
         private bool SkipDocument(DocumentItem item, BuildVersionType buildType)

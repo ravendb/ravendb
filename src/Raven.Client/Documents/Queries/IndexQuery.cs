@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Queries
 
         public ulong GetQueryHash(JsonOperationContext ctx)
         {
-            using (var hasher = new QueryHashCalculator(ctx))
+            using (var hasher = new HashCalculator(ctx))
             {
                 hasher.Write(Query);
                 hasher.Write(WaitForNonStaleResults);

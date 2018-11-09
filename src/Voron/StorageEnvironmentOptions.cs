@@ -185,7 +185,7 @@ namespace Voron
 
         public Action<string> AddToInitLog;
 
-        public event Action<StorageEnvironmentOptions> OnCreateDirectory;
+        public event Action<StorageEnvironmentOptions> OnDirectoryInitialize;
 
         protected StorageEnvironmentOptions(VoronPathSetting tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
         {
@@ -1248,9 +1248,9 @@ namespace Voron
             _environmentId = environmentId;
         }
 
-        public void InvokeOnCreateDirectory()
+        public void InvokeOnDirectoryInitialize()
         {
-            OnCreateDirectory?.Invoke(this);
+            OnDirectoryInitialize?.Invoke(this);
         }
     }
 

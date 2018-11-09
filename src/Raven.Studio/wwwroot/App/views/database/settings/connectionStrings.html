@@ -24,10 +24,10 @@
                         </div>
                         <div class="actions">
                             <button class="btn btn-default" data-bind="click: $parent.onEditRavenEtl" title="Edit connection string"><i class="icon-edit"></i></button>
-                            <span class="has-disable-reason" data-placement="right" data-bind="attr: { 'data-original-title': $root.isConnectionStringInUse($data) ? 'Connection string is being used by an ongoing task !' : '' }">
+                            <span class="has-disable-reason" data-placement="right" data-bind="attr: { 'data-original-title': $root.isConnectionStringInUse($data, 'RavenEtl') ? 'Connection string is being used by an ongoing task !' : '' }">
                                 <button class="btn btn-danger"
-                                        data-bind="click: $parent.confirmDelete.bind($parent, $data,'Raven'), disable: $root.isConnectionStringInUse($data), 
-                                                   attr: { 'title': !$root.isConnectionStringInUse($data) ? 'Remove connection string' : '' }">
+                                        data-bind="click: $parent.confirmDelete.bind($parent, $data,'Raven'), disable: $root.isConnectionStringInUse($data, 'RavenEtl'), 
+                                                   attr: { 'title': !$root.isConnectionStringInUse($data, 'RavenEtl') ? 'Remove connection string' : '' }">
                                         <i class="icon-trash"></i>
                                 </button> 
                             </span>
@@ -54,9 +54,9 @@
                         </div>
                         <div class="actions">
                             <button class="btn btn-default" data-bind="click: $parent.onEditSqlEtl" title="Edit connection string"><i class="icon-edit"></i></button>
-                            <span class="has-disable-reason" data-placement="right" data-bind="attr: { 'data-original-title': $root.isConnectionStringInUse($data) ? 'Connection string is being used by an ongoing task !' : '' }">
+                            <span class="has-disable-reason" data-placement="right" data-bind="attr: { 'data-original-title': $root.isConnectionStringInUse($data, 'SqlEtl') ? 'Connection string is being used by an ongoing task !' : '' }">
                                 <button class="btn btn-danger"
-                                        data-bind="click: $parent.confirmDelete.bind($parent, $data,'Sql'), disable: $root.isConnectionStringInUse($data), attr: { 'title': !$root.isConnectionStringInUse($data) ? 'Remove connection string' : ''}">
+                                        data-bind="click: $parent.confirmDelete.bind($parent, $data,'Sql'), disable: $root.isConnectionStringInUse($data, 'SqlEtl'), attr: { 'title': !$root.isConnectionStringInUse($data, 'SqlEtl') ? 'Remove connection string' : ''}">
                                         <i class="icon-trash"></i>
                                 </button>   
                             </span>    

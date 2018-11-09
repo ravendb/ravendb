@@ -279,7 +279,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 InitializeOptions(options, documentDatabase, name);
 
-                DirectoryExecUtils.SubscribeToOnDirectoryExec(options, documentDatabase.Configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Index, logger);
+                DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, documentDatabase.Configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Index, logger);
 
                 environment = LayoutUpdater.OpenEnvironment(options);
 
@@ -512,16 +512,13 @@ namespace Raven.Server.Documents.Indexes
                 Configuration = configuration;
                 PerformanceHints = performanceHints;
 
+                _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
                 _environment = environment;
                 var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name);
                 _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{safeName}");
-                _contextPool = new TransactionContextPool(_environment);
-                _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
-                _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
-                _indexStorage.Initialize(_environment);
-                IndexPersistence = new LuceneIndexPersistence(this);
-                IndexPersistence.Initialize(_environment);
 
+                InitializeComponentsUsingEnvironment(documentDatabase, _environment);
+                
                 LoadValues();
 
                 DocumentDatabase.TombstoneCleaner.Subscribe(this);
@@ -552,6 +549,20 @@ namespace Raven.Server.Documents.Indexes
                 Dispose();
                 throw;
             }
+        }
+
+        private void InitializeComponentsUsingEnvironment(DocumentDatabase documentDatabase, StorageEnvironment environment)
+        {
+            _contextPool?.Dispose();
+            _contextPool = new TransactionContextPool(environment);
+            
+            _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
+            _indexStorage.Initialize(environment);
+
+            IndexPersistence?.Dispose();
+
+            IndexPersistence = new LuceneIndexPersistence(this);
+            IndexPersistence.Initialize(environment);
         }
 
         protected virtual void OnInitialization()
@@ -622,9 +633,21 @@ namespace Raven.Server.Documents.Indexes
                 catch (Exception e)
                 {
                     if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Unexpected error in '{Name}' index. This should never happen.", e);
+
+                    try
                     {
-                        _logger.Operations($"Failed to execute indexing in {IndexingThreadName}", e);
+                        DocumentDatabase.NotificationCenter.Add(AlertRaised.Create(DocumentDatabase.Name, $"Unexpected error in '{Name}' index",
+                            "Unexpected error in indexing thread. See details.", AlertType.Indexing_UnexpectedIndexingThreadError, NotificationSeverity.Error,
+                            key: Name,
+                            details: new ExceptionDetails(e)));
                     }
+                    catch (Exception)
+                    {
+                        // ignore if we can't create notification
+                    }
+
+                    State = IndexState.Error;
                 }
             }, null, IndexingThreadName);
         }
@@ -661,11 +684,11 @@ namespace Raven.Server.Documents.Indexes
                 _indexingProcessCancellationTokenSource?.Cancel();
             }
 
-            if (_indexingThread == null)
+            var indexingThread = _indexingThread;
+
+            if (indexingThread == null)
                 return null;
 
-
-            var indexingThread = _indexingThread;
             _indexingThread = null;
 
             if (PoolOfThreads.LongRunningWork.Current != indexingThread)
@@ -1061,7 +1084,10 @@ namespace Raven.Server.Documents.Indexes
                                             while (_indexingProcessCancellationTokenSource.IsCancellationRequested == false)
                                             {
                                                 if (DocumentDatabase.IndexStore.TryReplaceIndexes(originalName, Definition.Name))
-                                                    break;
+                                                {
+                                                    StartIndexingThread();
+                                                    return;
+                                                }
                                             }
                                         }
                                         finally
@@ -1169,24 +1195,6 @@ namespace Raven.Server.Documents.Indexes
                 catch (OperationCanceledException)
                 {
                     // expected
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Unexpected error in '{Name}' index. This should never happen.", e);
-
-                    try
-                    {
-                        DocumentDatabase.NotificationCenter.Add(AlertRaised.Create(DocumentDatabase.Name, $"Unexpected error in '{Name}' index",
-                            "Unexpected error in indexing thread. See details.", AlertType.Indexing_UnexpectedIndexingThreadError, NotificationSeverity.Error,
-                            details: new ExceptionDetails(e)));
-                    }
-                    catch (Exception)
-                    {
-                        // ignore if we can't create notification
-                    }
-
-                    State = IndexState.Error;
                 }
                 finally
                 {
@@ -3274,7 +3282,9 @@ namespace Raven.Server.Documents.Indexes
             // here we ensure that we aren't currently running any indexing,
             // because we'll shut down the environment for this index, reads
             // are handled using the DrainRunningQueries portion
-            GetWaitForIndexingThreadToExit(disableIndex: false)?.Join(Timeout.Infinite);
+            var thread = GetWaitForIndexingThreadToExit(disableIndex: false);
+            thread?.Join(Timeout.Infinite);
+
             _environment.Dispose();
 
             return new DisposableAction(() =>
@@ -3285,12 +3295,12 @@ namespace Raven.Server.Documents.Indexes
 
                 var options = CreateStorageEnvironmentOptions(DocumentDatabase, Configuration);
 
-                DirectoryExecUtils.SubscribeToOnDirectoryExec(options, DocumentDatabase.Configuration.Storage, DocumentDatabase.Name, DirectoryExecUtils.EnvironmentType.Index, _logger);
+                DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, DocumentDatabase.Configuration.Storage, DocumentDatabase.Name, DirectoryExecUtils.EnvironmentType.Index, _logger);
 
                 try
                 {
                     _environment = LayoutUpdater.OpenEnvironment(options);
-                    InitializeInternal(_environment, DocumentDatabase, Configuration, PerformanceHints);
+                    InitializeComponentsUsingEnvironment(DocumentDatabase, _environment);
                 }
                 catch
                 {
@@ -3298,7 +3308,12 @@ namespace Raven.Server.Documents.Indexes
                     options.Dispose();
                     throw;
                 }
-                StartIndexingThread();
+
+                if (thread != null)
+                {
+                    // we want to start indexing thread only if we stopped it
+                    StartIndexingThread();
+                }
             });
         }
 
