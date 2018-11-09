@@ -77,8 +77,10 @@ namespace SlowTests.Client
             Assert.Equal("Karmel", res2.Value.Name);
             Assert.True(res2.Successful);
 
-            await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
-            await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+            var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+            operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
             var result = await store2.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("test"));
             Assert.Equal("Karmel", result.Value.Name);

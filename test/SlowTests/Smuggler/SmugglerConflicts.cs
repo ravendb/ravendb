@@ -61,7 +61,8 @@ namespace SlowTests.Smuggler
         {
             await GenerateConflict(_store1, _store2);
 
-            await _store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), _file);
+            var operation = await _store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), _file);
+            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
             await AssertImport(_store1);
         }
@@ -71,7 +72,8 @@ namespace SlowTests.Smuggler
         {
             await GenerateConflict(_store1, _store2);
 
-            await _store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), _file);
+            var operation = await _store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), _file);
+            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
             using (var store3 = GetDocumentStore(new Options
             {
@@ -87,7 +89,8 @@ namespace SlowTests.Smuggler
         {
             await GenerateConflict(_store1, _store2);
 
-            await _store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), _file);
+            var operation = await _store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), _file);
+            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
             using (var store3 = GetDocumentStore(new Options
             {
@@ -112,7 +115,8 @@ namespace SlowTests.Smuggler
         {
             await GenerateConflict(_store1, _store2);
 
-            await _store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), _file);
+            var operation = await _store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), _file);
+            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
             using (var session = _store2.OpenAsyncSession())
             {
@@ -130,7 +134,8 @@ namespace SlowTests.Smuggler
         {
             await GenerateConflict(_store1, _store2);
 
-            await _store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), _file);
+            var operation = await _store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), _file);
+            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
             using (var store3 = GetDocumentStore(new Options
             {
@@ -295,7 +300,8 @@ namespace SlowTests.Smuggler
         {
             for (int i = 0; i < 3; i++)
             {
-                await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), _file);
+                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), _file);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(3, stats.CountOfDocuments);
@@ -320,7 +326,8 @@ namespace SlowTests.Smuggler
         {
             for (int i = 0; i < 3; i++)
             {
-                await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), _file);
+                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), _file);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(3, stats.CountOfDocuments);

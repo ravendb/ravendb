@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -23,12 +24,14 @@ namespace SlowTests.Issues
             {
                 new UserByName().Execute(store);
                 new UserByNameCount().Execute(store);
-                await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile);
+                var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
             }
 
             using (var store = GetDocumentStore())
             {
-                await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile);
+                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(2, stats.CountOfIndexes);
