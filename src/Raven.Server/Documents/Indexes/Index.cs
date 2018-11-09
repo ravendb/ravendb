@@ -1157,11 +1157,13 @@ namespace Raven.Server.Documents.Indexes
                                         $"Indexing exceeded global limit for scratch space usage. Going to flush environment of '{Name}' index and forcing sync of data file");
 
                                 GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(storageEnvironment);
-                                GlobalFlushingBehavior.GlobalFlusher.Value.ForceSyncEnvironment(storageEnvironment);
 
                                 if (_logsAppliedEvent.Wait(Configuration.MaxTimeToWaitAfterFlushAndSyncWhenExceedingScratchSpaceLimit.AsTimeSpan))
                                 {
-                                    // we've just flushed let's try to cleanup scratch space immediately
+                                    // we've just flushed let's start the sync process
+                                    GlobalFlushingBehavior.GlobalFlusher.Value.ForceSyncEnvironment(storageEnvironment);
+
+                                    // and cleanup scratch space immediately
                                     storageEnvironment.Cleanup();
                                 }
                             }
