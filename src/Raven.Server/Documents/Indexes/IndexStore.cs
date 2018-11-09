@@ -1110,7 +1110,7 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var index in _indexes)
             {
-                index.StorageCleanup();
+                index.Cleanup();
             }
 
             long etag;
