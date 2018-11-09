@@ -55,7 +55,8 @@ namespace SlowTests.Issues
 
                 // let's try to force calling storageEnvironment.Cleanup() inside ExecuteIndexing method
                 replacementIndex.LowMemory();
-                replacementIndex._indexStorage.Environment().LogsApplied();
+                var envOfReplacementIndex = replacementIndex._indexStorage.Environment();
+                envOfReplacementIndex.LogsApplied();
 
                 db.IndexStore.StartIndexing();
 
@@ -63,11 +64,7 @@ namespace SlowTests.Issues
 
                 // let's try to force calling storageEnvironment.Cleanup() inside ExecuteIndexing method
                 replacementIndex.LowMemory();
-                replacementIndex._indexStorage.Environment().LogsApplied();
-
-                Thread.Sleep(500);
-
-                Assert.NotEqual(IndexState.Error, replacementIndex.State);
+                envOfReplacementIndex.LogsApplied();
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -75,6 +72,7 @@ namespace SlowTests.Issues
 
                     await session.SaveChangesAsync();
 
+                    // this will ensure that index isn't in error state
                     var count = await session.Query<User>("Users_ByName").Customize(x => x.WaitForNonStaleResults()).CountAsync();
                     Assert.Equal(3, count);
                 }
