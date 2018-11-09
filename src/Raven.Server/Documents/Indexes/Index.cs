@@ -1206,6 +1206,11 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public void Cleanup()
+        {
+            _environment?.Cleanup();
+        }
+
         protected virtual bool ShouldReplace()
         {
             return false;
@@ -1824,7 +1829,7 @@ namespace Raven.Server.Documents.Indexes
 
                 Stop(disableIndex: true);
                 SetState(IndexState.Disabled);
-                _environment?.Cleanup();
+                Cleanup();
             }
         }
 

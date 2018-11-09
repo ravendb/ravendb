@@ -1108,6 +1108,11 @@ namespace Raven.Server.Documents.Indexes
 
         public void RunIdleOperations()
         {
+            foreach (var index in _indexes)
+            {
+                index.StorageCleanup();
+            }
+
             long etag;
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
