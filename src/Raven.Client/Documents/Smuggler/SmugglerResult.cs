@@ -94,24 +94,25 @@ namespace Raven.Client.Documents.Smuggler
         {
             protected readonly SmugglerResult _result;
 
-            public SmugglerProgress()
+            public SmugglerProgress() 
+                : this(null)
             {
                 // for deserialization
             }
 
             public SmugglerProgress(SmugglerResult result)
             {
-                _result = result ?? throw new ArgumentNullException(nameof(result));
-                Message = _result.Message;
-                DatabaseRecord = _result.DatabaseRecord;
-                Documents = _result.Documents;
-                RevisionDocuments = _result.RevisionDocuments;
-                Tombstones = _result.Tombstones;
-                Conflicts = _result.Conflicts;
-                Identities = _result.Identities;
-                Indexes = _result.Indexes;
-                CompareExchange = _result.CompareExchange;
-                Counters = _result.Counters;
+                _result = result;
+                Message = _result?.Message;
+                DatabaseRecord = _result?.DatabaseRecord;
+                Documents = _result?.Documents;
+                RevisionDocuments = _result?.RevisionDocuments;
+                Tombstones = _result?.Tombstones;
+                Conflicts = _result?.Conflicts;
+                Identities = _result?.Identities;
+                Indexes = _result?.Indexes;
+                CompareExchange = _result?.CompareExchange;
+                Counters = _result?.Counters;
             }
 
             private string Message { get; set; }
