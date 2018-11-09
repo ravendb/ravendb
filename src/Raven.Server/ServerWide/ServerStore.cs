@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
@@ -140,7 +141,7 @@ namespace Raven.Server.ServerWide
             Secrets = new SecretProtection(configuration.Security);
 
             InitializationCompleted = new AsyncManualResetEvent(_shutdownNotification.Token);
-            
+
             if (Configuration.Indexing.GlobalScratchSpaceLimit != null)
                 GlobalIndexingScratchSpaceMonitor = new GlobalIndexingScratchSpaceMonitor(Configuration.Indexing.GlobalScratchSpaceLimit.Value);
 
@@ -513,7 +514,7 @@ namespace Raven.Server.ServerWide
             options.PrefetchSegmentSize = Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
 
-            DirectoryExecUtils.SubscribeToOnDirectoryExec(options, Configuration.Storage, nameof(DirectoryExecUtils.EnvironmentType.System), DirectoryExecUtils.EnvironmentType.System, Logger);
+            DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, Configuration.Storage, nameof(DirectoryExecUtils.EnvironmentType.System), DirectoryExecUtils.EnvironmentType.System, Logger);
 
             try
             {
@@ -1328,20 +1329,58 @@ namespace Raven.Server.ServerWide
             string databaseName, BlittableJsonReaderObject etlConfiguration)
         {
             UpdateDatabaseCommand command;
+            var databaseRecord = LoadDatabaseRecord(databaseName, out _);
 
             switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
             {
                 case EtlType.Raven:
-                    command = new AddRavenEtlCommand(JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration), databaseName);
+                    var rvnEtl = JsonDeserializationCluster.RavenEtlConfiguration(etlConfiguration);
+                    rvnEtl.Validate(out var rvnEtlErr, validateName: false, validateConnection: false);
+                    if (rvnEtl.ValidateConnectionString(databaseRecord) == false)
+                        rvnEtlErr.Add($"Could not find connection string named '{rvnEtl.ConnectionStringName}'. Please supply an existing connection string.");
+
+                    ThrowInvalidConfigurationIfNecessary(rvnEtlErr);
+
+                    command = new AddRavenEtlCommand(rvnEtl, databaseName);
                     break;
                 case EtlType.Sql:
-                    command = new AddSqlEtlCommand(JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration), databaseName);
+                    var sqlEtl = JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration);
+                    sqlEtl.Validate(out var sqlEtlErr, validateName: false, validateConnection: false);
+                    if (sqlEtl.ValidateConnectionString(databaseRecord) == false)
+                        sqlEtlErr.Add($"Could not find connection string named '{sqlEtl.ConnectionStringName}'. Please supply an existing connection string.");
+
+                    ThrowInvalidConfigurationIfNecessary(sqlEtlErr);
+
+                    command = new AddSqlEtlCommand(sqlEtl, databaseName);
                     break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
             }
 
             return await SendToLeaderAsync(command);
+
+            void ThrowInvalidConfigurationIfNecessary(IReadOnlyCollection<string> errors)
+            {
+                if (errors.Count <= 0) 
+                    return;
+
+                var sb = new StringBuilder();
+                sb
+                    .AppendLine("Invalid ETL configuration.")
+                    .AppendLine("Errors:");
+
+                foreach (var err in errors)
+                {
+                    sb
+                        .Append("- ")
+                        .AppendLine(err);
+                }
+
+                sb.AppendLine("Configuration:");
+                sb.AppendLine(etlConfiguration.ToString());
+
+                throw new InvalidOperationException(sb.ToString());
+            }
         }
 
         public async Task<(long, object)> UpdateEtl(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject etlConfiguration)

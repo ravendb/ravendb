@@ -137,8 +137,9 @@ class connectionStrings extends viewModelBase {
         }    
     }   
 
-    isConnectionStringInUse(connectionStringName: string) :boolean {
-        return _.includes(Object.keys(this.connectionStringsTasksInfo), connectionStringName);       
+    isConnectionStringInUse(connectionStringName: string, task: string): boolean {
+        return _.includes(Object.keys(this.connectionStringsTasksInfo), connectionStringName)
+            && !!this.connectionStringsTasksInfo[connectionStringName].find(x => x.TaskType === task);
     }
     
     private getAllConnectionStrings() {
@@ -216,11 +217,15 @@ class connectionStrings extends viewModelBase {
             });
     }
     
-    private getTasksThatUseThisString(connectionStringName: string, taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType) : { taskName: string; taskId: number }[]{        
-        const tasksData = this.connectionStringsTasksInfo[connectionStringName];               
-               
-        return tasksData ? _.sortBy(tasksData.map((task) => { return { taskName: task.TaskName, taskId: task.TaskId }; }), 
-                                    x => x.taskName.toUpperCase()) : [];    
+    private getTasksThatUseThisString(connectionStringName: string, taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType): { taskName: string; taskId: number }[] {
+        if (!this.connectionStringsTasksInfo[connectionStringName]) {
+            return [];
+        } else {
+            const tasksData = this.connectionStringsTasksInfo[connectionStringName].filter(x => x.TaskType === taskType);
+
+            return tasksData ? _.sortBy(tasksData.map((task) => { return { taskName: task.TaskName, taskId: task.TaskId }; }),
+                x => x.taskName.toUpperCase()) : [];  
+        }
     }
 
     onTestConnectionSql() {

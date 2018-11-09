@@ -11,29 +11,29 @@ namespace Raven.Server.Utils
 {
     public static class DirectoryExecUtils
     {
-        public static void SubscribeToOnDirectoryExec(StorageEnvironmentOptions options, StorageConfiguration config, string databaseName, EnvironmentType envType, Logger logger)
+        public static void SubscribeToOnDirectoryInitializeExec(StorageEnvironmentOptions options, StorageConfiguration config, string databaseName, EnvironmentType envType, Logger logger)
         {
-            if (string.IsNullOrEmpty(config.OnCreateDirectoryExec))
+            if (string.IsNullOrEmpty(config.OnDirectoryInitializeExec))
                 return;
 
             var directoryParameters = new DirectoryParameters
             {
-                OnCreateDirectoryExec = config.OnCreateDirectoryExec,
-                OnCreateDirectoryExecArguments = config.OnCreateDirectoryExecArguments,
-                OnCreateDirectoryExecTimeout = config.OnCreateDirectoryExecTimeout.AsTimeSpan,
+                OnDirectoryInitializeExec = config.OnDirectoryInitializeExec,
+                OnDirectoryInitializeExecArguments = config.OnDirectoryInitializeExecArguments,
+                OnDirectoryInitializeExecTimeout = config.OnDirectoryInitializeExecTimeout.AsTimeSpan,
                 DatabaseName = databaseName,
                 Type = envType
             };
 
             void OnDirectory(StorageEnvironmentOptions internalOptions)
             {
-                OnCreateDirectory(internalOptions, directoryParameters, logger);
+                OnDirectoryInitialize(internalOptions, directoryParameters, logger);
             }
 
-            options.OnCreateDirectory += OnDirectory;
+            options.OnDirectoryInitialize += OnDirectory;
         }
 
-        public static void OnCreateDirectory(StorageEnvironmentOptions options, DirectoryParameters parameters, Logger log)
+        public static void OnDirectoryInitialize(StorageEnvironmentOptions options, DirectoryParameters parameters, Logger log)
         {
             Process process = null;
             try
@@ -42,7 +42,7 @@ namespace Raven.Server.Utils
                 if (options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions dirOptions)
                     journalPath = dirOptions.JournalPath.FullPath;
 
-                var userArgs = parameters.OnCreateDirectoryExecArguments ?? string.Empty;
+                var userArgs = parameters.OnDirectoryInitializeExecArguments ?? string.Empty;
                 var args = $"{userArgs} {parameters.Type} {parameters.DatabaseName} " +
                            $"{CommandLineArgumentEscaper.EscapeSingleArg(options.BasePath.ToString())} " +
                            $"{CommandLineArgumentEscaper.EscapeSingleArg(options.TempPath.ToString())} " +
@@ -52,7 +52,7 @@ namespace Raven.Server.Utils
                 {
                     StartInfo = new ProcessStartInfo
                     {
-                        FileName = parameters.OnCreateDirectoryExec,
+                        FileName = parameters.OnDirectoryInitializeExec,
                         Arguments = args,
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
@@ -69,7 +69,7 @@ namespace Raven.Server.Utils
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidOperationException($"Unable to execute '{parameters.OnCreateDirectoryExec} {args}'. Failed to start process.", e);
+                    throw new InvalidOperationException($"Unable to execute '{parameters.OnDirectoryInitializeExec} {args}'. Failed to start process.", e);
                 }
 
                 var readStdOut = process.StandardOutput.ReadToEndAsync();
@@ -81,9 +81,9 @@ namespace Raven.Server.Utils
                     {
                         return readErrors.Result;
                     }
-                    catch
+                    catch (Exception e)
                     {
-                        return "Unable to get stderr";
+                        return $"Unable to get stderr, got exception: {e}";
                     }
                 }
 
@@ -93,36 +93,36 @@ namespace Raven.Server.Utils
                     {
                         return readStdOut.Result;
                     }
-                    catch
+                    catch (Exception e)
                     {
-                        return "Unable to get stdout";
+                        return $"Unable to get stdout, got exception: {e}";
                     }
                 }
 
-                if (process.WaitForExit((int)parameters.OnCreateDirectoryExecTimeout.TotalMilliseconds) == false)
+                if (process.WaitForExit((int)parameters.OnDirectoryInitializeExecTimeout.TotalMilliseconds) == false)
                 {
                     process.Kill();
-                    throw new InvalidOperationException($"Unable to execute '{parameters.OnCreateDirectoryExec} {args}', waited for {(int)parameters.OnCreateDirectoryExecTimeout.TotalMilliseconds} ms but the process didn't exit. Output: {GetStdOut()}{Environment.NewLine}Errors: {GetStdError()}");
+                    throw new InvalidOperationException($"Unable to execute '{parameters.OnDirectoryInitializeExec} {args}', waited for {(int)parameters.OnDirectoryInitializeExecTimeout.TotalMilliseconds} ms but the process didn't exit. Output: {GetStdOut()}{Environment.NewLine}Errors: {GetStdError()}");
                 }
 
                 try
                 {
-                    readStdOut.Wait(parameters.OnCreateDirectoryExecTimeout);
-                    readErrors.Wait(parameters.OnCreateDirectoryExecTimeout);
+                    readStdOut.Wait(parameters.OnDirectoryInitializeExecTimeout);
+                    readErrors.Wait(parameters.OnDirectoryInitializeExecTimeout);
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidOperationException($"Unable to read redirected stderr and stdout when executing '{parameters.OnCreateDirectoryExec} {args}'", e);
+                    throw new InvalidOperationException($"Unable to read redirected stderr and stdout when executing '{parameters.OnDirectoryInitializeExec} {args}'", e);
                 }
 
                 // Can have exit code o (success) but still get errors. We log the errors anyway.
                 if (log.IsOperationsEnabled)
-                    log.Operations(string.Format($"Executing '{parameters.OnCreateDirectoryExec} {args}' took {sw.ElapsedMilliseconds:#,#;;0} ms. Exit code: {process.ExitCode}{Environment.NewLine}Output: {GetStdOut()}{Environment.NewLine}Errors: {GetStdError()}{Environment.NewLine}"));
+                    log.Operations(string.Format($"Executing '{parameters.OnDirectoryInitializeExec} {args}' took {sw.ElapsedMilliseconds:#,#;;0} ms. Exit code: {process.ExitCode}{Environment.NewLine}Output: {GetStdOut()}{Environment.NewLine}Errors: {GetStdError()}{Environment.NewLine}"));
 
                 if (process.ExitCode != 0)
                 {
                     throw new InvalidOperationException(
-                        $"Command or executable '{parameters.OnCreateDirectoryExec} {args}' failed. Exit code: {process.ExitCode}{Environment.NewLine}Output: {GetStdOut()}{Environment.NewLine}Errors: {GetStdError()}{Environment.NewLine}");
+                        $"Command or executable '{parameters.OnDirectoryInitializeExec} {args}' failed. Exit code: {process.ExitCode}{Environment.NewLine}Output: {GetStdOut()}{Environment.NewLine}Errors: {GetStdError()}{Environment.NewLine}");
                 }
             }
             finally 
@@ -142,9 +142,9 @@ namespace Raven.Server.Utils
 
         public class DirectoryParameters
         {
-            public string OnCreateDirectoryExec { get; set; }
-            public string OnCreateDirectoryExecArguments { get; set; }
-            public TimeSpan OnCreateDirectoryExecTimeout { get; set; }
+            public string OnDirectoryInitializeExec { get; set; }
+            public string OnDirectoryInitializeExecArguments { get; set; }
+            public TimeSpan OnDirectoryInitializeExecTimeout { get; set; }
             public string DatabaseName { get; set; }
             public EnvironmentType Type { get; set; }
         }
