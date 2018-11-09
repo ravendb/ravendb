@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
@@ -46,12 +47,14 @@ namespace SlowTests.Issues
                     var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync(id);
                     Assert.Equal(12, revisionsMetadata.Count);
                 }
-                await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
             }
             // all data import
             using (var store2 = GetDocumentStore())
             {
-                await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                var operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 using (var session = store2.OpenAsyncSession())
                 {
                     var metadata = session.Advanced.GetMetadataFor(await session.LoadAsync<User>(id));
@@ -74,7 +77,8 @@ namespace SlowTests.Issues
                 importOptions.OperateOnTypes -= DatabaseItemType.RevisionDocuments;
                 importOptions.OperateOnTypes -= DatabaseItemType.Counters;
 
-                await store3.Smuggler.ImportAsync(importOptions, file);
+                var operation = await store3.Smuggler.ImportAsync(importOptions, file);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 using (var session = store3.OpenAsyncSession())
                 {
                     var metadata = session.Advanced.GetMetadataFor(await session.LoadAsync<User>(id));
@@ -107,7 +111,8 @@ namespace SlowTests.Issues
                 importOptions.OperateOnTypes -= DatabaseItemType.RevisionDocuments;
                 importOptions.OperateOnTypes -= DatabaseItemType.Counters;
 
-                await store4.Smuggler.ImportAsync(importOptions, file);
+                var operation = await store4.Smuggler.ImportAsync(importOptions, file);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = store4.OpenAsyncSession())
                 {

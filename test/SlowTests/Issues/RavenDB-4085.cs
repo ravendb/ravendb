@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -41,7 +42,8 @@ namespace SlowTests.Issues
                     var task1 = Task.Run(async () =>
                     {
                         // now perform full backup
-                        await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), backupPath);
+                        var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), backupPath);
+                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                     });
                     var task2 = Task.Run(() =>
                     {
@@ -63,7 +65,8 @@ namespace SlowTests.Issues
                 using (var store = GetDocumentStore())
                 {
                     // import all the data
-                    await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), backupPath);
+                    var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), backupPath);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     using (var session = store.OpenSession())
                     {

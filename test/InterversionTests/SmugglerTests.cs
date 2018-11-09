@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Operations;
@@ -28,7 +29,8 @@ namespace InterversionTests
                     var options = new DatabaseSmugglerExportOptions();
                     options.OperateOnTypes &= ~DatabaseItemType.Counters;
 
-                    await store40.Smuggler.ExportAsync(options, file);
+                    var operation = await store40.Smuggler.ExportAsync(options, file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var stats = await store40.Maintenance.SendAsync(new GetStatisticsOperation());
 
@@ -46,7 +48,8 @@ namespace InterversionTests
                         SkipRevisionCreation = true
                     };
 
-                    await store41.Smuggler.ImportAsync(options, file);
+                    var operation = await store41.Smuggler.ImportAsync(options, file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var stats = await store41.Maintenance.SendAsync(new GetStatisticsOperation());
 
@@ -86,7 +89,8 @@ namespace InterversionTests
                         session.SaveChanges();
                     }
 
-                    await store41.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    var operation = await store41.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var stats = await store41.Maintenance.SendAsync(new GetStatisticsOperation());
 
@@ -105,7 +109,8 @@ namespace InterversionTests
                     options.OperateOnTypes &= ~DatabaseItemType.Counters;
                     options.SkipRevisionCreation = true;
 
-                    await store40.Smuggler.ImportAsync(options, file);
+                    var operation = await store40.Smuggler.ImportAsync(options, file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var stats = await store40.Maintenance.SendAsync(new GetStatisticsOperation());
 

@@ -39,28 +39,5 @@ namespace SlowTests.Server.Basic
                 Assert.Equal(0, stats.CountOfDocuments);
             }
         }
-
-        [Fact]
-        public async Task RapidDatabaseDeletionAndRecreation()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var name = store.Database;
-                var t = store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), @"P:\Dumps\Stackoverflow\users.dump");
-                await Task.Delay(TimeSpan.FromSeconds(5));
-                var (index, _ ) = await Servers[0].ServerStore.DeleteDatabaseAsync(name, true, null);
-                await Servers[0].ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
-                (index, _) = await Servers[0].ServerStore.WriteDatabaseRecordAsync(name, new DatabaseRecord(name)
-                {
-                    Topology = new DatabaseTopology
-                    {
-                        Members = new List<string> { "A" }
-                    }
-                }, null);
-                await Servers[0].ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index);
-                await Task.Delay(TimeSpan.FromSeconds(15));
-                await t.IgnoreUnobservedExceptions();
-            }
-        }
     }
 }

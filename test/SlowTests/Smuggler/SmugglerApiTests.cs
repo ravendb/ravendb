@@ -56,7 +56,8 @@ namespace SlowTests.Smuggler
                     await session.SaveChangesAsync();
                 }
 
-                await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), store2.Smuggler);
+                var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), store2.Smuggler);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                 using (var commands = store2.Commands())
                 {
@@ -103,9 +104,11 @@ namespace SlowTests.Smuggler
                         await session.SaveChangesAsync();
                     }
 
-                    await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                    await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(3, stats.CountOfDocuments);
@@ -206,7 +209,8 @@ namespace SlowTests.Smuggler
 
                     database.Time.UtcDateTime = () => DateTime.UtcNow.AddSeconds(11);
 
-                    await exportStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions { IncludeExpired = false }, file).ConfigureAwait(false);
+                    var operation = await exportStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions { IncludeExpired = false }, file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
                 using (var importStore = GetDocumentStore(new Options
@@ -214,7 +218,8 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_importStore"
                 }))
                 {
-                    await importStore.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    var operation = await importStore.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                     using (var session = importStore.OpenAsyncSession())
                     {
                         var person = await session.LoadAsync<Person>("people/1").ConfigureAwait(false);
@@ -271,7 +276,8 @@ namespace SlowTests.Smuggler
                         await session.SaveChangesAsync();
                     }
 
-                    await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var stats = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
@@ -283,7 +289,8 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_store2"
                 }))
                 {
-                    await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    var operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
@@ -339,13 +346,15 @@ namespace SlowTests.Smuggler
                         await session.SaveChangesAsync();
                     }
 
-                    await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var stats = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
                     Assert.Equal(8, stats.CountOfRevisionDocuments);
 
-                    await store1.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    operation = await store1.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     stats = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
@@ -384,8 +393,11 @@ namespace SlowTests.Smuggler
                         await session.SaveChangesAsync();
                     }
 
-                    await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
-                    await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(2, stats.CountOfDocuments);
@@ -467,8 +479,11 @@ namespace SlowTests.Smuggler
                     exportOptions.OperateOnTypes |= DatabaseItemType.Tombstones;
                     importOptions.OperateOnTypes |= DatabaseItemType.Tombstones;
 
-                    await store1.Smuggler.ExportAsync(exportOptions, file);
-                    await store2.Smuggler.ImportAsync(importOptions, file);
+                    var operation = await store1.Smuggler.ExportAsync(exportOptions, file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store2.Smuggler.ImportAsync(importOptions, file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(2, stats.CountOfCounters);
@@ -535,7 +550,8 @@ namespace SlowTests.Smuggler
                         await session.SaveChangesAsync();
                     }
 
-                    await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var stats = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
@@ -547,10 +563,12 @@ namespace SlowTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_store2"
                 }))
                 {
-                    await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions
+                    var operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions
                     {
                         SkipRevisionCreation = true
                     }, file);
+
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
@@ -625,7 +643,8 @@ namespace SlowTests.Smuggler
 
                     using (var stream = GetDump("RavenDB_11664.1.ravendbdump"))
                     {
-                        await store.Smuggler.ForDatabase("ImportDest").ImportAsync(new DatabaseSmugglerImportOptions(), stream);
+                        operation = await store.Smuggler.ForDatabase("ImportDest").ImportAsync(new DatabaseSmugglerImportOptions(), stream);
+                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                     }
 
                     using (var session = store.OpenAsyncSession("ImportDest"))
