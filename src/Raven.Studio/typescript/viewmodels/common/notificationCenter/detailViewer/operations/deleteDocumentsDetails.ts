@@ -30,8 +30,6 @@ class deleteDocumentsDetails extends abstractOperationDetails {
 
         if (this.taskType === "DeleteByQuery") {
             this.query = (this.op.detailedDescription() as Raven.Client.Documents.Operations.BulkOperationResult.OperationDetails).Query;
-        } else {
-            this.query = null;
         }
 
         this.progress = ko.pureComputed(() => {
