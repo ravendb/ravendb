@@ -1173,7 +1173,7 @@ namespace Raven.Server.Documents
                 if (expectedChangeVector != null && doc.ChangeVector.CompareTo(expectedChangeVector) != 0)
                 {
                     throw new ConcurrencyException(
-                        $"Document {lowerId} has etag {doc.Etag}, but Delete was called with change vector '{expectedChangeVector}'. " +
+                        $"Document {id} has change vector {doc.ChangeVector}, but Delete was called with change vector '{expectedChangeVector}'. " +
                         "Optimistic concurrency violation, transaction will be aborted.")
                     {
                         ActualChangeVector = doc.ChangeVector,
