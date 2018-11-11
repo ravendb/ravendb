@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                         });
 
                     Assert.Equal("from index 'BookingIndex' as x where x.FullName = $p0 " +
-                                 "select { FullName : x.FullName, StartDate : toStringWithFormat(new Date(Date.parse(x.Start)), \"dd.MM.yyyy\") }"
+                                 "select { FullName : x.FullName, StartDate : toStringWithFormat(x.Start, \"dd.MM.yyyy\") }"
                             , query.ToString());
 
                     var result = query.Single();
@@ -79,7 +79,7 @@ namespace SlowTests.Issues
                         });
 
                     Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
-                                 "select { StartDate : toStringWithFormat(new Date(Date.parse(x.Start))) }"
+                                 "select { StartDate : toStringWithFormat(x.Start) }"
                         , query.ToString());
 
                     var result = query.Single();
@@ -119,7 +119,7 @@ namespace SlowTests.Issues
                         });
 
                     Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
-                                 $"select {{ StartDate : toStringWithFormat(new Date(Date.parse(x.Start)), \"{CultureInfo.CurrentCulture.Name}\") }}"
+                                 $"select {{ StartDate : toStringWithFormat(x.Start, \"{CultureInfo.CurrentCulture.Name}\") }}"
                         , query.ToString());
 
                     var result = query.Single();
@@ -158,7 +158,7 @@ namespace SlowTests.Issues
                         });
 
                     Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
-                                 $"select {{ StartDate : toStringWithFormat(new Date(Date.parse(x.Start)), \"dd.MM.yyyy\", \"{CultureInfo.CurrentCulture.Name}\") }}"
+                                 $"select {{ StartDate : toStringWithFormat(x.Start, \"dd.MM.yyyy\", \"{CultureInfo.CurrentCulture.Name}\") }}"
                         , query.ToString());
 
                     var result = query.Single();
@@ -198,7 +198,7 @@ namespace SlowTests.Issues
                         });
 
                     Assert.Equal("from Bookings as x where x.FirstName = $p0 " +
-                                 "select { StartDate : toStringWithFormat(new Date(Date.parse(x.Start)), \"dd.MM.yyyy\") }"
+                                 "select { StartDate : toStringWithFormat(x.Start, \"dd.MM.yyyy\") }"
                         , query.ToString());
 
                     var result = query.Single();
