@@ -4,12 +4,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
+using Jint.Native.Date;
 using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
@@ -173,7 +175,7 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("Raven_Min", new ClrFunctionInstance(ScriptEngine, Raven_Min));
                 ScriptEngine.SetValue("Raven_Max", new ClrFunctionInstance(ScriptEngine, Raven_Max));
 
-                ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, ConvertJsTimeToTimeSpanString));
+                ScriptEngine.SetValue("compareDates", new ClrFunctionInstance(ScriptEngine, CompareDates));
 
                 ScriptEngine.SetValue("toStringWithFormat", new ClrFunctionInstance(ScriptEngine, ToStringWithFormat));
 
@@ -869,16 +871,64 @@ namespace Raven.Server.Documents.Patch
                 throw new MissingMethodException("The method DeleteDocument was renamed to 'del'");
             }
 
-            private static JsValue ConvertJsTimeToTimeSpanString(JsValue self, JsValue[] args)
+            private static JsValue CompareDates(JsValue self, JsValue[] args)
             {
-                if (args.Length != 1 || args[0].IsNumber() == false)
-                    throw new InvalidOperationException("convertJsTimeToTimeSpanString(ticks) must be called with a single long argument");
+                if (args.Length < 1 || args.Length > 3)
+                {
+                    throw new InvalidOperationException($"No overload for method 'compareDates' takes {args.Length} arguments. " +
+                                                        "Supported overloads are : compareDates(date1, date2), compareDates(date1, date2, operationType)");
+                }
 
-                var ticks = Convert.ToInt64(args[0].AsNumber()) * 10000;
+                var date1 = GetDateArg(args[0]);
+                var date2 = GetDateArg(args[1]);
 
-                var asTimeSpan = new TimeSpan(ticks);
+                ExpressionType binaryOperationType;
+                if (args.Length == 2)
+                {
+                    binaryOperationType = ExpressionType.Subtract;
+                }
+                else if (args[2].IsString() == false || 
+                    Enum.TryParse(args[2].AsString(), out binaryOperationType) == false)
+                {
+                    throw new InvalidOperationException("compareDates(date1, date2, operationType) : 'operationType' must be a string argument representing a valid 'ExpressionType'");
+                }
 
-                return asTimeSpan.ToString();
+                switch (binaryOperationType)
+                {
+                    case ExpressionType.Subtract:
+                        return (date1 - date2).ToString();
+                    case ExpressionType.GreaterThan:
+                        return date1 > date2;
+                    case ExpressionType.GreaterThanOrEqual:
+                        return date1 >= date2;
+                    case ExpressionType.LessThan:
+                        return date1 < date2;
+                    case ExpressionType.LessThanOrEqual:
+                        return date1 <= date2;
+                    case ExpressionType.Equal:
+                        return date1 == date2;
+                    case ExpressionType.NotEqual:
+                        return date1 != date2;
+                    default:
+                        throw new InvalidOperationException($"compareDates(date1, date2, binaryOp) : unsupported binary operation '{binaryOperationType}'");
+
+                }
+            }
+
+            private static DateTime GetDateArg(JsValue arg)
+            {
+                DateTime date;
+                if (arg.IsDate())
+                {
+                    date = arg.AsDate().ToDateTime();
+                }
+                else if (arg.IsString() == false ||
+                         DateTime.TryParseExact(arg.AsString(), "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out date) == false)
+                {
+                    throw new InvalidOperationException("compareDates(date1, date2, binaryOp) : 'date1', 'date2' must be of type 'DateInstance' or a DateTime string");
+                }
+
+                return date;
             }
 
             private static JsValue ToStringWithFormat(JsValue self, JsValue[] args)
@@ -924,6 +974,17 @@ namespace Raven.Server.Documents.Patch
                     return format != null ?
                         num.ToString(format, cultureInfo) :
                         num.ToString(cultureInfo);
+                }
+
+                if (args[0].IsString())
+                {
+                    if (DateTime.TryParseExact(args[0].AsString(), "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) == false)
+                    {
+                        throw new InvalidOperationException("toStringWithFormat(dateString) : 'dateString' is not a valid DateTime string");
+                    }
+                    return format != null ?
+                        date.ToString(format, cultureInfo) :
+                        date.ToString(cultureInfo);
                 }
 
                 if (args[0].IsBoolean() == false)

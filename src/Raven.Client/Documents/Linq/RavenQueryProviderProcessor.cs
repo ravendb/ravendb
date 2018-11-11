@@ -2651,18 +2651,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 extensions[extensions.Length - 1] = new JavascriptConversionExtensions.IdentityPropertySupport(_documentQuery.Conventions);
             }
             
-            var js = expression.CompileToJavascript(new JavascriptCompilationOptions(extensions)
+            return expression.CompileToJavascript(new JavascriptCompilationOptions(extensions)
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(_conventions)
             });
-
-            if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)
-            {
-                //convert milliseconds to a TimeSpan string
-                js = $"convertJsTimeToTimeSpanString({js})";
-            }
-
-            return js;
         }
 
         private static bool HasComputation(MemberExpression memberExpression)
