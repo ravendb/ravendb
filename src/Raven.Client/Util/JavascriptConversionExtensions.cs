@@ -1016,9 +1016,7 @@ namespace Raven.Client.Util
                 {
                     if (memberExpression.Type == typeof(DateTime))
                     {
-                        writer.Write("new Date(Date.parse(");
                         writer.Write(parameter);
-                        writer.Write("))");
                     }
                     else
                     {                        
@@ -1352,24 +1350,45 @@ namespace Raven.Client.Util
                     return;
                 }
 
+                if ((context.Node.Type == typeof(bool) || context.Node.Type == typeof(TimeSpan)) &&
+                    context.Node is BinaryExpression binaryExpression &&
+                    binaryExpression.Left.Type == typeof(DateTime))
+                {
+                    var writer = context.GetWriter();
+                    context.PreventDefault();
+
+                    using (writer.Operation(context.Node))
+                    {
+                        writer.Write("compareDates(");
+
+                        context.Visitor.Visit(binaryExpression.Left);
+                        writer.Write(", ");
+
+                        context.Visitor.Visit(binaryExpression.Right);
+
+                        if (context.Node.NodeType != ExpressionType.Subtract)
+                        {
+                            writer.Write(", ");
+                            writer.Write($"'{context.Node.NodeType}'");
+                        }
+
+                        writer.Write(")");
+
+                    }
+
+                    return;
+                }
+
                 if (!(context.Node is MemberExpression node))
                     return;
 
-                if (node.Type == typeof(DateTime))
+                if (node.Type == typeof(DateTime) && node.Expression == null)
                 {
                     var writer = context.GetWriter();
                     context.PreventDefault();
 
                     using (writer.Operation(node))
                     {
-                        //match DateTime expressions like user.DateOfBirth, order.ShipmentInfo.DeliveryDate, etc
-                        if (node.Expression != null)
-                        {
-                            writer.Write("new Date(Date.parse(");
-                            context.Visitor.Visit(node.Expression); //visit inner expression (user ,order.ShipmentInfo, etc)
-                            writer.Write($".{node.Member.Name}))");
-                            return;
-                        }
 
                         //match DateTime.Now , DateTime.UtcNow, DateTime.Today
                         switch (node.Member.Name)
