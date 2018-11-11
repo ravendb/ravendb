@@ -20,7 +20,7 @@
                 <div class="details-item">
                     <div class="row">
                         <div class="col-sm-3 text-right">
-                            Index:
+                            <span data-bind="text: $root.deleteTypeName"></span>:
                         </div>
                         <div class="col-sm-9 details-value">
                             <span data-bind="text: $root.op.message"></span>
@@ -50,7 +50,7 @@
                             <span data-bind="text: $root.estimatedTimeLeft"></span>
                         </div>
                     </div>
-                    <div class="row">
+                    <div class="row" data-bind="if: $root.query">
                         <div class="col-sm-3 text-right">
                             Query:
                         </div>
@@ -76,7 +76,7 @@
                     <div class="details-item">
                         <div class="row">
                             <div class="col-sm-3 text-right">
-                                Index:
+                                <span data-bind="text: $root.deleteTypeName"></span>:
                             </div>
                             <div class="col-sm-9 details-value">
                                 <span data-bind="text: $root.op.message"></span>
@@ -91,7 +91,7 @@
                                 <span data-bind="text: Total.toLocaleString()"></span>
                             </div>
                         </div>
-                        <div class="row">
+                        <div class="row" data-bind="if: $root.query">
                             <div class="col-sm-3 text-right">
                                 Query:
                             </div>

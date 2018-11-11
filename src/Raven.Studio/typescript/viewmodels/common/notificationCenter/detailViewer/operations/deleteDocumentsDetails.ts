@@ -13,9 +13,14 @@ class deleteDocumentsDetails extends abstractOperationDetails {
     estimatedTimeLeft: KnockoutComputed<string>;
 
     query: string;
+    deleteTypeName: string;
+    taskType: Raven.Server.Documents.Operations.Operations.OperationType;
 
     constructor(op: operation, notificationCenter: notificationCenter) {
         super(op, notificationCenter);
+        this.taskType = op.taskType();
+        this.deleteTypeName = this.taskType === "DeleteByCollection" ? "Collection" : this.taskType === "DeleteByQuery" ? "Index" :
+            "N/A";
 
         this.initObservables();
     }
@@ -23,7 +28,11 @@ class deleteDocumentsDetails extends abstractOperationDetails {
     initObservables() {
         super.initObservables();
 
-        this.query = (this.op.detailedDescription() as Raven.Client.Documents.Operations.BulkOperationResult.OperationDetails).Query;
+        if (this.taskType === "DeleteByQuery") {
+            this.query = (this.op.detailedDescription() as Raven.Client.Documents.Operations.BulkOperationResult.OperationDetails).Query;
+        } else {
+            this.query = null;
+        }
 
         this.progress = ko.pureComputed(() => {
             return this.op.progress() as Raven.Client.Documents.Operations.DeterminateProgress;
@@ -48,6 +57,9 @@ class deleteDocumentsDetails extends abstractOperationDetails {
 
         this.estimatedTimeLeft = ko.pureComputed(() => {
             const progress = this.progress();
+            if (!progress) {
+                return "N/A";
+            }
             return this.getEstimatedTimeLeftFormatted(progress.Processed, progress.Total);
         }).extend({ rateLimit : 2000 });
     }
