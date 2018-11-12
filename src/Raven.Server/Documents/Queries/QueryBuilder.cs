@@ -169,12 +169,7 @@ namespace Raven.Server.Documents.Queries
 
                             var fieldName = ExtractIndexFieldName(query, parameters, where.Left, metadata);
 
-                            if (indexDef != null &&
-                                indexDef.IndexFields != null &&
-                                indexDef.IndexFields.TryGetValue(fieldName, out var indexingOptions))
-                            {
-                                exact |= indexingOptions.Indexing == FieldIndexing.Exact;
-                            }
+                            exact = IsExact(indexDef, exact, fieldName);
 
                             var (value, valueType) = GetValue(query, metadata, parameters, right, true);
 
@@ -278,6 +273,7 @@ namespace Raven.Server.Documents.Queries
             if (expression is BetweenExpression be)
             {
                 var fieldName = ExtractIndexFieldName(query, parameters, be.Source, metadata);
+                exact = IsExact(indexDef, exact, fieldName);
                 var (valueFirst, valueFirstType) = GetValue(query, metadata, parameters, be.Min);
                 var (valueSecond, _) = GetValue(query, metadata, parameters, be.Max);
 
@@ -304,8 +300,9 @@ namespace Raven.Server.Documents.Queries
             if (expression is InExpression ie)
             {
                 var fieldName = ExtractIndexFieldName(query, parameters, ie.Source, metadata);
-                LuceneTermType termType = LuceneTermType.Null;
-                bool hasGotTheRealType = false;
+                exact = IsExact(indexDef, exact, fieldName);
+                var termType = LuceneTermType.Null;
+                var hasGotTheRealType = false;
 
                 if (ie.All)
                 {
@@ -381,6 +378,17 @@ namespace Raven.Server.Documents.Queries
             }
 
             throw new InvalidQueryException("Unable to understand query", query.QueryText, parameters);
+        }
+
+        private static bool IsExact(IndexDefinitionBase indexDefinition, bool exact, QueryFieldName fieldName)
+        {
+            if (exact)
+                return true;
+
+            if (indexDefinition?.IndexFields != null && indexDefinition.IndexFields.TryGetValue(fieldName, out var indexingOptions))
+                return indexingOptions.Indexing == FieldIndexing.Exact;
+
+            return false;
         }
 
         public static QueryExpression EvaluateMethod(Query query, QueryMetadata metadata, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, MethodExpression method, ref BlittableJsonReaderObject parameters)
