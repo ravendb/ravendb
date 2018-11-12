@@ -94,17 +94,26 @@ namespace Raven.Server.Utils
                 return _lastCpuInfo?.ProcessCpuUsage ?? 0;
             }
 
-            if (Math.Abs(currentInfo.ActiveCores) < 0.01)
+            if (currentInfo.ActiveCores <= 0)
             {
                 // shouldn't happen
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"ActiveCores == 0, OS: {RuntimeInformation.OSDescription}");
+                {
+                    if (currentInfo is ExtensionPointInfo)
+                    {
+                        Logger.Info($"Got {currentInfo.ActiveCores} active cores from cpu usage extension point process");
+                    }
+                    else
+                    {
+                        Logger.Info($"ActiveCores == {currentInfo.ActiveCores}, OS: {RuntimeInformation.OSDescription}");
+                    }
+                }
 
                 return _lastCpuInfo?.ProcessCpuUsage ?? 0;
             }
 
             var processCpuUsage = (processorTimeDiff * 100.0) / timeDiff / currentInfo.ActiveCores;
-            if ((int)currentInfo.ActiveCores == ProcessorInfo.ProcessorCount)
+            if (currentInfo is ExtensionPointInfo == false && (int)currentInfo.ActiveCores == ProcessorInfo.ProcessorCount)
             {
                 // min as sometimes +-1% due to time sampling
                 processCpuUsage = Math.Min(processCpuUsage, machineCpuUsage);
@@ -324,7 +333,7 @@ namespace Raven.Server.Utils
 
             if (Logger.IsOperationsEnabled)
             {
-                Logger.Operations($"Received bad data for active cores from extension point : {extensionPointRawData.ActiveCores}");
+                Logger.Operations($"Received bad data for active cores from cpu usage extension point : {extensionPointRawData.ActiveCores}");
             }
             return 0;
         }
@@ -472,7 +481,7 @@ namespace Raven.Server.Utils
 
             public ulong TotalStealTime { private get; set; }
 
-            public ulong TotalWorkTime => TotalUserTime + TotalUserLowTime + TotalSystemTime + 
+            public ulong TotalWorkTime => TotalUserTime + TotalUserLowTime + TotalSystemTime +
                                           TotalIRQTime + TotalSoftIRQTime + TotalStealTime;
 
             public ulong TotalIdle => TotalIdleTime + TotalIOTime;

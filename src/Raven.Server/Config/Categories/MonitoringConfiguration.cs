@@ -13,7 +13,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Monitoring.Cpu.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string CpuUsageMonitorExec { get; set; }
 
-        [Description("The command line arguments for the 'Security.MasterKey.Exec' command or executable.")]
+        [Description("The command line arguments for the 'Monitoring.Cpu.Exec' command or executable. The arguments must be escaped for the command line.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Monitoring.Cpu.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly)]
         public string CpuUsageMonitorExecArguments { get; set; }

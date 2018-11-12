@@ -2,11 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Threading;
 using FastTests;
-using Microsoft.Extensions.Logging;
-using NetTopologySuite.Utilities;
-using Raven.Server.Config.Settings;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
