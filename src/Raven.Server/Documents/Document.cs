@@ -61,6 +61,14 @@ namespace Raven.Server.Documents
             };
 
             mutatedMetadata[Constants.Documents.Metadata.Id] = Id;
+            if (NonPersistentFlags.HasFlag(NonPersistentDocumentFlags.FromSmuggler) && metadata != null)
+            {
+                if (Flags.HasFlag(DocumentFlags.HasCounters) == false && metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray _))
+                    mutatedMetadata.Remove(Constants.Documents.Metadata.Counters);
+                if (Flags.HasFlag(DocumentFlags.HasAttachments) == false && metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray _))
+                    mutatedMetadata.Remove(Constants.Documents.Metadata.Attachments);
+            }
+
             if (ChangeVector != null)
                 mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector;        
             if (Flags != DocumentFlags.None)

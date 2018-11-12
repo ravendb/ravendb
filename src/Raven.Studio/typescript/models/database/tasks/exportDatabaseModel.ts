@@ -9,10 +9,12 @@ class exportDatabaseModel {
     includeIdentities = ko.observable(true);
     includeCompareExchange = ko.observable(true);
     includeCounters = ko.observable(true);
+    includeAttachments = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
     revisionsAreConfigured: KnockoutComputed<boolean>;
 
     exportFileName = ko.observable<string>();
+    validationMessage = ko.observable<string>();
 
     includeExpiredDocuments = ko.observable(true);
     removeAnalyzers = ko.observable(false);
@@ -55,6 +57,9 @@ class exportDatabaseModel {
         if (this.includeCounters()) {
             operateOnTypes.push("Counters");
         }
+        if (this.includeAttachments()) {
+            operateOnTypes.push("Attachments");
+        }
 
         return {
             Collections: this.includeAllCollections() ? null : this.includedCollections(),
@@ -69,8 +74,14 @@ class exportDatabaseModel {
 
     private initValidation() {
         this.exportDefinitionHasIncludes = ko.pureComputed(() => {
-            return this.includeDatabaseRecord() || this.includeDocuments() || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) || this.includeConflicts() ||
-                this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange() || this.includeCounters();
+            if (this.includeAttachments()) {
+                this.validationMessage("Note: Attachments can only be included with documents.");
+                return this.includeDocuments();
+            }
+            this.validationMessage("Note: At least one 'include' option must be checked...");
+            return this.includeDatabaseRecord() || this.includeConflicts() || this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange() ||
+                this.includeCounters() || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) || this.includeDocuments();
+
         });
 
         this.transformScript.extend({
@@ -81,7 +92,7 @@ class exportDatabaseModel {
             validation: [
                 {
                     validator: () => this.exportDefinitionHasIncludes(),
-                    message: "Note: At least one 'include' option must be checked..."
+                    message: () => this.validationMessage()
                 }
             ]
         });
