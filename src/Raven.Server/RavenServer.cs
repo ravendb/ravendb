@@ -1670,9 +1670,9 @@ namespace Raven.Server
                 ea.Execute(() => ServerMaintenanceTimer?.Dispose());
                 ea.Execute(() => AfterDisposal?.Invoke());
                 ea.Execute(() => _clusterMaintenanceWorker?.Dispose());
+                ea.Execute(() => CpuUsage.CpuUsageExtensionPoint?.Dispose());
 
                 ea.ThrowIfNeeded();
-                CpuUsage.CpuUsageExtensionPoint?.Dispose();
             }
         }
 

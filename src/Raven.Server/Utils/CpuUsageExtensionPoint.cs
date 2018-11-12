@@ -67,12 +67,16 @@ namespace Raven.Server.Utils
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
-
-            InitNewProcessHandle();
         }
 
         public void Start()
         {
+            _process = new Process
+            {
+                StartInfo = _startInfo,
+                EnableRaisingEvents = true
+            };
+
             try
             {
                 _process.Start();
@@ -82,6 +86,8 @@ namespace Raven.Server.Utils
                 NotifyWarning("Could not start cpu usage extension point process", e);
 
                 Dispose();
+
+                return;
             }
 
             var _ = ReadProcess(); // explicitly starting async task without waiting for it
@@ -90,24 +96,31 @@ namespace Raven.Server.Utils
 
         private async Task ReadErrors()
         {
-            var errors = await _process.StandardError.ReadLineAsync();
-            if (errors == null)
-            {
-                return;
-            }
             try
             {
-                if (_process.HasExited == false)
+                var errors = await _process.StandardError.ReadLineAsync();
+                if (errors == null)
                 {
-                    _process.Kill();
+                    return;
                 }
+                try
+                {
+                    if (_process.HasExited == false)
+                    {
+                        _process.Kill();
+                    }
+                }
+                catch (Exception)
+                {
+                    // When the process terminating, killed or exited
+                }
+                errors = errors + await _process.StandardError.ReadToEndAsync();
+                NotifyWarning($"Extension point process send an error: {errors}");
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                // When the process terminating, killed or exited
+                NotifyWarning("Could not read errors from cpu usage extension point process", e);
             }
-            errors = errors + await _process.StandardError.ReadLineAsync();
-            NotifyWarning($"Extension point process send an error: {errors}");
         }
 
         public void Dispose()
@@ -135,22 +148,29 @@ namespace Raven.Server.Utils
 
         private async Task ReadProcess()
         {
-            while (IsDisposed == false)
+            try
             {
-                var nextLine = _process.StandardOutput.ReadLineAsync();
-
-                if (await nextLine.WaitWithTimeout(_timeout) == false)
+                while (IsDisposed == false)
                 {
-                    // here we missed an update, restart the process once
-                    HandleError($"The process didn't send information for {_timeout.TotalSeconds} seconds.");
-                    break;
-                }
+                    var nextLine = _process.StandardOutput.ReadLineAsync();
 
-                var line = await nextLine;
-                if (HandleInfoReceived(line) == false)
-                {
-                    break;
+                    if (await nextLine.WaitWithTimeout(_timeout) == false)
+                    {
+                        // here we missed an update, restart the process once
+                        HandleError($"The process didn't send information for {_timeout.TotalSeconds} seconds.");
+                        break;
+                    }
+
+                    var line = await nextLine;
+                    if (HandleInfoReceived(line) == false)
+                    {
+                        break;
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+                HandleError(e.Message, e);
             }
         }
 
@@ -165,19 +185,30 @@ namespace Raven.Server.Utils
             {
                 try
                 {
-                    var blittable = context.ReadForMemory(data, string.Empty);
+                    var blittable = context.ReadForMemory(data, "cpuUsageExtensionPointData");
                     if (blittable.TryGet(nameof(ExtensionPointRawData.MachineCpuUsage), out double machineCpuUsage) == false)
                     {
-                        HandleError($"Can't read {nameof(ExtensionPointRawData.MachineCpuUsage)} property from : \n{blittable}.");
+                        HandleError($"Can't read {nameof(ExtensionPointRawData.MachineCpuUsage)} property from : {Environment.NewLine + blittable}.");
                         return false;
                     }
-                    _data.MachineCpuUsage = machineCpuUsage;
+                    if (machineCpuUsage < 0 || machineCpuUsage > 100)
+                    {
+                        HandleError($"{nameof(ExtensionPointRawData.MachineCpuUsage)} should be between 0 to 100 : {Environment.NewLine + blittable}.");
+                        return false;
+                    }
 
                     if (blittable.TryGet(nameof(ExtensionPointRawData.ActiveCores), out double activeCores) == false)
                     {
-                        HandleError($"Can't read {nameof(ExtensionPointRawData.ActiveCores)} property from : \n{blittable}.");
+                        HandleError($"Can't read {nameof(ExtensionPointRawData.ActiveCores)} property from : {Environment.NewLine + blittable}.");
                         return false;
                     }
+                    if (activeCores < 0)
+                    {
+                        HandleError($"{nameof(ExtensionPointRawData.ActiveCores)} should be above 0: {Environment.NewLine + blittable}.");
+                        return false;
+                    }
+
+                    _data.MachineCpuUsage = machineCpuUsage;
                     _data.ActiveCores = activeCores;
                 }
                 catch (Exception e)
@@ -208,14 +239,13 @@ namespace Raven.Server.Utils
                 if (_didRestart == false)
                 {
                     _didRestart = true;
-                    NotifyWarning($"{msg} \nTherefore the process will restart.", e);
+                    NotifyWarning($"{msg} {Environment.NewLine}Therefore the process will restart.", e);
 
-                    InitNewProcessHandle();
                     Start();
                 }
                 else
                 {
-                    NotifyWarning($"{msg} \nTherefore the process will terminate.", e);
+                    NotifyWarning($"{msg} {Environment.NewLine}Therefore the process will terminate.", e);
                     Dispose();
                 }
             }
@@ -242,15 +272,6 @@ namespace Raven.Server.Utils
             {
                 // nothing to do if we can't report it
             }
-        }
-
-        private void InitNewProcessHandle()
-        {
-            _process = new Process
-            {
-                StartInfo = _startInfo,
-                EnableRaisingEvents = true
-            };
         }
     }
 
