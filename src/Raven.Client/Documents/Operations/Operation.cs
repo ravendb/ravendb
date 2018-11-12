@@ -167,6 +167,11 @@ namespace Raven.Client.Documents.Operations
 
                     state = command.Result;
 
+                    // in most of the cases this will only perform one loop
+                    // but for operations like smuggler-ones there is a race probability
+                    // between sending the request to perform the operation
+                    // and registering it
+                    // this is why we are trying to get the state few times
                     if (state != null)
                         break;
 
