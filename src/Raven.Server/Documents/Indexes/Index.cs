@@ -409,6 +409,8 @@ namespace Raven.Server.Documents.Indexes
 
                 var options = CreateStorageEnvironmentOptions(documentDatabase, configuration);
 
+                DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, documentDatabase.Configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Index, _logger);
+
                 StorageEnvironment storageEnvironment = null;
                 try
                 {
