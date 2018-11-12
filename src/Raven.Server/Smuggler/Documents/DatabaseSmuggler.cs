@@ -599,6 +599,9 @@ namespace Raven.Server.Smuggler.Documents
 
                 if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Counters) == false)
                     item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasCounters);
+
+                if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false)
+                    item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasAttachments);
             }
         }
 

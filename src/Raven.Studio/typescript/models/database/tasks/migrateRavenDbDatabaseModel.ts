@@ -12,6 +12,7 @@ class migrateRavenDbDatabaseModel {
     includeIdentities = ko.observable(true);
     includeCompareExchange = ko.observable(true);
     includeCounters = ko.observable(true);
+    includeAttachments = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
     includeLegacyAttachments = ko.observable(true);
     removeAnalyzers = ko.observable(false);
@@ -99,6 +100,9 @@ class migrateRavenDbDatabaseModel {
             }
             if (this.includeCounters() && !this.isLegacy()) {
                 operateOnTypes.push("Counters");
+            }
+            if (this.includeAttachments() && !this.isLegacy()) {
+                operateOnTypes.push("Attachments");
             }
         }
 

@@ -36,6 +36,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private readonly Logger _log;
         private BuildVersionType _buildType;
+        private static DatabaseSmugglerOptions _options;
 
         public DatabaseDestination(DocumentDatabase database)
         {
@@ -46,6 +47,7 @@ namespace Raven.Server.Smuggler.Documents
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, long buildVersion)
         {
             _buildType = BuildVersion.Type(buildVersion);
+            _options = options;
             return null;
         }
 
@@ -149,7 +151,12 @@ namespace Raven.Server.Smuggler.Documents
             public void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtag progress)
             {
                 if (item.Attachments != null)
-                    progress.Attachments.ReadCount += item.Attachments.Count;
+                {
+                    if(_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
+                        progress.Attachments.ReadCount += item.Attachments.Count;
+                    else
+                        progress.Attachments.Skipped = true;
+                }
 
 
                 _command.Add(item);

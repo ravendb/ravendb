@@ -192,6 +192,10 @@
                                     <input id="migrate_counters" type="checkbox" data-bind="checked: includeCounters">
                                     <label for="migrate_counters">Include Counters</label>
                                 </div>
+                                <div class="toggle" data-bind="visible: !isLegacy()">
+                                    <input id="migrate_attachments" type="checkbox" data-bind="checked: includeAttachments">
+                                    <label for="migrate_attachments">Include Attachments</label>
+                                </div>
                                 <div class="toggle">
                                     <input id="migrate_remove_analyzers" type="checkbox" data-bind="checked: removeAnalyzers">
                                     <label for="migrate_remove_analyzers">Remove Analyzers</label>
