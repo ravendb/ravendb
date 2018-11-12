@@ -32,6 +32,7 @@ namespace Raven.Server.Smuggler.Documents
         private readonly DocumentsOperationContext _context;
         private readonly DatabaseSource _source;
         private BlittableJsonTextWriter _writer;
+        private static DatabaseSmugglerOptions _options;
 
         public StreamDestination(Stream stream, DocumentsOperationContext context, DatabaseSource source)
         {
@@ -44,6 +45,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             _gzipStream = new GZipStream(_stream, CompressionMode.Compress, leaveOpen: true);
             _writer = new BlittableJsonTextWriter(_context, _gzipStream);
+            _options = options;
 
             _writer.WriteStartObject();
 
@@ -457,7 +459,8 @@ namespace Raven.Server.Smuggler.Documents
                 var document = item.Document;
                 using (document.Data)
                 {
-                    WriteUniqueAttachmentStreams(document, progress);
+                    if(_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
+                        WriteUniqueAttachmentStreams(document, progress);
 
                     if (First == false)
                         Writer.WriteComma();
