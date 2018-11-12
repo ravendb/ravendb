@@ -20,9 +20,9 @@ namespace Raven.Server.Documents.Queries
         {
         }
 
-        public override Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        public override Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token, bool throwIfDoesNotExist = false)
         {
-            var index = GetIndex(query.Metadata.IndexName);
+            var index = GetIndex(query.Metadata.IndexName, throwIfDoesNotExist);
 
             if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
             {

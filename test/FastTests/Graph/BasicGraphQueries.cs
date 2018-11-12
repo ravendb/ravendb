@@ -83,6 +83,18 @@ namespace FastTests.Graph
         }
 
         [Fact]
+        public void Query_with_non_existing_collection_should_fail()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<RavenException>(() => session.Advanced.RawQuery<JObject>(@"match (FooBar)").ToList());
+                }
+            }
+        }
+
+        [Fact]
         public void Query_with_no_matches_and_without_select_should_return_empty_result()
         {
             using (var store = GetDocumentStore())

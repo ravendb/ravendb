@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Queries
         {
         }
 
-        public override Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        public override Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token, bool throwIfDoesNotExist = false)
         {
             throw new NotSupportedException(ErrorMessage);
         }

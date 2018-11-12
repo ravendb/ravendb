@@ -1534,9 +1534,9 @@ namespace Raven.Server.Documents
             }
         }
 
-        public CollectionStats GetCollection(string collection, DocumentsOperationContext context)
+        public CollectionStats GetCollection(string collection, DocumentsOperationContext context, bool throwIfDoesNotExist = false)
         {
-            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+            var collectionName = GetCollection(collection, throwIfDoesNotExist);
             if (collectionName == null)
             {
                 return new CollectionStats

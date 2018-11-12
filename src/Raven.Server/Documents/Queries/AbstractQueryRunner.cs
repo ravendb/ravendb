@@ -33,16 +33,17 @@ namespace Raven.Server.Documents.Queries
             Database = database;
         }
 
-        public Index GetIndex(string indexName)
+        public Index GetIndex(string indexName, bool throwIfDoesNotExist = false)
         {
             var index = Database.IndexStore.GetIndex(indexName);
-            if (index == null)
+            if (index == null && !throwIfDoesNotExist)
                 IndexDoesNotExistException.ThrowFor(indexName);
 
             return index;
         }
 
-        public abstract Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token);
+        public abstract Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag,
+            OperationCancelToken token, bool throwIfDoesNotExist = false);
 
         public abstract Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
             IStreamDocumentQueryResultWriter writer, OperationCancelToken token);

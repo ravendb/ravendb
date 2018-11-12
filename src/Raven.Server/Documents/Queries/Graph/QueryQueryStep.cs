@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 return default;
 
             var results = _queryRunner.ExecuteQuery(new IndexQueryServerSide(_queryMetadata),
-                  _context, _resultEtag, _token);
+                  _context, _resultEtag, _token, true);
 
             if (results.IsCompleted)
             {

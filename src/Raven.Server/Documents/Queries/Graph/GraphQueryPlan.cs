@@ -12,10 +12,10 @@ namespace Raven.Server.Documents.Queries.Graph
     {
         private IGraphQueryStep _rootQueryStep;
         private IndexQueryServerSide _query;
-        private DocumentsOperationContext _context;
-        private long? _resultEtag;
-        private OperationCancelToken _token;
-        private DocumentDatabase _database;
+        private readonly DocumentsOperationContext _context;
+        private readonly long? _resultEtag;
+        private readonly OperationCancelToken _token;
+        private readonly DocumentDatabase _database;
         public GraphQuery GraphQuery => _query.Metadata.Query.GraphQuery;
 
         public GraphQueryPlan(IndexQueryServerSide query, DocumentsOperationContext context, long? resultEtag,

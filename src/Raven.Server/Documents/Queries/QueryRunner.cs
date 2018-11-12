@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Queries
             return _static;
         }
 
-        public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token, bool throwIfDoesNotExist = false)
         {
             ObjectDisposedException lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Queries
                         if (scope == null)
                             sw = Stopwatch.StartNew();
 
-                        result = await GetRunner(query).ExecuteQuery(query, documentsContext, existingResultEtag, token);
+                        result = await GetRunner(query).ExecuteQuery(query, documentsContext, existingResultEtag, token, throwIfDoesNotExist);
                     }
 
                     result.DurationInMs = sw != null ? (long)sw.Elapsed.TotalMilliseconds : (long)scope.Duration.TotalMilliseconds;

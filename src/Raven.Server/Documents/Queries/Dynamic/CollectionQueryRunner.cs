@@ -25,14 +25,14 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
         }
 
-        public override Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
+        public override Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token, bool throwIfDoesNotExist = false)
         {
             var result = new DocumentQueryResult();
 
             if (documentsContext.Transaction == null || documentsContext.Transaction.Disposed)
                 documentsContext.OpenReadTransaction();
 
-            FillCountOfResultsAndIndexEtag(result, query.Metadata, documentsContext);
+            FillCountOfResultsAndIndexEtag(result, query.Metadata, documentsContext, throwIfDoesNotExist);
 
             if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
             {
@@ -161,7 +161,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
         }
 
-        private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide resultToFill, QueryMetadata query, DocumentsOperationContext context)
+        private unsafe void FillCountOfResultsAndIndexEtag(
+            QueryResultServerSide resultToFill, 
+            QueryMetadata query, 
+            DocumentsOperationContext context,
+            bool throwIfDoesNotExist = false)
         {
             var collection = query.CollectionName;
             var buffer = stackalloc long[3];
@@ -179,7 +183,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
             else
             {
-                var collectionStats = Database.DocumentsStorage.GetCollection(collection, context);
+                var collectionStats = Database.DocumentsStorage.GetCollection(collection, context,throwIfDoesNotExist);
 
                 buffer[0] = Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
                 buffer[1] = Database.DocumentsStorage.GetLastTombstoneEtag(context, collection);
