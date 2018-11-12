@@ -2338,10 +2338,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (IsRaw(expression, name))
                 return;
 
-            var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = true };
+            var isConditionalExpression = expression.Arguments[1].NodeType == ExpressionType.Conditional;
+            var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = isConditionalExpression == false };
             var js = ToJs(expression.Arguments[1], false, loadSupport);
 
-            if (loadSupport.HasLoad == false)
+            if (loadSupport.HasLoad == false || isConditionalExpression)
             {
                 AppendLineToOutputFunction(name, js);
             }
