@@ -10,11 +10,13 @@ class importDatabaseModel {
     includeCounters = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
     includeLegacyAttachments = ko.observable(false);
+    includeAttachments = ko.observable(true);
 
     includeExpiredDocuments = ko.observable(true);
     removeAnalyzers = ko.observable(false);
     
     transformScript = ko.observable<string>();
+    validationMessage = ko.observable<string>();
 
     validationGroup: KnockoutValidationGroup;
     importDefinitionHasIncludes: KnockoutComputed<boolean>;
@@ -49,6 +51,9 @@ class importDatabaseModel {
         if (this.includeCounters()) {
             operateOnTypes.push("Counters");
         }
+        if (this.includeAttachments()) {
+            operateOnTypes.push("Attachments");
+        }
         if (this.includeLegacyAttachments()) {
             operateOnTypes.push("LegacyAttachments");
         }
@@ -63,8 +68,13 @@ class importDatabaseModel {
 
     private initValidation() {
         this.importDefinitionHasIncludes = ko.pureComputed(() => {
-            return this.includeDatabaseRecord() || this.includeDocuments() || this.includeRevisionDocuments() || this.includeConflicts() ||
-                this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange() || this.includeLegacyAttachments() || this.includeCounters();
+            if (this.includeAttachments()) {
+                this.validationMessage("Note: Attachments can only be included with documents.");
+                return this.includeDocuments();
+            }
+            this.validationMessage("Note: At least one 'include' option must be checked...");
+            return this.includeDatabaseRecord() || this.includeConflicts() || this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange() ||
+                this.includeLegacyAttachments() || this.includeCounters() || this.includeRevisionDocuments() || this.includeDocuments();
         });
 
         this.transformScript.extend({
@@ -75,7 +85,7 @@ class importDatabaseModel {
             validation: [
                 {
                     validator: () => this.importDefinitionHasIncludes(),
-                    message: "Note: At least one 'include' option must be checked..."
+                    message: () => this.validationMessage()
                 }
             ]
         });
