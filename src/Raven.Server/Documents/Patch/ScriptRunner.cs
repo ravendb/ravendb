@@ -176,6 +176,7 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("Raven_Max", new ClrFunctionInstance(ScriptEngine, Raven_Max));
 
                 ScriptEngine.SetValue("compareDates", new ClrFunctionInstance(ScriptEngine, CompareDates));
+                ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, ConvertJsTimeToTimeSpanString));
 
                 ScriptEngine.SetValue("toStringWithFormat", new ClrFunctionInstance(ScriptEngine, ToStringWithFormat));
 
@@ -871,6 +872,18 @@ namespace Raven.Server.Documents.Patch
                 throw new MissingMethodException("The method DeleteDocument was renamed to 'del'");
             }
 
+            private static JsValue ConvertJsTimeToTimeSpanString(JsValue self, JsValue[] args)
+            {
+                if (args.Length != 1 || args[0].IsNumber() == false)
+                    throw new InvalidOperationException("convertJsTimeToTimeSpanString(ticks) must be called with a single long argument");
+
+                var ticks = Convert.ToInt64(args[0].AsNumber()) * 10000;
+
+                var asTimeSpan = new TimeSpan(ticks);
+
+                return asTimeSpan.ToString();
+            }
+
             private static JsValue CompareDates(JsValue self, JsValue[] args)
             {
                 if (args.Length < 1 || args.Length > 3)
@@ -915,20 +928,36 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            private static DateTime GetDateArg(JsValue arg)
+            private static unsafe DateTime GetDateArg(JsValue arg)
             {
-                DateTime date;
                 if (arg.IsDate())
                 {
-                    date = arg.AsDate().ToDateTime();
-                }
-                else if (arg.IsString() == false ||
-                         DateTime.TryParseExact(arg.AsString(), "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out date) == false)
-                {
-                    throw new InvalidOperationException("compareDates(date1, date2, binaryOp) : 'date1', 'date2' must be of type 'DateInstance' or a DateTime string");
+                    return arg.AsDate().ToDateTime();
                 }
 
-                return date;
+                if (arg.IsString() == false)
+                {
+                    ThrowInvalidArgumentForCompareDates();
+                }
+
+                var s = arg.AsString();
+                fixed (char* pValue = s)
+                {
+                    var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
+                    switch (result)
+                    {
+                        case LazyStringParser.Result.DateTime:
+                            return dt;
+                        default:
+                            ThrowInvalidArgumentForCompareDates();
+                            return DateTime.MinValue; // never hit
+                    }
+                }
+            }
+
+            private static void ThrowInvalidArgumentForCompareDates()
+            {
+                throw new InvalidOperationException("compareDates(date1, date2, binaryOp) : 'date1', 'date2' must be of type 'DateInstance' or a DateTime string");
             }
 
             private static JsValue ToStringWithFormat(JsValue self, JsValue[] args)
