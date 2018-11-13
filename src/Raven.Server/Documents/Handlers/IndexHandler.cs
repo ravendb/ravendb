@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/indexes", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/indexes", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task GetAll()
         {
             var name = GetStringQueryString("name", required: false);
@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/indexes/stats", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/indexes/stats", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task Stats()
         {
             var name = GetStringQueryString("name", required: false);
@@ -535,7 +535,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/indexes/errors", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/indexes/errors", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task GetErrors()
         {
             var names = GetStringValuesQueryString("name", required: false);
