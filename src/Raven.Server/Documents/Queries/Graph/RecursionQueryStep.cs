@@ -21,6 +21,9 @@ namespace Raven.Server.Documents.Queries.Graph
         private readonly HashSet<long> _visited = new HashSet<long>();
         private readonly Stack<RecursionState> _path = new Stack<RecursionState>();
         public int _index = -1;
+  
+        public IGraphQueryStep Left => _left;
+        public List<SingleEdgeMatcher> Steps => _steps;
 
         private class RecursionState
         {
@@ -47,6 +50,49 @@ namespace Raven.Server.Documents.Queries.Graph
             }
 
             _outputAlias = _stepAliases.Last();
+        }
+
+        public RecursionQueryStep(IGraphQueryStep left, RecursionQueryStep rqs)
+        {
+            _left = left;
+            _steps = rqs._steps;
+            _recursive = rqs._recursive;
+            _options = rqs._options;
+
+            _stepAliases.Add(left.GetOutputAlias());
+
+            foreach (var step in _steps)
+            {
+                if (step.Right == null)
+                    continue;
+                _stepAliases.Add(step.Right.GetOutputAlias());
+            }
+
+            _outputAlias = _stepAliases.Last();
+        }
+
+        public RecursionQueryStep(RecursionQueryStep rqs, IGraphQueryStep left, List<SingleEdgeMatcher> steps)
+        {
+            _left = left;
+            _steps = steps;
+            _recursive = rqs._recursive;
+            _options = rqs._options;
+
+            _stepAliases.Add(left.GetOutputAlias());
+
+            foreach (var step in _steps)
+            {
+                if (step.Right == null)
+                    continue;
+                _stepAliases.Add(step.Right.GetOutputAlias());
+            }
+
+            _outputAlias = _stepAliases.Last();
+        }
+
+        public IGraphQueryStep Clone()
+        {
+            return new RecursionQueryStep(_left.Clone(), new List<SingleEdgeMatcher>(_steps), _recursive, _options);
         }
 
         internal (WithEdgesExpression Edge, StringSegment EdgeAlias, StringSegment RecursionAlias, string SourceAlias) GetOutputEdgeInfo()

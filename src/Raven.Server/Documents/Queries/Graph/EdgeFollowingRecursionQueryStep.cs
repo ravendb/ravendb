@@ -18,6 +18,10 @@ namespace Raven.Server.Documents.Queries.Graph
         private List<Match> _results = new List<Match>();
         private int _index = -1;
 
+        public RecursionQueryStep Left => _left;
+        public IGraphQueryStep Right => _right;
+        public BlittableJsonReaderObject QueryParameters  => _queryParameters;
+
         public EdgeFollowingRecursionQueryStep(RecursionQueryStep left, IGraphQueryStep right, BlittableJsonReaderObject queryParameters)
         {
             _left = left;
@@ -25,6 +29,11 @@ namespace Raven.Server.Documents.Queries.Graph
             _queryParameters = queryParameters;
             _allAliases = new HashSet<string>(left.GetAllAliases());
             _allAliases.UnionWith(right.GetAllAliases());
+        }
+
+        public IGraphQueryStep Clone()
+        {
+            return new EdgeFollowingRecursionQueryStep((RecursionQueryStep)_left.Clone(), _right.Clone(),_queryParameters);
         }
 
         public HashSet<string> GetAllAliases()

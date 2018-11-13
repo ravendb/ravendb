@@ -17,6 +17,9 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private HashSet<string> _aliases;
 
+        public IGraphQueryStep Left => _left;
+        public IGraphQueryStep Right => _right;
+
         public EdgeQueryStep(IGraphQueryStep left, IGraphQueryStep right, WithEdgesExpression edgesExpression, MatchPath edgePath, BlittableJsonReaderObject queryParameters)
         {
             _left = left;
@@ -31,6 +34,26 @@ namespace Raven.Server.Documents.Queries.Graph
             _edgePath = edgePath;
             _queryParameters = queryParameters;
             _edgesExpression = edgesExpression;
+        }
+
+        public EdgeQueryStep(IGraphQueryStep left, IGraphQueryStep right, EdgeQueryStep eqs)
+        {
+            _left = left;
+            _right = right;
+            _aliases = new HashSet<string>();
+
+            _aliases.UnionWith(_left.GetAllAliases());
+            _aliases.UnionWith(_right.GetAllAliases());
+            _aliases.Add(eqs._edgePath.Alias);
+
+            _edgePath = eqs._edgePath;
+            _queryParameters = eqs._queryParameters;
+            _edgesExpression = eqs._edgesExpression;
+        }
+
+        public IGraphQueryStep Clone()
+        {
+            return new EdgeQueryStep(_left.Clone(), _right.Clone(), _edgesExpression, _edgePath, _queryParameters);
         }
 
         public ValueTask Initialize()

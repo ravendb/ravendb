@@ -189,8 +189,8 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public void OptimizeQueryPlan()
         {
-            //TODO: identify pattrens for optimization
-            return;
+            var cdqsr = new EdgeCollectionDestinationRewriter(_database.DocumentsStorage);
+            _rootQueryStep = cdqsr.Visit(_rootQueryStep);
         }
 
         public List<Match> Execute()

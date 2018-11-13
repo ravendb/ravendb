@@ -20,6 +20,9 @@ namespace Raven.Server.Documents.Queries.Graph
         private readonly List<Match> _results = new List<Match>();
         private int _index = -1;
 
+        public IGraphQueryStep Left => _left;
+        public IGraphQueryStep Right => _right;
+
         public IntersectionQueryStep(IGraphQueryStep left, IGraphQueryStep right)
         {
             _unionedAliases = new HashSet<string>();
@@ -33,6 +36,11 @@ namespace Raven.Server.Documents.Queries.Graph
 
             _left = left;
             _right = right;
+        }
+
+        public IGraphQueryStep Clone()
+        {
+            return new IntersectionQueryStep<TOp>(_left.Clone(), _right.Clone());
         }
 
         private void IntersectExpressions()

@@ -18,6 +18,17 @@ namespace Raven.Server.Documents.Queries.Graph
         public WithEdgesExpression Edge;
         public StringSegment EdgeAlias;
 
+
+        public SingleEdgeMatcher(SingleEdgeMatcher step, IGraphQueryStep right)
+        {
+            Right = right;
+            QueryParameters = step.QueryParameters;
+            IncludedEdges = new Dictionary<string, Sparrow.Json.BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
+            Results = new List<Match>();
+            Edge = step.Edge;
+            EdgeAlias = step.EdgeAlias;
+        }
+
         public void SingleMatch(Match left, string alias)
         {
             var dummy = left.GetSingleDocumentResult(alias);
