@@ -443,12 +443,15 @@ namespace Raven.Server.Smuggler.Documents
             private readonly DocumentsOperationContext _context;
             private readonly DatabaseSource _source;
             private HashSet<string> _attachmentStreamsAlreadyExported;
+            private ModifyMetadataFromSmuggler _modifier;
 
             public StreamDocumentActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, DatabaseSource source, string propertyName)
                 : base(writer, propertyName)
             {
                 _context = context;
                 _source = source;
+                if(propertyName == "Docs")
+                    _modifier = new ModifyMetadataFromSmuggler(_options.OperateOnTypes);
             }
 
             public void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtag progress)
@@ -466,13 +469,10 @@ namespace Raven.Server.Smuggler.Documents
                         Writer.WriteComma();
                     First = false;
 
-                    if (item.Document.Flags.HasFlag(DocumentFlags.Revision) == false)
-                    {
-                        var modifier = new ModifyMetadataFromSmuggler(_options.OperateOnTypes);
-                        document.EnsureMetadata(modifier);
-                    }
-                    else
+                    if (_modifier == null)
                         document.EnsureMetadata();
+                    else
+                        document.EnsureMetadata(_modifier);
 
                     _context.Write(Writer, document.Data);
                 }

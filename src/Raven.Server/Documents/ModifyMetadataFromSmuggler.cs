@@ -7,20 +7,20 @@ namespace Raven.Server.Documents
 {
     class ModifyMetadataFromSmuggler : IMetadataModifier
     {
-        public DatabaseItemType OperateOnTypes { get; set; }
+        private readonly DatabaseItemType _operateOnTypes;
 
         public ModifyMetadataFromSmuggler(DatabaseItemType operateOnTypes)
         {
-            OperateOnTypes = operateOnTypes;
+            _operateOnTypes = operateOnTypes;
         }
 
         public DynamicJsonValue ModifyMetadata(BlittableJsonReaderObject metadata, DynamicJsonValue mutatedMetadata)
         {
             if (metadata != null)
             {
-                if (OperateOnTypes.HasFlag(DatabaseItemType.Counters) == false && metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray _))
+                if (_operateOnTypes.HasFlag(DatabaseItemType.Counters) == false && metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray _))
                     mutatedMetadata.Remove(Constants.Documents.Metadata.Counters);
-                if (OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false && metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray _))
+                if (_operateOnTypes.HasFlag(DatabaseItemType.Attachments) == false && metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray _))
                     mutatedMetadata.Remove(Constants.Documents.Metadata.Attachments);
             }
 
