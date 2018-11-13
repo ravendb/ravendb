@@ -459,14 +459,20 @@ namespace Raven.Server.Smuggler.Documents
                 var document = item.Document;
                 using (document.Data)
                 {
-                    if(_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
+                    if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
                         WriteUniqueAttachmentStreams(document, progress);
 
                     if (First == false)
                         Writer.WriteComma();
                     First = false;
 
-                    document.EnsureMetadata();
+                    if (item.Document.Flags.HasFlag(DocumentFlags.Revision) == false)
+                    {
+                        var modifier = new ModifyMetadataFromSmuggler(_options.OperateOnTypes);
+                        document.EnsureMetadata(modifier);
+                    }
+                    else
+                        document.EnsureMetadata();
 
                     _context.Write(Writer, document.Data);
                 }

@@ -40,7 +40,7 @@ namespace Raven.Server.Documents
         public bool TryGetMetadata(out BlittableJsonReaderObject metadata) => 
             Data.TryGet(Constants.Documents.Metadata.Key, out metadata);
 
-        public void EnsureMetadata()
+        public void EnsureMetadata(IMetadataModifier modifier = null)
         {
             if (_metadataEnsured)
                 return;
@@ -61,13 +61,9 @@ namespace Raven.Server.Documents
             };
 
             mutatedMetadata[Constants.Documents.Metadata.Id] = Id;
-            if (NonPersistentFlags.HasFlag(NonPersistentDocumentFlags.FromSmuggler) && metadata != null)
-            {
-                if (Flags.HasFlag(DocumentFlags.HasCounters) == false && metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray _))
-                    mutatedMetadata.Remove(Constants.Documents.Metadata.Counters);
-                if (Flags.HasFlag(DocumentFlags.HasAttachments) == false && metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray _))
-                    mutatedMetadata.Remove(Constants.Documents.Metadata.Attachments);
-            }
+
+            if (modifier != null)
+                mutatedMetadata = modifier.ModifyMetadata(metadata, mutatedMetadata);
 
             if (ChangeVector != null)
                 mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector;        
