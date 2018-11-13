@@ -88,7 +88,8 @@ namespace Raven.Server.Documents.Queries
             var q = query.Metadata.Query;
             var qp = new GraphQueryPlan(query, documentsContext, existingResultEtag, token, Database);
             qp.BuildQueryPlan();
-            await qp.Initialize();
+            qp.OptimizeQueryPlan(); //TODO: audit optimization
+            await qp.Initialize();            
             var matchResults = qp.Execute();
 
             var filter = q.GraphQuery.Where;

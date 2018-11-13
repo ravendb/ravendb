@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private List<Match> _results = new List<Match>();
         private Dictionary<string, Match> _resultsById = new Dictionary<string, Match>(StringComparer.OrdinalIgnoreCase);
 
+
         public QueryQueryStep(QueryRunner queryRunner, Sparrow.StringSegment alias,Query query, QueryMetadata queryMetadata, DocumentsOperationContext documentsContext, long? existingResultEtag,
             OperationCancelToken token)
         {
@@ -35,6 +36,19 @@ namespace Raven.Server.Documents.Queries.Graph
             _context = documentsContext;
             _resultEtag = existingResultEtag;
             _token = token;
+        }
+
+        public bool IsCollectionQuery => _queryMetadata.IsCollectionQuery;
+        public bool HasWhereClause => _query.Where != null;
+
+        public static CollectionDestinationQueryStep ToCollectionDestinationQueryStep(DocumentsStorage documentsStorage, QueryQueryStep qqs)
+        {
+            return new CollectionDestinationQueryStep(qqs._alias, qqs._context, documentsStorage);
+        }
+
+        public IGraphQueryStep Clone()
+        {
+            return new QueryQueryStep(_queryRunner, _alias, _query, _queryMetadata, _context, _resultEtag, _token);
         }
 
         public bool GetNext(out Match match)
