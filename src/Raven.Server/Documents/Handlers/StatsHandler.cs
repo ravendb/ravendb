@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class StatsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/stats", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/stats", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task Stats()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
