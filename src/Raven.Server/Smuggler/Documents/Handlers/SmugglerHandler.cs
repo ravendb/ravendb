@@ -25,6 +25,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
+using Raven.Client.Properties;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
@@ -110,6 +111,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     }
                 }
 
+                ApplyBackwardCompatibility(options);
+
                 var token = CreateOperationToken();
 
                 var fileName = options.FileName;
@@ -134,6 +137,25 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     HttpContext.Abort();
                 }
             }
+        }
+
+        private void ApplyBackwardCompatibility(DatabaseSmugglerOptionsServerSide options)
+        {
+            if (options == null)
+                return;
+
+            if (RequestRouter.TryGetClientVersion(HttpContext, out var version) == false)
+                return;
+
+            if (version.Major != RavenVersionAttribute.Instance.MajorVersion)
+                return;
+
+            // only all 4.0 and 4.1 less or equal to 41006
+            if (version.Revision < 50 || version.Revision > 41006) 
+                return;
+
+            if (options.OperateOnTypes.HasFlag(DatabaseItemType.Documents))
+                options.OperateOnTypes |= DatabaseItemType.Attachments;
         }
 
         private IOperationResult ExportDatabaseInternal(
@@ -674,6 +696,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                                     if (MultipartRequestHelper.HasFileContentDisposition(contentDisposition) == false)
                                         continue;
+
+                                    ApplyBackwardCompatibility(options);
 
                                     var stream = new GZipStream(section.Body, CompressionMode.Decompress);
                                     DoImportInternal(context, stream, options, result, onProgress, token);
