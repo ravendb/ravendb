@@ -10,7 +10,7 @@ define(function(require, exports, module) {
         var keywordRegex = /[a-zA-Z_$@\u00a1-\uffff][a-zA-Z0-9_$@\u00a1-\uffff]*\b/;
 
         var clausesKeywords = (
-            "declare|from|group|where|order|load|select|include|update"
+            "declare|from|group|where|order|load|select|include|update|match|with"
         );
         this.clausesKeywords = clausesKeywords.split("|");
 
