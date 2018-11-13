@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -100,7 +101,7 @@ namespace Raven.TestDriver
                 }
             };
 
-            ImportDatabase(store, name);
+            AsyncHelpers.RunSync(() => ImportDatabaseAsync(store, name));
 
             SetupDatabase(store);
 
@@ -238,18 +239,18 @@ namespace Raven.TestDriver
                 throw new AggregateException(exceptions);
         }
 
-        private void ImportDatabase(DocumentStore docStore, string database)
+        private async Task ImportDatabaseAsync(DocumentStore docStore, string database, TimeSpan? timeout = null)
         {
             var options = new DatabaseSmugglerImportOptions();
             if (DatabaseDumpFilePath != null)
             {
-                AsyncHelpers.RunSync(() => docStore.Smuggler.ForDatabase(database)
-                    .ImportAsync(options, DatabaseDumpFilePath));
+                var operation = await docStore.Smuggler.ForDatabase(database).ImportAsync(options, DatabaseDumpFilePath);
+                await operation.WaitForCompletionAsync(timeout);
             }
             else if (DatabaseDumpFileStream != null)
             {
-                AsyncHelpers.RunSync(() => docStore.Smuggler.ForDatabase(database)
-                    .ImportAsync(options, DatabaseDumpFileStream));
+                var operation = await docStore.Smuggler.ForDatabase(database).ImportAsync(options, DatabaseDumpFileStream);
+                await operation.WaitForCompletionAsync(timeout);
             }
         }
 

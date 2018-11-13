@@ -1971,7 +1971,7 @@ namespace Raven.Server.ServerWide
             {
                 ServerShutdown.ThrowIfCancellationRequested();
 
-                if (_engine.CurrentState == RachisState.Leader)
+                if (_engine.CurrentState == RachisState.Leader && _engine.CurrentLeader?.Running == true)
                 {
                     try
                     {

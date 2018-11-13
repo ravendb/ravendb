@@ -1158,10 +1158,15 @@ namespace Raven.Server.Documents.Indexes
 
         public void RunIdleOperations()
         {
+            foreach (var index in _indexes)
+            {
+                index.Cleanup();
+            }
+
             long etag;
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-                _serverStore.Cluster.ReadDatabase(context, _documentDatabase.Name, out etag);
+                _serverStore.Cluster.ReadRawDatabase(context, _documentDatabase.Name, out etag);
 
             AsyncHelpers.RunSync(() => RunIdleOperationsAsync(etag));
         }

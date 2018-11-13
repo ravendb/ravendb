@@ -153,22 +153,38 @@ namespace Raven.Client.Documents.Operations
         {
             await _lock.WaitAsync().ConfigureAwait(false);
 
-            OperationState state;
+            OperationState state = null;
             try
             {
-                if (_result.Task.IsCompleted)
-                    return;
+                for (var i = 0; i < 10; i++)
+                {
+                    if (_result.Task.IsCompleted)
+                        return;
 
-                var command = GetOperationStateCommand(_conventions, _id);
+                    var command = GetOperationStateCommand(_conventions, _id);
 
-                await _requestExecutor.ExecuteAsync(command, _context, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
+                    await _requestExecutor.ExecuteAsync(command, _context, sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
 
-                state = command.Result;
+                    state = command.Result;
+
+                    // in most of the cases this will only perform one loop
+                    // but for operations like smuggler-ones there is a race probability
+                    // between sending the request to perform the operation
+                    // and registering it
+                    // this is why we are trying to get the state few times
+                    if (state != null)
+                        break;
+
+                    await Task.Delay(500).ConfigureAwait(false);
+                }
             }
             finally
             {
                 _lock.Release();
             }
+
+            if (state == null)
+                throw new InvalidOperationException($"Could not fetch state of operation '{_id}'.");
 
             OnNext(new OperationStatusChange
             {

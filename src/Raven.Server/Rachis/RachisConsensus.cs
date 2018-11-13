@@ -1770,6 +1770,8 @@ namespace Raven.Server.Rachis
                     return safe ? Volatile.Read(ref _leaderTag) : _leaderTag;
                 case RachisState.LeaderElect:
                 case RachisState.Leader:
+                    if (CurrentLeader?.Running != true)
+                        return null;
                     return safe ? Volatile.Read(ref _tag) : _tag; 
                 default:
                     throw new ArgumentOutOfRangeException();

@@ -1538,7 +1538,8 @@ namespace SlowTests.Server
                     session.SaveChanges();
                 }
 
-                await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFilePath);
+                var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFilePath);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
             }
 
             //Recording
@@ -1546,7 +1547,8 @@ namespace SlowTests.Server
             {
                 store.Maintenance.Send(new StartTransactionsRecordingOperation(recordFilePath));
 
-                await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFilePath);
+                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFilePath);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                 store.Maintenance.Send(new StopTransactionsRecordingOperation());
             }

@@ -383,6 +383,12 @@ namespace Raven.Server.Smuggler.Documents
                         default:
                             throw new NotSupportedException(index.Type.ToString());
                     }
+
+                    if (result.Indexes.ReadCount % 10 == 0)
+                    {
+                        var message = $"Read {result.Indexes.ReadCount:#,#;;0} indexes.";
+                        AddInfoToSmugglerResult(result, message);
+                    }
                 }
             }
 

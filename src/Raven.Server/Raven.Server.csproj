@@ -3,7 +3,7 @@
     <Description>Raven.Server is the database server for RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <RuntimeFrameworkVersion>2.1.5</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>2.1.6</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -57,7 +57,7 @@
     <ProjectReference Include="..\Voron\Voron.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="CsvHelper" Version="8.2.0" />
+    <PackageReference Include="CsvHelper" Version="9.1.0" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageReference Include="JetBrains.Annotations" Version="2018.2.1">
       <PrivateAssets>All</PrivateAssets>

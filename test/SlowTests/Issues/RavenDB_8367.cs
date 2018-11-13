@@ -37,12 +37,14 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile);
+                var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
             }
 
             using (var store = GetDocumentStore())
             {
-                await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile);
+                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = store.OpenSession())
                 {

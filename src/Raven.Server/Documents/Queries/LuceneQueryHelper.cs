@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Queries
         {
             return new BooleanQuery
             {
-                { Term(fieldName, Asterisk, LuceneTermType.WildCard), Occur.MUST },
+                { new MatchAllDocsQuery(), Occur.MUST },
                 { Term(fieldName, value, termType, exact: exact), Occur.MUST_NOT }
             };
         }
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Queries
         {
             return new BooleanQuery
             {
-                { Term(fieldName, Asterisk, LuceneTermType.WildCard), Occur.MUST },
+                { new MatchAllDocsQuery(), Occur.MUST },
                 { CreateRange(fieldName, value, true, value, true), Occur.MUST_NOT }
             };
         }
@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Queries
         {
             return new BooleanQuery
             {
-                { Term(fieldName, Asterisk, LuceneTermType.WildCard), Occur.MUST },
+                { new MatchAllDocsQuery(), Occur.MUST },
                 { CreateRange(fieldName, value, true, value, true), Occur.MUST_NOT }
             };
         }
