@@ -17,9 +17,9 @@ namespace SlowTests.ExtensionPoints
 {
     public class ExtensionPointsTests : RavenTestBase
     {
-        public const string SystemDbName = "System";
+        private const string SystemDbName = "System";
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
         public async Task OnDirectoryInitializeInMemoryTest()
         {
             string script;
@@ -76,7 +76,7 @@ exit 0";
 
                     foreach (var index in indexes)
                     {
-                        var expected = $"{DirectoryExecUtils.EnvironmentType.Index} {store.Database} {index.Env.Options.BasePath} {index.Env.Options.TempPath} {index.Env.Options.JournalPath}";
+                        var expected = $"{DirectoryExecUtils.EnvironmentType.Index} {store.Database} {index._environment.Options.BasePath} {index._environment.Options.TempPath} {index._environment.Options.JournalPath}";
                         var indexToRemove = matches.FindIndex(str => str.Contains(expected));
                         if (indexToRemove != -1)
                             matches.RemoveAt(indexToRemove);
@@ -87,7 +87,7 @@ exit 0";
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
         public async Task OnDirectoryInitializePersistedTest()
         {
             string script;
@@ -119,7 +119,7 @@ exit 0";
 
             UseNewLocalServer(customSettings: customSettings, runInMemory: false);
             var basePath = NewDataPath();
-            
+
             using (var store = GetDocumentStore(new Options
             {
                 Path = basePath
@@ -129,11 +129,11 @@ exit 0";
 
                 // The database loads after all indexes are loaded
                 var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                
+
                 var lines = File.ReadAllLines(outputFile);
                 Assert.True(lines.Length == 6);
 
-                var systemEnvOptions = Server.ServerStore.Env.Options;
+                var systemEnvOptions = Server.ServerStore._env.Options;
                 var configEnvOptions = documentDatabase.ConfigurationStorage.Environment.Options;
                 var docsEnvOptions = documentDatabase.DocumentsStorage.Environment.Options;
 
@@ -150,7 +150,7 @@ exit 0";
 
                 foreach (var index in indexes)
                 {
-                    var expected =$"{DirectoryExecUtils.EnvironmentType.Index} {store.Database} {index.Env.Options.BasePath} {index.Env.Options.TempPath} {index.Env.Options.JournalPath}";
+                    var expected = $"{DirectoryExecUtils.EnvironmentType.Index} {store.Database} {index._environment.Options.BasePath} {index._environment.Options.TempPath} {index._environment.Options.JournalPath}";
                     var indexToRemove = matches.FindIndex(str => str.Contains(expected));
                     if (indexToRemove != -1)
                         matches.RemoveAt(indexToRemove);

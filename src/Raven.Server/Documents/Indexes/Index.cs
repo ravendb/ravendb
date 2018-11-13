@@ -113,8 +113,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
-        internal StorageEnvironment Env => _environment;
-        private StorageEnvironment _environment;
+        internal StorageEnvironment _environment;
 
         internal TransactionContextPool _contextPool;
 
