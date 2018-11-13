@@ -883,7 +883,7 @@ namespace Raven.Server.Documents.Patch
                 return asTimeSpan.ToString();
             }
 
-            private static JsValue ToStringWithFormat(JsValue self, JsValue[] args)
+            private static unsafe JsValue ToStringWithFormat(JsValue self, JsValue[] args)
             {
                 if (args.Length < 1 || args.Length > 3)
                 {
@@ -930,13 +930,20 @@ namespace Raven.Server.Documents.Patch
 
                 if (args[0].IsString())
                 {
-                    if (DateTime.TryParseExact(args[0].AsString(), "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) == false)
+                    var s = args[0].AsString();
+                    fixed (char* pValue = s)
                     {
-                        throw new InvalidOperationException("toStringWithFormat(dateString) : 'dateString' is not a valid DateTime string");
+                        var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
+                        switch (result)
+                        {
+                            case LazyStringParser.Result.DateTime:
+                                return format != null ?
+                                    dt.ToString(format, cultureInfo) :
+                                    dt.ToString(cultureInfo);
+                            default:
+                                throw new InvalidOperationException("toStringWithFormat(dateString) : 'dateString' is not a valid DateTime string");
+                        }
                     }
-                    return format != null ?
-                        date.ToString(format, cultureInfo) :
-                        date.ToString(cultureInfo);
                 }
 
                 if (args[0].IsBoolean() == false)
