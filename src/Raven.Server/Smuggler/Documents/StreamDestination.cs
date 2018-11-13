@@ -67,7 +67,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public IDocumentActions Documents()
         {
-            return new StreamDocumentActions(_writer, _context, _source, "Docs");
+            return new StreamDocumentActions(_writer, _context, _source, "Docs", new SmugglerMetadataModifier(_options.OperateOnTypes));
         }
 
         public IDocumentActions RevisionDocuments()
@@ -104,7 +104,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             return new StreamIndexActions(_writer, _context);
         }
-        
+
         private class DatabaseRecordActions : IDatabaseRecordActions
         {
             private readonly BlittableJsonTextWriter _writer;
@@ -123,15 +123,15 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WritePropertyName(nameof(databaseRecord.DatabaseName));
                 _writer.WriteString(databaseRecord.DatabaseName);
                 _writer.WriteComma();
-                
+
                 _writer.WritePropertyName(nameof(databaseRecord.Encrypted));
                 _writer.WriteBool(databaseRecord.Encrypted);
                 _writer.WriteComma();
-                
+
                 _writer.WritePropertyName(nameof(databaseRecord.Revisions));
                 WriteRevisions(databaseRecord.Revisions);
                 _writer.WriteComma();
-                
+
                 _writer.WritePropertyName(nameof(databaseRecord.Expiration));
                 WriteExpiration(databaseRecord.Expiration);
                 _writer.WriteComma();
@@ -141,7 +141,7 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WritePropertyName(nameof(databaseRecord.RavenConnectionStrings));
                     WriteRavenConnectionStrings(databaseRecord.RavenConnectionStrings);
                     _writer.WriteComma();
-                    
+
                     _writer.WritePropertyName(nameof(databaseRecord.SqlConnectionStrings));
                     WriteSqlConnectionStrings(databaseRecord.SqlConnectionStrings);
                     _writer.WriteComma();
@@ -158,13 +158,13 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WriteNull();
                     return;
                 }
-                
+
                 _writer.WriteStartObject();
 
                 _writer.WritePropertyName(nameof(clientConfiguration.Etag));
                 _writer.WriteInteger(clientConfiguration.Etag);
                 _writer.WriteComma();
-               
+
                 _writer.WritePropertyName(nameof(clientConfiguration.Disabled));
                 _writer.WriteBool(clientConfiguration.Disabled);
 
@@ -188,7 +188,7 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WritePropertyName(nameof(clientConfiguration.ReadBalanceBehavior));
                     _writer.WriteString(clientConfiguration.ReadBalanceBehavior.Value.ToString());
                 }
-                
+
                 _writer.WriteEndObject();
             }
 
@@ -199,19 +199,19 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WriteNull();
                     return;
                 }
-                
+
                 _writer.WriteStartObject();
-               
+
                 _writer.WritePropertyName(nameof(expiration.Disabled));
                 _writer.WriteBool(expiration.Disabled);
-                
+
                 if (expiration.DeleteFrequencyInSec.HasValue)
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(expiration.DeleteFrequencyInSec));
                     _writer.WriteString(expiration.DeleteFrequencyInSec.Value.ToString());
                 }
-                
+
                 _writer.WriteEndObject();
             }
 
@@ -222,13 +222,13 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WriteNull();
                     return;
                 }
-                
+
                 _writer.WriteStartObject();
-                
+
                 _writer.WritePropertyName(nameof(revisions.Default));
                 WriteRevisionsCollectionConfiguration(revisions.Default);
                 _writer.WriteComma();
-                
+
                 _writer.WritePropertyName(nameof(revisions.Collections));
 
                 if (revisions.Collections == null)
@@ -249,18 +249,18 @@ namespace Raven.Server.Smuggler.Documents
                         _writer.WritePropertyName(collection.Key);
                         WriteRevisionsCollectionConfiguration(collection.Value);
                     }
-                    
+
                     _writer.WriteEndObject();
                 }
 
-                
+
                 _writer.WriteEndObject();
             }
 
             private void WriteRavenConnectionStrings(Dictionary<string, RavenConnectionString> connections)
             {
                 _writer.WriteStartObject();
-               
+
                 var first = true;
                 foreach (var ravenConnectionString in connections)
                 {
@@ -280,7 +280,7 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WritePropertyName(nameof(value.Database));
                     _writer.WriteString(value.Database);
                     _writer.WriteComma();
-                    
+
                     _writer.WriteArray(nameof(value.TopologyDiscoveryUrls), value.TopologyDiscoveryUrls);
 
                     _writer.WriteEndObject();
@@ -288,11 +288,11 @@ namespace Raven.Server.Smuggler.Documents
 
                 _writer.WriteEndObject();
             }
-            
+
             private void WriteSqlConnectionStrings(Dictionary<string, SqlConnectionString> connections)
             {
                 _writer.WriteStartObject();
-               
+
                 var first = true;
                 foreach (var sqlConnectionString in connections)
                 {
@@ -325,7 +325,7 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WriteNull();
                     return;
                 }
-                
+
                 _writer.WriteStartObject();
 
                 if (collectionConfiguration.MinimumRevisionsToKeep.HasValue)
@@ -443,15 +443,14 @@ namespace Raven.Server.Smuggler.Documents
             private readonly DocumentsOperationContext _context;
             private readonly DatabaseSource _source;
             private HashSet<string> _attachmentStreamsAlreadyExported;
-            private ModifyMetadataFromSmuggler _modifier;
+            private readonly IMetadataModifier _modifier;
 
-            public StreamDocumentActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, DatabaseSource source, string propertyName)
+            public StreamDocumentActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, DatabaseSource source, string propertyName, IMetadataModifier modifier = null)
                 : base(writer, propertyName)
             {
                 _context = context;
                 _source = source;
-                if(propertyName == "Docs")
-                    _modifier = new ModifyMetadataFromSmuggler(_options.OperateOnTypes);
+                _modifier = modifier;
             }
 
             public void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtag progress)
@@ -469,10 +468,7 @@ namespace Raven.Server.Smuggler.Documents
                         Writer.WriteComma();
                     First = false;
 
-                    if (_modifier == null)
-                        document.EnsureMetadata();
-                    else
-                        document.EnsureMetadata(_modifier);
+                    document.EnsureMetadata(_modifier);
 
                     _context.Write(Writer, document.Data);
                 }
@@ -624,7 +620,7 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteEndObject();
             }
         }
-        
+
         private abstract class StreamActionsBase : IDisposable
         {
             protected readonly BlittableJsonTextWriter Writer;
