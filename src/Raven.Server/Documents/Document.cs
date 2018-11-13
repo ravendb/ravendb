@@ -37,7 +37,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public bool TryGetMetadata(out BlittableJsonReaderObject metadata) => 
+        public bool TryGetMetadata(out BlittableJsonReaderObject metadata) =>
             Data.TryGet(Constants.Documents.Metadata.Key, out metadata);
 
         public void EnsureMetadata(IMetadataModifier modifier = null)
@@ -62,33 +62,16 @@ namespace Raven.Server.Documents
 
             mutatedMetadata[Constants.Documents.Metadata.Id] = Id;
 
-            if (modifier != null)
-                mutatedMetadata = modifier.ModifyMetadata(metadata, mutatedMetadata);
+            modifier?.ModifyMetadata(metadata, ref mutatedMetadata);
 
             if (ChangeVector != null)
-                mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector;        
+                mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector;
             if (Flags != DocumentFlags.None)
                 mutatedMetadata[Constants.Documents.Metadata.Flags] = Flags.ToString();
             Debug.Assert(LastModified != DateTime.MinValue, $"LastModified cannot be DateTime.MinValue. {Id}");
             mutatedMetadata[Constants.Documents.Metadata.LastModified] = LastModified;
             if (IndexScore.HasValue)
                 mutatedMetadata[Constants.Documents.Metadata.IndexScore] = IndexScore;
-
-            _hash = null;
-        }
-
-        public void RemoveAllPropertiesExceptMetadata()
-        {
-            foreach (var property in Data.GetPropertyNames())
-            {
-                if (string.Equals(property, Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                if (Data.Modifications == null)
-                    Data.Modifications = new DynamicJsonValue(Data);
-
-                Data.Modifications.Remove(property);
-            }
 
             _hash = null;
         }
