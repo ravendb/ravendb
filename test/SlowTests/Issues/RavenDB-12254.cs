@@ -55,7 +55,7 @@ namespace SlowTests.Issues
                                     Int2 = externalDocument.Int + 1
                                 };
 
-                    Assert.Equal(
+                    RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(d, $p1) {
 	var externalDocument = id(d)==null?null:load($p1);
 	var x = id(d)==null?0:10;
