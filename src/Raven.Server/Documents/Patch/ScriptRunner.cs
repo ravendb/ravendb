@@ -175,7 +175,6 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("Raven_Min", new ClrFunctionInstance(ScriptEngine, Raven_Min));
                 ScriptEngine.SetValue("Raven_Max", new ClrFunctionInstance(ScriptEngine, Raven_Max));
 
-                ScriptEngine.SetValue("compareDates", new ClrFunctionInstance(ScriptEngine, CompareDates));
                 ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, ConvertJsTimeToTimeSpanString));
 
                 ScriptEngine.SetValue("toStringWithFormat", new ClrFunctionInstance(ScriptEngine, ToStringWithFormat));
@@ -882,82 +881,6 @@ namespace Raven.Server.Documents.Patch
                 var asTimeSpan = new TimeSpan(ticks);
 
                 return asTimeSpan.ToString();
-            }
-
-            private static JsValue CompareDates(JsValue self, JsValue[] args)
-            {
-                if (args.Length < 1 || args.Length > 3)
-                {
-                    throw new InvalidOperationException($"No overload for method 'compareDates' takes {args.Length} arguments. " +
-                                                        "Supported overloads are : compareDates(date1, date2), compareDates(date1, date2, operationType)");
-                }
-
-                var date1 = GetDateArg(args[0]);
-                var date2 = GetDateArg(args[1]);
-
-                ExpressionType binaryOperationType;
-                if (args.Length == 2)
-                {
-                    binaryOperationType = ExpressionType.Subtract;
-                }
-                else if (args[2].IsString() == false || 
-                    Enum.TryParse(args[2].AsString(), out binaryOperationType) == false)
-                {
-                    throw new InvalidOperationException("compareDates(date1, date2, operationType) : 'operationType' must be a string argument representing a valid 'ExpressionType'");
-                }
-
-                switch (binaryOperationType)
-                {
-                    case ExpressionType.Subtract:
-                        return (date1 - date2).ToString();
-                    case ExpressionType.GreaterThan:
-                        return date1 > date2;
-                    case ExpressionType.GreaterThanOrEqual:
-                        return date1 >= date2;
-                    case ExpressionType.LessThan:
-                        return date1 < date2;
-                    case ExpressionType.LessThanOrEqual:
-                        return date1 <= date2;
-                    case ExpressionType.Equal:
-                        return date1 == date2;
-                    case ExpressionType.NotEqual:
-                        return date1 != date2;
-                    default:
-                        throw new InvalidOperationException($"compareDates(date1, date2, binaryOp) : unsupported binary operation '{binaryOperationType}'");
-
-                }
-            }
-
-            private static unsafe DateTime GetDateArg(JsValue arg)
-            {
-                if (arg.IsDate())
-                {
-                    return arg.AsDate().ToDateTime();
-                }
-
-                if (arg.IsString() == false)
-                {
-                    ThrowInvalidArgumentForCompareDates();
-                }
-
-                var s = arg.AsString();
-                fixed (char* pValue = s)
-                {
-                    var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
-                    switch (result)
-                    {
-                        case LazyStringParser.Result.DateTime:
-                            return dt;
-                        default:
-                            ThrowInvalidArgumentForCompareDates();
-                            return DateTime.MinValue; // never hit
-                    }
-                }
-            }
-
-            private static void ThrowInvalidArgumentForCompareDates()
-            {
-                throw new InvalidOperationException("compareDates(date1, date2, binaryOp) : 'date1', 'date2' must be of type 'DateInstance' or a DateTime string");
             }
 
             private static JsValue ToStringWithFormat(JsValue self, JsValue[] args)

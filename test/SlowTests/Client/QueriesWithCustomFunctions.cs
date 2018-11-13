@@ -96,7 +96,7 @@ namespace SlowTests.Client
                     var query = session.Query<User>()
                         .Select(u => new { u.Name, Age = DateTime.Today - u.Birthday});
 
-                    Assert.Equal("from Users as u select { Name : u.Name, Age : compareDates(new Date(new Date().setHours(0,0,0,0)), u.Birthday) }",
+                    Assert.Equal("from Users as u select { Name : u.Name, Age : convertJsTimeToTimeSpanString(new Date(new Date().setHours(0,0,0,0))-new Date(Date.parse(u.Birthday))) }",
                                 query.ToString());
 
                     var queryResult = query.ToList();
@@ -125,7 +125,7 @@ namespace SlowTests.Client
                     var query = session.Query<User>()
                         .Select(u => new { u.Name, Age = DateTime.Today - u.Birthday });
 
-                    Assert.Equal("from Users as u select { Name : u.Name, Age : compareDates(new Date(new Date().setHours(0,0,0,0)), u.Birthday) }",
+                    Assert.Equal("from Users as u select { Name : u.Name, Age : convertJsTimeToTimeSpanString(new Date(new Date().setHours(0,0,0,0))-new Date(Date.parse(u.Birthday))) }",
                         query.ToString());
 
                     var queryResult = await query.ToListAsync();
