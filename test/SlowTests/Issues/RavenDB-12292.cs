@@ -1,8 +1,10 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
+using Raven.Client;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Smuggler;
 using Raven.Tests.Core.Utils.Entities;
@@ -10,8 +12,68 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    class RavenDB_12292 : RavenTestBase
+    public class RavenDB_12292 : RavenTestBase
     {
+        [Fact]
+        public async Task CanExportRavenDbWithoutAttachments()
+        {
+            var folder = NewDataPath(forceCreateDir: true);
+            var file = Path.Combine(folder, "export.ravendbdump");
+
+            using (var store1 = GetDocumentStore())
+            {
+                using (var session = store1.OpenSession())
+                {
+                    var user = new User
+                    {
+                        Name = "John"
+                    };
+
+                    session.Store(user, "users/1");
+
+                    var buffer = new byte[1024 * 1024];
+                    new Random(1).NextBytes(buffer);
+
+                    session.Advanced.Attachments.Store(user, "photo.jpg", new MemoryStream(buffer));
+
+                    session.SaveChanges();
+                }
+
+                using (var store2 = GetDocumentStore())
+                {
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions
+                    {
+                        OperateOnTypes = DatabaseItemType.Documents
+                    }, file);
+
+                    operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+
+                    var fileInfo = new FileInfo(file);
+                    Assert.True(fileInfo.Exists);
+                    Assert.True(file.Length < 500);
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+
+                    using (var session = store2.OpenSession())
+                    {
+                        var user = session.Load<User>("users/1");
+                        Assert.NotNull(user);
+                        Assert.Equal("John", user.Name);
+
+                        var attachments = session.Advanced.Attachments.GetNames(user);
+                        Assert.Empty(attachments);
+
+                        var photo = session.Advanced.Attachments.Get(user, "photo.jpg");
+                        Assert.Null(photo);
+
+                        var metadata = session.Advanced.GetMetadataFor(user);
+                        Assert.False(metadata.TryGetValue(Constants.Documents.Metadata.Attachments, out _));
+                    }
+                }
+            }
+        }
+
         [Fact]
         public async Task CanImportRavenDbWithoutAttachments()
         {
@@ -57,12 +119,15 @@ namespace SlowTests.Issues
                     }
                     await session.SaveChangesAsync();
                 }
-                await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
             }
             // all data import
             using (var store2 = GetDocumentStore())
             {
-                await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                var operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+
                 using (var session = store2.OpenAsyncSession())
                 {
                     var metadata = session.Advanced.GetMetadataFor(await session.LoadAsync<User>(id));
@@ -83,7 +148,9 @@ namespace SlowTests.Issues
                 var importOptions = new DatabaseSmugglerImportOptions();
                 importOptions.OperateOnTypes -= DatabaseItemType.Attachments;
 
-                await store3.Smuggler.ImportAsync(importOptions, file);
+                var operation = await store3.Smuggler.ImportAsync(importOptions, file);
+                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+
                 using (var session = store3.OpenAsyncSession())
                 {
                     var metadata = session.Advanced.GetMetadataFor(await session.LoadAsync<User>(id));
@@ -123,7 +190,8 @@ namespace SlowTests.Issues
                 var importOptions = new DatabaseSmugglerImportOptions();
                 importOptions.OperateOnTypes -= DatabaseItemType.Attachments;
 
-                await store4.Smuggler.ImportAsync(importOptions, file);
+                var operation = await store4.Smuggler.ImportAsync(importOptions, file);
+                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
                 using (var session = store4.OpenAsyncSession())
                 {
                     var metadata = session.Advanced.GetMetadataFor(await session.LoadAsync<User>(id));
