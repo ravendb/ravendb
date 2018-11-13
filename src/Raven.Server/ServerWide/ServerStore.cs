@@ -82,8 +82,7 @@ namespace Raven.Server.ServerWide
 
         public CancellationToken ServerShutdown => _shutdownNotification.Token;
 
-        internal StorageEnvironment Env => _env;
-        private StorageEnvironment _env;
+        internal StorageEnvironment _env;
 
         private readonly NotificationsStorage _notificationsStorage;
         private readonly OperationsStorage _operationsStorage;
