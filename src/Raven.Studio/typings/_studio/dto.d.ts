@@ -514,3 +514,9 @@ interface editDocumentCrudActions {
     onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any): void;
 }
 
+
+
+interface getIndexEntriesFieldsCommandResult {
+    Static: string[];
+    Dynamic: string[];
+}

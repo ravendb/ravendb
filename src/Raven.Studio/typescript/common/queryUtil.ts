@@ -15,15 +15,9 @@ class queryUtil {
     static readonly DynamicPrefix = "collection/";
     static readonly AllDocs = "AllDocs";
 
-    static formatIndexQuery(indexName: string, ...predicates: { name?: string, value?: string }[]) {
-        let query = `from index '${indexName}'`;
-        if (predicates && predicates.length) {
-            query = predicates.reduce((result, field) => {
-                return `${result} where ${field.name} = '${field.value}'`;
-            }, query);
-        }
-
-        return query;
+    static formatIndexQuery(indexName: string, fieldName: string, value: string) {
+        const escapedFieldName = queryUtil.escapeCollectionOrFieldName(fieldName);
+        return `from index '${indexName}' where ${escapedFieldName} = '${value}' `;
     }
 
     static escapeCollectionOrFieldName(name: string) : string {

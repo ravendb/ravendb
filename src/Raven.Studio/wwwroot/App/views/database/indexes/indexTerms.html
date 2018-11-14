@@ -10,12 +10,13 @@
                 <i class="icon-arrow-down"></i>
                 <h3 class="text-primary" data-bind="text: name">
                 </h3>
+                <span class="badge dynamic-field" data-bind="visible: type === 'dynamic'">
+                    Dynamic field
+                </span>
                 <span class="badge pull-right">
                     <span data-bind="text: terms().length"></span> loaded
                 </span>
             </div>
-            
-            
 
             <div class="collapse" data-bind="attr: { id: 'termCollapse' + $index() }">
                 <div class="field-terms" data-bind="css: { 'no-entries': !terms().length }">

@@ -1,5 +1,4 @@
 import commandBase = require("commands/commandBase");
-import getIndexEntriesFieldsCommandResult = require("commands/database/index/getIndexEntriesFieldsCommandResult");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
