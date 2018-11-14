@@ -55,7 +55,7 @@ while($TRUE){{
                 extensionPoint.Start();
 
                 var startTime = DateTime.Now;
-                var value = new ExtensionPointRawData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
+                var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
                 while (Math.Abs(value.MachineCpuUsage) < 0.1)
                 {
                     if ((DateTime.Now - startTime).Seconds > 10)
@@ -105,7 +105,7 @@ while($TRUE){{
                 extensionPoint.Start();
 
                 var startTime = DateTime.Now;
-                var value = new ExtensionPointRawData{ ProcessCpuUsage = 0, MachineCpuUsage = 0};
+                var value = new ExtensionPointData{ ProcessCpuUsage = 0, MachineCpuUsage = 0};
                 while (Math.Abs(value.MachineCpuUsage) < 0.1)
                 {
                     if ((DateTime.Now - startTime).Seconds > 10)
@@ -162,7 +162,7 @@ while($TRUE){{
                 extensionPoint.Start();
 
                 var startTime = DateTime.Now;
-                var value = new ExtensionPointRawData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
+                var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
                 while (Math.Abs(value.MachineCpuUsage) < 0.1)
                 {
                     if ((DateTime.Now - startTime).Seconds > 10)
@@ -223,7 +223,7 @@ while($TRUE){{
                 extensionPoint.Start();
 
                 var startTime = DateTime.Now;
-                var value = new ExtensionPointRawData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
+                var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
                 while (Math.Abs(value.MachineCpuUsage) < 0.1 || Math.Abs(57 - value.MachineCpuUsage) < 0.1)
                 {
                     if ((DateTime.Now - startTime).Seconds > 10)
@@ -282,7 +282,7 @@ while($TRUE){{
                 extensionPoint.Start();
 
                 var startTime = DateTime.Now;
-                var value = new ExtensionPointRawData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
+                var value = new ExtensionPointData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
                 while (Math.Abs(value.MachineCpuUsage) < 0.1 || Math.Abs(57 - value.MachineCpuUsage) < 0.1)
                 {
                     if ((DateTime.Now - startTime).Seconds > 10)
