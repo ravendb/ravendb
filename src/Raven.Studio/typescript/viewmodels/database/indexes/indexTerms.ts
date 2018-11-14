@@ -1,7 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
 import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
-import getIndexEntriesFieldsCommandResult = require("commands/database/index/getIndexEntriesFieldsCommandResult");
 import queryCriteria = require("models/database/query/queryCriteria");
 import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 import queryUtil = require("common/queryUtil");
@@ -15,9 +14,12 @@ type termsForField = {
     name: string;
     terms: KnockoutObservableArray<string>;
     fromValue: string;
+    type: fieldType;
     hasMoreTerms: KnockoutObservable<boolean>;
     loadInProgress: KnockoutObservable<boolean>;
 }
+
+type fieldType = "static" | "dynamic";
 
 class indexTerms extends viewModelBase {
 
@@ -45,15 +47,13 @@ class indexTerms extends viewModelBase {
     fetchIndexEntriesFields(indexName: string) {
         return new getIndexEntriesFieldsCommand(indexName, this.activeDatabase())
             .execute()
-            .done((fields) => this.processFields(fields.Static));
+            .done((fields) => this.processFields(fields));
     }
 
     navigateToQuery(fieldName: string, term: string) {
         const query = queryCriteria.empty();
-        const queryText = queryUtil.formatIndexQuery(this.indexName, {
-            name: fieldName,
-            value: term
-        });
+        const queryText = queryUtil.formatIndexQuery(this.indexName, fieldName, term);
+        
         query.queryText(queryText);
         query.name("Index terms for " + this.indexName + " (" + fieldName + ": " + term + ")");
         query.recentQuery(true);
@@ -67,23 +67,27 @@ class indexTerms extends viewModelBase {
         this.navigate(queryUrl);
     }
 
-    static createTermsForField(fieldName: string): termsForField {
+    static createTermsForField(fieldName: string, type: fieldType): termsForField {
         return {
             fromValue: null,
             name: fieldName,
             hasMoreTerms: ko.observable<boolean>(true),
             terms: ko.observableArray<string>(),
+            type: type,
             loadInProgress: ko.observable<boolean>(false)
         }
     }
 
-    private processFields(fields: string[]) {
-        this.fields(fields.map(fieldName => indexTerms.createTermsForField(fieldName)));
+    private processFields(fields: getIndexEntriesFieldsCommandResult) {
+        const staticFields = fields.Static.map(fieldName => indexTerms.createTermsForField(fieldName, "static"));
+        const dynamicFields = fields.Dynamic.map(fieldName => indexTerms.createTermsForField(fieldName, "dynamic"));
+        
+        this.fields(staticFields.concat(dynamicFields));
 
         this.fields()
             .forEach(field => this.loadTerms(this.indexName, field));
     }
-
+    
     private loadTerms(indexName: string, termsForField: termsForField): JQueryPromise<Raven.Client.Documents.Queries.TermsQueryResult> {  // fetch one more to find out if we have more
         return new getIndexTermsCommand(indexName, null, termsForField.name, this.activeDatabase(), indexTerms.termsPageLimit + 1, termsForField.fromValue)  
             .execute()
