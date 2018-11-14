@@ -374,6 +374,12 @@ class query extends viewModelBase {
         });
         
         this.previewItem.extend({ rateLimit: 100}); 
+        
+        this.currentTab.subscribe(newTab => {
+            if (newTab !== "graph") {
+                this.graphQueryResults.stopSimulation();
+            }
+        })
     }
 
     private initValidation() {
@@ -1050,11 +1056,8 @@ class query extends viewModelBase {
         new debugGraphOutputCommand(this.activeDatabase(), this.criteria().queryText())
             .execute()
             .done((result) => {
-                console.log(result);
+                this.graphQueryResults.draw(result);
             });
-        
-        //TODO: fetch nodes and edges and plot graph
-        
     }
 
     exportCsv() {

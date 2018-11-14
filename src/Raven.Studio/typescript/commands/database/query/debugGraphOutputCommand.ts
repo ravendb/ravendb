@@ -2,14 +2,13 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-//TODO: make sure we support parameters
 class debugGraphOutputCommand extends commandBase {
     constructor(private db: database, private queryText: string) {
         super();
     }
 
-    execute(): JQueryPromise<any> {
-        return this.query(this.getUrl(), null, this.db)
+    execute(): JQueryPromise<debugGraphOutputResponse> {
+        return this.query<debugGraphOutputResponse>(this.getUrl(), null, this.db)
             .fail((response: JQueryXHR) => {
                 if (response.status === 404) {
                     this.reportError("Error querying index", "Index was not found", response.statusText)

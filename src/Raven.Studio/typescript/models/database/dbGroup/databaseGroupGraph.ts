@@ -244,7 +244,7 @@ class databaseGroupGraph {
                     const cacheKey = link.source.getId();
                     let currentValue = distanceCache.get(cacheKey) || 0;
                     
-                    // after each 8 outgoing links from given node exand ideal link width by 20 px
+                    // after each 8 outgoing links from given node extend ideal link width by 20 px
                     link.length = 140 + Math.floor(currentValue / 8) * 20;
 
                     currentValue++;
