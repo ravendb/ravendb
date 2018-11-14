@@ -16,15 +16,34 @@ class importDatabaseModel {
     removeAnalyzers = ko.observable(false);
     
     transformScript = ko.observable<string>();
-    validationMessage = ko.observable<string>();
 
     validationGroup: KnockoutValidationGroup;
     importDefinitionHasIncludes: KnockoutComputed<boolean>;
     
     constructor() {
         this.initValidation();
-    }
 
+        this.includeDocuments.subscribe(documents => {
+            if (!documents) {
+                this.includeCounters(false);
+                this.includeAttachments(false);
+                this.includeLegacyAttachments(false);
+            }
+        });
+        
+        this.removeAnalyzers.subscribe(analyzers => {
+            if (analyzers) {
+                this.includeIndexes(true);
+            }
+        });
+        
+        this.includeIndexes.subscribe(indexes => {
+            if (!indexes) {
+                this.removeAnalyzers(false);
+            }
+        });
+    }
+    
     toDto(): Raven.Client.Documents.Smuggler.DatabaseSmugglerImportOptions {
         const operateOnTypes: Array<Raven.Client.Documents.Smuggler.DatabaseItemType> = [];
         if (this.includeDatabaseRecord()) {
@@ -68,13 +87,16 @@ class importDatabaseModel {
 
     private initValidation() {
         this.importDefinitionHasIncludes = ko.pureComputed(() => {
-            if (this.includeAttachments()) {
-                this.validationMessage("Note: Attachments can only be included with documents.");
-                return this.includeDocuments();
-            }
-            this.validationMessage("Note: At least one 'include' option must be checked...");
-            return this.includeDatabaseRecord() || this.includeConflicts() || this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange() ||
-                this.includeLegacyAttachments() || this.includeCounters() || this.includeRevisionDocuments() || this.includeDocuments();
+            return this.includeDatabaseRecord() 
+                || this.includeConflicts() 
+                || this.includeIndexes() 
+                || this.includeIdentities() 
+                || this.includeCompareExchange() 
+                || this.includeLegacyAttachments() 
+                || this.includeCounters() 
+                || this.includeRevisionDocuments() 
+                || this.includeDocuments()
+                || this.includeAttachments();
         });
 
         this.transformScript.extend({
@@ -85,7 +107,7 @@ class importDatabaseModel {
             validation: [
                 {
                     validator: () => this.importDefinitionHasIncludes(),
-                    message: () => this.validationMessage()
+                    message: "Note: At least one 'include' option must be checked..."
                 }
             ]
         });

@@ -15,20 +15,49 @@
             </div>
             <div data-bind="with: model">
                 <div class="row">
-                    <div class="col-xs-12 col-sm-5 col-lg-3">
+                    <div class="col-lg-3">
                         <div class="toggle">
                             <input id="toggleDocuments" type="checkbox" data-bind="checked: includeDocuments">
                             <label for="toggleDocuments">Include Documents</label>
                         </div>
-                        <div class="toggle" data-toggle="tooltip" data-placement="top"
-                             data-bind="attr: { title: $root.hasRevisionsConfiguration() ? '' : 'Document Revisions are not enabled for this database' }">
-                            <input id="toggleRevisions" type="checkbox" data-bind="checked: includeRevisionDocuments, enable: $root.canExportDocumentRevisions">
-                            <label for="toggleRevisions">Include Revisions</label>
+                        <div class="margin-left margin-left-lg">
+                            <div class="toggle">
+                                <input id="toggleAttachments" type="checkbox" 
+                                       data-bind="checked: includeAttachments">
+                                <label for="toggleAttachments">Include Attachments</label>
+                            </div>
+                            <div class="toggle">
+                                <input id="toggleCounters" type="checkbox" 
+                                       data-bind="checked: includeCounters">
+                                <label for="toggleCounters">Include Counters</label>
+                            </div>
+                            <div class="toggle" data-toggle="tooltip" data-placement="top"
+                                 data-bind="attr: { title: $root.hasRevisionsConfiguration() ? '' : 'Document Revisions are not enabled
+                                  for this database' }">
+                                <input id="toggleRevisions" type="checkbox" data-bind="checked: includeRevisionDocuments, enable: $root.canExportDocumentRevisions">
+                                <label for="toggleRevisions">Include Revisions</label>
+                            </div>
+                            <div class="toggle">
+                                <input id="toggleConflicts" type="checkbox" data-bind="checked: includeConflicts">
+                                <label for="toggleConflicts">Include Conflicts</label>
+                            </div>
                         </div>
+                    </div>
+                    
+                    <div class="col-lg-3">
                         <div class="toggle">
                             <input id="toggleIndexes" type="checkbox" data-bind="checked: includeIndexes">
                             <label for="toggleIndexes">Include Indexes</label>
                         </div>
+
+                        <div class="margin-left margin-left-lg">
+                            <div class="toggle">
+                                <input id="toggleAnalyzers" type="checkbox" 
+                                       data-bind="checked: removeAnalyzers, enable: includeIndexes">
+                                <label for="toggleAnalyzers">Remove Analyzers</label>
+                            </div>
+                        </div>
+
                         <div class="toggle">
                             <input id="toggleIdentities" type="checkbox" data-bind="checked: includeIdentities">
                             <label for="toggleIdentities">Include Identities</label>
@@ -38,30 +67,14 @@
                             <label for="toggleConfiguration">Include Configuration</label>
                             <a id="configurationPopover"><small><i class="icon-info text-info"></i></small></a>
                         </div>
-                    </div>
-                    <div class="col-xs-12 col-sm-5 col-lg-4">
-                        <div class="toggle">
-                            <input id="toggleAttachments" type="checkbox" data-bind="checked: includeAttachments">
-                            <label for="toggleAttachments">Include Attachments</label>
-                        </div>
-                        <div class="toggle">
-                            <input id="toggleCounters" type="checkbox" data-bind="checked: includeCounters">
-                            <label for="toggleCounters">Include Counters</label>
-                        </div>
+
                         <div class="toggle">
                             <input id="toggleCmpXch" type="checkbox" data-bind="checked: includeCompareExchange">
                             <label for="toggleCmpXch">Include Compare Exchange</label>
                         </div>
-                        <div class="toggle">
-                            <input id="toggleConflicts" type="checkbox" data-bind="checked: includeConflicts">
-                            <label for="toggleConflicts">Include Conflicts</label>
-                        </div>
-                        <div class="toggle">
-                            <input id="toggleAnalyzers" type="checkbox" data-bind="checked: removeAnalyzers">
-                            <label for="toggleAnalyzers">Remove Analyzers</label>
-                        </div>
                     </div>
                 </div>
+                
                 <div class="row">
                     <div class="col-xs-12 col-sm-6">
                         <div data-bind="validationElement: exportDefinitionHasIncludes">

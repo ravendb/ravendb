@@ -149,58 +149,64 @@
 
                 <div data-bind="with: model" style="margin-left: 160px">
                     <div data-bind="visible: isRavenDb() && !ravenFsImport()">
-                        <div class="form-group flex-horizontal flex-stretch-items">
-                            <div>
-                                <div class="toggle" data-bind="visible: !isLegacy()">
-                                    <input id="migrate_database_record" type="checkbox" data-bind="checked: includeDatabaseRecord">
-                                    <label for="migrate_database_record">Include Database Record</label>
-                                </div>
+                        <div class="row">
+                            <div class="col-lg-3">
                                 <div class="toggle">
                                     <input id="migrate_documents" type="checkbox" data-bind="checked: includeDocuments">
                                     <label for="migrate_documents">Include Documents</label>
                                 </div>
-                                <div class="toggle" data-bind="visible: isLegacy">
-                                    <input id="migrate_legacy_attachments" type="checkbox" data-bind="checked: includeLegacyAttachments">
-                                    <label for="migrate_legacy_attachments">Include Attachments</label>
+                                <div class="margin-left margin-left-lg">
+                                    <div class="toggle" data-bind="visible: isLegacy">
+                                        <input id="migrate_legacy_attachments" type="checkbox" data-bind="checked: includeLegacyAttachments">
+                                        <label for="migrate_legacy_attachments">Include Legacy Attachments</label>
+                                    </div>
+                                    <div class="toggle" data-bind="visible: !isLegacy()">
+                                        <input id="migrate_attachments" type="checkbox" data-bind="checked: includeAttachments">
+                                        <label for="migrate_attachments">Include Attachments</label>
+                                    </div>
+                                    <div class="toggle" data-bind="visible: isV41">
+                                        <input id="migrate_counters" type="checkbox" data-bind="checked: includeCounters">
+                                        <label for="migrate_counters">Include Counters</label>
+                                    </div>
+                                    <div class="toggle" data-toggle="tooltip" data-placement="top">
+                                        <input id="migrate_revisions" type="checkbox" data-bind="checked: includeRevisionDocuments" />
+                                        <label for="migrate_revisions">Include Revisions</label>
+                                    </div>
+                                    <div class="toggle" data-bind="visible: !isLegacy()">
+                                        <input id="migrate_conflicts" type="checkbox" data-bind="checked: includeConflicts">
+                                        <label for="migrate_conflicts">Include Conflicts</label>
+                                    </div>
                                 </div>
-                                <div class="toggle" data-bind="visible: !isLegacy()">
-                                    <input id="migrate_conflicts" type="checkbox" data-bind="checked: includeConflicts">
-                                    <label for="migrate_conflicts">Include Conflicts</label>
+                            </div>
+                            <div class="col-lg-3">
+                                <div class="toggle">
+                                    <input id="migrate_indexes" type="checkbox" data-bind="checked: includeIndexes">
+                                    <label for="migrate_indexes">Include Indexes</label>
                                 </div>
-                                <div class="toggle" data-toggle="tooltip" data-placement="top">
-                                    <input id="migrate_revisions" type="checkbox" data-bind="checked: includeRevisionDocuments" />
-                                    <label for="migrate_revisions">Include Document Revisions</label>
+                                <div class="margin-left margin-left-lg">
+                                    <div class="toggle">
+                                        <input id="migrate_remove_analyzers" type="checkbox" data-bind="checked: removeAnalyzers">
+                                        <label for="migrate_remove_analyzers">Remove Analyzers</label>
+                                    </div>
                                 </div>
                                 <div class="toggle" data-bind="visible: !isLegacy()">
                                     <input id="migrate_identities" type="checkbox" data-bind="checked: includeIdentities">
                                     <label for="migrate_identities">Include Identities</label>
                                 </div>
-                                <div data-bind="validationElement: importDefinitionHasIncludes">
-                                    <div class="help-block" data-bind="validationMessage: importDefinitionHasIncludes"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="toggle">
-                                    <input id="migrate_indexes" type="checkbox" data-bind="checked: includeIndexes">
-                                    <label for="migrate_indexes">Include Indexes</label>
+                                <div class="toggle" data-bind="visible: !isLegacy()">
+                                    <input id="migrate_database_record" type="checkbox" data-bind="checked: includeDatabaseRecord">
+                                    <label for="migrate_database_record" class="margin-right margin-right-sm">Include Configuration</label>
+                                    <a id="configurationPopover"><small><i class="icon-info text-info"></i></small></a>
                                 </div>
                                 <div class="toggle" data-bind="visible: !isLegacy()">
                                     <input id="migrate_cmp_xch" type="checkbox" data-bind="checked: includeCompareExchange">
                                     <label for="migrate_cmp_xch">Include Compare Exchange</label>
                                 </div>
-                                <div class="toggle" data-bind="visible: isV41">
-                                    <input id="migrate_counters" type="checkbox" data-bind="checked: includeCounters">
-                                    <label for="migrate_counters">Include Counters</label>
-                                </div>
-                                <div class="toggle" data-bind="visible: !isLegacy()">
-                                    <input id="migrate_attachments" type="checkbox" data-bind="checked: includeAttachments">
-                                    <label for="migrate_attachments">Include Attachments</label>
-                                </div>
-                                <div class="toggle">
-                                    <input id="migrate_remove_analyzers" type="checkbox" data-bind="checked: removeAnalyzers">
-                                    <label for="migrate_remove_analyzers">Remove Analyzers</label>
-                                </div>
+                                
                             </div>
+                        </div>
+                        <div data-bind="validationElement: importDefinitionHasIncludes">
+                            <div class="help-block" data-bind="validationMessage: importDefinitionHasIncludes"></div>
                         </div>
                     </div>
                 </div>
@@ -209,7 +215,7 @@
                         <div class="form-group">
                             <div class="toggle">
                                 <input class="styled" type="checkbox" id="use-transform-script" data-bind="checked: showTransformScript">
-                                <label for="use-transform-script" class="margin-right">Use Transform script</label>
+                                <label for="use-transform-script" class="margin-right margin-right-sm">Use Transform script</label>
                                 <small id="scriptPopover"><i class="icon-info text-info"></i></small>
                             </div>
                         </div>
