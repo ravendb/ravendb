@@ -140,6 +140,30 @@
 
 .query-results-container {
     min-height: 500px;
+    
+    .graph-container {
+        overflow: hidden;
+        padding: 0;
+        
+        .node-name {
+            text-anchor: middle;
+            pointer-events: none;
+            font-size: 12px;
+        }
+
+        .node-bg {
+            cursor: pointer;
+            stroke: black;
+            stroke-opacity: 0.4;
+        }
+
+        .edges {
+            line {
+                stroke-width: 2px;
+                stroke: #39434f;
+            }
+        }
+    }
 }
 
 .query-results {
