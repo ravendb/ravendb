@@ -192,6 +192,7 @@ namespace Raven.Server.Commercial
         private async Task<HttpResponseMessage> SendAsyncInternal(HttpMethod method, Uri uri, object message, CancellationToken token)
         {
             var hasNonce = _nonce != null;
+            var retryOnce = true;
             do
             {
                 var request = new HttpRequestMessage(method, uri);
@@ -216,7 +217,21 @@ namespace Raven.Server.Commercial
                     };
                 }
 
-                var response = await _client.SendAsync(request, token).ConfigureAwait(false);
+                HttpResponseMessage response;
+                try
+                {
+                    response = await _client.SendAsync(request, token).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    if (retryOnce)
+                    {
+                        retryOnce = false;
+                        continue;
+                    }
+                        
+                    throw new InvalidOperationException($"Let's Encrypt client failed to send the request (retried once): {request}", e);
+                }
 
                 if (response.Headers.TryGetValues("Replay-Nonce", out var vals))
                     _nonce = vals.FirstOrDefault();
