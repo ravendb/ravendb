@@ -174,10 +174,10 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("Raven_Min", new ClrFunctionInstance(ScriptEngine, Raven_Min));
                 ScriptEngine.SetValue("Raven_Max", new ClrFunctionInstance(ScriptEngine, Raven_Max));
 
+                ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, ConvertJsTimeToTimeSpanString));
                 ScriptEngine.SetValue("compareDates", new ClrFunctionInstance(ScriptEngine, CompareDates));
 
                 ScriptEngine.SetValue("toStringWithFormat", new ClrFunctionInstance(ScriptEngine, ToStringWithFormat));
-
 
                 ScriptEngine.SetValue("scalarToRawString", new ClrFunctionInstance(ScriptEngine, ScalarToRawString));
 
@@ -868,6 +868,18 @@ namespace Raven.Server.Documents.Patch
             private static JsValue ThrowOnDeleteDocument(JsValue self, JsValue[] args)
             {
                 throw new MissingMethodException("The method DeleteDocument was renamed to 'del'");
+            }
+
+            private static JsValue ConvertJsTimeToTimeSpanString(JsValue self, JsValue[] args)
+            {
+                if (args.Length != 1 || args[0].IsNumber() == false)
+                    throw new InvalidOperationException("convertJsTimeToTimeSpanString(ticks) must be called with a single long argument");
+
+                var ticks = Convert.ToInt64(args[0].AsNumber()) * 10000;
+
+                var asTimeSpan = new TimeSpan(ticks);
+
+                return asTimeSpan.ToString();
             }
 
             private static JsValue CompareDates(JsValue self, JsValue[] args)
