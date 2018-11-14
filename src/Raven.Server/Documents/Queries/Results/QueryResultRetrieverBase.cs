@@ -462,8 +462,11 @@ namespace Raven.Server.Documents.Queries.Results
                 else if (fieldToFetch.CanExtractFromIndex)
                 {
                     var field = luceneDoc.GetField(fieldToFetch.QueryField.SourceAlias);
-                    var fieldValue = ConvertType(_context, field, GetFieldType(field.Name, luceneDoc), state);
-                    _loadedDocumentIds.Add(fieldValue.ToString());
+                    if (field != null)
+                    {
+                        var fieldValue = ConvertType(_context, field, GetFieldType(field.Name, luceneDoc), state);
+                        _loadedDocumentIds.Add(fieldValue.ToString());
+                    }
                 }
 
                 else
