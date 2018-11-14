@@ -410,6 +410,8 @@ namespace Raven.Server
 
         private Task _currentRefreshTask = Task.CompletedTask;
 
+        public Task RefreshTask => _currentRefreshTask;
+
         public void RefreshClusterCertificateTimerCallback(object state)
         {
             RefreshClusterCertificate(state);

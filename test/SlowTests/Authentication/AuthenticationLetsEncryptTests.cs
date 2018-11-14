@@ -33,7 +33,7 @@ namespace SlowTests.Authentication
         {
             var settingPath = Path.Combine(NewDataPath(forceCreateDir: true), "settings.json");
             var defaultSettingsPath = new PathSetting("settings.default.json").FullPath;
-            File.Copy(defaultSettingsPath, settingPath);
+            File.Copy(defaultSettingsPath, settingPath, true);
 
             UseNewLocalServer(customConfigPath: settingPath);
 
@@ -182,7 +182,16 @@ namespace SlowTests.Authentication
 
                 var result = mre.Wait(Debugger.IsAttached ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(2));
 
-                Assert.True(result, "Waited too long for the cluster cert to be replaced");
+                if (result == false && Server.RefreshTask.IsCompleted)
+                {
+                    if (Server.RefreshTask.IsFaulted || Server.RefreshTask.IsCanceled)
+                    {
+                        Assert.True(result,
+                            $"Refresh task failed to complete successfully. Exception: {Server.RefreshTask.Exception}");
+                    }
+                    Assert.True(result, "Refresh task completed successfully, waited too long for the cluster cert to be replaced");
+                }
+                Assert.True(result, "Refresh task didn't complete. Waited too long for the cluster cert to be replaced");
 
                 Assert.NotEqual(firstServerCertThumbprint, Server.Certificate.Certificate.Thumbprint);
             }
