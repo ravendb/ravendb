@@ -2763,13 +2763,6 @@ from Orders as o load o.Employee as employee select output(o, employee)" , query
 
                 using (var session = store.OpenSession())
                 {
-                    var dt = new DateTime(1942, 8, 1);
-                    var tst = dt.ToString();
-
-                    dt = new DateTime(1234, 5, 6, 7, 8, 9);
-                    tst = dt.ToString();
-
-
                     var query = session.Query<User>()
                                        .Where(x => x.Birthday.ToString().StartsWith("1234"))
                                        .Select(u => new
