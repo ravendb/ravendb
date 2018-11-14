@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Server.Dashboard;
+using Raven.Server.Utils.Cpu;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
