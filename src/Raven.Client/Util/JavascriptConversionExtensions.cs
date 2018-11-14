@@ -982,14 +982,11 @@ namespace Raven.Client.Util
         {
             private readonly IAbstractDocumentQuery<T> _documentQuery;
             private readonly List<string> _projectionParameters;
-            private readonly DateTimeSupport _dateTimeSupportExtension;
 
-
-            public WrappedConstantSupport(IAbstractDocumentQuery<T> documentQuery, List<string> projectionParameters, DateTimeSupport dateTimeSupportExtension)
+            public WrappedConstantSupport(IAbstractDocumentQuery<T> documentQuery, List<string> projectionParameters)
             {
                 _documentQuery = documentQuery;
                 _projectionParameters = projectionParameters;
-                _dateTimeSupportExtension = dateTimeSupportExtension;
             }
 
             private static bool IsWrappedConstantExpression(Expression expression)
@@ -1017,10 +1014,7 @@ namespace Raven.Client.Util
 
                 using (writer.Operation(memberExpression))
                 {
-                    writer.Write(memberExpression.Type == typeof(DateTime) &&
-                                 _dateTimeSupportExtension.InsideBinaryOperationOnDates
-                        ? $"new Date(Date.parse({parameter}))"
-                        : parameter);
+                    writer.Write(parameter);
                 }
             }
         }
@@ -1310,7 +1304,11 @@ namespace Raven.Client.Util
 
         public class DateTimeSupport : JavascriptConversionExtension
         {
-            public bool InsideBinaryOperationOnDates;
+            public static DateTimeSupport Instance = new DateTimeSupport();
+
+            private DateTimeSupport()
+            {
+            }
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
@@ -1348,64 +1346,40 @@ namespace Raven.Client.Util
                 if (context.Node is BinaryExpression binaryExpression &&
                     binaryExpression.Left.Type == typeof(DateTime))
                 {
-                    InsideBinaryOperationOnDates = true;
-
                     var writer = context.GetWriter();
                     context.PreventDefault();
 
-                    if (context.Node.Type == typeof(TimeSpan) && 
-                        context.Node.NodeType == ExpressionType.Subtract)
-                    {
-                        using (writer.Operation(context.Node))
-                        {
-                            writer.Write("convertJsTimeToTimeSpanString(");
-
-                            context.Visitor.Visit(binaryExpression.Left);
-                            writer.Write("-");
-
-                            context.Visitor.Visit(binaryExpression.Right);
-
-                            writer.Write(")");
-
-                        }
-
-                        InsideBinaryOperationOnDates = false;
-                        return;
-                    }
-
                     using (writer.Operation(context.Node))
                     {
+                        writer.Write("compareDates(");
+
                         context.Visitor.Visit(binaryExpression.Left);
-                        writer.WriteOperator(binaryExpression.NodeType, binaryExpression.Type);
+                        writer.Write(", ");
+
                         context.Visitor.Visit(binaryExpression.Right);
+
+                        if (context.Node.NodeType != ExpressionType.Subtract)
+                        {
+                            writer.Write($", '{context.Node.NodeType}'");
+                        }
+
+                        writer.Write(")");
+
                     }
 
-                    InsideBinaryOperationOnDates = false;
                     return;                   
                 }
 
                 if (!(context.Node is MemberExpression node))
                     return;
 
-                if (node.Type == typeof(DateTime) && 
-                    (node.Expression == null || InsideBinaryOperationOnDates))
+                if (node.Type == typeof(DateTime) && node.Expression == null)
                 {
                     var writer = context.GetWriter();
                     context.PreventDefault();
 
                     using (writer.Operation(node))
                     {
-                        if (node.Expression != null)
-                        {
-                            //inside a binary operation on dates, translate to JS date object
-
-                            writer.Write("new Date(Date.parse(");
-                            context.Visitor.Visit(node.Expression);
-                            writer.Write($".{node.Member.Name}))");
-
-                            return;
-                        }
-
                         //match DateTime.Now , DateTime.UtcNow, DateTime.Today
                         switch (node.Member.Name)
                         {
