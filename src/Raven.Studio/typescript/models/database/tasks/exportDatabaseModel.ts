@@ -14,7 +14,6 @@ class exportDatabaseModel {
     revisionsAreConfigured: KnockoutComputed<boolean>;
 
     exportFileName = ko.observable<string>();
-    validationMessage = ko.observable<string>();
 
     includeExpiredDocuments = ko.observable(true);
     removeAnalyzers = ko.observable(false);
@@ -29,6 +28,25 @@ class exportDatabaseModel {
 
     constructor() {
         this.initValidation();
+
+        this.includeDocuments.subscribe(documents => {
+            if (!documents) {
+                this.includeCounters(false);
+                this.includeAttachments(false);
+            }
+        });
+
+        this.removeAnalyzers.subscribe(analyzers => {
+            if (analyzers) {
+                this.includeIndexes(true);
+            }
+        });
+
+        this.includeIndexes.subscribe(indexes => {
+            if (!indexes) {
+                this.removeAnalyzers(false);
+            }
+        });
     }
 
     toDto(): Raven.Server.Smuggler.Documents.Data.DatabaseSmugglerOptionsServerSide {
@@ -74,14 +92,15 @@ class exportDatabaseModel {
 
     private initValidation() {
         this.exportDefinitionHasIncludes = ko.pureComputed(() => {
-            if (this.includeAttachments()) {
-                this.validationMessage("Note: Attachments can only be included with documents.");
-                return this.includeDocuments();
-            }
-            this.validationMessage("Note: At least one 'include' option must be checked...");
-            return this.includeDatabaseRecord() || this.includeConflicts() || this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange() ||
-                this.includeCounters() || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) || this.includeDocuments();
-
+            return this.includeDatabaseRecord() 
+                || this.includeAttachments() 
+                || this.includeConflicts() 
+                || this.includeIndexes() 
+                || this.includeIdentities() 
+                || this.includeCompareExchange() 
+                || this.includeCounters() 
+                || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) 
+                || this.includeDocuments();
         });
 
         this.transformScript.extend({
@@ -92,7 +111,7 @@ class exportDatabaseModel {
             validation: [
                 {
                     validator: () => this.exportDefinitionHasIncludes(),
-                    message: () => this.validationMessage()
+                    message: "Note: At least one 'include' option must be checked..."
                 }
             ]
         });

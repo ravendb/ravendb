@@ -225,6 +225,26 @@ class migrateRavenDbDatabaseModel {
 
             return url.toLowerCase().startsWith("https://");
         });
+
+        this.includeDocuments.subscribe(documents => {
+            if (!documents) {
+                this.includeCounters(false);
+                this.includeAttachments(false);
+                this.includeLegacyAttachments(false);
+            }
+        });
+
+        this.removeAnalyzers.subscribe(analyzers => {
+            if (analyzers) {
+                this.includeIndexes(true);
+            }
+        });
+
+        this.includeIndexes.subscribe(indexes => {
+            if (!indexes) {
+                this.removeAnalyzers(false);
+            }
+        });
     }
     
     private initValidation() {
