@@ -88,7 +88,7 @@ class queryUtil {
             .split(" ");
     }
     
-    static getCollectionOrIndexName(query: string): [string, "index" | "collection"] {
+    static getCollectionOrIndexName(query: string): [string, "index" | "collection" | "unknown"] {
         const words = queryUtil.tokenizeQuery(query);
 
         for (let i = 0; i < words.length; i++) {
@@ -100,6 +100,8 @@ class queryUtil {
                 }
             }
         }
+        
+        return [undefined, "unknown"];
     }
 
     static isDynamicQuery(query: string): boolean {

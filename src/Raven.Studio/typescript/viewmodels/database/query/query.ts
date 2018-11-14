@@ -803,9 +803,8 @@ class query extends viewModelBase {
     }
 
     private getRecentQueryName(): string {
-        const [collectionIndexName] = queryUtil.getCollectionOrIndexName(this.criteria().queryText());
-
-        return query.recentKeyword + " (" + collectionIndexName + ")";
+        const [collectionIndexName, type] = queryUtil.getCollectionOrIndexName(this.criteria().queryText());
+        return type !== "unknown" ? query.recentKeyword + " (" + collectionIndexName + ")" : query.recentKeyword;
     }
 
     previewQuery(item: storedQueryDto) {

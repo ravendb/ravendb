@@ -20,7 +20,7 @@ class queryStatsDialog extends dialogViewModelBase {
     }
 
     private physicalIndexExists(indexName: string) {
-        if (indexName === queryStatsDialog.AllDocs) {
+        if (!indexName || indexName === queryStatsDialog.AllDocs) {
             return false;
         }
         if (indexName.startsWith("collection/")) {
