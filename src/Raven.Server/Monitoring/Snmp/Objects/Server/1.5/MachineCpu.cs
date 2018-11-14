@@ -1,5 +1,5 @@
 using Lextm.SharpSnmpLib;
-using Raven.Server.Utils;
+using Raven.Server.Utils.Cpu;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {

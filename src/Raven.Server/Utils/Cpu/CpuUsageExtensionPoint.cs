@@ -6,7 +6,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json;
 using Sparrow.Logging;
 
-namespace Raven.Server.Utils
+namespace Raven.Server.Utils.Cpu
 {
     public class CpuUsageExtensionPoint : IDisposable
     {

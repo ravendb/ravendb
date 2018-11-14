@@ -50,14 +50,13 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Cpu;
 using Raven.Server.Web.ResponseCompression;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Platform;
-using Sparrow.Utils;
-using Voron;
 
 namespace Raven.Server
 {
