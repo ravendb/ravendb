@@ -1313,7 +1313,11 @@ namespace Raven.Server.Documents
         {
             var newEtag = GenerateNextEtag();
 
-            if (string.IsNullOrEmpty(changeVector))
+            if (flags.Contain(DocumentFlags.FromReplication))
+            {
+                changeVector = docChangeVector;
+            }
+            else if (string.IsNullOrEmpty(changeVector))
             {
                 changeVector = ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(
                     context,
