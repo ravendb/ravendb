@@ -37,7 +37,7 @@ namespace Raven.Server.Utils
 
                 var processorTimeDiff = _processTimes.TotalProcessorTimeTicks - previousProcessTimes.TotalProcessorTimeTicks;
                 var timeDiff = _processTimes.TimeTicks - previousProcessTimes.TimeTicks;
-                var activeCores = CpuUsage.GetNumberOfActiveCores(process, CpuUsage.CpuUsageExtensionPoint.Data);
+                var activeCores = CpuUsage.GetNumberOfActiveCores(process);
                 threadsInfo.ActiveCores = activeCores;
 
                 if (timeDiff == 0 || Math.Abs(activeCores) < 0.01)

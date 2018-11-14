@@ -29,7 +29,7 @@ namespace Raven.Server.Utils
         private ExtensionPointRawData _data = new ExtensionPointRawData();
         public ExtensionPointRawData BadData = new ExtensionPointRawData
         {
-            ActiveCores = -1,
+            ProcessCpuUsage = -1,
             MachineCpuUsage = -1
         };
 
@@ -186,36 +186,35 @@ namespace Raven.Server.Utils
                 try
                 {
                     var blittable = context.ReadForMemory(data, "cpuUsageExtensionPointData");
-                    if (blittable.TryGet(nameof(ExtensionPointRawData.MachineCpuUsage), out double machineCpuUsage) == false)
+                    
+                    if (TryGetValue(blittable, nameof(ExtensionPointRawData.MachineCpuUsage), out var machineCpuUsage)
+                    && TryGetValue(blittable, nameof(ExtensionPointRawData.ProcessCpuUsage), out var processCpuUsage))
                     {
-                        HandleError($"Can't read {nameof(ExtensionPointRawData.MachineCpuUsage)} property from : {Environment.NewLine + blittable}.");
-                        return false;
+                        _data.MachineCpuUsage = machineCpuUsage;
+                        _data.ProcessCpuUsage = processCpuUsage;
+                        return true;
                     }
-                    if (machineCpuUsage < 0 || machineCpuUsage > 100)
-                    {
-                        HandleError($"{nameof(ExtensionPointRawData.MachineCpuUsage)} should be between 0 to 100 : {Environment.NewLine + blittable}.");
-                        return false;
-                    }
-
-                    if (blittable.TryGet(nameof(ExtensionPointRawData.ActiveCores), out double activeCores) == false)
-                    {
-                        HandleError($"Can't read {nameof(ExtensionPointRawData.ActiveCores)} property from : {Environment.NewLine + blittable}.");
-                        return false;
-                    }
-                    if (activeCores < 0)
-                    {
-                        HandleError($"{nameof(ExtensionPointRawData.ActiveCores)} should be above 0: {Environment.NewLine + blittable}.");
-                        return false;
-                    }
-
-                    _data.MachineCpuUsage = machineCpuUsage;
-                    _data.ActiveCores = activeCores;
                 }
                 catch (Exception e)
                 {
                     HandleError($"Unable to parse \"{data}\" to json", e);
-                    return false;
                 }
+            }
+
+            return false;
+        }
+
+        private bool TryGetValue(BlittableJsonReaderObject blittable, string machineCpuUsageName, out double cpuUsage)
+        {
+            if (blittable.TryGet(machineCpuUsageName, out cpuUsage) == false)
+            {
+                HandleError($"Can't read {machineCpuUsageName} property from : {Environment.NewLine + blittable}.");
+                return false;
+            }
+            if (cpuUsage < 0 || cpuUsage > 100)
+            {
+                HandleError($"{nameof(ExtensionPointRawData.MachineCpuUsage)} should be between 0 to 100 : {Environment.NewLine + blittable}.");
+                return false;
             }
 
             return true;
@@ -279,6 +278,6 @@ namespace Raven.Server.Utils
     {
         public double MachineCpuUsage { get; set; }
 
-        public double ActiveCores { get; set; }
+        public double ProcessCpuUsage { get; set; }
     }
 }

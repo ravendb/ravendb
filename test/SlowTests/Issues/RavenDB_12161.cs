@@ -19,7 +19,7 @@ namespace SlowTests.Issues
             var tempFileName = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
             string exec;
             string args;
-            var jsonCpuUsage = "{\"MachineCpuUsage\":57, \"ActiveCores\":2.5}";
+            var jsonCpuUsage = "{\"MachineCpuUsage\":57, \"ProcessCpuUsage\":2.5}";
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 exec = "PowerShell";
@@ -55,7 +55,7 @@ while($TRUE){{
                 extensionPoint.Start();
 
                 var startTime = DateTime.Now;
-                var value = new ExtensionPointRawData { ActiveCores = 0, MachineCpuUsage = 0 };
+                var value = new ExtensionPointRawData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
                 while (Math.Abs(value.MachineCpuUsage) < 0.1)
                 {
                     if ((DateTime.Now - startTime).Seconds > 10)
@@ -66,7 +66,7 @@ while($TRUE){{
                 }
 
                 Assert.Equal(57, value.MachineCpuUsage);
-                Assert.Equal(2.5, value.ActiveCores);
+                Assert.Equal(2.5, value.ProcessCpuUsage);
             }
         }
 
@@ -105,7 +105,7 @@ while($TRUE){{
                 extensionPoint.Start();
 
                 var startTime = DateTime.Now;
-                var value = new ExtensionPointRawData{ ActiveCores = 0, MachineCpuUsage = 0};
+                var value = new ExtensionPointRawData{ ProcessCpuUsage = 0, MachineCpuUsage = 0};
                 while (Math.Abs(value.MachineCpuUsage) < 0.1)
                 {
                     if ((DateTime.Now - startTime).Seconds > 10)
@@ -116,7 +116,7 @@ while($TRUE){{
                 }
 
                 Assert.True(value.MachineCpuUsage < 0, $"Got {value} {nameof(value.MachineCpuUsage)} should get negative error value");
-                Assert.True(value.ActiveCores < 0, $"Got {value} {nameof(value.ActiveCores)} should get negative error value");
+                Assert.True(value.ProcessCpuUsage < 0, $"Got {value} {nameof(value.ProcessCpuUsage)} should get negative error value");
 
                 Assert.True(extensionPoint.IsDisposed, "Should dispose the extension point object if the process exited");
             }
@@ -162,7 +162,7 @@ while($TRUE){{
                 extensionPoint.Start();
 
                 var startTime = DateTime.Now;
-                var value = new ExtensionPointRawData { ActiveCores = 0, MachineCpuUsage = 0 };
+                var value = new ExtensionPointRawData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
                 while (Math.Abs(value.MachineCpuUsage) < 0.1)
                 {
                     if ((DateTime.Now - startTime).Seconds > 10)
@@ -173,7 +173,7 @@ while($TRUE){{
                 }
 
                 Assert.True(value.MachineCpuUsage < 0, $"Got {value} {nameof(value.MachineCpuUsage)} should get negative error value");
-                Assert.True(value.ActiveCores < 0, $"Got {value} {nameof(value.ActiveCores)} should get negative error value");
+                Assert.True(value.ProcessCpuUsage < 0, $"Got {value} {nameof(value.ProcessCpuUsage)} should get negative error value");
 
                 Assert.True(extensionPoint.IsDisposed, "Should dispose the extension point object if the process return invalid data");
             }
@@ -185,7 +185,7 @@ while($TRUE){{
             var tempFileName = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
             string exec;
             string args;
-            var jsonCpuUsage = "{\"MachineCpuUsage\":57, \"ActiveCores\":2.5}";
+            var jsonCpuUsage = "{\"MachineCpuUsage\":57, \"ProcessCpuUsage\":2.5}";
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 exec = "PowerShell";
@@ -223,7 +223,7 @@ while($TRUE){{
                 extensionPoint.Start();
 
                 var startTime = DateTime.Now;
-                var value = new ExtensionPointRawData { ActiveCores = 0, MachineCpuUsage = 0 };
+                var value = new ExtensionPointRawData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
                 while (Math.Abs(value.MachineCpuUsage) < 0.1 || Math.Abs(57 - value.MachineCpuUsage) < 0.1)
                 {
                     if ((DateTime.Now - startTime).Seconds > 10)
@@ -234,7 +234,7 @@ while($TRUE){{
                 }
 
                 Assert.True(value.MachineCpuUsage < 0, $"Got {value} {nameof(value.MachineCpuUsage)} should get negative error value");
-                Assert.True(value.ActiveCores < 0, $"Got {value} {nameof(value.ActiveCores)} should get negative error value");
+                Assert.True(value.ProcessCpuUsage < 0, $"Got {value} {nameof(value.ProcessCpuUsage)} should get negative error value");
 
                 Assert.True(extensionPoint.IsDisposed, "Should dispose the extension point object if the process exited");
             }
@@ -282,7 +282,7 @@ while($TRUE){{
                 extensionPoint.Start();
 
                 var startTime = DateTime.Now;
-                var value = new ExtensionPointRawData { ActiveCores = 0, MachineCpuUsage = 0 };
+                var value = new ExtensionPointRawData { ProcessCpuUsage = 0, MachineCpuUsage = 0 };
                 while (Math.Abs(value.MachineCpuUsage) < 0.1 || Math.Abs(57 - value.MachineCpuUsage) < 0.1)
                 {
                     if ((DateTime.Now - startTime).Seconds > 10)
@@ -293,7 +293,7 @@ while($TRUE){{
                 }
 
                 Assert.True(value.MachineCpuUsage < 0, $"Got {value} {nameof(value.MachineCpuUsage)} should get negative error value");
-                Assert.True(value.ActiveCores < 0, $"Got {value} {nameof(value.ActiveCores)} should get negative error value");
+                Assert.True(value.ProcessCpuUsage < 0, $"Got {value} {nameof(value.ProcessCpuUsage)} should get negative error value");
 
                 Assert.True(extensionPoint.IsDisposed, "Should dispose the extension point object if the process send errors");
             }
