@@ -273,6 +273,7 @@ namespace Raven.Server.Documents.Queries
             if (expression is BetweenExpression be)
             {
                 var fieldName = ExtractIndexFieldName(query, parameters, be.Source, metadata);
+                exact = IsExact(indexDef, exact, fieldName);
                 var (valueFirst, valueFirstType) = GetValue(query, metadata, parameters, be.Min);
                 var (valueSecond, _) = GetValue(query, metadata, parameters, be.Max);
 
@@ -299,8 +300,9 @@ namespace Raven.Server.Documents.Queries
             if (expression is InExpression ie)
             {
                 var fieldName = ExtractIndexFieldName(query, parameters, ie.Source, metadata);
-                LuceneTermType termType = LuceneTermType.Null;
-                bool hasGotTheRealType = false;
+                exact = IsExact(indexDef, exact, fieldName);
+                var termType = LuceneTermType.Null;
+                var hasGotTheRealType = false;
 
                 if (ie.All)
                 {

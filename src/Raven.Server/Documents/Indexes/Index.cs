@@ -997,7 +997,6 @@ namespace Raven.Server.Documents.Indexes
                                         _threadAllocations.CurrentlyAllocatedForProcessing = 0;
                                         _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
-                                        _inMemoryIndexProgress.Clear();
                                         TimeSpentIndexing.Stop();
                                     }
 
@@ -1154,14 +1153,17 @@ namespace Raven.Server.Documents.Indexes
                             if (_scratchSpaceLimitExceeded)
                             {
                                 if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Indexing exceeded global limit for scratch space usage. Going to flush environment of '{Name}' index and forcing sync of data file");
+                                    _logger.Info(
+                                        $"Indexing exceeded global limit for scratch space usage. Going to flush environment of '{Name}' index and forcing sync of data file");
 
                                 GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(storageEnvironment);
-                                GlobalFlushingBehavior.GlobalFlusher.Value.ForceSyncEnvironment(storageEnvironment);
 
                                 if (_logsAppliedEvent.Wait(Configuration.MaxTimeToWaitAfterFlushAndSyncWhenExceedingScratchSpaceLimit.AsTimeSpan))
                                 {
-                                    // we've just flushed let's try to cleanup scratch space immediately
+                                    // we've just flushed let's start the sync process
+                                    GlobalFlushingBehavior.GlobalFlusher.Value.ForceSyncEnvironment(storageEnvironment);
+
+                                    // and cleanup scratch space immediately
                                     storageEnvironment.Cleanup();
                                 }
                             }
@@ -1175,8 +1177,7 @@ namespace Raven.Server.Documents.Indexes
                                 // anytime soon
                                 ReduceMemoryUsage();
 
-                                WaitHandle.WaitAny(new[]
-                                    {_mre.WaitHandle, _logsAppliedEvent.WaitHandle, _indexingProcessCancellationTokenSource.Token.WaitHandle});
+                                WaitHandle.WaitAny(new[] {_mre.WaitHandle, _logsAppliedEvent.WaitHandle, _indexingProcessCancellationTokenSource.Token.WaitHandle});
 
                                 if (_logsAppliedEvent.IsSet && _mre.IsSet == false && _indexingProcessCancellationTokenSource.IsCancellationRequested == false)
                                 {
@@ -1198,11 +1199,18 @@ namespace Raven.Server.Documents.Indexes
                 }
                 finally
                 {
+                    _inMemoryIndexProgress.Clear();
+
                     storageEnvironment.OnLogsApplied -= HandleLogsApplied;
                     if (DocumentDatabase != null)
                         DocumentDatabase.Changes.OnDocumentChange -= HandleDocumentChange;
                 }
             }
+        }
+
+        public void Cleanup()
+        {
+            _environment?.Cleanup();
         }
 
         protected virtual bool ShouldReplace()
@@ -1525,9 +1533,9 @@ namespace Raven.Server.Documents.Indexes
                                 using (var indexWriteOperation = writeOperation.Value)
                                 {
                                     indexWriteOperation.Commit(stats);
-
-                                    UpdateThreadAllocations(indexContext, indexWriteOperation, null, false);
                                 }
+
+                                UpdateThreadAllocations(indexContext, null, null, false);
                             }
 
                             _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
@@ -1560,17 +1568,25 @@ namespace Raven.Server.Documents.Indexes
                     }
                     catch
                     {
-                        IndexPersistence.DisposeWriters();
+                        DisposeIndexWriterOnError(writeOperation);
                         throw;
-                    }
-                    finally
-                    {
-                        if (writeOperation.IsValueCreated)
-                            writeOperation.Value.Dispose();
                     }
 
                     return mightBeMore;
                 }
+            }
+        }
+
+        private void DisposeIndexWriterOnError(Lazy<IndexWriteOperation> writeOperation)
+        {
+            try
+            {
+                IndexPersistence.DisposeWriters();
+            }
+            finally
+            {
+                if (writeOperation.IsValueCreated)
+                    writeOperation.Value.Dispose();
             }
         }
 
@@ -1815,7 +1831,7 @@ namespace Raven.Server.Documents.Indexes
 
                 Stop(disableIndex: true);
                 SetState(IndexState.Disabled);
-                _environment?.Cleanup();
+                Cleanup();
             }
         }
 
@@ -1828,20 +1844,29 @@ namespace Raven.Server.Documents.Indexes
         {
             using (CurrentlyInUse(out var valid))
             {
-                if (valid == false || DocumentDatabase.DatabaseShutdown.IsCancellationRequested || _disposeOne.Disposed)
+                if (documentsContext.Transaction == null)
+                    throw new InvalidOperationException("Cannot calculate index progress without valid transaction.");
+
+                var disposed = DocumentDatabase.DatabaseShutdown.IsCancellationRequested || _disposeOne.Disposed;
+                if (valid == false || disposed)
                 {
-                    return new IndexProgress
+                    var progress = new IndexProgress
                     {
                         Name = Name,
-                        Type = Type
-                    };
+                        Type = Type,
+                        IndexRunningStatus = Status,
+                        Collections = new Dictionary<string, IndexProgress.CollectionStats>(StringComparer.OrdinalIgnoreCase)
+                };
+
+                    if (disposed)
+                        return progress;
+
+                    UpdateIndexProgress(documentsContext, progress, null);
+                    return progress;
                 }
 
                 if (_contextPool == null)
                     throw new ObjectDisposedException("Index " + Name);
-
-                if (documentsContext.Transaction == null)
-                    throw new InvalidOperationException("Cannot calculate index progress without valid transaction.");
 
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var tx = context.OpenReadTransaction())
@@ -1850,51 +1875,54 @@ namespace Raven.Server.Documents.Indexes
                     {
                         Name = Name,
                         Type = Type,
-                        IsStale = isStale ?? IsStale(documentsContext, context)
+                        IsStale = isStale ?? IsStale(documentsContext, context),
+                        IndexRunningStatus = Status,
+                        Collections = new Dictionary<string, IndexProgress.CollectionStats>(StringComparer.OrdinalIgnoreCase)
                     };
 
                     var stats = _indexStorage.ReadStats(tx);
 
-                    progress.Collections = new Dictionary<string, IndexProgress.CollectionStats>(StringComparer.OrdinalIgnoreCase);
-                    progress.IndexRunningStatus = Status;
-
-                    var indexingPerformance = _lastStats?.ToIndexingPerformanceLiveStats();
-                    if (indexingPerformance?.DurationInMs > 0)
-                    {
-                        progress.ProcessedPerSecond = indexingPerformance.InputCount / (indexingPerformance.DurationInMs / 1000);
-                    }
-
-                    foreach (var collection in GetCollections(documentsContext, out var isAllDocs))
-                    {
-                        var collectionNameForStats = isAllDocs == false ? collection : Constants.Documents.Collections.AllDocumentsCollection;
-                        var collectionStats = stats.Collections[collectionNameForStats];
-
-                        var lastEtags = GetLastEtags(collectionNameForStats,
-                            collectionStats.LastProcessedDocumentEtag,
-                            collectionStats.LastProcessedTombstoneEtag);
-
-                        if (progress.Collections.TryGetValue(collectionNameForStats, out var progressStats) == false)
-                        {
-                            progressStats = progress.Collections[collectionNameForStats] = new IndexProgress.CollectionStats
-                            {
-                                LastProcessedDocumentEtag = lastEtags.LastProcessedDocumentEtag,
-                                LastProcessedTombstoneEtag = lastEtags.LastProcessedTombstoneEtag
-                            };
-                        }
-
-                        progressStats.NumberOfDocumentsToProcess +=
-                            DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
-                                documentsContext, collection, progressStats.LastProcessedDocumentEtag, out var totalCount);
-                        progressStats.TotalNumberOfDocuments += totalCount;
-
-                        progressStats.NumberOfTombstonesToProcess +=
-                            DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
-                                documentsContext, collection, progressStats.LastProcessedTombstoneEtag, out totalCount);
-                        progressStats.TotalNumberOfTombstones += totalCount;
-                    }
+                    UpdateIndexProgress(documentsContext, progress, stats);
 
                     return progress;
                 }
+            }
+        }
+
+        private void UpdateIndexProgress(DocumentsOperationContext documentsContext, IndexProgress progress, IndexStats stats)
+        {
+            var indexingPerformance = _lastStats?.ToIndexingPerformanceLiveStats();
+            if (indexingPerformance?.DurationInMs > 0)
+            {
+                progress.ProcessedPerSecond = indexingPerformance.InputCount / (indexingPerformance.DurationInMs / 1000);
+            }
+
+            foreach (var collection in GetCollections(documentsContext, out var isAllDocs))
+            {
+                var collectionNameForStats = isAllDocs == false ? collection : Constants.Documents.Collections.AllDocumentsCollection;
+                var collectionStats = stats?.Collections[collectionNameForStats];
+
+                var lastEtags = GetLastEtags(collectionNameForStats,
+                    collectionStats?.LastProcessedDocumentEtag ?? 0,
+                    collectionStats?.LastProcessedTombstoneEtag ?? 0);
+
+                if (progress.Collections.TryGetValue(collectionNameForStats, out var progressStats) == false)
+                {
+                    progressStats = progress.Collections[collectionNameForStats] = new IndexProgress.CollectionStats
+                    {
+                        LastProcessedDocumentEtag = lastEtags.LastProcessedDocumentEtag, LastProcessedTombstoneEtag = lastEtags.LastProcessedTombstoneEtag
+                    };
+                }
+
+                progressStats.NumberOfDocumentsToProcess +=
+                    DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
+                        documentsContext, collection, progressStats.LastProcessedDocumentEtag, out var totalCount);
+                progressStats.TotalNumberOfDocuments += totalCount;
+
+                progressStats.NumberOfTombstonesToProcess +=
+                    DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
+                        documentsContext, collection, progressStats.LastProcessedTombstoneEtag, out totalCount);
+                progressStats.TotalNumberOfTombstones += totalCount;
             }
         }
 
@@ -1933,10 +1961,15 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (valid == false)
                 {
-                    return new IndexStats()
+                    return new IndexStats
                     {
                         Name = Name,
-                        Type = Type
+                        Type = Type,
+                        LockMode = Definition?.LockMode ?? IndexLockMode.Unlock,
+                        Priority = Definition?.Priority ?? IndexPriority.Normal,
+                        State = State,
+                        Status = Status,
+                        Collections = Collections.ToDictionary(x => x, _ => new IndexStats.CollectionStats())
                     };
                 }
 
@@ -3118,11 +3151,22 @@ namespace Raven.Server.Documents.Indexes
             var threadAllocations = _threadAllocations.TotalAllocated;
             var txAllocations = indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages
                                 * Voron.Global.Constants.Storage.PageSize;
-            var indexWriterAllocations = indexWriteOperation?.GetUsedMemory() ?? 0;
+
+            long indexWriterAllocations = 0;
+            long luceneFilesAllocations = 0;
+
+            if (indexWriteOperation != null)
+            {
+                var allocations = indexWriteOperation.GetAllocations();
+                indexWriterAllocations = allocations.RamSizeInBytes;
+                luceneFilesAllocations = allocations.FilesAllocationsInBytes;
+            }
+
+            var totalTxAllocations = txAllocations + luceneFilesAllocations;
 
             if (stats != null)
             {
-                var allocatedForStats = threadAllocations + txAllocations + indexWriterAllocations;
+                var allocatedForStats = threadAllocations + totalTxAllocations + indexWriterAllocations;
                 if (updateReduceStats)
                 {
                     stats.RecordReduceAllocations(allocatedForStats);
@@ -3133,14 +3177,14 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            var allocatedForProcessing = threadAllocations +
-                                   // we multiple it by two to take into account additional work
-                                   // that will need to be done during the commit phase of the index
-                                   2 * (indexWriterAllocations + txAllocations);
+            var allocatedForProcessing = threadAllocations + indexWriterAllocations +
+                                         // we multiple it by two to take into account additional work
+                                         // that will need to be done during the commit phase of the index
+                                         totalTxAllocations * 2;
 
             _threadAllocations.CurrentlyAllocatedForProcessing = allocatedForProcessing;
 
-            return txAllocations;
+            return totalTxAllocations;
         }
 
         private void HandleStoppedBatchesConcurrently(

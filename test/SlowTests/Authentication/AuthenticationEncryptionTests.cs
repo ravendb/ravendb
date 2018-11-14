@@ -59,7 +59,8 @@ namespace SlowTests.Authentication
                 WaitForIndexing(store);
 
                 var file = Path.GetTempFileName();
-                await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                 using (var commands = store.Commands())
                 {

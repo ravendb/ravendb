@@ -17,7 +17,6 @@ namespace Raven.Client.Documents.Smuggler
         {
             _sw = Stopwatch.StartNew();
             _messages = new List<string>();
-            _progress = new SmugglerProgress(this);
 
             /*
             *  NOTE:
@@ -26,7 +25,6 @@ namespace Raven.Client.Documents.Smuggler
             *
             *  Please remember to include this property in SmugglerProgress class
             */
-
 
             DatabaseRecord = new DatabaseRecordProgress();
             Documents = new CountsWithSkippedCountAndLastEtag();
@@ -37,6 +35,8 @@ namespace Raven.Client.Documents.Smuggler
             Indexes = new Counts();
             CompareExchange = new Counts();
             Counters = new CountsWithLastEtag();
+
+            _progress = new SmugglerProgress(this);
         }
 
         public string Message { get; private set; }
@@ -94,27 +94,33 @@ namespace Raven.Client.Documents.Smuggler
         {
             protected readonly SmugglerResult _result;
 
+            public SmugglerProgress() 
+                : this(null)
+            {
+                // for deserialization
+            }
+
             public SmugglerProgress(SmugglerResult result)
             {
                 _result = result;
+                Message = _result?.Message;
+                DatabaseRecord = _result?.DatabaseRecord;
+                Documents = _result?.Documents;
+                RevisionDocuments = _result?.RevisionDocuments;
+                Tombstones = _result?.Tombstones;
+                Conflicts = _result?.Conflicts;
+                Identities = _result?.Identities;
+                Indexes = _result?.Indexes;
+                CompareExchange = _result?.CompareExchange;
+                Counters = _result?.Counters;
             }
 
-            private string Message => _result.Message;
-
-            public override DatabaseRecordProgress DatabaseRecord => _result.DatabaseRecord;
-            public override CountsWithSkippedCountAndLastEtag Documents => _result.Documents;
-            public override CountsWithLastEtag RevisionDocuments => _result.RevisionDocuments;
-            public override CountsWithLastEtag Tombstones => _result.Tombstones;
-            public override CountsWithLastEtag Conflicts => _result.Conflicts;
-            public override Counts Identities => _result.Identities;
-            public override Counts Indexes => _result.Indexes;
-            public override Counts CompareExchange => _result.CompareExchange;
-            public override CountsWithLastEtag Counters => _result.Counters;
+            private string Message { get; set; }
 
             public override DynamicJsonValue ToJson()
             {
                 var json = base.ToJson();
-                json[nameof(Message)] = Message;
+                json[nameof(Message)] = _result?.Message ?? Message;
                 return json;
             }
         }
@@ -141,23 +147,23 @@ namespace Raven.Client.Documents.Smuggler
 
     public abstract class SmugglerProgressBase
     {
-        public virtual DatabaseRecordProgress DatabaseRecord { get; set; }
+        public DatabaseRecordProgress DatabaseRecord { get; set; }
 
-        public virtual CountsWithSkippedCountAndLastEtag Documents { get; set; }
+        public CountsWithSkippedCountAndLastEtag Documents { get; set; }
 
-        public virtual CountsWithLastEtag RevisionDocuments { get; set; }
+        public CountsWithLastEtag RevisionDocuments { get; set; }
 
-        public virtual CountsWithLastEtag Tombstones { get; set; }
+        public CountsWithLastEtag Tombstones { get; set; }
 
-        public virtual CountsWithLastEtag Conflicts { get; set; }
+        public CountsWithLastEtag Conflicts { get; set; }
 
-        public virtual Counts Identities { get; set; }
+        public Counts Identities { get; set; }
 
-        public virtual Counts Indexes { get; set; }
+        public Counts Indexes { get; set; }
 
-        public virtual Counts CompareExchange { get; set; }
+        public Counts CompareExchange { get; set; }
 
-        public virtual CountsWithLastEtag Counters { get; set; }
+        public CountsWithLastEtag Counters { get; set; }
 
         public virtual DynamicJsonValue ToJson()
         {

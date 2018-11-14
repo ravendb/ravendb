@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
@@ -16,7 +17,8 @@ namespace SlowTests.Issues
             {
                 using (var stream = GetDump("RavenDB_9912.1.ravendbdump"))
                 {
-                    await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
+                    var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
                 var stats = store.Maintenance.Send(new GetStatisticsOperation());
@@ -26,7 +28,8 @@ namespace SlowTests.Issues
 
                 using (var stream = GetDump("RavenDB_9912.2.ravendbdump"))
                 {
-                    await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
+                    var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
                 stats = store.Maintenance.Send(new GetStatisticsOperation());

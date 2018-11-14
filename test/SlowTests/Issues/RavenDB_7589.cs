@@ -84,7 +84,8 @@ namespace SlowTests.Issues
                 Assert.Equal(2, identities["companies|"]);
                 Assert.Equal(1, identities["addresses|"]);
 
-                await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile1);
+                var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile1);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
             }
 
             string dbName2;
@@ -92,7 +93,8 @@ namespace SlowTests.Issues
             {
                 dbName2 = store.Database;
 
-                await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile1);
+                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile1);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                 var identities = store.Maintenance.Send(new GetIdentitiesOperation());
 
@@ -115,7 +117,8 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile2);
+                operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile2);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
             }
 
             string dbName3;
@@ -123,8 +126,10 @@ namespace SlowTests.Issues
             {
                 dbName3 = store.Database;
 
-                await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile1);
-                await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile2);
+                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile1);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+                operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile2);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                 var identities = store.Maintenance.Send(new GetIdentitiesOperation());
 

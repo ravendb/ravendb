@@ -16,7 +16,7 @@ namespace SlowTests.Client.Subscriptions
         {
             using (var store1 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = x=> x + "store1"
+                ModifyDatabaseName = x => x + "store1"
             }))
             using (var store2 = GetDocumentStore(new Options
             {
@@ -28,7 +28,9 @@ namespace SlowTests.Client.Subscriptions
                     Name = "Foo"
                 });
 
-                await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(),  store2.Smuggler);
+                var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), store2.Smuggler);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
                 var subscription = store2.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionId)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)

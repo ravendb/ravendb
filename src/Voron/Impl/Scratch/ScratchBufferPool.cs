@@ -478,25 +478,36 @@ namespace Voron.Impl.Scratch
                 {
                     RemoveInactiveScratches(_current);
 
-                    if (_recycleArea.Count == 0)
-                        return;
-
-                    while (_recycleArea.First != null)
-                    {
-                        var recycledScratch = _recycleArea.First.Value;
-
-                        ScratchBufferItem _;
-                        _scratchBuffers.TryRemove(recycledScratch.Number, out _);
-                        recycledScratch.File.Dispose();
-                        _scratchSpaceMonitor.Decrease(recycledScratch.File.NumberOfAllocatedPages * Constants.Storage.PageSize);
-
-                        _recycleArea.RemoveFirst();
-                    }
+                    RemoveInactiveRecycledScratches();
                 }
             }
             catch (TimeoutException)
             {
                 
+            }
+        }
+
+        private void RemoveInactiveRecycledScratches()
+        {
+            if (_recycleArea.Count == 0)
+                return;
+
+            var scratchNode = _recycleArea.First;
+            while (scratchNode != null)
+            {
+                var next = scratchNode.Next;
+
+                var recycledScratch = scratchNode.Value;
+                if (recycledScratch.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction(null)) == false)
+                {
+                    _scratchBuffers.TryRemove(recycledScratch.Number, out _);
+                    recycledScratch.File.Dispose();
+                    _scratchSpaceMonitor.Decrease(recycledScratch.File.NumberOfAllocatedPages * Constants.Storage.PageSize);
+
+                    _recycleArea.Remove(scratchNode);
+                }
+
+                scratchNode = next;
             }
         }
 

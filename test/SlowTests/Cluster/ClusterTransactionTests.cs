@@ -226,7 +226,8 @@ namespace SlowTests.Cluster
                     Assert.Equal(user3.Name, user.Name);
                 }
 
-                await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
             }
 
             using (var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 2 }))
@@ -237,7 +238,8 @@ namespace SlowTests.Cluster
                     await session.SaveChangesAsync();
                     session.Advanced.Evict(user1);
 
-                    await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                     var user = await session.LoadAsync<User>("foo/bar");
                     session.Advanced.Evict(user);
                     Assert.Equal(user3.Name, user.Name);

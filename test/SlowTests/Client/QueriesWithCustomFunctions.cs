@@ -1319,7 +1319,7 @@ from Users as user select output(user)", query.ToString());
                     RavenTestHelper.AssertEqualRespectingNewLines(
                         @"declare function output(u) {
 	var date = new Date(1960, 0, 1);
-	return { Bday : new Date(Date.parse(u.Birthday)), Date : date };
+	return { Bday : u.Birthday, Date : date };
 }
 from Users as u select output(u)", query.ToString());
 
@@ -2531,12 +2531,12 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
 
                     Assert.Equal("from Orders as o where o.OrderedAt.Year <= $p0 " +
                                  "load o.Employee as employee " +
-                                 "select { Id : id(o), Status : \"Ordered at \"+new Date(Date.parse(o.OrderedAt))+\", by \"+employee.FirstName+\" \"+employee.LastName }"
-                                 ,complexLinqQuery.ToString());
+                                 "select { Id : id(o), Status : \"Ordered at \"+o.OrderedAt+\", by \"+employee.FirstName+\" \"+employee.LastName }"
+                                 , complexLinqQuery.ToString());
 
                     var queryResult = complexLinqQuery.ToList();
                     Assert.Equal(1, queryResult.Count);
-                    Assert.Equal("Ordered at Sat Aug 01 1942 00:00:00 GMT+00:00, by Jerry Garcia", queryResult[0].Status);
+                    Assert.Equal("Ordered at 1942-08-01T00:00:00.0000000, by Jerry Garcia", queryResult[0].Status);
 
                 }
             }
@@ -2763,6 +2763,13 @@ from Orders as o load o.Employee as employee select output(o, employee)" , query
 
                 using (var session = store.OpenSession())
                 {
+                    var dt = new DateTime(1942, 8, 1);
+                    var tst = dt.ToString();
+
+                    dt = new DateTime(1234, 5, 6, 7, 8, 9);
+                    tst = dt.ToString();
+
+
                     var query = session.Query<User>()
                                        .Where(x => x.Birthday.ToString().StartsWith("1234"))
                                        .Select(u => new
@@ -2772,13 +2779,13 @@ from Orders as o load o.Employee as employee select output(o, employee)" , query
                                        });
 
                     Assert.Equal("from Users as u where startsWith(u.Birthday, $p0) " +
-                                 "select { Name : u.Name, Birthday : new Date(Date.parse(u.Birthday)).toString() }"
+                                 "select { Name : u.Name, Birthday : u.Birthday.toString() }"
                                 , query.ToString());
 
                     var queryResult = query.ToList();
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Oren", queryResult[0].Name);
-                    Assert.Equal("Sat May 06 1234 07:08:09 GMT+00:00", queryResult[0].Birthday);
+                    Assert.Equal("1234-05-06T07:08:09.0000000", queryResult[0].Birthday);
 
                 }
             }
