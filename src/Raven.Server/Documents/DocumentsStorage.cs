@@ -1142,7 +1142,8 @@ namespace Raven.Server.Documents
                     local.Tombstone.ChangeVector,
                     modifiedTicks,
                     changeVector,
-                    flags).Etag;
+                    flags, 
+                    nonPersistentFlags).Etag;
 
                 EnsureLastEtagIsPersisted(context, etag);
 
@@ -1189,11 +1190,20 @@ namespace Raven.Server.Documents
                 var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr).Strip(DocumentFlags.FromClusterTransaction) | documentFlags;
 
                 long etag;
-                using (TableValueToSlice(context, (int)DocumentsTable.LowerId, ref tvr, out Slice tombstone))
+                using (TableValueToSlice(context, (int)DocumentsTable.LowerId, ref tvr, out Slice tombstoneId))
                 {
-                    var tombstoneEtag = CreateTombstone(context, tombstone, doc.Etag, collectionName, doc.ChangeVector, modifiedTicks, changeVector, flags);
-                    changeVector = tombstoneEtag.ChangeVector;
-                    etag = tombstoneEtag.Etag;
+                    var tombstone = CreateTombstone(
+                        context, 
+                        tombstoneId, 
+                        doc.Etag, 
+                        collectionName, 
+                        doc.ChangeVector, 
+                        modifiedTicks, 
+                        changeVector, 
+                        flags, 
+                        nonPersistentFlags);
+                    changeVector = tombstone.ChangeVector;
+                    etag = tombstone.Etag;
                 }
 
                 EnsureLastEtagIsPersisted(context, etag);
@@ -1252,10 +1262,11 @@ namespace Raven.Server.Documents
                     lowerId,
                     GenerateNextEtagForReplicatedTombstoneMissingDocument(context),
                     collectionName,
-                    changeVector,
-                    DateTime.UtcNow.Ticks,
                     null,
-                    documentFlags).Etag;
+                    DateTime.UtcNow.Ticks,
+                    changeVector,
+                    documentFlags,
+                    nonPersistentFlags).Etag;
 
                 return new DeleteOperationResult
                 {
@@ -1340,23 +1351,20 @@ namespace Raven.Server.Documents
                 etagTree.Add(LastEtagSlice, etagSlice);
         }
 
-        public (long Etag, string ChangeVector) CreateTombstone(
-            DocumentsOperationContext context,
+        public (long Etag, string ChangeVector) CreateTombstone(DocumentsOperationContext context,
             Slice lowerId,
             long documentEtag,
             CollectionName collectionName,
             string docChangeVector,
             long lastModifiedTicks,
             string changeVector,
-            DocumentFlags flags)
+            DocumentFlags flags, 
+            NonPersistentDocumentFlags nonPersistentFlags)
         {
             var newEtag = GenerateNextEtag();
 
-            if (flags.Contain(DocumentFlags.FromReplication))
-            {
-                changeVector = docChangeVector;
-            }
-            else if (string.IsNullOrEmpty(changeVector))
+            if (string.IsNullOrEmpty(changeVector) && 
+                nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
             {
                 changeVector = ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(
                     context,
