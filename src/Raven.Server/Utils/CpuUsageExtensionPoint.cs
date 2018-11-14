@@ -1,17 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
-using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using Raven.Client.Extensions;
 using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Timer = System.Timers.Timer;
 
 namespace Raven.Server.Utils
 {
@@ -26,14 +19,14 @@ namespace Raven.Server.Utils
         private Process _process;
         private bool _didRestart;
 
-        private ExtensionPointRawData _data = new ExtensionPointRawData();
-        public ExtensionPointRawData BadData = new ExtensionPointRawData
+        private ExtensionPointData _data = new ExtensionPointData();
+        public ExtensionPointData BadData = new ExtensionPointData
         {
             ProcessCpuUsage = -1,
             MachineCpuUsage = -1
         };
 
-        public ExtensionPointRawData Data
+        public ExtensionPointData Data
         {
             get
             {
@@ -187,8 +180,8 @@ namespace Raven.Server.Utils
                 {
                     var blittable = context.ReadForMemory(data, "cpuUsageExtensionPointData");
                     
-                    if (TryGetValue(blittable, nameof(ExtensionPointRawData.MachineCpuUsage), out var machineCpuUsage)
-                    && TryGetValue(blittable, nameof(ExtensionPointRawData.ProcessCpuUsage), out var processCpuUsage))
+                    if (TryGetValue(blittable, nameof(ExtensionPointData.MachineCpuUsage), out var machineCpuUsage)
+                    && TryGetValue(blittable, nameof(ExtensionPointData.ProcessCpuUsage), out var processCpuUsage))
                     {
                         _data.MachineCpuUsage = machineCpuUsage;
                         _data.ProcessCpuUsage = processCpuUsage;
@@ -213,7 +206,7 @@ namespace Raven.Server.Utils
             }
             if (cpuUsage < 0 || cpuUsage > 100)
             {
-                HandleError($"{nameof(ExtensionPointRawData.MachineCpuUsage)} should be between 0 to 100 : {Environment.NewLine + blittable}.");
+                HandleError($"{nameof(ExtensionPointData.MachineCpuUsage)} should be between 0 to 100 : {Environment.NewLine + blittable}.");
                 return false;
             }
 
@@ -274,7 +267,7 @@ namespace Raven.Server.Utils
         }
     }
 
-    public class ExtensionPointRawData
+    public class ExtensionPointData
     {
         public double MachineCpuUsage { get; set; }
 
