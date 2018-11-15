@@ -28,7 +28,9 @@ var paths = {
 
     lessSource: [
         './wwwroot/Content/css/styles.less',
-        './wwwroot/Content/css/legacy_styles.less'],
+        './wwwroot/Content/css/styles-light.less',
+        './wwwroot/Content/css/styles-blue.less'
+    ],
     lessSourcesToWatch: [
         './wwwroot/Content/css/**/*.less'
     ],
@@ -37,6 +39,11 @@ var paths = {
 
     releaseTarget: './build/',
     bowerSource: './wwwroot/lib/',
+    themeCss: [
+        'wwwroot/Content/css/styles.css',
+        'wwwroot/Content/css/styles-blue.css',
+        'wwwroot/Content/css/styles-light.css'
+    ],
     cssToMerge: [
         'wwwroot/lib/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.css',
         "wwwroot/lib/bootstrap-duration-picker/dist/bootstrap-duration-picker.css",
@@ -44,9 +51,7 @@ var paths = {
         'wwwroot/lib/bootstrap-multiselect/dist/css/bootstrap-multiselect.css',
         'wwwroot/lib/Durandal/css/durandal.css',
         'wwwroot/lib/animate.css/animate.css',
-        'wwwroot/lib/prism/themes/prism-dark.css',
-        'wwwroot/Content/css/styles-light.css',
-        'wwwroot/Content/css/legacy_styles.css'
+        'wwwroot/lib/prism/themes/prism-dark.css'
     ],
     externalLibs: [
         'es6-shim/es6-shim.js',
