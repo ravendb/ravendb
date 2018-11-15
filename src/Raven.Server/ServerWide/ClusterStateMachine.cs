@@ -1437,33 +1437,33 @@ namespace Raven.Server.ServerWide
         {
             using (var rawDatabaseRecord = ReadRawDatabase(context, name, out _))
             {
-                rawDatabaseRecord.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject topology);
-                using (topology)
-                {
-                    return JsonDeserializationCluster.DatabaseTopology(topology);
-                }
+                if (rawDatabaseRecord.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject topology) == false)
+                    throw new InvalidOperationException($"The database record '{name}' doesn't contain topology.");
+                return JsonDeserializationCluster.DatabaseTopology(topology);
             }
         }
 
         public PullReplicationDefinition ReadPullReplicationDefinition(string database, string definitionName, TransactionOperationContext context)
         {
-            var databaseRecord = ReadRawDatabase(context, database, out _);
-            if (databaseRecord == null)
+            using (var databaseRecord = ReadRawDatabase(context, database, out _))
             {
-                throw new DatabaseDoesNotExistException($"The database '{database}' doesn't exists.");
-            }
+                if (databaseRecord == null)
+                {
+                    throw new DatabaseDoesNotExistException($"The database '{database}' doesn't exists.");
+                }
 
-            if (databaseRecord.TryGet(nameof(DatabaseRecord.PullReplicationDefinition), out BlittableJsonReaderObject pullReplicationDefinitions) == false)
-            {
-                throw new InvalidOperationException($"Pull replication with the name '{definitionName}' isn't defined for the database '{database}'.");
-            }
+                if (databaseRecord.TryGet(nameof(DatabaseRecord.PullReplications), out BlittableJsonReaderObject pullReplicationDefinitions) == false)
+                {
+                    throw new InvalidOperationException($"Pull replication with the name '{definitionName}' isn't defined for the database '{database}'.");
+                }
 
-            if (pullReplicationDefinitions.TryGet(definitionName, out BlittableJsonReaderObject definition) == false)
-            {
-                throw new InvalidOperationException($"Pull replication with the name '{definitionName}' isn't defined for the database '{database}'.");
-            }
+                if (pullReplicationDefinitions.TryGet(definitionName, out BlittableJsonReaderObject definition) == false)
+                {
+                    throw new InvalidOperationException($"Pull replication with the name '{definitionName}' isn't defined for the database '{database}'.");
+                }
 
-            return JsonDeserializationCluster.PullReplicationDefinition(definition);
+                return JsonDeserializationCluster.PullReplicationDefinition(definition);
+            }
         }
 
         public DatabaseTopology ReadDatabaseTopology(BlittableJsonReaderObject rawDatabaseRecord)

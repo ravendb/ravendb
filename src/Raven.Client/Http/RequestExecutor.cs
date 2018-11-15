@@ -224,7 +224,7 @@ namespace Raven.Client.Http
             return executor;
         }
 
-        public static RequestExecutor CreateForFixedTopology(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
+        internal static RequestExecutor CreateForFixedTopology(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
             var urls = ValidateUrls(initialUrls, certificate);
             var nodes = urls.Select(u => new ServerNode

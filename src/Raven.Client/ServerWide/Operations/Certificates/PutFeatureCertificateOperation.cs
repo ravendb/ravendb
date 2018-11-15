@@ -2,13 +2,14 @@
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
 {
-    public class PutFeatureCertificateOperation : IServerOperation
+    public class PutFeatureCertificateOperation : IMaintenanceOperation
     {
         private readonly X509Certificate2 _certificate;
         private readonly string _name;
@@ -43,7 +44,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/certificates/feature";
+                url = $"{node.Url}/databases/{node.Database}/admin/certificates/feature";
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,

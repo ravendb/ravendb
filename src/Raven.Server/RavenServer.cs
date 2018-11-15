@@ -25,6 +25,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
@@ -1589,9 +1590,12 @@ namespace Raven.Server
                         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {
-                            var pullReplicationDefinition = ServerStore.Cluster.ReadPullReplicationDefinition(header.DatabaseName, info.RemoteConnectionInfo, ctx);
-                            if (pullReplicationDefinition.Certificates.Contains(certificate.Thumbprint))
+                            var pullReplicationDefinition = ServerStore.Cluster.ReadPullReplicationDefinition(header.DatabaseName, info.AuthorizationFor, ctx);
+                            if (pullReplicationDefinition.CanAccess(certificate.Thumbprint, out var err))
                                 return true;
+
+                            msg = err;
+                            return false;
                         }
                     }
                     goto default;

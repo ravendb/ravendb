@@ -230,7 +230,7 @@ namespace Raven.Server.Routing
                 case AuthorizationStatus.Operator:
                 case AuthorizationStatus.ValidUser:
                 case AuthorizationStatus.DatabaseAdmin:
-
+                case AuthorizationStatus.RestrictedAccess:
                     switch (authenticationStatus)
                     {
                         case null:
@@ -239,6 +239,12 @@ namespace Raven.Server.Routing
                         case RavenServer.AuthenticationStatus.NotYetValid:
                         case RavenServer.AuthenticationStatus.None:
                         case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
+
+                            // we allow an access to the restricted endpoints with an unfamilier certificate, since we will authorize it at the endpoint level
+                            if (authenticationStatus == RavenServer.AuthenticationStatus.UnfamiliarCertificate &&
+                                route.AuthorizationStatus == AuthorizationStatus.RestrictedAccess)
+                                return true; 
+
                             UnlikelyFailAuthorization(context, database?.Name, feature, route.AuthorizationStatus);
                             return false;
                         case RavenServer.AuthenticationStatus.Allowed:

@@ -63,7 +63,7 @@ namespace Raven.Client.ServerWide
 
         public List<ExternalReplication> ExternalReplications = new List<ExternalReplication>();
 
-        public Dictionary<string, PullReplicationDefinition> PullReplicationDefinition = new Dictionary<string, PullReplicationDefinition>(); 
+        public Dictionary<string, PullReplicationDefinition> PullReplications = new Dictionary<string, PullReplicationDefinition>(); 
 
         public Dictionary<string, RavenConnectionString> RavenConnectionStrings = new Dictionary<string, RavenConnectionString>();
 

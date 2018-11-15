@@ -20,6 +20,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web;
 using Raven.Server.Web.Authentication;
 using Sparrow;
 using Sparrow.Json;
@@ -728,7 +729,7 @@ namespace Raven.Server.Utils.Cli
 
                 try
                 {
-                    AdminCertificatesHandler.PutCertificateCollectionInCluster(Constants.Certificates.Prefix, certDef, certBytes, password, cli._server.ServerStore, ctx).Wait();
+                   RequestHandler.PutCertificateCollectionInCluster(Constants.Certificates.Prefix, certDef, certBytes, password, cli._server.ServerStore, ctx).Wait();
                 }
                 catch (Exception e)
                 {

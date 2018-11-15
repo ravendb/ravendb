@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Operations.Replication
         public string MentorNode;
         public TimeSpan DelayReplicationFor;
 
-        public PullReplicationAsEdgeSettings PullReplicationAsEdgeSettings;
+        public PullReplicationAsEdgeSettings PullReplicationAsEdgeOptions;
 
         [JsonDeserializationIgnore]
         public RavenConnectionString ConnectionString; // this is in memory only
@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Operations.Replication
             json[nameof(MentorNode)] = MentorNode;
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(DelayReplicationFor)] = DelayReplicationFor;
-            json[nameof(PullReplicationAsEdgeSettings)] = PullReplicationAsEdgeSettings?.ToJson();
+            json[nameof(PullReplicationAsEdgeOptions)] = PullReplicationAsEdgeOptions?.ToJson();
             return json;
         }
 
@@ -111,27 +111,25 @@ namespace Raven.Client.Documents.Operations.Replication
 
     public class PullReplicationAsEdgeSettings
     {
-        public bool PullReplicationEnabled = true;
         public string CertificateThumbprint;
-        public string RemoteName;
+        public string PullReplicationDefinition;
 
         public PullReplicationAsEdgeSettings() { }
 
-        public PullReplicationAsEdgeSettings(string remoteName)
+        public PullReplicationAsEdgeSettings(string pullReplicationDefinition)
         {
-            RemoteName = remoteName;
+            PullReplicationDefinition = pullReplicationDefinition;
         }
 
         public DynamicJsonValue ToJson()
         {
-            if (string.IsNullOrEmpty(RemoteName))
-                throw new ArgumentException("Must be not empty", nameof(RemoteName));
+            if (string.IsNullOrEmpty(PullReplicationDefinition))
+                throw new ArgumentException("Must be not empty", nameof(PullReplicationDefinition));
 
             return new DynamicJsonValue
             {
-                [nameof(PullReplicationEnabled)] = PullReplicationEnabled,
                 [nameof(CertificateThumbprint)] = CertificateThumbprint,
-                [nameof(RemoteName)] = RemoteName
+                [nameof(PullReplicationDefinition)] = PullReplicationDefinition
             };
         }
     }

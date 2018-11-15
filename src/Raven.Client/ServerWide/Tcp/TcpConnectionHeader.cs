@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Tcp
 {
@@ -28,14 +29,14 @@ namespace Raven.Client.ServerWide.Tcp
 
             public AuthorizeMethod AuthorizeAs;
 
-            public string RemoteConnectionInfo;
+            public string AuthorizationFor;
 
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue
                 {
                     [nameof(AuthorizeAs)] = AuthorizeAs,
-                    [nameof(RemoteConnectionInfo)] = RemoteConnectionInfo
+                    [nameof(AuthorizationFor)] = AuthorizationFor
                 };
             }
         }
@@ -61,14 +62,14 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int ReplicationBaseLine = 31;
         public static readonly int ReplicationAttachmentMissing = 40_300;
         public static readonly int ReplicationAttachmentMissingVersion41 = 41_300;
-        public static readonly int ReplicationWithPullOption = 42_000;
+        public static readonly int ReplicationWithPullOption = 42_300;
         public static readonly int SubscriptionBaseLine = 40;
         public static readonly int SubscriptionIncludes = 41_400;
         public static readonly int TestConnectionBaseLine = 50;
 
         public static readonly int ClusterTcpVersion = ClusterBaseLine;
         public static readonly int HeartbeatsTcpVersion = Heartbeats41200;
-        public static readonly int ReplicationTcpVersion = ReplicationAttachmentMissingVersion41;
+        public static readonly int ReplicationTcpVersion = ReplicationWithPullOption;
         public static readonly int SubscriptionTcpVersion = SubscriptionIncludes;
         public static readonly int TestConnectionTcpVersion = TestConnectionBaseLine;
 
@@ -208,7 +209,7 @@ namespace Raven.Client.ServerWide.Tcp
                 public bool MissingAttachments;
                 public bool Counters;
                 public bool ClusterTransaction;
-                public bool SupportPullReplication;
+                public bool PullReplication;
             }
         }
 
@@ -301,7 +302,7 @@ namespace Raven.Client.ServerWide.Tcp
                             Counters = true,
                             ClusterTransaction = true,
                             MissingAttachments = true,
-                            SupportPullReplication = true
+                            PullReplication = true
                         }
                     },
                     [ReplicationAttachmentMissingVersion41] = new SupportedFeatures(ReplicationAttachmentMissingVersion41)

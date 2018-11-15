@@ -1,27 +1,26 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Http;
-using Raven.Client.Json.Converters;
-using Raven.Client.ServerWide.Commands;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class GetPullReplicationInfoCommand : RavenCommand<TcpConnectionInfo[]>
+    internal class GetRemoteTaskTopologyCommand : RavenCommand<string[]>
     {
         private readonly string _remoteDatabase;
         private readonly string _databaseGroupId;
-        private readonly string _name;
+        private readonly string _remoteTask;
 
-        public GetPullReplicationInfoCommand(string remoteDatabase, string databaseGroupId, string name)
+        public GetRemoteTaskTopologyCommand(string remoteDatabase, string databaseGroupId, string remoteTask)
         {
-            _remoteDatabase = remoteDatabase;
-            _databaseGroupId = databaseGroupId;
-            _name = name;
+            _remoteDatabase = remoteDatabase ?? throw new ArgumentNullException(nameof(remoteDatabase));
+            _databaseGroupId = databaseGroupId ?? throw new ArgumentNullException(nameof(databaseGroupId));
+            _remoteTask = remoteTask ?? throw new ArgumentNullException(nameof(remoteTask));
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/info/tcp/pull?databaseName={_remoteDatabase}&definitionName={_name}&databaseGroupId={_databaseGroupId}";
+            url = $"{node.Url}/info/remote-task/topology?database={_remoteDatabase}&remote-task={_remoteTask}&groupId={_databaseGroupId}";
 
             RequestedNode = node;
             var request = new HttpRequestMessage
@@ -34,16 +33,13 @@ namespace Raven.Client.Documents.Commands
         public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
         {
             BlittableJsonReaderArray array = null;
-            if (response == null || response.TryGet("Results", out array) == false)
-                ThrowInvalidResponse();
-            if (array == null)
+            if (response == null || response.TryGet("Results", out array) == false || array == null)
                 ThrowInvalidResponse();
 
-            Result = new TcpConnectionInfo[array.Length];
+            Result = new string[array.Length];
             for (var index = 0; index < array.Length; index++)
             {
-                var item = (BlittableJsonReaderObject)array[index];
-                Result[index] = JsonDeserializationClient.TcpConnectionInfo(item);
+                Result[index] = array[index].ToString();
             }
         }
 

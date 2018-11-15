@@ -7,7 +7,7 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class UpdatePullReplicationCommand : UpdateDatabaseCommand
     {
-        public PullReplicationDefinition PullReplicationDefinition;
+        public PullReplicationDefinition Definition;
 
         public UpdatePullReplicationCommand():base(null) { }
 
@@ -17,14 +17,14 @@ namespace Raven.Server.ServerWide.Commands
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            PullReplicationDefinition.TaskId = etag;
-            record.PullReplicationDefinition[PullReplicationDefinition.Name] = PullReplicationDefinition;
+            Definition.TaskId = etag;
+            record.PullReplications[Definition.Name] = Definition;
             return null;
         }
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(PullReplicationDefinition)] = PullReplicationDefinition.ToJson();
+            json[nameof(Definition)] = Definition.ToJson();
         }
     }
 }

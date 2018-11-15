@@ -77,14 +77,13 @@ namespace Raven.Server.Documents.Replication
 
         private readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
         private OutgoingReplicationStatsAggregator _lastStats;
-        private readonly TcpConnectionInfo[] _connectionInfo;
-        private TcpConnectionInfo _currentConnectionInfo;
+        private readonly TcpConnectionInfo _connectionInfo;
 
         // In case this is an outgoing pull replication from the central
         // we need to associate this instance to the replication definition. 
         public string PullReplicationDefinitionName;
 
-        public OutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, bool external, TcpConnectionInfo[] connectionInfo)
+        public OutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, bool external, TcpConnectionInfo connectionInfo)
         {
             _parent = parent;
             _database = database;
@@ -169,35 +168,11 @@ namespace Raven.Server.Documents.Replication
                         $"{record.DatabaseName} is encrypted, and require HTTPS for replication, but had endpoint with url {Destination.Url} to database {Destination.Database}");
             }
 
-            Task<TcpClient> task = null;
-            var connected = false;
-            foreach (var tcpConnectionInfo in _connectionInfo)
-            {
-                try
-                {
-                    task = TcpUtils.ConnectSocketAsync(tcpConnectionInfo, _parent._server.Engine.TcpConnectionTimeout, _log);
-                    task.Wait(CancellationToken);
-                    _currentConnectionInfo = tcpConnectionInfo;
-                    connected = true;
-                    break;
-                }
-                catch (Exception e)
-                {
-                    if (_log.IsInfoEnabled)
-                    {
-                        _log.Info($"Failed to create TCP connection to {tcpConnectionInfo.Url}:{tcpConnectionInfo.Port}", e);
-                    }
-                }
-            }
-
-            if (connected == false)
-            {
-                throw new InvalidOperationException("Failed to connect to any of the supplied TCP connections.");
-            }
-
+            var task = TcpUtils.ConnectSocketAsync(_connectionInfo, _parent._server.Engine.TcpConnectionTimeout, _log);
+            task.Wait(CancellationToken);
             using (Interlocked.Exchange(ref _tcpClient, task.Result))
             {
-                var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _currentConnectionInfo, certificate, _parent._server.Engine.TcpConnectionTimeout);
+                var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, certificate, _parent._server.Engine.TcpConnectionTimeout);
                 wrapSsl.Wait(CancellationToken);
 
                 _stream = wrapSsl.Result;
@@ -206,7 +181,7 @@ namespace Raven.Server.Documents.Replication
                 using (_buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
                 {
                     var supportedFeatures = NegotiateReplicationVersion(authorizationInfo);
-                    if (supportedFeatures.Replication.SupportPullReplication)
+                    if (supportedFeatures.Replication.PullReplication)
                     {
                         var isPullReplication = SendPreliminaryData();
                         if (isPullReplication)
@@ -218,7 +193,7 @@ namespace Raven.Server.Documents.Replication
 
                     AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
                     if (_log.IsInfoEnabled)
-                        _log.Info($"Will replicate to {Destination.FromString()} via {_currentConnectionInfo.Url}");
+                        _log.Info($"Will replicate to {Destination.FromString()} via {_connectionInfo.Url}");
 
                     using (_stream) // note that _stream is being disposed by the interruptible read
                     using (_interruptibleRead)
@@ -233,13 +208,11 @@ namespace Raven.Server.Documents.Replication
         private bool SendPreliminaryData()
         {
             var destination = Destination as ExternalReplication;
-            var isPullReplication = destination?.PullReplicationAsEdgeSettings != null &&
-                                    destination.PullReplicationAsEdgeSettings.PullReplicationEnabled;
+            var isPullReplication = destination?.PullReplicationAsEdgeOptions != null;
 
             var request = new DynamicJsonValue
             {
                 ["Type"] = nameof(ReplicationInitialRequest),
-                [nameof(ReplicationInitialRequest.PullReplication)] = isPullReplication
             };
 
             if (isPullReplication)
@@ -247,7 +220,7 @@ namespace Raven.Server.Documents.Replication
                 request[nameof(ReplicationInitialRequest.Database)] = _parent.Database.Name; // my database
                 request[nameof(ReplicationInitialRequest.DatabaseGroupId)] = _parent.Database.DatabaseGroupId; // my database id
                 request[nameof(ReplicationInitialRequest.Info)] = _parent._server.GetTcpInfoAndCertificates(null); // my connection info
-                request[nameof(ReplicationInitialRequest.PullReplicationDefinition)] = destination.PullReplicationAsEdgeSettings.RemoteName;
+                request[nameof(ReplicationInitialRequest.PullReplicationDefinitionName)] = destination.PullReplicationAsEdgeOptions.PullReplicationDefinition;
             }
 
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))

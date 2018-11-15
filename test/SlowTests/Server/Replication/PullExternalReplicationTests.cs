@@ -98,7 +98,6 @@ namespace SlowTests.Server.Replication
             Assert.True(pullReplicationCertificate.HasPrivateKey);
 
             await PutCertificateInCentral(pullReplicationName, centralServer, centralAdminCert, centralDB, pullReplicationCertificate);
-            await PutCertificateInEdge(edgeAdminCert, edgeServer, pullReplicationCertificate);
 
             using (var centralStore = GetDocumentStore(new Options
             {
@@ -114,6 +113,8 @@ namespace SlowTests.Server.Replication
                 ModifyDatabaseName = _ => edgeDB
             }))
             {
+                await edgeStore.Maintenance.SendAsync(new PutFeatureCertificateOperation("PullReplicationCertificate", pullReplicationCertificate));
+
                 await SetupPullReplicationAsync(pullReplicationName, edgeStore, pullReplicationCertificate.Thumbprint, centralStore);
                 using (var centralSession = centralStore.OpenSession())
                 {
@@ -123,26 +124,6 @@ namespace SlowTests.Server.Replication
 
                 var timeout = 3000;
                 Assert.True(WaitForDocument(edgeStore, "foo/bar", timeout), edgeStore.Identifier);
-            }
-        }
-
-        private async Task PutCertificateInEdge(X509Certificate2 edgeAdminCert, RavenServer edgeServer, X509Certificate2 pullReplicationCertificate)
-        {
-            using (var store = GetDocumentStore(new Options
-            {
-                ClientCertificate = edgeAdminCert,
-                Server = edgeServer,
-                CreateDatabase = false
-            }))
-            {
-                var requestExecutor = store.GetRequestExecutor();
-                using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                {
-                    var command = new PutFeatureCertificateOperation("PullReplicationCertificate", pullReplicationCertificate)
-                        .GetCommand(store.Conventions, context);
-
-                    await requestExecutor.ExecuteAsync(command, context);
-                }
             }
         }
 
@@ -158,7 +139,7 @@ namespace SlowTests.Server.Replication
             {
                 await store.Maintenance.ForDatabase(store.Database).SendAsync(new UpdatePullReplicationDefinitionOperation(new PullReplicationDefinition(pullReplicationName)
                 {
-                    Certificates = new List<string>(new[] { certificate.Thumbprint })
+                    Certificates = new List<string>(new[] { Convert.ToBase64String(certificate.Export(X509ContentType.Cert)) })
                 }));
             }
         }
@@ -203,7 +184,7 @@ namespace SlowTests.Server.Replication
                 // add pull replication with invalid discovery url to test the failover on database topology discovery
                 var pullReplication = new ExternalReplication(centralDB, $"ConnectionString-{centralDB}")
                 {
-                    PullReplicationAsEdgeSettings = new PullReplicationAsEdgeSettings(name),
+                    PullReplicationAsEdgeOptions = new PullReplicationAsEdgeSettings(name),
                     MentorNode = "B", // this is the node were the data will be replicated to.
                 };
                 var urls = new List<string>();
@@ -298,7 +279,7 @@ namespace SlowTests.Server.Replication
                 // add pull replication with invalid discovery url to test the failover on database topology discovery
                 var pullReplication = new ExternalReplication(centralDB, $"ConnectionString-{centralDB}")
                 {
-                    PullReplicationAsEdgeSettings = new PullReplicationAsEdgeSettings(name),
+                    PullReplicationAsEdgeOptions = new PullReplicationAsEdgeSettings(name),
                     MentorNode = "B", // this is the node were the data will be replicated to.
                 };
                 await AddWatcherToReplicationTopology((DocumentStore)minionStore, pullReplication, new[] { "http://127.0.0.1:1234", central.WebUrl });
@@ -355,7 +336,7 @@ namespace SlowTests.Server.Replication
             {
                 var databaseWatcher = new ExternalReplication(store.Database,$"ConnectionString-{store.Database}")
                 {
-                    PullReplicationAsEdgeSettings = new PullReplicationAsEdgeSettings(remoteName)
+                    PullReplicationAsEdgeOptions = new PullReplicationAsEdgeSettings(remoteName)
                     {
                         CertificateThumbprint = thumbprint
                     },
