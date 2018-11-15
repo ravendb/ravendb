@@ -3,13 +3,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
-using Lucene.Net.Index;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Logging;
 using Voron;
 
@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         resultsCount += numberOfResults;
                                         collectionStats.RecordMapSuccess();
                                     }
-                                    catch (Exception e)
+                                    catch (Exception e) when (e.IsOutOfMemory() == false)
                                     {
                                         docsEnumerator.OnError();
                                         _index.ErrorIndexIfCriticalException(e);
