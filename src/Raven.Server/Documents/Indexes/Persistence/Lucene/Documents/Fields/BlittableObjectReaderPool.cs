@@ -18,14 +18,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 
         static BlittableObjectReaderPool()
         {
-            PoolSize = 128;
-            LowMemoryCapacityThreshold = new Size(128, SizeUnit.Kilobytes);
-
             if (PlatformDetails.Is32Bits)
-                return;
-
-            PoolSize = 512;
-            LowMemoryCapacityThreshold = new Size(256, SizeUnit.Kilobytes);
+            {
+                PoolSize = 128;
+                LowMemoryCapacityThreshold = new Size(128, SizeUnit.Kilobytes);
+            }
+            else
+            {
+                PoolSize = 512;
+                LowMemoryCapacityThreshold = new Size(256, SizeUnit.Kilobytes);
+            }
 
             Instance = new BlittableObjectReaderPool();
         }
