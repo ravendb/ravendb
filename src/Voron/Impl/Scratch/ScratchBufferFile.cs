@@ -232,6 +232,13 @@ namespace Voron.Impl.Scratch
 
             if (asOfTxId == -1)
             {
+                // PERF: Because of the type algorithm used to reclaim, pages bigger than 128 pages have 0 probability to be reused.
+                //       Therefore, we will just drop them and instruct the Virtual Memory Manager to just dont care about them. 
+                if (value.NumberOfPages > 128)
+                {
+                    _scratchPager.DiscardPages(value.PositionInScratchBuffer, value.NumberOfPages);                    
+                }
+
                 // We are freeing without the pages being 'visible' to any party (for ex. rollbacks)
                 if (_freePagesBySizeAvailableImmediately.TryGetValue(value.Size, out LinkedList<long> list) == false)
                 {
@@ -242,7 +249,7 @@ namespace Voron.Impl.Scratch
             }
             else
             {
-                // We are freeing with the pages being 'visible' to any party (for ex. rollbacks)
+                // We are freeing with the pages being 'visible' to any party (for ex. commits)
                 if (_freePagesBySize.TryGetValue(value.Size, out LinkedList<PendingPage> list) == false)
                 {
                     list = new LinkedList<PendingPage>();
