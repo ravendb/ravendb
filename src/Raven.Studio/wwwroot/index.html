@@ -24,7 +24,17 @@
             <link rel="stylesheet" href="lib/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.css" />
             <link rel="stylesheet" href="lib/bootstrap-duration-picker/dist/bootstrap-duration-picker.css" />
         <!-- /build -->
-        <link rel="stylesheet" href="Content/css/styles.css" />
+        
+        <script type="text/javascript">
+            var link = document.createElement("link");
+            link.rel = "stylesheet";
+            link.href = "Content/css/styles-light.css";
+            
+            //TODO: read from local storage!
+            
+            var head = document.getElementsByTagName("head")[0];
+            head.appendChild(link);
+        </script>
 
         <script type="text/javascript">
             if (navigator.userAgent.match(/IEMobile\/10\.0/)) {
