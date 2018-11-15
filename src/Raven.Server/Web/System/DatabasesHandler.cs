@@ -369,6 +369,7 @@ namespace Raven.Server.Web.System
                     BackupInfo = GetBackupInfo(db),
 
                     Alerts = db?.NotificationCenter.GetAlertCount() ?? 0,
+                    PerformanceHints = db?.NotificationCenter.GetPerformanceHintCount() ?? 0,
                     RejectClients = false,
                     LoadError = null,
                     IndexingErrors = db?.IndexStore?.GetIndexes()?.Sum(index => index.GetErrorCount()) ?? 0,

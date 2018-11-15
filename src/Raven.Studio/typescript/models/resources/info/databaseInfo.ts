@@ -31,6 +31,7 @@ class databaseInfo {
 
     indexingErrors = ko.observable<number>();
     alerts = ko.observable<number>();
+    performanceHints = ko.observable<number>();
 
     environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
     
@@ -171,6 +172,7 @@ class databaseInfo {
         this.totalTempBuffersSize(dto.TempBuffersSize ? dto.TempBuffersSize.SizeInBytes : 0);
         this.indexingErrors(dto.IndexingErrors);
         this.alerts(dto.Alerts);
+        this.performanceHints(dto.PerformanceHints);
         this.loadError(dto.LoadError);
         this.uptime(generalUtils.timeSpanAsAgo(dto.UpTime, false));
         this.dynamicDatabaseDistribution(dto.DynamicNodesDistribution);
