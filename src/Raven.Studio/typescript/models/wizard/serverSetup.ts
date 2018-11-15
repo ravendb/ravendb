@@ -120,7 +120,7 @@ class serverSetup {
             Port: setup.port() ? parseInt(setup.port(), 10) : 8080,
             Addresses: [setup.ip().ip()],
             LocalNodeTag: setup.bootstrapCluster() ? setup.localNodeTag() : null,
-            Environment: this.environment(),
+            Environment: setup.bootstrapCluster() ? this.environment() : null,
             TcpPort: setup.tcpPort() ? parseInt(setup.tcpPort(), 10) : 38888
         }
     }
