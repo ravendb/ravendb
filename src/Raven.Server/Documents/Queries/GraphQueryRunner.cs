@@ -40,6 +40,12 @@ namespace Raven.Server.Documents.Queries
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag,
             OperationCancelToken token)
         {
+            var res = new DocumentQueryResult();
+            return await ExecuteQuery(res, query, documentsContext, existingResultEtag, token);
+        }
+
+        private async Task<TResult> ExecuteQuery<TResult>(TResult final,IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token) where TResult : QueryResultServerSide
+        {
             using (var timingScope = new QueryTimingsScope())
             {
                 var qr = await GetQueryResults(query, documentsContext, existingResultEtag, token);
@@ -47,7 +53,6 @@ namespace Raven.Server.Documents.Queries
 
                 //TODO: handle order by, load, include clauses
 
-                var final = new DocumentQueryResult();
 
                 if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
                 {
@@ -64,7 +69,6 @@ namespace Raven.Server.Documents.Queries
                         Database.DocumentsStorage,
                         documentsContext,
                         fieldsToFetch, null);
-
 
 
                     foreach (var match in qr.Matches)
@@ -111,9 +115,9 @@ namespace Raven.Server.Documents.Queries
             return (matchResults, qp);
         }
 
-        private static void HandleResultsWithoutSelect(
+        private static void HandleResultsWithoutSelect<TResult>(
             DocumentsOperationContext documentsContext,
-            List<Match> matchResults, DocumentQueryResult final)
+            List<Match> matchResults, TResult final) where TResult : QueryResultServerSide
         {
             foreach (var match in matchResults)
             {
@@ -138,9 +142,11 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer, OperationCancelToken token)
+        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer, OperationCancelToken token)
         {
-            throw new NotImplementedException("Streaming graph queries is not supported at this time");
+            var result = new StreamDocumentQueryResult(response, writer, token);
+            result =  await ExecuteQuery(result, query, documentsContext, null, token);
+            result.Flush();
         }
 
         public override Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
