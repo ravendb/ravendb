@@ -9,7 +9,7 @@ import composition = require("durandal/composition");
 class aceEditorBindingHandler {
 
     defaults = {
-        theme: "ace/theme/pastel_dark_raven",
+        theme: "ace/theme/raven",
         fontSize: "16px",
         lang: "ace/mode/csharp",
         readOnly: false,

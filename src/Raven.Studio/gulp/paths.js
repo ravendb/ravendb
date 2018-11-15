@@ -50,8 +50,7 @@ var paths = {
         'wwwroot/lib/bootstrap-select/dist/css/bootstrap-select.css',
         'wwwroot/lib/bootstrap-multiselect/dist/css/bootstrap-multiselect.css',
         'wwwroot/lib/Durandal/css/durandal.css',
-        'wwwroot/lib/animate.css/animate.css',
-        'wwwroot/lib/prism/themes/prism-dark.css'
+        'wwwroot/lib/animate.css/animate.css'
     ],
     externalLibs: [
         'es6-shim/es6-shim.js',

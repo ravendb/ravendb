@@ -31,8 +31,8 @@
 define(function(require, exports, module) {
 
 exports.isDark = true;
-exports.cssClass = "ace-pastel-dark-raven";
-exports.cssText = require("../requirejs/text!./pastel_dark_raven.css");
+exports.cssClass = "ace-raven";
+exports.cssText = require("../requirejs/text!./raven.css");
 
 var dom = require("../lib/dom");
 dom.importCssString(exports.cssText, exports.cssClass);
