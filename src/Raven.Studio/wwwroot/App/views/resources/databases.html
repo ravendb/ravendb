@@ -316,6 +316,15 @@
             </div>
         </div>
     </div>
+    <div class="properties-item" data-bind="visible: performanceHints()">
+        <div class="properties-value value-only">
+            <div class="set-size text-info" title="Performance Hints" data-bind="css: { 'link-disabled': !canNavigateToDatabase() }">
+                <i class="icon-rocket"></i>
+                <span data-bind="text: performanceHints().toLocaleString()"></span>
+                <span class="hidden-compact" data-bind="text: $root.pluralize(performanceHints().toLocaleString(), 'performance hint', 'performance hints', true)"></span>
+            </div>
+        </div>
+    </div>
     <div class="properties-item" data-bind="visible: rejectClients()">
         <div class="properties-value value-only">
             <div class="set-size text-warning" title="Clients rejection mode">
