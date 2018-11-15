@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -10,6 +11,93 @@ namespace SlowTests.Server.Replication
 {
     public class ReplicationTombstoneTests : ReplicationTestBase
     {
+        [Fact]
+        public async Task DontReplicateTombstoneBack()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                string changeVector1;
+                var documentDatabase = await GetDocumentDatabaseInstanceFor(store1);
+
+                using (var session = store1.OpenSession())
+                {
+                    var user = new User
+                    {
+                        Name = "John Dow",
+                        Age = 30
+                    };
+                    session.Store(user, "users/1");
+                    session.SaveChanges();
+                    session.Delete(user);
+                    session.SaveChanges();
+
+                    using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        changeVector1 = documentDatabase.DocumentsStorage.GetDocumentOrTombstone(context, "users/1").Tombstone.ChangeVector;
+                    }
+                }
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+
+                Assert.True(WaitForDocumentDeletion(store2, "users/1"));
+                await Task.Delay((int)(documentDatabase.ReplicationLoader.MinimalHeartbeatInterval * 2.5));
+
+                using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var changeVector2 = documentDatabase.DocumentsStorage.GetDocumentOrTombstone(context, "users/1").Tombstone.ChangeVector;
+                    Assert.Equal(changeVector1, changeVector2);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task RavenDB_12295()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                using (var session = store1.OpenSession())
+                {
+                    var user = new User
+                    {
+                        Name = "John Dow",
+                        Age = 30
+                    };
+                    session.Store(user, "users/1");
+                    session.SaveChanges();
+
+                    session.Delete(user);
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+
+                using (var session = store1.OpenSession())
+                {
+                    session.Advanced.UseOptimisticConcurrency = true;
+
+                    var user = new User
+                    {
+                        Name = "John Dow",
+                        Age = 30
+                    };
+                    session.Store(user, "users/1");
+                    session.SaveChanges();
+
+                    await Task.Delay(2500);
+
+                    var changeVector = session.Advanced.GetChangeVectorFor(user);
+
+                    session.Delete(user.Id, changeVector);
+                    session.SaveChanges();
+                }
+            }
+        }
+
         [Fact]
         public async Task Tombstones_replication_should_delete_document_at_multiple_destinations_fan()
         {

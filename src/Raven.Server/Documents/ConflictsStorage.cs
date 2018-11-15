@@ -783,7 +783,8 @@ namespace Raven.Server.Documents
                     context.GetLazyString(mergedChangeVector),
                     latestConflict.LastModified.Ticks,
                     changeVector,
-                    latestConflict.Flags).Etag;
+                    latestConflict.Flags, 
+                    NonPersistentDocumentFlags.None).Etag;
             }
 
             return collectionName;
