@@ -51,7 +51,6 @@ gulp.task('z_parse-configuration', function() {
 
 gulp.task('less', function() {
     return gulp.src(PATHS.lessSource, { base: './wwwroot/Content/' })
-         // .pipe(plugins.newy(findNewestFile(PATHS.lessTargetSelector)))
         .pipe(plugins.sourcemaps.init())
         .pipe(plugins.less({ sourceMap: true }))
         .pipe(autoPrefixer())
@@ -157,10 +156,17 @@ gulp.task('z_release:html', function() {
         .pipe(gulp.dest(PATHS.releaseTarget));
 });
 
-gulp.task('z_release:css', function () {
+gulp.task('z_release:css-common', function () {
     checkAllFilesExist(PATHS.cssToMerge);
     return gulp.src(PATHS.cssToMerge)
-        .pipe(plugins.concatCss('styles.css', { rebaseUrls: false }))
+        .pipe(plugins.concatCss('styles-common.css', { rebaseUrls: false }))
+        .pipe(plugins.cssnano())
+        .pipe(gulp.dest(PATHS.releaseTargetContentCss));
+});
+
+gulp.task('z_release:theme-css', function () {
+    checkAllFilesExist(PATHS.themeCss);
+    return gulp.src(PATHS.themeCss)
         .pipe(plugins.cssnano())
         .pipe(gulp.dest(PATHS.releaseTargetContentCss));
 });
@@ -302,7 +308,8 @@ gulp.task('release', function (cb) {
             'z_release:ace-workers',
             'z_release:images',
             'z_release:html',
-            'z_release:css',
+            'z_release:css-common',
+            'z_release:theme-css',
             'z_release:fonts',
             'z_release:durandal'
         ],
