@@ -187,7 +187,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 stats.RecordReduceSuccesses(numberOfEntriesToReduce);
             }
-            catch (Exception e) when (e is OperationCanceledException == false)
+            catch (Exception e) when (e.IsOperationCanceled() == false && e.IsOutOfMemory() == false)
             {
                 _index.ErrorIndexIfCriticalException(e);
 
@@ -298,7 +298,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             stats.RecordReduceSuccesses(leafPage.NumberOfEntries);
                         }
                     }
-                    catch (Exception e) when (e is OperationCanceledException == false)
+                    catch (Exception e) when (e.IsOperationCanceled() == false && e.IsOutOfMemory() == false)
                     {
                         if (failedAggregatedLeafs == null)
                             failedAggregatedLeafs = new Dictionary<long, Exception>();
@@ -367,7 +367,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             stats.RecordReduceSuccesses(page.NumberOfEntries);
                         }
                     }
-                    catch (Exception e) when (e is OperationCanceledException == false)
+                    catch (Exception e) when (e.IsOperationCanceled() == false && e.IsOutOfMemory() == false)
                     {
                         _index.ErrorIndexIfCriticalException(e);
 

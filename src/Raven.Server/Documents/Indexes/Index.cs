@@ -989,6 +989,10 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     HandleOutOfMemoryException(oome, scope);
                                 }
+                                catch (EarlyOutOfMemoryException eoome)
+                                {
+                                    HandleOutOfMemoryException(eoome, scope);
+                                }
                                 catch (VoronUnrecoverableErrorException ide)
                                 {
                                     HandleIndexCorruption(scope, ide);
@@ -1319,7 +1323,7 @@ namespace Raven.Server.Documents.Indexes
             SetState(IndexState.Error);
         }
 
-        private void HandleOutOfMemoryException(OutOfMemoryException oome, IndexingStatsScope scope)
+        private void HandleOutOfMemoryException(Exception oome, IndexingStatsScope scope)
         {
             try
             {
@@ -1357,7 +1361,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private static string OutOfMemoryDetails(OutOfMemoryException oome)
+        private static string OutOfMemoryDetails(Exception oome)
         {
             var memoryInfo = MemoryInformation.GetMemInfoUsingOneTimeSmapsReader();
 
