@@ -43,6 +43,17 @@ class migrateRavenDbDatabase extends viewModelBase {
         this.model.skipServerCertificateValidation.subscribe(() => debouncedDetection(false));
     }
 
+    attached() {
+        super.attached();
+        
+        popoverUtils.longWithHover($("#configurationPopover"),
+            {
+                content:
+                    "<div>The following configuration settings will be exported:</div>" +
+                    "<strong>Revisions, Expiration & Client Configuration</strong>"
+            });
+    }
+    
     activate(args: any) {
         super.activate(args);
 

@@ -131,7 +131,7 @@ class exportDatabase extends viewModelBase {
         });
 
         this.model.revisionsAreConfigured = ko.pureComputed(() => {
-            return this.activeDatabase().hasRevisionsConfiguration();
+            return this.activeDatabase() && this.activeDatabase().hasRevisionsConfiguration();
         });
     }
 

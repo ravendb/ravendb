@@ -40,7 +40,7 @@ namespace SlowTests.Server.Documents.ETL.SQL
             if (TryConnect(cString))
                 return cString;
 
-            cString = @"Data Source=ci1\sqlexpress;Integrated Security=SSPI;Connection Timeout=3";
+            cString = @"Data Source=ci1\sqlexpress;Integrated Security=SSPI;Connection Timeout=15";
 
             if (TryConnect(cString))
                 return cString;

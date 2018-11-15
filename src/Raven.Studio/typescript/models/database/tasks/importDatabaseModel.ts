@@ -10,6 +10,7 @@ class importDatabaseModel {
     includeCounters = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
     includeLegacyAttachments = ko.observable(false);
+    includeAttachments = ko.observable(true);
 
     includeExpiredDocuments = ko.observable(true);
     removeAnalyzers = ko.observable(false);
@@ -21,8 +22,28 @@ class importDatabaseModel {
     
     constructor() {
         this.initValidation();
-    }
 
+        this.includeDocuments.subscribe(documents => {
+            if (!documents) {
+                this.includeCounters(false);
+                this.includeAttachments(false);
+                this.includeLegacyAttachments(false);
+            }
+        });
+        
+        this.removeAnalyzers.subscribe(analyzers => {
+            if (analyzers) {
+                this.includeIndexes(true);
+            }
+        });
+        
+        this.includeIndexes.subscribe(indexes => {
+            if (!indexes) {
+                this.removeAnalyzers(false);
+            }
+        });
+    }
+    
     toDto(): Raven.Client.Documents.Smuggler.DatabaseSmugglerImportOptions {
         const operateOnTypes: Array<Raven.Client.Documents.Smuggler.DatabaseItemType> = [];
         if (this.includeDatabaseRecord()) {
@@ -49,6 +70,9 @@ class importDatabaseModel {
         if (this.includeCounters()) {
             operateOnTypes.push("Counters");
         }
+        if (this.includeAttachments()) {
+            operateOnTypes.push("Attachments");
+        }
         if (this.includeLegacyAttachments()) {
             operateOnTypes.push("LegacyAttachments");
         }
@@ -63,8 +87,16 @@ class importDatabaseModel {
 
     private initValidation() {
         this.importDefinitionHasIncludes = ko.pureComputed(() => {
-            return this.includeDatabaseRecord() || this.includeDocuments() || this.includeRevisionDocuments() || this.includeConflicts() ||
-                this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange() || this.includeLegacyAttachments() || this.includeCounters();
+            return this.includeDatabaseRecord() 
+                || this.includeConflicts() 
+                || this.includeIndexes() 
+                || this.includeIdentities() 
+                || this.includeCompareExchange() 
+                || this.includeLegacyAttachments() 
+                || this.includeCounters() 
+                || this.includeRevisionDocuments() 
+                || this.includeDocuments()
+                || this.includeAttachments();
         });
 
         this.transformScript.extend({

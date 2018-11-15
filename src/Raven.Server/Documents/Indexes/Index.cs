@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
-        private StorageEnvironment _environment;
+        internal StorageEnvironment _environment;
 
         internal TransactionContextPool _contextPool;
 
@@ -407,6 +407,8 @@ namespace Raven.Server.Documents.Indexes
                     throw new InvalidOperationException($"Index '{Name}' was already initialized.");
 
                 var options = CreateStorageEnvironmentOptions(documentDatabase, configuration);
+
+                DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, documentDatabase.Configuration.Storage, documentDatabase.Name, DirectoryExecUtils.EnvironmentType.Index, _logger);
 
                 StorageEnvironment storageEnvironment = null;
                 try
