@@ -21,22 +21,48 @@
             <br />
             <div data-bind="with: model">
                 <div class="row">
-                    <div class="col-xs-12 col-sm-5 col-lg-3">
+                    <div class="col-lg-3">
                         <div class="toggle">
                             <input id="importDocuments" type="checkbox" data-bind="checked: includeDocuments">
                             <label for="importDocuments">Include Documents</label>
                         </div>
-                        <div class="toggle">
-                            <input id="importExpiredDocuments" type="checkbox" data-bind="checked: includeExpiredDocuments">
-                            <label for="importExpiredDocuments">Include Expired Documents</label>
+                        <div class="margin-left margin-left-lg">
+                            <div class="toggle">
+                                <input id="importAttachments" type="checkbox" 
+                                       data-bind="checked: includeAttachments"/>
+                                <label for="importAttachments">Include Attachments</label>
+                            </div>
+                            <div class="toggle">
+                                <input id="importLegacyAttachments" type="checkbox"
+                                       data-bind="checked: includeLegacyAttachments">
+                                <label for="importLegacyAttachments">Include Legacy Attachments</label>
+                            </div>
+                            <div class="toggle">
+                                <input id="importCounters" type="checkbox" 
+                                       data-bind="checked: includeCounters">
+                                <label for="importCounters">Include Counters</label>
+                            </div>
+                            <div class="toggle">
+                                <input id="importRevisions" type="checkbox" data-bind="checked: includeRevisionDocuments"/>
+                                <label for="importRevisions">Include Revisions</label>
+                            </div>
+                            <div class="toggle">
+                                <input id="importConflicts" type="checkbox" data-bind="checked: includeConflicts">
+                                <label for="importConflicts">Include Conflicts</label>
+                            </div>
+                           
                         </div>
-                        <div class="toggle" data-toggle="tooltip" data-placement="top">
-                            <input id="importRevisions" type="checkbox" data-bind="checked: includeRevisionDocuments"/>
-                            <label for="importRevisions">Include Revisions</label>
-                        </div>
+                    </div>
+                    <div class="col-lg-3">
                         <div class="toggle">
                             <input id="importIndexes" type="checkbox" data-bind="checked: includeIndexes">
                             <label for="importIndexes">Include Indexes</label>
+                        </div>
+                        <div class="margin-left margin-left-lg">
+                            <div class="toggle">
+                                <input id="importAnalyzers" type="checkbox" data-bind="checked: removeAnalyzers">
+                                <label for="importAnalyzers">Remove Analyzers</label>
+                            </div>
                         </div>
                         <div class="toggle">
                             <input id="importIdentities" type="checkbox" data-bind="checked: includeIdentities">
@@ -47,27 +73,9 @@
                             <label for="importConfiguration">Include Configuration</label>
                             <small id="configurationPopover"><i class="icon-info text-info"></i></small>
                         </div>
-                    </div>
-                    <div class="col-xs-12 col-sm-5 col-lg-4">
-                        <div class="toggle">
-                            <input id="importCounters" type="checkbox" data-bind="checked: includeCounters">
-                            <label for="importCounters">Include Counters</label>
-                        </div>
                         <div class="toggle">
                             <input id="importCmpXch" type="checkbox" data-bind="checked: includeCompareExchange">
                             <label for="importCmpXch">Include Compare Exchange</label>
-                        </div>
-                        <div class="toggle">
-                            <input id="importConflicts" type="checkbox" data-bind="checked: includeConflicts">
-                            <label for="importConflicts">Include Conflicts</label>
-                        </div>
-                        <div class="toggle">
-                            <input id="importAnalyzers" type="checkbox" data-bind="checked: removeAnalyzers">
-                            <label for="importAnalyzers">Remove Analyzers</label>
-                        </div>
-                        <div class="toggle">
-                            <input id="importLegacyAttachments" type="checkbox" data-bind="checked: includeLegacyAttachments">
-                            <label for="importLegacyAttachments">Include Legacy Attachments</label>
                         </div>
                     </div>
                 </div>

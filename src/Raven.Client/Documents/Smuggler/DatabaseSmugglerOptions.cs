@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Smuggler
                                                               DatabaseItemType.Conflicts |
                                                               DatabaseItemType.DatabaseRecord |
                                                               DatabaseItemType.Identities | DatabaseItemType.CompareExchange |
-                                                              DatabaseItemType.Counters;
+                                                              DatabaseItemType.Attachments | DatabaseItemType.Counters;
 
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;
 
