@@ -517,6 +517,19 @@ namespace Voron.Impl.Paging
             this._pagerState.CheckResetPrefetchTable();
         }
 
+        public virtual void DiscardPages(long pageNumber, int numberOfPages)
+        {
+            var pagerState = PagerState;
+            Debug.Assert(pagerState.AllocationInfos.Length == 1);
+
+            var allocInfo = pagerState.AllocationInfos[0];
+
+            byte* baseAddress = allocInfo.BaseAddress;
+            long offset = pageNumber * Constants.Storage.PageSize;
+
+            Memory.Discard(baseAddress + offset, numberOfPages * Constants.Storage.PageSize);
+        }
+
         public virtual void DiscardWholeFile()
         {
             long size = 0;
