@@ -265,6 +265,9 @@ namespace Voron.Data.Compression
                     continue;
                 }
 
+                // PERF: We dont care about the pager data content anymore. So we can discard the whole context to 
+                //       clean up the modified bit. 
+                old.DiscardWholeFile();
                 availablePages += old.NumberOfAllocatedPages;
             }
             

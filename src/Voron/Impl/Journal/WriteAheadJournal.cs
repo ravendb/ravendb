@@ -1482,7 +1482,7 @@ namespace Voron.Impl.Journal
                 txHeader->Hash = 0;
             }
 
-            var prepreToWriteToJournal = new CompressedPagesResult
+            var prepareToWriteToJournal = new CompressedPagesResult
             {
                 Base = txHeaderPtr,
                 NumberOf4Kbs = entireBuffer4Kbs,
@@ -1495,7 +1495,7 @@ namespace Voron.Impl.Journal
             if (_env.Options.EncryptionEnabled)
                 EncryptTransaction(txHeaderPtr);
 
-            return prepreToWriteToJournal;
+            return prepareToWriteToJournal;
         }
 
         internal static readonly byte[] Context = Encoding.UTF8.GetBytes("Txn-Acid");
@@ -1606,7 +1606,12 @@ namespace Voron.Impl.Journal
         {
             var initialSize = _env.Options.InitialFileSize ?? _env.Options.InitialLogFileSize;
             if (ShouldReduceSizeOfCompressionPager(initialSize, forceReduce) == false)
+            {
+                //PERF: Compression buffer will be reused, it is safe to discard the content to clear the modified bit.
+                _compressionPager.DiscardWholeFile();
                 return;
+            }
+                
 
             // the compression pager is too large, we probably had a big transaction and now can
             // free all of that and come back to more reasonable values.
