@@ -81,6 +81,11 @@ namespace Voron.Impl.Paging
             Inner.ReleaseAllocationInfo(baseAddress, size);
         }
 
+        public override void DiscardPages(long pageNumber, int numberOfPages)
+        {
+            // REVIEW: Nothing to do here?.
+        }
+
         public override void DiscardWholeFile()
         {
             // REVIEW: Nothing to do here?.

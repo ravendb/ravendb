@@ -191,6 +191,16 @@ namespace Voron.Platform.Posix
             return new Posix32Bit4KbBatchWrites(this);
         }
 
+        public override void DiscardPages(long pageNumber, int numberOfPages)
+        {
+            // REVIEW: Nothing to do here?.
+        }
+
+        public override void DiscardWholeFile()
+        {
+            // REVIEW: Nothing to do here?.
+        }
+
         public override byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null)
         {
             return AcquirePagePointer(tx, pageNumber, pagerState);
