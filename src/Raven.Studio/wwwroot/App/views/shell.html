@@ -94,7 +94,12 @@
                         <section data-bind="visible: showMatchedDocumentsSection">
                             <h4>Matched documents</h4>
                             <ul data-bind="foreach: matchedDocumentIds">
-                                <li><a href="#" data-bind="click: _.partial($parent.goToDocument, $data)"><span class="icon-document" style="color:#93278f;"></span> <span data-bind="text: $data"></span></a></li>
+                                <li>
+                                    <a href="#" data-bind="click: _.partial($parent.goToDocument, $data)">
+                                        <span class="icon-document"></span> 
+                                        <span data-bind="text: $data"></span>
+                                    </a>
+                                </li>
                             </ul>
                             <div class="text-center" data-bind="visible: spinners.startsWith">
                                 <div class="global-spinner"></div>
@@ -103,7 +108,12 @@
                         <section data-bind="visible: recentDocumentsList().length">
                             <h4>Recent documents</h4>
                             <ul data-bind="foreach: recentDocumentsList">
-                                <li><a href="#" data-bind="click: _.partial($parent.goToDocument, $data)"><span class="icon-document" style="color:#93278f;"></span> <span data-bind="text: $data"></span></a></li>
+                                <li>
+                                    <a href="#" data-bind="click: _.partial($parent.goToDocument, $data)">
+                                        <span class="icon-document"></span> 
+                                        <span data-bind="text: $data"></span>
+                                    </a>
+                                </li>
                             </ul>
                         </section>
                     </div>
