@@ -242,7 +242,32 @@
             }
         }
     }
+    
+    .storage-chart-color(@colorClass, @colorHex) {
+        .legend-rect {
+            &.@{colorClass} {
+                background-color: @colorHex;
+            }
+        }
+        
+        #storageChart .arc path {
+            &.@{colorClass} {
+                fill: @colorHex;
+            }
+        }
+    }
 
+    .storage-chart-color(color-1, #f75e71);
+    .storage-chart-color(color-2, #f38861);
+    .storage-chart-color(color-3, #f0ae5e);
+    .storage-chart-color(color-4, #edcd51);
+    .storage-chart-color(color-5, #7bd85d);
+    .storage-chart-color(color-6, #37c4ac);
+    .storage-chart-color(color-7, #2f9ef3);
+    .storage-chart-color(color-8, #6972ee);
+    .storage-chart-color(color-9, #9457b5);
+    .storage-chart-color(color-10, #d45598);
+    
     #storageChart {
         .arc {
             path {
@@ -353,9 +378,6 @@
         .list-container {
             min-height: 70px;
         }
-    }
-
-    .dashboard-traffic, .dashboard-databases, .dashboard-indexing, .dashboard-storage {
     }
 
     .dashboard-cpu-memory {
