@@ -161,7 +161,7 @@
                 <div class="panel-body" data-bind="visible: currentTab() !== 'timings' && currentTab() !== 'graph'">
                     <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-query-template'"></virtual-grid>
                 </div>
-                <div class="panel-body js-timings-container absolute-fill" data-bind="visible: currentTab() === 'timings'">
+                <div class="panel-body js-timings-container timings absolute-fill" data-bind="visible: currentTab() === 'timings'">
                     <div class="toggle toggle-right">
                         <input id="log-scale" class="styled" type="checkbox" data-bind="checked: timingsGraph.useLogScale">
                         <label for="log-scale" class="properties-label">
@@ -215,7 +215,7 @@
 </div>
 
 <script type="text/html" id="timing-item-template">
-    <i class="item-rect" data-bind="style: { 'background-color': $root.timingsGraph.getColor(name) }"></i>
+    <i data-bind="attr: { 'class': 'item-rect ' +  $root.timingsGraph.getColorClass(name) }"></i>
     <span class="name" data-bind="text: name"></span>
     <span class="duration" data-bind="text: duration.toLocaleString() + ' ms'"></span>
     <div data-bind="foreach: children">
