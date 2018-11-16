@@ -16,18 +16,12 @@ class inProgressAnimator implements disposable {
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         this.context = canvas.getContext("2d");
-
-        this.inMemoryStripesCanvas = document.createElement("canvas");
-        this.inMemoryStripesCanvas.width = this.canvas.width + 2 * inProgressAnimator.stripesPadding;
-        this.inMemoryStripesCanvas.height = this.canvas.height;
-
-        this.fillWithStripes();
     }
 
-    private fillWithStripes() {
+    private fillWithStripes(color: string) {
         const context = this.inMemoryStripesCanvas.getContext("2d");
 
-        context.strokeStyle = "rgba(255,255,255,0.1)";
+        context.strokeStyle = color;
         context.lineWidth = 3;
 
         const height = this.inMemoryStripesCanvas.height;
@@ -52,10 +46,12 @@ class inProgressAnimator implements disposable {
         this.disposed = true;
     }
 
-    animate() {
+    animate(color: string) {
         if (this.hasTimerRunning) {
             return;
         }
+        
+        this.init(color);
 
         if (this.inProgressArea.length) {
             this.hasTimerRunning = true;
@@ -64,6 +60,14 @@ class inProgressAnimator implements disposable {
         } else {
             this.clear();
         }
+    }
+    
+    private init(color: string) {
+        this.inMemoryStripesCanvas = document.createElement("canvas");
+        this.inMemoryStripesCanvas.width = this.canvas.width + 2 * inProgressAnimator.stripesPadding;
+        this.inMemoryStripesCanvas.height = this.canvas.height;
+
+        this.fillWithStripes(color);
     }
 
     private clear() {
