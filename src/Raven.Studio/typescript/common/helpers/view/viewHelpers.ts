@@ -74,7 +74,7 @@ class viewHelpers {
                 cb();
                 deferred.resolve();
             }
-        }
+        };
 
         subscriptions = asyncValidations.map(v => v.subscribe(() => onUpdate()));
 

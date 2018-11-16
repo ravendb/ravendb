@@ -13,4 +13,23 @@
             right: 5px;
         }
     }
+
+    ol {
+        padding-left: 20px;
+    }
+}
+
+#visualizerContainer {
+    position: relative;
+    
+    canvas, svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    rect.pane {
+        fill: none;
+        pointer-events: all;
+    }
 }
