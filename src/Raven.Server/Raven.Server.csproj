@@ -98,6 +98,11 @@
     <Folder Include="ServerWide\Commands\PeriodicBackup" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="Raven.System.Diagnostics.Process">
+      <HintPath>..\..\libs\Raven.System.Diagnostics.Process.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
     <None Update="Properties\Settings\settings_posix.json">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
