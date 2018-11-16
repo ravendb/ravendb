@@ -589,7 +589,7 @@ class driveUsageSection {
             if (matched) {
                 matched.update(incomingItem);
             } else {
-                const usage = new driveUsage(incomingItem, this.storageChart.getColorProvider(), this.includeTemporaryBuffers);
+                const usage = new driveUsage(incomingItem, this.storageChart.getColorClassProvider(), this.includeTemporaryBuffers);
                 this.table.push(usage);
             }
         });
