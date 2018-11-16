@@ -273,28 +273,12 @@ class storageReport extends viewModelBase {
             .attr("width", this.w)
             .attr("height", this.h)
             .attr("transform", "translate(.5,.5)");
-
-        this.addHashing();
     }
 
     private detectContainerSize() {
         const $chartNode = $("#storage-report-container .chart");
         this.w = $chartNode.width();
         this.h = $chartNode.height();
-    }
-
-    private addHashing() {
-        const defs = this.svg.append('defs');
-        const g = defs.append("pattern")
-            .attr('id', 'hash')
-            .attr('patternUnits', 'userSpaceOnUse')
-            .attr('width', '10')
-            .attr('height', '10')
-            .append("g").style("fill", "none")
-            .style("stroke", "grey")
-            .style("stroke-width", 1);
-        g.append("path").attr("d", "M0,0 l10,10");
-        g.append("path").attr("d", "M10,0 l-10,10");
     }
 
     private getChildren(node: storageReportItem, depth: number) {
