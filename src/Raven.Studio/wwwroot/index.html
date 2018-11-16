@@ -25,12 +25,23 @@
         <!-- /build -->
         
         <script type="text/javascript">
+            var themeToCss = {
+                "dark": "styles.css",
+                "blue": "styles-blue.css",
+                "light": "styles-light.css"
+            };
+            
+            var savedTheme = localStorage.getItem("raven-theme");
+            var supportedThemes = ["blue", "dark", "light"];
+            var themeToUse = savedTheme && supportedThemes.indexOf(savedTheme) !== -1 
+                ? savedTheme 
+                : "dark";
+
             var link = document.createElement("link");
             link.rel = "stylesheet";
-            link.href = "Content/css/styles.css";
-            
-            //TODO: read from local storage!
-            
+            link.id  = "raven-theme";
+            link.href = "Content/css/" + themeToCss[themeToUse];
+
             var head = document.getElementsByTagName("head")[0];
             head.appendChild(link);
         </script>

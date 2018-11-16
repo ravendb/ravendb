@@ -154,6 +154,11 @@
             
         </div>
         <ul class="nav navbar-nav navbar-right">
+            <li>
+                <a href="#" title="Change theme" class="theme-change" data-bind="click: $data.constructor.chooseTheme">
+                    Theme
+                </a>
+            </li>
             <li><a href="#" title="Send feedback" class="feedback-link" data-bind="click: $data.constructor.openFeedbackForm"><i class="icon-feedback"></i></a></li>
             <li><a target="_blank" title="Help" data-bind="attr: { href: currentHelpLink }" class="icon-help" style="display:none"></a></li>
             <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
