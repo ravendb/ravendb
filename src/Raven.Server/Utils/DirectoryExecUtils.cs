@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Diagnostics;
 using Raven.Server.Config.Categories;
-using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron;
+using Process = Custom.Raven.System.Diagnostics.Process;
+using ProcessStartInfo = Custom.Raven.System.Diagnostics.ProcessStartInfo;
 
 namespace Raven.Server.Utils
 {
@@ -34,7 +35,7 @@ namespace Raven.Server.Utils
 
         public static void OnDirectoryInitialize(StorageEnvironmentOptions options, DirectoryParameters parameters, Logger log)
         {
-            RavenProcess process = null;
+            Process process = null;
             try
             {
                 var journalPath = string.Empty;
@@ -47,21 +48,25 @@ namespace Raven.Server.Utils
                            $"{CommandLineArgumentEscaper.EscapeSingleArg(options.TempPath.ToString())} " +
                            $"{CommandLineArgumentEscaper.EscapeSingleArg(journalPath)}";
 
-                var startInfo = new ProcessStartInfo
+                process = new Process
                 {
-                    FileName = parameters.OnDirectoryInitializeExec,
-                    Arguments = args,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = parameters.OnDirectoryInitializeExec,
+                        Arguments = args,
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true,
+                        InheritHandles = false
+                    }
                 };
-                
+
                 var sw = Stopwatch.StartNew();
 
                 try
                 {
-                    process = RavenProcess.Start(startInfo);
+                    process.Start();
                 }
                 catch (Exception e)
                 {
