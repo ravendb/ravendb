@@ -79,6 +79,44 @@
             text-anchor: middle;
         }
     }
+    
+    .color-def (@innerName, @color) {
+        path {
+            &.@{innerName} {
+                fill: @color;
+            }
+        }
+        .item-rect {
+            &.@{innerName} {
+                background-color: @color;
+            }
+        }
+    }
+    
+    .timings {
+        path {
+            fill: #cccccc;
+        }
+
+        .item-rect {
+            background-color: #cccccc;
+        }
+        
+        .color-def(~'optimizer', #689f39);
+        .color-def(~'query', #1482c8);
+        .color-def(~'retriever', #34b3e4);
+        .color-def(~'projection', #046293);
+        .color-def(~'javaScript', #0077b5);
+        .color-def(~'storage', #008cc9);
+        .color-def(~'lucene', #a487ba);
+        .color-def(~'includes', #98041b);
+        .color-def(~'fill', #ff7000);
+        .color-def(~'gather', #fe8f01);
+        .color-def(~'highlightings', #890e4f);
+        .color-def(~'setup', #ad1457);
+        .color-def(~'explanations', #ec407a);
+        .color-def(~'staleness', #fed101);
+    }
 }
 
 .results-error {

@@ -15,23 +15,6 @@ class timingsChart {
     
     useLogScale = ko.observable<boolean>(false);
 
-    colors = {
-        "Optimizer": "#689f39",
-        "Query": "#1482c8",
-        "Retriever": "#34b3e4",
-        "Projection": "#046293",
-        "JavaScript": "#0077b5",
-        "Storage": "#008cc9",
-        "Lucene": "#a487ba",
-        "Includes": "#98041b",
-        "Fill": "#ff7000",
-        "Gather": "#fe8f01",
-        "Highlightings": "#890e4f",
-        "Setup": "#ad1457",
-        "Explanations": "#ec407a",
-        "Staleness": "#fed101",
-    } as dictionary<string>;
-    
     private totalSize = 0;
     private data: Raven.Client.Documents.Queries.Timings.QueryTimings;
     rootNode = ko.observable<graphNode>();
@@ -110,7 +93,7 @@ class timingsChart {
             .attr("display", d => d.depth ? null : "none")
             .attr("d", arc)
             .attr("fill-rule", "evenodd")
-            .style("fill", d => this.getColor(d.name))
+            .attr("class", d => this.getColorClass(d.name))
             .style("opacity", 1)
             .on("mouseover", d => this.mouseover(vis, d, levelName, levelDuration));
 
@@ -122,8 +105,8 @@ class timingsChart {
             .text(this.totalSize.toLocaleString() + " ms");
     }
     
-    getColor(item: string) {
-        return this.colors[item] ||  "#cccccc";
+    getColorClass(item: string) {
+        return _.camelCase(item);
     }
     
     private mouseover(vis: d3.Selection<any>, d: graphNode, levelName: d3.Selection<any>, levelDuration: d3.Selection<any>) {
