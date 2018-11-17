@@ -242,6 +242,7 @@ class replicationStats extends viewModelBase {
 
     /* colors */
 
+    private scrollConfig: scrollColorConfig;
     private colors = { 
         axis: undefined as string,
         gaps: undefined as string,
@@ -324,6 +325,7 @@ class replicationStats extends viewModelBase {
         super.compositionComplete();
         
         colorsManager.setup(".replication-stats", this.colors);
+        this.scrollConfig = graphHelper.readScrollConfig();
 
         this.tooltip = d3.select(".tooltip");
 
@@ -841,7 +843,8 @@ class replicationStats extends viewModelBase {
                     { left: this.totalWidth, top: replicationStats.axisHeight },
                     this.currentYOffset,
                     this.totalHeight - replicationStats.brushSectionHeight - replicationStats.axisHeight,
-                    this.maxYOffset ? this.maxYOffset + this.totalHeight - replicationStats.brushSectionHeight - replicationStats.axisHeight : 0);
+                    this.maxYOffset ? this.maxYOffset + this.totalHeight - replicationStats.brushSectionHeight - replicationStats.axisHeight : 0, 
+                    this.scrollConfig);
 
             } finally {
                 context.restore();
