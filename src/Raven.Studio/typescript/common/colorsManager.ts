@@ -19,8 +19,6 @@ class colorsManager {
         const readColors = colorsManager.domToObject(definitionsDom);
         
         colorsManager.assignColorProperties(readColors, targetObject, []);
-        
-        console.log(targetObject);
     }
     
     private static assignColorProperties(source: any, target: any, path: string[]) {
