@@ -7,6 +7,7 @@ import gapFinder = require("common/helpers/graph/gapFinder");
 import messagePublisher = require("common/messagePublisher");
 import graphHelper = require("common/helpers/graph/graphHelper");
 import liveIOStatsWebSocketClient = require("common/liveIOStatsWebSocketClient");
+import colorsManager = require("common/colorsManager");
 
 type rTreeLeaf = {
     minX: number;
@@ -204,31 +205,6 @@ class ioStats extends viewModelBase {
 
     /* static */
 
-    static readonly colors = {
-        axis: "#546175",
-        gaps: "#ca1c59",
-        trackBackground: "#2c343a",
-        trackNameBg: "rgba(57, 67, 79, 0.8)",
-        trackNameFg: "#98a7b7",
-        openedTrackArrow: "#ca1c59",
-        closedTrackArrow: "#98a7b7"
-    }
-
-    static readonly eventsColors: { [typeName in Sparrow.IoMetrics.MeterType]: { Low: string; High: string } } = {
-        "Compression": {
-            Low: "#cc23a6", High: "#5f076f"
-        },
-        "DataFlush": {
-            Low: "#4be3ff", High: "#0c2c7e"
-        },
-        "DataSync": {
-            Low: "#ffb956", High: "#cb3900"
-        },
-        "JournalWrite": {
-            Low: "#baff4d", High: "#1e4c0a"
-        }
-    }
-
     private static readonly trackHeight = 18;
     private static readonly trackMargin = 4;
     private static readonly closedTrackPadding = 2;
@@ -302,6 +278,35 @@ class ioStats extends viewModelBase {
     private yScale: d3.scale.Ordinal<string, number>;
     private tooltip: d3.Selection<Raven.Server.Documents.Handlers.IOMetricsRecentStats | timeGapInfo>; 
 
+    
+    /* colors */
+
+    private colors = {
+        axis: undefined as string,
+        gaps: undefined as string,
+        trackBackground: undefined as string,
+        trackNameBg: undefined as string,
+        trackNameFg: undefined as string,
+        openedTrackArrow: undefined as string,
+        closedTrackArrow: undefined as string,
+        text: undefined as string
+    };
+
+    private eventsColors: { [typeName in Sparrow.IoMetrics.MeterType]: { low: string; high: string } } = {
+        "Compression": { 
+            low: undefined as string, high: undefined as string
+        },
+        "DataFlush": {
+            low: undefined as string, high: undefined as string
+        },
+        "DataSync": {
+            low: undefined as string, high: undefined as string
+        },
+        "JournalWrite": {
+            low: undefined as string, high: undefined as string
+        }
+    };
+    
     constructor() {
         super();
         this.searchText.throttle(700).subscribe(() => this.filterTracks());
@@ -329,13 +334,9 @@ class ioStats extends viewModelBase {
 
     activate(args: { indexName: string, database: string }): void {
         super.activate(args);
-        this.indexesVisible = ko.pureComputed(() => this.hasIndexes() && !this.allIndexesAreFiltered());    
-
-        ioStats.meterTypes.forEach(meterType => {
-            this.legends.get(meterType)(new legend(ioStats.eventsColors[meterType].Low, ioStats.eventsColors[meterType].High, meterType));
-        });
+        this.indexesVisible = ko.pureComputed(() => this.hasIndexes() && !this.allIndexesAreFiltered());
     }
-
+    
     deactivate() {
         super.deactivate();
 
@@ -346,7 +347,14 @@ class ioStats extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
+        
+        colorsManager.setup(".io-stats .main-colors", this.colors);
+        colorsManager.setup(".io-stats .event-colors", this.eventsColors);
 
+        ioStats.meterTypes.forEach(meterType => {
+            this.legends.get(meterType)(new legend(this.eventsColors[meterType].low, this.eventsColors[meterType].high, meterType));
+        });
+        
         this.tooltip = d3.select(".tooltip");
         [this.totalWidth, this.totalHeight] = this.getPageHostDimenensions();
               
@@ -363,7 +371,7 @@ class ioStats extends viewModelBase {
 
     private initLegendImages() {
         this.legends.forEach(x => x().createLegendImage());
-    }  
+    }
   
     private setLegendScales() {
         this.legends.forEach(x => x().setLegendScales());
@@ -643,7 +651,7 @@ class ioStats extends viewModelBase {
         this.drawXaxisTimeLines(context, ticks, 0, ioStats.brushSectionHeight);
         this.drawXaxisTimeLabels(context, ticks, 5, 5);
 
-        context.strokeStyle = ioStats.colors.axis;
+        context.strokeStyle = this.colors.axis;
         context.strokeRect(0.5, 0.5, this.totalWidth - 1, ioStats.brushSectionHeight - 1);
 
         // 3. Draw accumulative data in the brush section (the top area)
@@ -691,7 +699,7 @@ class ioStats extends viewModelBase {
 
     private drawBrushGaps(context: CanvasRenderingContext2D) {
         context.beginPath();
-        context.strokeStyle = ioStats.colors.gaps;
+        context.strokeStyle = this.colors.gaps;
 
         for (let i = 0; i < this.gapFinder.gapsPositions.length; i++) {
             const gap = this.gapFinder.gapsPositions[i];
@@ -834,7 +842,7 @@ class ioStats extends viewModelBase {
             context.beginPath();
 
             context.setLineDash([4, 2]);
-            context.strokeStyle = ioStats.colors.axis;    
+            context.strokeStyle = this.colors.axis;    
 
             ticks.forEach((x, i) => {
                 context.moveTo(ioStats.initialOffset + (i * ioStats.step) + 0.5, yStart);
@@ -855,7 +863,7 @@ class ioStats extends viewModelBase {
             context.textAlign = "left";
             context.textBaseline = "top";
             context.font = "10px Lato";
-            context.fillStyle = ioStats.colors.axis;
+            context.fillStyle = this.colors.axis;
            
             ticks.forEach((x, i) => {
                 context.fillText(this.xTickFormat(x), ioStats.initialOffset + (i * ioStats.step) + timePaddingLeft, timePaddingTop);
@@ -1048,7 +1056,7 @@ class ioStats extends viewModelBase {
                     // Calc text size:
                     const itemSizeText = generalUtils.formatBytesToSize(recentItem.Size);
                     if (originalDx > itemSizeText.length * ioStats.charWidthApproximation) {
-                        context.fillStyle = 'black';
+                        context.fillStyle = this.colors.text; 
                         context.textAlign = "center";
                         context.font = "bold 10px Lato";
                         context.fillText(itemSizeText, x1 + originalDx / 2, yStartItem + ioStats.trackHeight / 2 + 4);
@@ -1165,7 +1173,7 @@ class ioStats extends viewModelBase {
         context.rect(0, ioStats.axisHeight, this.totalWidth, this.totalHeight - ioStats.brushSectionHeight);
         context.clip();
 
-        context.fillStyle = ioStats.colors.trackBackground;
+        context.fillStyle = this.colors.trackBackground;
         this.data.Environments.forEach(env => {  
              if (!this.filtered(env.Path)) {
                  context.fillRect(0, this.yScale(env.Path), this.totalWidth, ioStats.openedTrackHeight);
@@ -1211,7 +1219,7 @@ class ioStats extends viewModelBase {
         if (!skipDrawing) {
             context.font = "12px Lato"; // Define font before using measureText()...
             rectWidth = context.measureText(trackName).width + addedWidth;
-            context.fillStyle = ioStats.colors.trackNameBg;
+            context.fillStyle = this.colors.trackNameBg;
 
             if (!_.includes(this.filteredIndexesTracksNames(), trackName)) {
                 context.fillRect(2, yStart + ioStats.closedTrackPadding, rectWidth, ioStats.trackHeight);
@@ -1219,13 +1227,13 @@ class ioStats extends viewModelBase {
 
             // 2. Draw arrow only for indexes track
             if (drawArrow) {
-                context.fillStyle = this.isIndexesExpanded() ? ioStats.colors.openedTrackArrow : ioStats.colors.closedTrackArrow;
+                context.fillStyle = this.isIndexesExpanded() ? this.colors.openedTrackArrow : this.colors.closedTrackArrow;
                 graphHelper.drawArrow(context, 5, yStart + 6, !this.isIndexesExpanded());
                 this.hitTest.registerIndexToggle(2, yStart + ioStats.closedTrackPadding, rectWidth, ioStats.trackHeight);
             }
 
             // 3. Draw track name (if not filtered out..)                
-            context.fillStyle = ioStats.colors.trackNameFg;
+            context.fillStyle = this.colors.trackNameFg;
             context.beginPath(); 
 
             if (!_.includes(this.filteredIndexesTracksNames(), trackName)) {
@@ -1242,7 +1250,7 @@ class ioStats extends viewModelBase {
         const domain = xScale.domain();
        
         context.beginPath();
-        context.strokeStyle = ioStats.colors.gaps;
+        context.strokeStyle = this.colors.gaps;
        
         for (let i = 1; i < range.length - 1; i += 2) {
             const gapX = Math.floor(range[i]) + 0.5;
@@ -1411,7 +1419,7 @@ class ioStats extends viewModelBase {
         if (recentItem) {
             return this.legends.get(type)().colorScale(ioStats.extractItemValue(recentItem));
         } else {
-            return ioStats.eventsColors[type].High;
+            return this.eventsColors[type].high;
         }
     }
 

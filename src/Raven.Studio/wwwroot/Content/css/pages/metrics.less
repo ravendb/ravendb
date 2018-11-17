@@ -34,6 +34,74 @@ rect.pane {
     }
 }
 
+.io-stats {
+    .main-colors {
+        .color-definitions {
+            .axis {
+                color: #546175; 
+            }
+            .gaps {
+                color: #ca1c59;
+            }
+            .trackBackground {
+                color: #2c343a;
+            }
+            .trackNameBg {
+                color: rgba(57, 67, 79, 0.8);
+            }
+            .trackNameFg {
+                color: #98a7b7;
+            }
+            .openedTrackArrow {
+                color: #ca1c59;
+            }
+            .closedTrackArrow {
+                color: #98a7b7;
+            }
+            .text {
+                color: black;
+            }
+        }
+    }
+    
+    .event-colors {
+        .color-definitions {
+            .compression {
+                .low {
+                    color: #cc23a6;
+                }
+                .high {
+                    color: #5f076f;
+                }
+            }
+            .dataFlush {
+                .low {
+                    color: #4be3ff;
+                }
+                .high {
+                    color: #0c2c7e;
+                }
+            }
+            .dataSync {
+                .low {
+                    color: #ffb956;
+                }
+                .high {
+                    color: #cb3900;
+                }
+            }
+            .journalWrite {
+                .low {
+                    color: #baff4d;
+                }
+                .high {
+                    color: #1e4c0a;
+                }
+            }
+        }
+    }
+}
+
 @legend-container-width: 200px;
 @legend-arrow-border: 6px;
 @legend-arrow-color: @color-1;
