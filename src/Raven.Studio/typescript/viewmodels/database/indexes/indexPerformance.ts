@@ -229,6 +229,7 @@ class indexPerformance extends viewModelBase {
     private yScale: d3.scale.Ordinal<string, number>;
     private tooltip: d3.Selection<Raven.Client.Documents.Indexes.IndexingPerformanceOperation | timeGapInfo>;
     private currentTrackTooltipPosition: { x: number, y: number} = null;
+    private scrollConfig: scrollColorConfig;
     
     private colors = {
         axis: undefined as string,
@@ -338,6 +339,8 @@ class indexPerformance extends viewModelBase {
         super.compositionComplete();
 
         colorsManager.setup("#indexingPerformance", this.colors);
+        
+        this.scrollConfig = graphHelper.readScrollConfig();
         
         this.tooltip = d3.select(".tooltip");
 
@@ -879,7 +882,8 @@ class indexPerformance extends viewModelBase {
                     { left: this.totalWidth, top: indexPerformance.axisHeight },
                     this.currentYOffset,
                     this.totalHeight - indexPerformance.brushSectionHeight - indexPerformance.axisHeight,
-                    this.maxYOffset ? this.maxYOffset + this.totalHeight - indexPerformance.brushSectionHeight - indexPerformance.axisHeight: 0);
+                    this.maxYOffset ? this.maxYOffset + this.totalHeight - indexPerformance.brushSectionHeight - indexPerformance.axisHeight: 0,
+                    this.scrollConfig);
 
             } finally {
                 context.restore();
