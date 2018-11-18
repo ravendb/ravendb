@@ -15,6 +15,8 @@ namespace Raven.Server.Documents.Queries.Graph
         private List<Match> _results = new List<Match>();
         private int _index = -1;
 
+        private string _outputAlias;
+
         private HashSet<string> _aliases;
 
         public IGraphQueryStep Left => _left;
@@ -34,6 +36,8 @@ namespace Raven.Server.Documents.Queries.Graph
             _edgePath = edgePath;
             _queryParameters = queryParameters;
             _edgesExpression = edgesExpression;
+
+            _outputAlias = _right.GetOutputAlias();
         }
 
         public EdgeQueryStep(IGraphQueryStep left, IGraphQueryStep right, EdgeQueryStep eqs)
@@ -49,6 +53,9 @@ namespace Raven.Server.Documents.Queries.Graph
             _edgePath = eqs._edgePath;
             _queryParameters = eqs._queryParameters;
             _edgesExpression = eqs._edgesExpression;
+
+
+            _outputAlias = _right.GetOutputAlias();
         }
 
         public IGraphQueryStep Clone()
@@ -103,7 +110,7 @@ namespace Raven.Server.Documents.Queries.Graph
             _index = 0;
 
             var edgeMatcher = new EdgeMatcher(this);
-            var alias = _left.GetOuputAlias();
+            var alias = _left.GetOutputAlias();
             while (_left.GetNext(out var left))
             {
                 edgeMatcher.Run(left, alias);
@@ -131,7 +138,6 @@ namespace Raven.Server.Documents.Queries.Graph
                     Edge = edge,
                     EdgeAlias = edgeAlias
                 };
-                _alias = parent._left.GetOutputAlias();
                 _parent = parent;
             }
 
@@ -193,7 +199,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public string GetOuputAlias()
         {
-            return _right.GetOuputAlias();
+            return _right.GetOutputAlias();
         }
 
         public HashSet<string> GetAllAliases()
@@ -206,7 +212,7 @@ namespace Raven.Server.Documents.Queries.Graph
             _left.Analyze(match, addNode, addEdge);
             _right.Analyze(match, addNode, addEdge);
 
-            var prev = match.GetResult(_left.GetOuputAlias());
+            var prev = match.GetResult(_left.GetOutputAlias());
 
             AnalyzeEdge(_edgesExpression, _edgePath.Alias, match, prev, addEdge);
         }
@@ -253,6 +259,11 @@ namespace Raven.Server.Documents.Queries.Graph
         public List<Match> GetById(string id)
         {
             throw new NotSupportedException("Cannot get a match by id from an edge");
+        }
+
+        public string GetOutputAlias()
+        {
+            return _outputAlias;
         }
 
         private IGraphQueryStep _left;

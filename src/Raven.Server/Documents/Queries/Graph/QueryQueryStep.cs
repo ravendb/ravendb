@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public IGraphQueryStep Clone()
         {
-            return new QueryQueryStep(_queryRunner, _alias, _query, _queryMetadata, _context, _resultEtag, _token);
+            return new QueryQueryStep(_queryRunner, _alias, _query, _queryMetadata, _queryParameters, _context, _resultEtag, _token);
         }
 
         public bool GetNext(out Match match)
@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 // here we already get the right match, and we do nothing with it.
                 var clone = new Match(src);
                 clone.Remove(alias);
-                clone.Set(_parent.GetOuputAlias(), src.GetResult(alias));
+                clone.Set(_parent.GetOutputAlias(), src.GetResult(alias));
                 _temp.Add(clone);
             }
         }

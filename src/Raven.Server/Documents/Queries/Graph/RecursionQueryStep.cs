@@ -113,6 +113,11 @@ namespace Raven.Server.Documents.Queries.Graph
             _next.AddAliases(_allLliases);
         }
 
+        public ISingleGraphStep GetNextStep()
+        {
+            return _next;
+        }
+
         public HashSet<string> GetAllAliases()
         {
             return _allLliases;
@@ -250,7 +255,7 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
-        private async Task CompleteInitializationForStepAsyc(int position, ValueTask stepTask)
+        private async Task CompleteInitializationForStepAsync(int position, ValueTask stepTask)
         {
             await stepTask;
             await CompleteInitializationAfterLeft(position + 1);
@@ -325,7 +330,7 @@ namespace Raven.Server.Documents.Queries.Graph
                         var current = top.Match.GetSingleDocumentResult(_outputAlias);
                         if(current == null && _options.Min == 0)
                         {
-                            current = top.Match.GetSingleDocumentResult(_left.GetOuputAlias());
+                            current = top.Match.GetSingleDocumentResult(_left.GetOutputAlias());
                         }
                         if (current != null && AddMatch(current))
                         {

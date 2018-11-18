@@ -102,7 +102,6 @@ select  i.Name as Issue,
             using (var store = GetDocumentStore())
             {
                 CreateData(store);
-                WaitForUserToContinueTheTest(store);
                 using (var s = store.OpenSession())
                 {
                     var r = s.Advanced.RawQuery<Result>(Query)

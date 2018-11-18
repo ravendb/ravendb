@@ -28,21 +28,6 @@ namespace Raven.Server.Documents.Queries.Graph
             return new EdgeQueryStep(left, right, eqs);
         }
 
-        public override IGraphQueryStep VisitEdgeFollowingRecursionQueryStep(EdgeFollowingRecursionQueryStep efrqs)
-        {
-            var left = (RecursionQueryStep)Visit(efrqs.Left);
-            _isVisitingRight = true;
-            var right = Visit(efrqs.Right);
-            _isVisitingRight = false;
-
-            if (ReferenceEquals(left, efrqs.Left) && ReferenceEquals(right, efrqs.Right))
-            {
-                return efrqs;
-            }
-
-            return new EdgeFollowingRecursionQueryStep(left, right, efrqs.QueryParameters);
-        }
-
         public override IGraphQueryStep VisitQueryQueryStep(QueryQueryStep qqs)
         {
             if (_isVisitingRight && qqs.IsCollectionQuery && qqs.HasWhereClause == false)
@@ -75,13 +60,15 @@ namespace Raven.Server.Documents.Queries.Graph
                     steps.Add(step);
                 }
             }
+            var result = modified ? 
+                new RecursionQueryStep(rqs, left, steps) : 
+                new RecursionQueryStep(left, rqs);
 
-            if (modified)
-            {
-                return new RecursionQueryStep(rqs, left, steps);
-            }
+            var next = rqs.GetNextStep();
+            if(next != null)
+                result.SetNext(next);
 
-            return new RecursionQueryStep(left, rqs);
+            return result;
         }
     }
 }
