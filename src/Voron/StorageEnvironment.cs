@@ -354,7 +354,7 @@ namespace Voron
 
                     var schemaVersion = metadataTree.Read("schema-version");
                     if (schemaVersion == null)
-                        VoronUnrecoverableErrorException.Raise(this, "Could not find schema version in metadata tree, possible mismatch / corruption?");
+                        SchemaErrorException.Raise(this, "Could not find schema version in metadata tree, possible mismatch / corruption?");
 
                     schemaVersionVal = schemaVersion.Reader.ReadLittleEndianInt32();
                 }
@@ -374,6 +374,8 @@ namespace Voron
             }
             catch (Exception e)
             {
+                if (e is SchemaErrorException)
+                    throw;
                 VoronUnrecoverableErrorException.Raise(this, e.Message, e);
                 throw;
             }
@@ -408,7 +410,7 @@ namespace Voron
 
         private void ThrowSchemaUpgradeRequired(int schemaVersionVal, string message)
         {
-            VoronUnrecoverableErrorException.Raise(this,
+            SchemaErrorException.Raise(this,
                 "The schema version of this database is expected to be " +
                 Options.SchemaVersion + " but is actually " + schemaVersionVal +
                 ". " + message);
