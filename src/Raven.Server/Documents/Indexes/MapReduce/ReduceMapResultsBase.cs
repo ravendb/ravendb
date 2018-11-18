@@ -137,7 +137,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             return false;
         }
 
-        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, long currentEtag, long maxEtag, int count)
+        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, 
+            IndexingStatsScope stats, IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, int count)
         {
             throw new NotSupportedException();
         }
@@ -195,9 +196,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 _metrics.MapReduceIndexes.ReducedPerSec.Mark(numberOfEntriesToReduce);
 
                 stats.RecordReduceSuccesses(numberOfEntriesToReduce);
-                stats.RecordReduceAllocations(_index._threadAllocations.Allocations);
+
+                _index.UpdateThreadAllocations(indexContext, writer, stats, updateReduceStats: true);
+                
             }
-            catch (Exception e) when (e is OperationCanceledException == false)
+            catch (Exception e) when (e.IsOperationCanceled() == false && e.IsOutOfMemory() == false)
             {
                 _index.ErrorIndexIfCriticalException(e);
 
@@ -308,7 +311,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             stats.RecordReduceSuccesses(leafPage.NumberOfEntries);
                         }
                     }
-                    catch (Exception e) when (e is OperationCanceledException == false)
+                    catch (Exception e) when (e.IsOperationCanceled() == false && e.IsOutOfMemory() == false)
                     {
                         if (failedAggregatedLeafs == null)
                             failedAggregatedLeafs = new Dictionary<long, Exception>();
@@ -377,7 +380,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             stats.RecordReduceSuccesses(page.NumberOfEntries);
                         }
                     }
-                    catch (Exception e) when (e is OperationCanceledException == false)
+                    catch (Exception e) when (e.IsOperationCanceled() == false && e.IsOutOfMemory() == false)
                     {
                         _index.ErrorIndexIfCriticalException(e);
 
@@ -395,7 +398,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     parentPagesToAggregate.Add(branchesToAggregate.First());
                 }
 
-                stats.RecordReduceAllocations(_index._threadAllocations.Allocations);
+                _index.UpdateThreadAllocations(indexContext, writer, stats, updateReduceStats: true);
             }
 
             if (compressedEmptyLeafs != null && compressedEmptyLeafs.Count > 0)

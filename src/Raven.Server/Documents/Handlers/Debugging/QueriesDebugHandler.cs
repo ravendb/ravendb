@@ -153,11 +153,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             curDjvItem["Sorted"] = true;
                         }
 
-                        if (item.IsOptimizedSortOnly)
-                        {
-                            curDjvItem[nameof(Queries.QueryMetadata.IsOptimizedSortOnly)] = true;
-                        }
-
                         if (item.HasCmpXchg)
                         {
                             curDjvItem[nameof(Queries.QueryMetadata.HasCmpXchg)] = true;
@@ -178,7 +173,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             curDjvItem[nameof(Queries.QueryMetadata.IsDynamic)] = true;
                         }
 
-                        if (item.SelectFields.Any(x => x.Function != null))
+                        if (item.SelectFields != null && item.SelectFields.Any(x => x.Function != null))
                         {
                             curDjvItem["IsJSProjection"] = true;
                         }

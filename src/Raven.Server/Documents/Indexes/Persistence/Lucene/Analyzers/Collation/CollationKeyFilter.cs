@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.Collation
             var termText = new string(termBuffer, 0, _termAtt.TermLength());
             var collationKey = GetCollationKey(termText);
             var encodedLength = IndexableBinaryStringTools_UsingArrays.GetEncodedLength(collationKey);
-            if (sizeof(int) > termBuffer.Length)
+            if (encodedLength > termBuffer.Length)
                 termBuffer = _termAtt.ResizeTermBuffer(encodedLength);
 
             _termAtt.SetTermLength(encodedLength);

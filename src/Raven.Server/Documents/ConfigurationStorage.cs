@@ -5,13 +5,19 @@ using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
+using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Logging;
 using Voron;
 
 namespace Raven.Server.Documents
 {
     public class ConfigurationStorage : IDisposable
     {
+        private const string ResourceName = nameof(ConfigurationStorage);
+
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ConfigurationStorage>(ResourceName);
+
         public TransactionContextPool ContextPool { get; }
 
         public NotificationsStorage NotificationsStorage { get; }
@@ -42,13 +48,15 @@ namespace Raven.Server.Documents
             options.TimeToSyncAfterFlashInSec = (int)db.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = db.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             options.MasterKey = db.MasterKey?.ToArray();
+
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = db.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
             if (db.Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = db.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = db.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = db.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
 
-
+            DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, db.Configuration.Storage, db.Name, DirectoryExecUtils.EnvironmentType.Configuration, Logger);
+            
             NotificationsStorage = new NotificationsStorage(db.Name);
 
             OperationsStorage = new OperationsStorage();

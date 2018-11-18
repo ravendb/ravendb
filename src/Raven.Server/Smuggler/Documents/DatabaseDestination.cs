@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
@@ -28,7 +26,6 @@ using Sparrow.Logging;
 using Voron;
 using Voron.Global;
 using Sparrow;
-using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 
 namespace Raven.Server.Smuggler.Documents
@@ -39,6 +36,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private readonly Logger _log;
         private BuildVersionType _buildType;
+        private static DatabaseSmugglerOptions _options;
 
         public DatabaseDestination(DocumentDatabase database)
         {
@@ -49,6 +47,7 @@ namespace Raven.Server.Smuggler.Documents
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, long buildVersion)
         {
             _buildType = BuildVersion.Type(buildVersion);
+            _options = options;
             return null;
         }
 
@@ -152,7 +151,12 @@ namespace Raven.Server.Smuggler.Documents
             public void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtag progress)
             {
                 if (item.Attachments != null)
-                    progress.Attachments.ReadCount += item.Attachments.Count;
+                {
+                    if(_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
+                        progress.Attachments.ReadCount += item.Attachments.Count;
+                    else
+                        progress.Attachments.Skipped = true;
+                }
 
 
                 _command.Add(item);
@@ -430,7 +434,6 @@ namespace Raven.Server.Smuggler.Documents
             public bool IsDisposed => _isDisposed;
 
             private readonly DocumentsOperationContext _context;
-            private const string PreV4RevisionsDocumentId = "/revisions/";
 
             public MergedBatchPutCommand(DocumentDatabase database, BuildVersionType buildType, Logger log)
             {
@@ -527,13 +530,13 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    if (IsPreV4Revision(id, document))
+                    if (DatabaseSmuggler.IsPreV4Revision(_buildType, id, document))
                     {
                         // handle old revisions
                         if (_database.DocumentsStorage.RevisionsStorage.Configuration == null)
                             ThrowRevisionsDisabled();
 
-                        var endIndex = id.IndexOf(PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
+                        var endIndex = id.IndexOf(DatabaseSmuggler.PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
                         var newId = id.Substring(0, endIndex);
 
                         _database.DocumentsStorage.RevisionsStorage.Put(context, newId, document.Data, document.Flags,
@@ -589,17 +592,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private bool IsPreV4Revision(string id, Document document)
-            {
-                if (_buildType == BuildVersionType.V3 == false)
-                    return false;
 
-                if ((document.NonPersistentFlags & NonPersistentDocumentFlags.LegacyRevision) != NonPersistentDocumentFlags.LegacyRevision)
-                    return false;
-
-                return id.Contains(PreV4RevisionsDocumentId);
-            }
 
             private static void ThrowRevisionsDisabled()
             {

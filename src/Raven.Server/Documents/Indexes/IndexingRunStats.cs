@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Indexes
             AddError(null, $"Critical exception occurred: {exception}", "Critical");
         }
 
-        public void AddMemoryError(OutOfMemoryException oome)
+        public void AddMemoryError(Exception oome)
         {
             AddError(null, $"Memory exception occurred: {oome}", "Memory");
         }

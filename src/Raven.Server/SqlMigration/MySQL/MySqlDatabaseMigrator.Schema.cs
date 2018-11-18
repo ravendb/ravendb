@@ -21,14 +21,14 @@ namespace Raven.Server.SqlMigration.MySQL
                                                 "where TABLE_SCHEMA = @schema and CONSTRAINT_NAME = 'PRIMARY' " +
                                                 "order by ORDINAL_POSITION";
 
-        public const string SelectReferentialConstraints = "select UNIQUE_CONSTRAINT_SCHEMA, CONSTRAINT_NAME, REFERENCED_TABLE_NAME " +
+        public const string SelectReferentialConstraints = "select CONSTRAINT_SCHEMA, UNIQUE_CONSTRAINT_SCHEMA, CONSTRAINT_NAME, TABLE_NAME, REFERENCED_TABLE_NAME " +
                                                            "from information_schema.REFERENTIAL_CONSTRAINTS " +
                                                            "where UNIQUE_CONSTRAINT_SCHEMA = @schema ";
 
-        public const string SelectKeyColumnUsage = "select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME" +
+        public const string SelectKeyColumnUsage = "select CONSTRAINT_SCHEMA, CONSTRAINT_NAME, COLUMN_NAME, REFERENCED_COLUMN_NAME " +
                                                                       " from information_schema.KEY_COLUMN_USAGE " +
-                                                                      "where TABLE_SCHEMA = @schema " +
-                                                                      "order by ORDINAL_POSITION";
+                                                                      " where TABLE_SCHEMA = @schema and CONSTRAINT_NAME <> 'PRIMARY' " +
+                                                                      " order by ORDINAL_POSITION";
         
         public override DatabaseSchema FindSchema()
         {
@@ -105,8 +105,8 @@ namespace Raven.Server.SqlMigration.MySQL
 
         private void FindForeignKeys(DbConnection connection, DatabaseSchema dbSchema)
         {
-            var referentialConstraints = new Dictionary<string, (string Schema, string Table)>();
-
+            var keyColumnUsageCache = GetKeyColumnUsageCache(connection);
+            
             using (var cmd = connection.CreateCommand())
             {
                 cmd.CommandText = SelectReferentialConstraints;
@@ -118,38 +118,40 @@ namespace Raven.Server.SqlMigration.MySQL
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
-                        referentialConstraints.Add(reader["CONSTRAINT_NAME"].ToString(), 
-                            (reader["UNIQUE_CONSTRAINT_SCHEMA"].ToString(), reader["REFERENCED_TABLE_NAME"].ToString()));
-                }
-            }
-            
-            var keyColumnUsageCache = GetKeyColumnUsageCache(connection);
-            
-            foreach (var kvp in referentialConstraints)
-            {
-                var cacheValue = keyColumnUsageCache[kvp.Key];
-                var pkTable = dbSchema.GetTable(kvp.Value.Schema, kvp.Value.Table);
-                
-                if (pkTable == null)
-                {
-                    throw new InvalidOperationException("Can not find table: " + kvp.Value.Schema + "." + kvp.Value.Table);
-                }
-
-                // check if reference goes to Primary Key 
-                // note: we might have references to non-primary keys - ie. to unique index constraints 
-                if (cacheValue.ColumnNames.SequenceEqual(pkTable.PrimaryKeyColumns))
-                {
-                    pkTable.References.Add(new TableReference(cacheValue.Schema, cacheValue.TableName)
                     {
-                        Columns = cacheValue.ColumnNames
-                    });
+                        var cacheKey = reader["CONSTRAINT_SCHEMA"] + ":" + reader["CONSTRAINT_NAME"];
+                        var keyUsage = keyColumnUsageCache[cacheKey];
+
+                        var referencedTableSchema = reader["UNIQUE_CONSTRAINT_SCHEMA"].ToString();
+                        var referencedTableName = reader["REFERENCED_TABLE_NAME"].ToString();
+
+                        var pkTable = dbSchema.GetTable(referencedTableSchema, referencedTableName);
+                        
+                        if (pkTable == null)
+                        {
+                            throw new InvalidOperationException("Can not find table: " + referencedTableSchema + "." + referencedTableName);
+                        }
+                        
+                        // check if reference goes to Primary Key 
+                        // note: we might have references to non-primary keys - ie. to unique index constraints 
+                        if (keyUsage.ReferencedColumnNames.SequenceEqual(pkTable.PrimaryKeyColumns))
+                        {
+                            var tableSchema = reader["CONSTRAINT_SCHEMA"].ToString();
+                            var tableName = reader["TABLE_NAME"].ToString();
+                            
+                            pkTable.References.Add(new TableReference(tableSchema, tableName)
+                            {
+                                Columns = keyUsage.ColumnNames
+                            });
+                        }
+                    }
                 }
             }
         }
         
-        private Dictionary<string, (string Schema, string TableName, List<string> ColumnNames)> GetKeyColumnUsageCache(DbConnection connection)
+        private Dictionary<string, (List<string> ColumnNames, List<string> ReferencedColumnNames)> GetKeyColumnUsageCache(DbConnection connection)
         {
-            var cache = new Dictionary<string, (string Schema, string TableName, List<string> ColumnNames)>();
+            var cache = new Dictionary<string, (List<string> ColumnNames, List<string> ReferencedColumnNames)>();
             
             using (var cmd = connection.CreateCommand())
             {
@@ -164,17 +166,18 @@ namespace Raven.Server.SqlMigration.MySQL
                 {
                     while (reader.Read())
                     {
-                        var cacheKey = reader["CONSTRAINT_NAME"].ToString();
-                        (string schema, string tableName) = GetTableNameFromReader(reader);
+                        var cacheKey = reader["CONSTRAINT_SCHEMA"] + ":" + reader["CONSTRAINT_NAME"];
                         var columnName = reader["COLUMN_NAME"].ToString();
+                        var referencedColumnName = reader["REFERENCED_COLUMN_NAME"].ToString();
                         
                         if (cache.TryGetValue(cacheKey, out var cacheValue) == false)
                         {
-                            cacheValue = (schema, tableName, new List<string>());
+                            cacheValue = (new List<string>(), new List<string>());
                             cache[cacheKey] = cacheValue;
                         }
                         
                         cacheValue.ColumnNames.Add(columnName);
+                        cacheValue.ReferencedColumnNames.Add(referencedColumnName);
                     }
                 }
             }

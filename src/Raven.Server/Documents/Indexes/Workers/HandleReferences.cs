@@ -52,7 +52,8 @@ namespace Raven.Server.Documents.Indexes.Workers
             return moreWorkFound;
         }
 
-        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, long currentEtag, long maxEtag, int count)
+        public bool CanContinueBatch(DocumentsOperationContext documentsContext, TransactionOperationContext indexingContext, 
+            IndexingStatsScope stats, IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, int count)
         {
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
                 return false;
@@ -60,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             if (currentEtag >= maxEtag && stats.Duration >= _configuration.MapTimeoutAfterEtagReached.AsTimeSpan)
                 return false;
 
-            if (_index.CanContinueBatch(stats, documentsContext, indexingContext, count) == false)
+            if (_index.CanContinueBatch(stats, documentsContext, indexingContext, indexWriteOperation, count) == false)
                 return false;
 
             return true;
@@ -206,10 +207,12 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                 if (_logger.IsInfoEnabled)
                                                     _logger.Info($"Failed to execute mapping function on '{current.Id}' for '{_index.Name}'.", e);
                                             }
+
+                                            _index.UpdateThreadAllocations(indexContext, indexWriter, stats, updateReduceStats: false);
                                         }
                                     }
 
-                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, lastEtag, lastCollectionEtag, batchCount) == false)
+                                    if (CanContinueBatch(databaseContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, batchCount) == false)
                                     {
                                         keepRunning = false;
                                         break;
@@ -254,7 +257,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         {
             var tx = indexContext.Transaction.InnerTransaction;
             var loweredKey = tombstone.LowerId;
-            using (Slice.External(tx.Allocator, loweredKey.Buffer, loweredKey.Size, out Slice tombstoneKeySlice))
+            using (Slice.External(tx.Allocator, loweredKey, out Slice tombstoneKeySlice))
                 _indexStorage.RemoveReferences(tombstoneKeySlice, collection, null, indexContext.Transaction);
         }
 

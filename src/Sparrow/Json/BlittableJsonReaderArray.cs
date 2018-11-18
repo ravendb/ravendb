@@ -19,9 +19,9 @@ namespace Sparrow.Json
         public DynamicJsonArray Modifications;
 
         public BlittableJsonReaderObject Parent => _parent;
-      
+
         public BlittableJsonReaderArray(int pos, BlittableJsonReaderObject parent, BlittableJsonToken type)
-            : base (parent._context)
+            : base(parent._context)
         {
             _parent = parent;
 
@@ -40,9 +40,9 @@ namespace Sparrow.Json
         public override string ToString()
         {
             using (var memoryStream = new MemoryStream())
-            using(var tw = new BlittableJsonTextWriter(_context,memoryStream))
+            using (var tw = new BlittableJsonTextWriter(_context, memoryStream))
             {
-                tw.WriteValue(BlittableJsonToken.StartArray,this);
+                tw.WriteValue(BlittableJsonToken.StartArray, this);
                 tw.Flush();
                 memoryStream.Position = 0;
 
@@ -97,7 +97,7 @@ namespace Sparrow.Json
         }
 
         public void Dispose()
-        {            
+        {
             _parent?.Dispose();
         }
 
@@ -114,7 +114,7 @@ namespace Sparrow.Json
         {
             int min = 0;
             int max = Length - 1;
-            
+
             while (min <= max)
             {
                 int mid = (min + max) >> 1;
@@ -162,8 +162,8 @@ namespace Sparrow.Json
         {
             for (var i = 0; i < _count; i++)
             {
-                var tuple = GetValueTokenTupleByIndex(i);
-                writer.WriteValue(tuple.Item2, tuple.Item1);
+                var (value, token) = GetValueTokenTupleByIndex(i);
+                writer.WriteValue(ProcessTokenTypeFlags(token), value);
             }
         }
 

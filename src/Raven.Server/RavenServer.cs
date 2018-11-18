@@ -56,6 +56,8 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Utils;
+using Voron;
 
 namespace Raven.Server
 {
@@ -411,6 +413,8 @@ namespace Raven.Server
         }
 
         private Task _currentRefreshTask = Task.CompletedTask;
+
+        public Task RefreshTask => _currentRefreshTask;
 
         public void RefreshClusterCertificateTimerCallback(object state)
         {

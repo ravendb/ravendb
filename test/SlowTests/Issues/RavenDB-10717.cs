@@ -37,7 +37,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal("from Users as u select { " +
                                  "Predicate : new Date(Date.parse(u.Birthday))<new Date(Date.parse($p0)) }"
-                                , query.ToString());
+                        , query.ToString());
 
                     var result = query.ToList();
 

@@ -217,7 +217,7 @@ namespace Raven.Client.Util
                 }
 
                 // Now we translate the memberExpression
-                if (_innerCallExpected != default
+                else if (_innerCallExpected != default
                     && _innerCallExpected != DictionaryInnerCall.Map
                     && typeof(IDictionary).IsAssignableFrom(context.Node.Type))
                 {
@@ -982,11 +982,14 @@ namespace Raven.Client.Util
         {
             private readonly IAbstractDocumentQuery<T> _documentQuery;
             private readonly List<string> _projectionParameters;
+            private readonly DateTimeSupport _dateTimeSupportExtension;
 
-            public WrappedConstantSupport(IAbstractDocumentQuery<T> documentQuery, List<string> projectionParameters)
+
+            public WrappedConstantSupport(IAbstractDocumentQuery<T> documentQuery, List<string> projectionParameters, DateTimeSupport dateTimeSupportExtension)
             {
                 _documentQuery = documentQuery;
                 _projectionParameters = projectionParameters;
+                _dateTimeSupportExtension = dateTimeSupportExtension;
             }
 
             private static bool IsWrappedConstantExpression(Expression expression)
@@ -1014,16 +1017,10 @@ namespace Raven.Client.Util
 
                 using (writer.Operation(memberExpression))
                 {
-                    if (memberExpression.Type == typeof(DateTime))
-                    {
-                        writer.Write("new Date(Date.parse(");
-                        writer.Write(parameter);
-                        writer.Write("))");
-                    }
-                    else
-                    {                        
-                        writer.Write(parameter);
-                    }
+                    writer.Write(memberExpression.Type == typeof(DateTime) &&
+                                 _dateTimeSupportExtension.InsideBinaryOperationOnDates
+                        ? $"new Date(Date.parse({parameter}))"
+                        : parameter);
                 }
             }
         }
@@ -1313,11 +1310,7 @@ namespace Raven.Client.Util
 
         public class DateTimeSupport : JavascriptConversionExtension
         {
-            public static readonly DateTimeSupport Instance = new DateTimeSupport();
-
-            private DateTimeSupport()
-            {
-            }
+            public bool InsideBinaryOperationOnDates;
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
@@ -1352,22 +1345,64 @@ namespace Raven.Client.Util
                     return;
                 }
 
+                if (context.Node is BinaryExpression binaryExpression &&
+                    binaryExpression.Left.Type == typeof(DateTime))
+                {
+                    InsideBinaryOperationOnDates = true;
+
+                    var writer = context.GetWriter();
+                    context.PreventDefault();
+
+                    if (context.Node.Type == typeof(TimeSpan) && 
+                        context.Node.NodeType == ExpressionType.Subtract)
+                    {
+                        using (writer.Operation(context.Node))
+                        {
+                            writer.Write("convertJsTimeToTimeSpanString(");
+
+                            context.Visitor.Visit(binaryExpression.Left);
+                            writer.Write("-");
+
+                            context.Visitor.Visit(binaryExpression.Right);
+
+                            writer.Write(")");
+
+                        }
+
+                        InsideBinaryOperationOnDates = false;
+                        return;
+                    }
+
+                    using (writer.Operation(context.Node))
+                    {
+                        context.Visitor.Visit(binaryExpression.Left);
+                        writer.WriteOperator(binaryExpression.NodeType, binaryExpression.Type);
+                        context.Visitor.Visit(binaryExpression.Right);
+                    }
+
+                    InsideBinaryOperationOnDates = false;
+                    return;                   
+                }
+
                 if (!(context.Node is MemberExpression node))
                     return;
 
-                if (node.Type == typeof(DateTime))
+                if (node.Type == typeof(DateTime) && 
+                    (node.Expression == null || InsideBinaryOperationOnDates))
                 {
                     var writer = context.GetWriter();
                     context.PreventDefault();
 
                     using (writer.Operation(node))
                     {
-                        //match DateTime expressions like user.DateOfBirth, order.ShipmentInfo.DeliveryDate, etc
                         if (node.Expression != null)
                         {
+                            //inside a binary operation on dates, translate to JS date object
+
                             writer.Write("new Date(Date.parse(");
-                            context.Visitor.Visit(node.Expression); //visit inner expression (user ,order.ShipmentInfo, etc)
+                            context.Visitor.Visit(node.Expression);
                             writer.Write($".{node.Member.Name}))");
+
                             return;
                         }
 
@@ -1682,7 +1717,6 @@ namespace Raven.Client.Util
             }
         }
 
-
         public class ListInitSupport : JavascriptConversionExtension
         {
             public static readonly ListInitSupport Instance = new ListInitSupport();
@@ -1887,7 +1921,6 @@ namespace Raven.Client.Util
             }
 
         }
-
 
         public class NullComparisonSupport : JavascriptConversionExtension
         {

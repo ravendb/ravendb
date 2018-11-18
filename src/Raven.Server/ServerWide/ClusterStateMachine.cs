@@ -1636,7 +1636,7 @@ namespace Raven.Server.ServerWide
             return TcpConnectionHeaderMessage.ClusterTcpVersion;
         }
 
-        public override async Task<RachisConnection> ConnectToPeer(string url, string tag ,X509Certificate2 certificate)
+        public override async Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate)
         {
             if (url == null)
                 throw new ArgumentNullException(nameof(url));

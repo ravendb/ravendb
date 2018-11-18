@@ -49,6 +49,8 @@ namespace Sparrow.Utils
 
             public long TotalAllocated => Allocations - ReleasesFromOtherThreads;
 
+            public long CurrentlyAllocatedForProcessing;
+
             public bool IsThreadAlive()
             {
                 var copy = _threadInstance;

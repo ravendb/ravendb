@@ -697,7 +697,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore())
                 {
-                    await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportPath);
+                    var op = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportPath);
+                    await op.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(2, stats.CountOfDocuments);
@@ -740,7 +741,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     // importing to a new database, in order to verify that
                     // periodic backup imports only the changed documents (and counters)
 
-                    await store3.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportPath);
+                    var op = await store3.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportPath);
+                    await op.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     var stats = await store3.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(1, stats.CountOfDocuments);

@@ -3016,7 +3016,7 @@ from Users as user select output(user)", query.ToString());
 
                     Assert.Equal("from Orders as o " +
                                  "where o.OrderedAt.Year < $p2 " +
-                                 "select { Id : id(o), OrderedAt : new Date(Date.parse(o.OrderedAt)), " +
+                                 "select { Id : id(o), OrderedAt : o.OrderedAt, " +
                                     "Employee : o.Employee, Foo : o.Employee+o.Company } " +
                                  "include Employee,counters(o, $p0),counters(o.Employee, $p1)"
                         , query.ToString());
@@ -3123,7 +3123,7 @@ from Users as user select output(user)", query.ToString());
 
                     Assert.Equal("from Orders as o " +
                                  "where o.OrderedAt.Year < $p2 " +
-                                 "select { Id : id(o), OrderedAt : new Date(Date.parse(o.OrderedAt)), " +
+                                 "select { Id : id(o), OrderedAt : o.OrderedAt, " +
                                     "Employee : o.Employee, Foo : o.Employee+o.Company } " +
                                  "include Employee,counters(o, $p0),counters(o.Employee, $p1)"
                         , query.ToString());

@@ -82,7 +82,7 @@ namespace Voron.Platform.Win32
             if (_handle.IsInvalid)
             {
                 int lastWin32ErrorCode = Marshal.GetLastWin32Error();
-                throw new IOException("Failed to open file storage of Win32MemoryMapPager for " + file,
+                throw new IOException("Failed to open file storage of WinMemoryMapPager for " + file,
                     new Win32Exception(lastWin32ErrorCode));
             }
 

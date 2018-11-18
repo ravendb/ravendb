@@ -534,8 +534,11 @@ namespace Raven.Server.Web.System
                 {
                     settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
                 }
-                
-                ServerStore.EnsureNotPassive(nodeTag: setupInfo.LocalNodeTag);
+
+                if (!string.IsNullOrEmpty(setupInfo.LocalNodeTag))
+                {
+                    ServerStore.EnsureNotPassive(nodeTag: setupInfo.LocalNodeTag);    
+                }
                 
                 if (setupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
                 {

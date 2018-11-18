@@ -2338,10 +2338,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (IsRaw(expression, name))
                 return;
 
-            var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = true };
+            var isConditionalExpression = expression.Arguments[1].NodeType == ExpressionType.Conditional;
+            var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = isConditionalExpression == false };
             var js = ToJs(expression.Arguments[1], false, loadSupport);
 
-            if (loadSupport.HasLoad == false)
+            if (loadSupport.HasLoad == false || isConditionalExpression)
             {
                 AppendLineToOutputFunction(name, js);
             }
@@ -2615,17 +2616,19 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private string ToJs(Expression expression, bool loadArg = false, JavascriptConversionExtensions.LoadSupport loadSupport = null)
         {
+            var dateTimeSupport = new JavascriptConversionExtensions.DateTimeSupport();
+
             var extensions = new JavascriptConversionExtension[]
             {
                 new JavascriptConversionExtensions.DictionarySupport(),
                 JavascriptConversionExtensions.LinqMethodsSupport.Instance,
-                new JavascriptConversionExtensions.WrappedConstantSupport<T>(_documentQuery, _projectionParameters),
+                new JavascriptConversionExtensions.WrappedConstantSupport<T>(_documentQuery, _projectionParameters, dateTimeSupport),
                 JavascriptConversionExtensions.MathSupport.Instance,
                 new JavascriptConversionExtensions.TransparentIdentifierSupport(),
                 JavascriptConversionExtensions.ReservedWordsSupport.Instance,
                 JavascriptConversionExtensions.InvokeSupport.Instance,
                 JavascriptConversionExtensions.ToStringSupport.Instance,
-                JavascriptConversionExtensions.DateTimeSupport.Instance,
+                dateTimeSupport,
                 JavascriptConversionExtensions.NullCoalescingSupport.Instance,
                 JavascriptConversionExtensions.NestedConditionalSupport.Instance,
                 JavascriptConversionExtensions.StringSupport.Instance,
@@ -2650,18 +2653,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 extensions[extensions.Length - 1] = new JavascriptConversionExtensions.IdentityPropertySupport(_documentQuery.Conventions);
             }
             
-            var js = expression.CompileToJavascript(new JavascriptCompilationOptions(extensions)
+            return expression.CompileToJavascript(new JavascriptCompilationOptions(extensions)
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(_conventions)
             });
-
-            if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)
-            {
-                //convert milliseconds to a TimeSpan string
-                js = $"convertJsTimeToTimeSpanString({js})";
-            }
-
-            return js;
         }
 
         private static bool HasComputation(MemberExpression memberExpression)

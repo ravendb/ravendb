@@ -170,7 +170,20 @@ namespace Sparrow.Json
             if (newSize > MaxArenaSize)
                 newSize = MaxArenaSize;
 
-            var newBuffer = NativeMemory.AllocateMemory(newSize, out var thread);
+            byte* newBuffer;
+            NativeMemory.ThreadStats thread;
+
+            try
+            {
+                newBuffer = NativeMemory.AllocateMemory(newSize, out thread);
+            }
+            catch (OutOfMemoryException oom)
+                when (oom.Data?.Contains("Recoverable") != true) // this can be raised if the commit charge is low
+            {
+                // we were too eager with memory allocations?
+                newBuffer = NativeMemory.AllocateMemory(requestedSize, out thread);
+                newSize = requestedSize;
+            }
 
             // Save the old buffer pointer to be released when the arena is reset
             if (_olderBuffers == null)
@@ -201,8 +214,11 @@ namespace Sparrow.Json
                 if (SingleAllocationSizeLimit == null)
                     return size;
 
-                if (SingleAllocationSizeLimit.Value > size)
-                    return Math.Max(Bits.NextPowerOf2(requestedSize), SingleAllocationSizeLimit.Value);
+                if (size > SingleAllocationSizeLimit.Value)
+                {
+                    var sizeInMb = requestedSize / Constants.Size.Megabyte + (requestedSize % Constants.Size.Megabyte == 0 ? 0 : 1);
+                    return sizeInMb * Constants.Size.Megabyte;
+                }
 
                 return size;
             }

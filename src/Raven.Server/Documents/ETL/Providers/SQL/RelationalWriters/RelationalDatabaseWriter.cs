@@ -44,29 +44,54 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             _providerFactory = GetDbProviderFactory(etl.Configuration);
             _commandBuilder = _providerFactory.InitializeCommandBuilder();
             _connection = _providerFactory.CreateConnection();
-            _connection.ConnectionString = etl.Configuration.Connection.ConnectionString;
+            var connectionString = etl.Configuration.Connection.ConnectionString;
+            _connection.ConnectionString = connectionString;
 
-            try
-            {
-                _connection.Open();
-            }
-            catch (Exception e)
-            {
-                database.NotificationCenter.Add(AlertRaised.Create(
-                    database.Name,
-                    SqlEtl.SqlEtlTag,
-                    $"SQL ETL could not open connection to {_connection.ConnectionString}",
-                    AlertType.SqlEtl_ConnectionError,
-                    NotificationSeverity.Error,
-                    key: _connection.ConnectionString,
-                    details: new ExceptionDetails(e)));
-
-                throw;
-            }
+            OpenConnection(database, etl.Configuration.Name, etl.Configuration.ConnectionStringName);
 
             _tx = _connection.BeginTransaction();
 
             _stringParserList = GenerateStringParsers();
+        }
+
+        private void OpenConnection(DocumentDatabase database, string etlConfigurationName, string connectionStringName)
+        {
+            const int maxRetries = 5;
+            var retries = 0;
+
+            while (true)
+            {
+                try
+                {
+                    _connection.Open();
+                    return;
+                }
+                catch (Exception e)
+                {
+                    if (++retries < maxRetries)
+                    {
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Failed to open connection, retrying ({retries}/{maxRetries})", e);
+
+                        Thread.Sleep(50);
+                        continue;
+                    }
+
+                    using (_connection)
+                    {
+                        database.NotificationCenter.Add(AlertRaised.Create(
+                            database.Name,
+                            SqlEtl.SqlEtlTag,
+                            $"[{etlConfigurationName}] Could not open connection using '{connectionStringName}' connection string",
+                            AlertType.SqlEtl_ConnectionError,
+                            NotificationSeverity.Error,
+                            key: $"{etlConfigurationName}/{connectionStringName}",
+                            details: new ExceptionDetails(e)));
+
+                        throw;
+                    }
+                }
+            }
         }
 
         public static void TestConnection(string factoryName, string connectionString)
@@ -74,6 +99,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             var providerFactory = DbProviderFactories.GetFactory(factoryName);
             var connection = providerFactory.CreateConnection();
             connection.ConnectionString = connectionString;
+
             try
             {
                 connection.Open();
@@ -115,8 +141,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
         public void Dispose()
         {
-            _tx.Dispose();
-            _connection.Dispose();
+            using (_connection)
+            using (_tx)
+            {
+
+            }
         }
 
         public void Commit()

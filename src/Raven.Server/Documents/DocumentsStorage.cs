@@ -273,6 +273,8 @@ namespace Raven.Server.Documents
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Documents, null, this);
             try
             {
+                DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, DocumentDatabase.Configuration.Storage, DocumentDatabase.Name, DirectoryExecUtils.EnvironmentType.Database, _logger);
+
                 ContextPool = new DocumentsContextPool(DocumentDatabase);
                 Environment = LayoutUpdater.OpenEnvironment(options);
 
@@ -1140,7 +1142,8 @@ namespace Raven.Server.Documents
                     local.Tombstone.ChangeVector,
                     modifiedTicks,
                     changeVector,
-                    flags).Etag;
+                    flags, 
+                    nonPersistentFlags).Etag;
 
                 EnsureLastEtagIsPersisted(context, etag);
 
@@ -1171,7 +1174,7 @@ namespace Raven.Server.Documents
                 if (expectedChangeVector != null && doc.ChangeVector.CompareTo(expectedChangeVector) != 0)
                 {
                     throw new ConcurrencyException(
-                        $"Document {lowerId} has etag {doc.Etag}, but Delete was called with change vector '{expectedChangeVector}'. " +
+                        $"Document {id} has change vector {doc.ChangeVector}, but Delete was called with change vector '{expectedChangeVector}'. " +
                         "Optimistic concurrency violation, transaction will be aborted.")
                     {
                         ActualChangeVector = doc.ChangeVector,
@@ -1187,11 +1190,20 @@ namespace Raven.Server.Documents
                 var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr).Strip(DocumentFlags.FromClusterTransaction) | documentFlags;
 
                 long etag;
-                using (TableValueToSlice(context, (int)DocumentsTable.LowerId, ref tvr, out Slice tombstone))
+                using (TableValueToSlice(context, (int)DocumentsTable.LowerId, ref tvr, out Slice tombstoneId))
                 {
-                    var tombstoneEtag = CreateTombstone(context, tombstone, doc.Etag, collectionName, doc.ChangeVector, modifiedTicks, changeVector, flags);
-                    changeVector = tombstoneEtag.ChangeVector;
-                    etag = tombstoneEtag.Etag;
+                    var tombstone = CreateTombstone(
+                        context, 
+                        tombstoneId, 
+                        doc.Etag, 
+                        collectionName, 
+                        doc.ChangeVector, 
+                        modifiedTicks, 
+                        changeVector, 
+                        flags, 
+                        nonPersistentFlags);
+                    changeVector = tombstone.ChangeVector;
+                    etag = tombstone.Etag;
                 }
 
                 EnsureLastEtagIsPersisted(context, etag);
@@ -1250,10 +1262,11 @@ namespace Raven.Server.Documents
                     lowerId,
                     GenerateNextEtagForReplicatedTombstoneMissingDocument(context),
                     collectionName,
-                    changeVector,
-                    DateTime.UtcNow.Ticks,
                     null,
-                    documentFlags).Etag;
+                    DateTime.UtcNow.Ticks,
+                    changeVector,
+                    documentFlags,
+                    nonPersistentFlags).Etag;
 
                 return new DeleteOperationResult
                 {
@@ -1338,19 +1351,20 @@ namespace Raven.Server.Documents
                 etagTree.Add(LastEtagSlice, etagSlice);
         }
 
-        public (long Etag, string ChangeVector) CreateTombstone(
-            DocumentsOperationContext context,
+        public (long Etag, string ChangeVector) CreateTombstone(DocumentsOperationContext context,
             Slice lowerId,
             long documentEtag,
             CollectionName collectionName,
             string docChangeVector,
             long lastModifiedTicks,
             string changeVector,
-            DocumentFlags flags)
+            DocumentFlags flags, 
+            NonPersistentDocumentFlags nonPersistentFlags)
         {
             var newEtag = GenerateNextEtag();
 
-            if (string.IsNullOrEmpty(changeVector))
+            if (string.IsNullOrEmpty(changeVector) && 
+                nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
             {
                 changeVector = ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(
                     context,

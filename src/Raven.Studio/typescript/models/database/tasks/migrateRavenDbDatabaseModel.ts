@@ -11,10 +11,14 @@ class migrateRavenDbDatabaseModel {
     includeIndexes = ko.observable(true);
     includeIdentities = ko.observable(true);
     includeCompareExchange = ko.observable(true);
+    includeCounters = ko.observable(true);
+    includeAttachments = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
     includeLegacyAttachments = ko.observable(true);
     removeAnalyzers = ko.observable(false);
     importRavenFs = ko.observable(false);
+    showTransformScript = ko.observable<boolean>(false);
+    transformScript = ko.observable<string>();
 
     authenticationMethod = ko.observable<authenticationMethod>("none");
     authorized = ko.observable(true);
@@ -33,16 +37,19 @@ class migrateRavenDbDatabaseModel {
     domain = ko.observable<string>();
     apiKey = ko.observable<string>();
     enableBasicAuthenticationOverUnsecuredHttp = ko.observable<boolean>();
+    skipServerCertificateValidation = ko.observable<boolean>();
 
     serverMajorVersionNumber: KnockoutComputed<string>;
     isRavenDb: KnockoutComputed<boolean>;
     isLegacy: KnockoutComputed<boolean>;
+    isV41: KnockoutComputed<boolean>;
     hasRavenFs: KnockoutComputed<boolean>;
     ravenFsImport: KnockoutComputed<boolean>;
     resourceTypeName: KnockoutComputed<string>;
     showWindowsCredentialInputs: KnockoutComputed<boolean>;
     showApiKeyCredentialInputs: KnockoutComputed<boolean>;
     isUnsecuredBasicAuthentication: KnockoutComputed<boolean>;
+    isSecuredConnection: KnockoutComputed<boolean>;
 
     validationGroup: KnockoutValidationGroup;
     importDefinitionHasIncludes: KnockoutComputed<boolean>;
@@ -51,6 +58,16 @@ class migrateRavenDbDatabaseModel {
     constructor() {
         this.initObservables();
         this.initValidation();
+
+        this.showTransformScript.subscribe(v => {
+            if (v) {
+                this.transformScript(
+                    "var id = this['@metadata']['@id'];\r\n" +
+                    "// current object is available under 'this' variable");
+            } else {
+                this.transformScript("");
+            }
+        });
     }
 
     toDto(): Raven.Server.Smuggler.Migration.SingleDatabaseMigrationConfiguration {
@@ -69,7 +86,7 @@ class migrateRavenDbDatabaseModel {
             if (this.includeIndexes()) {
                 operateOnTypes.push("Indexes");
             }
-            if (this.includeRevisionDocuments() && !this.isLegacy()) {
+            if (this.includeRevisionDocuments()) {
                 operateOnTypes.push("RevisionDocuments");
             }
             if (this.includeLegacyAttachments() && this.isLegacy()) {
@@ -81,6 +98,12 @@ class migrateRavenDbDatabaseModel {
             if (this.includeCompareExchange() && !this.isLegacy()) {
                 operateOnTypes.push("CompareExchange");
             }
+            if (this.includeCounters() && !this.isLegacy()) {
+                operateOnTypes.push("Counters");
+            }
+            if (this.includeAttachments() && !this.isLegacy()) {
+                operateOnTypes.push("Attachments");
+            }
         }
 
         if (operateOnTypes.length === 0) {
@@ -91,7 +114,8 @@ class migrateRavenDbDatabaseModel {
             DatabaseName: this.resourceName(),
             OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Documents.Smuggler.DatabaseItemType,
             RemoveAnalyzers: this.removeAnalyzers(),
-            ImportRavenFs: this.importRavenFs()
+            ImportRavenFs: this.importRavenFs(),
+            TransformScript: this.transformScript()
         };
 
         return {
@@ -103,7 +127,8 @@ class migrateRavenDbDatabaseModel {
             ApiKey: this.showApiKeyCredentialInputs() ? this.apiKey() : null, 
             EnableBasicAuthenticationOverUnsecuredHttp: this.apiKey() ? this.enableBasicAuthenticationOverUnsecuredHttp() : false, 
             BuildMajorVersion: this.serverMajorVersion(),
-            BuildVersion: this.buildVersion()
+            BuildVersion: this.buildVersion(),
+            SkipServerCertificateValidation: this.isSecuredConnection() ? this.skipServerCertificateValidation() : false
         };
     }
 
@@ -155,6 +180,15 @@ class migrateRavenDbDatabaseModel {
            return version === "V2" || version === "V30" || version === "V35";
         });
 
+        this.isV41 = ko.pureComputed(() => {
+            if (this.isLegacy()) {
+                return false;
+            }
+
+            const buildVersion = this.buildVersion();
+            return buildVersion >= 41000 || buildVersion === 41;
+        });
+
         this.hasRavenFs = ko.pureComputed(() => {
             const version = this.serverMajorVersion();
             return version === "V30" || version === "V35";
@@ -181,6 +215,35 @@ class migrateRavenDbDatabaseModel {
             }
 
             return this.hasUnsecuredBasicAuthenticationOption() && url.toLowerCase().startsWith("http://");
+        });
+
+        this.isSecuredConnection = ko.pureComputed(() => {
+            const url = this.serverUrl();
+            if (!url) {
+                return false;
+            }
+
+            return url.toLowerCase().startsWith("https://");
+        });
+
+        this.includeDocuments.subscribe(documents => {
+            if (!documents) {
+                this.includeCounters(false);
+                this.includeAttachments(false);
+                this.includeLegacyAttachments(false);
+            }
+        });
+
+        this.removeAnalyzers.subscribe(analyzers => {
+            if (analyzers) {
+                this.includeIndexes(true);
+            }
+        });
+
+        this.includeIndexes.subscribe(indexes => {
+            if (!indexes) {
+                this.removeAnalyzers(false);
+            }
         });
     }
     
@@ -224,10 +287,10 @@ class migrateRavenDbDatabaseModel {
         this.importDefinitionHasIncludes = ko.pureComputed(() => {
             if (this.serverMajorVersion() === "V4") {
                 return this.includeDatabaseRecord() || this.includeDocuments() || this.includeRevisionDocuments() || this.includeConflicts() ||
-                    this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange();
+                    this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange() || this.includeCounters();
             }
 
-            const hasIncludes = this.includeDocuments() || this.includeIndexes() || this.includeLegacyAttachments();
+            const hasIncludes = this.includeDocuments() || this.includeIndexes() || this.includeLegacyAttachments() || this.includeRevisionDocuments();
             if (this.serverMajorVersion() === "V30" || this.serverMajorVersion() === "V35") {
                 return hasIncludes || this.importRavenFs();
             }

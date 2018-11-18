@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using Lucene.Net.Store;
 using Raven.Client.Util;
@@ -12,21 +13,26 @@ namespace Raven.Server.Indexing
     {
         private readonly StorageEnvironment _environment;
         private readonly string _name;
-        
-        public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment) : this (tx, environment, "Files")
-        {}                
+        private readonly IndexOutputFilesSummary _indexOutputFilesSummary;
+
+        public long FilesAllocations => _indexOutputFilesSummary.TotalWritten;
+
+        public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment) : this(tx, environment, "Files")
+        { }
 
         public LuceneVoronDirectory(Transaction tx, StorageEnvironment environment, string name)
         {
-            if ( !tx.IsWriteTransaction )
+            if (tx.IsWriteTransaction == false)
                 throw new InvalidOperationException($"Creation of the {nameof(LuceneVoronDirectory)} must be done under a write transaction.");
-            
+
             _environment = environment;
             _name = name;
 
             SetLockFactory(NoLockFactory.Instance);
 
             tx.CreateTree(_name);
+
+            _indexOutputFilesSummary = new IndexOutputFilesSummary();
         }
 
         public override bool FileExists(string name, IState s)
@@ -131,7 +137,6 @@ namespace Raven.Server.Indexing
                 throw new ArgumentNullException(nameof(s));
 
             return new VoronIndexInput(name, state.Transaction, _name);
-            
         }
 
         public override IndexOutput CreateOutput(string name, IState s)
@@ -140,7 +145,7 @@ namespace Raven.Server.Indexing
             if (state == null)
                 throw new ArgumentNullException(nameof(s));
 
-            return new VoronIndexOutput(_environment.Options, name, state.Transaction, _name);
+            return new VoronIndexOutput(_environment.Options, name, state.Transaction, _name, _indexOutputFilesSummary);
         }
 
         public IDisposable SetTransaction(Transaction tx, out IState state)
@@ -160,6 +165,11 @@ namespace Raven.Server.Indexing
 
         protected override void Dispose(bool disposing)
         {
+        }
+
+        public void ResetAllocations()
+        {
+            _indexOutputFilesSummary.Reset();
         }
     }
 }

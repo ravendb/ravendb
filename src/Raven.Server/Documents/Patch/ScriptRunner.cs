@@ -4,12 +4,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
+using Jint.Native.Date;
 using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
@@ -881,7 +883,7 @@ namespace Raven.Server.Documents.Patch
                 return asTimeSpan.ToString();
             }
 
-            private static JsValue ToStringWithFormat(JsValue self, JsValue[] args)
+            private static unsafe JsValue ToStringWithFormat(JsValue self, JsValue[] args)
             {
                 if (args.Length < 1 || args.Length > 3)
                 {
@@ -924,6 +926,24 @@ namespace Raven.Server.Documents.Patch
                     return format != null ?
                         num.ToString(format, cultureInfo) :
                         num.ToString(cultureInfo);
+                }
+
+                if (args[0].IsString())
+                {
+                    var s = args[0].AsString();
+                    fixed (char* pValue = s)
+                    {
+                        var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
+                        switch (result)
+                        {
+                            case LazyStringParser.Result.DateTime:
+                                return format != null ?
+                                    dt.ToString(format, cultureInfo) :
+                                    dt.ToString(cultureInfo);
+                            default:
+                                throw new InvalidOperationException("toStringWithFormat(dateString) : 'dateString' is not a valid DateTime string");
+                        }
+                    }
                 }
 
                 if (args[0].IsBoolean() == false)

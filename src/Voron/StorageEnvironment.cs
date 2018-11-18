@@ -52,7 +52,7 @@ namespace Voron
 
         public void ForceSyncDataFile()
         {
-            GlobalFlushingBehavior.GlobalFlusher.Value.ForceFlushAndSyncEnvironment(this);
+            GlobalFlushingBehavior.GlobalFlusher.Value.ForceSyncEnvironment(this);
         }
 
         /// <summary>
@@ -140,6 +140,9 @@ namespace Voron
                 _validPages[_validPages.Length - 1] |= unchecked(((long)ulong.MaxValue << (int)remainingBits));
 
                 _decompressionBuffers = new DecompressionBuffersPool(options);
+
+                options.InvokeOnDirectoryInitialize();
+
                 var isNew = _headerAccessor.Initialize();
 
                 _scratchBufferPool = new ScratchBufferPool(this);
@@ -523,6 +526,9 @@ namespace Voron
             finally
             {
                 var errors = new List<Exception>();
+
+                OnLogsApplied = null;
+
                 foreach (var disposable in new IDisposable[]
                 {
                     _journal,

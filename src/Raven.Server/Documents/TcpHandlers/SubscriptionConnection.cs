@@ -10,6 +10,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries;
@@ -70,9 +71,8 @@ namespace Raven.Server.Documents.TcpHandlers
             _tcpConnectionDisposable = tcpConnectionDisposable;
             ClientUri = connectionOptions.TcpClient.Client.RemoteEndPoint.ToString();
             _logger = LoggingSource.Instance.GetLogger<SubscriptionConnection>(connectionOptions.DocumentDatabase.Name);
-            CancellationTokenSource =
-                CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
-
+            CancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(TcpConnection.DocumentDatabase.DatabaseShutdown);
+            _supportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Subscription, connectionOptions.ProtocolVersion);
             _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
             Stats = new SubscriptionConnectionStats();
 
@@ -120,6 +120,13 @@ namespace Raven.Server.Documents.TcpHandlers
             // first, validate details and make sure subscription exists
             SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName);
 
+            if (_supportedFeatures.Subscription.Includes == false)
+            {
+                Subscription = ParseSubscriptionQuery(SubscriptionState.Query);
+                if (Subscription.Includes != null && Subscription.Includes.Length > 0)
+                    throw new SubscriptionInvalidStateException($"Subscription with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support Includes.");
+            }
+
             _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
             var timeout = TimeSpan.FromMilliseconds(16);
 
@@ -144,8 +151,6 @@ namespace Raven.Server.Documents.TcpHandlers
                     shouldRetry = true;
                 }
             } while (shouldRetry);
-
-
 
             // refresh subscription data (change vector may have been updated, because in the meanwhile, another subscription could have just completed a batch)            
             SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId, _options.SubscriptionName);
@@ -455,6 +460,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private SubscriptionDocumentsFetcher _documentsFetcher;
         private readonly IDisposable _tcpConnectionDisposable;
         private readonly (IDisposable ReleaseBuffer, JsonOperationContext.ManagedPinnedBuffer Buffer) _copiedBuffer;
+        private readonly TcpConnectionHeaderMessage.SupportedFeatures _supportedFeatures;
 
         private async Task ProcessSubscriptionAsync()
         {
@@ -615,9 +621,10 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 using (docsContext.OpenReadTransaction())
                 {
-                    var includeCmd = new IncludeDocumentsCommand(TcpConnection.DocumentDatabase.DocumentsStorage,
-                                docsContext, Subscription.Includes);
-                   
+                    IncludeDocumentsCommand includeCmd = null;
+                    if (_supportedFeatures.Subscription.Includes)
+                        includeCmd = new IncludeDocumentsCommand(TcpConnection.DocumentDatabase.DocumentsStorage, docsContext, Subscription.Includes);
+
                     foreach (var result in _documentsFetcher.GetDataToSend(docsContext, includeCmd, _startEtag))
                     {
                         _startEtag = result.Doc.Etag;

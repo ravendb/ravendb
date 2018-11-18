@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
@@ -42,7 +43,8 @@ namespace SlowTests.Issues
                         Default = new RevisionsCollectionConfiguration()
                     });
 
-                    await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), store2.Smuggler);
+                    var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), store2.Smuggler);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     await AssertAttachment(store2);
 
@@ -55,7 +57,8 @@ namespace SlowTests.Issues
                             Default = new RevisionsCollectionConfiguration()
                         });
 
-                        await store2.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), store3.Smuggler);
+                        operation = await store2.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), store3.Smuggler);
+                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                         await AssertAttachment(store3);
 

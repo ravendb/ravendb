@@ -53,7 +53,7 @@ namespace Voron
         public bool HasLowNumberOfFlushingResources => _concurrentFlushes.CurrentCount <= _lowNumberOfFlushingResources;
 
 
-        public void VoronEnvironmentFlushing()
+        private void VoronEnvironmentFlushing()
         {
             NativeMemory.EnsureRegistered();
             // We want this to always run, even if we dispose / create new storage env, this is 
@@ -242,7 +242,7 @@ namespace Voron
                     // we haven't reached the point where we have to flush, but we might want to, if we have enough 
                     // resources available, if we have more than half the flushing capacity, we can do it now, otherwise, we'll wait
                     // until it is actually required.
-                    if (_concurrentFlushes.CurrentCount < StorageEnvironment.MaxConcurrentFlushes / 2)
+                    if (_concurrentFlushes.CurrentCount > StorageEnvironment.MaxConcurrentFlushes / 2)
                         continue;
 
                     // At the same time, we want to avoid excessive flushes, so we'll limit it to once in a while if we don't
@@ -303,7 +303,7 @@ namespace Voron
             });
         }
 
-        public void ForceFlushAndSyncEnvironment(StorageEnvironment env)
+        public void ForceSyncEnvironment(StorageEnvironment env)
         {
             _syncIsRequired.Enqueue(new EnvSyncReq
             {

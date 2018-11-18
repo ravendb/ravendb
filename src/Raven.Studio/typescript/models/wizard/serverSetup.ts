@@ -119,8 +119,8 @@ class serverSetup {
             EnableExperimentalFeatures: this.useExperimentalFeatures(),
             Port: setup.port() ? parseInt(setup.port(), 10) : 8080,
             Addresses: [setup.ip().ip()],
-            LocalNodeTag: setup.localNodeTag(),
-            Environment: this.environment(),
+            LocalNodeTag: setup.bootstrapCluster() ? setup.localNodeTag() : null,
+            Environment: setup.bootstrapCluster() ? this.environment() : null,
             TcpPort: setup.tcpPort() ? parseInt(setup.tcpPort(), 10) : 38888
         }
     }

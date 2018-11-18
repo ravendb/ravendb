@@ -121,7 +121,7 @@ namespace Raven.Server.Utils
                 mergedArray.StartWriteArray();
                 foreach (var item in set)
                 {
-                    mergedArray.WriteValue(item.Item2, item.Item1);
+                    mergedArray.WriteValue(item.Item2 & BlittableJsonReaderBase.TypesMask, item.Item1);
                 }
                 mergedArray.WriteArrayEnd();
                 mergedArray.FinalizeDocument();
@@ -214,7 +214,7 @@ namespace Raven.Server.Utils
             if (propertyValue is BlittableJsonReaderObject.PropertyDetails)
             {
                 var prop = (BlittableJsonReaderObject.PropertyDetails)propertyValue;
-                writer.WriteValue(prop.Token, prop.Value);
+                writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
                 return;
             }
 
@@ -225,7 +225,7 @@ namespace Raven.Server.Utils
                 writer.WriteValue(">>>> conflict start");
                 foreach (BlittableJsonReaderObject.PropertyDetails item in conflicted.Values)
                 {
-                    writer.WriteValue(item.Token, item.Value);
+                    writer.WriteValue(item.Token & BlittableJsonReaderBase.TypesMask, item.Value);
                 }
                 writer.WriteValue("<<<< conflict end");
                 writer.WriteArrayEnd();

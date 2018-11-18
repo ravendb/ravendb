@@ -88,7 +88,7 @@ class indexErrors extends viewModelBase {
                     {
                         title: () => 'Show indexing error details'
                     }),
-                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.IndexName, x => appUrl.forQuery(this.activeDatabase(), x.IndexName), "Index name", "25%"),
+                new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.IndexName, x => appUrl.forEditIndex(x.IndexName, this.activeDatabase()), "Index name", "25%"),
                 new hyperlinkColumn<IndexErrorPerDocument>(grid, x => x.Document, x => appUrl.forEditDoc(x.Document, this.activeDatabase()), "Document Id", "20%"),
                 new textColumn<IndexErrorPerDocument>(grid, x => generalUtils.formatUtcDateAsLocal(x.Timestamp), "Date", "20%"),
                 new textColumn<IndexErrorPerDocument>(grid, x => x.Action, "Action", "10%"),

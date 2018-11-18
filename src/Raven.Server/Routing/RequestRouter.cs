@@ -135,11 +135,20 @@ namespace Raven.Server.Routing
             }
         }
 
+        public static bool TryGetClientVersion(HttpContext context, out Version version)
+        {
+            version = null;
+
+            if (context.Request.Headers.TryGetValue(Constants.Headers.ClientVersion, out var versionHeader) == false)
+                return false;
+
+            return Version.TryParse(versionHeader, out version);
+        }
+
         public static void AssertClientVersion(HttpContext context, Exception innerException)
         {
             // client in this context could be also a follower sending a command to his leader.
-            if (context.Request.Headers.TryGetValue(Constants.Headers.ClientVersion, out var versionHeader) &&
-                Version.TryParse(versionHeader, out var clientVersion))
+            if (TryGetClientVersion(context, out var clientVersion))
             {
                 var currentServerVersion = RavenVersionAttribute.Instance;
 

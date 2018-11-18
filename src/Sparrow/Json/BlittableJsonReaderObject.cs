@@ -481,10 +481,10 @@ namespace Sparrow.Json
                 AddToCache(name, result, index);
             }
 
-Return:
+        Return:
             return opResult;
 
-ThrowDisposed:
+        ThrowDisposed:
             ThrowObjectDisposed();
             result = null;
             return false;
@@ -527,10 +527,10 @@ ThrowDisposed:
                 ThrowOutOfRangeException();
 
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
-            
-            GetPropertyTypeAndPosition(index, metadataSize, 
-                out var token, 
-                out var position, 
+
+            GetPropertyTypeAndPosition(index, metadataSize,
+                out var token,
+                out var position,
                 out var propertyId);
 
             var stringValue = GetPropertyName(propertyId);
@@ -607,7 +607,7 @@ ThrowDisposed:
 
             } while (min <= max);
 
-NotFound:
+        NotFound:
             return -1;
         }
 
@@ -895,8 +895,7 @@ NotFound:
                 var prevEscCharOffset = 0;
                 for (var i = 0; i < escCount; i++)
                 {
-                    byte escCharOffsetLen;
-                    var escCharOffset = ReadVariableSizeInt(str + stringLength + escOffset + totalEscCharLen, out escCharOffsetLen);
+                    var escCharOffset = ReadVariableSizeInt(str + stringLength + escOffset + totalEscCharLen, out var escCharOffsetLen);
                     escCharOffset += prevEscCharOffset;
                     var escChar = (char)ReadNumber(_mem + str + escCharOffset, 1);
                     switch (escChar)
@@ -911,7 +910,9 @@ NotFound:
                         case '\t':
                             break;
                         default:
-                            throw new InvalidDataException("String not valid, invalid escape character: " + escChar);
+                            if (escChar >= 32)
+                                throw new InvalidDataException("String not valid, invalid escape character: " + escChar);
+                            break;
                     }
                     totalEscCharLen += escCharOffsetLen;
                     prevEscCharOffset = escCharOffset + 1;

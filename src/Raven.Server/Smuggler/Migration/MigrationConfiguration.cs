@@ -39,6 +39,8 @@ namespace Raven.Server.Smuggler.Migration
         public bool RemoveAnalyzers { get; set; }
 
         public bool ImportRavenFs { get; set; }
+
+        public string TransformScript { get; set; }
     }
 
     public abstract class MigrationConfigurationBase
@@ -58,5 +60,7 @@ namespace Raven.Server.Smuggler.Migration
         public string ApiKey { get; set; }
 
         public bool EnableBasicAuthenticationOverUnsecuredHttp { get; set; }
+
+        public bool SkipServerCertificateValidation { get; set; }
     }
 }

@@ -676,32 +676,20 @@ namespace Raven.Server.Documents
             return fst.NumberOfEntries;
         }
 
-        public void UpdateDocumentCounters(DocumentsOperationContext context, BlittableJsonReaderObject doc, string docId, List<CounterOperation> countersOperations)
+        public void UpdateDocumentCounters(DocumentsOperationContext context, BlittableJsonReaderObject doc, string docId)
         {
             BlittableJsonReaderArray metadataCounters = null;
-            var initCounterListSize = countersOperations.Count;
-            if (doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                metadata.TryGet(Constants.Documents.Metadata.Counters, out metadataCounters))
+            if (doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
             {
-                initCounterListSize += metadataCounters.Length;
+                metadata.TryGet(Constants.Documents.Metadata.Counters, out metadataCounters);
             }
 
-            List<string> counters = null;
-            foreach (var s in GetCountersForDocument(context, docId))
-            {
-                if (counters == null)
-                {
-                    counters = new List<string>(initCounterListSize);
-                }
-                counters.Add(s);
-            }
-
-            UpdateCountersListDueToOperations(ref counters, countersOperations);
+            var counters = GetCountersForDocument(context, docId).ToList();
 
             var flags = DocumentFlags.None;
-            if (counters == null || counters.Count == 0)
+            if (counters.Count == 0)
             {
-                if (null == metadataCounters)
+                if (metadataCounters == null)
                 {
                     return;
                 }
@@ -743,58 +731,6 @@ namespace Raven.Server.Documents
 
             var data = context.ReadObject(doc, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             _documentDatabase.DocumentsStorage.Put(context, docId, null, data, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByCountersUpdate);
-        }
-
-        private static void UpdateCountersListDueToOperations(ref List<string> counters, List<CounterOperation> countersOperations)
-        {
-            var localCounters = counters;
-
-            foreach (var operation in countersOperations)
-            {
-                // we need to check the updates to avoid inserting duplicate counter names
-                var loc = localCounters?.BinarySearch(operation.CounterName, StringComparer.OrdinalIgnoreCase) ?? ~0;
-
-                switch (operation.Type)
-                {
-                    case CounterOperationType.Increment:
-                    case CounterOperationType.Put:
-                        if (loc < 0)
-                        {
-                            CreateUpdatesIfNeeded();
-                            localCounters.Insert(~loc, operation.CounterName);
-                        }
-
-                        break;
-                    case CounterOperationType.Delete:
-                        if (loc >= 0)
-                        {
-                            CreateUpdatesIfNeeded();
-                            localCounters.RemoveAt(loc);
-                        }
-                        break;
-                    case CounterOperationType.None:
-                    case CounterOperationType.Get:
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException($"Unknown value {operation.Type}");
-                }
-            }
-
-            counters = localCounters; 
-
-            void CreateUpdatesIfNeeded()
-            {
-                if (localCounters != null)
-                    return;
-
-                localCounters = new List<string>(countersOperations.Count);
-                foreach (var val in localCounters)
-                {
-                    if (val == null)
-                        continue;
-                    localCounters.Add(val);
-                }
-            }
         }
     }
 }
