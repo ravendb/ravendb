@@ -1337,6 +1337,11 @@ namespace Raven.Server.Documents
                 if (string.IsNullOrEmpty(changeVector))
                     ChangeVectorUtils.ThrowConflictingEtag(lowerId.ToString(), docChangeVector, newEtag, Environment.Base64Id, DocumentDatabase.ServerStore.NodeTag);
 
+                if (context.LastDatabaseChangeVector == null)
+                    context.LastDatabaseChangeVector = GetDatabaseChangeVector(context);
+
+                changeVector = ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector, changeVector);
+
                 context.LastDatabaseChangeVector = changeVector;
             }
             else
