@@ -50,17 +50,17 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class LastRaftIndex : BackupStatus
+    public class LastRaftIndex
     {
-        public long? DatabaseRecord { get; set; }
+        public long DatabaseRecord { get; set; }
 
-        public override DynamicJsonValue ToJson()
+        public virtual DynamicJsonValue ToJson()
         {
-            var json = base.ToJson();
-            json[nameof(DatabaseRecord)] = DatabaseRecord;
-            return json;
+            return new DynamicJsonValue
+            {
+                [nameof(DatabaseRecord)] = DatabaseRecord
+            };
         }
-
     }
 
     public class LocalBackup : BackupStatus

@@ -120,12 +120,13 @@ namespace Raven.Server.Documents.PeriodicBackup
                     _logger.Info($"Creating {(_isFullBackup ? fullBackupText : "an incremental backup")}");
                 }
 
+                if (_serverStore.LastRaftIndexByDatabase.TryGetValue(_database.Name, out long currentLastRaftIndex) == false)
+                    currentLastRaftIndex = _serverStore.LastRaftCommitIndex;
                 if (_isFullBackup == false)
                 {
                     // no-op if nothing has changed
                     var currentLastEtag = _database.ReadLastEtag();
-                    _serverStore.LastRaftIndex.TryGetValue(_database.Name, out long currentLastRaftIndex);
-                    if ((currentLastEtag == _previousBackupStatus.LastEtag) && (currentLastRaftIndex <= _previousBackupStatus.LastRaftIndex.DatabaseRecord))
+                    if ((currentLastEtag == _previousBackupStatus.LastEtag) && (currentLastRaftIndex == _previousBackupStatus.LastRaftIndex.DatabaseRecord))
                     {
                         var message = "Skipping incremental backup because " +
                                       $"last etag ({currentLastEtag:#,#;;0}) hasn't changed since last backup";
@@ -171,7 +172,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 UpdateOperationId(runningBackupStatus);
                 runningBackupStatus.LastEtag = lastEtag;
-                runningBackupStatus.LastRaftIndex.DatabaseRecord = _serverStore.LastRaftCommitIndex;
+                runningBackupStatus.LastRaftIndex.DatabaseRecord = currentLastRaftIndex;
                 runningBackupStatus.FolderName = folderName;
                 if (_isFullBackup)
                     runningBackupStatus.LastFullBackup = _periodicBackup.StartTime;
@@ -179,6 +180,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                     runningBackupStatus.LastIncrementalBackup = _periodicBackup.StartTime;
 
                 totalSw.Stop();
+
+                if (_serverStore.LastRaftIndexByDatabase.ContainsKey(_database.Name) == false)
+                    _serverStore.LastRaftIndexByDatabase.AddOrUpdate(_database.Name, currentLastRaftIndex, (key, oldIndex) => currentLastRaftIndex);
 
                 if (_logger.IsInfoEnabled)
                 {

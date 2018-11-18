@@ -108,7 +108,7 @@ namespace Raven.Server.ServerWide
 
         public Operations Operations { get; }
 
-        public ConcurrentDictionary<string, long > LastRaftIndex = new ConcurrentDictionary<string, long>();
+        public ConcurrentDictionary<string, long > LastRaftIndexByDatabase = new ConcurrentDictionary<string, long>();
 
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
@@ -756,18 +756,23 @@ namespace Raven.Server.ServerWide
             // we set the postpone time to the minimum in order to overwrite it and to send this notification every time when a new client connects. 
         }
 
-        private void OnIndexChangedForBackup(object sender, (BlittableJsonReaderObject Cmd, long Index, string Type) t)
+        private void OnIndexChangedForBackup(object sender, (string DatabaseName, long Index, string Type) t)
         {
             switch (t.Type)
             {
-                case nameof(AddOrUpdateCompareExchangeCommand):
-                case nameof(RemoveCompareExchangeCommand):
-                    if (t.Cmd.TryGet(nameof(CompareExchangeCommandBase.Database), out string database))
-                        LastRaftIndex.AddOrUpdate(database, t.Index, (key, oldIndex) => t.Index);
-                    break;
-                default:
-                    if (t.Cmd.TryGet(nameof(DatabaseRecord.DatabaseName), out string databaseName))
-                        LastRaftIndex.AddOrUpdate(databaseName, t.Index, (key, oldIndex) => t.Index);
+                case nameof(IncrementClusterIdentityCommand):
+                case nameof(IncrementClusterIdentitiesBatchCommand):
+                case nameof(UpdateClusterIdentityCommand):
+                case nameof(PutIndexCommand):
+                case nameof(PutAutoIndexCommand):
+                case nameof(DeleteIndexCommand):
+                case nameof(SetIndexLockCommand):
+                case nameof(SetIndexPriorityCommand):
+                case nameof(SetIndexStateCommand):
+                case nameof(EditRevisionsConfigurationCommand):
+                case nameof(EditExpirationCommand):
+                case nameof(CompareExchangeCommandBase):
+                    LastRaftIndexByDatabase.AddOrUpdate(t.DatabaseName, t.Index, (key, oldIndex) => t.Index);
                     break;
             }
         }
