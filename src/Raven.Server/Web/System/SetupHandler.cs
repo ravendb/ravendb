@@ -82,8 +82,11 @@ namespace Raven.Server.Web.System
                             result = JsonConvert.DeserializeObject<JObject>(responseString);
                             if (result != null)
                             {
-                                if (((JObject)result).TryGetValue("Error", out var err))
+                                if (((JObject)result).TryGetValue(nameof(ExceptionDispatcher.ExceptionSchema.Error), out var err))
                                     error = err.ToString();
+
+                                if (((JObject)result).TryGetValue(nameof(ExceptionDispatcher.ExceptionSchema.Message), out var msg))
+                                    errorMessage = msg.ToString();
                             }
                         }
                     }
