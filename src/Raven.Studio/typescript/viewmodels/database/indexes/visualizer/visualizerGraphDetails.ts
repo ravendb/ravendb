@@ -5,6 +5,7 @@ import visualizerTreeExplorer = require("viewmodels/database/indexes/visualizer/
 import app = require("durandal/app");
 import d3 = require('d3');
 import rbush = require("rbush");
+import colorsManager = require("common/colorsManager");
 
 abstract class reduceValuesFormatter {
     static formatData(data: any) {
@@ -654,6 +655,23 @@ class visualizerGraphDetails {
 
     private canNavigateToNextTree: KnockoutComputed<boolean>;
     private canNavigateToPreviousTree: KnockoutComputed<boolean>;
+    
+    private colors = {
+        canvasBg: undefined as string,
+        interPageConnection: undefined as string,
+        pageBg: undefined as string,
+        pageNumber: undefined as string,
+        nestedSectionBg: undefined as string,
+        nestedSectionFg: undefined as string,
+        collapsedLeafsBg: undefined as string,
+        collapsedLeafsFg: undefined as string,
+        entriesBg: undefined as string,
+        entryBg: undefined as string,
+        entryFg: undefined as string,
+        aggregationLabel: undefined as string,
+        aggregationValue: undefined as string,
+        documentText: undefined as string
+    };
 
     constructor() {
         _.bindAll(this, ["goToMasterView", "goToNextTree", "goToPreviousTree"] as Array<keyof this>);
@@ -672,6 +690,8 @@ class visualizerGraphDetails {
         this.gotoMasterViewCallback = goToMasterViewCallback;
         this.trees = trees;
 
+        colorsManager.setup(".visualizer .details-colors", this.colors);
+        
         const container = d3.select("#visualizerContainer");
 
         [this.totalWidth, this.totalHeight] = viewHelpers.getPageHostDimenensions();
@@ -852,7 +872,7 @@ class visualizerGraphDetails {
         const canvas = this.canvas.node() as HTMLCanvasElement;
         const ctx = canvas.getContext("2d");
 
-        ctx.fillStyle = "#2c3333";
+        ctx.fillStyle = this.colors.canvasBg;
         ctx.fillRect(0, 0, this.totalWidth, this.totalHeight);
         ctx.save();
 
@@ -892,7 +912,7 @@ class visualizerGraphDetails {
                 }
 
                 if (page.parentPage) {
-                    ctx.strokeStyle = "#686f6f";
+                    ctx.strokeStyle = this.colors.interPageConnection;
                     ctx.lineWidth = 2;
 
                     const sourcePoint = page.getSourceConnectionPoint();
@@ -918,7 +938,7 @@ class visualizerGraphDetails {
     }
 
     private drawPage(ctx: CanvasRenderingContext2D, page: pageItem) {
-        ctx.fillStyle = "#3a4242";
+        ctx.fillStyle = this.colors.pageBg;
         ctx.fillRect(page.x, page.y, page.width, page.height);
 
         ctx.save();
@@ -926,7 +946,7 @@ class visualizerGraphDetails {
         try {
 
             // page number
-            ctx.fillStyle = "#008cc9";
+            ctx.fillStyle = this.colors.pageNumber;
             ctx.font = "bold 24px Lato";
             ctx.textAlign = "right";
             ctx.textBaseline = "top";
@@ -934,11 +954,11 @@ class visualizerGraphDetails {
 
             if (page instanceof leafPageItem && page.nestedSection) {
                 const nestedSectionMargins = pageItem.margins.nestedSection;
-                ctx.fillStyle = "#008cc9";
+                ctx.fillStyle = this.colors.nestedSectionBg;
                 ctx.fillRect(page.width - nestedSectionMargins.rightMargin - nestedSectionMargins.width, nestedSectionMargins.topMargin, nestedSectionMargins.width, nestedSectionMargins.height);
 
                 ctx.textAlign = "center";
-                ctx.fillStyle = "white";
+                ctx.fillStyle = this.colors.nestedSectionFg; 
                 ctx.font = "11px Lato";
                 ctx.fillText("NESTED", page.width - nestedSectionMargins.rightMargin - nestedSectionMargins.width / 2, nestedSectionMargins.topMargin + 3);
                 ctx.fillText("SECTION", page.width - nestedSectionMargins.rightMargin - nestedSectionMargins.width / 2, nestedSectionMargins.topMargin + 15);
@@ -956,7 +976,7 @@ class visualizerGraphDetails {
     }
 
     private drawCollapsedLeafs(ctx: CanvasRenderingContext2D, page: collapsedLeafsItem) {
-        ctx.fillStyle = "#3a4242";
+        ctx.fillStyle = this.colors.collapsedLeafsBg;
         ctx.fillRect(page.x, page.y, page.width, page.height);
 
         ctx.save();
@@ -964,7 +984,7 @@ class visualizerGraphDetails {
         try {
 
             ctx.font = "11px Lato";
-            ctx.fillStyle = "#a9adad";
+            ctx.fillStyle = this.colors.collapsedLeafsFg;
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
             ctx.fillText(page.aggregationCount + " leafs collapsed", page.width / 2, pageItem.margins.pageNumberTopMargin);
@@ -977,17 +997,17 @@ class visualizerGraphDetails {
     private drawEntries(ctx: CanvasRenderingContext2D, leaf: leafPageItem) {
         const entries = leaf.entries;
         ctx.font = "11px Lato";
-        ctx.fillStyle = "#626969";
+        ctx.fillStyle = this.colors.entriesBg;
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
         ctx.fillText("Entries:", pageItem.margins.aggragationTextHorizontalPadding, leaf.entriesTextY);
 
         for (let i = 0; i < entries.length; i++) {
             const entry = entries[i];
-            ctx.fillStyle = "#2c3333";
+            ctx.fillStyle = this.colors.entryBg;
             ctx.fillRect(entry.x, entry.y, entry.width, entry.height);
 
-            ctx.fillStyle = "#a9adad";
+            ctx.fillStyle = this.colors.entryFg;
             ctx.font = "12px Lato";
             if (entry instanceof entryPaddingItem) {
                 ctx.textAlign = "center";
@@ -1002,12 +1022,12 @@ class visualizerGraphDetails {
 
     private drawAggregation(ctx: CanvasRenderingContext2D, branch: branchPageItem) {
         ctx.font = "11px Lato";
-        ctx.fillStyle = "#626969";
+        ctx.fillStyle = this.colors.aggregationLabel;
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
         ctx.fillText("Aggregation:", pageItem.margins.aggragationTextHorizontalPadding, pageItem.margins.pageNumberTopMargin);
 
-        ctx.fillStyle = "#a9adad";
+        ctx.fillStyle = this.colors.aggregationValue;
         ctx.font = "12px Lato";
         ctx.textAlign = "left";
 
@@ -1039,7 +1059,7 @@ class visualizerGraphDetails {
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.font = "18px Lato";
-            ctx.fillStyle = "black";
+            ctx.fillStyle = this.colors.documentText;
             ctx.fillText(docItem.name, docItem.x + docItem.width / 2, docItem.y + docItem.height / 2);
         }
     }
@@ -1137,7 +1157,7 @@ class visualizerGraphDetails {
                 .transition()
                 .duration(200)
                 .style("opacity", 0.05);
-        }
+        };
 
         this.pageItemHighlightHandler();
     }
