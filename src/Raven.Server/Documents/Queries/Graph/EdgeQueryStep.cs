@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
-        private class EdgeMatcher : ISingleGraphStep
+        public class EdgeMatcher : ISingleGraphStep
         {
             private readonly EdgeQueryStep _parent;
             SingleEdgeMatcher _processor;
@@ -156,6 +156,11 @@ namespace Raven.Server.Documents.Queries.Graph
             public void AddAliases(HashSet<string> aliases)
             {
                 aliases.UnionWith(_parent.GetAllAliases());
+            }
+
+            public void SetPrev(IGraphQueryStep prev)
+            {
+                _parent._left = prev;
             }
 
             public ValueTask Initialize()

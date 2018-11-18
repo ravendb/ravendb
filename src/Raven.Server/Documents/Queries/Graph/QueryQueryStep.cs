@@ -164,6 +164,10 @@ namespace Raven.Server.Documents.Queries.Graph
                 aliases.UnionWith(_parent.GetAllAliases());
             }
 
+            public void SetPrev(IGraphQueryStep prev)
+            {
+            }
+
             public bool GetAndClearResults(List<Match> matches)
             {
                 if (_temp.Count == 0)

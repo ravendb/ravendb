@@ -34,5 +34,7 @@ namespace Raven.Server.Documents.Queries.Graph
         void Run(GraphQueryRunner.Match src, string alias);
 
         void AddAliases(HashSet<string> aliases);
-}
+
+        void SetPrev(IGraphQueryStep prev);
+    }
 }
