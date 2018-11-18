@@ -1,17 +1,20 @@
-<div class="modal-dialog" role="document" id="chooseThemeModal">
+<div class="modal-dialog modal-lg" role="document" id="chooseThemeModal">
+    <div class="modal-content">
+        <div class="modal-body">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h3>Set UI Theme:</h3>
+            
+            <div class="flex-horizontal">
+                <div class="theme theme-dark" data-bind="click: _.partial(useTheme, 'dark')">
 
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-body">
-                <h3>Choose Theme to use:</h3>
-                
-                <div class="text-center">
-                    <button data-bind="click: _.partial(useTheme, 'dark')" class="btn btn-primary">Dark</button>
-                    <button data-bind="click: _.partial(useTheme, 'light')" class="btn btn-primary">Light</button>
-                    <button data-bind="click: _.partial(useTheme, 'blue')" class="btn btn-primary">Blue</button>
+                </div>
+                <div class="theme theme-light" data-bind="click: _.partial(useTheme, 'light')">
+                    
+                </div>
+                <div class="theme theme-blue" data-bind="click: _.partial(useTheme, 'blue')">
+                    
                 </div>
             </div>
         </div>
     </div>
-    
 </div>
