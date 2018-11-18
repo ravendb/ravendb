@@ -120,8 +120,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     _logger.Info($"Creating {(_isFullBackup ? fullBackupText : "an incremental backup")}");
                 }
 
-                if (_serverStore.LastRaftIndexByDatabase.TryGetValue(_database.Name, out long currentLastRaftIndex) == false)
-                    currentLastRaftIndex = _serverStore.LastRaftCommitIndex;
+                var currentLastRaftIndex = _serverStore.GetLastRaftIndex(_database.Name);
+
                 if (_isFullBackup == false)
                 {
                     // no-op if nothing has changed
@@ -181,9 +181,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 totalSw.Stop();
 
-                if (_serverStore.LastRaftIndexByDatabase.ContainsKey(_database.Name) == false)
-                    _serverStore.LastRaftIndexByDatabase.AddOrUpdate(_database.Name, currentLastRaftIndex, (key, oldIndex) => currentLastRaftIndex);
-
+                _serverStore.SetLastRaftIndex(_database.Name, currentLastRaftIndex);
                 if (_logger.IsInfoEnabled)
                 {
                     var fullBackupText = "a " + (_configuration.BackupType == BackupType.Backup ? " full backup" : " snapshot");
