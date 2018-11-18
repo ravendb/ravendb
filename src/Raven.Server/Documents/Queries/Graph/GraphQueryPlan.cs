@@ -53,8 +53,6 @@ namespace Raven.Server.Documents.Queries.Graph
             var edges = new Dictionary<object, HashSet<string>>();
             var nodes = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
-
-
             foreach (var match in matches)
             {
                 _rootQueryStep.Analyze(match, AddNode, AddEdge);
@@ -71,6 +69,11 @@ namespace Raven.Server.Documents.Queries.Graph
                     edges[src] = hash = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 hash.Add(dst);
+
+                if(nodes.TryGetValue(dst, out _) == false)
+                {
+                    nodes[dst] = _database.DocumentsStorage.Get(_context, dst);
+                }
             }
 
             void AddNode(string key, object val)
