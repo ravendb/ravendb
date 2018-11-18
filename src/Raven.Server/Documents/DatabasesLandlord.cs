@@ -21,6 +21,7 @@ using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Utils;
+using Voron.Exceptions;
 
 namespace Raven.Server.Documents
 {
@@ -621,6 +622,12 @@ namespace Raven.Server.Documents
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Failed to start database {config.ResourceName}", e);
+
+                if (e is SchemaErrorException)
+                {
+                    throw new DatabaseSchemaErrorException($"Failed to start database {config.ResourceName}" + Environment.NewLine +
+                                                           $"At {config.Core.DataDirectory}", e);
+                }
                 throw new DatabaseLoadFailureException($"Failed to start database {config.ResourceName}" + Environment.NewLine +
                                                        $"At {config.Core.DataDirectory}", e);
             }
