@@ -265,15 +265,16 @@ namespace Raven.Server.Documents.Handlers
                     };
                     foreach(var item in edge.Value)
                     {
-                        var key = item.Key;
-                        if (key is Document d)
+                        var edgeVal = item.Edge;
+                        if (edgeVal is Document d)
                         {
-                            key = d.Id?.ToString() ?? "anonymous/" + Guid.NewGuid();
+                            edgeVal = d.Id?.ToString() ?? "anonymous/" + Guid.NewGuid();
                         }
                         array.Add(new DynamicJsonValue
                         {
-                            ["From"] = key,
-                            ["To"] = item.Value
+                            ["From"] = item.Source,
+                            ["To"] = item.Destination,
+                            ["Edge"] = edgeVal
                         });
                     }
                     edges.Add(djv);

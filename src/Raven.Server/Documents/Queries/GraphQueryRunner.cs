@@ -30,12 +30,19 @@ namespace Raven.Server.Documents.Queries
         {
         }
 
+        public class EdgeDebugInfo
+        {
+            public string Source;
+            public string Destination;
+            public object Edge;
+        }
+
         public class GraphDebugInfo
         {
             private readonly DocumentDatabase _database;
             private readonly DocumentsOperationContext _context;
             public Dictionary<string, object> Nodes = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-            public Dictionary<string, Dictionary<object, HashSet<string>>> Edges = new Dictionary<string, Dictionary<object, HashSet<string>>>();
+            public Dictionary<string, List<EdgeDebugInfo>> Edges = new Dictionary<string, List<EdgeDebugInfo>>();
 
             public GraphDebugInfo(DocumentDatabase database, DocumentsOperationContext context)
             {
@@ -43,18 +50,20 @@ namespace Raven.Server.Documents.Queries
                 _context = context;
             }
 
-            public void AddEdge(string edge, object src, string dst)
+            public void AddEdge(string edgeName, object edge, string source, string dst)
             {
-                if (src == null || dst == null)
+                if (edge == null || dst == null)
                     return;
 
-                if (Edges.TryGetValue(edge, out var edgeInfo) == false)
-                    Edges[edge] = edgeInfo = new Dictionary<object, HashSet<string>>();
+                if (Edges.TryGetValue(edgeName, out var edgeInfo) == false)
+                    Edges[edgeName] = edgeInfo = new List<EdgeDebugInfo>();
 
-                if (edgeInfo.TryGetValue(src, out var hash) == false)
-                    edgeInfo[src] = hash = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                hash.Add(dst);
+                edgeInfo.Add(new EdgeDebugInfo
+                {
+                    Destination = dst,
+                    Source = source ?? "__anonymous__/" + Guid.NewGuid(),
+                    Edge = edge
+                });
 
                 if (Nodes.TryGetValue(dst, out _) == false)
                 {
