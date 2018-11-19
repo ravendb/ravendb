@@ -31,6 +31,11 @@ namespace Raven.Server.Documents.Queries.Graph
             _allAliases.UnionWith(right.GetAllAliases());
         }
 
+        public bool IsEmpty()
+        {
+            return _results.Count == 0;
+        }
+
         public IGraphQueryStep Clone()
         {
             return new EdgeFollowingRecursionQueryStep((RecursionQueryStep)_left.Clone(), _right.Clone(),_queryParameters);

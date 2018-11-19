@@ -20,6 +20,8 @@ namespace Raven.Server.Documents.Queries.Graph
             Action<string, object> addNode, 
             Action<object, string> addEdge);
 
+        bool IsEmpty();
+
         IGraphQueryStep Clone();
     }
 }

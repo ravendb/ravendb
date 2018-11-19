@@ -43,7 +43,12 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public static CollectionDestinationQueryStep ToCollectionDestinationQueryStep(DocumentsStorage documentsStorage, QueryQueryStep qqs)
         {
-            return new CollectionDestinationQueryStep(qqs._alias, qqs._context, documentsStorage);
+            return new CollectionDestinationQueryStep(qqs._alias, qqs._context, documentsStorage, qqs._queryMetadata.CollectionName);
+        }
+
+        public bool IsEmpty()
+        {
+            return _results.Count == 0;
         }
 
         public IGraphQueryStep Clone()

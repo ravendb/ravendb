@@ -51,6 +51,11 @@ namespace Raven.Server.Documents.Queries.Graph
             _edgesExpression = eqs._edgesExpression;
         }
 
+        public bool IsEmpty()
+        {
+            return _results.Count == 0;
+        }
+
         public IGraphQueryStep Clone()
         {
             return new EdgeQueryStep(_left.Clone(), _right.Clone(), _edgesExpression, _edgePath, _queryParameters);
@@ -64,6 +69,12 @@ namespace Raven.Server.Documents.Queries.Graph
             var leftTask = _left.Initialize();
             if(leftTask.IsCompleted)
             {
+                //At this point we know we are not going to yield results we can skip running right hand side
+                if (Left.IsEmpty())
+                {
+                    _index = 0;
+                    return default;
+                }
                 var rightTask = _right.Initialize();
                 if(rightTask.IsCompleted)
                 {
@@ -85,6 +96,12 @@ namespace Raven.Server.Documents.Queries.Graph
         private async Task InitializeLeftAsync(ValueTask leftTask)
         {
             await leftTask;
+            //At this point we know we are not going to yield results we can skip running right hand side
+            if (Left.IsEmpty())
+            {
+                _index = 0;
+                return;
+            }
             var rightTask = _right.Initialize();
             if (rightTask.IsCompleted == false)
             {
