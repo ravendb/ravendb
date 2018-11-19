@@ -47,7 +47,7 @@ class queryCommand extends commandBase {
     }
 
     private extractQueryParameters(queryText: string) {
-        const parametersEndRegex = /^(from|declare)/mi;
+        const parametersEndRegex = /^\s*(with|match|from|declare)/mi;
         const match = parametersEndRegex.exec(queryText);
         if (!match) {
             return [undefined, queryText];
