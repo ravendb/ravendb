@@ -19,6 +19,8 @@ namespace Raven.Server.Documents.Queries.Graph
         void Analyze(GraphQueryRunner.Match match,
             GraphQueryRunner.GraphDebugInfo graphDebugInfo);
 
+        bool IsEmpty();
+
         IGraphQueryStep Clone();
 
         ISingleGraphStep GetSingleGraphStepExecution();

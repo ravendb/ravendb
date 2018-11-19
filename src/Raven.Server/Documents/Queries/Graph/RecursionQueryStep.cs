@@ -101,6 +101,11 @@ namespace Raven.Server.Documents.Queries.Graph
             _outputAlias = _stepAliases.Last();
         }
 
+        public bool IsEmpty()
+        {
+            return _results.Count == 0;
+        }
+
         public IGraphQueryStep Clone()
         {
             return new RecursionQueryStep(_left.Clone(), new List<SingleEdgeMatcher>(_steps), _recursive, _options);

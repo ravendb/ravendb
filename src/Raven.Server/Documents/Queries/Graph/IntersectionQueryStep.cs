@@ -38,6 +38,11 @@ namespace Raven.Server.Documents.Queries.Graph
             _right = right;
         }
 
+        public bool IsEmpty()
+        {
+            return _results.Count == 0;
+        }
+
         public IGraphQueryStep Clone()
         {
             return new IntersectionQueryStep<TOp>(_left.Clone(), _right.Clone());
@@ -132,6 +137,13 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private ValueTask CompleteInitializationAfterLeft()
         {
+            //At this point we know we are not going to yield results we can skip running right hand side
+            if (GetType().GetGenericArguments().FirstOrDefault() != typeof(Union) && _left.IsEmpty())
+            {
+                _index = 0;
+                return default;
+            }
+
             var rightTask = _right.Initialize();
             if (rightTask.IsCompleted == false)
             {
