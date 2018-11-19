@@ -542,15 +542,15 @@ namespace Raven.Server
                 }
 
                 // same certificate, but now we need to see if we need to auto update it
-                var remainingDays = (currentCertificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
-                if (remainingDays > 30 && forceRenew == false)
-                    return; // nothing to do, the certs are the same and we have enough time
-
-                // we want to setup all the renewals for Saturday so we'll have reduced the amount of cert renewals that are counted against our renewals
-                // but if we have less than 20 days, we'll try anyway
-                if (DateTime.Today.DayOfWeek != DayOfWeek.Saturday && remainingDays > 20 && forceRenew == false)
+                var (shouldRenew, renewalDate) = CalculateRenewalDate(currentCertificate, forceRenew);
+                if (shouldRenew == false)
+                {
+                    // We don't want an alert here, this happens frequently.
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Renew check: still have time left to renew the server certificate with thumbprint `{currentCertificate.Certificate.Thumbprint}`, estimated renewal date: {renewalDate}");
                     return;
-
+                }                    
+                
                 if (ServerStore.LicenseManager.GetLicenseStatus().Type == LicenseType.Developer && forceRenew == false)
                 {
                     msg = "It's time to renew your Let's Encrypt server certificate but automatic renewal is turned off when using the developer license. Go to the certificate page in the studio and trigger the renewal manually.";
@@ -592,6 +592,29 @@ namespace Raven.Server
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
             }
+        }
+
+        public (bool ShouldRenew, DateTime RenewalDate) CalculateRenewalDate(CertificateHolder currentCertificate, bool forceRenew)
+        {
+            // we want to setup all the renewals for Saturdays, 30 days before expiration. This is done to reduce the amount of cert renewals that are counted against our renewals
+            // but if we have less than 20 days or user asked to force-renew, we'll try anyway.
+
+            if (forceRenew)
+                return (true, DateTime.UtcNow);
+
+            var remainingDays = (currentCertificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
+            if (remainingDays <= 20)
+            {
+                return (true, DateTime.UtcNow);
+            }
+
+            var firstPossibleDate = currentCertificate.Certificate.NotAfter.ToUniversalTime().AddDays(-30);
+            
+            // We can do this because saturday is last in the DayOfWeek enum
+            var daysUntilSaturday = DayOfWeek.Saturday - firstPossibleDate.DayOfWeek; 
+            var firstPossibleSaturday = firstPossibleDate.AddDays(daysUntilSaturday);
+
+            return (false, firstPossibleSaturday);
         }
 
         public async Task StartCertificateReplicationAsync(string base64Cert, bool replaceImmediately)
