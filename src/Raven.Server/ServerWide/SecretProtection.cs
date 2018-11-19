@@ -19,12 +19,15 @@ using Org.BouncyCastle.Utilities.Encoders;
 using Org.BouncyCastle.X509;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Voron.Platform.Posix;
 using OpenFlags = Voron.Platform.Posix.OpenFlags;
+using Process = Custom.Raven.System.Diagnostics.Process;
+using ProcessStartInfo = Custom.Raven.System.Diagnostics.ProcessStartInfo;
 
 namespace Raven.Server.ServerWide
 {
@@ -323,24 +326,24 @@ namespace Raven.Server.ServerWide
 
         public RavenServer.CertificateHolder LoadCertificateWithExecutable(string executable, string args, ServerStore serverStore)
         {
-            var process = new Process
+            RavenProcess process;
+
+            var startInfo = new ProcessStartInfo
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = executable,
-                    Arguments = args,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                }
+                FileName = executable,
+                Arguments = args,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                InheritHandles = false
             };
 
             var sw = Stopwatch.StartNew();
 
             try
             {
-                process.Start();
+                process = RavenProcess.Start(startInfo);
             }
             catch (Exception e)
             {
@@ -422,25 +425,24 @@ namespace Raven.Server.ServerWide
 
         private byte[] LoadMasterKeyWithExecutable()
         {
+            RavenProcess process;
 
-            var process = new Process
+            var startInfo = new ProcessStartInfo
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = _config.MasterKeyExec,
-                    Arguments = _config.MasterKeyExecArguments,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                }
+                FileName = _config.MasterKeyExec,
+                Arguments = _config.MasterKeyExecArguments,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                InheritHandles = false
             };
 
             var sw = Stopwatch.StartNew();
 
             try
             {
-                process.Start();
+                process = RavenProcess.Start(startInfo);
             }
             catch (Exception e)
             {

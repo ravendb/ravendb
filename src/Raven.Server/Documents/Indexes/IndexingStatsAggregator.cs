@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Indexes
             _stats.AddCriticalError(e);
         }
 
-        public void AddMemoryError(OutOfMemoryException oome)
+        public void AddMemoryError(Exception oome)
         {
             _stats.AddMemoryError(oome);
         }

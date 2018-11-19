@@ -78,10 +78,7 @@
             </div>
         </div>
         
-        
-        <hr /> 
-        
-        <div class="form-group" data-bind="validationElement: $root.model.environment, with: $root.model">
+        <div class="form-group" data-bind="validationElement: $root.model.environment, with: $root.model, visible: bootstrapCluster">
             <label for="port" class="control-label">Environment</label>
             <div style="position: relative">
                 <button class="btn btn-block dropdown-toggle" type="button" data-toggle="dropdown">
