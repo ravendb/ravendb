@@ -31,6 +31,23 @@ namespace FastTests.Graph
             }
         }
 
+        [Fact]
+        public void Do_not_leak_last_alias_in_recursive()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateNorthwindDatabase(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Advanced.RawQuery<JObject>(
+                        "match (Employees as e)-recursive { [ReportsTo]->(Employees as boss) }"
+                        )
+                        .First();
+                    Assert.False(result.ContainsKey("boss"));
+                }
+            }
+        }
 
         [Fact]
         public void Graph_query_can_handle_edges_defined_in_property_with_whitespaces()

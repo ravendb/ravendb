@@ -206,7 +206,13 @@ namespace Raven.Server.Documents.Queries.Graph
                 matches.Clear();
                 ProcessSingleResultRecursive(match, matches);
                 if (matches.Count > 0)
-                    _results.AddRange(matches);
+                {
+                    foreach (var item in matches)
+                    {
+                        item.Remove(_outputAlias);
+                        _results.Add(item);
+                    }
+                }
             }
         }
 
