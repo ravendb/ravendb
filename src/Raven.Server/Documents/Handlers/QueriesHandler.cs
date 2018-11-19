@@ -255,18 +255,28 @@ namespace Raven.Server.Documents.Handlers
                     });
                 }
 
-                foreach (var item in results.Edges)
+                foreach (var edge in results.Edges)
                 {
-                    var key = item.Key;
-                    if (key is Document d)
+                    var array = new DynamicJsonArray();
+                    var djv = new DynamicJsonValue
                     {
-                        key = d.Id?.ToString() ?? "anonymous/" + Guid.NewGuid();
+                        ["Name"] = edge.Key,
+                        ["Results"] = array
+                    };
+                    foreach(var item in edge.Value)
+                    {
+                        var key = item.Key;
+                        if (key is Document d)
+                        {
+                            key = d.Id?.ToString() ?? "anonymous/" + Guid.NewGuid();
+                        }
+                        array.Add(new DynamicJsonValue
+                        {
+                            ["From"] = key,
+                            ["To"] = item.Value
+                        });
                     }
-                    edges.Add(new DynamicJsonValue
-                    {
-                        ["From"] = key,
-                        ["To"] = item.Value
-                    });
+                    edges.Add(djv);
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

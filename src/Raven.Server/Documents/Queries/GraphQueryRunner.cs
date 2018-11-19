@@ -30,17 +30,62 @@ namespace Raven.Server.Documents.Queries
         {
         }
 
-        public async Task<(Dictionary<string, object> Nodes, Dictionary<object, HashSet<string>> Edges)> GetAnalyzedQueryResults(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag,
+        public class GraphDebugInfo
+        {
+            private readonly DocumentDatabase _database;
+            private readonly DocumentsOperationContext _context;
+            public Dictionary<string, object> Nodes = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            public Dictionary<string, Dictionary<object, HashSet<string>>> Edges = new Dictionary<string, Dictionary<object, HashSet<string>>>();
+
+            public GraphDebugInfo(DocumentDatabase database, DocumentsOperationContext context)
+            {
+                _database = database;
+                _context = context;
+            }
+
+            public void AddEdge(string edge, object src, string dst)
+            {
+                if (src == null || dst == null)
+                    return;
+
+                if (Edges.TryGetValue(edge, out var edgeInfo) == false)
+                    Edges[edge] = edgeInfo = new Dictionary<object, HashSet<string>>();
+
+                if (edgeInfo.TryGetValue(src, out var hash) == false)
+                    edgeInfo[src] = hash = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                hash.Add(dst);
+
+                if (Nodes.TryGetValue(dst, out _) == false)
+                {
+                    Nodes[dst] = _database.DocumentsStorage.Get(_context, dst);
+                }
+            }
+
+            public void AddNode(string key, object val)
+            {
+                key = key ?? "__anonymous__/" + Guid.NewGuid();
+                Nodes[key] = val;
+            }
+        }
+
+
+        public async Task<GraphDebugInfo> GetAnalyzedQueryResults(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag,
            OperationCancelToken token)
         {
             var qr = await GetQueryResults(query, documentsContext, existingResultEtag, token);
-            return qr.QueryPlan.Analyze(qr.Matches);
+            var result = new GraphDebugInfo(Database, documentsContext);
+            qr.QueryPlan.Analyze(qr.Matches, result);
+            return result;
         }
 
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag,
             OperationCancelToken token)
         {
-            var res = new DocumentQueryResult();
+            var res = new DocumentQueryResult
+            {
+                IndexName = "@graph"
+            };
             return await ExecuteQuery(res, query, documentsContext, existingResultEtag, token);
         }
 
@@ -144,7 +189,10 @@ namespace Raven.Server.Documents.Queries
 
         public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer, OperationCancelToken token)
         {
-            var result = new StreamDocumentQueryResult(response, writer, token);
+            var result = new StreamDocumentQueryResult(response, writer, token)
+            {
+                IndexName = "@graph"
+            };
             result =  await ExecuteQuery(result, query, documentsContext, null, token);
             result.Flush();
         }

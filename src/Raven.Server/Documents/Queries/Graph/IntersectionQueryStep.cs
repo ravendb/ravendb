@@ -179,10 +179,10 @@ namespace Raven.Server.Documents.Queries.Graph
             throw new NotSupportedException("Cannot get a match by id from an edge");
         }
 
-        public void Analyze(Match match, Action<string, object> addNode, Action<object, string> addEdge)
+        public void Analyze(Match match, GraphQueryRunner.GraphDebugInfo graphDebugInfo)
         {
-            _left.Analyze(match, addNode, addEdge);
-            _right.Analyze(match, addNode, addEdge);
+            _left.Analyze(match, graphDebugInfo);
+            _right.Analyze(match, graphDebugInfo);
         }
 
         public ISingleGraphStep GetSingleGraphStepExecution()

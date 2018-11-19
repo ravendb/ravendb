@@ -212,17 +212,18 @@ namespace Raven.Server.Documents.Queries.Graph
             return _aliases;
         }
 
-        public void Analyze(Match match, Action<string, object> addNode, Action<object, string> addEdge)
+        public void Analyze(Match match, GraphQueryRunner.GraphDebugInfo graphDebugInfo)
         {
-            _left.Analyze(match, addNode, addEdge);
-            _right.Analyze(match, addNode, addEdge);
+            _left.Analyze(match, graphDebugInfo);
+            _right.Analyze(match, graphDebugInfo);
 
             var prev = match.GetResult(_left.GetOutputAlias());
 
-            AnalyzeEdge(_edgesExpression, _edgePath.Alias, match, prev, addEdge);
+            AnalyzeEdge(_edgesExpression, _edgePath.Alias, match, prev, graphDebugInfo);
         }
 
-        public static string AnalyzeEdge(WithEdgesExpression _edgesExpression, StringSegment edgeAlias, Match match, object prev, Action<object, string> addEdge)
+        public static string AnalyzeEdge(WithEdgesExpression _edgesExpression, StringSegment edgeAlias, Match match, object prev,
+            GraphDebugInfo graphDebugInfo)
         {
             var edge = match.GetResult(edgeAlias);
 
@@ -256,7 +257,7 @@ namespace Raven.Server.Documents.Queries.Graph
             if (result == null)
                 return null;
 
-            addEdge(prev, result);
+            graphDebugInfo.AddEdge(edgeAlias, prev, result);
 
             return result;
         }

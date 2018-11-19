@@ -17,8 +17,7 @@ namespace Raven.Server.Documents.Queries.Graph
         List<GraphQueryRunner.Match> GetById(string id);
 
         void Analyze(GraphQueryRunner.Match match,
-            Action<string, object> addNode, 
-            Action<object, string> addEdge);
+            GraphQueryRunner.GraphDebugInfo graphDebugInfo);
 
         IGraphQueryStep Clone();
 

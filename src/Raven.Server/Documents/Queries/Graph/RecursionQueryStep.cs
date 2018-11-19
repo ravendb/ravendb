@@ -484,9 +484,9 @@ namespace Raven.Server.Documents.Queries.Graph
             return _temp;
         }
 
-        public void Analyze(Match match, Action<string, object> addNode, Action<object, string> addEdge)
+        public void Analyze(Match match, GraphQueryRunner.GraphDebugInfo graphDebugInfo)
         {
-            _left.Analyze(match, addNode, addEdge);
+            _left.Analyze(match, graphDebugInfo);
 
             var prev = match.GetResult(_left.GetOutputAlias());
 
@@ -500,11 +500,11 @@ namespace Raven.Server.Documents.Queries.Graph
                 {
                     if (step.Edge != null)
                     {
-                        var next = EdgeQueryStep.AnalyzeEdge(step.Edge, step.EdgeAlias, singleMatch, prev, addEdge);
+                        var next = EdgeQueryStep.AnalyzeEdge(step.Edge, step.EdgeAlias, singleMatch, prev, graphDebugInfo);
                         if (next != null)
                             prev = next;
                     }
-                    step.Right?.Analyze(singleMatch, addNode, addEdge);
+                    step.Right?.Analyze(singleMatch, graphDebugInfo);
                 }
             }
 

@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Queries.Graph
             return new CollectionDestinationQueryStep(_alias, _context, _documentStorage);
         }
 
-        public void Analyze(GraphQueryRunner.Match match, Action<string, object> addNode, Action<object, string> addEdge)
+        public void Analyze(GraphQueryRunner.Match match, GraphQueryRunner.GraphDebugInfo graphDebugInfo)
         {
             var result = match.GetResult(_alias);
             if (result == null)
@@ -35,11 +35,11 @@ namespace Raven.Server.Documents.Queries.Graph
 
             if (result is Document d && d.Id != null)
             {
-                addNode(d.Id.ToString(), d);
+                graphDebugInfo.AddNode(d.Id.ToString(), d);
             }
             else
             {
-                addNode(null, result);
+                graphDebugInfo.AddNode(null, result);
             }
         }
 
