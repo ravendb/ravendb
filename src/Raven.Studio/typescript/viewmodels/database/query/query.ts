@@ -154,6 +154,7 @@ class query extends viewModelBase {
     canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
     isMapReduceIndex: KnockoutComputed<boolean>;
     isCollectionQuery: KnockoutComputed<boolean>;
+    isGraphQuery: KnockoutComputed<boolean>;
     isDynamicQuery: KnockoutComputed<boolean>;
     isAutoIndex: KnockoutComputed<boolean>;
 
@@ -298,6 +299,11 @@ class query extends viewModelBase {
             return !indexes.find(x => x.Name === indexName);
         });
         
+        this.isGraphQuery = ko.pureComputed(() => {
+            const indexName = this.queriedIndex();
+            return "@graph" === indexName;
+        });
+        
         this.isDynamicQuery = ko.pureComputed(() => {
             return queryUtil.isDynamicQuery(this.criteria().queryText());
         });
@@ -311,7 +317,9 @@ class query extends viewModelBase {
         });
 
         this.canDeleteDocumentsMatchingQuery = ko.pureComputed(() => {
-            return !this.isMapReduceIndex();
+            const mapReduce = this.isMapReduceIndex();
+            const graphQuery = this.isGraphQuery();
+            return !mapReduce && !graphQuery;
         });
 
         this.containsAsterixQuery = ko.pureComputed(() => this.criteria().queryText().includes("*.*"));

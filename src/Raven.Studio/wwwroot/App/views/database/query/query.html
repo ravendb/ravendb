@@ -64,7 +64,7 @@
             </h2>
             <div class="clearfix">
                 <div class="results-info pull-left btn-group">
-                    <div  data-bind="visible: queryStats() && hasEditableIndex(), if: queryStats() && hasEditableIndex()"  class="dropdown btn-group" >
+                    <div data-bind="visible: queryStats() && hasEditableIndex() && !isGraphQuery(), if: queryStats() && hasEditableIndex() && !isGraphQuery()" class="dropdown btn-group" >
                         <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                             <span>
                                 <i class="icon-index"></i> <span>Index '</span><span data-bind="text: queriedIndexLabel"></span>'
@@ -105,13 +105,22 @@
                             </li>
                         </ul>
                     </div>
-                    <small data-bind="if: queryStats, visible: queryStats">
-                        <strong data-bind="if: !hasEditableIndex(), visible: !hasEditableIndex()">
-                            <i class="icon-documents"></i><span data-bind="text: queriedIndexDescription"></span>
-                        </strong>
-                        <span data-bind="visible: queriedIndex() && queriedIndex().indexOf('collection') === 0">&nbsp;collection</span>
-                        &nbsp;was used to get the results in
-                        <strong data-bind="text: queryStats().DurationInMs.toLocaleString() + ' ms'"></strong>
+                    <small data-bind="if: queryStats(), visible: queryStats()">
+                        <span data-bind="if: !isGraphQuery()">
+                            <strong data-bind="if: !hasEditableIndex(), visible: !hasEditableIndex()">
+                                <i class="icon-documents"></i><span data-bind="text: queriedIndexDescription"></span>
+                            </strong>
+                            <span data-bind="visible: queriedIndex() && queriedIndex().indexOf('collection') === 0">&nbsp;collection</span>
+                            &nbsp;was used to get the results in
+                            <strong data-bind="text: queryStats().DurationInMs.toLocaleString() + ' ms'"></strong>
+                        </span>
+                        <span data-bind="if: isGraphQuery">
+                            <strong>
+                                <i class="icon-indexing"></i><span>Graph</span>
+                            </strong>
+                            query took: 
+                            <strong data-bind="text: queryStats().DurationInMs.toLocaleString() + ' ms'"></strong>
+                        </span>
                     </small>
                 </div>
                 <div class="btn-group btn-group-sm pull-right" role="group">
@@ -193,7 +202,7 @@
             <button type="button" class="btn btn-sm" data-bind="click: $root.goToTimingsTab, css: { active: currentTab() === 'timings' }, visible: timings()">
                 Timings
             </button> 
-            <button type="button" class="btn btn-sm" data-bind="click: $root.goToGraphTab, css: { active: currentTab() === 'graph' }"> <!-- TODO visible flag -->
+            <button type="button" class="btn btn-sm" data-bind="click: $root.goToGraphTab, css: { active: currentTab() === 'graph' }, visible: isGraphQuery">
                 Graph
             </button>
         </div>
@@ -246,7 +255,7 @@
         </div>
         <div class="col-xs-5">
             <div class="toggle">
-                <input type="checkbox" class="styled" data-bind="checked: criteria().showFields, disable: isCollectionQuery">
+                <input type="checkbox" class="styled" data-bind="checked: criteria().showFields, disable: isCollectionQuery() || isGraphQuery()">
                 <label></label>
             </div>
         </div>
@@ -257,7 +266,7 @@
         </div>
         <div class="col-xs-5">
             <div class="toggle">
-                <input type="checkbox" class="styled" data-bind="checked: criteria().indexEntries, disable: isCollectionQuery">
+                <input type="checkbox" class="styled" data-bind="checked: criteria().indexEntries, disable: isCollectionQuery() || isGraphQuery()">
                 <label></label>
             </div>
         </div>

@@ -10,6 +10,8 @@ class queryStatsDialog extends dialogViewModelBase {
     selectedIndexEditUrl: string;
 
     canNavigateToIndex: boolean;
+    
+    isGraphQuery: boolean;
 
     constructor(private queryStats: Raven.Client.Documents.Queries.QueryResult<any, any>, private db: database) {
         super();
@@ -17,6 +19,7 @@ class queryStatsDialog extends dialogViewModelBase {
         this.selectedIndexEditUrl = appUrl.forEditIndex(queryStats.IndexName, this.db);
 
         this.canNavigateToIndex = this.physicalIndexExists(queryStats.IndexName);
+        this.isGraphQuery = queryStats.IndexName === "@graph";
     }
 
     private physicalIndexExists(indexName: string) {
