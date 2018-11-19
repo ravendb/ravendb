@@ -257,7 +257,7 @@ namespace Raven.Server.Documents.Queries.Graph
             if (result == null)
                 return null;
 
-            graphDebugInfo.AddEdge(edgeAlias, prev, result);
+            graphDebugInfo.AddEdge(edgeAlias, edge, result);
 
             return result;
         }
