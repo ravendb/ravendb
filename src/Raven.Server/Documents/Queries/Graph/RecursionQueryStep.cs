@@ -77,6 +77,11 @@ namespace Raven.Server.Documents.Queries.Graph
             _outputAlias = _stepAliases.Last();
         }
 
+        public void SetAliases(HashSet<string> aliases)
+        {
+            _allLliases.UnionWith(aliases);
+        }
+
         public RecursionQueryStep(RecursionQueryStep rqs, IGraphQueryStep left, List<SingleEdgeMatcher> steps)
         {
             _left = left;
@@ -252,6 +257,11 @@ namespace Raven.Server.Documents.Queries.Graph
             public void AddAliases(HashSet<string> aliases)
             {
                 aliases.UnionWith(_parent.GetAllAliases());
+            }
+
+            public void SetPrev(IGraphQueryStep prev)
+            {
+             
             }
         }
 

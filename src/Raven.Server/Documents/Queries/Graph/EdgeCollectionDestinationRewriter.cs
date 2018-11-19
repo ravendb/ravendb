@@ -60,13 +60,21 @@ namespace Raven.Server.Documents.Queries.Graph
                     steps.Add(step);
                 }
             }
-            var result = modified ? 
-                new RecursionQueryStep(rqs, left, steps) : 
-                new RecursionQueryStep(left, rqs);
+
+            if (modified == false)
+            {
+                return rqs;
+            }
+
+            var result = new RecursionQueryStep(rqs, left, steps);
 
             var next = rqs.GetNextStep();
-            if(next != null)
+            if (next != null)
+            {
+                next.SetPrev(result);
                 result.SetNext(next);
+                result.SetAliases(rqs.GetAllAliases());
+            }
 
             return result;
         }
