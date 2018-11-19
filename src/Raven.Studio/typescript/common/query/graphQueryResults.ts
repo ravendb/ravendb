@@ -9,10 +9,15 @@ interface debugGraphOutputNodeWithLayout extends debugGraphOutputNode, cola.Node
     
 }
 
+interface debugGraphOutputEdge extends cola.Link<debugGraphOutputNodeWithLayout> {
+    payload: any;
+    name: string;
+}
+
 class graphQueryResults {
     
     public static readonly circleRadius = 40;
-    public static readonly linkLength = 120;
+    public static readonly linkLength = 160;
     public static readonly clickDetectionRadius = 6;
     
     private width: number;
@@ -80,11 +85,27 @@ class graphQueryResults {
         this.d3cola.on('tick', () => {
             this.updateElementDecorators();
         });
+
+        this.svg.append("defs").append("marker")
+            .attr({"id":"arrowhead",
+                    "viewBox":"-0 -2.5 5 5",
+                    "refX":25,
+                    "refY":0,
+                    "orient":"auto",
+                    "markerWidth":5,
+                    "markerHeight":5,
+                    "xoverflow":"visible"})
+            .append("svg:path")
+            .attr("d", "M 0,-2.5 L 2.5 ,0 L 0,2.5")
+            .attr("fill", "#ccc")
+            .attr("stroke","#ccc");
     }
 
     private updateElementDecorators() {
         this.updateNodes(this.nodesContainer.selectAll(".node"));
         this.updateEdges(this.edgesContainer.selectAll(".edge"));
+        this.updateEdgePaths(this.edgesContainer.selectAll(".edgePath"));
+        this.updateEdgeLabels(this.edgesContainer.selectAll(".edgeLabel"));
     }
 
     private zoomed() {
@@ -128,21 +149,26 @@ class graphQueryResults {
             .call(this.d3cola.drag);
 
         let mouseDownPosition: [number, number] = null;
+        let hasMouseDown = false; //used to control mouse button and down event
         
         enteringNodes
             .append("circle")
             .attr("class", "node-bg")
             .attr("r", 0)
-            .attr("fill", d => this.getCollectionColor(d))
-            .on("mousedown", () => {
+            .attr("fill", d => this.getCollectionColor(d)) 
+            .on("mousedown", e => {
                 mouseDownPosition = d3.mouse(this.nodesContainer.node());
+                hasMouseDown = (d3.event as MouseEvent).button === 0; // left mouse button
             })
             .on("mouseup", d => {
-                const upPosition = d3.mouse(this.nodesContainer.node());
-                
-                const distanceSquared = Math.pow(mouseDownPosition[0] - upPosition[0], 2) + Math.pow(mouseDownPosition[1] - upPosition[1], 2);
-                if (Math.sqrt(distanceSquared) < graphQueryResults.clickDetectionRadius) {
-                    this.showPreview(d);
+                if (hasMouseDown) {
+                    const upPosition = d3.mouse(this.nodesContainer.node());
+
+                    const distanceSquared = Math.pow(mouseDownPosition[0] - upPosition[0], 2) + Math.pow(mouseDownPosition[1] - upPosition[1], 2);
+                    if (Math.sqrt(distanceSquared) < graphQueryResults.clickDetectionRadius) {
+                        this.showPreview(d);
+                    }
+                    hasMouseDown = false;
                 }
             })
             .transition()
@@ -154,29 +180,63 @@ class graphQueryResults {
             .text(x => x.Id)
             .attr("y", 5);
 
-        const edgeNodes = this.edgesContainer
+        const edges = this.edgesContainer
             .selectAll(".edge")
             .data(links, x => x.source.Id + "-" + x.target.Id);
 
-        edgeNodes.exit()
+        edges.exit()
             .remove();
         
-        const enteringLines = edgeNodes
+        const enteringLines = edges
             .enter()
             .append("line");
 
         enteringLines
+            .attr('marker-end','url(#arrowhead)')
             .attr("opacity", 0)
+            .attr("id", (d, i) => "edge" + i)
             .attr("class", "edge")
             .transition()
             .attr("opacity", 1);
 
+
+        const edgePaths = this.edgesContainer.selectAll(".edgePath")
+            .data(links)
+            .enter()
+            .append("path")
+            .attr({"d": d => "M " + d.source.x + " " + d.source.y + " L " + d.target.x + " " + d.target.y,
+                "class":"edgePath",
+                "fill-opacity":0,
+                "stroke-opacity":0,
+                "fill":"blue",
+                "stroke":"red",
+                "id":(d, i) => "edgePath" + i})
+            .style("pointer-events", "none");
+
+        const edgeLabels = this.edgesContainer.selectAll(".edgeLabel")
+            .data(links)
+            .enter()
+            .append("text")
+            .style("pointer-events", "none")
+            .attr({"class":"edgeLabel",
+                "id": (d, i) => "edgeLabel" + i,
+                "dx":60,
+                "dy":0,
+                "font-size":10,
+                "fill":"#aaa"});
+
+        edgeLabels.append("textPath")
+            .attr("xlink:href",(d, i) => "#edgePath" + i)
+            .style("pointer-events", "none")
+            .text(d => d.name);
+        
         const nodes = data.Nodes as Array<debugGraphOutputNodeWithLayout>;
         
         this.d3cola
             .linkDistance(() => graphQueryResults.linkLength)
             .nodes(nodes)
             .links(links)
+            .avoidOverlaps(true)
             .start(30);
 
         enteringNodes
@@ -184,6 +244,12 @@ class graphQueryResults {
 
         enteringLines
             .call(selection => this.updateEdges(selection));
+
+        edgePaths
+            .call(selection => this.updateEdgePaths(selection));
+        
+        edgeLabels
+            .call(selection => this.updateEdgeLabels(selection));
         
         //TODO: set initial scale?
     }
@@ -197,19 +263,22 @@ class graphQueryResults {
         app.showBootstrapDialog(new showDataDialog(title, text, "javascript"));
     }
     
-    private findLinksForCola(data: debugGraphOutputResponse): Array<cola.Link<debugGraphOutputNodeWithLayout>> {
+    private findLinksForCola(data: debugGraphOutputResponse): Array<debugGraphOutputEdge> {
         const nodesCache = new Map<string, debugGraphOutputNodeWithLayout>();
         data.Nodes.forEach(node => {
             nodesCache.set(node.Id, node as debugGraphOutputNodeWithLayout);
         });
         
-        return _.flatMap(data.Edges, e => 
-            e.To.map(to => {
-                return {
-                    source: nodesCache.get(e.From),
-                    target: nodesCache.get(to),
-                } as cola.Link<debugGraphOutputNodeWithLayout>;
-            }));
+        return _.flatMap(data.Edges, edgesByType => {
+           return edgesByType.Results.map(edge => {
+               return {
+                   source: nodesCache.get(edge.From),
+                   target: nodesCache.get(edge.To),
+                   name: edgesByType.Name,
+                   payload: edge.Edge
+               } as debugGraphOutputEdge;
+           });
+        }); 
     }
 
     private updateNodes(selection: d3.Selection<debugGraphOutputNodeWithLayout>) {
@@ -217,13 +286,32 @@ class graphQueryResults {
             .attr("transform", x => `translate(${x.x},${x.y})`);
     }
 
-    private updateEdges(selection: d3.Selection<cola.Link<debugGraphOutputNodeWithLayout>>) {
+    private updateEdges(selection: d3.Selection<debugGraphOutputEdge>) {
         selection
             .attr("x1", x => x.source.x)
             .attr("y1", x => x.source.y)
             .attr("x2", x => x.target.x)
             .attr("y2", x => x.target.y);
     }
+    
+    private updateEdgePaths(selection: d3.Selection<debugGraphOutputEdge>) {
+        selection
+            .attr("d", d => "M " + d.source.x + " " + d.source.y + " L " + d.target.x + " " + d.target.y);
+    }
+    
+    private updateEdgeLabels(selection: d3.Selection<debugGraphOutputEdge>) {
+        selection.attr('transform',function(d,i){
+            if (d.target.x < d.source.x){
+                const bbox = this.getBBox();
+                const rx = bbox.x+bbox.width/2;
+                const ry = bbox.y+bbox.height/2;
+                return "rotate(180 " + rx + " " + ry + ")";
+            } else {
+                return "rotate(0)";
+            }
+        });
+    }
+    
 }
 
 export = graphQueryResults;
