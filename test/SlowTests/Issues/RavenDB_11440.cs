@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.ServerWide.Operations.Logs;
 using Sparrow.Logging;
@@ -9,48 +11,51 @@ namespace SlowTests.Issues
     public class RavenDB_11440 : RavenTestBase
     {
         [Fact]
-        public void CanGetLogsConfigurationAndChangeMode()
+        public async Task CanGetLogsConfigurationAndChangeMode()
         {
             using (var store = GetDocumentStore())
             {
-                var configuration1 = store.Maintenance.Server.Send(new GetLogsConfigurationOperation());
-
-                LogMode modeToSet;
-                switch (configuration1.CurrentMode)
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
                 {
-                    case LogMode.None:
-                        modeToSet = LogMode.Information;
-                        break;
-                    case LogMode.Operations:
-                        modeToSet = LogMode.Information;
-                        break;
-                    case LogMode.Information:
-                        modeToSet = LogMode.None;
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
+                    var configuration = await store.Maintenance.Server.SendAsync(new GetLogsConfigurationOperation(), cts.Token);
 
-                try
-                {
-                    store.Maintenance.Server.Send(new SetLogsConfigurationOperation(new SetLogsConfigurationOperation.Parameters
+                    LogMode modeToSet;
+                    switch (configuration.CurrentMode)
                     {
-                        Mode = modeToSet
-                    }));
+                        case LogMode.None:
+                            modeToSet = LogMode.Information;
+                            break;
+                        case LogMode.Operations:
+                            modeToSet = LogMode.Information;
+                            break;
+                        case LogMode.Information:
+                            modeToSet = LogMode.None;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
 
-                    var configuration2 = store.Maintenance.Server.Send(new GetLogsConfigurationOperation());
-
-                    Assert.Equal(modeToSet, configuration2.CurrentMode);
-                    Assert.Equal(configuration1.Mode, configuration2.Mode);
-                    Assert.Equal(configuration1.Path, configuration2.Path);
-                    Assert.Equal(configuration1.UseUtcTime, configuration2.UseUtcTime);
-                }
-                finally
-                {
-                    store.Maintenance.Server.Send(new SetLogsConfigurationOperation(new SetLogsConfigurationOperation.Parameters
+                    try
                     {
-                        Mode = configuration1.CurrentMode
-                    }));
+                        await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(new SetLogsConfigurationOperation.Parameters
+                        {
+                            Mode = modeToSet
+                        }), cts.Token);
+
+                        var configuration2 = await store.Maintenance.Server.SendAsync(new GetLogsConfigurationOperation(), cts.Token);
+
+                        Assert.Equal(modeToSet, configuration2.CurrentMode);
+                        Assert.Equal(configuration.Mode, configuration2.Mode);
+                        Assert.Equal(configuration.Path, configuration2.Path);
+                        Assert.Equal(configuration.UseUtcTime, configuration2.UseUtcTime);
+                    }
+                    finally
+                    {
+                        await store.Maintenance.Server.SendAsync(new SetLogsConfigurationOperation(new SetLogsConfigurationOperation.Parameters
+                        {
+                            Mode = configuration.CurrentMode
+                        }), cts.Token);
+                    }
                 }
             }
         }
