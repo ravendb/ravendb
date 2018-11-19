@@ -614,6 +614,9 @@ namespace Raven.Server
             var daysUntilSaturday = DayOfWeek.Saturday - firstPossibleDate.DayOfWeek; 
             var firstPossibleSaturday = firstPossibleDate.AddDays(daysUntilSaturday);
 
+            if (firstPossibleSaturday.Date == DateTime.Today)
+                return (true, firstPossibleSaturday);
+
             return (false, firstPossibleSaturday);
         }
 
