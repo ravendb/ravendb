@@ -881,7 +881,7 @@ namespace Raven.Server.Web.Authentication
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
-                writer.WritePropertyName("Estimated renewal");
+                writer.WritePropertyName("EstimatedRenewal");
                 writer.WriteDateTime(renewalDate, true);
                 writer.WriteEndObject();
             }
