@@ -23,11 +23,17 @@ interface debugGraphOutputNode {
     Value: documentDto;
 }
 
-interface debugGraphOutputResponse {
-    Edges: Array<{
+interface debugGraphEdge {
+    Name: string;
+    Results: Array<{
         From: string;
-        To: Array<string>;
-    }>,
+        To: string;
+        Edge: any;
+    }>
+}
+
+interface debugGraphOutputResponse {
+    Edges: Array<debugGraphEdge>,
     Nodes: Array<debugGraphOutputNode>;
 }
 
