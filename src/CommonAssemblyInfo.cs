@@ -3,9 +3,9 @@ using System.Resources;
 
 [assembly: AssemblyCopyright("© Hibernating Rhinos 2004 - 2018 All rights reserved.")]
 
-[assembly: AssemblyVersion("4.0.9")]
-[assembly: AssemblyFileVersion("4.0.9.40")]
-[assembly: AssemblyInformationalVersion("4.0.9")]
+[assembly: AssemblyVersion("4.0.10")]
+[assembly: AssemblyFileVersion("4.0.10.40")]
+[assembly: AssemblyInformationalVersion("4.0.10")]
 
 #if DEBUG
 [assembly: AssemblyConfiguration("Debug")]
