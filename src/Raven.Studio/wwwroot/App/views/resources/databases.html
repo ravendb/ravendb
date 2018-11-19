@@ -110,7 +110,8 @@
                                                                           attr: { class: 'panel database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') + ' ' + ($root.createIsLocalDatabaseObservable(name)() ? 'relevant' : '') }">
                 <div data-bind="attr: { 'data-state-text': $root.createIsLocalDatabaseObservable(name)() ? badgeText : 'remote', class: 'state ' + ($root.createIsLocalDatabaseObservable(name)() ? badgeClass() : 'state-remote') }"></div>
                 <div class="padding padding-sm database-info">
-                    <div class="info-grow">
+                    <div class="info-grow" data-bind="style: { width: $root.databaseNameWidth() +'px'}">
+                        <div class="info-resize"></div>
                         <div class="info-container">
                             <div class="checkbox">
                                 <input type="checkbox" class="styled" data-bind="checked: $root.selectedDatabases, checkedValue: name, disable: isBeingDeleted">
