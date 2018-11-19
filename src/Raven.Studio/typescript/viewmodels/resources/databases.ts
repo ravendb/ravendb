@@ -28,8 +28,16 @@ import generalUtils = require("common/generalUtils");
 import popoverUtils = require("common/popoverUtils");
 import database = require("models/resources/database");
 import eventsCollector = require("common/eventsCollector");
+import storageKeyProvider = require("common/storage/storageKeyProvider");
 
 class databases extends viewModelBase {
+    
+    static readonly sizeLimits = {
+        databaseName: {
+            min: 150,
+            max: 1000
+        }
+    };
 
     databases = ko.observable<databasesInfo>();
     clusterManager = clusterTopologyManager.default;
@@ -55,6 +63,8 @@ class databases extends viewModelBase {
 
     accessManager = accessManager.default.databasesView;
     isAboveUserAccess = accessManager.default.operatorAndAbove;
+    
+    databaseNameWidth = ko.observable<number>(350);
 
     environmentClass = (source: KnockoutObservable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>) => 
         database.createEnvironmentColorComputed("label", source);
@@ -143,6 +153,7 @@ class databases extends viewModelBase {
         super.compositionComplete();
         
         this.initTooltips();
+        this.initDatabaseNameResize();
     }
     
     deactivate() {
@@ -194,6 +205,54 @@ class databases extends viewModelBase {
                 this.filterDatabases();
                 this.initTooltips();
             });
+    }
+    
+    private initDatabaseNameResize() {
+        this.databaseNameWidth(this.loadDatabaseNamesSize());
+        
+        const $databases = $(".databases");
+        $databases.on("mousedown.resize", ".info-resize", e => {
+            
+            const initialX = e.clientX;
+            const initialWidth = this.databaseNameWidth();
+            
+            $databases.on("mousemove.resize", e => {
+                const currentX = e.clientX;
+                const deltaX = currentX - initialX;
+                const newWidth = initialWidth + deltaX;
+                const databaseWithLimits = databases.sizeLimits.databaseName;
+                const newWidthWithLimits = Math.max(databaseWithLimits.min, Math.min(databaseWithLimits.max, newWidth));
+                this.databaseNameWidth(newWidthWithLimits);
+            });
+            
+            e.preventDefault(); //prevent selections, etc
+            
+            window.addEventListener("click", e => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, {
+                capture: true,
+                once: true
+            });
+            
+            $("body").one("mouseup.resize", e => {
+                e.preventDefault();
+                $databases.off("mousemove.resize");
+                this.saveDatabaseNamesSize(this.databaseNameWidth());
+            });
+        });
+    }
+
+    private static getLocalStorageKeyForDbNameWidth() {
+        return storageKeyProvider.storageKeyFor("databaseNameWidth");
+    }
+    
+    private loadDatabaseNamesSize() {
+        return localStorage.getObject(databases.getLocalStorageKeyForDbNameWidth()) || 350;
+    }
+    
+    private saveDatabaseNamesSize(value: number) {
+        localStorage.setObject(databases.getLocalStorageKeyForDbNameWidth(), value);
     }
     
     private initTooltips() {

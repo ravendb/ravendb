@@ -58,9 +58,26 @@
             background-color: #43495e;
         }
 
+        .info-grow {
+            .info-resize {
+                display: none;
+            }
+        }
+        
         @media (min-width: @screen-lg) {
             .info-grow {
                 width: 350px;
+                position: relative;
+                
+                .info-resize {
+                    display: block;
+                    position: absolute;
+                    right: -3px;
+                    width: 6px;
+                    cursor: ew-resize;
+                    height: 100%;
+                    z-index: @zindex-tooltip;
+                }
             }
         }
 
@@ -147,7 +164,6 @@
             font-size: 19px;
             display: flex;
             align-items: center;
-            max-width: 380px;
             flex-shrink: 0;
 
             .checkbox {
