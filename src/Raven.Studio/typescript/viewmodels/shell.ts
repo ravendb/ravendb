@@ -71,6 +71,7 @@ class shell extends viewModelBase {
     showSplash = viewModelBase.showSplash;
     browserAlert = ko.observable<boolean>(false);
     dontShowBrowserAlertAgain = ko.observable<boolean>(false);
+    currentUrlHash = ko.observable<string>(window.location.hash);
 
     licenseStatus = license.licenseCssClass;
     supportStatus = license.supportCssClass;
@@ -92,7 +93,7 @@ class shell extends viewModelBase {
     
     serverEnvironment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
     serverEnvironmentClass = database.createEnvironmentColorComputed("text", this.serverEnvironment);
-
+    
     private onBootstrapFinishedTask = $.Deferred<void>();
     
     static showConnectionLost = ko.pureComputed(() => {
@@ -134,6 +135,10 @@ class shell extends viewModelBase {
         );
         
         this.detectBrowser();
+        
+        window.addEventListener("hashchange", e => {
+            this.currentUrlHash(location.hash);
+        });
     }
     
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -449,6 +454,19 @@ class shell extends viewModelBase {
         }
         
         this.browserAlert(false);
+    }
+    
+    createUrlWithHashComputed(serverUrlProvider: KnockoutComputed<string>) {
+        return ko.pureComputed(() => {
+            const serverUrl = serverUrlProvider();
+            const hash = this.currentUrlHash();
+            
+            if (!serverUrl) {
+                return "#";
+            }
+            
+            return serverUrl + "/studio/index.html" + hash;
+        })
     }
 }
 
