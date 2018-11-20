@@ -225,7 +225,7 @@ Foreach ($target in $targets) {
             $rvnPath = [io.path]::combine($specOutDirs.Rvn, "rvn.exe");
             $drtoolsPath = [io.path]::combine($specOutDirs.Drtools, "Voron.Recovery.exe");
             $migratorPath = [io.path]::combine($specOutDirs.Migrator, "Raven.Migrator.exe");
-            $debugPath = [io.path]::combine($specOutDirs.Migrator, "Raven.Debug.exe");
+            $debugPath = [io.path]::combine($specOutDirs.Debug, "Raven.Debug.exe");
             
             SignFile $PROJECT_DIR $serverPath $DryRunSign
             SignFile $PROJECT_DIR $rvnPath $DryRunSign
