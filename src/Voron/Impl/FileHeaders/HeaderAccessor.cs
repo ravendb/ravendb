@@ -10,6 +10,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.Utils;
+using Voron.Exceptions;
 using Voron.Global;
 
 namespace Voron.Impl.FileHeaders
@@ -83,7 +84,7 @@ namespace Voron.Impl.FileHeaders
                 }
 
                 if (f1->Version != Constants.CurrentVersion)
-                    throw new InvalidDataException(
+                    throw new SchemaErrorException(
                         $"The db file is for version {f1->Version}, which is not compatible with the current version {Constants.CurrentVersion} on {_env.Options.BasePath}");
 
                 if (f1->TransactionId < 0)

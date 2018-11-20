@@ -15,7 +15,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
@@ -36,10 +35,12 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
 using Sparrow.Utils;
+using ProcessStartInfo = Custom.Raven.System.Diagnostics.ProcessStartInfo;
 
 namespace Raven.Server.Smuggler.Documents.Handlers
 {
@@ -452,13 +453,14 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     RedirectStandardInput = true,
-                    UseShellExecute = false
+                    UseShellExecute = false,
+                    InheritHandles = false
                 };
 
-                Process process = null;
+                RavenProcess process = null;
                 try
                 {
-                    process = Process.Start(processStartInfo);
+                    process = RavenProcess.Start(processStartInfo);
                 }
                 catch (Exception e)
                 {
@@ -584,7 +586,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             return migratorFile;
         }
 
-        private static bool KillProcess(Process process)
+        private static bool KillProcess(RavenProcess process)
         {
             try
             {

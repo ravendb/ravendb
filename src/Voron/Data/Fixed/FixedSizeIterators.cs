@@ -237,9 +237,6 @@ namespace Voron.Data.Fixed
             {
                 AssertNoChanges();
 
-                if (_currentPage == null)
-                    throw new InvalidOperationException("No current page was set");
-
                 while (_currentPage != null)
                 {
                     _currentPage.LastSearchPosition++;

@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 using Raven.Server.Config.Categories;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron;
+using ProcessStartInfo = Custom.Raven.System.Diagnostics.ProcessStartInfo;
 
 namespace Raven.Server.Utils
 {
@@ -35,7 +34,7 @@ namespace Raven.Server.Utils
 
         public static void OnDirectoryInitialize(StorageEnvironmentOptions options, DirectoryParameters parameters, Logger log)
         {
-            Process process = null;
+            RavenProcess process = null;
             try
             {
                 var journalPath = string.Empty;
@@ -48,24 +47,23 @@ namespace Raven.Server.Utils
                            $"{CommandLineArgumentEscaper.EscapeSingleArg(options.TempPath.ToString())} " +
                            $"{CommandLineArgumentEscaper.EscapeSingleArg(journalPath)}";
 
-                process = new Process
+
+                var startInfo = new ProcessStartInfo
                 {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = parameters.OnDirectoryInitializeExec,
-                        Arguments = args,
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        CreateNoWindow = true
-                    }
+                    FileName = parameters.OnDirectoryInitializeExec,
+                    Arguments = args,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                    InheritHandles = false
                 };
-                
+
                 var sw = Stopwatch.StartNew();
 
                 try
                 {
-                    process.Start();
+                    process = RavenProcess.Start(startInfo);
                 }
                 catch (Exception e)
                 {

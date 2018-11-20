@@ -1083,12 +1083,12 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, string expectedChangeVector, string changeVector = null)
+        public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, string expectedChangeVector)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             using (var cv = context.GetLazyString(expectedChangeVector))
             {
-                return Delete(context, lowerId, id, expectedChangeVector: cv, changeVector: changeVector);
+                return Delete(context, lowerId, id, expectedChangeVector: cv);
             }
         }
 
@@ -1298,7 +1298,7 @@ namespace Raven.Server.Documents
         }
 
         // Note: Make sure to call this with a separator, so you won't delete "users/11" for "users/1"
-        public List<DeleteOperationResult> DeleteDocumentsStartingWith(DocumentsOperationContext context, string prefix, string changeVector = null)
+        public List<DeleteOperationResult> DeleteDocumentsStartingWith(DocumentsOperationContext context, string prefix)
         {
             var deleteResults = new List<DeleteOperationResult>();
 
@@ -1316,7 +1316,7 @@ namespace Raven.Server.Documents
                         hasMore = true;
                         var id = TableValueToId(context, (int)DocumentsTable.Id, ref holder.Value.Reader);
 
-                        var deleteOperationResult = Delete(context, id, null, changeVector: changeVector);
+                        var deleteOperationResult = Delete(context, id, null);
                         if (deleteOperationResult != null)
                             deleteResults.Add(deleteOperationResult.Value);
                     }
@@ -1374,6 +1374,11 @@ namespace Raven.Server.Documents
 
                 if (string.IsNullOrEmpty(changeVector))
                     ChangeVectorUtils.ThrowConflictingEtag(lowerId.ToString(), docChangeVector, newEtag, Environment.Base64Id, DocumentDatabase.ServerStore.NodeTag);
+
+                if (context.LastDatabaseChangeVector == null)
+                    context.LastDatabaseChangeVector = GetDatabaseChangeVector(context);
+
+                changeVector = ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector, changeVector);
 
                 context.LastDatabaseChangeVector = changeVector;
             }
