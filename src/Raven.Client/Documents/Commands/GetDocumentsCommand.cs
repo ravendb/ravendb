@@ -154,7 +154,7 @@ namespace Raven.Client.Documents.Commands
             else
             {
                 var calculateHash = CalculateHash(context, uniqueIds);
-                pathBuilder.Append("loadHash=").Append(calculateHash);
+                pathBuilder.Append("&loadHash=").Append(calculateHash);
                 request.Method = HttpMethod.Post;
 
                 request.Content = new BlittableJsonContent(stream =>
