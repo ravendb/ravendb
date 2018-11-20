@@ -113,6 +113,9 @@ namespace Raven.Server.Documents.Queries.Graph
         private void CompleteInitialization()
         {
             _index = 0;
+            if(_right.IsEmpty())
+                return;
+
             var edgeAlias = _edgePath.Alias;
             var edge = _edgesExpression;
             edge.EdgeAlias = edgeAlias;

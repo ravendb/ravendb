@@ -102,10 +102,10 @@ namespace Raven.Server.Documents.Queries.Graph
                     if(negated)
                         return new IntersectionQueryStep<Except>(left, right);
 
-                    return new IntersectionQueryStep<Intersection>(left, right);
+                    return new IntersectionQueryStep<Intersection>(left, right, returnEmptyIfRightEmpty:true);
 
                case OperatorType.Or:
-                    return new IntersectionQueryStep<Union>(left, right);
+                    return new IntersectionQueryStep<Union>(left, right, returnEmptyIfLeftEmpty:false);
 
                 default:
                     throw new ArgumentOutOfRangeException($"Unexpected binary expression of type: {be.Operator}");

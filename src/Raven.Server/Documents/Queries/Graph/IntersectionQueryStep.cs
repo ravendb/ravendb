@@ -19,12 +19,16 @@ namespace Raven.Server.Documents.Queries.Graph
         private readonly IGraphQueryStep _right;
         private readonly List<Match> _results = new List<Match>();
         private int _index = -1;
+        private bool _returnEmptyIfLeftEmpty;
+        private bool _returnEmptyIfRightEmpty;
 
         public IGraphQueryStep Left => _left;
         public IGraphQueryStep Right => _right;
 
-        public IntersectionQueryStep(IGraphQueryStep left, IGraphQueryStep right)
+        public IntersectionQueryStep(IGraphQueryStep left, IGraphQueryStep right, bool returnEmptyIfRightEmpty = false, bool returnEmptyIfLeftEmpty = true)
         {
+            _returnEmptyIfLeftEmpty = returnEmptyIfLeftEmpty;
+            _returnEmptyIfRightEmpty = returnEmptyIfRightEmpty;
             _unionedAliases = new HashSet<string>();
             _unionedAliases.UnionWith(left.GetAllAliases());
             _unionedAliases.UnionWith(right.GetAllAliases());
@@ -45,12 +49,16 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public IGraphQueryStep Clone()
         {
-            return new IntersectionQueryStep<TOp>(_left.Clone(), _right.Clone());
+            return new IntersectionQueryStep<TOp>(_left.Clone(), _right.Clone(), _returnEmptyIfRightEmpty, _returnEmptyIfLeftEmpty);
         }
 
         private void IntersectExpressions()
         {
             _index = 0;
+
+            if (_returnEmptyIfRightEmpty && _right.IsEmpty())
+                return;
+
             _tempIntersect.Clear();
 
             var operation = new TOp();
@@ -138,7 +146,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private ValueTask CompleteInitializationAfterLeft()
         {
             //At this point we know we are not going to yield results we can skip running right hand side
-            if (GetType().GetGenericArguments().FirstOrDefault() != typeof(Union) && _left.IsEmpty())
+            if (_returnEmptyIfLeftEmpty)
             {
                 _index = 0;
                 return default;

@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Queries.Graph
             var left = Visit(iqsu.Left);
             var right = Visit(iqsu.Right);
 
-            return new IntersectionQueryStep<Union>(left, right);
+            return new IntersectionQueryStep<Union>(left, right, returnEmptyIfLeftEmpty:false);
         }
 
         public virtual IGraphQueryStep VisitIntersectionQueryStepIntersection(IntersectionQueryStep<Intersection> iqsi)
@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Queries.Graph
             var left = Visit(iqsi.Left);
             var right = Visit(iqsi.Right);
 
-            return new IntersectionQueryStep<Intersection>(left, right);
+            return new IntersectionQueryStep<Intersection>(left, right, returnEmptyIfRightEmpty: true);
         }
 
         public virtual IGraphQueryStep VisitRecursionQueryStep(RecursionQueryStep rqs)
