@@ -10,6 +10,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.PeriodicBackup.Aws;
@@ -119,14 +120,13 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var fullBackupText = "a " + (_configuration.BackupType == BackupType.Backup ? "full backup" : "snapshot");
                     _logger.Info($"Creating {(_isFullBackup ? fullBackupText : "an incremental backup")}");
                 }
-
-                var currentLastRaftIndex = _serverStore.GetLastRaftIndex(_database.Name);
+                var currentLastRaftIndex = GetDatabaseRecord().EtagForBackup;
 
                 if (_isFullBackup == false)
                 {
                     // no-op if nothing has changed
                     var currentLastEtag = _database.ReadLastEtag();
-                    if ((currentLastEtag == _previousBackupStatus.LastEtag) && (currentLastRaftIndex == _previousBackupStatus.LastRaftIndex.DatabaseRecord))
+                    if ((currentLastEtag == _previousBackupStatus.LastEtag) && (currentLastRaftIndex == _previousBackupStatus.LastRaftIndex.LastEtag))
                     {
                         var message = "Skipping incremental backup because " +
                                       $"last etag ({currentLastEtag:#,#;;0}) hasn't changed since last backup";
@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 UpdateOperationId(runningBackupStatus);
                 runningBackupStatus.LastEtag = lastEtag;
-                runningBackupStatus.LastRaftIndex.DatabaseRecord = currentLastRaftIndex;
+                runningBackupStatus.LastRaftIndex.LastEtag = currentLastRaftIndex;
                 runningBackupStatus.FolderName = folderName;
                 if (_isFullBackup)
                     runningBackupStatus.LastFullBackup = _periodicBackup.StartTime;
@@ -181,7 +181,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 totalSw.Stop();
 
-                _serverStore.SetLastRaftIndex(_database.Name, currentLastRaftIndex);
                 if (_logger.IsInfoEnabled)
                 {
                     var fullBackupText = "a " + (_configuration.BackupType == BackupType.Backup ? " full backup" : " snapshot");
@@ -247,6 +246,15 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // save the backup status
                     await WriteStatus(runningBackupStatus, onProgress);
                 }
+            }
+        }
+
+        private DatabaseRecord GetDatabaseRecord()
+        {
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return _serverStore.Cluster.ReadDatabase(context, _database.Name);
             }
         }
 

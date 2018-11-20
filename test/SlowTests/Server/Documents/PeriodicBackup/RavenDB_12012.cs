@@ -105,7 +105,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Thread.Sleep(100);
         }
 
-        [Fact]
+        [Fact (Skip = "RavenDB-12349")]
         public async Task CreateFullAndIncrementalBackupWithCompareExchangeInTheMiddle()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -180,7 +180,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-12350")]
         public async Task CreateFullAndIncrementalBackupWithIdentitiesInTheMiddle()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
