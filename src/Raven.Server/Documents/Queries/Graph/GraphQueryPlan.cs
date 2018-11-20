@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide;
@@ -39,7 +40,7 @@ namespace Raven.Server.Documents.Queries.Graph
             switch (expression)
             {
                 case PatternMatchElementExpression pme:
-                    return BuildQueryPlanForPattern(pme);
+                    return BuildQueryPlanForPattern(pme, 0);
                 case BinaryExpression be:
                     return BuildQueryPlanForBinaryExpression(be);
                 default:
@@ -47,35 +48,11 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
-        public (Dictionary<string, object> Nodes, Dictionary<object, HashSet<string>> Edges) Analyze(List<Match> matches)
+        public void Analyze(List<Match> matches, GraphDebugInfo graphDebugInfo)
         {
-            var edges = new Dictionary<object, HashSet<string>>();
-            var nodes = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-
-
-
             foreach (var match in matches)
             {
-                _rootQueryStep.Analyze(match, AddNode, AddEdge);
-            }
-
-            return (nodes, edges);
-
-            void AddEdge(object src, string dst)
-            {
-                if (src == null || dst == null)
-                    return;
-
-                if (edges.TryGetValue(src, out var hash) == false)
-                    edges[src] = hash = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                hash.Add(dst);
-            }
-
-            void AddNode(string key, object val)
-            {
-                key = key ?? "__anonymous__/" + Guid.NewGuid();
-                nodes[key] = val;
+                _rootQueryStep.Analyze(match, graphDebugInfo);
             }
         }
 
@@ -112,15 +89,22 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
-        private IGraphQueryStep BuildQueryPlanForPattern(PatternMatchElementExpression patternExpression)
+        private IGraphQueryStep BuildQueryPlanForPattern(PatternMatchElementExpression patternExpression, int start)
         {
-            var prev = BuildQueryPlanForMatchNode(patternExpression.Path[0]);
-            for (int i = 1; i < patternExpression.Path.Length; i+=2)
+            var prev = BuildQueryPlanForMatchNode(patternExpression.Path[start]);
+            for (int i = start + 1; i < patternExpression.Path.Length; i+=2)
             {
-                var next = i + 1 < patternExpression.Path.Length ?
-                    BuildQueryPlanForMatchNode(patternExpression.Path[i + 1]) :
-                    null;
-                prev = BuildQueryPlanForEdge(prev, next, patternExpression.Path[i]);
+                if (patternExpression.Path[i].Recursive == null)
+                {
+                    var next = i + 1 < patternExpression.Path.Length ?
+                      BuildQueryPlanForMatchNode(patternExpression.Path[i + 1]) :
+                      null;
+                    prev = BuildQueryPlanForEdge(prev, next, patternExpression.Path[i]);
+                }
+                else
+                {
+                    return BuildQueryPlanForRecursiveEdge(prev, i, patternExpression);
+                }
             }
 
             return prev;
@@ -130,11 +114,6 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             var alias = edge.Alias;
 
-            if(edge.Recursive != null)
-            {
-                return BuildQueryPlanForRecursiveEdge(left, right, edge);
-            }
-
             if (GraphQuery.WithEdgePredicates.TryGetValue(alias, out var withEdge) == false)
             {
                 throw new InvalidOperationException($"BuildQueryPlanForEdge was invoked for alias='{alias}' which suppose to be an edge but no corresponding WITH EDGE clause was found.");
@@ -143,9 +122,9 @@ namespace Raven.Server.Documents.Queries.Graph
             return new EdgeQueryStep(left, right, withEdge, edge, _query.QueryParameters);
         }
 
-        private IGraphQueryStep BuildQueryPlanForRecursiveEdge(IGraphQueryStep left, IGraphQueryStep right, MatchPath edge)
+        private IGraphQueryStep BuildQueryPlanForRecursiveEdge(IGraphQueryStep left, int index, PatternMatchElementExpression patternExpression)
         {
-            var recursive = edge.Recursive.Value;
+            var recursive = patternExpression.Path[index].Recursive.Value;
             var pattern = recursive.Pattern;
             var steps = new List<SingleEdgeMatcher>((pattern.Count + 1) / 2);
             for (int i = 0; i < pattern.Count; i += 2)
@@ -161,22 +140,35 @@ namespace Raven.Server.Documents.Queries.Graph
                     QueryParameters = _query.QueryParameters,
                     Edge = recursiveEdge,
                     Results = new List<Match>(),
-                    Right = i + 1 < pattern.Count ? BuildQueryPlanForMatchNode(pattern[i + 1]) : right,
+                    Right = i + 1 < pattern.Count ? BuildQueryPlanForMatchNode(pattern[i + 1]) : null,
                     EdgeAlias = pattern[i].Alias
                 });
             }
 
             var recursiveStep = new RecursionQueryStep(left, steps, recursive, recursive.GetOptions(_query.Metadata, _query.QueryParameters));
 
-            if (right == null)
-                return recursiveStep;
+            if(index + 1 < patternExpression.Path.Length)
+            {
+                if (patternExpression.Path[index + 1].IsEdge)
+                {
+                    var nextPlan = BuildQueryPlanForPattern(patternExpression, index + 2);
+                    nextPlan = BuildQueryPlanForEdge(recursiveStep, nextPlan, patternExpression.Path[index + 1]);
+                    recursiveStep.SetNext(nextPlan.GetSingleGraphStepExecution());
+                }
+                else
+                {
+                    var nextPlan = BuildQueryPlanForPattern(patternExpression, index + 1);
+                    recursiveStep.SetNext(nextPlan.GetSingleGraphStepExecution());
+                }
+            }
 
-            return new EdgeFollowingRecursionQueryStep(recursiveStep, right, _query.QueryParameters);
+
+            return recursiveStep;
         }
 
-        private IGraphQueryStep BuildQueryPlanForMatchNode(MatchPath vertex)
+        private IGraphQueryStep BuildQueryPlanForMatchNode(MatchPath node)
         {            
-            Sparrow.StringSegment alias = vertex.Alias;
+            Sparrow.StringSegment alias = node.Alias;
             if (GraphQuery.WithDocumentQueries.TryGetValue(alias, out var query) == false)
             {
                 throw new InvalidOperationException($"BuildQueryPlanForMatchVertex was invoked for allias='{alias}' which is supposed to be a node but no corresponding WITH clause was found.");
@@ -184,7 +176,7 @@ namespace Raven.Server.Documents.Queries.Graph
             // TODO: we can tell at this point if it is a collection query or not,
             // TODO: in the future, we want to build a diffrent step for collection queries in the future.        
             var queryMetadata = new QueryMetadata(query, _query.QueryParameters, 0);
-            return new QueryQueryStep(_database.QueryRunner, alias, query, queryMetadata, _context, _resultEtag, _token);
+            return new QueryQueryStep(_database.QueryRunner, alias, query, queryMetadata, _query.QueryParameters, _context, _resultEtag, _token);
         }
 
         public void OptimizeQueryPlan()

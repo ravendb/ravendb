@@ -12,6 +12,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private HashSet<string> _aliases;
         DocumentsOperationContext _context;
         DocumentsStorage _documentStorage;
+        private List<GraphQueryRunner.Match> _temp = new List<GraphQueryRunner.Match>();
 
         public CollectionDestinationQueryStep(Sparrow.StringSegment alias, DocumentsOperationContext documentsContext, DocumentsStorage documentStorage)
         {
@@ -26,7 +27,7 @@ namespace Raven.Server.Documents.Queries.Graph
             return new CollectionDestinationQueryStep(_alias, _context, _documentStorage);
         }
 
-        public void Analyze(GraphQueryRunner.Match match, Action<string, object> addNode, Action<object, string> addEdge)
+        public void Analyze(GraphQueryRunner.Match match, GraphQueryRunner.GraphDebugInfo graphDebugInfo)
         {
             var result = match.GetResult(_alias);
             if (result == null)
@@ -34,11 +35,11 @@ namespace Raven.Server.Documents.Queries.Graph
 
             if (result is Document d && d.Id != null)
             {
-                addNode(d.Id.ToString(), d);
+                graphDebugInfo.AddNode(d.Id.ToString(), d);
             }
             else
             {
-                addNode(null, result);
+                graphDebugInfo.AddNode(null, result);
             }
         }
 
@@ -62,16 +63,23 @@ namespace Raven.Server.Documents.Queries.Graph
             return default;
         }
 
-        public bool TryGetById(string id, out GraphQueryRunner.Match match)
+        public List<GraphQueryRunner.Match> GetById(string id)
         {
+            _temp.Clear();
+
             var document = _documentStorage.Get(_context, id);
-            match = new GraphQueryRunner.Match();
+            var match = new GraphQueryRunner.Match();
             if (document != null)
             {                
                 match.Set(_alias, document);
-                return true;
+                _temp.Add(match);
             }
-            return false;
+            return _temp;
+        }
+
+        public ISingleGraphStep GetSingleGraphStepExecution()
+        {
+            throw new NotSupportedException();
         }
     }
 }

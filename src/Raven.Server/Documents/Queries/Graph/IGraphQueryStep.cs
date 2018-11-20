@@ -14,12 +14,26 @@ namespace Raven.Server.Documents.Queries.Graph
 
         bool GetNext(out GraphQueryRunner.Match match);
 
-        bool TryGetById(string id, out GraphQueryRunner.Match match);
+        List<GraphQueryRunner.Match> GetById(string id);
 
         void Analyze(GraphQueryRunner.Match match,
-            Action<string, object> addNode, 
-            Action<object, string> addEdge);
+            GraphQueryRunner.GraphDebugInfo graphDebugInfo);
 
         IGraphQueryStep Clone();
+
+        ISingleGraphStep GetSingleGraphStepExecution();
+    }
+
+    public interface ISingleGraphStep
+    {
+        ValueTask Initialize();
+
+        bool GetAndClearResults(List<GraphQueryRunner.Match> matches);
+
+        void Run(GraphQueryRunner.Match src, string alias);
+
+        void AddAliases(HashSet<string> aliases);
+
+        void SetPrev(IGraphQueryStep prev);
     }
 }

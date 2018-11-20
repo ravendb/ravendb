@@ -12,15 +12,19 @@ namespace Raven.Server.Documents.Queries.Graph
     public class RecursionQueryStep : IGraphQueryStep
     {
         private readonly IGraphQueryStep _left;
+        private ISingleGraphStep _next;
         private readonly List<SingleEdgeMatcher> _steps;
         private readonly RecursiveMatch _recursive;
         private readonly RecursiveMatch.RecursiveOptions _options;
         private readonly string _outputAlias;
         private readonly List<string> _stepAliases = new List<string>();
         private readonly List<Match> _results = new List<Match>();
+        private List<Match> _temp = new List<Match>();
+        private readonly HashSet<string> _allLliases = new HashSet<string>();
         private readonly HashSet<long> _visited = new HashSet<long>();
         private readonly Stack<RecursionState> _path = new Stack<RecursionState>();
         public int _index = -1;
+        private bool _skipMaterialization;
   
         public IGraphQueryStep Left => _left;
         public List<SingleEdgeMatcher> Steps => _steps;
@@ -50,9 +54,11 @@ namespace Raven.Server.Documents.Queries.Graph
             }
 
             _outputAlias = _stepAliases.Last();
+            _allLliases.UnionWith(_left.GetAllAliases());
+            _allLliases.Add(_recursive.Alias);
         }
 
-        public RecursionQueryStep(IGraphQueryStep left, RecursionQueryStep rqs)
+         public RecursionQueryStep(IGraphQueryStep left, RecursionQueryStep rqs)
         {
             _left = left;
             _steps = rqs._steps;
@@ -69,6 +75,11 @@ namespace Raven.Server.Documents.Queries.Graph
             }
 
             _outputAlias = _stepAliases.Last();
+        }
+
+        public void SetAliases(HashSet<string> aliases)
+        {
+            _allLliases.UnionWith(aliases);
         }
 
         public RecursionQueryStep(RecursionQueryStep rqs, IGraphQueryStep left, List<SingleEdgeMatcher> steps)
@@ -101,9 +112,20 @@ namespace Raven.Server.Documents.Queries.Graph
             return (match.Edge, match.EdgeAlias, _recursive.Alias, _left.GetOutputAlias());
         }
 
+        public void SetNext(ISingleGraphStep next)
+        {
+            _next = next;
+            _next.AddAliases(_allLliases);
+        }
+
+        public ISingleGraphStep GetNextStep()
+        {
+            return _next;
+        }
+
         public HashSet<string> GetAllAliases()
         {
-            return _left.GetAllAliases();
+            return _allLliases;
         }
 
         public bool GetNext(out Match match)
@@ -127,13 +149,13 @@ namespace Raven.Server.Documents.Queries.Graph
             if (_index != -1)
                 return default;
 
+            _index = 0;
+
             var leftTask = _left.Initialize();
             if (leftTask.IsCompleted == false)
             {
                 return new ValueTask(CompleteLeftInitializationAsync(leftTask));
             }
-
-            _index = 0;
 
             return CompleteInitializationAfterLeft(0);
         }
@@ -152,20 +174,100 @@ namespace Raven.Server.Documents.Queries.Graph
                     return new ValueTask(CompleteInitializationForStepAsync(position, stepTask));
                 }
             }
+            if(_next != null)
+            {
+                var nextTask = _next.Initialize();
+                if(nextTask.IsCompleted == false)
+                {
+                    return CompleteNextStepTaskAsync(nextTask);
+                }
+            }
 
             CompleteInitialization();
             return default;
         }
 
+        private async ValueTask CompleteNextStepTaskAsync(ValueTask nextTask)
+        {
+            await nextTask;
+            CompleteInitialization();
+        }
+
         private void CompleteInitialization()
         {
+            if (_skipMaterialization)
+            {
+                return;
+            }
+            
             var matches = new List<Match>();
             while (_left.GetNext(out var match))
             {
                 matches.Clear();
                 ProcessSingleResultRecursive(match, matches);
                 if (matches.Count > 0)
-                    _results.AddRange(matches);
+                {
+                    foreach (var item in matches)
+                    {
+                        item.Remove(_outputAlias);
+                        _results.Add(item);
+                    }
+                }
+            }
+        }
+
+        private class RecursionSingleStep : ISingleGraphStep
+        {
+            private readonly RecursionQueryStep _parent;
+            private List<Match> _matches = new List<Match>();
+
+            public RecursionSingleStep(RecursionQueryStep parent)
+            {
+                _parent = parent;
+            }
+
+            public bool GetAndClearResults(List<Match> matches)
+            {
+                if (_matches.Count == 0)
+                    return false;
+
+                matches.AddRange(_matches);
+                _matches.Clear();
+
+                return true;
+            }
+
+            public ValueTask Initialize()
+            {
+                _parent._skipMaterialization = true;
+                var task = _parent.Initialize();
+                if (task.IsCompleted)
+                {
+                    _parent._skipMaterialization = false;
+                    return default;
+            }
+                return CompleteInit(task);
+            }
+
+            private async ValueTask CompleteInit(ValueTask task)
+            {
+                await task;
+                _parent._skipMaterialization = false;
+            }
+
+            public void Run(Match src, string alias)
+            {
+                _parent.ProcessSingleResultRecursive(src, _matches);
+            }
+
+            public void AddAliases(HashSet<string> aliases)
+            {
+                aliases.UnionWith(_parent.GetAllAliases());
+            }
+
+            public void SetPrev(IGraphQueryStep prev)
+            {
+             
             }
         }
 
@@ -178,7 +280,6 @@ namespace Raven.Server.Documents.Queries.Graph
         private async Task CompleteLeftInitializationAsync(ValueTask leftTask)
         {
             await leftTask;
-            _index = 0;
             await CompleteInitializationAfterLeft(0);
         }
 
@@ -204,7 +305,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 // the first item is always the root
                 if (_path.Count - 1 == _options.Max)
                 {
-                    if (AddMatch())
+                    if (AddMatch(cur))
                         return;
                     _path.Pop();
                 }
@@ -212,7 +313,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 {
                     if (ProcessSingleResult(currentMatch, aliasBaseIndex, out var currentMatches) == false)
                     {
-                        if (AddMatch())
+                        if (AddMatch(cur))
                         {
                             return;
                         }
@@ -233,7 +334,8 @@ namespace Raven.Server.Documents.Queries.Graph
                         return;
 
                     if (_options.Type == RecursiveMatchType.Lazy &&
-                        AddMatch())
+
+                        AddMatch(cur))
                     {
                         return;
                     }
@@ -241,7 +343,12 @@ namespace Raven.Server.Documents.Queries.Graph
                     var top = _path.Peek();
                     if (top.Matches == null || top.Matches.Count == 0)
                     {
-                        if (AddMatch())
+                        var current = top.Match.GetSingleDocumentResult(_outputAlias);
+                        if(current == null && _options.Min == 0)
+                        {
+                            current = top.Match.GetSingleDocumentResult(_left.GetOutputAlias());
+                        }
+                        if (current != null && AddMatch(current))
                         {
                             return;
                         }
@@ -262,7 +369,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 }
             }
 
-            bool AddMatch()
+            bool AddMatch(Document current)
             {
                 var top = _path.Peek();
                 if (top.AlreadyAdded)
@@ -270,6 +377,39 @@ namespace Raven.Server.Documents.Queries.Graph
 
                 if (_path.Count <= _options.Min)
                     return false;
+
+                var match = new Match(originalMatch);
+                var list = new List<Match>();
+                foreach (var item in _path)
+                {
+                    var one = new Match();
+                    foreach (var alias in _recursive.Aliases)
+                    {
+                        var v = item.Match.GetResult(alias);
+                        if (v == null)
+                            continue;
+                        one.Set(alias, v);
+                    }
+                    if (one.Empty)
+                        continue;
+
+                    list.Add(one);
+                }
+                list.Reverse();
+
+                match.Set(_recursive.Alias, list);
+                match.Set(_outputAlias, current);
+
+                if (_next != null)
+                {
+                    _next.Run(match, _outputAlias);
+                    if (_next.GetAndClearResults(matches) == false)
+                        return false;
+                }
+                else
+                {
+                	matches.Add(match);
+                }
 
                 if (bestPathLength != null)
                 {
@@ -289,34 +429,14 @@ namespace Raven.Server.Documents.Queries.Graph
                 }
 
                 top.AlreadyAdded = true;
-
-                bestPathLength = _path.Count;
-
-                var match = new Match(originalMatch);
-                var list = new List<Match>();
-                foreach (var item in _path)
+                if (_options.Type == RecursiveMatchType.Longest)
                 {
-                    if (_options.Type != RecursiveMatchType.Shortest)
-                        item.AlreadyAdded = true;
-
-                    var one = new Match();
-                    foreach (var alias in _recursive.Aliases)
+                    foreach (var item in _path)
                     {
-                        var v = item.Match.GetResult(alias);
-                        if (v == null)
-                            continue;
-                        one.Set(alias, v);
+                        item.AlreadyAdded = true;
                     }
-                    if (one.Empty)
-                        continue;
-
-                    list.Add(one);
                 }
-                list.Reverse();
-
-                match.Set(_recursive.Alias, list);
-                match.Set(_outputAlias, cur);
-                matches.Add(match);
+                bestPathLength = _path.Count;
 
                 return _options.Type == RecursiveMatchType.Lazy;
             }
@@ -351,14 +471,22 @@ namespace Raven.Server.Documents.Queries.Graph
             return true;
         }
 
-        public bool TryGetById(string id, out Match match)
+        public List<Match> GetById(string id)
         {
-            throw new NotSupportedException("Cannot get matches by id from recursive portion");
+            _temp.Clear();
+            var matches = _left.GetById(id);
+
+            foreach (var item in matches)
+            {
+                ProcessSingleResultRecursive(item, _temp);
         }
 
-        public void Analyze(Match match, Action<string, object> addNode, Action<object, string> addEdge)
+            return _temp;
+        }
+
+        public void Analyze(Match match, GraphQueryRunner.GraphDebugInfo graphDebugInfo)
         {
-            _left.Analyze(match, addNode, addEdge);
+            _left.Analyze(match, graphDebugInfo);
 
             var prev = match.GetResult(_left.GetOutputAlias());
 
@@ -372,14 +500,19 @@ namespace Raven.Server.Documents.Queries.Graph
                 {
                     if (step.Edge != null)
                     {
-                        var next = EdgeQueryStep.AnalyzeEdge(step.Edge, step.EdgeAlias, singleMatch, prev, addEdge);
+                        var next = EdgeQueryStep.AnalyzeEdge(step.Edge, step.EdgeAlias, singleMatch, prev, graphDebugInfo);
                         if (next != null)
                             prev = next;
                     }
-                    step.Right?.Analyze(singleMatch, addNode, addEdge);
+                    step.Right?.Analyze(singleMatch, graphDebugInfo);
                 }
             }
 
         }
+
+        public ISingleGraphStep GetSingleGraphStepExecution()
+        {
+            return new RecursionSingleStep(this);
     }
+}
 }

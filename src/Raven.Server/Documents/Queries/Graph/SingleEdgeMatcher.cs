@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             var dummy = left.GetSingleDocumentResult(alias);
             if (dummy == null)
-                throw new InvalidOperationException("Unable to find alias " + alias + " in query results, this is probably a bug");
+                return;
 
             var leftDoc = dummy.Data;
 
@@ -88,23 +88,30 @@ namespace Raven.Server.Documents.Queries.Graph
 
             foreach (var includedEdge in IncludedEdges)
             {
-                Match rightMatch = default;
-                if (Right != null &&
-                    Right.TryGetById(includedEdge.Key, out rightMatch) == false)
+                if(Right == null)
+                {
+                    MergeAndAddResult(left, leftDoc, includedEdge.Key, includedEdge.Value, default);
                     continue;
-
-                var clone = new Match(left);
-                clone.Merge(rightMatch);
-
-                if (ShouldUseFullObjectForEdge(leftDoc, includedEdge.Value))
-                    clone.Set(EdgeAlias, includedEdge.Value);
-                else
-                    clone.Set(EdgeAlias, includedEdge.Key);
-
-                Results.Add(clone);
+                }
+                foreach (var rightMatch in Right.GetById(includedEdge.Key))
+                {
+                    MergeAndAddResult(left, leftDoc, includedEdge.Key, includedEdge.Value, rightMatch);
+                }
             }
         }
 
+        private void MergeAndAddResult(Match left, BlittableJsonReaderObject leftDoc, string includeKey, BlittableJsonReaderObject includedValue, Match rightMatch)
+        {
+            var clone = new Match(left);
+            clone.Merge(rightMatch);
+
+            if (ShouldUseFullObjectForEdge(leftDoc, includedValue))
+                clone.Set(EdgeAlias, includedValue);
+            else
+                clone.Set(EdgeAlias, includeKey);
+
+            Results.Add(clone);
+        }
 
         private struct EdgeIncludeOp : IncludeUtil.IIncludeOp
         {

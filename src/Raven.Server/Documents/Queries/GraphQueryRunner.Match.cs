@@ -24,9 +24,16 @@ namespace Raven.Server.Documents.Queries
             {
                 if (_inner == null)
                     return "<empty>";
-                return string.Join(", ", _inner.Select(x=> x.Key + " - " + x.Value));
+                return string.Join(", ", _inner.Select(x => x.Key + " - " + GetNameOfValue(x.Value)));
             }
 
+            private static object GetNameOfValue(object x)
+            {
+                if (x is Document d && d.Id != null)
+                    return d.Id;
+
+                return x;
+            }
 
             public Match(Match other)
             {
@@ -49,6 +56,13 @@ namespace Raven.Server.Documents.Queries
                 {
                     _inner[item.Key] = item.Value;
                 }
+            }
+
+            public void Remove(string alias)
+            {
+                if (_inner == null)
+                    return;
+                _inner.Remove(alias);
             }
 
             public object GetResult(string alias)
@@ -84,16 +98,6 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 return false;
-            }
-
-            //try to set, but don't overwrite
-            public long? TrySet(StringSegment alias, Document val)
-            {
-                EnsureInnerInitialized();
-
-                if (_inner.TryAdd(alias, val) == false)
-                    return null;
-                return (long)val.Data.BasePointer;
             }
 
             private void EnsureInnerInitialized()

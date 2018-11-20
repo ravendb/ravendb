@@ -15,6 +15,8 @@ namespace Raven.Server.Documents.Queries.Graph
         private List<Match> _results = new List<Match>();
         private int _index = -1;
 
+        private string _outputAlias;
+
         private HashSet<string> _aliases;
 
         public IGraphQueryStep Left => _left;
@@ -34,6 +36,8 @@ namespace Raven.Server.Documents.Queries.Graph
             _edgePath = edgePath;
             _queryParameters = queryParameters;
             _edgesExpression = edgesExpression;
+
+            _outputAlias = _right.GetOutputAlias();
         }
 
         public EdgeQueryStep(IGraphQueryStep left, IGraphQueryStep right, EdgeQueryStep eqs)
@@ -49,6 +53,9 @@ namespace Raven.Server.Documents.Queries.Graph
             _edgePath = eqs._edgePath;
             _queryParameters = eqs._queryParameters;
             _edgesExpression = eqs._edgesExpression;
+
+
+            _outputAlias = _right.GetOutputAlias();
         }
 
         public IGraphQueryStep Clone()
@@ -93,30 +100,94 @@ namespace Raven.Server.Documents.Queries.Graph
             CompleteInitialization();
         }
 
+        public ISingleGraphStep GetSingleGraphStepExecution()
+        {
+            return new EdgeMatcher(this);
+        }
+
         private void CompleteInitialization()
         {
             _index = 0;
-            var edgeAlias = _edgePath.Alias;
-            var edge = _edgesExpression;
-            edge.EdgeAlias = edgeAlias;
 
-            var processor = new SingleEdgeMatcher
-            {
-                IncludedEdges = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase),
-                QueryParameters = _queryParameters,
-                Results = _results,
-                Right = _right,
-                Edge = edge,
-                EdgeAlias = edgeAlias
-            };
-            string alias = _left.GetOutputAlias();
-
+            var edgeMatcher = new EdgeMatcher(this);
+            var alias = _left.GetOutputAlias();
             while (_left.GetNext(out var left))
             {
-                processor.SingleMatch(left, alias);
+                edgeMatcher.Run(left, alias);
             }
         }
 
+        public class EdgeMatcher : ISingleGraphStep
+        {
+            private readonly EdgeQueryStep _parent;
+            SingleEdgeMatcher _processor;
+
+            public EdgeMatcher(EdgeQueryStep parent)
+            {
+                var edgeAlias = parent._edgePath.Alias;
+                var edge = parent._edgesExpression;
+                edge.EdgeAlias = edgeAlias;
+
+                _processor = new SingleEdgeMatcher
+                {
+                    IncludedEdges = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase),
+            
+                    QueryParameters = parent._queryParameters,
+                    Results = parent._results,
+                    Right = parent._right,
+                    Edge = edge,
+                    EdgeAlias = edgeAlias
+                };
+                _parent = parent;
+            }
+
+            public bool GetAndClearResults(List<Match> matches)
+            {
+                if (_processor.Results.Count == 0)
+                    return false;
+
+                matches.AddRange(_processor.Results);
+                _processor.Results.Clear();
+
+                return true;
+            }
+
+
+            public void AddAliases(HashSet<string> aliases)
+            {
+                aliases.UnionWith(_parent.GetAllAliases());
+            }
+
+            public void SetPrev(IGraphQueryStep prev)
+            {
+                _parent._left = prev;
+            }
+
+            public ValueTask Initialize()
+            {
+                if(_parent._left != null)
+                {
+                    var leftTask = _parent._left.GetSingleGraphStepExecution().Initialize();
+                    if(leftTask.IsCompleted == false)
+                    {
+                        return CompleteRightInitAsync(leftTask);
+                    }
+                }
+                return _parent._right.GetSingleGraphStepExecution().Initialize();
+            }
+
+            private async ValueTask CompleteRightInitAsync(ValueTask leftTask)
+            {
+                await leftTask;
+                await _parent._right.Initialize();
+            }
+
+            public void Run(Match src, string alias)
+            {
+                _processor.SingleMatch(src, alias);
+            }
+        }
+        
 
         public bool GetNext(out Match match)
         {
@@ -129,13 +200,9 @@ namespace Raven.Server.Documents.Queries.Graph
             match = _results[_index++];
             return true;
         }
+        
 
-        public bool TryGetById(string id, out Match match)
-        {
-            throw new NotSupportedException("Cannot get a match by id from an edge");
-        }
-
-        public string GetOutputAlias()
+        public string GetOuputAlias()
         {
             return _right.GetOutputAlias();
         }
@@ -145,17 +212,18 @@ namespace Raven.Server.Documents.Queries.Graph
             return _aliases;
         }
 
-        public void Analyze(Match match, Action<string, object> addNode, Action<object, string> addEdge)
+        public void Analyze(Match match, GraphQueryRunner.GraphDebugInfo graphDebugInfo)
         {
-            _left.Analyze(match, addNode, addEdge);
-            _right.Analyze(match, addNode, addEdge);
+            _left.Analyze(match, graphDebugInfo);
+            _right.Analyze(match, graphDebugInfo);
 
             var prev = match.GetResult(_left.GetOutputAlias());
 
-            AnalyzeEdge(_edgesExpression, _edgePath.Alias, match, prev, addEdge);
+            AnalyzeEdge(_edgesExpression, _edgePath.Alias, match, prev, graphDebugInfo);
         }
 
-        public static string AnalyzeEdge(WithEdgesExpression _edgesExpression, StringSegment edgeAlias, Match match, object prev, Action<object, string> addEdge)
+        public static string AnalyzeEdge(WithEdgesExpression _edgesExpression, StringSegment edgeAlias, Match match, object prev,
+            GraphDebugInfo graphDebugInfo)
         {
             var edge = match.GetResult(edgeAlias);
 
@@ -189,9 +257,29 @@ namespace Raven.Server.Documents.Queries.Graph
             if (result == null)
                 return null;
 
-            addEdge(prev, result);
+            string source = null;
+            if(prev is string str)
+            {
+                source = str;
+            }
+            else if (prev is Document d)
+            {
+                source = d.Id;
+            }
+
+            graphDebugInfo.AddEdge(edgeAlias, edge, source, result);
 
             return result;
+        }
+
+        public List<Match> GetById(string id)
+        {
+            throw new NotSupportedException("Cannot get a match by id from an edge");
+        }
+
+        public string GetOutputAlias()
+        {
+            return _outputAlias;
         }
 
         private IGraphQueryStep _left;

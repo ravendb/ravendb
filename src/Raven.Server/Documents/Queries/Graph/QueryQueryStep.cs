@@ -19,13 +19,15 @@ namespace Raven.Server.Documents.Queries.Graph
         private OperationCancelToken _token;
         private QueryRunner _queryRunner;
         private QueryMetadata _queryMetadata;
+        private readonly Sparrow.Json.BlittableJsonReaderObject _queryParameters;
+        private List<Match> _temp = new List<Match>();
+
 
         private int _index = -1;
         private List<Match> _results = new List<Match>();
         private Dictionary<string, Match> _resultsById = new Dictionary<string, Match>(StringComparer.OrdinalIgnoreCase);
 
-
-        public QueryQueryStep(QueryRunner queryRunner, Sparrow.StringSegment alias,Query query, QueryMetadata queryMetadata, DocumentsOperationContext documentsContext, long? existingResultEtag,
+        public QueryQueryStep(QueryRunner queryRunner, Sparrow.StringSegment alias, Query query, QueryMetadata queryMetadata, Sparrow.Json.BlittableJsonReaderObject queryParameters, DocumentsOperationContext documentsContext, long? existingResultEtag,
             OperationCancelToken token)
         {
             _query = query;
@@ -33,6 +35,7 @@ namespace Raven.Server.Documents.Queries.Graph
             _aliases = new HashSet<string> { _alias };
             _queryRunner = queryRunner;
             _queryMetadata = queryMetadata;
+            _queryParameters = queryParameters;
             _context = documentsContext;
             _resultEtag = existingResultEtag;
             _token = token;
@@ -48,7 +51,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public IGraphQueryStep Clone()
         {
-            return new QueryQueryStep(_queryRunner, _alias, _query, _queryMetadata, _context, _resultEtag, _token);
+            return new QueryQueryStep(_queryRunner, _alias, _query, _queryMetadata, _queryParameters, _context, _resultEtag, _token);
         }
 
         public bool GetNext(out Match match)
@@ -67,7 +70,10 @@ namespace Raven.Server.Documents.Queries.Graph
             if (_index != -1)
                 return default;
 
-            var results = _queryRunner.ExecuteQuery(new IndexQueryServerSide(_queryMetadata),
+            var results = _queryRunner.ExecuteQuery(new IndexQueryServerSide(_queryMetadata)
+            {
+                QueryParameters = _queryParameters
+            },
                   _context, _resultEtag, _token);
 
             if (results.IsCompleted)
@@ -99,12 +105,16 @@ namespace Raven.Server.Documents.Queries.Graph
             }
         }
 
-        public bool TryGetById(string id, out Match match)
+        public List<Match> GetById(string id)
         {
             if(_results.Count != 0 && _resultsById.Count == 0)// only reason is that we are projecting non documents here
                 throw new InvalidOperationException("Target vertices in a pattern match that originate from map/reduce WITH clause are not allowed. (pattern match has multiple statements in the form of (a)-[:edge]->(b) ==> in such pattern, 'b' must not originate from map/reduce index query)");
               
-            return _resultsById.TryGetValue(id, out match);
+            _temp.Clear();
+            if (_resultsById.TryGetValue(id, out var match))
+                _temp.Add(match);
+            return _temp;
+
         }
 
         public string GetOutputAlias()
@@ -117,7 +127,7 @@ namespace Raven.Server.Documents.Queries.Graph
             return _aliases;
         }
 
-        public void Analyze(Match match, Action<string, object> addNode, Action<object, string> addEdge)
+        public void Analyze(Match match, GraphQueryRunner.GraphDebugInfo graphDebugInfo)
         {
             var result = match.GetResult(_alias);
             if (result == null)
@@ -125,11 +135,63 @@ namespace Raven.Server.Documents.Queries.Graph
 
             if(result is Document d && d.Id != null)
             {
-                addNode(d.Id.ToString(), d);
+                graphDebugInfo.AddNode(d.Id.ToString(), d);
             }
             else
             {
-                addNode(null, result);
+                graphDebugInfo.AddNode(null, result);
+            }
+        }
+
+        public ISingleGraphStep GetSingleGraphStepExecution()
+        {
+            return new QuerySingleStep(this);
+    }
+
+        private class QuerySingleStep : ISingleGraphStep
+        {
+            private QueryQueryStep _parent;
+            private List<Match> _temp = new List<Match>(1);
+
+            public QuerySingleStep(QueryQueryStep queryQueryStep)
+            {
+                _parent = queryQueryStep;
+}
+
+
+            public void AddAliases(HashSet<string> aliases)
+            {
+                aliases.UnionWith(_parent.GetAllAliases());
+            }
+
+            public void SetPrev(IGraphQueryStep prev)
+            {
+            }
+
+            public bool GetAndClearResults(List<Match> matches)
+            {
+                if (_temp.Count == 0)
+                    return false;
+
+                matches.AddRange(_temp);
+
+                _temp.Clear();
+
+                return true;
+            }
+
+            public ValueTask Initialize()
+            {
+                return _parent.Initialize();
+            }
+
+            public void Run(Match src, string alias)
+            {
+                // here we already get the right match, and we do nothing with it.
+                var clone = new Match(src);
+                clone.Remove(alias);
+                clone.Set(_parent.GetOutputAlias(), src.GetResult(alias));
+                _temp.Add(clone);
             }
         }
     }

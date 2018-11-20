@@ -33,7 +33,7 @@ namespace Raven.Client.Exceptions
 
         private static string BuildMessage(string message, string queryText, BlittableJsonReaderObject parameters)
         {
-            var result = new StringBuilder(message.Length + queryText.Length);
+            var result = new StringBuilder(message?.Length ?? 0 + queryText?.Length ?? 0);
 
             result.Append(message)
                 .Append(Environment.NewLine)

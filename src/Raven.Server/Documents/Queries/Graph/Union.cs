@@ -57,10 +57,10 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             foreach (var alias in aliases)
             {
-                var doc = src.GetSingleDocumentResult(alias);
-                if (doc == null)
+                var val = src.GetResult(alias);
+                if (val == null)
                     continue;
-                dst.TrySet(alias, doc);
+                dst.Set(alias, val);
             }
         }
 

@@ -24,25 +24,10 @@ namespace Raven.Server.Documents.Queries.Graph
                     return VisitIntersectionQueryStepIntersection(iqsi);
                 case RecursionQueryStep rqs:
                     return VisitRecursionQueryStep(rqs);
-                case EdgeFollowingRecursionQueryStep efrqs:
-                    return VisitEdgeFollowingRecursionQueryStep(efrqs);
                 default:
                     throw new NotSupportedException($"Unexpected type {root.GetType().Name} for QueryPlanRewriter.Visit");
 
             }
-        }
-
-        public virtual IGraphQueryStep VisitEdgeFollowingRecursionQueryStep(EdgeFollowingRecursionQueryStep efrqs)
-        {
-            var left = (RecursionQueryStep)Visit(efrqs.Left);
-            var right = Visit(efrqs.Right);
-
-            if (ReferenceEquals(left, efrqs.Left) && ReferenceEquals(right, efrqs.Right))
-            {
-                return efrqs;
-            }
-
-            return new EdgeFollowingRecursionQueryStep(left, right, efrqs.QueryParameters);
         }
 
         public virtual IGraphQueryStep VisitQueryQueryStep(QueryQueryStep qqs)

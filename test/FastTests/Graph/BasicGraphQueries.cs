@@ -323,7 +323,7 @@ match (Employees where id() ='employees/7-A')-[ReportsTo]->(Employees as Boss)
         public void CanUseMultiHopInQueries()
         {
             var results = Query<EmployeeRelations>(@"
-match (Employees as e where id() = 'employees/7-A')-recursive as n (longest) { [ReportsTo as m] }->(Employees as boss)
+match (Employees as e where id() = 'employees/7-A')-recursive as n (longest) { [ReportsTo as m]->(Employees as intermediary) }-[ReportsTo]->(Employees as boss)
 select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
 ");
             Assert.Equal(1, results.Count);
@@ -331,7 +331,7 @@ select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
             {
                 Assert.Equal("Andrew", item.Boss);
                 Assert.Equal("Robert", item.Employee);
-                Assert.Equal(new[] {  "employees/5-A", "employees/2-A" }, item.MiddleManagement);
+                Assert.Equal(new[] {  "employees/5-A" }, item.MiddleManagement);
             }
         }
 
@@ -339,7 +339,7 @@ select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
         public void CanUseMultiHopInQueriesWithScript()
         {
             var results = Query<EmployeeRelations>(@"
-match (Employees as e where id() = 'employees/7-A')-recursive as n (longest) { [ReportsTo as m] }->(Employees as boss)
+match (Employees as e where id() = 'employees/7-A')-recursive as n (longest) { [ReportsTo as m]->(Employees as intermediary) }-[ReportsTo]->(Employees as boss)
 select {
     Employee: e.FirstName + ' ' + e.LastName,
     MiddleManagement: n.map(f => load(f.m)).map(f => f.FirstName + ' ' + f.LastName),
@@ -351,7 +351,7 @@ select {
             {
                 Assert.Equal("Andrew Fuller", item.Boss);
                 Assert.Equal("Robert King", item.Employee);
-                Assert.Equal(new[] { "Steven Buchanan", "Andrew Fuller" }, item.MiddleManagement);
+                Assert.Equal(new[] { "Steven Buchanan" }, item.MiddleManagement);
             }
         }
 
@@ -359,7 +359,7 @@ select {
         public void CanHandleCyclesInGraph()
         {
             var results = Query<EmployeeRelations>(@"
-match (Employees as e where id() = 'employees/7-A')-recursive as n (longest) { [ReportsTo as m] }->(Employees as boss)
+match (Employees as e where id() = 'employees/7-A')-recursive as n (longest) { [ReportsTo as m]->(Employees ) }-[ReportsTo]->(Employees as boss)
 select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
 ", store =>
             {
@@ -416,7 +416,7 @@ select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.RawQuery<Tragedy>(@"
-match (People as son where Name = 'Otho Sackville-Baggins')-recursive (0) { [Parents where Gender = 'Male' select Id]->(People as ancestor where BornAt='Shire')-[Parents where Gender = 'Male' select Id] } ->(People as evil where BornAt = 'Mordor')
+match (People as son where Name = 'Otho Sackville-Baggins')-recursive (0) { [Parents where Gender = 'Male' select Id]->(People as ancestor where BornAt='Shire') } -[Parents where Gender = 'Male' select Id]->(People as evil where BornAt = 'Mordor')
 select son.Name as Son, evil.Name as Evil")
                         .ToList();
 
@@ -438,8 +438,8 @@ select son.Name as Son, evil.Name as Evil")
                 {
                     var results = session.Advanced.RawQuery<Ancestry>(@"
 match (People as son)-recursive as ancestry (2,5,'longest') { 
-    [Parents where Gender = 'Male' select Id]->(People as paternal where BornAt='Shire')-[Parents where Gender = 'Male' select Id]
-}->(People as paternal0 where BornAt='Shire') 
+    [Parents where Gender = 'Male' select Id]->(People as paternal where BornAt='Shire')
+}-[Parents where Gender = 'Male' select Id]->(People as paternal0 where BornAt='Shire') 
 select ancestry.paternal.Name as Parentage, son.Name, paternal0.Name as Eldest")
                         .ToList();
 
@@ -505,7 +505,6 @@ select {
     PaternalAncestors: ancestry.map(a=>a.paternal.Name)
 }")
 .ToList();
-                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(1, results.Count);
                     Assert.Equal("Bilbo Baggins", results[0].Name);
                     Assert.Equal(new[] { "Bungo"}, results[0].PaternalAncestors);
@@ -533,12 +532,18 @@ select {
 .ToList();
                     results.Sort((x, y) => x.Parentage.CompareTo(y.Parentage));
 
-                    Assert.Equal(2, results.Count);
+                    Assert.Equal(4, results.Count);
                     Assert.Equal("Bilbo Baggins", results[0].Name);
-                    Assert.Equal("Bungo | Mungo | Balbo Baggins", results[0].Parentage);
+                    Assert.Equal("Bungo", results[0].Parentage);
 
                     Assert.Equal("Bilbo Baggins", results[1].Name);
-                    Assert.Equal("Bungo | Mungo | Berylla Boffin", results[1].Parentage);
+                    Assert.Equal("Bungo | Mungo", results[1].Parentage);
+
+                    Assert.Equal("Bilbo Baggins", results[2].Name);
+                    Assert.Equal("Bungo | Mungo | Balbo Baggins", results[2].Parentage);
+
+                    Assert.Equal("Bilbo Baggins", results[3].Name);
+                    Assert.Equal("Bungo | Mungo | Berylla Boffin", results[3].Parentage);
                 }
             }
         }

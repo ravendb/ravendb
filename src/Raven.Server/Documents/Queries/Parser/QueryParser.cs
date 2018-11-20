@@ -335,7 +335,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Alias(true, out var maybeAlias) == false)
             {
                 if(gq.HasAlias(collection.FieldValue) ||
-                    _synteticWithQueries?.ContainsKey(collection.FieldValue) == true
+                    isEdge == false && _synteticWithQueries?.ContainsKey(collection.FieldValue) == true
                     )
                 {
                     alias = collection.FieldValue;
@@ -345,6 +345,10 @@ namespace Raven.Server.Documents.Queries.Parser
                     alias = implicitPrefix.Length == 0 ? collection.FieldValue :
                          implicitPrefix + "_" + collection.FieldValue;
                 }
+            }
+            else if(maybeAlias.Value == "_")
+            {
+                alias = "__alias" + (++_counter);
             }
             else
             {
@@ -501,6 +505,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     {
                         case "-":
                             foundDash = true;
+                            
                             continue;
                         case "[":
                             if (foundDash == false)
@@ -528,7 +533,8 @@ namespace Raven.Server.Documents.Queries.Parser
                                 Recursive = last.Recursive
                             };
                             foundDash = true;
-                            expectNode = true;
+                            expectNode = false;
+
                             continue;
                         case "<":
                             throw new InvalidQueryException("Got unexpected '<', did you forget to add '->' ?", Scanner.Input, null);
@@ -554,7 +560,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
                         case "(":
                             if (expectNode == false && list[list.Count - 1].EdgeType != EdgeType.Left)
-                                throw new InvalidQueryException("Got '(', but it wasn't expected", Scanner.Input, null);
+                                throw new InvalidQueryException("Got '(', but it wasn't expected, did you forgot to use -> ? ", Scanner.Input, null);
 
                             if (GraphAlias(gq, false, default, out alias) == false)
                                 throw new InvalidQueryException("Couldn't get node's alias", Scanner.Input, null);
@@ -569,10 +575,10 @@ namespace Raven.Server.Documents.Queries.Parser
                             });
                             break;
                         case "recursive":
-                            if(allowRecursive == false)
+                            if (allowRecursive == false)
                                 throw new InvalidQueryException("Cannot call 'recusrive' inside another 'recursive', only one level is allowed", Scanner.Input, null);
 
-                            if(expectNode)
+                            if (expectNode)
                                 throw new InvalidQueryException("'recursive' must appear only after a node, not after an edge", Scanner.Input, null);
 
                             if (foundDash == false)
@@ -582,7 +588,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
                             if (Scanner.TryScan("as"))
                             {
-                                if(Scanner.Identifier() == false)
+                                if (Scanner.Identifier() == false)
                                     throw new InvalidQueryException("Missing alias for 'recursive' after 'as'", Scanner.Input, null);
                                 recursiveAlias = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength);
                             }
@@ -636,16 +642,38 @@ namespace Raven.Server.Documents.Queries.Parser
                                 EdgeType = list[list.Count - 1].EdgeType,
                                 IsEdge = true
                             });
-                            var result  = ProcessEdges(gq, out var repeatedPattern, alias, repeated, allowRecursive: false, foundDash: true);
-                            repeated.RemoveAt(0);
+
+                            var result = ProcessEdges(gq, out var repeatedPattern, alias, repeated, allowRecursive: false, foundDash: true);
+                            if(repeatedPattern is PatternMatchElementExpression pmee)
+                            {
+                                if (pmee.Reversed)
+                                    repeated.RemoveAt(repeated.Count - 1);
+                                else
+                                    repeated.RemoveAt(0);
+                            }
+                            else
+                            {
+                                throw new InvalidQueryException("'recursive' must contain only a single pattern match, but contained " + repeatedPattern, Scanner.Input, null);
+                            }
 
                             if (Scanner.TryScan("}") == false)
                                 throw new InvalidQueryException("'recursive' must be closed by '}', but wasn't", Scanner.Input, null);
 
+                            if (repeated.Count == 0)
+                            {
+                                throw new InvalidQueryException("empty recursive {} block is not allowed ", Scanner.Input, null);
+                            }
+
+                            if (repeated.Last().IsEdge)
+                            {
+                                throw new InvalidQueryException("'recursive' block cannot end with an end and must close with a node ( recursive { [edge]->(node) } )", Scanner.Input, null);
+                            }
+
+
                             list.Add(new MatchPath
                             {
                                 Alias = "recursive",
-                                EdgeType = EdgeType.Right,
+                                EdgeType = list[list.Count-1].EdgeType,
                                 Recursive = new RecursiveMatch
                                 {
                                     Alias = recursiveAlias,
@@ -655,7 +683,8 @@ namespace Raven.Server.Documents.Queries.Parser
                                 },
                                 IsEdge = true
                             });
-                            expectNode = true;
+                            alias = recursiveAlias;
+                            expectNode = false;
                             foundDash = false;
                             break;
                         default:
@@ -684,24 +713,26 @@ namespace Raven.Server.Documents.Queries.Parser
                 hasOutgoing |= list[i].EdgeType == EdgeType.Right;
             }
 
+            bool reversed = false;
             QueryExpression op;
             if (hasIncoming)
             {
                 if (hasOutgoing == false)
                 {
+                    reversed = true;
                     ReverseIncomingChain(list);
                 }
                 else
                 {
                     return BreakPatternChainToAndClauses(list, out op);
                 }
-
             }
 
             op = new PatternMatchElementExpression
             {
                 Path = list.ToArray(),
-                Type = ExpressionType.Pattern
+                Type = ExpressionType.Pattern,
+                Reversed = reversed
             };
             return op;
         }
@@ -710,6 +741,7 @@ namespace Raven.Server.Documents.Queries.Parser
         {
             // need to split the expression based on the direction of the arrows
             var clauses = new List<PatternMatchElementExpression>();
+            bool reversed = false;
             for (int i = list.Count - 1; i >= 1; i--)
             {
                 if (list[i].EdgeType != list[i - 1].EdgeType)
@@ -717,6 +749,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     var part = list.Skip(i).ToList();
                     if (part.Last().EdgeType == EdgeType.Left)
                     {
+                        reversed = true;
                         ReverseIncomingChain(part);
                     }
                     else
@@ -750,7 +783,8 @@ namespace Raven.Server.Documents.Queries.Parser
             clauses.Add(new PatternMatchElementExpression
             {
                 Path = list.ToArray(),
-                Type = ExpressionType.Pattern
+                Type = ExpressionType.Pattern,
+                Reversed = reversed,
             });
 
             op = clauses.Last();
@@ -772,7 +806,8 @@ namespace Raven.Server.Documents.Queries.Parser
                 {
                     Alias = cur.Alias,
                     EdgeType = EdgeType.Right,
-                    IsEdge = cur.IsEdge
+                    IsEdge = cur.IsEdge,
+                    Recursive = cur.Recursive
                 };
             }
         }
