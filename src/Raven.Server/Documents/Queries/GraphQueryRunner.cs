@@ -164,9 +164,8 @@ namespace Raven.Server.Documents.Queries
                             matchResults[i] = default;
                     }
                 }
-            }
-
-            return (matchResults, qp);
+            }            
+            return (matchResults.Skip(query.Start).Take(query.PageSize).ToList(), qp);
         }
 
         private static void HandleResultsWithoutSelect<TResult>(
