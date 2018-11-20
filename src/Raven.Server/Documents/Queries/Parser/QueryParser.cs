@@ -494,7 +494,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private bool ProcessEdges(GraphQuery gq, out QueryExpression op, StringSegment alias, List<MatchPath> list, bool allowRecursive, bool foundDash)
         {
-            bool expectNode = false;
+            var expectNode = false;
             MatchPath last;
             while (true)
 
@@ -511,17 +511,29 @@ namespace Raven.Server.Documents.Queries.Parser
                             if (foundDash == false)
                                 throw new InvalidQueryException("Got '[' when expected '-', did you forget to add '-[' ?", Scanner.Input, null);
 
+                            var startingPos = Scanner.Position - 1;
+
                             if (GraphAlias(gq, true, alias, out alias) == false)
                                 throw new InvalidQueryException("MATCH identifier after '-['", Scanner.Input, null);
-                            if (Scanner.TryScan(']') == false)
-                                throw new InvalidQueryException("MATCH operator expected a ']' after reading: " + alias, Scanner.Input, null);
 
+                            var endingToken = Scanner.Position + 1;
+
+                            if (expectNode)
+                            {
+                                throw new InvalidQueryException(
+                                    $@"Expected the alias '{alias}' to refer a node, but it refers to an edge.{Environment.NewLine}This is likely a mistake in the query as the expression {Scanner.Input.Substring(startingPos,endingToken - startingPos)} should probably be a node.");
+                            }
+
+                            if (Scanner.TryScan(']') == false)
+                                throw new InvalidQueryException("MATCH operator expected a ']' after reading: " + alias, Scanner.Input, null);                            
                             list.Add(new MatchPath
                             {
                                 Alias = alias,
                                 EdgeType = list[list.Count - 1].EdgeType,
                                 IsEdge = true
                             });
+
+                            expectNode = true; //after each edge we expect a node
                             break;
                         case "<-":
                             last = list[list.Count - 1];
@@ -573,6 +585,7 @@ namespace Raven.Server.Documents.Queries.Parser
                                 Alias = alias,
                                 EdgeType = list[list.Count - 1].EdgeType
                             });
+                            expectNode = false; //the next should be an edge
                             break;
                         case "recursive":
                             if (allowRecursive == false)
@@ -692,7 +705,6 @@ namespace Raven.Server.Documents.Queries.Parser
                     }
 
                     foundDash = false;
-                    expectNode = false;
                 }
                 else
                 {
