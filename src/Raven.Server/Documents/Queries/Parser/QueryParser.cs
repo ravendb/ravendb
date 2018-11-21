@@ -516,12 +516,11 @@ namespace Raven.Server.Documents.Queries.Parser
                             if (GraphAlias(gq, true, alias, out alias) == false)
                                 throw new InvalidQueryException("MATCH identifier after '-['", Scanner.Input, null);
 
-                            var endingToken = Scanner.Position + 1;
+                            var endingPos = Scanner.Position + 1;
 
                             if (expectNode)
                             {
-                                throw new InvalidQueryException(
-                                    $@"Expected the alias '{alias}' to refer a node, but it refers to an edge.{Environment.NewLine}This is likely a mistake in the query as the expression {Scanner.Input.Substring(startingPos,endingToken - startingPos)} should probably be a node.");
+                                ThrowExpectedNodeButFoundEdge(alias, Scanner.Input.Substring(startingPos, endingPos - startingPos),Scanner.Input);
                             }
 
                             if (Scanner.TryScan(']') == false)
@@ -536,6 +535,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             expectNode = true; //after each edge we expect a node
                             break;
                         case "<-":
+
                             last = list[list.Count - 1];
                             list[list.Count - 1] = new MatchPath
                             {
@@ -544,8 +544,8 @@ namespace Raven.Server.Documents.Queries.Parser
                                 EdgeType = EdgeType.Left,
                                 Recursive = last.Recursive
                             };
+
                             foundDash = true;
-                            expectNode = false;
 
                             continue;
                         case "<":
@@ -561,6 +561,12 @@ namespace Raven.Server.Documents.Queries.Parser
                                 EdgeType = EdgeType.Right,
                                 Recursive = last.Recursive
                             };
+
+                            if (expectNode && Scanner.TryPeek('['))
+                            {
+                                ThrowExpectedNodeButFoundEdge(last.Alias,last.ToString(), Scanner.Input);
+                            }
+                            
                             if (Scanner.TryScan('(') == false)
                             {
                                 var msg = $"({last.Alias})-> is not allowed, you should use ({last.Alias})-[...] instead.";
@@ -571,11 +577,14 @@ namespace Raven.Server.Documents.Queries.Parser
                             goto case "(";
 
                         case "(":
-                            if (expectNode == false && list[list.Count - 1].EdgeType != EdgeType.Left)
-                                throw new InvalidQueryException("Got '(', but it wasn't expected, did you forgot to use -> ? ", Scanner.Input, null);
 
+                            var start = Scanner.Position - 1;
                             if (GraphAlias(gq, false, default, out alias) == false)
                                 throw new InvalidQueryException("Couldn't get node's alias", Scanner.Input, null);
+                            var end = Scanner.Position + 1;
+
+                            if (expectNode == false)
+                                ThrowExpectedEdgeButFoundNode(alias,Scanner.Input.Substring(start, end - start),Scanner.Input);
 
                             if (Scanner.TryScan(')') == false)
                                 throw new InvalidQueryException("MATCH operator expected a ')' after reading: " + alias, Scanner.Input, null);
@@ -713,6 +722,18 @@ namespace Raven.Server.Documents.Queries.Parser
                     return true;
                 }
             }
+        }
+
+        private void ThrowExpectedEdgeButFoundNode(StringSegment alias, string invalidQueryElement, string query)
+        {
+            throw new InvalidQueryException(
+                $@"Expected the alias '{alias}' to refer an edge, but it refers to an node.{Environment.NewLine}This is likely a mistake in the query as the expression '{invalidQueryElement}' should probably be an edge.", query);
+        }
+
+        private void ThrowExpectedNodeButFoundEdge(StringSegment alias, string invalidQueryElement, string query)
+        {
+            throw new InvalidQueryException(
+                $@"Expected the alias '{alias}' to refer a node, but it refers to an edge.{Environment.NewLine}This is likely a mistake in the query as the expression '{invalidQueryElement}' should probably be a node.", query);
         }
 
         private static QueryExpression FinalProcessingOfMatchExpression(List<MatchPath> list)
