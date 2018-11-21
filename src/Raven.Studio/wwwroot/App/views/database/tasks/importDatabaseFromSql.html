@@ -65,6 +65,25 @@
                                     </div>
                                 </div>
                             </div>
+                            <div data-bind="visible: databaseType() === 'NpgSQL', with: npgSql">
+                                <div class="form-group"
+                                     data-bind="validationElement: connectionString">
+                                    <label class="control-label">Connection string<i class="required"></i></label>
+                                    <div class="flex-grow">
+                                        <textarea class="form-control"
+                                                  data-bind="textInput: connectionString" rows="3"
+                                                  title="The connection string for the NpgSQL server"
+                                                  placeholder="Enter the complete connection string for the NpgSQL server">                                        
+                                        </textarea>
+                                        <div>
+                                            <small>
+                                                <i class="icon-info"></i>
+                                                Please include database name in your connection string.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                             <div class="form-group flex-horizontal">
                                 <div>
@@ -114,6 +133,13 @@
                                     <div class="toggle">
                                         <input id="manyToMany" type="checkbox" data-bind="checked: advanced.detectManyToMany">
                                         <label for="manyToMany">Detect <strong>many-to-many</strong> relationships</label>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="control-label">&nbsp;</label>
+                                    <div class="toggle">
+                                        <input id="includeUnsupported" type="checkbox" data-bind="checked: advanced.includeUnsupported">
+                                        <label for="includeUnsupported">Include <strong>unsupported</strong> documents</label>
                                     </div>
                                 </div>
                             </div>

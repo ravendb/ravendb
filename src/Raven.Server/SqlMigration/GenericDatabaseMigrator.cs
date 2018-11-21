@@ -5,6 +5,7 @@ using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Npgsql;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Documents;
@@ -51,7 +52,7 @@ namespace Raven.Server.SqlMigration
                         Dictionary<string, object> queryParameters = null;
                         var queryToUse = settings.Mode == MigrationTestMode.First 
                             ? GetQueryForCollection(collectionToImport) // we limit rows count internally by passing rowsLimit: 1
-                            : GetQueryByPrimaryKey(collectionToImport, tableSchema.PrimaryKeyColumns, settings.PrimaryKeyValues, out queryParameters);
+                            : GetQueryByPrimaryKey(collectionToImport, tableSchema, settings.PrimaryKeyValues, out queryParameters);
                         
                         foreach (var doc in EnumerateTable(queryToUse, collectionToImport.ColumnsMapping, specialColumns,
                             collectionToImport.AttachmentNameMapping, enumerationConnection, rowsLimit: 1, queryParameters: queryParameters))
@@ -472,8 +473,9 @@ namespace Raven.Server.SqlMigration
             return connection;
         }
 
-        protected string GetQueryByPrimaryKey(RootCollection collection, List<string> primaryKeyColumns, string[] primaryKeyValues, out Dictionary<string, object> queryParameters)
+        protected string GetQueryByPrimaryKey(RootCollection collection, TableSchema tableSchema, string[] primaryKeyValues, out Dictionary<string, object> queryParameters)
         {
+            var primaryKeyColumns = tableSchema.PrimaryKeyColumns;
             if (primaryKeyColumns.Count != primaryKeyValues.Length)
             {
                 queryParameters = null;
@@ -484,7 +486,7 @@ namespace Raven.Server.SqlMigration
             
             var wherePart = string.Join(" and ", primaryKeyColumns.Select((column, idx) =>
             {
-                parameters["p" + idx] = primaryKeyValues[idx];
+                parameters["p" + idx] = ValueAsObject(tableSchema, column, primaryKeyValues, idx);
                 return QuoteColumn(column) + " = @p" + idx;
             }));
             
@@ -493,7 +495,15 @@ namespace Raven.Server.SqlMigration
             // here we ignore custom query - as we want to get row based on primary key
             return "select * from " + QuoteTable(collection.SourceTableSchema, collection.SourceTableName) + " where " + wherePart;
         }
-        
+
+        private object ValueAsObject(TableSchema tableSchema, string column, string[] primaryKeyValue, int index)
+        {
+            var type = tableSchema.Columns.Find(x => x.Name == column).Type;
+            var value = type == ColumnType.Number ? (object)int.Parse(primaryKeyValue[index].ToString()) : primaryKeyValue[index];
+
+            return value;
+        }
+
         protected IEnumerable<SqlMigrationDocument> EnumerateTable(string tableQuery, Dictionary<string, string> documentPropertiesMapping, 
             HashSet<string> specialColumns, Dictionary<string, string> attachmentNameMapping, DbConnection connection, int? rowsLimit, Dictionary<string, object> queryParameters = null)
         {
