@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -40,6 +41,18 @@ namespace Raven.Server.Documents.Queries.Graph
             _context = documentsContext;
             _resultEtag = existingResultEtag;
             _token = token;
+
+            if (!string.IsNullOrEmpty(queryMetadata.CollectionName)) //not a '_' collection
+            {
+                try
+                {
+                    var _ = _queryRunner.Database.DocumentsStorage.GetCollection(queryMetadata.CollectionName, throwIfDoesNotExist: true);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidQueryException("Query on collection " + queryMetadata.CollectionName + " failed, because there is no such collection. If you meant to use " + queryMetadata.CollectionName + " as an alias, use: (_ as " + queryMetadata.CollectionName +")", e );
+                }
+            }
         }
 
         public bool IsCollectionQuery => _queryMetadata.IsCollectionQuery;
