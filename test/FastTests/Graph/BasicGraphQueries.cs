@@ -120,8 +120,8 @@ namespace FastTests.Graph
                 CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
-                    var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (v)").ToList();
-                    Assert.False(allVerticesQuery.Any(row => row.ContainsKey("v"))); //we have "flat" results
+                    var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (_ as v)").ToList();
+                    Assert.False(allVerticesQuery.Any(row => row.ContainsKey("_ as v"))); //we have "flat" results
                 }
             }
         }
@@ -134,7 +134,7 @@ namespace FastTests.Graph
                 CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
-                    var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (u)-[HasRated select Movie]->(m)").ToList();
+                    var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (_ as u)-[HasRated select Movie]->(_ as m)").ToList();
                     Assert.True(allVerticesQuery.All(row => row.ContainsKey("m")));
                     Assert.True(allVerticesQuery.All(row => row.ContainsKey("u")));
                 }
@@ -440,6 +440,18 @@ select son.Name as Son, evil.Name as Evil")
                     Assert.Equal(1, results.Count);
                     Assert.Equal("Longo", results[0].Evil);
                     Assert.Equal("Otho Sackville-Baggins", results[0].Son);
+                }
+            }
+        }
+
+        [Fact]
+        public void Query_with_non_existing_collection_should_fail()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<RavenException>(() => session.Advanced.RawQuery<JObject>(@"match (FooBar)").ToList());
                 }
             }
         }
