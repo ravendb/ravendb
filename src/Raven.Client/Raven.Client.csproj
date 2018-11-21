@@ -44,7 +44,7 @@
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Lambda2Js.Signed" Version="3.1.1" />
+    <PackageReference Include="Lambda2Js.Signed" Version="3.1.2" />
     <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
     <PackageReference Include="System.Buffers" Version="4.5.0" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
