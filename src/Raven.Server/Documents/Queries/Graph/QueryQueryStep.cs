@@ -39,6 +39,11 @@ namespace Raven.Server.Documents.Queries.Graph
             _context = documentsContext;
             _resultEtag = existingResultEtag;
             _token = token;
+
+            if (!string.IsNullOrEmpty(queryMetadata.CollectionName)) //not a '_' collection
+            {
+                var _ = _queryRunner.Database.DocumentsStorage.GetCollection(queryMetadata.CollectionName, throwIfDoesNotExist: true);
+            }
         }
 
         public bool IsCollectionQuery => _queryMetadata.IsCollectionQuery;
