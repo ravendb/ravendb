@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 return default;
 
             var leftTask = _left.Initialize();
-            if(leftTask.IsCompleted)
+            if (leftTask.IsCompleted)
             {
                 //At this point we know we are not going to yield results we can skip running right hand side
                 if (Left.IsEmpty())
@@ -82,8 +82,9 @@ namespace Raven.Server.Documents.Queries.Graph
                     _index = 0;
                     return default;
                 }
+
                 var rightTask = _right.Initialize();
-                if(rightTask.IsCompleted)
+                if (rightTask.IsCompleted)
                 {
                     CompleteInitialization();
                     return default;
@@ -126,6 +127,9 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             _index = 0;
 
+            if (_right.IsEmpty())
+                return;
+
             var edgeMatcher = new EdgeMatcher(this);
             var alias = _left.GetOutputAlias();
             while (_left.GetNext(out var left))
@@ -148,7 +152,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 _processor = new SingleEdgeMatcher
                 {
                     IncludedEdges = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase),
-            
+
                     QueryParameters = parent._queryParameters,
                     Results = parent._results,
                     Right = parent._right,
@@ -182,10 +186,10 @@ namespace Raven.Server.Documents.Queries.Graph
 
             public ValueTask Initialize()
             {
-                if(_parent._left != null)
+                if (_parent._left != null)
                 {
                     var leftTask = _parent._left.GetSingleGraphStepExecution().Initialize();
-                    if(leftTask.IsCompleted == false)
+                    if (leftTask.IsCompleted == false)
                     {
                         return CompleteRightInitAsync(leftTask);
                     }
@@ -204,7 +208,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 _processor.SingleMatch(src, alias);
             }
         }
-        
+
 
         public bool GetNext(out Match match)
         {
@@ -217,7 +221,7 @@ namespace Raven.Server.Documents.Queries.Graph
             match = _results[_index++];
             return true;
         }
-        
+
 
         public string GetOuputAlias()
         {
@@ -275,7 +279,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 return null;
 
             string source = null;
-            if(prev is string str)
+            if (prev is string str)
             {
                 source = str;
             }

@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.Queries.Graph
         private ValueTask CompleteInitializationAfterLeft()
         {
             //At this point we know we are not going to yield results we can skip running right hand side
-            if (_returnEmptyIfLeftEmpty)
+            if (_returnEmptyIfLeftEmpty && _left.IsEmpty())
             {
                 _index = 0;
                 return default;
