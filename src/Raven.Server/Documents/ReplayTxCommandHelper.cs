@@ -71,7 +71,7 @@ namespace Raven.Server.Documents
                                         break;
                                     case TxInstruction.BeginAsyncCommitAndStartNewTransaction:
                                         previousTx = txCtx.Transaction;
-                                        txCtx.Transaction = txCtx.Transaction.BeginAsyncCommitAndStartNewTransaction();
+                                        txCtx.Transaction = txCtx.Transaction.BeginAsyncCommitAndStartNewTransaction(txCtx);
                                         txDisposable = txCtx.Transaction;
                                         break;
                                     case TxInstruction.EndAsyncCommit:

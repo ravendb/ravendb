@@ -193,6 +193,9 @@ namespace Sparrow.Json
 
             public void Dispose()
             {
+                if (Parent == null)
+                    return;// disposed already
+
                 if (Context.DoNotReuse)
                 {
                     Context.Dispose();
@@ -205,6 +208,9 @@ namespace Sparrow.Json
                 Context.InPoolSince = DateTime.UtcNow;
 
                 Parent.Push(Context);
+
+                Parent = null;
+                Context = null;
             }
 
         }
