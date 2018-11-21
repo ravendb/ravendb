@@ -1,13 +1,31 @@
 ﻿#chooseThemeModal {
-    .theme {
-        width: 33%;
-        height: 200px;
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-position: center;
-        cursor: pointer;
+    .theme-previews {
+        display: flex;
+        padding: @grid-gutter-width/2;
     }
-    .theme-dark {
+
+    .theme {
+        flex-basis: 0;
+        flex-grow: 1;
+        cursor: pointer;
+        padding: @grid-gutter-width/2;
+        text-align: center;
+
+        .theme-title {
+            margin-top: @grid-gutter-width/2;
+            margin-bottom: 0;
+        }
+
+        &:hover {
+            background-color: @panel-bg-2;
+        }
+
+        &.active {
+            box-shadow: 0 0 0 2px inset @brand-primary;
+            background-color: @panel-bg-2;
+        }
+    }
+    /*.theme-dark {
         background-image: url(../img/dark-theme.png);
     }
     
@@ -17,5 +35,5 @@
     
     .theme-light {
         background-image: url(../img/light-theme.png);
-    }
+    }*/
 }

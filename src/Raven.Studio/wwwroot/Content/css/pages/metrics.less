@@ -19,21 +19,6 @@ rect.pane {
     pointer-events: all;
 }
 
-.metricsContainer { 
-    .tooltip {
-        box-shadow: 0 3px 10px -3px rgba(0, 0, 0, 0.45);
-        position: absolute;
-        text-align: left;
-        background: #2c3333;
-        color: #a9adad;
-        border: 0px;
-        padding:8px 16px;
-        border-radius: 2px;
-        pointer-events: none;
-        opacity:1;
-    }
-}
-
 .replication-stats {
     .color-definitions {
         .axis {
@@ -78,40 +63,42 @@ rect.pane {
         
         .tracks {
             .replication {
-                color: #0b4971;
+                color: @color-3;
             }
             .networkRead {
-                color: #046293;
+                color: @color-4-2;
             }
             .networkWrite {
-                color: #046293;
+                color: @color-4-2;
             }
             .storageRead {
-                color: #66418c;
+                color: @color-5;
             }
             .storageWrite {
-                color: #66418c;
+                color: @color-5;
             }
             .networkDocumentRead {
-                color: #0077b5;
-            }
-            .networkAttachmentRead {
-                color: #008cc9;
-            }
-            .networkTombstoneRead {
-                color: #34b3e4;
+                color: @color-4;
             }
             .storageDocumentRead {
-                color: #0077b5;
+                color: @color-4;
             }
-            .storageTombstoneRead {
-                color: #34b3e4;
+            .networkAttachmentRead {
+                color: @color-3-3;
             }
             .storageAttachmentRead {
-                color: #008cc9;
+                color: @color-3-3;
             }
+            .networkTombstoneRead {
+                color: @color-3-2;
+            }
+
+            .storageTombstoneRead {
+                color: @color-3-2;
+            }
+            
             .storageCounterRead {
-                color: #27b5c9;
+                color: @color-3-1;
             }
         }
     }   
@@ -121,64 +108,78 @@ rect.pane {
     .main-colors {
         .color-definitions {
             .axis {
-                color: #546175; 
+                color: @layout-border;
             }
+
             .gaps {
-                color: #ca1c59;
+                color: @brand-primary;
             }
+
             .trackBackground {
-                color: #2c343a;
+                color: @panel-bg;
             }
+
             .trackNameBg {
-                color: rgba(57, 67, 79, 0.8);
+                color: @panel-bg-2;
             }
+
             .trackNameFg {
-                color: #98a7b7;
+                color: @text-color;
             }
+
             .openedTrackArrow {
-                color: #ca1c59;
+                color: @brand-primary;
             }
+
             .closedTrackArrow {
-                color: #98a7b7;
+                color: @text-muted;
             }
+
             .text {
-                color: black;
+                color: @text-color;
             }
         }
     }
-    
+
     .event-colors {
         .color-definitions {
             .compression {
                 .low {
-                    color: #cc23a6;
+                    color: darken(@color-5, 15%);
                 }
+
                 .high {
-                    color: #5f076f;
+                    color: lighten(@color-5-2, 15%);
                 }
             }
+
             .dataFlush {
                 .low {
-                    color: #4be3ff;
+                    color: darken(@color-3-2, 15%);
                 }
+
                 .high {
-                    color: #0c2c7e;
+                    color: lighten(@color-3, 15%);
                 }
             }
+
             .dataSync {
                 .low {
-                    color: #ffb956;
+                    color: darken(@color-1, 15%);
                 }
+
                 .high {
-                    color: #cb3900;
+                    color: lighten(@color-1-2, 15%);
                 }
             }
+
             .journalWrite {
                 .low {
-                    color: #baff4d;
+                    color: darken(@color-4-2, 15%);
                 }
+
                 .high {
-                    color: #1e4c0a;
+                    color: lighten(@color-4, 15%);
                 }
             }
         }

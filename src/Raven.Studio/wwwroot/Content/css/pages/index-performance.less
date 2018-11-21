@@ -1,136 +1,183 @@
 ﻿#indexingPerformance {
     .axis {
-        color: #546175;
+        color: @layout-border;
     }
+
     .gaps {
-        color: #ca1c59;
+        color: @brand-primary;
     }
+
     .brushChartColor {
-        color: #37404b;
+        color: @panel-bg;
     }
+
     .brushChartStrokeColor {
-        color: #008cc9;
+        color: @brand-info;
     }
+
     .trackBackground {
-        color: #2c343a;
+        color: @panel-bg;
     }
+
     .trackNameBg {
-        color: rgba(57, 67, 79, 0.8);
+        color: @panel-bg-2;
     }
+
     .faulty {
-        color: #e02424;
+        color: @brand-danger;
     }
+
     .trackNameFg {
-        color: #98a7b7;
+        color: @text-color;
     }
+
     .openedTrackArrow {
-        color: #ca1c59;
+        color: @brand-primary;
     }
+
     .closedTrackArrow {
-        color: #98a7b7;
+        color: @text-muted;
     }
+
     .stripeTextColor {
-        color: #2c343a;
+        color: @text-color;
     }
+
     .progressStripes {
         color: rgba(255, 255, 255, 0.1);
     }
+
     .tracks {
-        .collection {
-            color: #046293;
-        }
-        .indexing {
-            color: #607d8b;
-        }
-        .cleanup {
-            color: #1a858e;
-        }
-        .references {
-            color: #ac2258;
-        }
-        .map {
-            color: #0b4971;
-        }
-        .storageDocumentRead {
-            color: #0077b5;
-        }
-        .linq {
-            color: #008cc9;
-        }
-        .jint {
-            color: #008cc9;
-        }
-        .loadDocument {
-            color: #008cc9;
-        }
-        .bloom {
-            color: #34b3e4;
-        }
-        .luceneDelete {
-            color: #66418c;
-        }
-        .luceneSuggestion {
-            color: #553570;
-        }
-        .luceneAddDocument {
-            color: #8d6cab;
-        }
-        .luceneConvert {
-            color: #7b539d;
-        }
-        .createBlittableJson {
-            color: #313fa0;
-        }
+
         .aggregationBlittableJson {
             color: #ec407a;
         }
-        .getMapEntriesTree {
-            color: #689f39;
+
+
+        .references {
+            color: #ac2258;
         }
-        .getMapEntries {
-            color: #8cc34b;
-        }
-        .storageRemoveMapResult {
-            color: #ff7000;
-        }
-        .storagePutMapResult {
-            color: #fe8f01;
-        }
+
         .reduce {
             color: #98041b;
         }
+
         .tree {
             color: #af1923;
         }
+
         .aggregationLeafs {
             color: #890e4f;
         }
+
         .aggregationBranches {
             color: #ad1457;
         }
+
         .storageReduceResults {
             color: #e65100;
         }
+
         .nestedValues {
             color: #795549;
         }
-        .storageRead {
-            color: #faa926;
-        }
+
         .aggregationNestedValues {
             color: #d81a60;
         }
-        .luceneFlushToDisk {
-            color: #a487ba;
+
+        .storageRemoveMapResult {
+            color: @color-1-3;
         }
-        .storageCommit {
-            color: #5b912d;
+
+        .storagePutMapResult {
+            color: @color-2;
         }
-        .luceneRecreateSearcher {
-            color: #b79ec7;
+
+
+        .storageRead {
+            color: @color-2-1;
         }
+
         .saveOutputDocuments {
-            color: #fed101;
+            color: @color-2-2;
+        }
+
+        .getMapEntries {
+            color: @color-2-3;
+        }
+
+        .getMapEntriesTree {
+            color: @color-3;
+        }
+
+        .storageCommit {
+            color: @color-3-1;
+        }
+
+        .cleanup {
+            color: @color-3-2;
+        }
+
+        .linq {
+            color: @color-3-3;
+        }
+
+        .jint {
+            color: @color-3-3;
+        }
+
+        .loadDocument {
+            color: @color-3-3;
+        }
+
+        .bloom {
+            color: @color-4;
+        }
+
+        .storageDocumentRead {
+            color: @color-4-1;
+        }
+
+        .collection {
+            color: darken(@color-4,10%);
+        }
+
+        .createBlittableJson {
+            color: darken(@color-4-1, 15%);
+        }
+
+        .indexing {
+            color: @color-4-2;
+        }
+
+        .map {
+            color: darken(@color-4-2,10%);
+        }
+
+        .luceneDelete {
+            color: lighten(@color-4-3, 15%);
+        }
+
+        .luceneSuggestion {
+            color: lighten(@color-4-3, 5%);
+        }
+
+        .luceneAddDocument {
+            color: darken(@color-4-3, 15%);
+        }
+
+        .luceneConvert {
+            color: @color-4-3;
+        }
+
+
+        .luceneFlushToDisk {
+            color: @color-5;
+        }
+
+        .luceneRecreateSearcher {
+            color: lighten(@color-5, 10%);
         }
     }
 }
