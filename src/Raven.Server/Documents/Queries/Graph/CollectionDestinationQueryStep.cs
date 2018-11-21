@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 
@@ -13,18 +14,27 @@ namespace Raven.Server.Documents.Queries.Graph
         DocumentsOperationContext _context;
         DocumentsStorage _documentStorage;
         private List<GraphQueryRunner.Match> _temp = new List<GraphQueryRunner.Match>();
+        private string _colectionName;
 
-        public CollectionDestinationQueryStep(Sparrow.StringSegment alias, DocumentsOperationContext documentsContext, DocumentsStorage documentStorage)
+        public CollectionDestinationQueryStep(StringSegment alias, DocumentsOperationContext documentsContext, DocumentsStorage documentStorage, string colectionName)
         {
+            _colectionName = colectionName;
             _alias = alias;
             _aliases = new HashSet<string> { alias };
             _context = documentsContext;
             _documentStorage = documentStorage;
         }
 
+        public bool IsEmpty()
+        {
+            if (_colectionName == string.Empty)
+                return _documentStorage.GetNumberOfDocuments() == 0;
+            return _documentStorage.GetCollection(_colectionName, _context).Count == 0;
+        }
+
         public IGraphQueryStep Clone()
         {
-            return new CollectionDestinationQueryStep(_alias, _context, _documentStorage);
+            return new CollectionDestinationQueryStep(_alias, _context, _documentStorage, _colectionName);
         }
 
         public void Analyze(GraphQueryRunner.Match match, GraphQueryRunner.GraphDebugInfo graphDebugInfo)
@@ -69,8 +79,11 @@ namespace Raven.Server.Documents.Queries.Graph
 
             var document = _documentStorage.Get(_context, id);
             var match = new GraphQueryRunner.Match();
-            if (document != null)
-            {                
+            if (_colectionName == string.Empty /* in the case of alias like '_'*/ ||
+                document != null && document.TryGetMetadata(out var metadata)
+                && metadata.TryGetWithoutThrowingOnError(Constants.Documents.Metadata.Collection, out string cn)
+                && cn == _colectionName)
+            {
                 match.Set(_alias, document);
                 _temp.Add(match);
             }
