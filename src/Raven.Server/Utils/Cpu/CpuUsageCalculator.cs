@@ -10,7 +10,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Utils.Cpu
 {
-    internal interface ICpuUsageCalculator
+    internal interface ICpuUsageCalculator : IDisposable
     {
         (double MachineCpuUsage, double ProcessCpuUsage) Calculate();
         void Init();
@@ -82,6 +82,10 @@ namespace Raven.Server.Utils.Cpu
             }
 
             return Math.Min(100, processCpuUsage);
+        }
+
+        public void Dispose()
+        {
         }
     }
 
@@ -251,6 +255,11 @@ namespace Raven.Server.Utils.Cpu
         public void Init()
         {
             _inspector.Start();
+        }
+
+        public void Dispose()
+        {
+            _inspector?.Dispose();
         }
     }
 }

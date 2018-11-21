@@ -21,8 +21,6 @@ namespace Raven.Server.Utils.Cpu
         private static readonly object Locker = new object();
         private static ICpuUsageCalculator _calculator;
 
-        public static CpuUsageExtensionPoint CpuUsageExtensionPoint { get; set; }
-
         static CpuUsage()
         {
             if (PlatformDetails.RunningOnPosix == false)
@@ -107,6 +105,14 @@ namespace Raven.Server.Utils.Cpu
                     Logger.Info("Failure to get the number of active cores", e);
 
                 return ProcessorInfo.ProcessorCount;
+            }
+        }
+
+        public static void Dispose()
+        {
+            lock (Locker)
+            {
+                _calculator?.Dispose();
             }
         }
 
