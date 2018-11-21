@@ -167,7 +167,7 @@ exit 0";
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
+        [Fact]
         public void CanGetErrorsFromOnDirectoryInitialize()
         {
             string script;
@@ -201,7 +201,7 @@ exit 129";
             Assert.True(e.InnerException.Message.Contains("ERROR!") && e.InnerException.Message.Contains("Karmelush is ANGRY"));
         }
 
-        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
+        [Fact]
         public void CertificateAndMasterKeyExecTest()
         {
             string script;
