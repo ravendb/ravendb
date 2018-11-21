@@ -18,6 +18,7 @@ namespace SlowTests.Server.Documents.SqlMigration
     {
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanMigrateSkipOnParent(MigrationProvider provider)
         {
@@ -66,6 +67,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanMigrateEmbedOnParent(MigrationProvider provider)
         {
@@ -127,6 +129,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanMigrateLinkOnParent(MigrationProvider provider)
         {
@@ -186,6 +189,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanMigrateSkipOnChild(MigrationProvider provider)
         {
@@ -234,6 +238,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanMigrateEmbedOnChild(MigrationProvider provider)
         {
@@ -295,6 +300,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanMigrateLinkOnChild(MigrationProvider provider)
         {
@@ -365,6 +371,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task NestedEmbedding(MigrationProvider provider)
         {
@@ -443,6 +450,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task LinkInsideEmbed(MigrationProvider provider)
         {
@@ -517,6 +525,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanHandleMissingParentEmbed(MigrationProvider provider)
         {
@@ -567,6 +576,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanHandleMissingParentLink(MigrationProvider provider)
         {
@@ -621,6 +631,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanLimitRows(MigrationProvider provider)
         {
@@ -659,6 +670,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanImportWithRelationToNonPrimaryKey(MigrationProvider provider)
         {
