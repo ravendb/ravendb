@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Raven.Client.Documents;
+using Raven.Client.Exceptions;
 using Xunit;
 
 namespace FastTests.Graph
@@ -113,5 +115,74 @@ select  i.Name as Issue,
             }
         }
 
+        [Fact]
+        public void Edge_instead_of_node_should_make_simple_left_to_right_query_fail()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateData(store);
+                using (var s = store.OpenSession())
+                {
+                    Assert.Throws<InvalidQueryException>(() => s.Advanced.RawQuery<Result>("match (Issues as i)-[Groups]->[Groups as direct]").ToList());
+                }
+            }
+
+        }
+
+        [Fact]
+        public void Node_instead_of_edge_should_make_simple_left_to_right_query_fail()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateData(store);
+                using (var s = store.OpenSession())
+                {
+                    //different type of mistake - writing node instead of edge
+                    Assert.Throws<InvalidQueryException>(() => s.Advanced.RawQuery<Result>("match (Issues as i)-(Groups)->(Groups as direct)").ToList());
+                }
+            }
+        }
+
+        [Fact]
+        public void Edge_instead_of_node_should_make_simple_right_to_left_query_fail()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateData(store);
+                using (var s = store.OpenSession())
+                {
+                    Assert.Throws<InvalidQueryException>(() => s.Advanced.RawQuery<Result>("match (Groups as A)<-[Groups as B]<-[Issues as C]").ToList());
+                }
+            }
+        }
+
+        [Fact]
+        public void Node_instead_of_edge_should_make_simple_right_to_left_query_fail()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateData(store);
+                using (var s = store.OpenSession())
+                {
+                    Assert.Throws<InvalidQueryException>(() => s.Advanced.RawQuery<Result>("match (Groups as A)<-(Groups as B)<-(Issues as C)").ToList());
+                }
+            }
+        }
+
+        [Fact]
+        public void Edge_instead_of_node_should_make_complex_query_fail()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateData(store);
+                using (var s = store.OpenSession())
+                {
+                    Assert.Throws<InvalidQueryException>(() => s.Advanced.RawQuery<Result>(
+                        @"with {  from Users where id() = ""users/84"" } as u
+                          match   (Issues as i)-[Groups]->(Groups as g)<-[Parents]-[Groups as midpoint]<-[Groups]-(u)
+                          select  i.Name as Issue, u.Name as User").ToList());
+                }
+            }
+        }
     }
 }
