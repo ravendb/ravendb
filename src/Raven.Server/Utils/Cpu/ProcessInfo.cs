@@ -20,7 +20,7 @@ namespace Raven.Server.Utils.Cpu
 
         public long TimeTicks { get; }
 
-        public double ActiveCores { get; }
+        public long ActiveCores { get; }
     }
 
     internal class WindowsInfo : ProcessInfo

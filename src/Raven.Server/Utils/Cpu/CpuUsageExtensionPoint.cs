@@ -178,14 +178,15 @@ namespace Raven.Server.Utils.Cpu
             {
                 try
                 {
-                    var blittable = context.ReadForMemory(data, "cpuUsageExtensionPointData");
-                    
-                    if (TryGetValue(blittable, nameof(ExtensionPointData.MachineCpuUsage), out var machineCpuUsage)
-                    && TryGetValue(blittable, nameof(ExtensionPointData.ProcessCpuUsage), out var processCpuUsage))
+                    using (var blittable = context.ReadForMemory(data, "cpuUsageExtensionPointData"))
                     {
-                        _data.MachineCpuUsage = machineCpuUsage;
-                        _data.ProcessCpuUsage = processCpuUsage;
-                        return true;
+                        if (TryGetValue(blittable, nameof(ExtensionPointData.MachineCpuUsage), out var machineCpuUsage)
+                            && TryGetValue(blittable, nameof(ExtensionPointData.ProcessCpuUsage), out var processCpuUsage))
+                        {
+                            _data.MachineCpuUsage = machineCpuUsage;
+                            _data.ProcessCpuUsage = processCpuUsage;
+                            return true;
+                        }
                     }
                 }
                 catch (Exception e)

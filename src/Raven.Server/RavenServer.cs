@@ -298,11 +298,6 @@ namespace Raven.Server
 
         }
 
-        private void RunCpuUsageExtensionPoint()
-        {
-            
-        }
-
         private void RedirectsHttpTrafficToHttps()
         {
             try
@@ -1661,7 +1656,7 @@ namespace Raven.Server
                 ea.Execute(() => ServerMaintenanceTimer?.Dispose());
                 ea.Execute(() => AfterDisposal?.Invoke());
                 ea.Execute(() => _clusterMaintenanceWorker?.Dispose());
-                ea.Execute(() => CpuUsage.CpuUsageExtensionPoint?.Dispose());
+                ea.Execute(CpuUsage.Dispose);
 
                 ea.ThrowIfNeeded();
             }
