@@ -252,18 +252,7 @@ namespace Sparrow.Platform.Posix
         public static extern int statvfs(string path, ref Statvfs buf);
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int mprotect_64bit(IntPtr start, ulong size, ProtFlag protFlag);
-        
-        [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int mprotect_32bit(IntPtr start, IntPtr size, ProtFlag protFlag);
-
-        public static int mprotect(IntPtr start, ulong size, ProtFlag protFlag)
-        {
-            if (PlatformDetails.Is32Bits == false)
-                return mprotect_64bit(start, size, protFlag);
-            return mprotect_32bit(start, new IntPtr((int)size), protFlag);
-        }
-        
+        public static extern int mprotect(IntPtr start, IntPtr size, ProtFlag protFlag);
 
         public static void PwriteOrThrow(int fd, byte *buffer, ulong count, long offset, string file, string debug)
         {
