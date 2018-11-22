@@ -601,10 +601,12 @@ class indexPerformance extends viewModelBase {
 
         // Draw area chart showing indexes work
         let x1: number, x2: number, y0: number = 0, y1: number;
+        context.beginPath();
+        
+        x2 = this.xBrushTimeScale(new Date(workData[0].pointInTime));
+        
         for (let i = 0; i < workData.length - 1; i++) {
-
-            context.beginPath();
-            x1 = this.xBrushTimeScale(new Date(workData[i].pointInTime));
+            x1 = x2;
             y1 = Math.round(this.yBrushValueScale(workData[i].numberOfIndexesWorking)) + 0.5;
             x2 = this.xBrushTimeScale(new Date(workData[i + 1].pointInTime));
             context.moveTo(x1, indexPerformance.brushSectionHeight - y0);
@@ -616,9 +618,9 @@ class indexPerformance extends viewModelBase {
                 context.fillRect(x1, indexPerformance.brushSectionHeight - y1, x2-x1, y1);
             } 
 
-            context.stroke();
             y0 = y1; 
         }
+        context.stroke();
 
         // Draw last line:
         context.beginPath();
@@ -902,25 +904,37 @@ class indexPerformance extends viewModelBase {
             const isOpened = _.includes(this.expandedTracks(), perfStat.Name);
             let yStart = this.yScale(perfStat.Name);
             yStart += isOpened ? indexPerformance.openedTrackPadding : indexPerformance.closedTrackPadding;
+            
+            const trackEndY = yStart + (isOpened ? indexPerformance.openedTrackHeight : indexPerformance.closedTrackHeight);
+            
+            const trackVisibleOnScreen = trackEndY >= indexPerformance.axisHeight && yStart < this.totalHeight - indexPerformance.brushSectionHeight;
 
-            const performance = perfStat.Performance;
-            const perfLength = performance.length;
-            for (let perfIdx = 0; perfIdx < perfLength; perfIdx++) {
-                const perf = performance[perfIdx];
-                const startDate = (perf as IndexingPerformanceStatsWithCache).StartedAsDate;
-                const x1 = xScale(startDate);
+            const yOffset = isOpened ? indexPerformance.trackHeight + indexPerformance.stackPadding : 0;
+            const stripesYStart = yStart + (isOpened ? yOffset : 0);
+            
+            if (trackVisibleOnScreen) {
+                const performance = perfStat.Performance;
+                const perfLength = performance.length;
+                for (let perfIdx = 0; perfIdx < perfLength; perfIdx++) {
+                    const perf = performance[perfIdx];
+                    const startDate = (perf as IndexingPerformanceStatsWithCache).StartedAsDate;
 
-                const startDateAsInt = startDate.getTime();
+                    const startDateAsInt = startDate.getTime();
+                    if (visibleEndDateAsInt < startDateAsInt) {
+                        continue;
+                    }
 
-                const endDateAsInt = startDateAsInt + perf.DurationInMs;
-                if (endDateAsInt < visibleStartDateAsInt || visibleEndDateAsInt < startDateAsInt)
-                    continue;
+                    if (startDateAsInt + perf.DurationInMs < visibleStartDateAsInt)
+                        continue;
+                    
+                    
+                    const x1 = xScale(startDate);
+                    
+                    this.drawStripes(0, context, [perf.Details], x1, stripesYStart, yOffset, extentFunc, perfStat.Name);
 
-                const yOffset = isOpened ? indexPerformance.trackHeight + indexPerformance.stackPadding : 0;
-                this.drawStripes(context, [perf.Details], x1, yStart + (isOpened ? yOffset : 0), yOffset, extentFunc, perfStat.Name);
-
-                if (!perf.Completed) {
-                    this.findInProgressAction(context, perf, extentFunc, x1, yStart + (isOpened ? yOffset : 0), yOffset);
+                    if (!perf.Completed) {
+                        this.findInProgressAction(context, perf, extentFunc, x1, stripesYStart, yOffset);
+                    }
                 }
             }
         });
@@ -961,7 +975,7 @@ class indexPerformance extends viewModelBase {
         throw new Error("Unable to find color for: " + operationName);
     }
 
-    private drawStripes(context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Indexes.IndexingPerformanceOperation>, xStart: number, yStart: number,
+    private drawStripes(level: number, context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Indexes.IndexingPerformanceOperation>, xStart: number, yStart: number,
         yOffset: number, extentFunc: (duration: number) => number, indexName?: string) {
 
         let currentX = xStart;
@@ -978,10 +992,10 @@ class indexPerformance extends viewModelBase {
                 if (dx >= 0.8) { // don't show tooltip for very small items
                     this.hitTest.registerTrackItem(currentX, yStart, dx, indexPerformance.trackHeight, op);
                 }
-                if (op.Name.startsWith("Collection_")) {
+                if (dx >= 5 && op.Name.startsWith("Collection_")) {
                     context.fillStyle = indexPerformance.colors.collectionNameTextColor;
                     const text = op.Name.substr("Collection_".length);
-                    const textWidth = context.measureText(text).width
+                    const textWidth = context.measureText(text).width;
                     const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
                     if (truncatedText) {
                         context.font = "12px Lato";
@@ -994,8 +1008,8 @@ class indexPerformance extends viewModelBase {
                 }
             }
             
-            if (op.Operations.length > 0) {
-                this.drawStripes(context, op.Operations, currentX, yStart + yOffset, yOffset, extentFunc);
+            if ((level > 0 || dx > 1) && op.Operations.length > 0) {
+                this.drawStripes(level + 1, context, op.Operations, currentX, yStart + yOffset, yOffset, extentFunc);
             }
             currentX += dx;
         }

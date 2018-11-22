@@ -47,11 +47,8 @@ class rangeAggregator {
     pushRange(startTime: number, endTime: number) {
 
         // 1. Find appropriate start position for the new element
-        let i = 0;
-        while ((i < this.indexesWork.length) && (startTime > this.indexesWork[i].pointInTime)) {
-            i++;
-        }
-        this.ptrStart = i;
+        
+        this.ptrStart = _.sortedIndexBy(this.indexesWork, { pointInTime: startTime }, x => x.pointInTime);
 
         let previousValue = (this.ptrStart === 0) ? this.indexesWork[0].numberOfIndexesWorking : this.indexesWork[this.ptrStart - 1].numberOfIndexesWorking;
        
@@ -72,7 +69,7 @@ class rangeAggregator {
         }
 
         // 2. Find appropriate end position for the new element AND update working indexes counter along the way...
-        i = this.ptrStart;
+        let i = this.ptrStart;
         while ((i < this.indexesWork.length) && (endTime + 1 > this.indexesWork[i].pointInTime)) {
             if ((i + 1 < this.indexesWork.length) && (endTime + 1 > this.indexesWork[i + 1].pointInTime)) {               
                 let newValue = ++(this.indexesWork[i + 1].numberOfIndexesWorking);

@@ -44,9 +44,9 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<result
 
         if (this.pendingDataToApply.length) {
             this.mergeIncomingData(this.pendingDataToApply);
+            this.pendingDataToApply = [];
+            this.onData(this.mergedData);
         }
-        this.pendingDataToApply = [];
-        this.onData(this.mergedData);
     }
 
     protected onHeartBeat() {
