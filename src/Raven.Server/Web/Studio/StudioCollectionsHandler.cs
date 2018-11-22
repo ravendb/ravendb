@@ -299,7 +299,7 @@ namespace Raven.Server.Web.Studio
         {
             var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
 
-            var excludeIds = new HashSet<LazyStringValue>();
+            var excludeIds = new HashSet<string>();
 
             var reader = context.Read(RequestBodyStream(), "ExcludeIds");
             if (reader.TryGet("ExcludeIds", out BlittableJsonReaderArray ids))
@@ -316,7 +316,7 @@ namespace Raven.Server.Web.Studio
         }
 
 
-        private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, Documents.Operations.Operations.OperationType operationType, HashSet<LazyStringValue> excludeIds)
+        private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, Documents.Operations.Operations.OperationType operationType, HashSet<string> excludeIds)
         {
             var collectionName = GetStringQueryString("name");
 
