@@ -77,6 +77,8 @@ namespace Raven.Server.Config
 
         public TransactionMergerConfiguration TransactionMergerConfiguration { get; }
 
+        public NotificationConfiguration Notifications { get; }
+
         internal IConfigurationRoot ServerWideSettings { get; set; }
 
         protected IConfigurationRoot Settings { get; set; }
@@ -123,6 +125,7 @@ namespace Raven.Server.Config
             Tombstones = new TombstoneConfiguration();
             Subscriptions = new SubscriptionConfiguration();
             TransactionMergerConfiguration = new TransactionMergerConfiguration(Storage.ForceUsing32BitsPager);
+            Notifications = new NotificationConfiguration();
         }
 
         private void AddJsonConfigurationVariables(string customConfigPath = null)
@@ -176,6 +179,7 @@ namespace Raven.Server.Config
             Tombstones.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Subscriptions.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             TransactionMergerConfiguration.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Notifications.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
 
             PostInit();
 
