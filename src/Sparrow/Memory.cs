@@ -10,13 +10,11 @@ namespace Sparrow
     {
         private const int CompareInlineVsCallThreshold = 256;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Compare(byte* p1, byte* p2, int size)
         {
             return CompareInline(p1, p2, size);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Compare(byte* p1, byte* p2, int size, out int position)
         {
             return CompareInline(p1, p2, size, out position);
@@ -181,12 +179,17 @@ UnmanagedCompare:
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Copy(void* dest, void* src, long n)
         {
-            if (n < uint.MaxValue) // Common code-path
+            if (n <= uint.MaxValue) // Common code-path
             {
                 Copy(dest, src, (uint)n);
                 return;
             }
+            
+            CopyLong(dest, src, n);
+        }
 
+        private static void CopyLong(void* dest, void* src, long n)
+        {
             for (long i = 0; i < n; i += uint.MaxValue)
             {
                 var size = uint.MaxValue;
@@ -205,19 +208,23 @@ UnmanagedCompare:
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Set(byte* dest, byte value, long n)
         {
-            if (n < uint.MaxValue) // Common code-path
+            if (n <= uint.MaxValue) // Common code-path
             {
                 Set(dest, value, (uint)n);
+                return;
             }
-            else
+            
+            SetLong(dest, value, n);
+        }
+
+        private static void SetLong(byte* dest, byte value, long n)
+        {
+            for (long i = 0; i < n; i += uint.MaxValue)
             {
-                for (long i = 0; i < n; i += uint.MaxValue)
-                {
-                    var size = uint.MaxValue;
-                    if (i + uint.MaxValue > n)
-                        size = (uint)(n % uint.MaxValue);
-                    Set(dest + i, value, size);
-                }
+                var size = uint.MaxValue;
+                if (i + uint.MaxValue > n)
+                    size = (uint)(n % uint.MaxValue);
+                Set(dest + i, value, size);
             }
         }
 
@@ -225,10 +232,8 @@ UnmanagedCompare:
         public static void Move(byte* dest, byte* src, int n)
         {
             // if dest and src overlaps, we need to call specifically to memmove pinvoke supporting overlapping
-            var d = new IntPtr(dest).ToInt64();
-            var s = new IntPtr(src).ToInt64();
-            if (d - n >= s &&
-                s + n >= d)
+            if (dest - n >= src &&
+                src + n >= dest)
             {
                 var _ = PlatformDetails.RunningOnPosix
                     ? Syscall.Move(dest, src, n)
