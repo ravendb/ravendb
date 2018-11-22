@@ -250,7 +250,8 @@ UnmanagedCompare:
         {
             return Unsafe.As<TFrom, TTo>(ref value);            
         }
-
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static T Read<T>(byte* ptr)
         {
             return Unsafe.Read<T>(ptr);
