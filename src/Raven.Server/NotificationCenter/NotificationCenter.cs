@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.BackgroundWork;
 using Raven.Server.NotificationCenter.Notifications;
@@ -21,11 +22,12 @@ namespace Raven.Server.NotificationCenter
         private readonly CancellationToken _shutdown;
         private PostponedNotificationsSender _postponedNotificationSender;
 
-        public NotificationCenter(NotificationsStorage notificationsStorage, string database, CancellationToken shutdown)
+        public NotificationCenter(NotificationsStorage notificationsStorage, string database, CancellationToken shutdown, RavenConfiguration config)
         {
             _notificationsStorage = notificationsStorage;
             _database = database;
             _shutdown = shutdown;
+            _config = config;
             Options = new NotificationCenterOptions();
             Paging = new Paging(this, _notificationsStorage, database);
             RequestLatency = new RequestLatency(this, _notificationsStorage, database);
@@ -52,11 +54,19 @@ namespace Raven.Server.NotificationCenter
         public readonly SlowWriteNotifications SlowWrites;
 
         public readonly NotificationCenterOptions Options;
+        private readonly RavenConfiguration _config;
 
         public void Add(Notification notification, DateTime? postponeUntil = null, bool updateExisting = true)
         {
             try
             {
+                if (_config.Studio.ShouldFilterOut(notification))
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Filtered out notification. Id: '{notification.Id}', Title: '{notification.Title}', message: '{notification.Message}'");
+                    return;
+                }
+
                 if (notification.IsPersistent)
                 {
                     try
