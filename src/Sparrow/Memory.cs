@@ -1,19 +1,22 @@
 using System;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow.Binary;
+using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 
 namespace Sparrow
 {
     public static unsafe class Memory
     {
-        public const int CompareInlineVsCallThreshold = 256;
+        private const int CompareInlineVsCallThreshold = 256;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Compare(byte* p1, byte* p2, int size)
         {
             return CompareInline(p1, p2, size);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Compare(byte* p1, byte* p2, int size, out int position)
         {
             return CompareInline(p1, p2, size, out position);
@@ -107,11 +110,13 @@ namespace Sparrow
             return *bpx - *(bpx + offset);
 
 UnmanagedCompare:
-            return UnmanagedMemory.Compare((byte*)p1, (byte*)p2, size);
+            return PlatformDetails.RunningOnPosix
+                ? Syscall.Compare((byte *)p1, (byte *)p2, size)
+                : Win32UnmanagedMemory.Compare((byte *)p1, (byte *)p2, size); 
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int CompareInline(void* p1, void* p2, int size, out int position)
+        private static int CompareInline(void* p1, void* p2, int size, out int position)
         {
             byte* bpx = (byte*)p1;
             byte* bpy = (byte*)p2;
@@ -167,40 +172,28 @@ UnmanagedCompare:
             return *(bpx + p) - *(bpx + p + offset);
         }
 
-        /// <summary>
-        /// Bulk copy is optimized to handle copy operations where n is statistically big. While it will use a faster copy operation for 
-        /// small amounts of memory, when you have smaller than 2048 bytes calls (depending on the target CPU) it will always be
-        /// faster to call .Copy() directly.
-        /// </summary>
-        
-        private static void BulkCopy(void* dest, void* src, long n)
-        {
-            UnmanagedMemory.Copy((byte*)dest, (byte*)src, n);            
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Copy(void* dest, void* src, uint n)
         {
             Unsafe.CopyBlock(dest, src, n);
         }
 
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Copy(void* dest, void* src, int n)
-        {
-            Unsafe.CopyBlock(dest, src, (uint)n);
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Copy(void* dest, void* src, long n)
         {
-            if (n < uint.MaxValue)
+            if (n < uint.MaxValue) // Common code-path
             {
-                Unsafe.CopyBlock(dest, src, (uint)n); // Common code-path
+                Copy(dest, src, (uint)n);
                 return;
             }
 
-            BulkCopy(dest, src, n);
+            for (long i = 0; i < n; i += uint.MaxValue)
+            {
+                var size = uint.MaxValue;
+                if (i + uint.MaxValue > n)
+                    size = (uint)(n % uint.MaxValue);
+                Copy((byte*)dest + i, (byte*)src + i, size);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -210,37 +203,40 @@ UnmanagedCompare:
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Set(byte* dest, byte value, int n)
-        {
-            Unsafe.InitBlock(dest, value, (uint)n);
-        }
-
         public static void Set(byte* dest, byte value, long n)
         {
-            SetInline(dest, value, n);
-        }
-
-        /// <summary>
-        /// Set is optimized to handle copy operations where n is statistically small.       
-        /// </summary>
-        /// <remarks>This is a forced inline version, use with care.</remarks>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SetInline(byte* dest, byte value, long n)
-        {
-            if (n == 0)
-                goto Finish;
-
-            if (n < int.MaxValue)
+            if (n < uint.MaxValue) // Common code-path
             {
-                Unsafe.InitBlock(dest, value, (uint)n);
+                Set(dest, value, (uint)n);
             }
             else
             {
-                UnmanagedMemory.Set(dest, value, n);
+                for (long i = 0; i < n; i += uint.MaxValue)
+                {
+                    var size = uint.MaxValue;
+                    if (i + uint.MaxValue > n)
+                        size = (uint)(n % uint.MaxValue);
+                    Set(dest + i, value, size);
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Move(byte* dest, byte* src, int n)
+        {
+            // if dest and src overlaps, we need to call specifically to memmove pinvoke supporting overlapping
+            var d = new IntPtr(dest).ToInt64();
+            var s = new IntPtr(src).ToInt64();
+            if (d - n >= s &&
+                s + n >= d)
+            {
+                var _ = PlatformDetails.RunningOnPosix
+                    ? Syscall.Move(dest, src, n)
+                    : Win32UnmanagedMemory.Move(dest, src, n);
+                return;
             }
 
-            Finish:
-            ;
+            Copy(dest, src, n);
         }
     }
 }
