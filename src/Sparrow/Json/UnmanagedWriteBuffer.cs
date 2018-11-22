@@ -484,7 +484,7 @@ Grow:
             {
                 CopyTo(_head.Address + _head.Used);
                 // we need to fit in the beginning of the chunk, so we must move it backward.
-                UnmanagedMemory.Move(_head.Address, _head.Address + _head.Used, SizeInBytes);
+                Memory.Move(_head.Address, _head.Address + _head.Used, SizeInBytes);
 
                 ptr = _head.Address;
                 size = SizeInBytes;

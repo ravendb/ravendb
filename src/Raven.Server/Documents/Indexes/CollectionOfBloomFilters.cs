@@ -385,7 +385,7 @@ namespace Raven.Server.Documents.Indexes
                 using (_tree.DirectAdd(partition.Key, Partition.PartitionSize, out byte* ptr))
                 {
                     if (partition.IsEmpty == false)
-                        UnmanagedMemory.Copy(ptr, partition.Ptr, Partition.PartitionSize);
+                        Memory.Copy(ptr, partition.Ptr, Partition.PartitionSize);
 
                     partition.Writeable = true;
                     partition.IsEmpty = false;
