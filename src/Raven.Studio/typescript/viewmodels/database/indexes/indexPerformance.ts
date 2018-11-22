@@ -213,6 +213,7 @@ class indexPerformance extends viewModelBase {
     private static readonly minGapSize = 10 * 1000; // 10 seconds
     private static readonly initialOffset = 100;
     private static readonly step = 200;
+    private static readonly bufferSize = 50000;
 
 
     private static readonly openedTrackHeight = indexPerformance.openedTrackPadding
@@ -246,6 +247,8 @@ class indexPerformance extends viewModelBase {
     /* private */
 
     private data: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = [];
+    private bufferIsFull = ko.observable<boolean>(false);
+    private bufferUsage = ko.observable<string>("0.0");
     private totalWidth: number;
     private totalHeight: number;
     private currentYOffset = 0;
@@ -277,6 +280,8 @@ class indexPerformance extends viewModelBase {
     
     constructor() {
         super();
+        
+        this.bindToCurrentInstance("toggleScroll", "clearGraphWithConfirm");
 
         this.canExpandAll = ko.pureComputed(() => {
             const indexNames = this.indexNames();
@@ -465,6 +470,8 @@ class indexPerformance extends viewModelBase {
             }
 
             this.data = data;
+            
+            this.checkBufferUsage();
 
             const [workData, maxConcurrentIndexes] = this.prepareTimeData();
 
@@ -487,6 +494,17 @@ class indexPerformance extends viewModelBase {
         };
 
         this.liveViewClient(new liveIndexPerformanceWebSocketClient(this.activeDatabase(), onDataUpdate));
+    }
+    
+    private checkBufferUsage() {
+        const dataCount = _.sumBy(this.data, x => x.Performance.length);
+        const usage = Math.min(100, dataCount * 100.0 / indexPerformance.bufferSize);
+        this.bufferUsage(usage.toFixed(1));
+        
+        if (dataCount > indexPerformance.bufferSize) {
+            this.bufferIsFull(true);
+            this.cancelLiveView();
+        }
     }
 
     scrollToRight() {
@@ -761,8 +779,12 @@ class indexPerformance extends viewModelBase {
         finally {
             context.restore();
         }
-    }   
+    }
 
+    toggleScroll() {
+        this.autoScroll.toggle();
+    }
+    
     private onZoom() {
         this.autoScroll(false);
         this.clearSelectionVisible(true);
@@ -1262,6 +1284,7 @@ class indexPerformance extends viewModelBase {
 
     private dataImported(result: string) {
         this.cancelLiveView();
+        this.bufferIsFull(false);
 
         try {            
             const importedData: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = JSON.parse(result);
@@ -1291,11 +1314,26 @@ class indexPerformance extends viewModelBase {
         });
     }
 
-    closeImport() {
-        this.isImport(false);
+    clearGraphWithConfirm() {
+        this.confirmationMessage("Clear graph data", "Do you want to discard all collected indexing performance information?")
+            .done(result => {
+                if (result.can) {
+                    this.clearGraph();
+                }
+            })
+    }
+    
+    clearGraph() {
+        this.bufferIsFull(false);
+        this.cancelLiveView();
         this.hasAnyData(false);
         this.resetGraphData();
         this.enableLiveView();
+    }
+    
+    closeImport() {
+        this.isImport(false);
+        this.clearGraph();
     }
 
     private resetGraphData() {
