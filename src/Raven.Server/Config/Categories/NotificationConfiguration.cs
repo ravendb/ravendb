@@ -38,7 +38,7 @@ namespace Raven.Server.Config.Categories
                     break;
             }
             
-            return FilteredOutNotifications.TryGetValue(name, out _);
+            return FilteredOutNotifications.Contains(name);
         }
     }
 }
