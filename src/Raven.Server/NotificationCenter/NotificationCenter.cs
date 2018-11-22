@@ -60,7 +60,7 @@ namespace Raven.Server.NotificationCenter
         {
             try
             {
-                if (_config.Studio.ShouldFilterOut(notification))
+                if (_config.Notifications.ShouldFilterOut(notification))
                 {
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Filtered out notification. Id: '{notification.Id}', Title: '{notification.Title}', message: '{notification.Message}'");
