@@ -1339,6 +1339,9 @@ namespace Raven.Server.Documents.Queries
 
         public QueryFieldName GetIndexFieldName(FieldExpression fe, BlittableJsonReaderObject parameters)
         {
+            if (IsGraph)
+                return new QueryFieldName(fe.FieldValue, fe.IsQuoted);
+
             if (_aliasToName.TryGetValue(fe.Compound[0], out var indexFieldName) &&
                 fe.Compound[0] != Query.From.Alias)
             {
@@ -1347,27 +1350,25 @@ namespace Raven.Server.Documents.Queries
 
                 return indexFieldName;
             }
+
             if (fe.Compound.Count == 1)
                 return new QueryFieldName(fe.Compound[0], fe.IsQuoted);
 
-            if (IsGraph == false)
+            if(RootAliasPaths.TryGetValue(fe.Compound[0], out _))
             {
-                if(RootAliasPaths.TryGetValue(fe.Compound[0], out _))
+                if (fe.Compound.Count == 2)
                 {
-                    if (fe.Compound.Count == 2)
-                    {
-                        return new QueryFieldName(fe.Compound[1], fe.IsQuoted);
-                    }
-
-                    return new QueryFieldName(fe.FieldValueWithoutAlias, fe.IsQuoted);
+                    return new QueryFieldName(fe.Compound[1], fe.IsQuoted);
                 }
 
-                if (RootAliasPaths.Count != 0)
-                {
-                    ThrowUnknownAlias(fe.Compound[0], parameters);
-                }
+                return new QueryFieldName(fe.FieldValueWithoutAlias, fe.IsQuoted);
             }
 
+            if (RootAliasPaths.Count != 0)
+            {
+                ThrowUnknownAlias(fe.Compound[0], parameters);
+            }
+            
             return new QueryFieldName(fe.FieldValue, fe.IsQuoted);
         }
 
