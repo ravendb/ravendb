@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Extensions;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
@@ -34,7 +37,8 @@ namespace Raven.Server.Web.System
             var database = GetStringQueryString("database");
             var databaseGroupId = GetStringQueryString("groupId");
             var remoteTask = GetStringQueryString("remote-task");
-            PullReplicationHandler.Authenticate(HttpContext, ServerStore, database, remoteTask);
+
+            Authenticate(HttpContext, ServerStore, database, remoteTask);
 
             List<string> nodes;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -60,6 +64,57 @@ namespace Raven.Server.Web.System
                 });
             }
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/info/remote-task/tcp", "GET", AuthorizationStatus.RestrictedAccess)]
+        public Task GetRemoteTaskTcp()
+        {
+            var remoteTask = GetStringQueryString("remote-task");
+            var database = GetStringQueryString("database");
+
+            Authenticate(HttpContext, ServerStore, database, remoteTask);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var output = Server.ServerStore.GetTcpInfoAndCertificates(HttpContext.Request.GetClientRequestedNodeUrl());
+                context.Write(writer, output);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public static void Authenticate(HttpContext httpContext, ServerStore serverStore, string database, string remoteTask)
+        {
+            var feature = httpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+
+            if (feature == null) // we are not using HTTPS 
+                return;
+
+            switch (feature.Status)
+            {
+                case RavenServer.AuthenticationStatus.Allowed:
+                case RavenServer.AuthenticationStatus.Operator:
+                case RavenServer.AuthenticationStatus.ClusterAdmin:
+                    // we can trust this certificate
+                    return;
+
+                case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
+                    using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var pullReplication = serverStore.Cluster.ReadPullReplicationDefinition(database, remoteTask, context);
+                        var cert = httpContext.Connection.ClientCertificate;
+                        if (pullReplication.CanAccess(cert?.Thumbprint, out var err) == false)
+                        {
+                            throw new AuthorizationException(err);
+                        }
+                    }
+                    return;
+
+                default:
+                    throw new ArgumentException($"This is a bug, we should deal with '{feature?.Status}' authentication status at RequestRoute.TryAuthorize function.");
+            }
         }
 
         private List<string> GetResponsibleNodes(DatabaseTopology topology, string databaseGroupId, PullReplicationDefinition pullReplication)
@@ -91,7 +146,7 @@ namespace Raven.Server.Web.System
 
             public ulong GetTaskKey()
             {
-                return Hashing.XXHash64.Calculate(DatabaseGroupId, Encodings.Utf8);
+                return Hashing.Mix(Hashing.XXHash64.Calculate(DatabaseGroupId, Encodings.Utf8));
             }
 
             public string GetMentorNode()

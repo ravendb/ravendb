@@ -10,10 +10,8 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
-using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Json;
 using Xunit;
 
 namespace SlowTests.Server.Replication
@@ -25,7 +23,7 @@ namespace SlowTests.Server.Replication
         {
             using (var store = GetDocumentStore())
             {
-                await store.Maintenance.ForDatabase(store.Database).SendAsync(new UpdatePullReplicationDefinitionOperation("test"));
+                await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationOperation("test"));
             }
         }
 
@@ -36,7 +34,7 @@ namespace SlowTests.Server.Replication
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await store2.Maintenance.ForDatabase(store2.Database).SendAsync(new UpdatePullReplicationDefinitionOperation(name));
+                await store2.Maintenance.ForDatabase(store2.Database).SendAsync(new PutPullReplicationOperation(name));
                 using (var s2 = store2.OpenSession())
                 {
                     s2.Store(new User(), "foo/bar");
@@ -58,7 +56,7 @@ namespace SlowTests.Server.Replication
             using (var edge1 = GetDocumentStore())
             using (var edge2 = GetDocumentStore())
             {
-                await central.Maintenance.ForDatabase(central.Database).SendAsync(new UpdatePullReplicationDefinitionOperation(name));
+                await central.Maintenance.ForDatabase(central.Database).SendAsync(new PutPullReplicationOperation(name));
                 using (var session = central.OpenSession())
                 {
                     session.Store(new User(), "foo/bar");
@@ -113,9 +111,7 @@ namespace SlowTests.Server.Replication
                 ModifyDatabaseName = _ => edgeDB
             }))
             {
-                await edgeStore.Maintenance.SendAsync(new PutFeatureCertificateOperation("PullReplicationCertificate", pullReplicationCertificate));
-
-                await SetupPullReplicationAsync(pullReplicationName, edgeStore, pullReplicationCertificate.Thumbprint, centralStore);
+                await SetupPullReplicationAsync(pullReplicationName, edgeStore, pullReplicationCertificate, centralStore);
                 using (var centralSession = centralStore.OpenSession())
                 {
                     centralSession.Store(new User(), "foo/bar");
@@ -137,9 +133,12 @@ namespace SlowTests.Server.Replication
                 ModifyDatabaseName = _=> centralDB
             }))
             {
-                await store.Maintenance.ForDatabase(store.Database).SendAsync(new UpdatePullReplicationDefinitionOperation(new PullReplicationDefinition(pullReplicationName)
+                await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationOperation(new PullReplicationDefinition(pullReplicationName)
                 {
-                    Certificates = new List<string>(new[] { Convert.ToBase64String(certificate.Export(X509ContentType.Cert)) })
+                    Certificates = new Dictionary<string, string>
+                    {
+                        [certificate.Thumbprint] = Convert.ToBase64String(certificate.Export(X509ContentType.Cert))
+                    }
                 }));
             }
         }
@@ -179,7 +178,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 var name = $"pull-replication {GetDatabaseName()}";
-                await centralStore.Maintenance.ForDatabase(centralStore.Database).SendAsync(new UpdatePullReplicationDefinitionOperation(name));
+                await centralStore.Maintenance.ForDatabase(centralStore.Database).SendAsync(new PutPullReplicationOperation(name));
 
                 // add pull replication with invalid discovery url to test the failover on database topology discovery
                 var pullReplication = new ExternalReplication(centralDB, $"ConnectionString-{centralDB}")
@@ -273,7 +272,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 var name = $"pull-replication {GetDatabaseName()}";
-                await centralStore.Maintenance.ForDatabase(centralStore.Database).SendAsync(new UpdatePullReplicationDefinitionOperation(name));
+                await centralStore.Maintenance.ForDatabase(centralStore.Database).SendAsync(new PutPullReplicationOperation(name));
 
 
                 // add pull replication with invalid discovery url to test the failover on database topology discovery
@@ -328,7 +327,7 @@ namespace SlowTests.Server.Replication
             return SetupPullReplicationAsync(remoteName, edge, null, central);
         }
 
-        public async Task<List<ModifyOngoingTaskResult>> SetupPullReplicationAsync(string remoteName, DocumentStore edge, string thumbprint,params DocumentStore[] central)
+        public async Task<List<ModifyOngoingTaskResult>> SetupPullReplicationAsync(string remoteName, DocumentStore edge, X509Certificate2 certificate, params DocumentStore[] central)
         {
             var tasks = new List<Task<ModifyOngoingTaskResult>>();
             var resList = new List<ModifyOngoingTaskResult>();
@@ -337,10 +336,11 @@ namespace SlowTests.Server.Replication
                 var databaseWatcher = new ExternalReplication(store.Database,$"ConnectionString-{store.Database}")
                 {
                     PullReplicationAsEdgeOptions = new PullReplicationAsEdgeSettings(remoteName)
-                    {
-                        CertificateThumbprint = thumbprint
-                    },
                 };
+                if (certificate != null)
+                {
+                    databaseWatcher.PullReplicationAsEdgeOptions.CertificateWithPrivateKey = Convert.ToBase64String(certificate.Export(X509ContentType.Pfx));
+                }
                 ModifyReplicationDestination(databaseWatcher);
                 tasks.Add(AddWatcherToReplicationTopology(edge, databaseWatcher, store.Urls));
             }

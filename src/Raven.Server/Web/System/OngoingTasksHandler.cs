@@ -150,7 +150,7 @@ namespace Raven.Server.Web.System
         private OngoingTaskReplication GetExternalReplicationInfo(DatabaseTopology databaseTopology, ClusterTopology clusterTopology,
             ExternalReplication watcher, Dictionary<string, RavenConnectionString> connectionStrings)
         {
-            var taskStatus = ReplicationLoader.GetExternalReplicationState(Database, watcher.TaskId);
+            var taskStatus = ReplicationLoader.GetExternalReplicationState(ServerStore, Database.Name, watcher.TaskId);
             var tag = Database.WhoseTaskIsIt(databaseTopology, watcher, taskStatus);
 
             (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);
@@ -1077,7 +1077,7 @@ namespace Raven.Server.Web.System
                         using (context.OpenReadTransaction())
                         {
                             var databaseRecord = ServerStore.Cluster.ReadDatabase(context, Database.Name);
-                            var taskStatus = ReplicationLoader.GetExternalReplicationState(Database, watcher.TaskId);
+                            var taskStatus = ReplicationLoader.GetExternalReplicationState(ServerStore, Database.Name, watcher.TaskId);
                             json[nameof(OngoingTask.ResponsibleNode)] = Database.WhoseTaskIsIt(databaseRecord.Topology, watcher, taskStatus);
                         }
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Security.Cryptography.X509Certificates;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -8,7 +7,7 @@ namespace Raven.Client.Documents.Operations.Replication
 {
     public abstract class FeatureTaskDefinition : IDynamicJsonValueConvertible
     {
-        public List<string> Certificates; // base64
+        public Dictionary<string, string> Certificates; // <thumbprint, base64 cert>
         public string Name;
         public long TaskId;
 
@@ -21,14 +20,10 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public virtual DynamicJsonValue ToJson()
         {
-            DynamicJsonArray certs = null;
+            DynamicJsonValue certs = null;
             if (Certificates != null)
             {
-                foreach (var certificate in Certificates)
-                {
-                    var x509Certificate2 = new X509Certificate2(Convert.FromBase64String(certificate));
-                }
-                certs = new DynamicJsonArray(Certificates);
+                certs = DynamicJsonValue.Convert(Certificates);
             }
             return new DynamicJsonValue
             {
@@ -50,23 +45,25 @@ namespace Raven.Client.Documents.Operations.Replication
                 return false;
             }
 
-            foreach (var certificate in Certificates)
-            {
-                var cert = new X509Certificate2(Convert.FromBase64String(certificate));
-                if (cert.Thumbprint == thumbprint)
-                {
-                    return true;
-                }
-            }
+            if (Certificates.ContainsKey(thumbprint))
+                return true; // we will authenticate the certificate later on the tcp level.
 
             err = $"Certificate with the thumbprint {thumbprint} was not found for pull replication '{Name}'";
             return false;
         }
 
-        public void Validate()
+        public void Validate(bool useSsl)
         {
             if (string.IsNullOrEmpty(Name))
                 throw new ArgumentNullException(nameof(Name));
+
+            if (useSsl == false)
+            {
+                if (Certificates?.Count > 0)
+                {
+                    throw new InvalidOperationException("Your server is unsecured and therefore you can't define pull replication with a certificate.");
+                }
+            }
         }
     }
 }

@@ -111,9 +111,10 @@ namespace Raven.Client.Documents.Operations.Replication
 
     public class PullReplicationAsEdgeSettings
     {
-        public string CertificateThumbprint;
-        public string PullReplicationDefinition;
+        public string CertificateWithPrivateKey; // base64
+        public string CertificatePassword;
 
+        public string PullReplicationDefinition;
         public PullReplicationAsEdgeSettings() { }
 
         public PullReplicationAsEdgeSettings(string pullReplicationDefinition)
@@ -128,8 +129,9 @@ namespace Raven.Client.Documents.Operations.Replication
 
             return new DynamicJsonValue
             {
-                [nameof(CertificateThumbprint)] = CertificateThumbprint,
-                [nameof(PullReplicationDefinition)] = PullReplicationDefinition
+                [nameof(CertificateWithPrivateKey)] = CertificateWithPrivateKey,
+                [nameof(PullReplicationDefinition)] = PullReplicationDefinition,
+                [nameof(CertificatePassword)] = CertificatePassword
             };
         }
     }

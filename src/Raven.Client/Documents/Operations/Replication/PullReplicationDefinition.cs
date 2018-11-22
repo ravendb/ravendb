@@ -34,13 +34,5 @@ namespace Raven.Client.Documents.Operations.Replication
             djv[nameof(DelayReplicationFor)] = DelayReplicationFor;
             return djv;
         }
-
-        public static string GetPrefix(string databaseName)
-        {
-            if (string.IsNullOrEmpty(databaseName))
-                throw new ArgumentNullException(databaseName);
-
-            return $"values/{databaseName}/{Constants.Certificates.FeaturePrefix}";
-        }
     }
 }

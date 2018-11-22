@@ -92,8 +92,6 @@ namespace Raven.Client
             }
 
             public const string Prefix = "certificates/";
-
-            public const string FeaturePrefix = "feature-certificates/";
         }
 
         public class Configuration

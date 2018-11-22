@@ -238,15 +238,15 @@ namespace Raven.Server.Routing
                         case RavenServer.AuthenticationStatus.Expired:
                         case RavenServer.AuthenticationStatus.NotYetValid:
                         case RavenServer.AuthenticationStatus.None:
-                        case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
-
-                            // we allow an access to the restricted endpoints with an unfamilier certificate, since we will authorize it at the endpoint level
-                            if (authenticationStatus == RavenServer.AuthenticationStatus.UnfamiliarCertificate &&
-                                route.AuthorizationStatus == AuthorizationStatus.RestrictedAccess)
-                                return true; 
-
                             UnlikelyFailAuthorization(context, database?.Name, feature, route.AuthorizationStatus);
                             return false;
+
+                        case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
+                            // we allow an access to the restricted endpoints with an unfamilier certificate, since we will authorize it at the endpoint level
+                            if (route.AuthorizationStatus == AuthorizationStatus.RestrictedAccess)
+                                return true; 
+                            goto case null;
+                         
                         case RavenServer.AuthenticationStatus.Allowed:
                             if (route.AuthorizationStatus == AuthorizationStatus.Operator || route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin)
                                 goto case RavenServer.AuthenticationStatus.None;

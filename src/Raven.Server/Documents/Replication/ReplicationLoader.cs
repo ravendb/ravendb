@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.Replication
                             pullReplicationDefinition = _server.Cluster.ReadPullReplicationDefinition(Database.Name, initialRequest.PullReplicationDefinitionName, ctx);
                         }
 
-                        var taskId = (int)Hashing.XXHash64.Calculate(initialRequest.DatabaseGroupId, Encodings.Utf8);
+                        var taskId = Hashing.Mix(Hashing.XXHash64.Calculate(initialRequest.DatabaseGroupId, Encodings.Utf8));
                         var externalReplication = pullReplicationDefinition.ToExternalReplication(initialRequest.Database, taskId);
                         var outgoingReplication = new OutgoingReplicationHandler(this, Database, externalReplication, external: true, initialRequest.Info)
                         {
@@ -557,7 +557,7 @@ namespace Raven.Server.Documents.Replication
             DropOutgoingConnections(changes.RemovedDestiantions, instancesToDispose);
             var newDestinations = changes.AddedDestinations.Where(configuration =>
             {
-                var taskStatus = GetExternalReplicationState(Database, configuration.TaskId);
+                var taskStatus = GetExternalReplicationState(_server, Database.Name, configuration.TaskId);
                 var whoseTaskIsIt = Database.WhoseTaskIsIt(newRecord.Topology, configuration, taskStatus);
                 return whoseTaskIsIt == _server.NodeTag;
             }).ToList();
@@ -579,12 +579,12 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public static ExternalReplicationState GetExternalReplicationState(DocumentDatabase database, long taskId)
+        public static ExternalReplicationState GetExternalReplicationState(ServerStore server, string database, long taskId)
         {
-            using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var stateBlittable = database.ServerStore.Cluster.Read(context, ExternalReplicationState.GenerateItemName(database.Name, taskId));
+                var stateBlittable = server.Cluster.Read(context, ExternalReplicationState.GenerateItemName(database, taskId));
 
                 return stateBlittable != null ? JsonDeserializationCluster.ExternalReplicationState(stateBlittable) : new ExternalReplicationState();
             }
@@ -807,6 +807,7 @@ namespace Raven.Server.Documents.Replication
 
                     if (exNode.PullReplicationAsEdgeOptions == null)
                     {
+                        // normal external replication
                         using (var requestExecutor = RequestExecutor.Create(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.ConnectionString.Database, certificate,
                             DocumentConventions.Default))
                         using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -823,6 +824,7 @@ namespace Raven.Server.Documents.Replication
                     using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     {
                         string[] remoteDatabaseUrls;
+                        // fetch central cluster node urls
                         using (var requestExecutor = RequestExecutor.CreateForFixedTopology(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.ConnectionString.Database,
                             certificate, DocumentConventions.Default))
                         {
@@ -831,6 +833,7 @@ namespace Raven.Server.Documents.Replication
                             remoteDatabaseUrls = cmd.Result;
                         }
 
+                        // fetch tcp info for the central nodes
                         using (var requestExecutor = RequestExecutor.CreateForFixedTopology(remoteDatabaseUrls,
                             exNode.ConnectionString.Database, certificate, DocumentConventions.Default))
                         {
@@ -870,34 +873,26 @@ namespace Raven.Server.Documents.Replication
         {
             authorizationInfo = null;
             var exNode = node as ExternalReplication;
-            if (exNode == null)
+            if (exNode == null) // internal replication
                 return _server.Server.Certificate.Certificate;
 
-            if (exNode.PullReplicationAsEdgeOptions?.CertificateThumbprint != null)
+            var options = exNode.PullReplicationAsEdgeOptions;
+            if (options == null) // normal external replication
+                return _server.Server.Certificate.Certificate;
+
+            // pull replication
+            authorizationInfo = new TcpConnectionHeaderMessage.AuthorizationInfo
             {
-                using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    var key = PullReplicationDefinition.GetPrefix(Database.Name) + exNode.PullReplicationAsEdgeOptions.CertificateThumbprint;
-                    var certificate = _server.Cluster.Read(context, key);
-                    if (certificate == null)
-                    {
-                        throw new InvalidOperationException($"The certificate with the thumbprint {exNode.PullReplicationAsEdgeOptions.CertificateThumbprint} was not found.");
-                    }
+                AuthorizeAs = TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication,
+                AuthorizationFor = options.PullReplicationDefinition
+            };
 
-                    var definition = JsonDeserializationServer.CertificateDefinition(certificate);
-                    var certBytes = Convert.FromBase64String(definition.Certificate);
-                    
-                    authorizationInfo = new TcpConnectionHeaderMessage.AuthorizationInfo
-                    {
-                        AuthorizeAs = TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication,
-                        AuthorizationFor = exNode.PullReplicationAsEdgeOptions.PullReplicationDefinition
-                    };
-                    return new X509Certificate2(certBytes, definition.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-                }
-            }
+            if (options.CertificateWithPrivateKey == null)
+                return _server.Server.Certificate.Certificate;
 
-            return _server.Server.Certificate.Certificate;
+            var certBytes = Convert.FromBase64String(options.CertificateWithPrivateKey);
+            return new X509Certificate2(certBytes, options.CertificatePassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+
         }
 
         public (string Url, OngoingTaskConnectionStatus Status) GetExternalReplicationDestination(long taskId)

@@ -729,7 +729,7 @@ namespace Raven.Server.Utils.Cli
 
                 try
                 {
-                   RequestHandler.PutCertificateCollectionInCluster(Constants.Certificates.Prefix, certDef, certBytes, password, cli._server.ServerStore, ctx).Wait();
+                   AdminCertificatesHandler.PutCertificateCollectionInCluster(Constants.Certificates.Prefix, certDef, certBytes, password, cli._server.ServerStore, ctx).Wait();
                 }
                 catch (Exception e)
                 {
