@@ -1560,7 +1560,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 outputPtr[1] = count;
                 outputSize += sizeof(long) * 2;
 
-                Unsafe.CopyBlockUnaligned(Output + outputSize, modified + start, (uint)count);
+                Memory.CopyUnaligned(Output + outputSize, modified + start, (uint)count);
                 OutputSize = outputSize + count;
             }
 
@@ -1812,7 +1812,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 outputPtr[1] = runLengthInBytes;
                 outputSize += sizeof(long) * 2;
 
-                Unsafe.CopyBlock(Output + outputSize, (srcPtr + destOffset) + startIdx, (uint)runLengthInBytes);
+                Memory.Copy(Output + outputSize, (srcPtr + destOffset) + startIdx, (uint)runLengthInBytes);
 
                 OutputSize = outputSize + runLengthInBytes;
             }
@@ -1953,7 +1953,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 outputPtr[1] = runLengthInBytes;
                 outputSize += sizeof(long) * 2;
 
-                Unsafe.CopyBlock(Output + outputSize, (srcPtr + destOffset) + startIdx, (uint)runLengthInBytes);
+                Memory.Copy(Output + outputSize, (srcPtr + destOffset) + startIdx, (uint)runLengthInBytes);
 
                 OutputSize = outputSize + runLengthInBytes;
             }
@@ -2212,7 +2212,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 *(long*)(outputPtr + 0) = startIdx;
                 *(long*)(outputPtr + 8) = runLengthInBytes;
 
-                Unsafe.CopyBlock(outputPtr + 16, srcPtr + (destOffset + startIdx), (uint)runLengthInBytes);
+                Memory.Copy(outputPtr + 16, srcPtr + (destOffset + startIdx), (uint)runLengthInBytes);
 
                 OutputSize += runLengthInBytes + 16;
             }
@@ -2221,7 +2221,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static ulong ToUnsignedLong(bool value)
             {
-                var result = Unsafe.As<bool, byte>(ref value);
+                var result = Memory.As<bool, byte>(ref value);
                 return result;
             }
 
@@ -2343,7 +2343,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static byte ToByte(bool value)
             {
-                return Unsafe.As<bool, byte>(ref value);
+                return Memory.As<bool, byte>(ref value);
             }
 
             public void ComputeCacheAware_Branchless_LessRegisters(void* originalBuffer, void* modifiedBuffer, int size)
@@ -2740,7 +2740,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -2817,7 +2817,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -2900,7 +2900,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -2982,7 +2982,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -3064,7 +3064,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -3136,7 +3136,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -3211,7 +3211,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -3281,7 +3281,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -3354,7 +3354,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -3431,7 +3431,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -3499,7 +3499,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }

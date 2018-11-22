@@ -238,5 +238,17 @@ UnmanagedCompare:
 
             Copy(dest, src, n);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void CopyUnaligned(byte* dest, byte* src, uint n)
+        {
+            Unsafe.CopyBlockUnaligned(dest, src, n);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static TTo As<TFrom, TTo>(ref TFrom value)
+        {
+            return Unsafe.As<TFrom, TTo>(ref value);            
+        }
     }
 }

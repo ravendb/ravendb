@@ -51,7 +51,7 @@ namespace Sparrow.Json
 
             if (_buffer.Length - Used > count)
             {
-                Unsafe.CopyBlock(_buffer.Pointer + Used, buffer, (uint)count);
+                Memory.Copy(_buffer.Pointer + Used, buffer, (uint)count);
                 _sizeInBytes += count;
                 Used += count;
             }
@@ -76,7 +76,7 @@ namespace Sparrow.Json
 
                 var bytesToWrite = Math.Min(lengthLeft, _buffer.Length - Used);
 
-                Unsafe.CopyBlock(_buffer.Pointer + Used, buffer, (uint)bytesToWrite);
+                Memory.Copy(_buffer.Pointer + Used, buffer, (uint)bytesToWrite);
 
                 _sizeInBytes += bytesToWrite;
                 lengthLeft -= bytesToWrite;
@@ -271,7 +271,7 @@ namespace Sparrow.Json
             var head = _head;
             if (head.Allocation.SizeInBytes - head.Used > count)
             {
-                Unsafe.CopyBlock(head.Address + head.Used, buffer, (uint)count);
+                Memory.Copy(head.Address + head.Used, buffer, (uint)count);
                 head.AccumulatedSizeInBytes += count;
                 head.Used += count;
             }
@@ -298,7 +298,7 @@ namespace Sparrow.Json
 
                 // Write as much as we can in the current Segment
                 var amountWrittenInRound = Math.Min(amountPending, availableSpace);
-                Unsafe.CopyBlock(head.Address + head.Used, buffer, (uint)amountWrittenInRound);
+                Memory.Copy(head.Address + head.Used, buffer, (uint)amountWrittenInRound);
 
                 // Update Segment invariants
                 head.AccumulatedSizeInBytes += amountWrittenInRound;
