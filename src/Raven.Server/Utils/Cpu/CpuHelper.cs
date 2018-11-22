@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
@@ -10,46 +9,34 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
-using Sparrow.Platform.Posix.macOS;
 using Sparrow.Utils;
 
 namespace Raven.Server.Utils.Cpu
 {
-    public static class CpuUsage
+    public static class CpuHelper
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineResources>("Server");
-        private static readonly object Locker = new object();
-        private static ICpuUsageCalculator _calculator;
 
-        static CpuUsage()
+        internal static ICpuUsageCalculator GetOSCpuUsageCalculator()
         {
+            ICpuUsageCalculator calculator;
             if (PlatformDetails.RunningOnPosix == false)
             {
-                _calculator = new WindowsCpuUsageCalculator();
+                calculator = new WindowsCpuUsageCalculator();
             }
             else if (PlatformDetails.RunningOnMacOsx)
             {
-                _calculator = new MacInfoCpuUsageCalculator();
+                calculator = new MacInfoCpuUsageCalculator();
             }
             else
             {
-                _calculator = new LinuxCpuUsageCalculator();
+                calculator = new LinuxCpuUsageCalculator();
             }
-            _calculator.Init();
+            calculator.Init();
+            return calculator;
         }
 
-        public static (double MachineCpuUsage, double ProcessCpuUsage) Calculate()
-        {
-            // this is a pretty quick method (sys call only), and shouldn't be
-            // called heavily, so it is easier to make sure that this is thread
-            // safe by just holding a lock.
-            lock (Locker)
-            {
-                return _calculator.Calculate();
-            }
-        }
-
-        public static void UseCpuUsageExtensionPoint(
+        internal static ExtensionPointCpuUsageCalculator GetExtensionPointCpuUsageCalculator(
             JsonContextPool contextPool,
             MonitoringConfiguration configuration,
             NotificationCenter.NotificationCenter notificationCenter)
@@ -58,36 +45,12 @@ namespace Raven.Server.Utils.Cpu
                 contextPool,
                 configuration.CpuUsageMonitorExec,
                 configuration.CpuUsageMonitorExecArguments,
-                Logger,
                 notificationCenter);
 
-            extensionPoint.Init();
+            
 
-            lock (Locker)
-            {
-                _calculator = extensionPoint;
-            }
+            return extensionPoint;
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static ulong GetTime(FileTime fileTime)
-        {
-            return ((ulong)fileTime.dwHighDateTime << 32) | (uint)fileTime.dwLowDateTime;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        internal struct FileTime
-        {
-            public int dwLowDateTime;
-            public int dwHighDateTime;
-        }
-
-        [return: MarshalAs(UnmanagedType.Bool)]
-        [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern bool GetSystemTimes(
-            ref FileTime lpIdleTime,
-            ref FileTime lpKernelTime,
-            ref FileTime lpUserTime);
 
         public static long GetNumberOfActiveCores(Process process)
         {
@@ -105,14 +68,6 @@ namespace Raven.Server.Utils.Cpu
                     Logger.Info("Failure to get the number of active cores", e);
 
                 return ProcessorInfo.ProcessorCount;
-            }
-        }
-
-        public static void Dispose()
-        {
-            lock (Locker)
-            {
-                _calculator?.Dispose();
             }
         }
 

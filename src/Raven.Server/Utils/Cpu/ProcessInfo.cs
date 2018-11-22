@@ -8,11 +8,11 @@ namespace Raven.Server.Utils.Cpu
         {
             using (var process = Process.GetCurrentProcess())
             {
-                var processTimes = CpuUsage.GetProcessTimes(process);
+                var processTimes = CpuHelper.GetProcessTimes(process);
                 TotalProcessorTimeTicks = processTimes.TotalProcessorTimeTicks;
                 TimeTicks = processTimes.TimeTicks;
 
-                ActiveCores = CpuUsage.GetNumberOfActiveCores(process);
+                ActiveCores = CpuHelper.GetNumberOfActiveCores(process);
             }
         }
 

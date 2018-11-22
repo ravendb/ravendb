@@ -44,12 +44,10 @@ while($TRUE){{
                 Process.Start("chmod", $"755 {tempFileName}");
             }
             
-            var logger = LoggingSource.Instance.GetLogger<RavenDB_12161>("");
             using (var extensionPoint = new CpuUsageExtensionPoint(
                 new JsonContextPool(),
                 exec,
                 args,
-                logger,
                 Server.ServerStore.NotificationCenter))
             {
                 extensionPoint.Start();
@@ -94,12 +92,10 @@ while($TRUE){{
                 Process.Start("chmod", $"755 {tempFileName}");
             }
 
-            var logger = LoggingSource.Instance.GetLogger<RavenDB_12161>("");
             using (var extensionPoint = new CpuUsageExtensionPoint(
                 new JsonContextPool(),
                 exec,
                 args,
-                logger,
                 Server.ServerStore.NotificationCenter))
             {
                 extensionPoint.Start();
@@ -151,12 +147,10 @@ while($TRUE){{
                 Process.Start("chmod", $"755 {tempFileName}");
             }
 
-            var logger = LoggingSource.Instance.GetLogger<RavenDB_12161>("");
             using (var extensionPoint = new CpuUsageExtensionPoint(
                 new JsonContextPool(),
                 exec,
                 args,
-                logger,
                 Server.ServerStore.NotificationCenter))
             {
                 extensionPoint.Start();
@@ -212,12 +206,10 @@ while($TRUE){{
                 Process.Start("chmod", $"755 {tempFileName}");
             }
 
-            var logger = LoggingSource.Instance.GetLogger<RavenDB_12161>("");
             using (var extensionPoint = new CpuUsageExtensionPoint(
                 new JsonContextPool(),
                 exec,
                 args,
-                logger,
                 Server.ServerStore.NotificationCenter))
             {
                 extensionPoint.Start();
@@ -271,12 +263,10 @@ while($TRUE){{
                 Process.Start("chmod", $"755 {tempFileName}");
             }
 
-            var logger = LoggingSource.Instance.GetLogger<RavenDB_12161>("");
             using (var extensionPoint = new CpuUsageExtensionPoint(
                 new JsonContextPool(),
                 exec,
                 args,
-                logger,
                 Server.ServerStore.NotificationCenter))
             {
                 extensionPoint.Start();

@@ -19,7 +19,7 @@ namespace Raven.Server.Utils
         {
             using (var process = Process.GetCurrentProcess())
             {
-                _processTimes = CpuUsage.GetProcessTimes(process);
+                _processTimes = CpuHelper.GetProcessTimes(process);
             }
         }
 
@@ -34,14 +34,14 @@ namespace Raven.Server.Utils
             using (var process = Process.GetCurrentProcess())
             {
                 var previousProcessTimes = _processTimes;
-                _processTimes = CpuUsage.GetProcessTimes(process);
+                _processTimes = CpuHelper.GetProcessTimes(process);
 
                 var processorTimeDiff = _processTimes.TotalProcessorTimeTicks - previousProcessTimes.TotalProcessorTimeTicks;
                 var timeDiff = _processTimes.TimeTicks - previousProcessTimes.TimeTicks;
-                var activeCores = CpuUsage.GetNumberOfActiveCores(process);
+                var activeCores = CpuHelper.GetNumberOfActiveCores(process);
                 threadsInfo.ActiveCores = activeCores;
 
-                if (timeDiff == 0 || Math.Abs(activeCores) < 0.01)
+                if (timeDiff == 0 || activeCores == 0)
                     return threadsInfo;
 
                 var cpuUsage = (processorTimeDiff * 100.0) / timeDiff / activeCores;

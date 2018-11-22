@@ -14,7 +14,7 @@ namespace Raven.Server.Dashboard
 
         public double CpuUsage { get; set; }
 
-        public double ActiveCores { get; set; }
+        public long ActiveCores { get; set; }
 
         public ThreadsInfo()
         {
