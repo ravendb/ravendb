@@ -45,7 +45,7 @@ namespace Sparrow.Collections.LockFree
 
         private static TValue objToValRef(object value)
         {
-            return Unsafe.As<object, TValue>(ref value);
+            return Memory.As<object, TValue>(ref value);
         }
 
         private static TValue objToValValue(object value)
