@@ -5,15 +5,15 @@
             <h3>Set UI Theme:</h3>
             
             <div class="theme-previews">
-                <div class="theme theme-dark" data-bind="click: _.partial(useTheme, 'dark')">
+                <div class="theme theme-dark" data-bind="click: _.partial(useTheme, 'dark'), css: { 'active': currentTheme() === 'dark' }">
                     <img src="Content/img/dark-theme.png" class="img-responsive" />
                     <h2 class="theme-title">DARK</h2>
                 </div>
-                <div class="theme theme-blue" data-bind="click: _.partial(useTheme, 'blue')">
+                <div class="theme theme-blue" data-bind="click: _.partial(useTheme, 'blue'), css: { 'active': currentTheme() === 'blue' }">
                     <img src="Content/img/blue-theme.png" class="img-responsive" />
                     <h2 class="theme-title">BLUE</h2>
                 </div>
-                <div class="theme theme-light" data-bind="click: _.partial(useTheme, 'light')">
+                <div class="theme theme-light" data-bind="click: _.partial(useTheme, 'light'), css: { 'active': currentTheme() === 'light' }">
                     <img src="Content/img/light-theme.png" class="img-responsive" />
                     <h2 class="theme-title">LIGHT</h2>
                 </div>
