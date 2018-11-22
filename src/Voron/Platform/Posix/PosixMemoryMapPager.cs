@@ -209,7 +209,7 @@ namespace Voron.Platform.Posix
 
             if (UsePageProtection || force)
             {
-                if (Syscall.mprotect(new IntPtr(start), size, ProtFlag.PROT_READ) == 0)
+                if (Syscall.mprotect(new IntPtr(start), new IntPtr((int)size), ProtFlag.PROT_READ) == 0)
                     return;
                 var err = Marshal.GetLastWin32Error();
                 Debugger.Break();
@@ -223,7 +223,7 @@ namespace Voron.Platform.Posix
 
             if (UsePageProtection || force)
             {
-                if (Syscall.mprotect(new IntPtr(start), size, ProtFlag.PROT_READ | ProtFlag.PROT_WRITE) == 0)
+                if (Syscall.mprotect(new IntPtr(start), new IntPtr((int)size), ProtFlag.PROT_READ | ProtFlag.PROT_WRITE) == 0)
                     return;
                 var err = Marshal.GetLastWin32Error();
                 Debugger.Break();
