@@ -25,8 +25,7 @@ namespace Voron.Impl.Journal
         private IJournalWriter _journalWriter;
         private long _writePosIn4Kb;
 
-        private TransactionHeader[] _transactionHeaders;
-        private int _numberOfTransactionHeaders;
+        private List<TransactionHeader> _transactionHeaders;
 
         private readonly PageTable _pageTranslationTable = new PageTable();
 
@@ -39,7 +38,7 @@ namespace Voron.Impl.Journal
         {
             Number = journalNumber;
             _env = env;
-            _transactionHeaders = ArrayPool<TransactionHeader>.Shared.Rent(journalWriter.NumberOfAllocated4Kb);
+            _transactionHeaders = new List<TransactionHeader>();
             _journalWriter = journalWriter;
             _writePosIn4Kb = 0;
             _unusedPages = new FastList<PagePosition>();
@@ -79,8 +78,6 @@ namespace Voron.Impl.Journal
 
         public void Dispose()
         {
-            if (_transactionHeaders != null)
-                ArrayPool<TransactionHeader>.Shared.Return(_transactionHeaders);
             _transactionHeaders = null;
             _unusedPagesHashSetPool.Clear();
             _unusedPages.Clear();
@@ -106,7 +103,7 @@ namespace Voron.Impl.Journal
         public void SetLastReadTxHeader(long maxTransactionId, ref TransactionHeader lastReadTxHeader)
         {
             int low = 0;
-            int high = _numberOfTransactionHeaders - 1;
+            int high = _transactionHeaders.Count - 1;
 
             while (low <= high)
             {
@@ -128,11 +125,11 @@ namespace Voron.Impl.Journal
                 lastReadTxHeader.TransactionId = -1; // not found
                 return;
             }
-            if (high != _numberOfTransactionHeaders - 1)
+            if (high != _transactionHeaders.Count - 1)
             {
                 throw new InvalidOperationException("Found a gap in the transaction headers held by this journal file in memory, shouldn't be possible");
             }
-            lastReadTxHeader = _transactionHeaders[_numberOfTransactionHeaders - 1];
+            lastReadTxHeader = _transactionHeaders[_transactionHeaders.Count - 1];
         }
 
         /// <summary>
@@ -155,15 +152,9 @@ namespace Voron.Impl.Journal
 
                 // We skip to the next transaction header.
                 posBy4Kbs += (int)roundTo4Kb;
-                if (_transactionHeaders.Length == _numberOfTransactionHeaders)
-                {
-                    var temp = ArrayPool<TransactionHeader>.Shared.Rent(_transactionHeaders.Length * 2);
-                    Array.Copy(_transactionHeaders, temp, _transactionHeaders.Length);
-                    ArrayPool<TransactionHeader>.Shared.Return(_transactionHeaders);
-                    _transactionHeaders = temp;
-                }
+
                 Debug.Assert(readTxHeader->HeaderMarker == Constants.TransactionHeaderMarker);
-                _transactionHeaders[_numberOfTransactionHeaders++] = *readTxHeader;
+                _transactionHeaders.Add(*readTxHeader);
             }
 
             JournalWriter.Write(posBy4Kb, p, numberOf4Kbs);
@@ -301,10 +292,10 @@ namespace Voron.Impl.Journal
             }
         }
 
-        public void InitFrom(JournalReader journalReader, TransactionHeader[] transactionHeaders, int transactionsCount)
+        public void InitFrom(JournalReader journalReader, List<TransactionHeader> transactionHeaders)
         {
             _writePosIn4Kb = journalReader.Next4Kb;
-            Array.Copy(transactionHeaders, _transactionHeaders, transactionsCount);
+            _transactionHeaders = new List<TransactionHeader>(transactionHeaders);
         }
 
         public bool DeleteOnClose { set { _journalWriter.DeleteOnClose = value; } }
