@@ -200,16 +200,16 @@ namespace Voron.Impl.Journal
             return true;
         }
 
-        public int RecoverAndValidate(StorageEnvironmentOptions options, TransactionHeader[] transactionHeaders)
+        public List<TransactionHeader> RecoverAndValidate(StorageEnvironmentOptions options)
         {
-            int index = 0;
+            var transactionHeaders = new List<TransactionHeader>();
             while (ReadOneTransactionToDataFile(options))
             {
-                transactionHeaders[index++] = *LastTransactionHeader;
+                transactionHeaders.Add(*LastTransactionHeader);
             }
             ZeroRecoveryBufferIfNeeded(this, options);
 
-            return index;
+            return transactionHeaders;
         }
 
         public void ZeroRecoveryBufferIfNeeded(IPagerLevelTransactionState tx, StorageEnvironmentOptions options)
