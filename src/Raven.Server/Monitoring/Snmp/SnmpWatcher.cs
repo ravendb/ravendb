@@ -200,8 +200,8 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ServerTotalRequests(server.Metrics));
             store.Add(new ServerRequestsPerSecond(server.Metrics));
 
-            store.Add(new ProcessCpu());
-            store.Add(new MachineCpu());
+            store.Add(new ProcessCpu(server.CpuUsageCalculator));
+            store.Add(new MachineCpu(server.CpuUsageCalculator));
 
             store.Add(new ServerTotalMemory());
 

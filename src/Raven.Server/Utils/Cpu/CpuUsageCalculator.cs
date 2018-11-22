@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Raven.Server.Dashboard;
 using Sparrow.Json;
@@ -10,17 +10,17 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Utils.Cpu
 {
-    internal interface ICpuUsageCalculator : IDisposable
+    public interface ICpuUsageCalculator : IDisposable
     {
         (double MachineCpuUsage, double ProcessCpuUsage) Calculate();
         void Init();
     }
 
-    [SuppressMessage("ReSharper", "StaticMemberInGenericType")]
     internal abstract class CpuUsageCalculator<T> : ICpuUsageCalculator where T : ProcessInfo
     {
-        protected static readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineResources>("Server");
-        private static readonly (double MachineCpuUsage, double ProcessCpuUsage) EmptyCpuUsage = (0, 0);
+        private readonly (double MachineCpuUsage, double ProcessCpuUsage) _emptyCpuUsage = (0.0, 0.0);
+        protected readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineResources>("Server");
+        private readonly object _locker = new object();
 
         protected (double MachineCpuUsage, double ProcessCpuUsage)? LastCpuUsage;
 
@@ -35,20 +35,26 @@ namespace Raven.Server.Utils.Cpu
 
         public (double MachineCpuUsage, double ProcessCpuUsage) Calculate()
         {
-            if (PreviousInfo == null)
-                return EmptyCpuUsage;
+            // this is a pretty quick method (sys call only), and shouldn't be
+            // called heavily, so it is easier to make sure that this is thread
+            // safe by just holding a lock.
+            lock (_locker)
+            {
+                if (PreviousInfo == null)
+                    return _emptyCpuUsage;
 
-            var currentInfo = GetProcessInfo();
-            if (currentInfo == null)
-                return EmptyCpuUsage;
+                var currentInfo = GetProcessInfo();
+                if (currentInfo == null)
+                    return _emptyCpuUsage;
 
-            var machineCpuUsage = CalculateMachineCpuUsage(currentInfo);
-            var processCpuUsage = CalculateProcessCpuUsage(currentInfo, machineCpuUsage);
+                var machineCpuUsage = CalculateMachineCpuUsage(currentInfo);
+                var processCpuUsage = CalculateProcessCpuUsage(currentInfo, machineCpuUsage);
 
-            PreviousInfo = currentInfo;
+                PreviousInfo = currentInfo;
 
-            LastCpuUsage = (machineCpuUsage, processCpuUsage);
-            return LastCpuUsage.Value;
+                LastCpuUsage = (machineCpuUsage, processCpuUsage);
+                return (machineCpuUsage, processCpuUsage);
+            }
         }
 
         protected abstract T GetProcessInfo();
@@ -109,10 +115,10 @@ namespace Raven.Server.Utils.Cpu
 
         protected override WindowsInfo GetProcessInfo()
         {
-            var systemIdleTime = new CpuUsage.FileTime();
-            var systemKernelTime = new CpuUsage.FileTime();
-            var systemUserTime = new CpuUsage.FileTime();
-            if (CpuUsage.GetSystemTimes(ref systemIdleTime, ref systemKernelTime, ref systemUserTime) == false)
+            var systemIdleTime = new FileTime();
+            var systemKernelTime = new FileTime();
+            var systemUserTime = new FileTime();
+            if (GetSystemTimes(ref systemIdleTime, ref systemKernelTime, ref systemUserTime) == false)
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info("Failure when trying to get GetSystemTimes from Windows, error code was: " + Marshal.GetLastWin32Error());
@@ -121,10 +127,30 @@ namespace Raven.Server.Utils.Cpu
 
             return new WindowsInfo
             {
-                SystemIdleTime = CpuUsage.GetTime(systemIdleTime),
-                SystemKernelTime = CpuUsage.GetTime(systemKernelTime),
-                SystemUserTime = CpuUsage.GetTime(systemUserTime)
+                SystemIdleTime = GetTime(systemIdleTime),
+                SystemKernelTime = GetTime(systemKernelTime),
+                SystemUserTime = GetTime(systemUserTime)
             };
+        }
+
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("kernel32.dll", SetLastError = true)]
+        internal static extern bool GetSystemTimes(
+            ref FileTime lpIdleTime,
+            ref FileTime lpKernelTime,
+            ref FileTime lpUserTime);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static ulong GetTime(FileTime fileTime)
+        {
+            return ((ulong)fileTime.dwHighDateTime << 32) | (uint)fileTime.dwLowDateTime;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct FileTime
+        {
+            public int dwLowDateTime;
+            public int dwHighDateTime;
         }
     }
 
@@ -234,14 +260,12 @@ namespace Raven.Server.Utils.Cpu
             JsonContextPool contextPool,
             string exec,
             string args,
-            Logger logger,
             NotificationCenter.NotificationCenter notificationCenter)
         {
             _inspector = new CpuUsageExtensionPoint(
                 contextPool,
                 exec,
                 args,
-                logger,
                 notificationCenter
             );
         }
@@ -259,7 +283,7 @@ namespace Raven.Server.Utils.Cpu
 
         public void Dispose()
         {
-            _inspector?.Dispose();
+            _inspector.Dispose();
         }
     }
 }

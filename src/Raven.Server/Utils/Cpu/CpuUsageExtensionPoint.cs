@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
+using Raven.Server.Dashboard;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -11,32 +12,22 @@ namespace Raven.Server.Utils.Cpu
     public class CpuUsageExtensionPoint : IDisposable
     {
         private readonly JsonContextPool _contextPool;
-        private readonly Logger _logger;
+        private readonly Logger _logger = LoggingSource.Instance.GetLogger<MachineResources>("Server");
         private readonly NotificationCenter.NotificationCenter _notificationCenter;
         private readonly ProcessStartInfo _startInfo;
         private readonly TimeSpan _timeout = TimeSpan.FromSeconds(10);
 
         private Process _process;
-        private bool _didRestart;
+        private DateTime _lastRestart;
 
-        private ExtensionPointData _data = new ExtensionPointData();
+        private ExtensionPointData _data;
         public ExtensionPointData BadData = new ExtensionPointData
         {
             ProcessCpuUsage = -1,
             MachineCpuUsage = -1
         };
 
-        public ExtensionPointData Data
-        {
-            get
-            {
-                if (IsDisposed && _logger.IsOperationsEnabled)
-                {
-                    _logger.Operations($"Try to get data from {nameof(CpuUsageExtensionPoint)} which was disposed");
-                }
-                return _data;
-            }
-        }
+        public ExtensionPointData Data => IsDisposed ? BadData : _data;
 
         public bool IsDisposed { get; private set; }
 
@@ -45,11 +36,9 @@ namespace Raven.Server.Utils.Cpu
             JsonContextPool contextPool,
             string exec,
             string args,
-            Logger logger,
             NotificationCenter.NotificationCenter notificationCenter)
         {
             _contextPool = contextPool;
-            _logger = logger;
             _notificationCenter = notificationCenter;
             _startInfo = new ProcessStartInfo
             {
@@ -107,7 +96,7 @@ namespace Raven.Server.Utils.Cpu
                 {
                     // When the process terminating, killed or exited
                 }
-                errors = errors + await _process.StandardError.ReadToEndAsync();
+                errors = errors + Environment.NewLine + await _process.StandardError.ReadToEndAsync();
                 NotifyWarning($"Extension point process send an error: {errors}");
             }
             catch (Exception e)
@@ -119,7 +108,6 @@ namespace Raven.Server.Utils.Cpu
         public void Dispose()
         {
             IsDisposed = true;
-            _data = BadData;
             using (_process)
             {
                 try
@@ -180,13 +168,14 @@ namespace Raven.Server.Utils.Cpu
                 {
                     using (var blittable = context.ReadForMemory(data, "cpuUsageExtensionPointData"))
                     {
-                        if (TryGetValue(blittable, nameof(ExtensionPointData.MachineCpuUsage), out var machineCpuUsage)
-                            && TryGetValue(blittable, nameof(ExtensionPointData.ProcessCpuUsage), out var processCpuUsage))
+                        if (TryGetCpuUsage(blittable, nameof(ExtensionPointData.MachineCpuUsage), out var machineCpuUsage)
+                            && TryGetCpuUsage(blittable, nameof(ExtensionPointData.ProcessCpuUsage), out var processCpuUsage))
                         {
                             _data.MachineCpuUsage = machineCpuUsage;
                             _data.ProcessCpuUsage = processCpuUsage;
                             return true;
                         }
+                        // TryGetCpuUsage call HandleError when it failed
                     }
                 }
                 catch (Exception e)
@@ -198,11 +187,11 @@ namespace Raven.Server.Utils.Cpu
             return false;
         }
 
-        private bool TryGetValue(BlittableJsonReaderObject blittable, string machineCpuUsageName, out double cpuUsage)
+        private bool TryGetCpuUsage(BlittableJsonReaderObject blittable, string propertyName, out double cpuUsage)
         {
-            if (blittable.TryGet(machineCpuUsageName, out cpuUsage) == false)
+            if (blittable.TryGet(propertyName, out cpuUsage) == false)
             {
-                HandleError($"Can't read {machineCpuUsageName} property from : {Environment.NewLine + blittable}.");
+                HandleError($"Can't read {propertyName} property from : {Environment.NewLine + blittable}.");
                 return false;
             }
             if (cpuUsage < 0 || cpuUsage > 100)
@@ -229,16 +218,17 @@ namespace Raven.Server.Utils.Cpu
             }
             finally
             {
-                if (_didRestart == false)
+                const int maxMinutesBetweenIssues = 15;
+                if (DateTime.UtcNow - _lastRestart > TimeSpan.FromMinutes(maxMinutesBetweenIssues))
                 {
-                    _didRestart = true;
+                    _lastRestart = DateTime.Now;
                     NotifyWarning($"{msg} {Environment.NewLine}Therefore the process will restart.", e);
 
                     Start();
                 }
                 else
                 {
-                    NotifyWarning($"{msg} {Environment.NewLine}Therefore the process will terminate.", e);
+                    NotifyWarning($"{msg} {Environment.NewLine}This is the second issue in cpu usage extension point process withing {maxMinutesBetweenIssues} minutes and therefore the process will terminate.", e);
                     Dispose();
                 }
             }
@@ -268,7 +258,7 @@ namespace Raven.Server.Utils.Cpu
         }
     }
 
-    public class ExtensionPointData
+    public struct ExtensionPointData
     {
         public double MachineCpuUsage { get; set; }
 

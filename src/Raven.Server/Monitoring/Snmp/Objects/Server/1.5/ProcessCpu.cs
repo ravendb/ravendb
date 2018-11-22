@@ -5,14 +5,17 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
     public class ProcessCpu : ScalarObjectBase<Gauge32>
     {
-        public ProcessCpu()
+        private readonly ICpuUsageCalculator _calculator;
+
+        public ProcessCpu(ICpuUsageCalculator calculator)
             : base(SnmpOids.Server.ProcessCpu)
         {
+            _calculator = calculator;
         }
 
         protected override Gauge32 GetData()
         {
-            return new Gauge32((int)CpuUsage.Calculate().ProcessCpuUsage);
+            return new Gauge32((int)_calculator.Calculate().ProcessCpuUsage);
         }
     }
 }
