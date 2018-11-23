@@ -263,6 +263,23 @@ select {
         }
 
         [Fact]
+        public void CanSkipAndTake()
+        {
+            var results = Query<OrderAndProduct>(@"
+match (Orders as o where id() = 'orders/821-A')-[Lines as l select Product]->(Products as p)
+select {
+    OrderId: id(o),
+    Product: p.Name,
+    Discount: l.Discount
+}
+Limit 1,1
+");
+            Assert.Equal(1, results.Count);
+            var res = results.First();
+            Assert.Equal("Ipoh Coffee" ,res.Product);
+        }
+
+        [Fact]
         public void CanUseEmptyDocumentAlias()
         {
             var results = Query<Employee>(@"

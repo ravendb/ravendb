@@ -1350,18 +1350,22 @@ namespace Raven.Server.Documents.Queries
             if (fe.Compound.Count == 1)
                 return new QueryFieldName(fe.Compound[0], fe.IsQuoted);
 
-            if (RootAliasPaths.TryGetValue(fe.Compound[0], out _))
+            if (IsGraph == false)
             {
-                if (fe.Compound.Count == 2)
+                if(RootAliasPaths.TryGetValue(fe.Compound[0], out _))
                 {
-                    return new QueryFieldName(fe.Compound[1], fe.IsQuoted);
-                }
-                return new QueryFieldName(fe.FieldValueWithoutAlias, fe.IsQuoted);
-            }
+                    if (fe.Compound.Count == 2)
+                    {
+                        return new QueryFieldName(fe.Compound[1], fe.IsQuoted);
+                    }
 
-            if (RootAliasPaths.Count != 0)
-            {
-                ThrowUnknownAlias(fe.Compound[0], parameters);
+                    return new QueryFieldName(fe.FieldValueWithoutAlias, fe.IsQuoted);
+                }
+
+                if (RootAliasPaths.Count != 0)
+                {
+                    ThrowUnknownAlias(fe.Compound[0], parameters);
+                }
             }
 
             return new QueryFieldName(fe.FieldValue, fe.IsQuoted);

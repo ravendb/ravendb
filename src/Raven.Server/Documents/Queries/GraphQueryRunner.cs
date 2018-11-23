@@ -105,11 +105,15 @@ namespace Raven.Server.Documents.Queries
                 var qr = await GetQueryResults(query, documentsContext, existingResultEtag, token);
                 var q = query.Metadata.Query;
 
-                //TODO: handle order by, load, include clauses
-
+                //TODO: handle order by, load,  clauses
+                if (query.Metadata.OrderBy != null)
+                {
+                    Sort(qr, query.Metadata.OrderBy);
+                }
 
                 if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
                 {
+                    // include clause
                     HandleResultsWithoutSelect(documentsContext, qr.Matches, final);
                 }
                 else if (q.Select != null)
@@ -134,12 +138,24 @@ namespace Raven.Server.Documents.Queries
 
                         final.AddResult(result);
                     }
+
+                    //include clause
                 }
 
                 final.TotalResults = final.Results.Count;
                 return final;
             }
         }
+
+        private void Sort((List<Match> Matches, GraphQueryPlan QueryPlan) qr, OrderByField[] orderBy)
+        {
+            foreach (var field in orderBy)
+            {
+                var orderByFieldSorter = new GraphQueryOrderByFieldSorter(field);
+                qr.Matches.Sort(orderByFieldSorter);
+            }
+        }
+
 
         private async Task<(List<Match> Matches, GraphQueryPlan QueryPlan)> GetQueryResults(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
         {
@@ -164,9 +180,8 @@ namespace Raven.Server.Documents.Queries
                             matchResults[i] = default;
                     }
                 }
-            }
-
-            return (matchResults, qp);
+            }            
+            return (matchResults.Skip(query.Start).Take(query.PageSize).ToList(), qp);
         }
 
         private static void HandleResultsWithoutSelect<TResult>(
