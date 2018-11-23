@@ -191,7 +191,7 @@
 //** `.form-group` margin
 @form-group-margin-bottom: 15px;
 
-@checkbox-border: @gray;
+@checkbox-border: @text-muted;
 
 @legend-color: @gray-dark;
 @legend-border-color: #e5e5e5;
@@ -457,6 +457,10 @@
 @state-danger-text: @brand-danger;
 @state-danger-bg: #5e3746;
 @state-danger-border: darken(spin(@state-danger-bg, -10), 5%);
+
+@state-experimental-text: @color-5-2;
+@state-experimental-bg: darken(@color-5-1, 25%);
+@state-experimental-border: darken(spin(@state-experimental-bg, -10), 5%);
 //== Tooltips
 //
 //##
@@ -724,7 +728,6 @@
 //== Code
 //
 //##
-
 @kbd-color: #fff;
 @kbd-bg: #333;
 
@@ -780,8 +783,8 @@
 @token-important: @color-2-2;
 
 @row-bg: @well-bg;
-@row-bg-selection-preview: @gray-darker;
-@row-bg-selected: @gray-dark;
+@row-bg-selection-preview: fadeout(@brand-primary,92%);
+@row-bg-selected: fadeout(@brand-primary,80%);
 
 @notification-center-bg: @body-bg;
 @main-menu-hover: @gray-darker;

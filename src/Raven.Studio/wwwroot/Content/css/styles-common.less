@@ -909,8 +909,8 @@ input[type=file] + .form-control {
         height: 35px;
         display: inline-block;
         margin: auto;
-        border: 4px solid fadeout(#FFF,80%);
-        border-top-color: fadeout(#FFF,30%);
+        border: 4px solid fadeout(@text-emphasis,80%);
+        border-top-color: fadeout(@text-emphasis,40%);
         border-radius: 50%;
         -webkit-transition: border-width 0.1s ease;
         -moz-transition: border-width 0.1s ease;
@@ -922,7 +922,7 @@ input[type=file] + .form-control {
     &.spinner-sm:before {
         width: 18px;
         height: 18px;
-        border: 3px solid rgba(255, 255, 255, 0.2);
+        border-width: 3px;
         border-top-color: inherit;
     }
 
@@ -931,7 +931,7 @@ input[type=file] + .form-control {
         position: relative;
         width: 12px;
         height: 12px;
-        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-width: 2px;
         border-top-color: inherit;
     }
 }
@@ -1608,6 +1608,12 @@ input[type=file] + .form-control {
     }
 }
 
+.modal {
+    pre {
+        background-color: @well-bg;
+    }
+}
+
 .modal-backdrop, .backdrop {
     background-color: darken(@gray-base,3%);
     opacity: @modal-backdrop-opacity;
@@ -1830,9 +1836,6 @@ ul.properties {
         max-width: @tooltip-inner-max-width;
     }
 }
-@state-experimental-text: @color-5-2;
-@state-experimental-bg: @color-5-1;
-@state-experimental-border: darken(spin(@state-experimental-bg, -10), 5%);
 
 .bg-experimental {
     .bg-variant(@state-experimental-bg, @state-experimental-text);

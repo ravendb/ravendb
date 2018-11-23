@@ -60,9 +60,9 @@ class columnPreviewPlugin<T> {
         const markupProvider = this.defaultMarkupProvider;
         this.$tooltip.on("click", ".copy", () => {
             copyToClipboard.copy(this.currentValue);
+            $(".copy", this.$tooltip).addClass("btn-success");
             $(".copy span", this.$tooltip)
                 .html("Copied!")
-                .addClass("text-success");
         });
 
         $(containerSelector).on("mouseenter", ".cell", e => {
