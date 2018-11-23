@@ -1806,10 +1806,12 @@ namespace Raven.Client.Documents.Indexes
             switch (node.NodeType)
             {
                 case ExpressionType.NewArrayInit:
+                    Out("new DynamicArray(");
                     Out("new ");
                     OutputAppropriateArrayType(node);
                     Out("[]");
                     VisitExpressions('{', node.Expressions, '}');
+                    Out(")");
                     return node;
 
                 case ExpressionType.NewArrayBounds:
