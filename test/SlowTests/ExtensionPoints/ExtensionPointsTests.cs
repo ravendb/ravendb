@@ -26,7 +26,7 @@ namespace SlowTests.ExtensionPoints
     {
         private const string SystemDbName = "System";
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
         public async Task OnDirectoryInitializeInMemoryTest()
         {
             string script;
@@ -94,7 +94,7 @@ exit 0";
             }
         }
 
-        [Fact]
+        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
         public async Task OnDirectoryInitializePersistedTest()
         {
             string script;

@@ -126,6 +126,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 Indexing = options.Indexing
             }, allFields);
 
+            if (scope.DynamicFields == null)
+                scope.DynamicFields = new Dictionary<string, FieldIndexing>();
+
+            scope.DynamicFields[name] = field.Indexing;
+
             if (scope.CreateFieldConverter == null)
                 scope.CreateFieldConverter = new LuceneDocumentConverter(new IndexField[] { });
 

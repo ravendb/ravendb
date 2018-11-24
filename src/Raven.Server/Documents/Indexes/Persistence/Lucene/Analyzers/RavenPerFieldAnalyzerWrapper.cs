@@ -10,13 +10,22 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
 {
     public sealed class RavenPerFieldAnalyzerWrapper : Analyzer
     {
         private readonly Analyzer _defaultAnalyzer;
+        private Analyzer _defaultExactAnalyzer;
+        private Analyzer _defaultSearchAnalyzer;
+
+        private readonly Func<Analyzer> _defaultSearchAnalyzerFactory;
+        private readonly Func<Analyzer> _defaultExactAnalyzerFactory;
+
         private readonly Dictionary<string, Analyzer> _analyzerMap = new Dictionary<string, Analyzer>(default(PerFieldAnalyzerComparer));
+        private readonly bool _hasDynamicFields;
 
         public struct PerFieldAnalyzerComparer : IEqualityComparer<string>
         {
@@ -64,6 +73,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
             _defaultAnalyzer = defaultAnalyzer;
         }
 
+        public RavenPerFieldAnalyzerWrapper(Analyzer defaultAnalyzer, Func<Analyzer> defaultSearchAnalyzerFactory, Func<Analyzer> defaultExactAnalyzerFactory)
+            : this(defaultAnalyzer)
+        {
+            _hasDynamicFields = true;
+            _defaultSearchAnalyzerFactory = defaultSearchAnalyzerFactory ?? throw new ArgumentNullException(nameof(defaultSearchAnalyzerFactory));
+            _defaultExactAnalyzerFactory = defaultExactAnalyzerFactory ?? throw new ArgumentNullException(nameof(defaultExactAnalyzerFactory));
+        }
+
         public void AddAnalyzer(string fieldName, Analyzer analyzer)
         {
             _analyzerMap.Add(fieldName, analyzer);
@@ -76,11 +93,28 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
 
         internal Analyzer GetAnalyzer(string fieldName)
         {
-            if (_analyzerMap.Count == 0)
-                return _defaultAnalyzer;
+            if (_analyzerMap.Count == 0 || _analyzerMap.TryGetValue(fieldName, out Analyzer value) == false)
+            {
+                if (_hasDynamicFields)
+                {
+                    var scope = CurrentIndexingScope.Current;
 
-            _analyzerMap.TryGetValue(fieldName, out Analyzer value);
-            return value ?? _defaultAnalyzer;
+                    if (scope?.DynamicFields != null && scope.DynamicFields.TryGetValue(fieldName, out var fieldIndexing))
+                    {
+                        switch (fieldIndexing)
+                        {
+                            case FieldIndexing.Search:
+                                return _defaultSearchAnalyzer ?? (_defaultSearchAnalyzer = _defaultSearchAnalyzerFactory());
+                            case FieldIndexing.Exact:
+                                return _defaultExactAnalyzer ?? (_defaultExactAnalyzer = _defaultExactAnalyzerFactory());
+                        }
+                    }
+                }
+
+                return _defaultAnalyzer;
+            }
+
+            return value;
         }
 
         public override TokenStream ReusableTokenStream(string fieldName, System.IO.TextReader reader)

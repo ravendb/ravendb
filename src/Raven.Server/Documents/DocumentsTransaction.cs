@@ -28,11 +28,11 @@ namespace Raven.Server.Documents
             _changes = changes;
         }
 
-        public DocumentsTransaction BeginAsyncCommitAndStartNewTransaction()
+        public DocumentsTransaction BeginAsyncCommitAndStartNewTransaction(DocumentsOperationContext context)
         {
             _replaced = true;
             var tx = InnerTransaction.BeginAsyncCommitAndStartNewTransaction();
-            return new DocumentsTransaction(_context, tx, _changes);
+            return new DocumentsTransaction(context, tx, _changes);
         }
 
         public void AddAfterCommitNotification(DocumentChange change)

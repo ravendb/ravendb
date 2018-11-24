@@ -47,7 +47,6 @@ using Sparrow.Logging;
 using Sparrow;
 using Constants = Raven.Client.Constants;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
-using ProcessStartInfo = Custom.Raven.System.Diagnostics.ProcessStartInfo;
 
 namespace Raven.Server.Web.System
 {
@@ -1067,8 +1066,14 @@ namespace Raven.Server.Web.System
             }
             processStartInfo.RedirectStandardOutput = true;
             processStartInfo.RedirectStandardInput = true;
-            processStartInfo.InheritHandles = false;
-            var process = RavenProcess.Start(processStartInfo, enableRaisingEvents: true);
+            var process = new Process
+            {
+                StartInfo = processStartInfo,
+                EnableRaisingEvents = true
+            };
+
+            process.Start();
+
             var result = new OfflineMigrationResult();
             var overallProgress = result.Progress as SmugglerResult.SmugglerProgress;
             var operationId = ServerStore.Operations.GetNextOperationId();
@@ -1175,7 +1180,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static async Task<(bool HasTimeout, string Line)> ReadLineOrTimeout(RavenProcess process, Task timeout, OfflineMigrationConfiguration configuration, CancellationToken token)
+        private static async Task<(bool HasTimeout, string Line)> ReadLineOrTimeout(Process process, Task timeout, OfflineMigrationConfiguration configuration, CancellationToken token)
         {
             var readline = process.StandardOutput.ReadLineAsync();
             string progressLine = null;

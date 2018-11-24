@@ -209,10 +209,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private ExplanationResult GetQueryExplanations(ExplanationOptions options, Query luceneQuery, IndexSearcher searcher, ScoreDoc scoreDoc, Document document, global::Lucene.Net.Documents.Document luceneDocument)
         {
             string key;
-            if (options != null && string.IsNullOrWhiteSpace(options.GroupKey) == false)
-                key = luceneDocument.Get(options.GroupKey, _state);
+            var hasGroupKey = options != null && string.IsNullOrWhiteSpace(options.GroupKey) == false;
+            if (_indexType.IsMapReduce())
+            {
+                if (hasGroupKey)
+                {
+                    key = luceneDocument.Get(options.GroupKey, _state);
+                    if (key == null && document.Data.TryGet(options.GroupKey, out object value))
+                        key = value?.ToString();
+                }
+                else
+                    key = luceneDocument.Get(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, _state);
+            }
             else
-                key = document.Id;
+            {
+                key = hasGroupKey
+                    ? luceneDocument.Get(options.GroupKey, _state)
+                    : document.Id;
+            }
 
             return new ExplanationResult
             {

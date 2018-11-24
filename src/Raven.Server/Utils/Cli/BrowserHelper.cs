@@ -1,5 +1,5 @@
 ﻿using System;
-using Custom.Raven.System.Diagnostics;
+using System.Diagnostics;
 using Sparrow.Platform;
 
 namespace Raven.Server.Utils.Cli
@@ -12,15 +12,15 @@ namespace Raven.Server.Utils.Cli
             {
                 if (PlatformDetails.RunningOnPosix == false)
                 {
-                    RavenProcess.Start(new ProcessStartInfo("cmd", $"/c start {url}") { InheritHandles = false });
+                    Process.Start(new ProcessStartInfo("cmd", $"/c start {url}"));
                 }
                 else if (PlatformDetails.RunningOnMacOsx)
                 {
-                    System.Diagnostics.Process.Start("open", url);
+                    Process.Start("open", url);
                 }
                 else
                 {
-                    System.Diagnostics.Process.Start("xdg-open", url);
+                    Process.Start("xdg-open", url);
                 }
 
                 return true;

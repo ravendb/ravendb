@@ -115,7 +115,7 @@ namespace SlowTests.MailingList
 
                         var results = session.Advanced.DocumentQuery<Person, Person_IdCopy_Index>()
                             .WaitForNonStaleResults()
-                            .WhereEquals("Family_Dad_Id", "people/Dad")
+                            .Search("Family_Dad_Id", "people Dad")
                             .ToArray();
 
 
@@ -194,7 +194,7 @@ namespace SlowTests.MailingList
 
                         var results = session.Advanced.DocumentQuery<Person, Person_Id_Index>()
                             .WaitForNonStaleResults()
-                            .WhereEquals("Family_Dad_Id", "people/Dad")
+                            .Search("Family_Dad_Id", "people Dad")
                             .ToArray();
 
 

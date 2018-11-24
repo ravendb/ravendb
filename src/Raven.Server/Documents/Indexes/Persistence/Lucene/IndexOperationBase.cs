@@ -55,18 +55,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     switch (value.Indexing)
                     {
                         case FieldIndexing.Exact:
-                            if (analyzers.TryGetValue(typeof(KeywordAnalyzer), out defaultAnalyzerToUse) == false)
-                                analyzers[typeof(KeywordAnalyzer)] = defaultAnalyzerToUse = new KeywordAnalyzer();
+                            defaultAnalyzerToUse = GetOrCreateAnalyzer(typeof(KeywordAnalyzer), CreateKeywordAnalyzer);
                             break;
                         case FieldIndexing.Search:
                             if (value.Analyzer != null)
                                 defaultAnalyzerToUse = GetAnalyzer(Constants.Documents.Indexing.Fields.AllFields, value.Analyzer, analyzers, forQuerying);
 
                             if (defaultAnalyzerToUse == null)
-                            {
-                                if (analyzers.TryGetValue(typeof(RavenStandardAnalyzer), out defaultAnalyzerToUse) == false)
-                                    analyzers[typeof(RavenStandardAnalyzer)] = defaultAnalyzerToUse = new RavenStandardAnalyzer(Version.LUCENE_29);
-                            }
+                                defaultAnalyzerToUse = GetOrCreateAnalyzer(typeof(RavenStandardAnalyzer), CreateStandardAnalyzer);
                             break;
                         default:
                             // explicitly ignore all other values
@@ -81,7 +77,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 analyzers.Add(defaultAnalyzerToUse.GetType(), defaultAnalyzerToUse);
             }
 
-            var perFieldAnalyzerWrapper = new RavenPerFieldAnalyzerWrapper(defaultAnalyzerToUse);
+            var perFieldAnalyzerWrapper = forQuerying == false && indexDefinition.HasDynamicFields
+                ? new RavenPerFieldAnalyzerWrapper(
+                        defaultAnalyzerToUse, 
+                        () => GetOrCreateAnalyzer(typeof(RavenStandardAnalyzer), CreateStandardAnalyzer),
+                        () => GetOrCreateAnalyzer(typeof(KeywordAnalyzer), CreateKeywordAnalyzer))
+                : new RavenPerFieldAnalyzerWrapper(defaultAnalyzerToUse);
+
             foreach (var field in indexDefinition.IndexFields)
             {
                 var fieldName = field.Value.Name;
@@ -89,8 +91,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 switch (field.Value.Indexing)
                 {
                     case FieldIndexing.Exact:
-                        if (analyzers.TryGetValue(typeof(KeywordAnalyzer), out var keywordAnalyzer) == false)
-                            analyzers[typeof(KeywordAnalyzer)] = keywordAnalyzer = new KeywordAnalyzer();
+                        var keywordAnalyzer = GetOrCreateAnalyzer(typeof(KeywordAnalyzer), CreateKeywordAnalyzer);
 
                         perFieldAnalyzerWrapper.AddAnalyzer(fieldName, keywordAnalyzer);
                         break;
@@ -122,10 +123,27 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             void AddStandardAnalyzer(string fieldName)
             {
-                if (analyzers.TryGetValue(typeof(RavenStandardAnalyzer), out var standardAnalyzer) == false)
-                    analyzers[typeof(RavenStandardAnalyzer)] = standardAnalyzer = new RavenStandardAnalyzer(Version.LUCENE_29);
+                var standardAnalyzer = GetOrCreateAnalyzer(typeof(RavenStandardAnalyzer), CreateStandardAnalyzer);
 
                 perFieldAnalyzerWrapper.AddAnalyzer(fieldName, standardAnalyzer);
+            }
+
+            Analyzer GetOrCreateAnalyzer(Type analyzerType, Func<Analyzer> createAnalyzer)
+            {
+                if (analyzers.TryGetValue(analyzerType, out var analyzer) == false)
+                    analyzers[analyzerType] = analyzer = createAnalyzer();
+
+                return analyzer;
+            }
+
+            KeywordAnalyzer CreateKeywordAnalyzer()
+            {
+                return new KeywordAnalyzer();
+            }
+
+            RavenStandardAnalyzer CreateStandardAnalyzer()
+            {
+                return new RavenStandardAnalyzer(Version.LUCENE_29);
             }
         }
 
