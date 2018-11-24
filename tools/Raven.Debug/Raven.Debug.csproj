@@ -3,10 +3,9 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <RuntimeFrameworkVersion>2.1.5</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>2.1.6</RuntimeFrameworkVersion>
     <RuntimeIdentifiers>win7-x64;win8-x64;win81-x64;win10-x64;win7-x86;win8-x86;win81-x86;win10-x86;ubuntu.14.04-x64;ubuntu.16.04-x64;ubuntu.18.04-x64</RuntimeIdentifiers>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
-    <NoWarn>NU1701</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="0.9.180305.1" />
+    <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="1.0.0" />
     <PackageReference Include="Microsoft.Extensions.CommandLineUtils" Version="1.1.1" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
   </ItemGroup>
