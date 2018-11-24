@@ -4,7 +4,6 @@ using Raven.Server.Config.Categories;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron;
-using ProcessStartInfo = Custom.Raven.System.Diagnostics.ProcessStartInfo;
 
 namespace Raven.Server.Utils
 {
@@ -34,7 +33,7 @@ namespace Raven.Server.Utils
 
         public static void OnDirectoryInitialize(StorageEnvironmentOptions options, DirectoryParameters parameters, Logger log)
         {
-            RavenProcess process = null;
+            Process process = null;
             try
             {
                 var journalPath = string.Empty;
@@ -55,15 +54,14 @@ namespace Raven.Server.Utils
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    CreateNoWindow = true,
-                    InheritHandles = false
+                    CreateNoWindow = true
                 };
 
                 var sw = Stopwatch.StartNew();
 
                 try
                 {
-                    process = RavenProcess.Start(startInfo);
+                    process = Process.Start(startInfo);
                 }
                 catch (Exception e)
                 {

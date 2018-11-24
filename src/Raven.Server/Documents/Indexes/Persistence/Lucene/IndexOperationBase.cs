@@ -81,7 +81,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 analyzers.Add(defaultAnalyzerToUse.GetType(), defaultAnalyzerToUse);
             }
 
-            var perFieldAnalyzerWrapper = new RavenPerFieldAnalyzerWrapper(defaultAnalyzerToUse);
+            var perFieldAnalyzerWrapper = forQuerying == false && indexDefinition.HasDynamicFields 
+                ? new RavenPerFieldAnalyzerWrapper(defaultAnalyzerToUse, () => standardAnalyzer ?? new RavenStandardAnalyzer(Version.LUCENE_29), () => keywordAnalyzer ?? new KeywordAnalyzer()) 
+                : new RavenPerFieldAnalyzerWrapper(defaultAnalyzerToUse);
+
             foreach (var field in indexDefinition.IndexFields)
             {
                 var fieldName = field.Value.Name;

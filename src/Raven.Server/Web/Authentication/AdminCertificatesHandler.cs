@@ -866,6 +866,29 @@ namespace Raven.Server.Web.Authentication
             return Task.CompletedTask;
         }
 
+        [RavenAction("/admin/certificates/letsencrypt/renewal-date", "GET", AuthorizationStatus.ClusterAdmin)]
+        public Task RenewalDate()
+        {
+            if (ServerStore.Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
+                throw new InvalidOperationException("This server wasn't set up using the Let's Encrypt setup mode.");
+
+            if (Server.Certificate.Certificate == null)
+                throw new InvalidOperationException("The server certificate is not loaded.");
+
+            var (_, renewalDate) = Server.CalculateRenewalDate(Server.Certificate, false);
+            
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("EstimatedRenewal");
+                writer.WriteDateTime(renewalDate, true);
+                writer.WriteEndObject();
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/admin/certificates/letsencrypt/force-renew", "POST", AuthorizationStatus.ClusterAdmin)]
         public Task ForceRenew()
         {

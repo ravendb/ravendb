@@ -1,5 +1,8 @@
 ﻿using System.Collections.Generic;
+using Raven.Client.Documents.Commands;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
+using Sparrow.Threading;
 using Xunit;
 
 namespace FastTests.Client
@@ -152,6 +155,35 @@ namespace FastTests.Client
                     users.TryGetValue("users/77", out user77);
                     Assert.NotNull(user77);
                     Assert.Equal(user77.Id, "users/77");
+                }
+            }
+        }
+
+        [Fact]
+        public void Should_Load_Many_Ids_As_Post_Request_Directly()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var ids = new List<string>();
+                using (var session = store.OpenSession())
+                {
+                    // Length of all the ids together should be larger than 1024 for POST request
+                    for (int i = 0; i < 200; i++)
+                    {
+                        var id = "users/" + i;
+                        ids.Add(id);
+                        session.Store(new User()
+                        {
+                            Name = "Person " + i
+                        }, id);
+                    }
+                    session.SaveChanges();
+                }
+                var rq1 = store.GetRequestExecutor();
+                var cmd = new GetDocumentsCommand(ids.ToArray(), null, true);
+                using (var ctx = new JsonOperationContext(1024, 1024, SharedMultipleUseFlag.None))
+                {
+                    rq1.Execute(cmd, ctx);
                 }
             }
         }

@@ -74,7 +74,14 @@ namespace Raven.Server.Documents.Queries.Results
                 return GetProjection(input, score, null, state);
 
             using (_storageScope = _storageScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Storage)))
-                return DirectGet(input, null, state);
+            {
+                var doc = DirectGet(input, null, state);
+
+                if (doc != null)
+                    doc.IndexScore = score;
+
+                return doc;
+            }
         }
 
         public override bool TryGetKey(Lucene.Net.Documents.Document document, IState state, out string key)
