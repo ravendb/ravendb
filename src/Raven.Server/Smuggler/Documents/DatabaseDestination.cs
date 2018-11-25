@@ -674,7 +674,7 @@ namespace Raven.Server.Smuggler.Documents
             private CountersHandler.ExecuteCounterBatchCommand _prevCommand;
             private Task _prevCommandTask = Task.CompletedTask;
             private int _batchSize;
-            private const int _maxBatchSize = 10000;
+            private const int MaxBatchSize = 1_024;
 
             public CounterActions(DocumentDatabase database)
             {
@@ -696,8 +696,9 @@ namespace Raven.Server.Smuggler.Documents
                     ChangeVector = counter.ChangeVector
                 };
 
-                _cmd.Add(counter.DocumentId, counterOp);
-                _batchSize++;
+                _cmd.Add(counter.DocumentId, counterOp, out var isNew);
+                if (isNew)
+                    _batchSize++;
             }
 
             public void WriteCounter(CounterDetail counterDetail)
@@ -713,7 +714,7 @@ namespace Raven.Server.Smuggler.Documents
 
             private void HandleBatchOfCountersIfNecessary()
             {
-                if (_batchSize < _maxBatchSize)
+                if (_batchSize < MaxBatchSize)
                     return;
 
                 var prevCommand = _prevCommand;

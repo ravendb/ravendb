@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         HasWrites |= operation.Type != CounterOperationType.Get &&
                                      operation.Type != CounterOperationType.None;
-                        Add(docOps.DocumentId, operation);
+                        Add(docOps.DocumentId, operation, out _);
                     }
                 }
             }
@@ -83,17 +83,16 @@ namespace Raven.Server.Documents.Handlers
                 _dictionary = new Dictionary<string, List<CounterOperation>>();
             }
 
-            public void Add(string id, CounterOperation op)
+            public void Add(string id, CounterOperation op, out bool isNew)
             {
+                isNew = false;
                 if (_dictionary.TryGetValue(id, out var existing) == false)
                 {
+                    isNew = true;
                     _dictionary[id] = new List<CounterOperation> { op };
+                    return;
                 }
-
-                else
-                {
-                    existing.Add(op);
-                }
+                existing.Add(op);
             }
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
@@ -101,12 +100,16 @@ namespace Raven.Server.Documents.Handlers
                 if (_database.ServerStore.Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
                     FeaturesAvailabilityException.Throw("Counters");
 
+                var ops = 0;
+                var countersToAdd = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+                var countersToRemove = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
                 foreach (var kvp in _dictionary)
                 {
                     Document doc = null;
                     var docId = kvp.Key;
                     string docCollection = null;
-                    
+                    ops += kvp.Value.Count;
                     foreach (var operation in kvp.Value)
                     {
                         switch (operation.Type)
@@ -127,13 +130,18 @@ namespace Raven.Server.Documents.Handlers
                             case CounterOperationType.Increment:
                                 LastChangeVector =
                                     _database.DocumentsStorage.CountersStorage.IncrementCounter(context, docId, docCollection, operation.CounterName, operation.Delta);
-                                GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);                               
+                                GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
+
+                                countersToAdd.Add(operation.CounterName);
+                                countersToRemove.Remove(operation.CounterName);
                                 break;
                             case CounterOperationType.Delete:
                                 if (_fromEtl && doc == null)
                                     break;
 
                                 LastChangeVector = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, docId, docCollection, operation.CounterName);
+                                countersToAdd.Remove(operation.CounterName);
+                                countersToRemove.Add(operation.CounterName);
                                 break;
                             case CounterOperationType.Put:
                                 if (_fromEtl && doc == null)
@@ -153,6 +161,8 @@ namespace Raven.Server.Documents.Handlers
                                         operation.CounterName, operation.ChangeVector, operation.Delta);
                                 }
 
+                                countersToAdd.Add(operation.CounterName);
+                                countersToRemove.Remove(operation.CounterName);
                                 break;
                             case CounterOperationType.None:
                                 break;
@@ -167,8 +177,12 @@ namespace Raven.Server.Documents.Handlers
 
                     if (doc != null)
                     {
-                        _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc.Data, docId);
+                        _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc.Data, docId, countersToAdd, countersToRemove);
+                        doc.Data?.Dispose(); // we cloned the data, so we can dispose it.
                     }
+
+                    countersToAdd.Clear();
+                    countersToRemove.Clear();
 
                     void LoadDocument()
                     {
@@ -205,7 +219,7 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
 
-                return CountersDetail.Counters.Count;
+                return ops;
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
