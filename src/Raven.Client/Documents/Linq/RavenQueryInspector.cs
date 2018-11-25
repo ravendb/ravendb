@@ -31,6 +31,7 @@ namespace Raven.Client.Documents.Linq
         private InMemoryDocumentSessionOperations _session;
         private bool _isMapReduce;
         private DocumentConventions _conventions;
+        private bool _isAsync;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenQueryInspector{T}"/> class.
@@ -52,6 +53,7 @@ namespace Raven.Client.Documents.Linq
             _indexName = indexName;
             _collectionName = collectionName;
             _session = session;
+            _isAsync = session is AsyncDocumentSession;
             _isMapReduce = isMapReduce;
             _provider.AfterQueryExecuted(AfterQueryExecuted);
             _expression = expression ?? Expression.Constant(this);
@@ -139,32 +141,44 @@ namespace Raven.Client.Documents.Linq
         /// </returns>
         public override string ToString()
         {
-            RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
-            string query;
-            if (_session is AsyncDocumentSession)
+            if (_isAsync)
             {
-                var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(_expression);
-                query = asyncDocumentQuery.GetIndexQuery().ToString();
-            }
-            else
-            {
-                var documentQuery = ravenQueryProvider.GetDocumentQueryFor(_expression);
-                query = documentQuery.ToString();
+                var asyncDocumentQuery = GetAsyncDocumentQuery();
+                return asyncDocumentQuery.ToString();
             }
 
-            return query;
+            var documentQuery = GetDocumentQuery();
+            return documentQuery.ToString();
         }
 
         public IndexQuery GetIndexQuery(bool isAsync = true)
         {
-            RavenQueryProviderProcessor<T> ravenQueryProvider = GetRavenQueryProvider();
             if (isAsync == false)
             {
-                var documentQuery = ravenQueryProvider.GetDocumentQueryFor(_expression);
+                var documentQuery = GetDocumentQuery();
                 return documentQuery.GetIndexQuery();
             }
-            var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(_expression);
+
+            var asyncDocumentQuery = GetAsyncDocumentQuery();
             return asyncDocumentQuery.GetIndexQuery();
+        }
+
+        internal IDocumentQuery<T> GetDocumentQuery()
+        {
+            if (_isAsync)
+                throw new InvalidOperationException("Cannot convert async query to sync document query.");
+
+            var ravenQueryProvider = GetRavenQueryProvider();
+            return ravenQueryProvider.GetDocumentQueryFor(_expression);
+        }
+
+        internal IAsyncDocumentQuery<T> GetAsyncDocumentQuery()
+        {
+            if (_isAsync == false)
+                throw new InvalidOperationException("Cannot convert sync query to async document query.");
+
+            var ravenQueryProvider = GetRavenQueryProvider();
+            return ravenQueryProvider.GetAsyncDocumentQueryFor(_expression);
         }
 
         private RavenQueryProviderProcessor<T> GetRavenQueryProvider()

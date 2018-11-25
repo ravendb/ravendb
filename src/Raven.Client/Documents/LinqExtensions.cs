@@ -1193,7 +1193,7 @@ namespace Raven.Client.Documents
 
         public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, string path, string sorterName)
         {
-            if (string.IsNullOrWhiteSpace(sorterName)) 
+            if (string.IsNullOrWhiteSpace(sorterName))
                 throw new ArgumentNullException(nameof(sorterName));
 
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -1302,6 +1302,28 @@ namespace Raven.Client.Documents
             builder.Invoke(f);
 
             return source.MoreLikeThis(f.MoreLikeThis);
+        }
+
+        public static IDocumentQuery<T> ToDocumentQuery<T>(this IQueryable<T> source)
+        {
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var results = source.Provider.CreateQuery<T>(expression);
+
+            var ravenQueryInspector = (RavenQueryInspector<T>)results;
+
+            return ravenQueryInspector.GetDocumentQuery();
+        }
+
+        public static IAsyncDocumentQuery<T> ToAsyncDocumentQuery<T>(this IQueryable<T> source)
+        {
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var results = source.Provider.CreateQuery<T>(expression);
+
+            var ravenQueryInspector = (RavenQueryInspector<T>)results;
+
+            return ravenQueryInspector.GetAsyncDocumentQuery();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
