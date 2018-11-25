@@ -179,7 +179,7 @@ UnmanagedCompare:
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Copy(void* dest, void* src, long n)
         {
-            if (n <= uint.MaxValue) // Common code-path
+            if (n < uint.MaxValue) // Common code-path
             {
                 Copy(dest, src, (uint)n);
                 return;
@@ -208,7 +208,7 @@ UnmanagedCompare:
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Set(byte* dest, byte value, long n)
         {
-            if (n <= uint.MaxValue) // Common code-path
+            if (n < uint.MaxValue) // Common code-path
             {
                 Set(dest, value, (uint)n);
                 return;
