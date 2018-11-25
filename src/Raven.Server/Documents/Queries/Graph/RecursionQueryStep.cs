@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
 using Sparrow.Json;
@@ -55,7 +56,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             _outputAlias = _stepAliases.Last();
             _allLliases.UnionWith(_left.GetAllAliases());
-            _allLliases.Add(_recursive.Alias);
+            _allLliases.Add(_recursive.Alias.Value);
         }
 
          public RecursionQueryStep(IGraphQueryStep left, RecursionQueryStep rqs)
@@ -390,7 +391,7 @@ namespace Raven.Server.Documents.Queries.Graph
                     var one = new Match();
                     foreach (var alias in _recursive.Aliases)
                     {
-                        var v = item.Match.GetResult(alias);
+                        var v = item.Match.GetResult(alias.Value);
                         if (v == null)
                             continue;
                         one.Set(alias, v);
@@ -495,7 +496,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             var prev = match.GetResult(_left.GetOutputAlias());
 
-            var result = match.GetResult(_recursive.Alias);
+            var result = match.GetResult(_recursive.Alias.Value);
             if (!(result is List<Match> matches))
                 return;
 

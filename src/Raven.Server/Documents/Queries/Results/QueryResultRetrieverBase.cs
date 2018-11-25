@@ -21,6 +21,7 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
+using Microsoft.Extensions.Primitives;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -279,7 +280,7 @@ namespace Raven.Server.Documents.Queries.Results
             DynamicJsonArray array = null;
             FieldType fieldType = null;
             var anyExtracted = false;
-            foreach (var field in indexDocument.GetFields(fieldToFetch.Name))
+            foreach (var field in indexDocument.GetFields(fieldToFetch.Name.Value))
             {
                 if (fieldType == null)
                     fieldType = GetFieldType(field.Name, indexDocument);
@@ -384,7 +385,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }
                 else
                 {
-                    name = fieldToFetch.Name;
+                    name = fieldToFetch.Name.Value;
                 }
 
                 if (fieldToFetch.QueryField.SourceAlias != null
@@ -517,7 +518,7 @@ namespace Raven.Server.Documents.Queries.Results
                     _loadedDocumentsByAliasName[fieldToFetch.QueryField.Alias] = doc;
                 }
 
-                if (string.IsNullOrEmpty(fieldToFetch.Name)) // we need the whole document here
+                if (string.IsNullOrEmpty(fieldToFetch.Name.Value)) // we need the whole document here
                 {
                     buffer.Add(doc);
                     continue;
