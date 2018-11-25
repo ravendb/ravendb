@@ -21,7 +21,7 @@ namespace Raven.Server.Dashboard
         {
             _watchers = watchers;
             _notificationsThrottle = notificationsThrottle;
-            _threadsUsage = new ThreadsUsage();
+            _threadsUsage = new ThreadsUsage(includeStackTrace: true, includeStackObjects: true);
         }
 
         protected override async Task DoWork()
@@ -53,6 +53,12 @@ namespace Raven.Server.Dashboard
             {
                 _lastSentNotification = DateTime.UtcNow;
             }
+        }
+
+        public new void Dispose()
+        {
+            base.Dispose();
+            _threadsUsage.Dispose();
         }
     }
 }

@@ -2,36 +2,62 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Microsoft.Diagnostics.Runtime;
 using Raven.Server.Dashboard;
 using Sparrow.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Utils
 {
-    public class ThreadsUsage
+    public class ThreadsUsage : IDisposable
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineResources>("ThreadsUsage");
         private (long TotalProcessorTimeTicks, long TimeTicks) _processTimes;
         private Dictionary<int, long> _threadTimesInfo = new Dictionary<int, long>();
+        private readonly bool _includeStackTrace;
+        private readonly bool _includeStackObjects;
+        private readonly DataTarget _dataTarget;
+        private readonly ClrInfo _clrVersion;
+        private readonly string _dac;
 
-        public ThreadsUsage()
+        public ThreadsUsage(bool includeStackTrace = false, bool includeStackObjects = false)
         {
+            _includeStackTrace = includeStackTrace;
+            _includeStackObjects = includeStackObjects;
+
             using (var process = Process.GetCurrentProcess())
             {
                 _processTimes = CpuUsage.GetProcessTimes(process);
+
+                try
+                {
+                    if (_includeStackTrace || _includeStackObjects)
+                    {
+                        _dataTarget = DataTarget.AttachToProcess(process.Id, 1000, AttachFlag.Passive);
+                        _clrVersion = _dataTarget.ClrVersions[0];
+                        _dac = _dataTarget.SymbolLocator.FindBinary(_clrVersion.DacInfo);
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Failed to attach to process", e);
+                }
             }
         }
 
         public ThreadsInfo Calculate()
         {
             var threadAllocations = NativeMemory.AllThreadStats
-                        .GroupBy(x => x.UnmanagedThreadId)
-                        .ToDictionary(g => g.Key, x => x.First());
+                .GroupBy(x => x.UnmanagedThreadId)
+                .ToDictionary(g => g.Key, x => x.First());
 
             var threadsInfo = new ThreadsInfo();
 
             using (var process = Process.GetCurrentProcess())
             {
+                var clrThreadsInfo = GetClrThreadsInfo(_clrVersion, _dac, _includeStackTrace, _includeStackObjects);
+
                 var previousProcessTimes = _processTimes;
                 _processTimes = CpuUsage.GetProcessTimes(process);
 
@@ -48,6 +74,7 @@ namespace Raven.Server.Utils
 
                 var threadTimesInfo = new Dictionary<int, long>();
                 double totalCpuUsage = 0;
+
                 foreach (var thread in GetProcessThreads(process))
                 {
                     try
@@ -70,6 +97,17 @@ namespace Raven.Server.Utils
                             managedThreadId = threadStats.Id;
                         }
 
+                        List<string> stackTrace = null;
+                        List<string> stackObjects = null;
+                        if (clrThreadsInfo.TryGetValue((uint)thread.Id, out var clrThreadInfo))
+                        {
+                            managedThreadId = clrThreadInfo.ManagedThreadId;
+                            if (clrThreadInfo.ThreadType != ThreadType.Other)
+                                threadName = clrThreadInfo.ThreadType.ToString();
+                            stackTrace = clrThreadInfo.StackTrace;
+                            stackObjects = clrThreadInfo.StackObjects;
+                        }
+
                         var threadState = GetThreadInfoOrDefault<ThreadState?>(() => thread.ThreadState);
                         threadsInfo.List.Add(new ThreadInfo
                         {
@@ -80,7 +118,9 @@ namespace Raven.Server.Utils
                             StartingTime = GetThreadInfoOrDefault<DateTime?>(() => thread.StartTime.ToUniversalTime()),
                             State = threadState,
                             Priority = GetThreadInfoOrDefault<ThreadPriorityLevel?>(() => thread.PriorityLevel),
-                            ThreadWaitReason = GetThreadInfoOrDefault(() => threadState == ThreadState.Wait ? thread.WaitReason : (ThreadWaitReason?)null)
+                            ThreadWaitReason = GetThreadInfoOrDefault(() => threadState == ThreadState.Wait ? thread.WaitReason : (ThreadWaitReason?)null),
+                            StackTrace = stackTrace,
+                            StackObjects = stackObjects
                         });
                     }
                     catch (InvalidOperationException)
@@ -100,9 +140,9 @@ namespace Raven.Server.Utils
 
                 _threadTimesInfo = threadTimesInfo;
                 threadsInfo.CpuUsage = Math.Min(totalCpuUsage, 100);
-
-                return threadsInfo;
             }
+
+            return threadsInfo;
         }
 
         private static T GetThreadInfoOrDefault<T>(Func<T> action)
@@ -148,5 +188,121 @@ namespace Raven.Server.Utils
 
             return threadCpuUsage;
         }
+
+        public static Dictionary<uint, ClrThreadInfo> GetClrThreadsInfo(
+            ClrInfo clrVersion, string dac, bool includeStackTrace, bool includeStackObjects)
+        {
+            var clrThreadsInfo = new Dictionary<uint, ClrThreadInfo>();
+
+            if (clrVersion == null || dac == null)
+                return clrThreadsInfo;
+
+            try
+            {
+                var runtime = clrVersion.CreateRuntime(dac);
+
+                foreach (var clrThread in runtime.Threads)
+                {
+                    if (clrThread.IsAlive == false)
+                        continue;
+
+                    var threadInfo = clrThreadsInfo[clrThread.OSThreadId] = new ClrThreadInfo
+                    {
+                        ManagedThreadId = clrThread.ManagedThreadId,
+                        ThreadType = clrThread.IsGC ? ThreadType.GC : clrThread.IsFinalizer ? ThreadType.Finalizer : ThreadType.Other
+                    };
+
+                    
+                    if (includeStackTrace)
+                    {
+                        foreach (var frame in clrThread.EnumerateStackTrace())
+                        {
+                            threadInfo.StackTrace.Add(frame.DisplayString);
+                        }
+                    }
+
+                    if (includeStackObjects)
+                    {
+                        GetStackObjects(runtime, clrThread, threadInfo);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Failed to get CLR threads info", e);
+            }
+
+            return clrThreadsInfo;
+        }
+
+        private static void GetStackObjects(ClrRuntime runtime, ClrThread clrThread, ClrThreadInfo threadInfo)
+        {
+            // We'll need heap data to find objects on the stack.
+            var heap = runtime.Heap;
+
+            // Walk each pointer aligned address on the stack.  Note that StackBase/StackLimit
+            // is exactly what they are in the TEB.  This means StackBase > StackLimit on AMD64.
+            var start = clrThread.StackBase;
+            var stop = clrThread.StackLimit;
+
+            // We'll walk these in pointer order.
+            if (start > stop)
+            {
+                var tmp = start;
+                start = stop;
+                stop = tmp;
+            }
+
+            // Walk each pointer aligned address. Ptr is a stack address.
+            for (var ptr = start; ptr <= stop; ptr += (ulong)runtime.PointerSize)
+            {
+                // Read the value of this pointer. If we fail to read the memory, break. The
+                // stack region should be in the crash dump.
+                if (runtime.ReadPointer(ptr, out var obj) == false)
+                    break;
+
+                // We check to see if this address is a valid object by simply calling
+                // GetObjectType. If that returns null, it's not an object.
+                var type = heap.GetObjectType(obj);
+                if (type == null)
+                    continue;
+
+                // there tends to be a lot of free objects in the stack.
+                if (type.IsFree == false)
+                {
+                    threadInfo.StackObjects.Add(type.Name);
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            _dataTarget?.Dispose();
+        }
+    }
+
+    public class ClrThreadInfo
+    {
+        public ClrThreadInfo()
+        {
+            StackTrace = new List<string>();
+            StackObjects = new List<string>();
+        }
+
+        public int ManagedThreadId { get; set; }
+
+        public List<string> StackTrace { get; set; }
+
+        public List<string> StackObjects { get; set; }
+
+        public ThreadType ThreadType { get; set; }
+    }
+
+    public enum ThreadType
+    {
+        Other,
+        GC,
+        Finalizer
     }
 }

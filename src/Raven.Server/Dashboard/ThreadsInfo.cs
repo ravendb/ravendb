@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Dashboard
@@ -49,6 +50,10 @@ namespace Raven.Server.Dashboard
 
         public ThreadWaitReason? ThreadWaitReason { get; set; }
 
+        public List<string> StackTrace { get; set; }
+
+        public List<string> StackObjects { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -60,7 +65,9 @@ namespace Raven.Server.Dashboard
                 [nameof(StartingTime)] = StartingTime,
                 [nameof(State)] = State,
                 [nameof(Priority)] = Priority,
-                [nameof(ThreadWaitReason)] = ThreadWaitReason
+                [nameof(ThreadWaitReason)] = ThreadWaitReason,
+                [nameof(StackTrace)] = TypeConverter.ToBlittableSupportedType(StackTrace),
+                [nameof(StackObjects)] = TypeConverter.ToBlittableSupportedType(StackObjects)
             };
         }
     }
