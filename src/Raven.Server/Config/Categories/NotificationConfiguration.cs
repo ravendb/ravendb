@@ -24,7 +24,10 @@ namespace Raven.Server.Config.Categories
             string name;
 
             // A user may choose to filter out a specific notification of either AlertRaised or PerformanceHint types
-            // or they may filter out an entire notification type (e.g. DatabaseChanged, NotificationUpdated, etc.)
+            // or they may filter out an entire notification type (e.g. PerformanceHint, DatabaseChanged, NotificationUpdated, etc.)
+            if (FilteredOutNotifications.Contains(notification.Type.ToString()))
+                return true;
+
             switch (notification)
             {
                 case AlertRaised alert:
@@ -34,8 +37,7 @@ namespace Raven.Server.Config.Categories
                     name = hint.HintType.ToString();
                     break;
                 default:
-                    name = notification.Type.ToString();
-                    break;
+                    return false;
             }
             
             return FilteredOutNotifications.Contains(name);
