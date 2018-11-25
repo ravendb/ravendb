@@ -5,6 +5,7 @@ using System.Reflection;
 using Newtonsoft.Json;
 using Sparrow;
 using Sparrow.Extensions;
+using Sparrow.Json;
 
 namespace Raven.Client.Json.Converters
 {
@@ -56,7 +57,7 @@ namespace Raven.Client.Json.Converters
             writer.WriteEndObject();
         }
 
-        public Dictionary<TKey, TValue> GenericReadJson<TKey, TValue>(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        public unsafe Dictionary<TKey, TValue> GenericReadJson<TKey, TValue>(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
             var result = new Dictionary<TKey, TValue>();
             do
@@ -68,39 +69,22 @@ namespace Raven.Client.Json.Converters
                     throw new InvalidOperationException("Expected PropertyName, Got " + reader.TokenType);
 
                 object key;
-                var s = reader.Value as string;
-                if (s != null)
+                if (reader.Value is string s)
                 {
-                    if (typeof(TKey) == typeof(DateTime) || typeof(TKey) == typeof(DateTime?))
+                    fixed (char* str = s)
                     {
-                        DateTime time;
-                        if (DateTime.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
-                                                   DateTimeStyles.RoundtripKind, out time))
+                        var r = LazyStringParser.TryParseDateTime(str, s.Length, out DateTime dt, out DateTimeOffset dto);
+                        switch (r)
                         {
-                            key = time.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(time, DateTimeKind.Local) : time;
+                            case LazyStringParser.Result.DateTime:
+                                key = dt;
+                                break;
+                            case LazyStringParser.Result.DateTimeOffset:
+                                key = dto;
+                                break;
+                            default:
+                                throw new InvalidOperationException("No idea how to parse " + typeof(TKey));
                         }
-                        else
-                        {
-                            throw new InvalidOperationException("Could not parse date time from " + s);
-                        }
-                    }
-                    else if (typeof(TKey) == typeof(DateTimeOffset) || typeof(TKey) == typeof(DateTimeOffset?))
-                    {
-                        DateTimeOffset time;
-                        if (DateTimeOffset.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
-                                                         DateTimeStyles.RoundtripKind, out time))
-                        {
-                            key = time;
-                        }
-                        else
-                        {
-                            throw new InvalidOperationException("Could not parse date time offset from " + s);
-                        }
-
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException("No idea how to parse " + typeof(TKey));
                     }
                 }
                 else

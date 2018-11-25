@@ -7,6 +7,7 @@
 using System;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
+using Sparrow.Json;
 
 namespace Raven.Client.Json.Converters
 {
@@ -43,15 +44,18 @@ namespace Raven.Client.Json.Converters
         /// <param name="existingValue">The existing value of object being read.</param>
         /// <param name="serializer">The calling serializer.</param>
         /// <returns>The object value.</returns>
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        public override unsafe object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            var input = reader.Value as string;
-            if (input != null && LuceneDateTimePattern.IsMatch(input))
+            if (reader.Value is string input && LuceneDateTimePattern.IsMatch(input))
             {
-                var stringToDate = DateTools.StringToDate(input);
-                if (objectType == typeof(DateTimeOffset) || objectType == typeof(DateTimeOffset?))
-                    return new DateTimeOffset(stringToDate, DateTimeOffset.Now.Offset);
-                return DateTime.SpecifyKind(stringToDate, DateTimeKind.Local);
+                fixed (char* str = input)
+                {
+                    var result = LazyStringParser.TryParseDateTime(str, input.Length, out DateTime dt, out DateTimeOffset dto);
+                    if (result == LazyStringParser.Result.DateTime)
+                        return DateTime.SpecifyKind(dt, DateTimeKind.Local);
+                    if (result == LazyStringParser.Result.DateTimeOffset)
+                        return dto;
+                }
             }
             return reader.Value;
         }

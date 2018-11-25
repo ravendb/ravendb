@@ -3,6 +3,7 @@ using System.Globalization;
 using Newtonsoft.Json;
 using Sparrow;
 using Sparrow.Extensions;
+using Sparrow.Json;
 
 namespace Raven.Client.Json.Converters
 {
@@ -32,29 +33,20 @@ namespace Raven.Client.Json.Converters
                 throw new ArgumentException(string.Format("Not idea how to process argument: '{0}'", value));
         }
 
-        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        public override unsafe object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            var s = reader.Value as string;
-            if (s != null)
+            if (reader.Value is string s)
             {
-                if (objectType == typeof(DateTime) || objectType == typeof(DateTime?))
+                fixed (char * str = s)
                 {
-                    DateTime time;
-                    if (DateTime.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out time))
-                    {
-                        if (s.EndsWith("+00:00"))
-                            return time.ToUniversalTime();
-                        return time;
-                    }
+                    var result = LazyStringParser.TryParseDateTime(str, s.Length, out DateTime dt, out DateTimeOffset dto);
+                    if (result == LazyStringParser.Result.DateTime)
+                        return dt;
+                    if (result == LazyStringParser.Result.DateTimeOffset)
+                        return dto;
                 }
-                if (objectType == typeof(DateTimeOffset) || objectType == typeof(DateTimeOffset?))
-                {
-                    DateTimeOffset time;
-                    if (DateTimeOffset.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out time))
-                        return time;
-                }
-
             }
+
             return DeferReadToNextConverter(reader, objectType, serializer, existingValue);
         }
 
