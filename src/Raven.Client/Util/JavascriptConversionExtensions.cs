@@ -734,12 +734,24 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (context.Node is MemberExpression memberExpression &&
-                    memberExpression.Member.Name == "Value" &&
-                    memberExpression.Expression.Type.IsNullableType())
+                if (!(context.Node is MemberExpression memberExpression) || 
+                    memberExpression.Expression.Type.IsNullableType() == false)
+                    return;
+
+                if (memberExpression.Member.Name == "Value")
                 {
                     context.PreventDefault();
                     context.Visitor.Visit(memberExpression.Expression);
+                }
+                else if (memberExpression.Member.Name == "HasValue")
+                {
+                    context.PreventDefault();
+                    var writer = context.GetWriter();
+                    using (writer.Operation(memberExpression))
+                    {
+                        context.Visitor.Visit(memberExpression.Expression);
+                        writer.Write(" != null");
+                    }
                 }
 
             }

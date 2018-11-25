@@ -2438,6 +2438,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private static bool HasComputation(MemberExpression memberExpression)
         {
+            if (memberExpression.Member.Name == "HasValue" &&
+                memberExpression.Expression.Type.IsNullableType())
+            {
+                return true;
+            }
+
             var cur = memberExpression;
 
             while (cur != null)
