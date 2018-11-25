@@ -38,7 +38,14 @@ namespace Raven.Client.Documents.Session.Tokens
                 if (i > 0)
                     writer.Append(", ");
 
-                WriteField(writer, fieldToFetch);
+                if (fieldToFetch == null)
+                {
+                    writer.Append("null");
+                }
+                else
+                {
+                    WriteField(writer, fieldToFetch);
+                }
 
                 if (IsCustomFunction)
                     continue;

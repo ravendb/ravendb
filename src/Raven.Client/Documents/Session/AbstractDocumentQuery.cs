@@ -1720,7 +1720,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         {
             sourceAlias = null;
 
-            if (fields.Length != 1)
+            if (fields.Length != 1 || fields[0] == null)
                 return;
 
             var indexOf = fields[0].IndexOf(".", StringComparison.Ordinal);
