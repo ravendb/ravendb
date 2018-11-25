@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Extensions.Primitives;
 using Sparrow;
 using Sparrow.Json;
 
@@ -23,14 +24,14 @@ namespace Raven.Server.Documents.Queries.AST
             for (int i = 0; i < Path.Length; i++)
             {
                 sb.Append(Path[i].IsEdge ? "[" : "(");
-                sb.Append(Path[i].Alias);
+                sb.Append(Path[i].Alias.Value);
                 sb.Append(Path[i].IsEdge ? "]" : ")");
 
                 if (i + 1 < Path.Length)
                 {
                     if(Path[i+1].Recursive != null)
                     {
-                        sb.Append(Path[i + 1].Recursive);
+                        sb.Append(Path[i + 1].Recursive.Value);
                         continue;
                     }
 
@@ -93,7 +94,7 @@ namespace Raven.Server.Documents.Queries.AST
         {
             var sp = new StringBuilder(" recursive ");
             if (Alias.Length != 0)
-                sp.Append(" as ").Append(Alias).Append(" ");
+                sp.Append(" as ").Append(Alias.Value).Append(" ");
 
             if(Options?.Count > 0)
             {

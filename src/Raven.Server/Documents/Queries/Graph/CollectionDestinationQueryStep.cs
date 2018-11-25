@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -20,7 +21,7 @@ namespace Raven.Server.Documents.Queries.Graph
         {
             _colectionName = colectionName;
             _alias = alias;
-            _aliases = new HashSet<string> { alias };
+            _aliases = new HashSet<string> { alias.Value };
             _context = documentsContext;
             _documentStorage = documentStorage;
         }
@@ -39,7 +40,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public void Analyze(GraphQueryRunner.Match match, GraphQueryRunner.GraphDebugInfo graphDebugInfo)
         {
-            var result = match.GetResult(_alias);
+            var result = match.GetResult(_alias.Value);
             if (result == null)
                 return;
 
@@ -65,7 +66,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public string GetOutputAlias()
         {
-            return _alias;
+            return _alias.Value;
         }
 
         public ValueTask Initialize()

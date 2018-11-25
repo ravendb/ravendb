@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents
         public const string DoNotRemove = "DoNotRemove";
         private readonly ReaderWriterLockSlim _disposing = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
-            new ConcurrentDictionary<StringSegment, DateTime>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
+            new ConcurrentDictionary<StringSegment, DateTime>(StringSegmentComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<string, Timer> _wakeupTimers = new ConcurrentDictionary<string, Timer>();
 
         public readonly ResourceCache<DocumentDatabase> DatabasesCache = new ResourceCache<DocumentDatabase>();
@@ -518,7 +519,7 @@ namespace Raven.Server.Documents
 
                 var db = CreateDocumentsStorage(databaseName, config);
                 _serverStore.NotificationCenter.Add(
-                    DatabaseChanged.Create(databaseName, DatabaseChangeType.Load));
+                    DatabaseChanged.Create(databaseName.Value, DatabaseChangeType.Load));
 
                 return db;
             }
@@ -563,11 +564,11 @@ namespace Raven.Server.Documents
                 // This is in case when an deletion request was issued prior to the actual loading of the database.
                 try
                 {
-                    var record = _serverStore.LoadDatabaseRecord(databaseName, out _);
+                    var record = _serverStore.LoadDatabaseRecord(databaseName.Value, out _);
                     if (record == null)
                         return;
 
-                    ShouldDeleteDatabase(databaseName, record);
+                    ShouldDeleteDatabase(databaseName.Value, record);
                 }
                 catch
                 {
@@ -584,8 +585,8 @@ namespace Raven.Server.Documents
             void AddToInitLog(string txt)
             {
                 string msg = txt;
-                msg = $"[Load Database] {DateTime.UtcNow} :: Database '{(string)databaseName}' : {msg}";
-                if (InitLog.TryGetValue(databaseName, out var q))
+                msg = $"[Load Database] {DateTime.UtcNow} :: Database '{databaseName}' : {msg}";
+                if (InitLog.TryGetValue(databaseName.Value, out var q))
                     q.Enqueue(msg);
                 if (_logger.IsInfoEnabled)
                     _logger.Info(msg);
@@ -594,7 +595,7 @@ namespace Raven.Server.Documents
             try
             {
                 // force this to have a new value if one already exists
-                InitLog.AddOrUpdate(databaseName,
+                InitLog.AddOrUpdate(databaseName.Value,
                     s => new ConcurrentQueue<string>(),
                     (s, existing) => new ConcurrentQueue<string>());
 
@@ -633,7 +634,7 @@ namespace Raven.Server.Documents
             }
             finally
             {
-                InitLog.TryRemove(databaseName, out var _);
+                InitLog.TryRemove(databaseName.Value, out var _);
             }
         }
 
@@ -645,7 +646,7 @@ namespace Raven.Server.Documents
 
         public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false)
         {
-            if (databaseName.IsNullOrWhiteSpace())
+            if (databaseName.Trim().Length == 0)
                 throw new ArgumentNullException(nameof(databaseName), "Database name cannot be empty");
             if (databaseName.Equals("<system>")) // This is here to guard against old ravendb tests
                 throw new ArgumentNullException(nameof(databaseName),
@@ -768,7 +769,7 @@ namespace Raven.Server.Documents
                 return;
 
             LastRecentlyUsed.TryRemove(databaseName, out _);
-            DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out _, caller).Dispose();
+            DatabasesCache.RemoveLockAndReturn(databaseName.Value, CompleteDatabaseUnloading, out _, caller).Dispose();
             ScheduleDatabaseWakeup(databaseName.Value, dueTime);
         }
 

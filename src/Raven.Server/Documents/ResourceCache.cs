@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -18,12 +19,12 @@ namespace Raven.Server.Documents
     public class ResourceCache<TResource> : IEnumerable<KeyValuePair<StringSegment, Task<TResource>>>
     {
         readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseInsensitive = 
-                    new ConcurrentDictionary<StringSegment, Task<TResource>>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
+                    new ConcurrentDictionary<StringSegment, Task<TResource>>(StringSegmentComparer.OrdinalIgnoreCase);
         readonly ConcurrentDictionary<StringSegment, Task<TResource>> _caseSensitive 
-            = new ConcurrentDictionary<StringSegment, Task<TResource>>(StringSegmentEqualityComparer.Instance);
+            = new ConcurrentDictionary<StringSegment, Task<TResource>>(StringSegmentComparer.Ordinal);
 
         private readonly ConcurrentDictionary<StringSegment, ConcurrentSet<StringSegment>> _mappings =
-            new ConcurrentDictionary<StringSegment, ConcurrentSet<StringSegment>>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
+            new ConcurrentDictionary<StringSegment, ConcurrentSet<StringSegment>>(StringSegmentComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// This locks the entire cache. Use carefully.

@@ -1,12 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Text;
+using Microsoft.Extensions.Primitives;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
 {
     public class GraphQuery
     {
-        public HashSet<StringSegment> RecursiveMatches = new HashSet<StringSegment>(StringSegmentEqualityComparer.Instance);
+        public HashSet<StringSegment> RecursiveMatches = new HashSet<StringSegment>(StringSegmentComparer.Ordinal);
 
         public Dictionary<StringSegment, Query> WithDocumentQueries = new Dictionary<StringSegment, Query>();
 
@@ -29,7 +30,7 @@ namespace Raven.Server.Documents.Queries.AST
         public bool TryAddFunction(StringSegment name, (string FunctionText, Esprima.Ast.Program Program) func)
         {
             if (DeclaredFunctions == null)
-                DeclaredFunctions = new Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
+                DeclaredFunctions = new Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)>(StringSegmentComparer.Ordinal);
 
             return DeclaredFunctions.TryAdd(name, func);
         }

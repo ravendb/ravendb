@@ -1,6 +1,7 @@
 
 using System;
 using System.Globalization;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Json;
@@ -40,8 +41,8 @@ namespace Raven.Server.Documents.Queries.AST
             {
                 case BetweenExpression between:
                     var src = Evaluate(between.Source, value);
-                    var hValue = GetFieldValue(between.Max.Token, between.Max.Value, queryParameters);
-                    var lValue = GetFieldValue(between.Min.Token, between.Min.Value, queryParameters);
+                    var hValue = GetFieldValue(between.Max.Token.Value, between.Max.Value, queryParameters);
+                    var lValue = GetFieldValue(between.Min.Token.Value, between.Min.Value, queryParameters);
 
                     if (Compare(lValue, src) < 0)
                         return false;
@@ -232,12 +233,12 @@ namespace Raven.Server.Documents.Queries.AST
                     switch (right)
                     {
                         case string rs:
-                            return seg.Compare(rs, StringComparison.OrdinalIgnoreCase);
+                            return string.Compare(seg.Value, rs, StringComparison.OrdinalIgnoreCase);
                         case StringSegment rseg:
-                            return rseg.Compare(seg, StringComparison.OrdinalIgnoreCase);
+                            return string.Compare(rseg.Value, seg.Value, StringComparison.OrdinalIgnoreCase);
                         case LazyStringValue _:
                         case LazyCompressedStringValue _:
-                            return seg.Compare(right.ToString(), StringComparison.OrdinalIgnoreCase);
+                            return string.Compare(seg.Value, right.ToString(), StringComparison.OrdinalIgnoreCase);
                         default:
                             return null;
                     }
@@ -256,7 +257,7 @@ namespace Raven.Server.Documents.Queries.AST
                     case string rs:
                         return string.Compare(s, rs, StringComparison.OrdinalIgnoreCase);
                     case StringSegment rseg:
-                        return rseg.Compare(s, StringComparison.OrdinalIgnoreCase);
+                        return string.Compare(s, rseg.Value, StringComparison.OrdinalIgnoreCase);
                     case LazyStringValue _:
                     case LazyCompressedStringValue _:
                         return string.Compare(s, right.ToString(), StringComparison.OrdinalIgnoreCase);
@@ -278,9 +279,9 @@ namespace Raven.Server.Documents.Queries.AST
                             queryParameters.TryGetMember(ve.Token, out var r);
                             return r;
                         case ValueTokenType.Long:
-                            return QueryBuilder.ParseInt64WithSeparators(ve.Token);
+                            return QueryBuilder.ParseInt64WithSeparators(ve.Token.Value);
                         case ValueTokenType.Double:
-                            return double.Parse(ve.Token, CultureInfo.InvariantCulture);
+                            return double.Parse(ve.Token.AsSpan(), NumberStyles.AllowThousands | NumberStyles.Float, CultureInfo.InvariantCulture);
                         case ValueTokenType.String:
                             return ve.Token;
                         case ValueTokenType.True:

@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Sparrow.Collections;
 using Sparrow.Global;
 using Sparrow.Json.Parsing;
@@ -83,7 +84,7 @@ namespace Sparrow.Json
                 return;
             }
 
-            pathCache = new Dictionary<StringSegment, object>(StringSegmentEqualityStructComparer.BoxedInstance);
+            pathCache = new Dictionary<StringSegment, object>(StringSegmentComparer.Ordinal);
             pathCacheByIndex = new Dictionary<int, object>(NumericEqualityComparer.BoxedInstanceInt32);
         }
 
@@ -501,7 +502,7 @@ namespace Sparrow.Json
         {
             EnsureNotDisposed();
             LazyStringValue value = GetLazyString(key, longLived: true);
-            _fieldNames[key] = value;
+            _fieldNames[key.Value] = value;
 
             //sanity check, in case the 'value' is manually disposed outside of this function
             Debug.Assert(value.IsDisposed == false);
@@ -536,7 +537,7 @@ namespace Sparrow.Json
                 state.FindEscapePositionsIn(address, ref actualSize, escapePositionsSize);
 
                 state.WriteEscapePositionsTo(address + actualSize);
-                LazyStringValue result = longLived == false ? AllocateStringValue(field, address, actualSize) : new LazyStringValue(field, address, actualSize, this);
+                LazyStringValue result = longLived == false ? AllocateStringValue(field.Value, address, actualSize) : new LazyStringValue(field.Value, address, actualSize, this);
                 result.AllocatedMemoryData = memory;
 
                 if (state.EscapePositions.Count > 0)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
@@ -109,7 +110,7 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 if (parameters.TryGetMember(value.Token, out var parameterValue) == false)
-                    QueryBuilder.ThrowParameterValueWasNotProvided(value.Token, QueryText, parameters);
+                    QueryBuilder.ThrowParameterValueWasNotProvided(value.Token.Value, QueryText, parameters);
 
                 return QueryBuilder.GetValueTokenType(parameterValue, QueryText, parameters, unwrapArrays);
             }

@@ -30,8 +30,8 @@ namespace FastTests.Server.Documents.Queries.Parser
             qs.Init(q);
 
             Assert.True(qs.Identifier());
-            Assert.Equal(start, qs.TokenStart);
-            Assert.Equal(len, qs.TokenLength);
+            Assert.Equal(start, qs.Token.Offset);
+            Assert.Equal(len, qs.Token.Length);
         }
 
 
@@ -65,9 +65,9 @@ namespace FastTests.Server.Documents.Queries.Parser
             var result = qs.TryNumber();
             Assert.NotNull(result);
             if (result == NumberToken.Double)
-                Assert.Equal((double)expected, double.Parse(q.Substring(qs.TokenStart, qs.TokenLength), CultureInfo.InvariantCulture));
+                Assert.Equal((double)expected, double.Parse(qs.Token.Value, CultureInfo.InvariantCulture));
             else
-                Assert.Equal((long)expected, long.Parse(q.Substring(qs.TokenStart, qs.TokenLength), CultureInfo.InvariantCulture));
+                Assert.Equal((long)expected, long.Parse(qs.Token.Value, CultureInfo.InvariantCulture));
         }
 
         [Theory]
@@ -79,8 +79,8 @@ namespace FastTests.Server.Documents.Queries.Parser
 
             Assert.True(qs.Identifier());
             Assert.True(qs.Identifier());
-            Assert.Equal(start, qs.TokenStart);
-            Assert.Equal(len, qs.TokenLength);
+            Assert.Equal(start, qs.Token.Offset);
+            Assert.Equal(len, qs.Token.Length);
         }
     }
 }

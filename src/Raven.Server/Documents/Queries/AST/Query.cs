@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Exceptions;
 using Sparrow;
 
@@ -28,7 +29,7 @@ namespace Raven.Server.Documents.Queries.AST
         public bool TryAddFunction(StringSegment name, (string FunctionText, Esprima.Ast.Program Program) func)
         {
             if (DeclaredFunctions == null)
-                DeclaredFunctions = new Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
+                DeclaredFunctions = new Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)>(StringSegmentComparer.OrdinalIgnoreCase);
 
             return DeclaredFunctions.TryAdd(name, func);
         }
