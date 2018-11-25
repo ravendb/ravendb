@@ -195,8 +195,8 @@ namespace Raven.Server.Documents.Queries.Facets
         {
             if (expression is BetweenExpression bee)
             {
-                var hValue = ConvertFieldValue(bee.Max.Token, bee.Max.Value, query.Query.QueryParameters);
-                var lValue = ConvertFieldValue(bee.Min.Token, bee.Min.Value, query.Query.QueryParameters);
+                var hValue = ConvertFieldValue(bee.Max.Token.Value, bee.Max.Value, query.Query.QueryParameters);
+                var lValue = ConvertFieldValue(bee.Min.Token.Value, bee.Min.Value, query.Query.QueryParameters);
 
                 var fieldName = ((FieldExpression)bee.Source).GetText(null);
 
@@ -229,7 +229,7 @@ namespace Raven.Server.Documents.Queries.Facets
                         var fieldName = ExtractFieldName(be, query);
 
                         var r = (ValueExpression)be.Right;
-                        var fieldValue = ConvertFieldValue(r.Token, r.Value, query.Query.QueryParameters);
+                        var fieldValue = ConvertFieldValue(r.Token.Value, r.Value, query.Query.QueryParameters);
 
                         type = fieldValue.Type;
 
@@ -296,7 +296,7 @@ namespace Raven.Server.Documents.Queries.Facets
                 return lfe.GetText(null);
 
             if (be.Left is ValueExpression lve)
-                return lve.Token;
+                return lve.Token.Value;
 
             ThrowUnsupportedRangeExpression(query, be.Left);
             return null;

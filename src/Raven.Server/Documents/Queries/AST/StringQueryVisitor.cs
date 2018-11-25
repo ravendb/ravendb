@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Extensions.Primitives;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -67,7 +68,7 @@ namespace Raven.Server.Documents.Queries.AST
                 if (expressions[i].Alias != null)
                 {
                     _sb.Append(" AS ");
-                    _sb.Append(expressions[i].Alias.Value);
+                    _sb.Append(expressions[i].Alias.Value.Value);
                 }
             }
         }
@@ -113,7 +114,7 @@ namespace Raven.Server.Documents.Queries.AST
         public override void VisitDeclaredFunction(StringSegment name, string func)
         {
             EnsureLine();
-            _sb.Append("DECLARE function ").Append(name).AppendLine(func).AppendLine();
+            _sb.Append("DECLARE function ").Append(name.Value).AppendLine(func).AppendLine();
         }
 
         public override void VisitWhereClause(QueryExpression where)
@@ -361,7 +362,7 @@ namespace Raven.Server.Documents.Queries.AST
                 Visit(withClause.Value);
                 _indent--;
                 EnsureLine();
-                _sb.Append("} AS ").Append(withClause.Key);
+                _sb.Append("} AS ").Append(withClause.Key.Value);
                 _sb.AppendLine();
             }
         }
@@ -372,7 +373,7 @@ namespace Raven.Server.Documents.Queries.AST
             {
                 EnsureLine();
                 
-                VisitWithEdgesExpression(withEdgesClause.Key, withEdgesClause.Value);
+                VisitWithEdgesExpression(withEdgesClause.Key.Value, withEdgesClause.Value);
                 
             }
         }

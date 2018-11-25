@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using Microsoft.Extensions.Primitives;
 using Raven.Server.Json;
 using Sparrow;
 using Sparrow.Json;
@@ -140,7 +141,7 @@ namespace Raven.Server.Utils
 
         private static bool HasSuffixSeparator(StringSegment includePath, out int indexOfPrefixStart)
         {
-            indexOfPrefixStart = includePath.IndexOfLast(SuffixSeparatorChar);
+            indexOfPrefixStart = includePath.LastIndexOf(SuffixSeparator);
 
             if (indexOfPrefixStart == -1)
                 return false;
@@ -165,7 +166,7 @@ namespace Raven.Server.Utils
             var doubleVal = val as LazyNumberValue;
             if (doubleVal != null)
                 val = doubleVal.Inner;
-            var res = string.Format(suffixSegment, val).TrimEnd(']');
+            var res = string.Format(suffixSegment.Value, val).TrimEnd(']');
             return res == "" ? null : res;
         }
 

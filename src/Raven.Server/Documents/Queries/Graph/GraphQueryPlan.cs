@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -168,7 +169,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         private IGraphQueryStep BuildQueryPlanForMatchNode(MatchPath node)
         {            
-            Sparrow.StringSegment alias = node.Alias;
+            var alias = node.Alias;
             if (GraphQuery.WithDocumentQueries.TryGetValue(alias, out var query) == false)
             {
                 throw new InvalidOperationException($"BuildQueryPlanForMatchVertex was invoked for allias='{alias}' which is supposed to be a node but no corresponding WITH clause was found.");
