@@ -34,6 +34,7 @@ namespace rvn
             ConfigureAdminChannelCommand();
             ConfigureWindowsServiceCommand();
             ConfigureLogsCommand();
+            ConfigureClrMd();
 
             _app.OnExecute(() =>
             {
@@ -112,6 +113,50 @@ namespace rvn
                         {
                             return ExitWithError("RavenDB server PID argument is invalid.", cmd);
                         }
+                    }
+
+                    return 0;
+                });
+            });
+        }
+
+        private static void ConfigureClrMd()
+        {
+            _app.Command("ClrMD", cmd =>
+            {
+                cmd.ExtendedHelpText = cmd.Description = "Attach to a RavenDB process to get debug info using Microsoft.Diagnostics.Runtime";
+                cmd.HelpOption(HelpOptionString);
+                var pidArg = cmd.Argument("ProcessID", "RavenDB Server process ID");
+                var tidArg = cmd.Argument("ThreadID", "The thread ID stack to display");
+                var command = cmd.Argument("Command", "The command to execute");
+
+                cmd.OnExecute(() =>
+                {
+                    if (string.IsNullOrEmpty(command.Value))
+                    {
+                        return ExitWithError("Command cannot be empty, options: !ClrStack or !DumpStackObjects", cmd);
+                    }
+
+                    int? pid = null;
+                    if (string.IsNullOrEmpty(pidArg.Value) == false)
+                    {
+                        if (int.TryParse(pidArg.Value, out var pidAsInt) == false)
+                            return ExitWithError("RavenDB server PID argument is invalid.", cmd);
+
+                        pid = pidAsInt;
+                    }
+
+                    int? tid = null;
+                    if (string.IsNullOrEmpty(pidArg.Value) &&
+                        int.TryParse(tidArg.Value, out var tidAsInt))
+                    {
+                        tid = tidAsInt;
+                    }
+
+                    var clrMd = new ClrMd(pid, tid, command.Value);
+                    using (clrMd)
+                    {
+                        clrMd.CollectData();
                     }
 
                     return 0;
