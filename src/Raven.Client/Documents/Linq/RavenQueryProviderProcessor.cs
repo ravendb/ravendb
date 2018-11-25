@@ -2064,9 +2064,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             if (value is string || value is char)
             {
-                value = $"\"{value}\"";
+                return $"\"{value}\"";
             }
-            return value.ToString();
+
+            return value?.ToString();
         }
 
         private void AddReturnStatmentToOutputFunction(Expression expression)
@@ -2974,28 +2975,32 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void HandleKeywordsIfNeeded(ref string field, ref string alias)
         {
-            if (NeedToAddFromAliasToField(field))
+            if (field != null)
             {
-                AddFromAliasToFieldToFetch(ref field, ref alias);
-            }
-            else if (_aliasKeywords.Contains(field))
-            {
-                AddDefaultAliasToQuery();
-                AddFromAliasToFieldToFetch(ref field, ref alias, true);
-            }
-
-            var indexOf = field.IndexOf(".", StringComparison.OrdinalIgnoreCase);
-            if (indexOf != -1)
-            {
-                var parameter = field.Substring(0, indexOf);
-                if (_aliasKeywords.Contains(parameter))
+                if (NeedToAddFromAliasToField(field))
                 {
-                    // field is a nested path that starts with RQL keyword,
-                    // need to quote the keyword
-                    var nestedPath = field.Substring(indexOf + 1);
+                    AddFromAliasToFieldToFetch(ref field, ref alias);
+                }
+                else if (_aliasKeywords.Contains(field))
+                {
                     AddDefaultAliasToQuery();
-                    AddFromAliasToFieldToFetch(ref parameter, ref alias, true);
-                    field = $"{parameter}.{nestedPath}";
+                    AddFromAliasToFieldToFetch(ref field, ref alias, true);
+                }
+
+                var indexOf = field.IndexOf(".", StringComparison.OrdinalIgnoreCase);
+                if (indexOf != -1)
+                {
+                    var parameter = field.Substring(0, indexOf);
+                    if (_aliasKeywords.Contains(parameter))
+                    {
+                        // field is a nested path that starts with RQL keyword,
+                        // need to quote the keyword
+
+                        var nestedPath = field.Substring(indexOf + 1);
+                        AddDefaultAliasToQuery();
+                        AddFromAliasToFieldToFetch(ref parameter, ref alias, true);
+                        field = $"{parameter}.{nestedPath}";
+                    }
                 }
             }
 
