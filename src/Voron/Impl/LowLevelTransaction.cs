@@ -154,12 +154,11 @@ namespace Voron.Impl
             _journal = env.Journal;
             _id = txId;
             _freeSpaceHandling = previous._freeSpaceHandling;
-            _allocator = previous._allocator;
-
-            _disposeAllocator = previous._disposeAllocator;
-            previous._disposeAllocator = false;
-
             PersistentContext = previous.PersistentContext;
+
+            _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+            _disposeAllocator = true;
+
             Flags = TransactionFlags.ReadWrite;
 
             _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);

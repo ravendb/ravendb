@@ -25,7 +25,7 @@ namespace FastTests.Voron.Optimizations
                     database.DocumentsStorage.Put(context, "1", null, b);
                     database.DocumentsStorage.Put(context, "2", null, b);
 
-                    var tx2 = tx1.BeginAsyncCommitAndStartNewTransaction();
+                    var tx2 = tx1.BeginAsyncCommitAndStartNewTransaction(context);
                     context.Transaction = tx2;
 
                     database.DocumentsStorage.Put(context, "1", null, b);
@@ -35,7 +35,7 @@ namespace FastTests.Voron.Optimizations
                     tx1.Dispose();
 
                     tx2.InnerTransaction.OpenTable(tableSchema, "Collection.Tombstones.@empty");
-                    var tx3 = tx2.BeginAsyncCommitAndStartNewTransaction();
+                    var tx3 = tx2.BeginAsyncCommitAndStartNewTransaction(context);
                     context.Transaction = tx3;
 
                     tx3.InnerTransaction.OpenTable(tableSchema, "Collection.Tombstones.@empty");
