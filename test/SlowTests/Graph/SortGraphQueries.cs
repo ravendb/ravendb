@@ -74,7 +74,7 @@ namespace SlowTests.Graph
                         match (Orders as o)
                         order by o.Lines
                         ").First();
-                    Assert.Equal("orders/709-A", result.Id);
+                    Assert.Equal("orders/1-A", result.Id);
                 }
             }
         }
@@ -91,7 +91,7 @@ namespace SlowTests.Graph
                         match (Orders as o)
                         order by o.ShipTo
                         ").First();
-                    Assert.Equal("orders/578-A", result.Id);
+                    Assert.Equal("orders/1-A", result.Id);
                 }
             }
         }

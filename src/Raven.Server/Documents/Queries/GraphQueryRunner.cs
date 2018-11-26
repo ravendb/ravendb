@@ -143,16 +143,16 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private void Sort(List<Match> matches, OrderByField[] orderBy)
+        private void Sort(List<Match> matches, OrderByField[] orderBy, string databaseName, string query)
         {
             if (orderBy.Length == 1)
             {
-                var orderByFieldSorter = new GraphQueryOrderByFieldComparer(orderBy.First());
+                var orderByFieldSorter = new GraphQueryOrderByFieldComparer(orderBy.First(), databaseName, query);
                 matches.Sort(orderByFieldSorter);
                 return;
             }
 
-            var orderByMltipleFieldsSorter = new GraphQueryMultipleFieldsComparer(orderBy);
+            var orderByMltipleFieldsSorter = new GraphQueryMultipleFieldsComparer(orderBy, databaseName, query);
             matches.Sort(orderByMltipleFieldsSorter);
         }
 
@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.Queries
 
             if (query.Metadata.OrderBy != null)
             {
-                Sort(matchResults, query.Metadata.OrderBy);
+                Sort(matchResults, query.Metadata.OrderBy, Database.Name, query.Query);
             }
 
             var filter = q.GraphQuery.Where;

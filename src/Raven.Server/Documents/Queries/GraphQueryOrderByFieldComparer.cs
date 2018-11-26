@@ -14,9 +14,13 @@ namespace Raven.Server.Documents.Queries
         private BlittablePath _path;
         private int _order;
         public readonly Logger Log = LoggingSource.Instance.GetLogger<GraphQueryOrderByFieldComparer>("GraphQueryOrderByFieldComparer");
+        private readonly string _databaseName;
+        private readonly string _query;
 
-        public GraphQueryOrderByFieldComparer(OrderByField field)
+        public GraphQueryOrderByFieldComparer(OrderByField field, string databaseName, string query)
         {
+            _databaseName = databaseName;
+            _query = query;
             var fieldName = field.Name.Value;
             var indexOfDot = fieldName.IndexOf('.');
             if (indexOfDot < 0)
@@ -32,9 +36,10 @@ namespace Raven.Server.Documents.Queries
         {
             _order = _field.Ascending ? 1 : -1;
             object xObject;
-            object yObject;
+            object yObject = null;
             var xResult = x.GetResult(_alias);
             var yResult = y.GetResult(_alias);
+
             switch (xResult)
             {
                 case Document xDocument:
@@ -60,6 +65,7 @@ namespace Raven.Server.Documents.Queries
                     {
                         xObject = xLazyStringValue;
                         yObject = yLazyStringValue;
+                        break;
                     }
                     else if(yResult is string yStringValue)
                     {
@@ -68,7 +74,6 @@ namespace Raven.Server.Documents.Queries
                         break;
                     }
                     return LogMissmatchTypesReturnOrder(xResult, yResult);
-                    break;
                 case string xString:
                     if (yResult is string yString)
                     {
@@ -82,56 +87,51 @@ namespace Raven.Server.Documents.Queries
                         break;
                     }
                     return LogMissmatchTypesReturnOrder(xResult, yResult);
+                case LazyNumberValue _:
+                case int _:
+                case long _:
+                case double _:
+                    xObject = xResult;
+                    var (isNumber, compare) = SetObjectIfNumericType(xResult, yResult, ref yObject);
+                    if (isNumber == false)
+                        return compare;
                     break;
-                case LazyNumberValue xLazyNumberValue:
-                    xObject = xLazyNumberValue;
-                    switch (yResult)
-                    {
-                        case int i:
-                            yObject = i;
-                            break;
-                        case long l:
-                            yObject = l;
-                            break;
-                        case double d:
-                            yObject = d;
-                            break;
-                        case float f:
-                            yObject = f;
-                            break;
-                        case LazyNumberValue lnv:
-                            yObject = lnv;
-                            break;
-                        default:
-                            return LogMissmatchTypesReturnOrder(xResult, yResult);
-                    }                                        
-                    break;
-                case int xInt:
-                    if (yResult is int yInt)
-                    {
-                        xObject = xInt;
-                        yObject = yInt;
-                        break;
-                    }
-                    return LogMissmatchTypesReturnOrder(xResult, yResult);
-                case long xLong:
-                    if (yResult is long yLong)
-                    {
-                        xObject = xLong;
-                        yObject = yLong;
-                        break;
-                    }
-                    return LogMissmatchTypesReturnOrder(xResult, yResult);
-                case double xDouble:
-                    if (yResult is double yDouble)
-                    {
-                        xObject = xDouble;
-                        yObject = yDouble;
-                        break;
-                    }
-                    return LogMissmatchTypesReturnOrder(xResult, yResult);
                 default:
                     return LogMissmatchTypesReturnOrder(xResult, yResult);
+            }
+
+            return Compare(xObject, yObject);
+        }
+
+        private (bool IsNumber,int Compare) SetObjectIfNumericType(object xResult, object yResult, ref object yObject)
+        {
+            switch (yResult)
+            {
+                case int _:
+                case long _:
+                case double _:
+                case float _:
+                case LazyNumberValue _:
+                    yObject = yResult;
+                    break;
+                default:
+                    return (false, LogMissmatchTypesReturnOrder(xResult, yResult));
+            }
+
+            return (true, 0);
+        }
+
+        private int Compare(object xObject, object yObject )
+        {
+            //Null values will appear last
+            if (xObject == null)
+            {
+                return _order;
+            }
+
+            if (yObject == null)
+            {
+                return _order * -1;
             }
 
             switch (xObject)
@@ -141,17 +141,18 @@ namespace Raven.Server.Documents.Queries
                     {
                         return xLazyStringValue.CompareTo(yLazyStringValue) * _order;
                     }
-                    else if (yResult is string yStringValue)
+                    else if (yObject is string yStringValue)
                     {
                         return xLazyStringValue.CompareTo(yStringValue) * _order;
                     }
+
                     return LogMissmatchTypesReturnOrder(xObject, yObject);
-                    break;
                 case string xString:
                     if (yObject is string yString)
                     {
                         return string.CompareOrdinal(xString, yString) * _order;
                     }
+
                     return LogMissmatchTypesReturnOrder(xObject, yObject);
                 case LazyNumberValue xLazyNumberValue:
                     switch (yObject)
@@ -170,37 +171,95 @@ namespace Raven.Server.Documents.Queries
                             return LogMissmatchTypesReturnOrder(xObject, yObject);
                     }
                 case long xLong:
-                    if (yObject is long yLong)
+                    switch (yObject)
                     {
-                        return xLong.CompareTo(yLong) * _order;
+                        case int _:
+                        case long _:
+                        case double _:
+                        case float _:
+                        case LazyNumberValue _:
+                            return xLong.CompareTo(yObject) * _order;
+                        default:
+                            return LogMissmatchTypesReturnOrder(xObject, yObject);
                     }
-                    return LogMissmatchTypesReturnOrder(xObject, yObject);
-                case IComparable xComparable:
-                    if(yObject.GetType() == xObject.GetType())
-                        return xComparable.CompareTo(yObject) * _order;
-                    return LogMissmatchTypesReturnOrder(xObject, yObject);
+                case int xInt:
+                    switch (yObject)
+                    {
+                        case int _:
+                        case long _:
+                        case double _:
+                        case float _:
+                        case LazyNumberValue _:
+                            return xInt.CompareTo(yObject) * _order;
+                        default:
+                            return LogMissmatchTypesReturnOrder(xObject, yObject);
+                    }
+                case double xDouble:
+                    switch (yObject)
+                    {
+                        case int _:
+                        case long _:
+                        case double _:
+                        case float _:
+                        case LazyNumberValue _:
+                            return xDouble.CompareTo(yObject) * _order;
+                        default:
+                            return LogMissmatchTypesReturnOrder(xObject, yObject);
+                    }
+                case float xFloat:
+                    switch (yObject)
+                    {
+                        case int _:
+                        case long _:
+                        case double _:
+                        case float _:
+                        case LazyNumberValue _:
+                            return xFloat.CompareTo(yObject) * _order;
+                        default:
+                            return LogMissmatchTypesReturnOrder(xObject, yObject);
+                    }
                 case BlittableJsonReaderArray xBlittableJsonReaderArray:
                     if (yObject is BlittableJsonReaderArray yBlittableJsonReaderArray)
                     {
-                        return string.CompareOrdinal(xBlittableJsonReaderArray.ToString(), yBlittableJsonReaderArray.ToString());
+                        return CompareBlittableArray(xBlittableJsonReaderArray, yBlittableJsonReaderArray);
                     }
                     return LogMissmatchTypesReturnOrder(xObject, yObject);
                 case BlittableJsonReaderObject xBlittableJsonReaderObject:
                     if (yObject is BlittableJsonReaderObject yBlittableJsonReaderObject)
                     {
-                        return string.CompareOrdinal(xBlittableJsonReaderObject.ToString(), yBlittableJsonReaderObject.ToString());
+                        return xBlittableJsonReaderObject.Location.CompareTo(yBlittableJsonReaderObject.Location);                  
                     }
+
                     return LogMissmatchTypesReturnOrder(xObject, yObject);
                 default:
                     return LogMissmatchTypesReturnOrder(xObject, yObject);
             }
         }
 
+        private int CompareBlittableArray(BlittableJsonReaderArray xBlittableJsonReaderArray, BlittableJsonReaderArray yBlittableJsonReaderArray)
+        {
+            var xCurr = 0;
+            var yCurr = 0;
+            while (xCurr < xBlittableJsonReaderArray.Length && yCurr< yBlittableJsonReaderArray.Length)
+            {
+                var res = Compare(xBlittableJsonReaderArray[xCurr++], yBlittableJsonReaderArray[yCurr++]);
+                if (res != 0)
+                    return res * _order;
+            }
+
+            if (xCurr == xBlittableJsonReaderArray.Length && yCurr == yBlittableJsonReaderArray.Length)
+            {
+                return 0;
+            }
+
+            return (xCurr - yCurr) * _order; //longer with equal prefix is bigger
+        }
+
         private int LogMissmatchTypesReturnOrder(object xResult, object yResult)
         {
             if (Log.IsInfoEnabled)
             {
-                Log.Info($"Got unexpected types for compare ${xResult} of type {xResult.GetType().Name} and ${yResult} of type {yResult.GetType().Name}.");
+                Log.Info($"Database: {_databaseName} Graph Query: {_query} Got unexpected types to compare: {xResult} of type {xResult.GetType().Name} and {yResult} of type {yResult.GetType().Name}, this may yield unexpected query ordering.");
             }
 
             return _order;
@@ -211,12 +270,12 @@ namespace Raven.Server.Documents.Queries
     {
         private List<GraphQueryOrderByFieldComparer> _comparers;
 
-        public GraphQueryMultipleFieldsComparer(IEnumerable<OrderByField> fields)
+        public GraphQueryMultipleFieldsComparer(IEnumerable<OrderByField> fields, string databaseName, string query)
         {
             _comparers = new List<GraphQueryOrderByFieldComparer>();
             foreach (var field in fields)
             {
-                _comparers.Add(new GraphQueryOrderByFieldComparer(field));
+                _comparers.Add(new GraphQueryOrderByFieldComparer(field, databaseName, query));
             }
         }
 
