@@ -13,6 +13,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.Restore;
@@ -120,7 +121,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var fullBackupText = "a " + (_configuration.BackupType == BackupType.Backup ? "full backup" : "snapshot");
                     _logger.Info($"Creating {(_isFullBackup ? fullBackupText : "an incremental backup")}");
                 }
-                var currentLastRaftIndex = GetDatabaseRecord().EtagForBackup;
+                var currentLastRaftIndex = GetDatabaseEtagForBackup();
 
                 if (_isFullBackup == false)
                 {
@@ -249,12 +250,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private DatabaseRecord GetDatabaseRecord()
+        private long GetDatabaseEtagForBackup()
         {
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                return _serverStore.Cluster.ReadDatabase(context, _database.Name);
+                var databaseRecord = _serverStore.Cluster.ReadRawDatabase(context, _database.Name, out _);
+                if (databaseRecord.TryGet(nameof(DatabaseRecord.EtagForBackup), out long etagForBackUp))
+                    return etagForBackUp;
+                return 0;
             }
         }
 

@@ -1076,6 +1076,17 @@ namespace Raven.Server.ServerWide
         {
             switch (type)
             {
+                case nameof(UpdatePeriodicBackupCommand):
+                case nameof(UpdateExternalReplicationCommand):
+                case nameof(AddRavenEtlCommand):
+                case nameof(AddSqlEtlCommand):
+                case nameof(UpdateRavenEtlCommand):
+                case nameof(UpdateSqlEtlCommand):
+                case nameof(DeleteOngoingTaskCommand):
+                case nameof(PutRavenConnectionStringCommand):
+                case nameof(PutSqlConnectionStringCommand):
+                case nameof(RemoveRavenConnectionStringCommand):
+                case nameof(RemoveSqlConnectionStringCommand):
                 case nameof(PutIndexCommand):
                 case nameof(PutAutoIndexCommand):
                 case nameof(DeleteIndexCommand):
