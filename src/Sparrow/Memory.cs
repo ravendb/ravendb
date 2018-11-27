@@ -214,7 +214,7 @@ namespace Sparrow
         public static void Move(byte* dest, byte* src, int n)
         {
             // if dest and src overlaps, we need to call specifically to memmove pinvoke supporting overlapping
-            if (dest - n >= src &&
+            if (dest + n >= src &&
                 src + n >= dest)
             {
                 var _ = PlatformDetails.RunningOnPosix
