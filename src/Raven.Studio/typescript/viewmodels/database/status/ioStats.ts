@@ -246,6 +246,7 @@ class ioStats extends viewModelBase {
     private static readonly step = 200;
     private static readonly minGapSize = 10 * 1000; // 10 seconds
     private static readonly axisHeight = 35; 
+    private static readonly bufferSize = 50000;
 
     private static readonly indexesString = "Indexes";
 
@@ -276,6 +277,8 @@ class ioStats extends viewModelBase {
 
     private liveViewClient = ko.observable<liveIOStatsWebSocketClient>();
     private data: Raven.Server.Documents.Handlers.IOMetricsResponse;
+    private bufferIsFull = ko.observable<boolean>(false);
+    private bufferUsage = ko.observable<string>("0.0");
     private closedIndexesItemsCache: Array<IOMetricsRecentStatsWithCache>;
     private commonPathsPrefix: string;     
     private totalWidth: number;
@@ -304,6 +307,9 @@ class ioStats extends viewModelBase {
 
     constructor() {
         super();
+
+        this.bindToCurrentInstance("clearGraphWithConfirm");
+        
         this.searchText.throttle(700).subscribe(() => this.filterTracks());
 
         ioStats.meterTypes.forEach(type => {
@@ -528,6 +534,7 @@ class ioStats extends viewModelBase {
             }
 
             this.data = mergedData;
+            this.checkBufferUsage();
             this.prepareTimeData();
 
             if (!firstTime) {
@@ -555,6 +562,18 @@ class ioStats extends viewModelBase {
         };
 
         this.liveViewClient(new liveIOStatsWebSocketClient(this.activeDatabase(), onDataUpdate));
+    }
+    
+    private checkBufferUsage() {
+        const dataCount = _.sumBy(this.data.Environments, env => _.sumBy(env.Files, files => files.Recent.length));
+        
+        const usage = Math.min(100, dataCount * 100.0 / ioStats.bufferSize);
+        this.bufferUsage(usage.toFixed(1));
+
+        if (dataCount > ioStats.bufferSize) {
+            this.bufferIsFull(true);
+            this.cancelLiveView();
+        }
     }
 
     scrollToRight() {
@@ -864,6 +883,10 @@ class ioStats extends viewModelBase {
         finally {
             context.restore();
         }
+    }
+
+    toggleScroll() {
+        this.autoScroll.toggle();
     }
 
     private onZoom() {
@@ -1306,6 +1329,7 @@ class ioStats extends viewModelBase {
 
     private dataImported(result: string) {
         this.cancelLiveView();
+        this.bufferIsFull(false);
 
         try {
             const importedData: Raven.Server.Documents.Handlers.IOMetricsResponse = JSON.parse(result); 
@@ -1342,11 +1366,26 @@ class ioStats extends viewModelBase {
         });
     }
 
-    closeImport() {
-        this.isImport(false);
+    clearGraphWithConfirm() {
+        this.confirmationMessage("Clear graph data", "Do you want to discard all collected IO statistics?")
+            .done(result => {
+                if (result.can) {
+                    this.clearGraph();
+                }
+            })
+    }
+    
+    clearGraph() {
+        this.bufferIsFull(false);
+        this.cancelLiveView();
         this.hasAnyData(false);
         this.resetGraphData();
         this.enableLiveView();
+    }
+
+    closeImport() {
+        this.isImport(false);
+        this.clearGraph();
     }   
 
     private resetGraphData() {
