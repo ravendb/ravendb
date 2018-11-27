@@ -13,7 +13,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 {
     public class OracleClientSchemaTest : SqlAwareTestBase
     {
-        [Fact]
+        [RequiresOracleSqlFact]
         public void CanFetchSchema()
         {
             using (WithSqlDatabase(MigrationProvider.OracleClient, out var connectionString, out string schemaName, includeData: false))
