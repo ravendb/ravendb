@@ -1,37 +1,52 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 using Raven.Server.SqlMigration.Schema;
 
-namespace Raven.Server.SqlMigration.NpgSQL
+namespace Raven.Server.SqlMigration.OracleClient
 {
-    internal partial class NpgSqlDatabaseMigrator : GenericDatabaseMigrator
+    internal partial class OracleClientDatabaseMigrator : GenericDatabaseMigrator
     {
-        public const string SelectColumns = "select c.TABLE_SCHEMA, c.TABLE_NAME, c.COLUMN_NAME, c.DATA_TYPE" +
-                                            " from information_schema.COLUMNS c join information_schema.TABLES t " +
-                                            " on c.TABLE_CATALOG = t.TABLE_CATALOG and c.TABLE_SCHEMA = t.TABLE_SCHEMA and c.TABLE_NAME = t.TABLE_NAME " +
-                                            " where t.TABLE_TYPE <> 'VIEW' AND t.table_schema = 'public'";
+        public const string GetSchema = "select user_cons_columns.owner as TABLE_SCHEMA from user_cons_columns WHERE ROWNUM = 1";
 
-        public const string SelectPrimaryKeys = "select tc.TABLE_SCHEMA, tc.TABLE_NAME, COLUMN_NAME " +
-                                                "from information_schema.TABLE_CONSTRAINTS as tc " +
-                                                "inner join information_schema.KEY_COLUMN_USAGE as ku " +
-                                                "on tc.CONSTRAINT_TYPE = 'PRIMARY KEY' and tc.constraint_name = ku.CONSTRAINT_NAME" +
-                                                " order by ORDINAL_POSITION";
+        public static readonly string SelectColumns = "SELECT (select user_cons_columns.owner from user_cons_columns WHERE ROWNUM = 1) as TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM USER_TAB_COLS " +
+            "where TABLE_NAME not in (select view_name from all_views where owner = (select user_cons_columns.owner from user_cons_columns WHERE ROWNUM = 1))";
 
-        public const string SelectReferentialConstraints = "select CONSTRAINT_NAME, UNIQUE_CONSTRAINT_NAME " +
-                                                           "from information_schema.REFERENTIAL_CONSTRAINTS";
+        public const string SelectPrimaryKeys = "select user_cons_columns.owner as TABLE_SCHEMA, user_cons_columns.table_name, user_cons_columns.column_name " +
+                                                "from user_constraints, user_cons_columns " +
+                                                "where user_constraints.constraint_type = 'P' " +
+                                                "and user_constraints.constraint_name = user_cons_columns.constraint_name " +
+                                                "and user_constraints.owner = user_cons_columns.owner " +
+                                                "order by user_cons_columns.owner, user_cons_columns.table_name, user_cons_columns.position";
 
-        public const string SelectKeyColumnUsage = "select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME" +
-                                                                      " from information_schema.KEY_COLUMN_USAGE " +
-                                                                      "order by ORDINAL_POSITION";
+        public const string SelectReferentialConstraints = "select CONSTRAINT_NAME, R_CONSTRAINT_NAME AS \"UNIQUE_CONSTRAINT_NAME\" from user_constraints where CONSTRAINT_TYPE = 'R'";
+
+        public const string SelectKeyColumnUsage = "select user_constraints.owner as \"TABLE_SCHEMA\", user_constraints.TABLE_NAME, USER_CONS_COLUMNS.COLUMN_NAME, user_constraints.CONSTRAINT_NAME " +
+                                                                      "from user_constraints inner join USER_CONS_COLUMNS on user_constraints.CONSTRAINT_NAME = USER_CONS_COLUMNS.CONSTRAINT_NAME " +
+                                                                      "where user_constraints.constraint_TYPE = 'P' OR user_constraints.constraint_TYPE = 'R'";
 
         public override DatabaseSchema FindSchema()
         {
             using (var connection = OpenConnection())
             {
+                string schemaName = null;
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = GetSchema;
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            schemaName = reader["TABLE_SCHEMA"].ToString();
+                        }
+                    }
+                }
+
                 var schema = new DatabaseSchema
                 {
-                    CatalogName = connection.Database
-                };
+                    CatalogName = schemaName ?? ConnectionString.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries).First(s => s.StartsWith("USER")).Split(new char[] { '=' }, StringSplitOptions.RemoveEmptyEntries)[1]
+            };
 
                 FindTableNames(connection, schema);
                 FindPrimaryKeys(connection, schema);

@@ -84,7 +84,25 @@
                                     </div>
                                 </div>
                             </div>
-
+                            <div data-bind="visible: databaseType() === 'OracleClient', with: oracleClient">
+                                <div class="form-group"
+                                     data-bind="validationElement: connectionString">
+                                    <label class="control-label">Connection string<i class="required"></i></label>
+                                    <div class="flex-grow">
+                                        <textarea class="form-control"
+                                                  data-bind="textInput: connectionString" rows="3"
+                                                  title="The connection string for the Oracle Database server"
+                                                  placeholder="Enter the complete connection string for the Oracle Database server">                                        
+                                        </textarea>
+                                        <div>
+                                            <small>
+                                                <i class="icon-info"></i>
+                                                Please include database name in your connection string.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="form-group flex-horizontal">
                                 <div>
                                     <button class="btn btn-default" type="button"
@@ -139,7 +157,7 @@
                                     <label class="control-label">&nbsp;</label>
                                     <div class="toggle">
                                         <input id="includeUnsupported" type="checkbox" data-bind="checked: advanced.includeUnsupported">
-                                        <label for="includeUnsupported">Include <strong>unsupported</strong> documents</label>
+                                        <label for="includeUnsupported">Include <strong>unsupported</strong> data types</label>
                                     </div>
                                 </div>
                             </div>

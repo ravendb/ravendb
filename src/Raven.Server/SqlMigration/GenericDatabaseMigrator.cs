@@ -5,7 +5,6 @@ using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Npgsql;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Documents;
@@ -473,7 +472,7 @@ namespace Raven.Server.SqlMigration
             return connection;
         }
 
-        protected string GetQueryByPrimaryKey(RootCollection collection, TableSchema tableSchema, string[] primaryKeyValues, out Dictionary<string, object> queryParameters)
+        protected virtual string GetQueryByPrimaryKey(RootCollection collection, TableSchema tableSchema, string[] primaryKeyValues, out Dictionary<string, object> queryParameters)
         {
             var primaryKeyColumns = tableSchema.PrimaryKeyColumns;
             if (primaryKeyColumns.Count != primaryKeyValues.Length)
@@ -496,7 +495,7 @@ namespace Raven.Server.SqlMigration
             return "select * from " + QuoteTable(collection.SourceTableSchema, collection.SourceTableName) + " where " + wherePart;
         }
 
-        private object ValueAsObject(TableSchema tableSchema, string column, string[] primaryKeyValue, int index)
+        public object ValueAsObject(TableSchema tableSchema, string column, string[] primaryKeyValue, int index)
         {
             var type = tableSchema.Columns.Find(x => x.Name == column).Type;
             var value = type == ColumnType.Number ? (object)int.Parse(primaryKeyValue[index].ToString()) : primaryKeyValue[index];
@@ -538,7 +537,7 @@ namespace Raven.Server.SqlMigration
             }
         }
         
-        protected IDataProvider<DynamicJsonArray> CreateArrayLinkDataProvider(ReferenceInformation refInfo, DbConnection connection)
+        protected virtual IDataProvider<DynamicJsonArray> CreateArrayLinkDataProvider(ReferenceInformation refInfo, DbConnection connection)
         {
             var query = "select " + string.Join(", ", refInfo.TargetPrimaryKeyColumns.Select(QuoteColumn)) + " from " + QuoteTable(refInfo.SourceSchema, refInfo.SourceTableName)
                         + " where " + string.Join(" and ", refInfo.ForeignKeyColumns.Select((column, idx) => QuoteColumn(column) + " = @p" + idx));
@@ -562,7 +561,7 @@ namespace Raven.Server.SqlMigration
             });
         }
 
-        protected IDataProvider<EmbeddedObjectValue> CreateObjectEmbedDataProvider(ReferenceInformation refInfo, DbConnection connection)
+        protected virtual IDataProvider<EmbeddedObjectValue> CreateObjectEmbedDataProvider(ReferenceInformation refInfo, DbConnection connection)
         {
             var query = "select * from " + QuoteTable(refInfo.SourceSchema, refInfo.SourceTableName)
                                          + " where " + string.Join(" and ", refInfo.TargetPrimaryKeyColumns.Select((column, idx) => QuoteColumn(column) + " = @p" + idx));
@@ -584,7 +583,7 @@ namespace Raven.Server.SqlMigration
             });
         }
 
-        protected IDataProvider<EmbeddedArrayValue> CreateArrayEmbedDataProvider(ReferenceInformation refInfo, DbConnection connection)
+        protected virtual IDataProvider<EmbeddedArrayValue> CreateArrayEmbedDataProvider(ReferenceInformation refInfo, DbConnection connection)
         {
             var query = "select * from " + QuoteTable(refInfo.SourceSchema, refInfo.SourceTableName)
                                          + " where " + string.Join(" and ", refInfo.ForeignKeyColumns.Select((column, idx) => QuoteColumn(column) + " = @p" + idx));
