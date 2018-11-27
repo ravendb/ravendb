@@ -141,7 +141,7 @@ namespace SlowTests.Voron.Bugs
 
                     fixed (byte* b = value1)
                     fixed (byte* c = memoryStream.ToArray())
-                        Assert.Equal(0, UnmanagedMemory.Compare(b, c, value1.Length));
+                        Assert.Equal(0, Memory.Compare(b, c, value1.Length));
                 }
             }
         }

@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter;
-using Raven.Server.Utils;
+using Raven.Server.Utils.Cpu;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.LowMemory;
@@ -15,6 +15,7 @@ namespace Raven.Server.Dashboard
 {
     public class MachineResourcesNotificationSender : BackgroundWorkBase
     {
+        private readonly RavenServer _server;
         private readonly ConcurrentSet<ConnectedWatcher> _watchers;
         private readonly TimeSpan _notificationsThrottle;
 
@@ -22,10 +23,15 @@ namespace Raven.Server.Dashboard
         private readonly byte[][] _buffers;
         private readonly SmapsReader _smapsReader;
 
-        public MachineResourcesNotificationSender(string resourceName,
-            ConcurrentSet<ConnectedWatcher> watchers, TimeSpan notificationsThrottle, CancellationToken shutdown)
+        public MachineResourcesNotificationSender(
+            string resourceName,
+            RavenServer server,
+            ConcurrentSet<ConnectedWatcher> watchers, 
+            TimeSpan notificationsThrottle, 
+            CancellationToken shutdown)
             : base(resourceName, shutdown)
         {
+            _server = server;
             _watchers = watchers;
             _notificationsThrottle = notificationsThrottle;
 
@@ -69,10 +75,15 @@ namespace Raven.Server.Dashboard
             }
         }
 
-        public static MachineResources GetMachineResources(SmapsReader smapsReader)
+        public MachineResources GetMachineResources(SmapsReader smapsReader)
+        {
+            return GetMachineResources(smapsReader, _server.CpuUsageCalculator);
+        }
+
+        public static MachineResources GetMachineResources(SmapsReader smapsReader, ICpuUsageCalculator cpuUsageCalculator)
         {
             var memInfo = MemoryInformation.GetMemoryInfo(smapsReader, extendedInfo: true);
-            var cpuInfo = CpuUsage.Calculate();
+            var cpuInfo = cpuUsageCalculator.Calculate();
 
             var machineResources = new MachineResources
             {

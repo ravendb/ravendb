@@ -952,7 +952,7 @@ namespace Raven.Client.Documents.Session
 
             var ravenQueryInspector = new RavenQueryInspector<T>();
             var ravenQueryProvider = new RavenQueryProvider<T>(
-                this,
+                CreateDocumentQueryInternal<T>(), // clone
                 IndexName,
                 CollectionName,
                 type,
@@ -986,7 +986,7 @@ namespace Raven.Client.Documents.Session
                 throw new InvalidOperationException(
                     $"DocumentQuery source has (index name: {IndexName}, collection: {CollectionName}), but got request for (index name: {indexName}, collection: {collectionName}), you cannot change the index name / collection when using DocumentQuery as the source");
 
-            return SelectFields<TResult>();
+            return CreateDocumentQueryInternal<TResult>();
         }
 
         public IAsyncDocumentQuery<TResult> AsyncQuery<TResult>(string indexName, string collectionName, bool isMapReduce)

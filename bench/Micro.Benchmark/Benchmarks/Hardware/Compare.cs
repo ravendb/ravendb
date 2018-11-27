@@ -683,8 +683,8 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             byte* currentEnd = end - (size & (32 - 1));
             while (bpx < currentEnd)
             {
-                var vx = Unsafe.Read<Vector<byte>>(bpx);
-                var vy = Unsafe.Read<Vector<byte>>(bpy);
+                var vx = Memory.Read<Vector<byte>>(bpx);
+                var vy = Memory.Read<Vector<byte>>(bpy);
 
                 var xor = Vector.Xor(vx, vy);
                 if (xor == Vector<byte>.Zero)
@@ -730,8 +730,8 @@ namespace Micro.Benchmark.Benchmarks.Hardware
 
             while (l > 0)
             {
-                var vx = Unsafe.Read<Vector<byte>>(bpx);
-                var vy = Unsafe.Read<Vector<byte>>(bpy);
+                var vx = Memory.Read<Vector<byte>>(bpx);
+                var vy = Memory.Read<Vector<byte>>(bpy);
 
                 var xor = Vector.Xor(vx, vy);
                 if (xor == Vector<byte>.Zero)

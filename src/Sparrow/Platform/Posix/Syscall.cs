@@ -13,22 +13,14 @@ namespace Sparrow.Platform.Posix
     {
         internal const string LIBC_6 = "libc";
 
-        [DllImport(LIBC_6, EntryPoint = "memcpy", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Unicode, SetLastError = false)]
-        [SecurityCritical]
-        public static extern IntPtr Copy(byte* dest, byte* src, long count);
-
         [DllImport(LIBC_6, EntryPoint = "memcmp", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
         [SecurityCritical]
         public static extern int Compare(byte* b1, byte* b2, long count);
-
+        
         [DllImport(LIBC_6, EntryPoint = "memmove", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
         [SecurityCritical]
         public static extern int Move(byte* dest, byte* src, long count);
-
-        [DllImport(LIBC_6, EntryPoint = "memset", CallingConvention = CallingConvention.Cdecl, SetLastError = false)]
-        [SecurityCritical]
-        public static extern IntPtr Set(byte* dest, int c, long count);
-
+        
         [DllImport(LIBC_6, EntryPoint = "syscall", SetLastError = true)]
         public static extern long syscall0(long number);
 
@@ -260,7 +252,7 @@ namespace Sparrow.Platform.Posix
         public static extern int statvfs(string path, ref Statvfs buf);
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int mprotect(IntPtr start, ulong size, ProtFlag protFlag);
+        public static extern int mprotect(IntPtr start, IntPtr size, ProtFlag protFlag);
 
         public static void PwriteOrThrow(int fd, byte *buffer, ulong count, long offset, string file, string debug)
         {

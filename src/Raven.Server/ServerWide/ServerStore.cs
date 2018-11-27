@@ -122,7 +122,7 @@ namespace Raven.Server.ServerWide
 
             _notificationsStorage = new NotificationsStorage(ResourceName);
 
-            NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, null, ServerShutdown);
+            NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, null, ServerShutdown, configuration);
 
             ServerDashboardNotifications = new ServerDashboardNotifications(this, ServerShutdown);
 
