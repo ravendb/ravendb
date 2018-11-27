@@ -14,22 +14,6 @@ namespace FastTests.Client.Indexing
 {
     public class JavaScriptIndexTests : RavenTestBase
     {
-
-        [Fact]
-        public void CreatingJavaScriptIndexWithFeaturesAvailabilitySetToStableWillThrow()
-        {
-            DoNotReuseServer();
-            using (var store = GetDocumentStore())
-            {
-                Server.Configuration.Core.FeaturesAvailability = FeaturesAvailability.Stable;
-                var e = Assert.Throws<IndexCreationException>(() => store.ExecuteIndex(new UsersByName()));
-                Assert.Contains(
-                    "The experimental 'JavaScript' indexes feature is not enabled in your current server configuration. " +
-                    "In order to use, please enable experimental features by changing 'Features.Availability' configuration value to 'Experimental'.",
-                    e.Message);
-            }
-        }
-
         [Fact]
         public void CanUseJavaScriptIndex()
         {
