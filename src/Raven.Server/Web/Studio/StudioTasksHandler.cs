@@ -22,7 +22,7 @@ namespace Raven.Server.Web.Studio
     public class StudioTasksHandler : RequestHandler
     {
         // return the calculated full data directory for the database before it is created according to the name & path supplied
-        [RavenAction("/studio-tasks/full-data-directory", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/studio-tasks/full-data-directory", "GET", AuthorizationStatus.Operator)]
         public Task FullDataDirectory()
         {
             var path = GetStringQueryString("path", required: false);
@@ -50,7 +50,7 @@ namespace Raven.Server.Web.Studio
             {
                 if (PathUtil.IsSubDirectory(result, ServerStore.Configuration.Core.DataDirectory.FullPath) == false)
                 {
-                    result = $"The administrator has restricted databases to be created only under the DataDir: '{ServerStore.Configuration.Core.DataDirectory.FullPath}' but the actual requested path is '{result}'.";
+                    result = $"The administrator has restricted databases to be created only under the {RavenConfiguration.GetKey(x => x.Core.DataDirectory)} directory: '{ServerStore.Configuration.Core.DataDirectory.FullPath}'.";
                 }
             }
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
