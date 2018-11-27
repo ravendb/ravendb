@@ -140,7 +140,7 @@ namespace Raven.Client.Connection.Async
                         () => Tuple.Create(DateTime.UtcNow, UpdateTopologyAsync())
                         ));
                 }
-                if (val.Value.Item1.Add(convention.TimeToWaitBetweenReplicationTopologyUpdates) <= DateTime.UtcNow)
+                if (val.IsValueCreated && val.Value.Item1.Add(convention.TimeToWaitBetweenReplicationTopologyUpdates) <= DateTime.UtcNow)
                 {
                     _topologyUpdate.TryUpdate(Url,
                         new Lazy<Tuple<DateTime, Task>>(
