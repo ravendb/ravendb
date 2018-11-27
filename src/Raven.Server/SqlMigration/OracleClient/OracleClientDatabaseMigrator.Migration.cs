@@ -91,7 +91,7 @@ namespace Raven.Server.SqlMigration.OracleClient
         {
             if (rowsLimit.HasValue)
             {
-                return "select * from (" + inputQuery + ") FETCH NEXT " + rowsLimit + "ROWS ONLY";
+                return $"select * from ({inputQuery}) FETCH NEXT {rowsLimit} ROWS ONLY";
             }
 
 
@@ -113,12 +113,12 @@ namespace Raven.Server.SqlMigration.OracleClient
             }
 
             var parameters = new Dictionary<string, object>();
-            string query = "select * from \"" + QuoteTable(collection.SourceTableSchema, collection.SourceTableName) + "\" where "
-                            + string.Join(" and ", primaryKeyColumns.Select((column, idx) =>
-                            {
-                                parameters["p" + idx] = ValueAsObject(tableSchema, column, primaryKeyValues, idx);
-                                return $"\"{QuoteColumn(column)}\" = :p{idx}";
-                            }));
+            string query = $"select * from \"{QuoteTable(collection.SourceTableSchema, collection.SourceTableName)}\" where "
+                           + string.Join(" and ", primaryKeyColumns.Select((column, idx) =>
+                           {
+                               parameters["p" + idx] = ValueAsObject(tableSchema, column, primaryKeyValues, idx);
+                               return $"\"{QuoteColumn(column)}\" = :p{idx}";
+                           }));
 
 
             queryParameters = parameters;
@@ -127,8 +127,10 @@ namespace Raven.Server.SqlMigration.OracleClient
 
         protected override IDataProvider<DynamicJsonArray> CreateArrayLinkDataProvider(ReferenceInformation refInfo, DbConnection connection)
         {
-            var query = "select " + "\"" + string.Join(", ", refInfo.TargetPrimaryKeyColumns.Select(QuoteColumn)) + "\"" + " from " + "\"" + QuoteTable(refInfo.SourceSchema, refInfo.SourceTableName)
-                        + "\"" + " where " + "\"" + string.Join(" and ", refInfo.ForeignKeyColumns.Select((column, idx) => QuoteColumn(column) + "\"" + " = :p" + idx));
+            var queryColumns = string.Join(", ", refInfo.TargetPrimaryKeyColumns.Select(QuoteColumn));
+            var queryParameters = string.Join(" and ", refInfo.ForeignKeyColumns.Select((column, idx) => $"\"{QuoteColumn(column)}\" = :p{idx}"));
+
+            var query = $"select \"{queryColumns}\" from \"{QuoteTable(refInfo.SourceSchema, refInfo.SourceTableName)}\" where {queryParameters}";
 
             return new SqlStatementProvider<DynamicJsonArray>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.SourcePrimaryKeyColumns), reader =>
             {
@@ -150,10 +152,9 @@ namespace Raven.Server.SqlMigration.OracleClient
 
         protected override IDataProvider<EmbeddedObjectValue> CreateObjectEmbedDataProvider(ReferenceInformation refInfo, DbConnection connection)
         {
-            var query = "select * from " + "\"" + QuoteTable(refInfo.SourceSchema, refInfo.SourceTableName)
-                        + "\"" + " where " + "\"" + string.Join(" and ", refInfo.TargetPrimaryKeyColumns.Select((column, idx) => QuoteColumn(column) + "\"" + " = :p" + idx));
+            var queryParameters = string.Join(" and ", refInfo.TargetPrimaryKeyColumns.Select((column, idx) => $"\"{QuoteColumn(column)}\" = :p{idx}"));
+            var query = $"select * from \"{QuoteTable(refInfo.SourceSchema, refInfo.SourceTableName)}\" where {queryParameters}";
             
-
             return new SqlStatementProvider<EmbeddedObjectValue>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.ForeignKeyColumns), reader =>
             {
                 if (reader.Read() == false)
@@ -173,8 +174,9 @@ namespace Raven.Server.SqlMigration.OracleClient
 
         protected override IDataProvider<EmbeddedArrayValue> CreateArrayEmbedDataProvider(ReferenceInformation refInfo, DbConnection connection)
         {
-            var query = "select * from " + "\"" + QuoteTable(refInfo.SourceSchema, refInfo.SourceTableName) + "\""
-                                             + " where " + "\"" + string.Join(" and ", refInfo.ForeignKeyColumns.Select((column, idx) => QuoteColumn(column) + "\"" + " = :p" + idx));
+            var queryParameters = string.Join(" and ", refInfo.ForeignKeyColumns.Select((column, idx) => $"\"{QuoteColumn(column)}\" = :p{idx}"));
+
+            var query = $"select * from \"{QuoteTable(refInfo.SourceSchema, refInfo.SourceTableName)}\" where {queryParameters}";
 
             return new SqlStatementProvider<EmbeddedArrayValue>(connection, query, specialColumns => GetColumns(specialColumns, refInfo.SourcePrimaryKeyColumns), reader =>
             {
