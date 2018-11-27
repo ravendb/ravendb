@@ -38,6 +38,8 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Migration;
+using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.PeriodicBackup.Restore;
@@ -45,6 +47,7 @@ using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow;
+using Voron.Util.Settings;
 using Constants = Raven.Client.Constants;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
@@ -226,6 +229,17 @@ namespace Raven.Server.Web.System
                 if (string.IsNullOrWhiteSpace(databaseRecord.DatabaseName))
                     throw new ArgumentException("DatabaseName property has invalid value (null, empty or whitespace only)");
                 databaseRecord.DatabaseName = databaseRecord.DatabaseName.Trim();
+
+                if (ServerStore.Configuration.Core.EnforceDataDirectoryPath 
+                    && databaseRecord.Settings.TryGetValue("DataDir", out var dir))
+                {
+                    var requestedDirectory = PathUtil.ToFullPath(dir, ServerStore.Configuration.Core.DataDirectory.FullPath);
+
+                    if (RavenConfiguration.IsSubDirectory(requestedDirectory, ServerStore.Configuration.Core.DataDirectory.FullPath) == false)
+                    {
+                        throw new ArgumentException($"The administrator has restricted databases to be created only under the DataDir '{ServerStore.Configuration.Core.DataDirectory.FullPath}' but the actual requested path is '{requestedDirectory}'.");
+                    }
+                }
 
                 if ((databaseRecord.Topology?.DynamicNodesDistribution ?? false) &&
                     Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(out var licenseLimit) == false)

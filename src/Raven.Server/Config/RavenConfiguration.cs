@@ -310,6 +310,26 @@ namespace Raven.Server.Config
             return dataDirectoryPath;
         }
 
+        public static bool IsSubDirectory(string userPath, string rootPath)
+        {
+            var rootDirInfo = new DirectoryInfo(rootPath);
+            var userDirInfo = new DirectoryInfo(userPath);
+
+            if (userDirInfo.FullName == rootDirInfo.FullName)
+                return true;
+
+            while (userDirInfo.Parent != null)
+            {
+                if (userDirInfo.Parent.FullName == rootDirInfo.FullName)
+                {
+                    return true;
+                }
+
+                userDirInfo = userDirInfo.Parent;
+            }
+            return false;
+        }
+
         public static RavenConfiguration CreateForServer(string name, string customConfigPath = null)
         {
             return new RavenConfiguration(name, ResourceType.Server, customConfigPath);
