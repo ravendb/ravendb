@@ -1100,10 +1100,8 @@ namespace Raven.Server.Documents.Patch
                 Reset();
                 OriginalDocumentId = documentId;
 
-                if (_args.Length != args.Length)
-                    _args = new JsValue[args.Length];
-                for (var i = 0; i < args.Length; i++)
-                    _args[i] = TranslateToJs(ScriptEngine, jsonCtx, args[i]);
+                SetArgs(jsonCtx, method, args);
+
                 try
                 {
                     var call = ScriptEngine.GetValue(method).TryCast<ICallable>();
@@ -1119,6 +1117,22 @@ namespace Raven.Server.Documents.Patch
                     _refResolver.ExplodeArgsOn(null, null);
                     _docsCtx = null;
                     _jsonCtx = null;
+                }
+            }
+
+            private void SetArgs(JsonOperationContext jsonCtx, string method, object[] args)
+            {
+                if (_args.Length != args.Length)
+                    _args = new JsValue[args.Length];
+                for (var i = 0; i < args.Length; i++)
+                    _args[i] = TranslateToJs(ScriptEngine, jsonCtx, args[i]);
+
+                if (method != "__selectOutput" &&
+                    _args.Length == 2 &&
+                    _args[1].IsObject() &&
+                    _args[1].AsObject() is BlittableObjectInstance boi)
+                {
+                    _refResolver.ExplodeArgsOn(null, boi);
                 }
             }
 
