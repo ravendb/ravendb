@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Client.Documents
