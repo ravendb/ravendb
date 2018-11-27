@@ -24,7 +24,7 @@ namespace Raven.Client.ServerWide
             if (result.Count == 0 || result[0].Value != databaseName)
             {
                 throw new InvalidOperationException(
-                     "Database name can only contain only A-Z, a-z, \"_\", \".\" or \"-\" but was: " + databaseName);
+                     "Database name can only contain A-Z, a-z, \"_\", \".\" or \"-\" but was: " + databaseName);
             }
         }
     }
