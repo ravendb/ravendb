@@ -18,6 +18,7 @@ using Raven.Client.Json.Converters;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
@@ -371,7 +372,7 @@ namespace Raven.Server.Web.System
                     throw new ArgumentException($"Unable to combine the local root path '{ServerStore.Configuration.Backup.LocalRootPath?.FullPath}' with the user supplied relative path '{folderPath}'", e);
                 }
 
-                if (IsSubDirectoryOfRootPath(fullPath) == false)
+                if (RavenConfiguration.IsSubDirectory(fullPath, ServerStore.Configuration.Backup.LocalRootPath.FullPath) == false)
                 {
                     throw new ArgumentException($"The administrator has restricted local backups to be saved under the following root path '{ServerStore.Configuration.Backup.LocalRootPath?.FullPath}' but the actual chosen path is '{fullPath}' which is not a subdirectory of the root path.");
                 }
@@ -407,23 +408,6 @@ namespace Raven.Server.Web.System
 
                 break;
             }
-        }
-
-        public bool IsSubDirectoryOfRootPath(string userPath)
-        {
-            var rootDirInfo = new DirectoryInfo(ServerStore.Configuration.Backup.LocalRootPath.FullPath);
-            var userDirInfo = new DirectoryInfo(userPath);
-
-            while (userDirInfo.Parent != null)
-            {
-                if (userDirInfo.Parent.FullName == rootDirInfo.FullName)
-                {
-                    return true;
-                }
-
-                userDirInfo = userDirInfo.Parent;
-            }
-            return false;
         }
 
         private static CrontabSchedule VerifyBackupFrequency(string backupFrequency)
