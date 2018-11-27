@@ -142,6 +142,16 @@ namespace Raven.Client.Documents.Session
 
         internal OperationExecutor Operations => _operationExecutor ?? (_operationExecutor = new SessionOperationExecutor(this));
 
+        internal OperationExecutor Operations2
+        {
+            get
+            {
+                return _operationExecutor == null ? (_operationExecutor = new SessionOperationExecutor(this)) : _operationExecutor;
+            }
+
+            private set { _operationExecutor = value; }
+        }
+
         public JsonOperationContext Context => _context;
 
         /// <summary>
