@@ -4,6 +4,7 @@
     {
         MsSQL,
         MySQL,
-        NpgSQL
+        NpgSQL,
+        OracleClient
     }
 }

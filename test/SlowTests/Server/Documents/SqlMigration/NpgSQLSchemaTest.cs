@@ -1,18 +1,14 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
-using Raven.Server.ServerWide.Context;
+﻿using System.Linq;
 using Raven.Server.SqlMigration;
-using Raven.Server.SqlMigration.Model;
 using Raven.Server.SqlMigration.Schema;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Server.Documents.SqlMigration
 {
     public class NpgSQLSchemaTest : SqlAwareTestBase
     {
-        [Fact]
+        [RequiresNpgSqlFact]
         public void CanFetchSchema()
         {
             using (WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out string schemaName, includeData: false))

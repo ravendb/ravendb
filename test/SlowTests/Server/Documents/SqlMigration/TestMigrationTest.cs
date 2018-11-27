@@ -16,6 +16,8 @@ namespace SlowTests.Server.Documents.SqlMigration
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresMySqlInlineData]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
         public async Task CanTestWithEmbed(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
@@ -57,6 +59,8 @@ namespace SlowTests.Server.Documents.SqlMigration
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresMySqlInlineData]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
         public async Task CanTestWithSkip(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
@@ -93,6 +97,8 @@ namespace SlowTests.Server.Documents.SqlMigration
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresMySqlInlineData]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
         public async Task CanTestWithPrimaryKeyValues(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))

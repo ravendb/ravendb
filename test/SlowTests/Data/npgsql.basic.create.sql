@@ -1,3 +1,7 @@
+DROP SCHEMA public;
+CREATE SCHEMA public;
+ALTER SCHEMA public OWNER TO postgres;
+
 -- -----------------------------------------------------
 -- Name: order; Type: TABLE; Schema: public;
 -- -----------------------------------------------------
