@@ -26,8 +26,6 @@ using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Voron.Platform.Posix;
 using OpenFlags = Voron.Platform.Posix.OpenFlags;
-using Process = Custom.Raven.System.Diagnostics.Process;
-using ProcessStartInfo = Custom.Raven.System.Diagnostics.ProcessStartInfo;
 
 namespace Raven.Server.ServerWide
 {
@@ -326,7 +324,7 @@ namespace Raven.Server.ServerWide
 
         public RavenServer.CertificateHolder LoadCertificateWithExecutable(string executable, string args, ServerStore serverStore)
         {
-            RavenProcess process;
+            Process process;
 
             var startInfo = new ProcessStartInfo
             {
@@ -335,15 +333,14 @@ namespace Raven.Server.ServerWide
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                CreateNoWindow = true,
-                InheritHandles = false
+                CreateNoWindow = true
             };
 
             var sw = Stopwatch.StartNew();
 
             try
             {
-                process = RavenProcess.Start(startInfo);
+                process = Process.Start(startInfo);
             }
             catch (Exception e)
             {
@@ -425,7 +422,7 @@ namespace Raven.Server.ServerWide
 
         private byte[] LoadMasterKeyWithExecutable()
         {
-            RavenProcess process;
+            Process process;
 
             var startInfo = new ProcessStartInfo
             {
@@ -434,15 +431,14 @@ namespace Raven.Server.ServerWide
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                CreateNoWindow = true,
-                InheritHandles = false
+                CreateNoWindow = true
             };
 
             var sw = Stopwatch.StartNew();
 
             try
             {
-                process = RavenProcess.Start(startInfo);
+                process = Process.Start(startInfo);
             }
             catch (Exception e)
             {

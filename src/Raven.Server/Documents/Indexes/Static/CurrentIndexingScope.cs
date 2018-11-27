@@ -18,7 +18,9 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly DocumentsStorage _documentsStorage;
         private readonly DocumentsOperationContext _documentsContext;
 
-        public UnmanagedBuffersPoolWithLowMemoryHandling UnmanagedBuffersPool { get; }
+        public readonly UnmanagedBuffersPoolWithLowMemoryHandling UnmanagedBuffersPool;
+
+        public Dictionary<string, FieldIndexing> DynamicFields;
 
         private readonly Func<string, SpatialField> _getSpatialField;
 

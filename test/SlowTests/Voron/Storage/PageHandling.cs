@@ -48,7 +48,7 @@ namespace SlowTests.Voron.Storage
             {
                 int _;
                 var allocatedPage = tx.LowLevelTransaction.AllocateOverflowRawPage(16000, out _);
-                Memory.SetInline(allocatedPage.DataPointer, 0xFF, 16000);
+                Memory.Set(allocatedPage.DataPointer, 0xFF, (long)16000);
 
                 long pageNumber = allocatedPage.PageNumber;
 

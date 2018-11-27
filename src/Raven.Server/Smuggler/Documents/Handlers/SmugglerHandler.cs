@@ -35,12 +35,10 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
 using Sparrow.Utils;
-using ProcessStartInfo = Custom.Raven.System.Diagnostics.ProcessStartInfo;
 
 namespace Raven.Server.Smuggler.Documents.Handlers
 {
@@ -453,14 +451,13 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     RedirectStandardInput = true,
-                    UseShellExecute = false,
-                    InheritHandles = false
+                    UseShellExecute = false
                 };
 
-                RavenProcess process = null;
+                Process process = null;
                 try
                 {
-                    process = RavenProcess.Start(processStartInfo);
+                    process = Process.Start(processStartInfo);
                 }
                 catch (Exception e)
                 {
@@ -586,7 +583,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             return migratorFile;
         }
 
-        private static bool KillProcess(RavenProcess process)
+        private static bool KillProcess(Process process)
         {
             try
             {

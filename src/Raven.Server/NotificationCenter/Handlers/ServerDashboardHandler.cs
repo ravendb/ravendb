@@ -35,7 +35,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                             smapsReader = new SmapsReader(new[] {buffer1, buffer2});
                         }
 
-                        var machineResources = MachineResourcesNotificationSender.GetMachineResources(smapsReader);
+                        var machineResources = MachineResourcesNotificationSender.GetMachineResources(smapsReader, Server.CpuUsageCalculator);
                         await writer.WriteToWebSocket(machineResources.ToJson());
 
                         using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown))

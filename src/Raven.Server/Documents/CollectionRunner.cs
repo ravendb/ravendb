@@ -46,7 +46,7 @@ namespace Raven.Server.Documents
         }
 
         protected async Task<IOperationResult> ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context,
-             Action<DeterminateProgress> onProgress, Func<LazyStringValue, TransactionOperationsMerger.MergedTransactionCommand> action, OperationCancelToken token)
+             Action<DeterminateProgress> onProgress, Func<string, TransactionOperationsMerger.MergedTransactionCommand> action, OperationCancelToken token)
         {
             const int batchSize = 1024;
             var progress = new DeterminateProgress();
@@ -71,15 +71,14 @@ namespace Raven.Server.Documents
                     : null)
             {
                 var end = false;
+                var ids = new Queue<string>(batchSize);
 
                 while (startEtag <= lastEtag)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-
+                    ids.Clear();
                     using (context.OpenReadTransaction())
                     {
-                        var ids = new Queue<LazyStringValue>(batchSize);
-
                         foreach (var document in GetDocuments(context, collectionName, startEtag, batchSize, isAllDocs))
                         {
                             cancellationToken.ThrowIfCancellationRequested();
@@ -99,30 +98,30 @@ namespace Raven.Server.Documents
 
                             ids.Enqueue(document.Id);
                         }
-
-                        if (ids.Count == 0)
-                            break;
-
-                        do
-                        {
-                            var command = new ExecuteRateLimitedOperations<LazyStringValue>(ids, action, rateGate, token,
-                                maxTransactionSize: 16 * Voron.Global.Constants.Size.Megabyte,
-                                batchSize: batchSize);
-
-                            await Database.TxMerger.Enqueue(command);
-
-                            progress.Processed += command.Processed;
-
-                            onProgress(progress);
-
-                            if (command.NeedWait)
-                                rateGate?.WaitToProceed();
-
-                        } while (ids.Count > 0);
-
-                        if (end)
-                            break;
                     }
+
+                    if (ids.Count == 0)
+                        break;
+
+                    do
+                    {
+                        var command = new ExecuteRateLimitedOperations<string>(ids, action, rateGate, token,
+                            maxTransactionSize: 16 * Voron.Global.Constants.Size.Megabyte,
+                            batchSize: batchSize);
+
+                        await Database.TxMerger.Enqueue(command);
+
+                        progress.Processed += command.Processed;
+
+                        onProgress(progress);
+
+                        if (command.NeedWait)
+                            rateGate?.WaitToProceed();
+
+                    } while (ids.Count > 0);
+
+                    if (end)
+                        break;
                 }
             }
 

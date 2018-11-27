@@ -26,5 +26,17 @@
             width: 150px;
             flex-shrink: 0;
         }
+        
+        .clearance, .permissions, .expiration, .auto-renew {
+            margin-top: 0;
+            line-height: 18px;
+            margin-right: @grid-gutter-width/2;
+            white-space: nowrap;
+        }
+        .permissions {
+            strong + strong {
+                margin-left: @grid-gutter-width / 4;
+            }
+        }
     }
 }

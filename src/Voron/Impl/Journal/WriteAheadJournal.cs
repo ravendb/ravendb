@@ -189,46 +189,36 @@ namespace Voron.Impl.Journal
                     RecoverCurrentJournalSize(pager);
 
                     var transactionHeader = txHeader->TransactionId == 0 ? null : txHeader;
-                    using (
-                        var journalReader = new JournalReader(pager, _dataPager, recoveryPager, lastSyncedTransactionId,
-                            transactionHeader))
+                    using (var journalReader = new JournalReader(pager, _dataPager, recoveryPager, lastSyncedTransactionId, transactionHeader))
                     {
-                        var transactionHeaders = ArrayPool<TransactionHeader>.Shared.Rent((int)journalReader.NumberOfAllocated4Kb);
-                        try
+                        var transactionHeaders = journalReader.RecoverAndValidate(_env.Options);
+
+                        var lastReadHeaderPtr = journalReader.LastTransactionHeader;
+
+                        if (lastReadHeaderPtr != null)
                         {
-                            var transactionCount = journalReader.RecoverAndValidate(_env.Options, transactionHeaders);
-
-                            var lastReadHeaderPtr = journalReader.LastTransactionHeader;
-
-                            if (lastReadHeaderPtr != null)
-                            {
-                                *txHeader = *lastReadHeaderPtr;
-                                lastSyncedTxId = txHeader->TransactionId;
-                                lastSyncedJournal = journalNumber;
-                            }
-
-                            pager.Dispose(); // need to close it before we open the journal writer
-
-                            if (lastSyncedTxId != -1 && (journalReader.RequireHeaderUpdate || journalNumber == logInfo.CurrentJournal))
-                            {
-                                var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber,
-                                    pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
-                                var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
-                                jrnlFile.InitFrom(journalReader, transactionHeaders, transactionCount);
-                                jrnlFile.AddRef(); // creator reference - write ahead log
-
-                                journalFiles.Add(jrnlFile);
-                            }
-
-                            if (journalReader.RequireHeaderUpdate) //this should prevent further loading of transactions
-                            {
-                                requireHeaderUpdate = true;
-                                break;
-                            }
+                            *txHeader = *lastReadHeaderPtr;
+                            lastSyncedTxId = txHeader->TransactionId;
+                            lastSyncedJournal = journalNumber;
                         }
-                        finally
+
+                        pager.Dispose(); // need to close it before we open the journal writer
+
+                        if (lastSyncedTxId != -1 && (journalReader.RequireHeaderUpdate || journalNumber == logInfo.CurrentJournal))
                         {
-                            ArrayPool<TransactionHeader>.Shared.Return(transactionHeaders);
+                            var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber,
+                                pager.NumberOfAllocatedPages * Constants.Storage.PageSize);
+                            var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber);
+                            jrnlFile.InitFrom(journalReader, transactionHeaders);
+                            jrnlFile.AddRef(); // creator reference - write ahead log
+
+                            journalFiles.Add(jrnlFile);
+                        }
+
+                        if (journalReader.RequireHeaderUpdate) //this should prevent further loading of transactions
+                        {
+                            requireHeaderUpdate = true;
+                            break;
                         }
                     }
 
@@ -1457,7 +1447,7 @@ namespace Voron.Impl.Journal
             if (remainder != 0)
             {
                 // zero the remainder of the page
-                UnmanagedMemory.Set(txHeaderPtr + totalLength, 0, 4 * Constants.Size.Kilobyte - remainder);
+                Memory.Set(txHeaderPtr + totalLength, 0, 4 * Constants.Size.Kilobyte - remainder);
             }
 
             var reportedCompressionLength = performCompression ? compressedLen : -1;

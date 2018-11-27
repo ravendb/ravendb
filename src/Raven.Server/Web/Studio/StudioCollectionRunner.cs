@@ -12,9 +12,9 @@ namespace Raven.Server.Web.Studio
 {
     internal class StudioCollectionRunner : CollectionRunner
     {
-        private readonly HashSet<LazyStringValue> _excludeIds;
+        private readonly HashSet<string> _excludeIds;
 
-        public StudioCollectionRunner(DocumentDatabase database, DocumentsOperationContext context, HashSet<LazyStringValue> excludeIds) : base(database, context, null)
+        public StudioCollectionRunner(DocumentDatabase database, DocumentsOperationContext context, HashSet<string> excludeIds) : base(database, context, null)
         {
             _excludeIds = excludeIds;
         }

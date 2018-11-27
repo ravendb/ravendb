@@ -213,6 +213,7 @@ class indexPerformance extends viewModelBase {
     private static readonly minGapSize = 10 * 1000; // 10 seconds
     private static readonly initialOffset = 100;
     private static readonly step = 200;
+    private static readonly bufferSize = 50000;
 
 
     private static readonly openedTrackHeight = indexPerformance.openedTrackPadding
@@ -246,6 +247,8 @@ class indexPerformance extends viewModelBase {
     /* private */
 
     private data: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = [];
+    private bufferIsFull = ko.observable<boolean>(false);
+    private bufferUsage = ko.observable<string>("0.0");
     private totalWidth: number;
     private totalHeight: number;
     private currentYOffset = 0;
@@ -277,6 +280,8 @@ class indexPerformance extends viewModelBase {
     
     constructor() {
         super();
+        
+        this.bindToCurrentInstance("toggleScroll", "clearGraphWithConfirm");
 
         this.canExpandAll = ko.pureComputed(() => {
             const indexNames = this.indexNames();
@@ -465,6 +470,8 @@ class indexPerformance extends viewModelBase {
             }
 
             this.data = data;
+            
+            this.checkBufferUsage();
 
             const [workData, maxConcurrentIndexes] = this.prepareTimeData();
 
@@ -487,6 +494,17 @@ class indexPerformance extends viewModelBase {
         };
 
         this.liveViewClient(new liveIndexPerformanceWebSocketClient(this.activeDatabase(), onDataUpdate));
+    }
+    
+    private checkBufferUsage() {
+        const dataCount = _.sumBy(this.data, x => x.Performance.length);
+        const usage = Math.min(100, dataCount * 100.0 / indexPerformance.bufferSize);
+        this.bufferUsage(usage.toFixed(1));
+        
+        if (dataCount > indexPerformance.bufferSize) {
+            this.bufferIsFull(true);
+            this.cancelLiveView();
+        }
     }
 
     scrollToRight() {
@@ -601,10 +619,12 @@ class indexPerformance extends viewModelBase {
 
         // Draw area chart showing indexes work
         let x1: number, x2: number, y0: number = 0, y1: number;
+        context.beginPath();
+        
+        x2 = this.xBrushTimeScale(new Date(workData[0].pointInTime));
+        
         for (let i = 0; i < workData.length - 1; i++) {
-
-            context.beginPath();
-            x1 = this.xBrushTimeScale(new Date(workData[i].pointInTime));
+            x1 = x2;
             y1 = Math.round(this.yBrushValueScale(workData[i].numberOfIndexesWorking)) + 0.5;
             x2 = this.xBrushTimeScale(new Date(workData[i + 1].pointInTime));
             context.moveTo(x1, indexPerformance.brushSectionHeight - y0);
@@ -616,9 +636,9 @@ class indexPerformance extends viewModelBase {
                 context.fillRect(x1, indexPerformance.brushSectionHeight - y1, x2-x1, y1);
             } 
 
-            context.stroke();
             y0 = y1; 
         }
+        context.stroke();
 
         // Draw last line:
         context.beginPath();
@@ -759,8 +779,12 @@ class indexPerformance extends viewModelBase {
         finally {
             context.restore();
         }
-    }   
+    }
 
+    toggleScroll() {
+        this.autoScroll.toggle();
+    }
+    
     private onZoom() {
         this.autoScroll(false);
         this.clearSelectionVisible(true);
@@ -902,25 +926,37 @@ class indexPerformance extends viewModelBase {
             const isOpened = _.includes(this.expandedTracks(), perfStat.Name);
             let yStart = this.yScale(perfStat.Name);
             yStart += isOpened ? indexPerformance.openedTrackPadding : indexPerformance.closedTrackPadding;
+            
+            const trackEndY = yStart + (isOpened ? indexPerformance.openedTrackHeight : indexPerformance.closedTrackHeight);
+            
+            const trackVisibleOnScreen = trackEndY >= indexPerformance.axisHeight && yStart < this.totalHeight - indexPerformance.brushSectionHeight;
 
-            const performance = perfStat.Performance;
-            const perfLength = performance.length;
-            for (let perfIdx = 0; perfIdx < perfLength; perfIdx++) {
-                const perf = performance[perfIdx];
-                const startDate = (perf as IndexingPerformanceStatsWithCache).StartedAsDate;
-                const x1 = xScale(startDate);
+            const yOffset = isOpened ? indexPerformance.trackHeight + indexPerformance.stackPadding : 0;
+            const stripesYStart = yStart + (isOpened ? yOffset : 0);
+            
+            if (trackVisibleOnScreen) {
+                const performance = perfStat.Performance;
+                const perfLength = performance.length;
+                for (let perfIdx = 0; perfIdx < perfLength; perfIdx++) {
+                    const perf = performance[perfIdx];
+                    const startDate = (perf as IndexingPerformanceStatsWithCache).StartedAsDate;
 
-                const startDateAsInt = startDate.getTime();
+                    const startDateAsInt = startDate.getTime();
+                    if (visibleEndDateAsInt < startDateAsInt) {
+                        continue;
+                    }
 
-                const endDateAsInt = startDateAsInt + perf.DurationInMs;
-                if (endDateAsInt < visibleStartDateAsInt || visibleEndDateAsInt < startDateAsInt)
-                    continue;
+                    if (startDateAsInt + perf.DurationInMs < visibleStartDateAsInt)
+                        continue;
+                    
+                    
+                    const x1 = xScale(startDate);
+                    
+                    this.drawStripes(0, context, [perf.Details], x1, stripesYStart, yOffset, extentFunc, perfStat.Name);
 
-                const yOffset = isOpened ? indexPerformance.trackHeight + indexPerformance.stackPadding : 0;
-                this.drawStripes(context, [perf.Details], x1, yStart + (isOpened ? yOffset : 0), yOffset, extentFunc, perfStat.Name);
-
-                if (!perf.Completed) {
-                    this.findInProgressAction(context, perf, extentFunc, x1, yStart + (isOpened ? yOffset : 0), yOffset);
+                    if (!perf.Completed) {
+                        this.findInProgressAction(context, perf, extentFunc, x1, stripesYStart, yOffset);
+                    }
                 }
             }
         });
@@ -961,7 +997,7 @@ class indexPerformance extends viewModelBase {
         throw new Error("Unable to find color for: " + operationName);
     }
 
-    private drawStripes(context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Indexes.IndexingPerformanceOperation>, xStart: number, yStart: number,
+    private drawStripes(level: number, context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Indexes.IndexingPerformanceOperation>, xStart: number, yStart: number,
         yOffset: number, extentFunc: (duration: number) => number, indexName?: string) {
 
         let currentX = xStart;
@@ -978,10 +1014,10 @@ class indexPerformance extends viewModelBase {
                 if (dx >= 0.8) { // don't show tooltip for very small items
                     this.hitTest.registerTrackItem(currentX, yStart, dx, indexPerformance.trackHeight, op);
                 }
-                if (op.Name.startsWith("Collection_")) {
+                if (dx >= 5 && op.Name.startsWith("Collection_")) {
                     context.fillStyle = indexPerformance.colors.collectionNameTextColor;
                     const text = op.Name.substr("Collection_".length);
-                    const textWidth = context.measureText(text).width
+                    const textWidth = context.measureText(text).width;
                     const truncatedText = graphHelper.truncText(text, textWidth, dx - 4);
                     if (truncatedText) {
                         context.font = "12px Lato";
@@ -994,8 +1030,8 @@ class indexPerformance extends viewModelBase {
                 }
             }
             
-            if (op.Operations.length > 0) {
-                this.drawStripes(context, op.Operations, currentX, yStart + yOffset, yOffset, extentFunc);
+            if ((level > 0 || dx > 1) && op.Operations.length > 0) {
+                this.drawStripes(level + 1, context, op.Operations, currentX, yStart + yOffset, yOffset, extentFunc);
             }
             currentX += dx;
         }
@@ -1248,6 +1284,7 @@ class indexPerformance extends viewModelBase {
 
     private dataImported(result: string) {
         this.cancelLiveView();
+        this.bufferIsFull(false);
 
         try {            
             const importedData: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = JSON.parse(result);
@@ -1277,11 +1314,26 @@ class indexPerformance extends viewModelBase {
         });
     }
 
-    closeImport() {
-        this.isImport(false);
+    clearGraphWithConfirm() {
+        this.confirmationMessage("Clear graph data", "Do you want to discard all collected indexing performance information?")
+            .done(result => {
+                if (result.can) {
+                    this.clearGraph();
+                }
+            })
+    }
+    
+    clearGraph() {
+        this.bufferIsFull(false);
+        this.cancelLiveView();
         this.hasAnyData(false);
         this.resetGraphData();
         this.enableLiveView();
+    }
+    
+    closeImport() {
+        this.isImport(false);
+        this.clearGraph();
     }
 
     private resetGraphData() {

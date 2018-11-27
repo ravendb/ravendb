@@ -11,7 +11,7 @@ namespace Raven.Server.Dashboard
             var options = new ServerDashboardOptions();
 
             var machineResourcesNotificationSender = 
-                new MachineResourcesNotificationSender(nameof(ServerStore), Watchers, options.MachineResourcesThrottle, shutdown);
+                new MachineResourcesNotificationSender(nameof(ServerStore), serverStore.Server, Watchers, options.MachineResourcesThrottle, shutdown);
             BackgroundWorkers.Add(machineResourcesNotificationSender);
 
             var databasesInfoNotificationSender = 

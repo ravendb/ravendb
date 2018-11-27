@@ -95,7 +95,7 @@ namespace Voron.Impl.Journal
                 _recoveryPager.EnsureContinuous(0, numberOfPages);
                 _recoveryPager.EnsureMapped(this, 0, numberOfPages);
                 outputPage = _recoveryPager.AcquirePagePointer(this, 0);
-                UnmanagedMemory.Set(outputPage, 0, (long)numberOfPages * Constants.Storage.PageSize);
+                Memory.Set(outputPage, 0, (long)numberOfPages * Constants.Storage.PageSize);
 
                 try
                 {
@@ -117,7 +117,7 @@ namespace Voron.Impl.Journal
                 _recoveryPager.EnsureContinuous(0, numberOfPages);
                 _recoveryPager.EnsureMapped(this, 0, numberOfPages);
                 outputPage = _recoveryPager.AcquirePagePointer(this, 0);
-                UnmanagedMemory.Set(outputPage, 0, (long)numberOfPages * Constants.Storage.PageSize);
+                Memory.Set(outputPage, 0, (long)numberOfPages * Constants.Storage.PageSize);
                 Memory.Copy(outputPage, (byte*)current + sizeof(TransactionHeader), current->UncompressedSize);
                 pageInfoPtr = (TransactionHeaderPageInfo*)outputPage;
             }
@@ -200,16 +200,16 @@ namespace Voron.Impl.Journal
             return true;
         }
 
-        public int RecoverAndValidate(StorageEnvironmentOptions options, TransactionHeader[] transactionHeaders)
+        public List<TransactionHeader> RecoverAndValidate(StorageEnvironmentOptions options)
         {
-            int index = 0;
+            var transactionHeaders = new List<TransactionHeader>();
             while (ReadOneTransactionToDataFile(options))
             {
-                transactionHeaders[index++] = *LastTransactionHeader;
+                transactionHeaders.Add(*LastTransactionHeader);
             }
             ZeroRecoveryBufferIfNeeded(this, options);
 
-            return index;
+            return transactionHeaders;
         }
 
         public void ZeroRecoveryBufferIfNeeded(IPagerLevelTransactionState tx, StorageEnvironmentOptions options)
