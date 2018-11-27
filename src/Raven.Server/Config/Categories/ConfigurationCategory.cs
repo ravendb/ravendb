@@ -163,6 +163,12 @@ namespace Raven.Server.Config.Categories
 
                                 property.SetValue(this, values);
                             }
+                            else if (property.PropertyType == typeof(HashSet<string>))
+                            {
+                                var hashSet = new HashSet<string>(SplitValue(value), StringComparer.OrdinalIgnoreCase);
+
+                                property.SetValue(this, hashSet);
+                            }
                             else if (timeUnit != null)
                             {
                                 property.SetValue(this, new TimeSetting(Convert.ToInt64(value), timeUnit.Unit));

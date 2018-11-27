@@ -490,7 +490,7 @@ namespace Raven.Server.Documents.Replication
 
         private unsafe byte* ReadExactlyUnlikely(int size, int diff)
         {
-            UnmanagedMemory.Move(
+            Memory.Move(
                 _copiedBuffer.Buffer.Pointer,
                 _copiedBuffer.Buffer.Pointer + _copiedBuffer.Buffer.Used,
                 diff);

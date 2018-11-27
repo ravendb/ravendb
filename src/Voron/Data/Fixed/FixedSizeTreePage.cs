@@ -154,7 +154,7 @@ namespace Voron.Data.Fixed
                 return;
 
             // we need to move it back, then add the new item
-            UnmanagedMemory.Move(Pointer + Constants.FixedSizeTree.PageHeaderSize,
+            Memory.Move(Pointer + Constants.FixedSizeTree.PageHeaderSize,
                 Pointer + StartPosition,
                 NumberOfEntries * (IsLeaf ? _entrySize : FixedSizeTree.BranchEntrySize));
 
@@ -174,7 +174,7 @@ namespace Voron.Data.Fixed
                 return;
             }
             // have to move the memory
-            UnmanagedMemory.Move(Pointer + StartPosition + (pos * size),
+            Memory.Move(Pointer + StartPosition + (pos * size),
                    Pointer + StartPosition + ((pos + 1) * size),
                    (NumberOfEntries - pos) * size);
         }

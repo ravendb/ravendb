@@ -239,7 +239,7 @@ namespace Sparrow.Utils
             byte* destPtr = Destination;
 
             if (isNewDiff)
-                Memory.SetInline(destPtr, 0, size);
+                Memory.Set(destPtr, 0, size);
 
             long pos = 0;
             while (pos < diffSize)
@@ -258,7 +258,7 @@ namespace Sparrow.Utils
                     count *= -1;
                     if (start + count > size)
                         AssertInvalidSize(start, count);
-                    Memory.SetInline(destPtr + start, 0, count);
+                    Memory.Set(destPtr + start, 0, count);
                     continue;
                 }
 

@@ -51,14 +51,14 @@ namespace Sparrow.Platform
 
             *(int*)virtualAlloc = allocatedSize;
 
-            if (Syscall.mprotect((IntPtr)virtualAlloc, 4096, ProtFlag.PROT_NONE) != 0)
+            if (Syscall.mprotect((IntPtr)virtualAlloc, new IntPtr(4096), ProtFlag.PROT_NONE) != 0)
             {
                 throw new InvalidOperationException("Could not mark the memory as inaccessible because " +
                                                Marshal.GetLastWin32Error());
 
             }
             
-            if (Syscall.mprotect((IntPtr)(virtualAlloc + 4096 + (sizeInPages*4096)), 4096, ProtFlag.PROT_NONE) != 0)
+            if (Syscall.mprotect((IntPtr)(virtualAlloc + 4096 + (sizeInPages*4096)), new IntPtr(4096), ProtFlag.PROT_NONE) != 0)
             {
                 throw new InvalidOperationException("Could not mark the memory as inaccessible because " +
                                                Marshal.GetLastWin32Error());
@@ -91,7 +91,7 @@ namespace Sparrow.Platform
 
             
 
-            if (Syscall.mprotect((IntPtr)address, 4096, ProtFlag.PROT_READ) != 0)
+            if (Syscall.mprotect((IntPtr)address, new IntPtr(4096), ProtFlag.PROT_READ) != 0)
             {
                 throw new InvalidOperationException("Could not mark the memory as readable because " +
                                                Marshal.GetLastWin32Error());

@@ -376,8 +376,8 @@ namespace Micro.Benchmark.Benchmarks.Hardware
 
                 for (long i = 0; i < len; i += 32, originalPtr += 32, modifiedPtr += 32)
                 {
-                    var o0 = Unsafe.Read<Vector<long>>(originalPtr);
-                    var m0 = Unsafe.Read<Vector<long>>(modifiedPtr);
+                    var o0 = Memory.Read<Vector<long>>(originalPtr);
+                    var m0 = Memory.Read<Vector<long>>(modifiedPtr);
 
                     if (allZeros)
                         allZeros &= m0.Equals(Vector<long>.Zero);
@@ -439,11 +439,11 @@ namespace Micro.Benchmark.Benchmarks.Hardware
 
                 for (long i = 0; i < len; i += 64, originalPtr += 64, modifiedPtr += 64)
                 {
-                    var m0 = Unsafe.Read<Vector<long>>(modifiedPtr);
-                    var m1 = Unsafe.Read<Vector<long>>(modifiedPtr + 32);
+                    var m0 = Memory.Read<Vector<long>>(modifiedPtr);
+                    var m1 = Memory.Read<Vector<long>>(modifiedPtr + 32);
 
-                    var o0 = Unsafe.Read<Vector<long>>(originalPtr);
-                    var o1 = Unsafe.Read<Vector<long>>(originalPtr + 32);
+                    var o0 = Memory.Read<Vector<long>>(originalPtr);
+                    var o1 = Memory.Read<Vector<long>>(originalPtr + 32);
 
                     if (allZeros)
                         allZeros &= m0.Equals(Vector<long>.Zero) && m1.Equals(Vector<long>.Zero);
@@ -1560,7 +1560,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 outputPtr[1] = count;
                 outputSize += sizeof(long) * 2;
 
-                Unsafe.CopyBlockUnaligned(Output + outputSize, modified + start, (uint)count);
+                Memory.CopyUnaligned(Output + outputSize, modified + start, (uint)count);
                 OutputSize = outputSize + count;
             }
 
@@ -1812,7 +1812,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 outputPtr[1] = runLengthInBytes;
                 outputSize += sizeof(long) * 2;
 
-                Unsafe.CopyBlock(Output + outputSize, (srcPtr + destOffset) + startIdx, (uint)runLengthInBytes);
+                Memory.Copy(Output + outputSize, (srcPtr + destOffset) + startIdx, (uint)runLengthInBytes);
 
                 OutputSize = outputSize + runLengthInBytes;
             }
@@ -1953,7 +1953,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 outputPtr[1] = runLengthInBytes;
                 outputSize += sizeof(long) * 2;
 
-                Unsafe.CopyBlock(Output + outputSize, (srcPtr + destOffset) + startIdx, (uint)runLengthInBytes);
+                Memory.Copy(Output + outputSize, (srcPtr + destOffset) + startIdx, (uint)runLengthInBytes);
 
                 OutputSize = outputSize + runLengthInBytes;
             }
@@ -2212,7 +2212,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 *(long*)(outputPtr + 0) = startIdx;
                 *(long*)(outputPtr + 8) = runLengthInBytes;
 
-                Unsafe.CopyBlock(outputPtr + 16, srcPtr + (destOffset + startIdx), (uint)runLengthInBytes);
+                Memory.Copy(outputPtr + 16, srcPtr + (destOffset + startIdx), (uint)runLengthInBytes);
 
                 OutputSize += runLengthInBytes + 16;
             }
@@ -2221,7 +2221,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static ulong ToUnsignedLong(bool value)
             {
-                var result = Unsafe.As<bool, byte>(ref value);
+                var result = Memory.As<bool, byte>(ref value);
                 return result;
             }
 
@@ -2343,7 +2343,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static byte ToByte(bool value)
             {
-                return Unsafe.As<bool, byte>(ref value);
+                return Memory.As<bool, byte>(ref value);
             }
 
             public void ComputeCacheAware_Branchless_LessRegisters(void* originalBuffer, void* modifiedBuffer, int size)
@@ -2740,7 +2740,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -2769,8 +2769,8 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                     bool blockEquals;
                     if (*(ulong*)(ptr + 0) == *(ulong*)(ptr + offset + 0))
                     {
-                        var o0 = Unsafe.Read<Vector<ulong>>(ptr);
-                        var m0 = Unsafe.Read<Vector<ulong>>(ptr + offset);
+                        var o0 = Memory.Read<Vector<ulong>>(ptr);
+                        var m0 = Memory.Read<Vector<ulong>>(ptr + offset);
 
                         blockEquals = o0.Equals(m0);
                         if (blockEquals && !started)
@@ -2817,7 +2817,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -2900,7 +2900,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -2938,8 +2938,8 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                     Sse.Prefetch0(ptr + 512);
                     Sse.Prefetch0(ptr + offset + 512);
 
-                    var o0 = Unsafe.Read<Vector<ulong>>(ptr);
-                    var m0 = Unsafe.Read<Vector<ulong>>(ptr + offset);
+                    var o0 = Memory.Read<Vector<ulong>>(ptr);
+                    var m0 = Memory.Read<Vector<ulong>>(ptr + offset);
 
                     if (o0.Equals(m0))
                     {
@@ -2982,7 +2982,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -3064,7 +3064,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -3136,7 +3136,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -3211,7 +3211,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -3237,8 +3237,8 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 // For each block of 32 bytes in size (that is 4 ulong values per block)
                 for (byte* end = ptr + size; ptr < end; ptr += 32)
                 {
-                    var o0 = Unsafe.Read<Vector<ulong>>(ptr);
-                    var m0 = Unsafe.Read<Vector<ulong>>(ptr + offset);
+                    var o0 = Memory.Read<Vector<ulong>>(ptr);
+                    var m0 = Memory.Read<Vector<ulong>>(ptr + offset);
 
                     if (o0.Equals(m0))
                     {
@@ -3281,7 +3281,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -3309,8 +3309,8 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 {
                     if (*(ulong*)(ptr + 0) == *(ulong*)(ptr + offset + 0))
                     {
-                        var o0 = Unsafe.Read<Vector<ulong>>(ptr);
-                        var m0 = Unsafe.Read<Vector<ulong>>(ptr + offset);
+                        var o0 = Memory.Read<Vector<ulong>>(ptr);
+                        var m0 = Memory.Read<Vector<ulong>>(ptr + offset);
 
                         if (o0.Equals(m0))
                         {
@@ -3354,7 +3354,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -3431,7 +3431,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -3499,7 +3499,7 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 for (Range* end = (Range*)(Output + size); rangePtr < end; rangePtr++)
                 {
                     *((Range*)writePtr) = *rangePtr;
-                    Unsafe.CopyBlock(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
+                    Memory.Copy(writePtr + 16, (byte*)modifiedBuffer + rangePtr->Start, (uint)rangePtr->Count);
 
                     writePtr += rangePtr->Count + 16;
                 }
@@ -3526,8 +3526,8 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 // For each block of 32 bytes in size (that is 4 ulong values per block)
                 for (byte* end = ptr + size; ptr < end; ptr += 32)
                 {
-                    var o0 = Unsafe.Read<Vector<long>>(ptr + 0);
-                    var m0 = Unsafe.Read<Vector<long>>(ptr + offset + 0);
+                    var o0 = Memory.Read<Vector<long>>(ptr + 0);
+                    var m0 = Memory.Read<Vector<long>>(ptr + offset + 0);
 
                     if (!o0.Equals(m0))
                     {

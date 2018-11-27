@@ -302,7 +302,7 @@ namespace Voron.Data.Fixed
                 var entriesToMove = page.NumberOfEntries - page.LastSearchPosition;
                 if (entriesToMove > 0)
                 {
-                    UnmanagedMemory.Move(page.Pointer + page.StartPosition + ((page.LastSearchPosition + 1) * _entrySize),
+                    Memory.Move(page.Pointer + page.StartPosition + ((page.LastSearchPosition + 1) * _entrySize),
                         page.Pointer + page.StartPosition + (page.LastSearchPosition * _entrySize),
                         entriesToMove * _entrySize);
                 }
@@ -600,7 +600,7 @@ namespace Voron.Data.Fixed
             var newEntryPos = parentPage.Pointer + parentPage.StartPosition + (position * BranchEntrySize);
             if (entriesToMove > 0)
             {
-                UnmanagedMemory.Move(newEntryPos + BranchEntrySize,
+                Memory.Move(newEntryPos + BranchEntrySize,
                     newEntryPos,
                     entriesToMove * BranchEntrySize);
             }
@@ -1079,7 +1079,7 @@ namespace Voron.Data.Fixed
             }
             else
             {
-                UnmanagedMemory.Move(page.Pointer + page.StartPosition + (startPos * _entrySize),
+                Memory.Move(page.Pointer + page.StartPosition + (startPos * _entrySize),
                     page.Pointer + page.StartPosition + ((endPos + 1) * _entrySize),
                     ((page.NumberOfEntries - endPos - 1) * _entrySize)
                     );
@@ -1357,7 +1357,7 @@ namespace Voron.Data.Fixed
                     page.SetKey(parentPage.GetKey(parentPage.LastSearchPosition),0);
                 }
                 
-                UnmanagedMemory.Move(page.Pointer + page.StartPosition + (entriesToTake * sizeOfEntryInPage),
+                Memory.Move(page.Pointer + page.StartPosition + (entriesToTake * sizeOfEntryInPage),
                     page.Pointer + page.StartPosition,
                     entriesToTake * sizeOfEntryInPage);
 

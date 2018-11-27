@@ -412,7 +412,7 @@ namespace Sparrow.Compression
                     *op++ = (byte)(lastRun << ML_BITS);
                 }
 
-                Unsafe.CopyBlock(op, anchor, (uint)lastRun);
+                Memory.Copy(op, anchor, (uint)lastRun);
                 op += lastRun;
             }
 
@@ -664,7 +664,7 @@ namespace Sparrow.Compression
                             goto _output_error;   /* Error : input must be consumed */
                     }
 
-                    Unsafe.CopyBlock(op, ip, (uint)length);
+                    Memory.Copy(op, ip, (uint)length);
                     ip += length;
                     op += length;
                     break;     /* Necessarily EOF, due to parsing restrictions */
@@ -708,14 +708,14 @@ namespace Sparrow.Compression
                     {
                         /* match can be copied as a single segment from external dictionary */
                         match = dictEnd - (lowPrefix - match);                        
-                        UnmanagedMemory.Move(op, match, length); 
+                        Memory.Move(op, match, length); 
                         op += length;
                     }
                     else
                     {
                         /* match encompass external dictionary and current segment */
                         int copySize = (int)(lowPrefix - match);
-                        Unsafe.CopyBlock(op, dictEnd - copySize, (uint)copySize);
+                        Memory.Copy(op, dictEnd - copySize, (uint)copySize);
                         op += copySize;
 
                         copySize = length - copySize;
@@ -728,7 +728,7 @@ namespace Sparrow.Compression
                         }
                         else
                         {
-                            Unsafe.CopyBlock(op, lowPrefix, (uint)copySize);                            
+                            Memory.Copy(op, lowPrefix, (uint)copySize);                            
                             op += copySize;
                         }
                     }
