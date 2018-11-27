@@ -77,6 +77,8 @@ namespace Raven.Client.Connection.Async
 
         private NameValueCollection operationsHeaders = new NameValueCollection();
 
+        private Task updateTopologyTask;
+
 #if !DNXCORE50
         protected readonly ILog Log = LogManager.GetCurrentClassLogger();
 #else
@@ -132,35 +134,39 @@ namespace Raven.Client.Connection.Async
                 requestExecuterGetter(this, databaseName, incrementReadStripe), convention, AvoidCluster);
 
             Lazy<Tuple<DateTime, Task>> val;
-            try
-            {
-                if (_topologyUpdate.TryGetValue(Url, out val) == false)
-                {
-                    val = _topologyUpdate.GetOrAdd(Url, _ => new Lazy<Tuple<DateTime, Task>>(
-                        () => Tuple.Create(DateTime.UtcNow, UpdateTopologyAsync())
-                        ));
-                }
-                if (val.IsValueCreated && val.Value.Item1.Add(convention.TimeToWaitBetweenReplicationTopologyUpdates) <= DateTime.UtcNow)
-                {
-                    _topologyUpdate.TryUpdate(Url,
-                        new Lazy<Tuple<DateTime, Task>>(
-                            () => Tuple.Create(DateTime.UtcNow, UpdateTopologyAsync())
-                    ), val);
-                    _topologyUpdate.TryGetValue(Url, out val); // get the update value, ours or someone elses
-                }
 
-                AsyncHelpers.RunSync(() => val.Value.Item2);
-            }
-            catch (Exception)
+            if (_topologyUpdate.TryGetValue(Url, out val) == false)
             {
-                _topologyUpdate.TryRemove(Url, out val);
+                val = _topologyUpdate.GetOrAdd(Url, _ => new Lazy<Tuple<DateTime, Task>>(
+                    () => Tuple.Create(DateTime.UtcNow, UpdateTopologyAsync())
+                    ));
+            }
+            if (val.IsValueCreated && val.Value.Item1.Add(convention.TimeToWaitBetweenReplicationTopologyUpdates) <= DateTime.UtcNow)
+            {
+                _topologyUpdate.TryUpdate(Url,
+                    new Lazy<Tuple<DateTime, Task>>(
+                        () => Tuple.Create(DateTime.UtcNow, UpdateTopologyAsync())
+                ), val);
+                _topologyUpdate.TryGetValue(Url, out val); // get the update value, ours or someone elses
+            }
+
+            updateTopologyTask = val.Value.Item2.ContinueWith(async x =>
+            {
+                if (x.IsFaulted == false)
+                    return;
+
                 // we explicitly ignore errors here, can be because node is down, the db does not exists, etc
                 // we refresh the topology (forced)
-                val = _topologyUpdate.GetOrAdd(Url, new Lazy<Tuple<DateTime, Task>>(
+
+                _topologyUpdate.TryRemove(Url, out val);
+
+                var task = _topologyUpdate.GetOrAdd(Url, new Lazy<Tuple<DateTime, Task>>(
                     () => Tuple.Create(DateTime.UtcNow, UpdateTopologyAsync(null, force: true))));
 
-                AsyncHelpers.RunSync(() => val.Value.Item2);
-            }
+                await task.Value.Item2.ConfigureAwait(false);
+
+                updateTopologyTask = task.Value.Item2;
+            }).Unwrap();
         }
 
         private async Task UpdateTopologyAsync()
@@ -2965,6 +2971,8 @@ namespace Raven.Client.Connection.Async
             currentlyExecuting = true;
             try
             {
+                await updateTopologyTask.ConfigureAwait(false);
+
                 return await RequestExecuter.ExecuteOperationAsync(this, method, currentRequest, operation, token).ConfigureAwait(false);
             }
             finally
