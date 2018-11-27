@@ -235,7 +235,7 @@ namespace Raven.Server.Web.System
                 {
                     var requestedDirectory = PathUtil.ToFullPath(dir, ServerStore.Configuration.Core.DataDirectory.FullPath);
 
-                    if (RavenConfiguration.IsSubDirectory(requestedDirectory, ServerStore.Configuration.Core.DataDirectory.FullPath) == false)
+                    if (PathUtil.IsSubDirectory(requestedDirectory, ServerStore.Configuration.Core.DataDirectory.FullPath) == false)
                     {
                         throw new ArgumentException($"The administrator has restricted databases to be created only under the DataDir '{ServerStore.Configuration.Core.DataDirectory.FullPath}' but the actual requested path is '{requestedDirectory}'.");
                     }

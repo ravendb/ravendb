@@ -48,7 +48,7 @@ namespace Raven.Server.Web.Studio
 
             if (ServerStore.Configuration.Core.EnforceDataDirectoryPath)
             {
-                if (RavenConfiguration.IsSubDirectory(result, ServerStore.Configuration.Core.DataDirectory.FullPath) == false)
+                if (PathUtil.IsSubDirectory(result, ServerStore.Configuration.Core.DataDirectory.FullPath) == false)
                 {
                     result = $"The administrator has restricted databases to be created only under the DataDir: '{ServerStore.Configuration.Core.DataDirectory.FullPath}' but the actual requested path is '{result}'.";
                 }

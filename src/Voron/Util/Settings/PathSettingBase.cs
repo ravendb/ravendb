@@ -94,5 +94,25 @@ namespace Voron.Util.Settings
 
             return Path.GetFullPath(result); // it will unify directory separators
         }
+
+        public static bool IsSubDirectory(string userPath, string rootPath)
+        {
+            var rootDirInfo = new DirectoryInfo(rootPath);
+            var userDirInfo = new DirectoryInfo(userPath);
+
+            if (userDirInfo.FullName == rootDirInfo.FullName)
+                return true;
+
+            while (userDirInfo.Parent != null)
+            {
+                if (userDirInfo.Parent.FullName == rootDirInfo.FullName)
+                {
+                    return true;
+                }
+
+                userDirInfo = userDirInfo.Parent;
+            }
+            return false;
+        }
     }
 }
