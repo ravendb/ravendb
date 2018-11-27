@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Xml.Linq;
 using Raven.Client.Json;
 using Raven.Server.Documents.Patch;
 using Sparrow.Json;
@@ -16,6 +17,9 @@ namespace Raven.Server.Documents.Queries
         public readonly Logger Log = LoggingSource.Instance.GetLogger<GraphQueryOrderByFieldComparer>("GraphQueryOrderByFieldComparer");
         private readonly string _databaseName;
         private readonly string _query;
+        private string _xId = Unknown;
+        private string _yId = Unknown;
+        private const string Unknown = "Unknown";
 
         public GraphQueryOrderByFieldComparer(OrderByField field, string databaseName, string query)
         {
@@ -49,6 +53,8 @@ namespace Raven.Server.Documents.Queries
                         yDocument.EnsureMetadata();
                         xObject = _path.Evaluate(xDocument.Data, true);
                         yObject = _path.Evaluate(yDocument.Data, true);
+                        _xId = xDocument.Id;
+                        _yId = yDocument.Id;
                         break;
                     }
                     return LogMissmatchTypesReturnOrder(xResult, yResult);
@@ -126,6 +132,9 @@ namespace Raven.Server.Documents.Queries
             //Null values will appear last
             if (xObject == null)
             {
+                if (yObject == null)
+                    return 0;
+
                 return _order;
             }
 
@@ -227,6 +236,7 @@ namespace Raven.Server.Documents.Queries
                 case BlittableJsonReaderObject xBlittableJsonReaderObject:
                     if (yObject is BlittableJsonReaderObject yBlittableJsonReaderObject)
                     {
+                        //We don't really support meaningful sort by blittable and we just need to provide a consistent result.
                         return xBlittableJsonReaderObject.Location.CompareTo(yBlittableJsonReaderObject.Location);                  
                     }
 
@@ -259,7 +269,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (Log.IsInfoEnabled)
             {
-                Log.Info($"Database: {_databaseName} Graph Query: {_query} Got unexpected types to compare: {xResult} of type {xResult.GetType().Name} and {yResult} of type {yResult.GetType().Name}, this may yield unexpected query ordering.");
+                Log.Info($"Database: {_databaseName} Graph Query: {_query} Document Ids:({_xId},{_yId}), Got unexpected types to compare: {xResult} of type {xResult.GetType().Name} and {yResult} of type {yResult.GetType().Name}, this may yield unexpected query ordering.");
             }
 
             return _order;
