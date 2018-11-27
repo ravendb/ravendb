@@ -100,12 +100,12 @@ namespace Voron.Util.Settings
             var rootDirInfo = new DirectoryInfo(rootPath);
             var userDirInfo = new DirectoryInfo(userPath);
 
-            if (userDirInfo.FullName == rootDirInfo.FullName)
+            if (string.Equals(userDirInfo.FullName, rootDirInfo.FullName, StringComparison.OrdinalIgnoreCase))
                 return true;
 
             while (userDirInfo.Parent != null)
             {
-                if (userDirInfo.Parent.FullName == rootDirInfo.FullName)
+                if (string.Equals(userDirInfo.Parent.FullName, rootDirInfo.FullName, StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }
