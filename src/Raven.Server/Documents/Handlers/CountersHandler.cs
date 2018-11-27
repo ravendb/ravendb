@@ -98,9 +98,6 @@ namespace Raven.Server.Documents.Handlers
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
             {
-                if (_database.ServerStore.Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                    FeaturesAvailabilityException.Throw("Counters");
-
                 foreach (var kvp in _dictionary)
                 {
                     Document doc = null;
@@ -233,9 +230,6 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/counters", "GET", AuthorizationStatus.ValidUser)]
         public Task Get()
         {
-            if (Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                FeaturesAvailabilityException.Throw("Counters");
-
             var docId = GetStringValuesQueryString("docId"); 
             var full = GetBoolValueQueryString("full", required: false) ?? false;
             var counters = GetStringValuesQueryString("counter", required: false);
