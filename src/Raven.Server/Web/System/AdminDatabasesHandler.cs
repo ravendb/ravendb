@@ -231,7 +231,7 @@ namespace Raven.Server.Web.System
                 databaseRecord.DatabaseName = databaseRecord.DatabaseName.Trim();
 
                 if (ServerStore.Configuration.Core.EnforceDataDirectoryPath 
-                    && databaseRecord.Settings.TryGetValue("DataDir", out var dir))
+                    && databaseRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.DataDirectory), out var dir))
                 {
                     var requestedDirectory = PathUtil.ToFullPath(dir, ServerStore.Configuration.Core.DataDirectory.FullPath);
 
