@@ -100,12 +100,14 @@ namespace Voron.Util.Settings
             var rootDirInfo = new DirectoryInfo(rootPath);
             var userDirInfo = new DirectoryInfo(userPath);
 
-            if (string.Equals(userDirInfo.FullName, rootDirInfo.FullName, StringComparison.OrdinalIgnoreCase))
+            var comparisonType = PlatformDetails.RunningOnPosix ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+            
+            if (string.Equals(userDirInfo.FullName, rootDirInfo.FullName, comparisonType))
                 return true;
 
             while (userDirInfo.Parent != null)
             {
-                if (string.Equals(userDirInfo.Parent.FullName, rootDirInfo.FullName, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(userDirInfo.Parent.FullName, rootDirInfo.FullName, comparisonType))
                 {
                     return true;
                 }
