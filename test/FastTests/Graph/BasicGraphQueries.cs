@@ -451,7 +451,7 @@ select son.Name as Son, evil.Name as Evil")
             {
                 using (var session = store.OpenSession())
                 {
-                    Assert.Throws<RavenException>(() => session.Advanced.RawQuery<JObject>(@"match (FooBar)").ToList());
+                    Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<JObject>(@"match (FooBar)").ToList());
                 }
             }
         }
