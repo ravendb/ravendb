@@ -9,6 +9,9 @@ import studioSetting = require("common/settings/studioSetting");
 class globalSettings extends abstractSettings {
     private readonly remoteSettingsLoader: () => JQueryPromise<Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration>;
     private readonly remoteSettingsSaver: (settings: Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration) => JQueryPromise<void>;
+
+    replicationFactor = new simpleStudioSetting<number>(
+        "remote", null, x => this.saveSetting(x));
     
     numberFormatting = new simpleStudioSetting<studio.settings.numberFormatting>("local", "formatted", x => this.saveSetting(x));
     dontShowAgain = new dontShowAgainSettings(x => this.saveSetting(x));
