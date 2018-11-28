@@ -70,7 +70,7 @@ namespace Sparrow.Json
             _context.ReturnMemoryStream((MemoryStream)_stream);
         }
 
-        public void ThrowInvalidTypeException(Type typeOfStream)
+        private void ThrowInvalidTypeException(Type typeOfStream)
         {
             throw new ArgumentException($"Expected stream to be MemoryStream, but got {(typeOfStream == null ? "null" : typeOfStream.ToString())}.");
         }
