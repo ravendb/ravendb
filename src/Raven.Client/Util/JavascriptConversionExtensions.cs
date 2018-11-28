@@ -682,20 +682,20 @@ namespace Raven.Client.Util
                 var writer = context.GetWriter();
                 using (writer.Operation(methodCallExpression))
                 {
-                    string arg = null;
+                    string path = null;
                     var isNumber = false;
                     if (methodCallExpression.Arguments.Count == 2 &&
                         methodCallExpression.Arguments[1] is LambdaExpression lambda &&
                         lambda.Body is MemberExpression memberExpression)
                     {
-                        arg = memberExpression.Member.Name;
+                        path = memberExpression.Member.Name;
 
                         if (memberExpression.Expression is ParameterExpression == false)
                         {
-                            GetInnermostExpression(memberExpression, out var path);
-                            if (path != string.Empty)
+                            GetInnermostExpression(memberExpression, out var nestedPath);
+                            if (nestedPath != string.Empty)
                             {
-                                arg = $"{path}.{arg}";
+                                path = $"{nestedPath}.{path}";
                             }
                         }
 
@@ -703,21 +703,21 @@ namespace Raven.Client.Util
                     }
 
                     writer.Write(".sort(");
-                    if (arg != null)
+                    if (path != null)
                     {
                         writer.Write("function (a, b){ return ");
 
                         if (isNumber)
                         {
                             writer.Write(desc
-                                ? $"b.{arg} - a.{arg}"
-                                : $"a.{arg} - b.{arg}");
+                                ? $"b.{path} - a.{path}"
+                                : $"a.{path} - b.{path}");
                         }
                         else
                         {
                             writer.Write(desc
-                                ? $"((a.{arg} < b.{arg}) ? 1 : (a.{arg} > b.{arg})? -1 : 0)"
-                                : $"((a.{arg} < b.{arg}) ? -1 : (a.{arg} > b.{arg})? 1 : 0)");
+                                ? $"((a.{path} < b.{path}) ? 1 : (a.{path} > b.{path})? -1 : 0)"
+                                : $"((a.{path} < b.{path}) ? -1 : (a.{path} > b.{path})? 1 : 0)");
                         }
                         writer.Write(";}");
 
@@ -2290,6 +2290,20 @@ namespace Raven.Client.Util
             }
 
             return expression.Expression as ParameterExpression;
+        }
+
+        public static Expression GetInnermostExpression(MemberExpression expression, out string path)
+        {
+            path = string.Empty;
+            while (expression.Expression is MemberExpression memberExpression)
+            {
+                expression = memberExpression;
+                path = path == string.Empty
+                    ? expression.Member.Name
+                    : $"{expression.Member.Name}.{path}";
+            }
+
+            return expression.Expression;
         }
 
     }

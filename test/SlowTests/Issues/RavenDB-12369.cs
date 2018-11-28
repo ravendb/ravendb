@@ -211,18 +211,18 @@ namespace SlowTests.Issues
                 {
                     var q = Queryable.Select(s.Query<MultiOrder>(), x => new
                     {
-                        OrderedByNestedDate = x.Info.OrderBy(i => i.Address.ZipCode).ToList()
+                        OrderedBy = x.Info.OrderBy(i => i.Address.ZipCode).ToList()
                     });
                     Assert.Equal("from MultiOrders as x select { " +
-                                 "OrderedByNestedDate : x.Info.sort(" +
+                                 "OrderedBy : x.Info.sort(" +
                                  "function (a, b){ return a.Address.ZipCode - b.Address.ZipCode;}) }"
                         , q.ToString());
 
                     var result = q.First();
 
-                    Assert.Equal(1, result.OrderedByNestedDate[0].Address.ZipCode);
-                    Assert.Equal(2, result.OrderedByNestedDate[1].Address.ZipCode);
-                    Assert.Equal(3, result.OrderedByNestedDate[2].Address.ZipCode);
+                    Assert.Equal(1, result.OrderedBy[0].Address.ZipCode);
+                    Assert.Equal(2, result.OrderedBy[1].Address.ZipCode);
+                    Assert.Equal(3, result.OrderedBy[2].Address.ZipCode);
                 }
             }
         }
@@ -269,19 +269,19 @@ namespace SlowTests.Issues
                 {
                     var q = Queryable.Select(s.Query<MultiOrder>(), x => new
                     {
-                        OrderedByNestedDate = x.Info.OrderBy(i => i.Address.City).ToList()
+                        OrderedBy = x.Info.OrderBy(i => i.Address.City).ToList()
                     });
                     Assert.Equal("from MultiOrders as x select { " +
-                                 "OrderedByNestedDate : x.Info.sort(function (a, b){ " +
+                                 "OrderedBy : x.Info.sort(function (a, b){ " +
                                  "return ((a.Address.City < b.Address.City) " +
                                  "? -1 : (a.Address.City > b.Address.City)? 1 : 0);}) }"
                         , q.ToString());
 
                     var result = q.First();
 
-                    Assert.Equal("Atlanta", result.OrderedByNestedDate[0].Address.City);
-                    Assert.Equal("Berlin", result.OrderedByNestedDate[1].Address.City);
-                    Assert.Equal("Chicago", result.OrderedByNestedDate[2].Address.City);
+                    Assert.Equal("Atlanta", result.OrderedBy[0].Address.City);
+                    Assert.Equal("Berlin", result.OrderedBy[1].Address.City);
+                    Assert.Equal("Chicago", result.OrderedBy[2].Address.City);
                 }
             }
         }
@@ -318,19 +318,19 @@ namespace SlowTests.Issues
                 {
                     var q = Queryable.Select(s.Query<Order>(), x => new
                     {
-                        SortedLines = x.Lines.OrderByDescending(l => l.Quantity).ToList()
+                        OrderByDescending = x.Lines.OrderByDescending(l => l.Quantity).ToList()
                     });
 
                     var result = q.First();
 
                     Assert.Equal("from Orders as x select " +
-                                 "{ SortedLines : x.Lines.sort(" +
+                                 "{ OrderByDescending : x.Lines.sort(" +
                                  "function (a, b){ return b.Quantity - a.Quantity;}) }"
                         , q.ToString());
 
-                    Assert.Equal(30, result.SortedLines[0].Quantity);
-                    Assert.Equal(20, result.SortedLines[1].Quantity);
-                    Assert.Equal(10, result.SortedLines[2].Quantity);
+                    Assert.Equal(30, result.OrderByDescending[0].Quantity);
+                    Assert.Equal(20, result.OrderByDescending[1].Quantity);
+                    Assert.Equal(10, result.OrderByDescending[2].Quantity);
                 }
             }
         }
@@ -367,20 +367,20 @@ namespace SlowTests.Issues
                 {
                     var q = Queryable.Select(s.Query<Order>(), x => new
                     {
-                        SortedLines = x.Lines.OrderByDescending(l => l.ProductName).ToList()
+                        OrderByDescending = x.Lines.OrderByDescending(l => l.ProductName).ToList()
                     });
 
                     Assert.Equal("from Orders as x select { " +
-                                 "SortedLines : x.Lines.sort(function (a, b){ " +
+                                 "OrderByDescending : x.Lines.sort(function (a, b){ " +
                                  "return ((a.ProductName < b.ProductName) " +
                                  "? 1 : (a.ProductName > b.ProductName)? -1 : 0);}) }"
                         , q.ToString());
 
                     var result = q.First();
 
-                    Assert.Equal("cheese", result.SortedLines[0].ProductName);
-                    Assert.Equal("beer", result.SortedLines[1].ProductName);
-                    Assert.Equal("avocado", result.SortedLines[2].ProductName);
+                    Assert.Equal("cheese", result.OrderByDescending[0].ProductName);
+                    Assert.Equal("beer", result.OrderByDescending[1].ProductName);
+                    Assert.Equal("avocado", result.OrderByDescending[2].ProductName);
 
 
                 }
