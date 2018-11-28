@@ -28,7 +28,7 @@ namespace Raven.Tests.Core.Commands
 #endif
 
         [Fact]
-        public void CanCancelPutDocument()
+        public async Task CanCancelPutDocument()
         {
             var random = new Random();
             var largeArray = new byte[1024 * 1024 * 2];
@@ -43,6 +43,15 @@ namespace Raven.Tests.Core.Commands
                 var ravenJObject = RavenJObject.FromObject(largeDocument);
                 cts.Cancel();
                 var putTask = store.AsyncDatabaseCommands.PutAsync("test/1", null, ravenJObject, new RavenJObject(), cts.Token);
+
+                for (int i = 0; i < 500; i++)
+                {
+                    if (putTask.IsCanceled)
+                        break;
+
+                    await Task.Delay(100).ConfigureAwait(false);
+                }
+
                 Assert.True(putTask.IsCanceled);
             }
         }
