@@ -23,6 +23,7 @@ using Raven.Client.Extensions;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Commands;
@@ -1127,7 +1128,7 @@ namespace Raven.Server.Documents.Patch
                 for (var i = 0; i < args.Length; i++)
                     _args[i] = TranslateToJs(ScriptEngine, jsonCtx, args[i]);
 
-                if (method != "__selectOutput" &&
+                if (method != QueryMetadata.SelectOutput &&
                     _args.Length == 2 &&
                     _args[1].IsObject() &&
                     _args[1].AsObject() is BlittableObjectInstance boi)

@@ -29,6 +29,8 @@ namespace Raven.Server.Documents.Queries
 {
     public class QueryMetadata
     {
+        internal static string SelectOutput = "__selectOutput";
+
         private readonly Dictionary<string, QueryFieldName> _aliasToName = new Dictionary<string, QueryFieldName>();
 
         public readonly Dictionary<StringSegment, (string PropertyPath, bool Array, bool Parameter, bool Quoted, string LoadFromAlias)> RootAliasPaths = new Dictionary<StringSegment, (string, bool, bool, bool, string)>();
@@ -475,14 +477,13 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidQueryException("Select clause contains invalid script", QueryText, parameters, e);
             }
 
-            var name = "__selectOutput";
             if (Query.DeclaredFunctions != null &&
-                Query.DeclaredFunctions.ContainsKey(name))
+                Query.DeclaredFunctions.ContainsKey(SelectOutput))
                 ThrowUseOfReserveFunctionBodyMethodName(parameters);
 
             var sb = new StringBuilder();
 
-            sb.Append("function ").Append(name).Append("(");
+            sb.Append("function ").Append(SelectOutput).Append("(");
             int index = 0;
             var args = new SelectField[RootAliasPaths.Count];
 
@@ -510,10 +511,10 @@ namespace Raven.Server.Documents.Queries
 
             sb.AppendLine(";").AppendLine("}");
 
-            if (Query.TryAddFunction(name, (sb.ToString(), Query.SelectFunctionBody.Program)) == false)
+            if (Query.TryAddFunction(SelectOutput, (sb.ToString(), Query.SelectFunctionBody.Program)) == false)
                 ThrowUseOfReserveFunctionBodyMethodName(parameters);
 
-            SelectFields = new[] { SelectField.CreateMethodCall(name, null, args) };
+            SelectFields = new[] { SelectField.CreateMethodCall(SelectOutput, null, args) };
         }
 
         private void AddToCounterIncludes(CounterIncludesField counterIncludes, MethodExpression expression, BlittableJsonReaderObject parameters)
