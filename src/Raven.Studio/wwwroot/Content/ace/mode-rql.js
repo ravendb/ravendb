@@ -794,7 +794,7 @@ ace.define("ace/mode/rql_highlight_rules",["require","exports","module","ace/lib
         var keywordRegex = /[a-zA-Z_$@\u00a1-\uffff][a-zA-Z0-9_$@\u00a1-\uffff]*\b/;
 
         var clausesKeywords = (
-            "declare|from|group|where|order|load|select|include|update|match|with"
+            "declare|from|group|where|order|load|select|include|update|match|with|limit|offset"
         );
         this.clausesKeywords = clausesKeywords.split("|");
 
