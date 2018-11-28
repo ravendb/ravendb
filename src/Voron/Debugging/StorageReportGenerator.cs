@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="StorageReportGenerator.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -44,7 +44,7 @@ namespace Voron.Debugging
         public List<JournalFile> Journals;
         public List<Table> Tables;
         public ScratchBufferPoolInfo ScratchBufferPoolInfo { get; set; }
-        public bool CalculateExactSizes { get; set; }
+        public bool IncludeDetails { get; set; }
         public VoronPathSetting TempPath { get; set; }
         public VoronPathSetting JournalPath { get; set; }
     }
@@ -84,14 +84,14 @@ namespace Voron.Debugging
 
             foreach (var tree in input.Trees)
             {
-                var treeReport = GetReport(tree, input.CalculateExactSizes);
+                var treeReport = GetReport(tree, input.IncludeDetails);
 
                 trees.Add(treeReport);
             }
 
             foreach (var fst in input.FixedSizeTrees)
             {
-                var treeReport = GetReport(fst, input.CalculateExactSizes);
+                var treeReport = GetReport(fst, input.IncludeDetails);
 
                 trees.Add(treeReport);
             }
@@ -99,7 +99,7 @@ namespace Voron.Debugging
             var tables = new List<TableReport>();
             foreach (var table in input.Tables)
             {
-                var tableReport = table.GetReport(input.CalculateExactSizes);
+                var tableReport = table.GetReport(input.IncludeDetails);
                 tables.Add(tableReport);
             }
 
@@ -112,7 +112,7 @@ namespace Voron.Debugging
                 Trees = trees,
                 Tables = tables,
                 Journals = journals,
-                PreAllocatedBuffers = GetReport(new NewPageAllocator(_tx, _tx.RootObjects), input.CalculateExactSizes),
+                PreAllocatedBuffers = GetReport(new NewPageAllocator(_tx, _tx.RootObjects), input.IncludeDetails),
                 ScratchBufferPoolInfo = input.ScratchBufferPoolInfo,
                 TempBuffers = tempBuffers,
             };
@@ -189,12 +189,13 @@ namespace Voron.Debugging
             return tempFiles;
         }
 
-        public static TreeReport GetReport(FixedSizeTree fst, bool calculateExactSizes)
+        public static TreeReport GetReport(FixedSizeTree fst, bool includeDetails)
         {
             List<double> pageDensities = null;
-
-            if (calculateExactSizes)
+            if (includeDetails)
+            {
                 pageDensities = GetPageDensities(fst);
+            }
 
             var density = pageDensities?.Average() ?? -1;
 
@@ -210,19 +211,20 @@ namespace Voron.Debugging
                 PageCount = fst.PageCount,
                 Density = density,
                 AllocatedSpaceInBytes = fst.PageCount * Constants.Storage.PageSize,
-                UsedSpaceInBytes = calculateExactSizes ? (long)(fst.PageCount * Constants.Storage.PageSize * density) : -1,
-                MultiValues = null
+                UsedSpaceInBytes = includeDetails ? (long)(fst.PageCount * Constants.Storage.PageSize * density) : -1,
+                MultiValues = null,
             };
             return treeReport;
         }
 
-        public static TreeReport GetReport(Tree tree, bool calculateExactSizes)
+        public static TreeReport GetReport(Tree tree, bool includeDetails)
         {
             List<double> pageDensities = null;
-
-            if (calculateExactSizes)
+            Dictionary<int, int> pageBalance = null;
+            if (includeDetails)
             {
                 pageDensities = GetPageDensities(tree);
+                pageBalance = GatherBalanceDistribution(tree);
             }
 
             MultiValuesReport multiValues = null;
@@ -251,9 +253,10 @@ namespace Voron.Debugging
                 PageCount = tree.State.PageCount,
                 Density = density,
                 AllocatedSpaceInBytes = tree.State.PageCount * Constants.Storage.PageSize + (streams?.AllocatedSpaceInBytes ?? 0),
-                UsedSpaceInBytes = calculateExactSizes ? (long)(tree.State.PageCount * Constants.Storage.PageSize * density) : -1,
+                UsedSpaceInBytes = includeDetails ? (long)(tree.State.PageCount * Constants.Storage.PageSize * density) : -1,
                 MultiValues = multiValues,
-                Streams = streams
+                Streams = streams,
+                BalanceHistogram = pageBalance,
             };
 
             return treeReport;
@@ -357,10 +360,10 @@ namespace Voron.Debugging
             return multiValues;
         }
 
-        public static PreAllocatedBuffersReport GetReport(NewPageAllocator preAllocatedBuffers, bool calculateExactSizes)
+        public static PreAllocatedBuffersReport GetReport(NewPageAllocator preAllocatedBuffers, bool includeDetails)
         {
             var buffersReport = preAllocatedBuffers.GetNumberOfPreAllocatedFreePages();
-            var allocationTreeReport = GetReport(preAllocatedBuffers.GetAllocationStorageFst(), calculateExactSizes);
+            var allocationTreeReport = GetReport(preAllocatedBuffers.GetAllocationStorageFst(), includeDetails);
 
             return new PreAllocatedBuffersReport
             {
@@ -370,6 +373,38 @@ namespace Voron.Debugging
                 AllocationTree = allocationTreeReport,
                 OriginallyAllocatedSpaceInBytes = (buffersReport.NumberOfOriginallyAllocatedPages + allocationTreeReport.PageCount) * Constants.Storage.PageSize
             };
+        }
+
+        public static Dictionary<int, int> GatherBalanceDistribution(Tree tree)
+        {
+            var histogram = new Dictionary<int, int>();
+
+            var root = tree.GetReadOnlyTreePage(tree.State.RootPageNumber);
+
+            GatherBalanceDistribution(tree, root, histogram, depth: 1);
+
+            return histogram;
+        }
+
+        private static void GatherBalanceDistribution(Tree tree, TreePage page, Dictionary<int, int> histogram, int depth)
+        {
+            if (page.IsLeaf)
+            {
+                if (!histogram.TryGetValue(depth, out int value))
+                    value = 0;
+
+                histogram[depth] = value + 1;
+            }
+            else
+            {
+                for (int i = 0; i < page.NumberOfEntries; i++)
+                {
+                    var nodeHeader = page.GetNode(i);
+                    var pageNum = nodeHeader->PageNumber;
+
+                    GatherBalanceDistribution(tree, tree.GetReadOnlyTreePage(pageNum), histogram, depth + 1);
+                }
+            }
         }
 
         public static List<double> GetPageDensities(Tree tree)

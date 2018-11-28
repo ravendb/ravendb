@@ -1605,21 +1605,21 @@ namespace Voron.Data.Tables
             _tableTree?.Dispose();
         }
 
-        public TableReport GetReport(bool calculateExactSizes)
+        public TableReport GetReport(bool includeDetails)
         {
             var overflowSize = _overflowPageCount * Constants.Storage.PageSize;
-            var report = new TableReport(overflowSize, overflowSize, calculateExactSizes)
+            var report = new TableReport(overflowSize, overflowSize, includeDetails)
             {
                 Name = Name.ToString(),
                 NumberOfEntries = NumberOfEntries
             };
 
-            report.AddStructure(_tableTree, calculateExactSizes);
+            report.AddStructure(_tableTree, includeDetails);
 
             if (_schema.Key != null && _schema.Key.IsGlobal == false)
             {
                 var pkTree = GetTree(_schema.Key);
-                report.AddIndex(pkTree, calculateExactSizes);
+                report.AddIndex(pkTree, includeDetails);
             }
 
             foreach (var index in _schema.FixedSizeIndexes)
@@ -1628,7 +1628,7 @@ namespace Voron.Data.Tables
                     continue;
 
                 var fst = GetFixedSizeTree(index.Value);
-                report.AddIndex(fst, calculateExactSizes);
+                report.AddIndex(fst, includeDetails);
             }
 
             foreach (var index in _schema.Indexes)
@@ -1637,14 +1637,14 @@ namespace Voron.Data.Tables
                     continue;
 
                 var tree = GetTree(index.Value);
-                report.AddIndex(tree, calculateExactSizes);
+                report.AddIndex(tree, includeDetails);
             }
 
             var activeCandidateSection = ActiveCandidateSection;
-            report.AddStructure(activeCandidateSection, calculateExactSizes);
+            report.AddStructure(activeCandidateSection, includeDetails);
 
             var inactiveSections = InactiveSections;
-            report.AddStructure(inactiveSections, calculateExactSizes);
+            report.AddStructure(inactiveSections, includeDetails);
 
             using (var it = inactiveSections.Iterate())
             {
@@ -1653,14 +1653,14 @@ namespace Voron.Data.Tables
                     do
                     {
                         var inactiveSection = new RawDataSection(_tx.LowLevelTransaction, it.CurrentKey);
-                        report.AddData(inactiveSection, calculateExactSizes);
+                        report.AddData(inactiveSection, includeDetails);
                     } while (it.MoveNext());
                 }
             }
 
-            report.AddData(ActiveDataSmallSection, calculateExactSizes);
+            report.AddData(ActiveDataSmallSection, includeDetails);
 
-            report.AddPreAllocatedBuffers(_tablePageAllocator, calculateExactSizes);
+            report.AddPreAllocatedBuffers(_tablePageAllocator, includeDetails);
 
             return report;
         }
