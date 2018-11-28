@@ -74,6 +74,7 @@ namespace Voron.Debugging
         public long UsedSpaceInBytes { get; set; }
 
         public StreamsReport Streams { get; set; }
+        public Dictionary<int, int> BalanceHistogram { get; internal set; }
     }
 
     public class MultiValuesReport
