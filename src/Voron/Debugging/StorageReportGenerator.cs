@@ -143,19 +143,7 @@ namespace Voron.Debugging
         {
             var tempFiles = Directory.GetFiles(tempPath.FullPath, "*.buffers").Select(filePath =>
             {
-                var file = new FileInfo(filePath);
-
-                return new TempBufferReport
-                {
-                    Name = file.Name,
-                    AllocatedSpaceInBytes = file.Length,
-                    Type = TempBufferType.Scratch
-                };
-            }).ToList();
-
-            if (journalPath != null)
-            {
-                var recyclableJournals = Directory.GetFiles(journalPath.FullPath, $"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}.*").Select(filePath =>
+                try
                 {
                     var file = new FileInfo(filePath);
 
@@ -163,8 +151,36 @@ namespace Voron.Debugging
                     {
                         Name = file.Name,
                         AllocatedSpaceInBytes = file.Length,
-                        Type = TempBufferType.RecyclableJournal
+                        Type = TempBufferType.Scratch
                     };
+                }
+                catch (FileNotFoundException)
+                {
+                    // could be deleted meanwhile
+                    return null;
+                }
+            }).Where(x => x != null).ToList();
+
+            if (journalPath != null)
+            {
+                var recyclableJournals = Directory.GetFiles(journalPath.FullPath, $"{StorageEnvironmentOptions.RecyclableJournalFileNamePrefix}.*").Select(filePath =>
+                {
+                    try
+                    {
+                        var file = new FileInfo(filePath);
+
+                        return new TempBufferReport
+                        {
+                            Name = file.Name,
+                            AllocatedSpaceInBytes = file.Length,
+                            Type = TempBufferType.RecyclableJournal
+                        };
+                    }
+                    catch (FileNotFoundException)
+                    {
+                        // could be deleted meanwhile
+                        return null;
+                    }
                 }).ToList();
 
                 tempFiles.AddRange(recyclableJournals);
