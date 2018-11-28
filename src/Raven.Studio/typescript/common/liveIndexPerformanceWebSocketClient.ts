@@ -12,15 +12,18 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<result
     private static readonly isoParser = d3.time.format.iso;
 
     private mergedData: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = [];
-
+    private readonly dateCutOff: Date;
     private pendingDataToApply: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = [];
     private updatesPaused = false;
 
     loading = ko.observable<boolean>(true);
 
-    constructor(db: database, onData: (data: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) => void) {
+    constructor(db: database, 
+                onData: (data: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) => void,
+                dateCutOff?: Date) {
         super(db);
         this.onData = onData;
+        this.dateCutOff = dateCutOff;
     }
 
     get connectionDescription() {
@@ -59,12 +62,15 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<result
         if (this.updatesPaused) {
             this.pendingDataToApply.push(...e.Results);
         } else {
-            this.mergeIncomingData(e.Results);
-            this.onData(this.mergedData);
+            const hasAnyChange = this.mergeIncomingData(e.Results);
+            if (hasAnyChange) {
+                this.onData(this.mergedData);
+            }
         }
     }
 
     private mergeIncomingData(e: Raven.Client.Documents.Indexes.IndexPerformanceStats[]) {
+        let hasAnyChange = false;
         e.forEach(incomingIndexStats => {
             const indexName = incomingIndexStats.Name;
 
@@ -85,6 +91,12 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<result
 
             incomingIndexStats.Performance.forEach(incomingPerf => {
                 liveIndexPerformanceWebSocketClient.fillCache(incomingPerf);
+                
+                if (this.dateCutOff && this.dateCutOff.getTime() >= (incomingPerf as IndexingPerformanceStatsWithCache).StartedAsDate.getTime()) {
+                    return;
+                }
+                
+                hasAnyChange = true;
 
                 if (idToIndexCache.has(incomingPerf.Id)) {
                     // update 
@@ -96,6 +108,8 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<result
                 }
             });
         });
+        
+        return hasAnyChange;
     }
 
     static fillCache(perf: Raven.Client.Documents.Indexes.IndexingPerformanceStats) {

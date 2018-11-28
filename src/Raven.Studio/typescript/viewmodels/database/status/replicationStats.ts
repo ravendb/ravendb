@@ -227,7 +227,7 @@ class replicationStats extends viewModelBase {
 
     hasAnyData = ko.observable<boolean>(false);
     loading: KnockoutComputed<boolean>;
-    private searchText = ko.observable<string>();
+    private searchText = ko.observable<string>("");
 
     private liveViewClient = ko.observable<liveReplicationStatsWebSocketClient>();
     private autoScroll = ko.observable<boolean>(false);
@@ -248,6 +248,7 @@ class replicationStats extends viewModelBase {
 
     private bufferIsFull = ko.observable<boolean>(false);
     private bufferUsage = ko.observable<string>("0.0");
+    private dateCutoff: Date; // used to avoid showing server side cached items, after 'clear' is clicked. 
     private totalWidth: number;
     private totalHeight: number;
     private currentYOffset = 0;
@@ -485,7 +486,7 @@ class replicationStats extends viewModelBase {
             }
         };
 
-        this.liveViewClient(new liveReplicationStatsWebSocketClient(this.activeDatabase(), onDataUpdate));
+        this.liveViewClient(new liveReplicationStatsWebSocketClient(this.activeDatabase(), onDataUpdate, this.dateCutoff));
     }
 
     private checkBufferUsage() {
@@ -1268,12 +1269,22 @@ class replicationStats extends viewModelBase {
     clearGraph() {
         this.bufferIsFull(false);
         this.cancelLiveView();
+        
+        this.setCutOffDate();
+        
         this.hasAnyData(false);
         this.resetGraphData();
         this.enableLiveView();
     }
+    
+    private setCutOffDate() {
+        this.dateCutoff = d3.max(this.data, 
+                d => d3.max(d.Performance, 
+                    (p: ReplicationPerformanceBaseWithCache) => p.StartedAsDate));
+    }
 
     closeImport() {
+        this.dateCutoff = null;
         this.isImport(false);
         this.clearGraph();
     }
@@ -1283,6 +1294,7 @@ class replicationStats extends viewModelBase {
 
         this.expandedTracks([]);
         this.searchText("");
+        this.bufferUsage("0.0");
     }
 
     private setZoomAndBrush(scale: [number, number], brushAction: (brush: d3.svg.Brush<any>) => void) {
