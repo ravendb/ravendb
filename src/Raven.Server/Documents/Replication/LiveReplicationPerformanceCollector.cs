@@ -2,83 +2,57 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Replication;
 using Raven.Server.Utils;
-using Sparrow.Collections;
+using Raven.Server.Utils.Stats;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class LiveReplicationPerformanceCollector : IDisposable
+    public class LiveReplicationPerformanceCollector : LivePerformanceCollector<LiveReplicationPerformanceCollector.IReplicationPerformanceStats>
     {
-        private readonly DocumentDatabase _database;
-        private CancellationTokenSource _cts;
-        private readonly Task<Task> _task;
-
         private readonly ConcurrentDictionary<string, ReplicationHandlerAndPerformanceStatsList<IncomingReplicationHandler, IncomingReplicationStatsAggregator>> _incoming =
             new ConcurrentDictionary<string, ReplicationHandlerAndPerformanceStatsList<IncomingReplicationHandler, IncomingReplicationStatsAggregator>>(StringComparer.OrdinalIgnoreCase);
 
         private readonly ConcurrentDictionary<OutgoingReplicationHandler, ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator>> _outgoing =
             new ConcurrentDictionary<OutgoingReplicationHandler, ReplicationHandlerAndPerformanceStatsList<OutgoingReplicationHandler, OutgoingReplicationStatsAggregator>>();
 
-        public LiveReplicationPerformanceCollector(DocumentDatabase database)
+        public LiveReplicationPerformanceCollector(DocumentDatabase database) : base(database)
         {
-            _database = database;
-
             var recentStats = PrepareInitialPerformanceStats().ToList();
             if (recentStats.Count > 0)
             {
                 Stats.Enqueue(recentStats);
             }
 
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
-            _task = Task.Factory.StartNew(StartCollectingStats);
+            Start();
         }
 
-        public AsyncQueue<List<IReplicationPerformanceStats>> Stats { get; } = new AsyncQueue<List<IReplicationPerformanceStats>>();
-
-        private async Task StartCollectingStats()
+        protected override async Task StartCollectingStats()
         {
-            _database.ReplicationLoader.IncomingReplicationAdded += IncomingHandlerAdded;
-            _database.ReplicationLoader.IncomingReplicationRemoved += IncomingHandlerRemoved;
-            _database.ReplicationLoader.OutgoingReplicationAdded += OutgoingHandlerAdded;
-            _database.ReplicationLoader.OutgoingReplicationRemoved += OutgoingHandlerRemoved;
+            Database.ReplicationLoader.IncomingReplicationAdded += IncomingHandlerAdded;
+            Database.ReplicationLoader.IncomingReplicationRemoved += IncomingHandlerRemoved;
+            Database.ReplicationLoader.OutgoingReplicationAdded += OutgoingHandlerAdded;
+            Database.ReplicationLoader.OutgoingReplicationRemoved += OutgoingHandlerRemoved;
 
-            foreach (var handler in _database.ReplicationLoader.IncomingHandlers)
+            foreach (var handler in Database.ReplicationLoader.IncomingHandlers)
                 IncomingHandlerAdded(handler);
 
-            foreach (var handler in _database.ReplicationLoader.OutgoingHandlers)
+            foreach (var handler in Database.ReplicationLoader.OutgoingHandlers)
                 OutgoingHandlerAdded(handler);
-
-            var token = _cts.Token;
 
             try
             {
-                while (token.IsCancellationRequested == false)
-                {
-                    await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(3000), token).ConfigureAwait(false);
-
-                    if (token.IsCancellationRequested)
-                        break;
-
-                    var performanceStats = PreparePerformanceStats().ToList();
-
-                    if (performanceStats.Count > 0)
-                    {
-                        Stats.Enqueue(performanceStats);
-                    }
-                }
+                await RunInLoop();
             }
             finally
             {
-                _database.ReplicationLoader.OutgoingReplicationRemoved -= OutgoingHandlerRemoved;
-                _database.ReplicationLoader.OutgoingReplicationAdded -= OutgoingHandlerAdded;
-                _database.ReplicationLoader.IncomingReplicationRemoved -= IncomingHandlerRemoved;
-                _database.ReplicationLoader.IncomingReplicationAdded -= IncomingHandlerAdded;
+                Database.ReplicationLoader.OutgoingReplicationRemoved -= OutgoingHandlerRemoved;
+                Database.ReplicationLoader.OutgoingReplicationAdded -= OutgoingHandlerAdded;
+                Database.ReplicationLoader.IncomingReplicationRemoved -= IncomingHandlerRemoved;
+                Database.ReplicationLoader.IncomingReplicationAdded -= IncomingHandlerAdded;
 
                 foreach (var kvp in _incoming)
                     IncomingHandlerRemoved(kvp.Value.Handler);
@@ -88,16 +62,16 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private IEnumerable<IReplicationPerformanceStats> PrepareInitialPerformanceStats()
+        protected IEnumerable<IReplicationPerformanceStats> PrepareInitialPerformanceStats()
         {
-            foreach (var handler in _database.ReplicationLoader.IncomingHandlers)
+            foreach (var handler in Database.ReplicationLoader.IncomingHandlers)
             {
                 var stats = handler.GetReplicationPerformance();
                 if (stats.Length > 0)
                     yield return new IncomingPerformanceStats(handler.ConnectionInfo.SourceDatabaseId, handler.SourceFormatted, stats);
             }
 
-            foreach (var handler in _database.ReplicationLoader.OutgoingHandlers)
+            foreach (var handler in Database.ReplicationLoader.OutgoingHandlers)
             {
                 var stats = handler.GetReplicationPerformance();
                 if (stats.Length > 0)
@@ -105,12 +79,19 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private IEnumerable<IReplicationPerformanceStats> PreparePerformanceStats()
+        protected override List<IReplicationPerformanceStats> PreparePerformanceStats()
         {
-            foreach (var incoming in _incoming.Values)
+            var results = new List<IReplicationPerformanceStats>(_incoming.Count + _outgoing.Count);
+
+            foreach (var incoming in _incoming)
             {
-                var handler = incoming.Handler;
-                var performance = incoming.Performance;
+                // This is done this way instead of using
+                // _incoming.Values because .Values locks the entire
+                // dictionary.
+
+                var handlerAndPerformanceStatsList = incoming.Value;
+                var handler = handlerAndPerformanceStatsList.Handler;
+                var performance = handlerAndPerformanceStatsList.Performance;
 
                 var itemsToSend = new List<IncomingReplicationStatsAggregator>(performance.Count);
                 while (performance.TryTake(out IncomingReplicationStatsAggregator stat))
@@ -122,13 +103,21 @@ namespace Raven.Server.Documents.Replication
                     itemsToSend.Add(latestStats);
 
                 if (itemsToSend.Count > 0)
-                    yield return new IncomingPerformanceStats(handler.ConnectionInfo.SourceDatabaseId, handler.SourceFormatted, itemsToSend.Select(item => item.ToReplicationPerformanceLiveStatsWithDetails()).ToArray());
+                {
+                    results.Add(new IncomingPerformanceStats(handler.ConnectionInfo.SourceDatabaseId, handler.SourceFormatted,
+                        itemsToSend.Select(item => item.ToReplicationPerformanceLiveStatsWithDetails()).ToArray()));
+                }
             }
 
-            foreach (var outgoing in _outgoing.Values)
+            foreach (var outgoing in _outgoing)
             {
-                var handler = outgoing.Handler;
-                var performance = outgoing.Performance;
+                // This is done this way instead of using
+                // _outgoing.Values because .Values locks the entire
+                // dictionary.
+
+                var handlerAndPerformanceStatsList = outgoing.Value;
+                var handler = handlerAndPerformanceStatsList.Handler;
+                var performance = handlerAndPerformanceStatsList.Performance;
 
                 var itemsToSend = new List<OutgoingReplicationStatsAggregator>(performance.Count);
                 while (performance.TryTake(out OutgoingReplicationStatsAggregator stat))
@@ -140,8 +129,13 @@ namespace Raven.Server.Documents.Replication
                     itemsToSend.Add(latestStats);
 
                 if (itemsToSend.Count > 0)
-                    yield return new OutgoingPerformanceStats(handler.DestinationDbId, handler.DestinationFormatted, itemsToSend.Select(item => item.ToReplicationPerformanceLiveStatsWithDetails()).ToArray());
+                {
+                    results.Add(new OutgoingPerformanceStats(handler.DestinationDbId, handler.DestinationFormatted,
+                        itemsToSend.Select(item => item.ToReplicationPerformanceLiveStatsWithDetails()).ToArray()));
+                }
             }
+
+            return results;
         }
 
         private void OutgoingHandlerRemoved(OutgoingReplicationHandler handler)
@@ -170,7 +164,7 @@ namespace Raven.Server.Documents.Replication
 
             var latestStat = stats.Handler.GetLatestReplicationPerformance();
             if (latestStat != null)
-                stats.Performance.Add(latestStat, _cts.Token);
+                stats.Performance.Add(latestStat, CancellationToken);
         }
 
         private void IncomingHandlerRemoved(IncomingReplicationHandler handler)
@@ -199,36 +193,13 @@ namespace Raven.Server.Documents.Replication
 
             var latestStat = stats.Handler.GetLatestReplicationPerformance();
             if (latestStat != null)
-                stats.Performance.Add(latestStat, _cts.Token);
+                stats.Performance.Add(latestStat, CancellationToken);
         }
 
-        public void Dispose()
+        private class ReplicationHandlerAndPerformanceStatsList<THandler, TStatsAggregator> : HandlerAndPerformanceStatsList<THandler, TStatsAggregator>
         {
-            _cts?.Cancel();
-
-            try
+            public ReplicationHandlerAndPerformanceStatsList(THandler handler) : base(handler)
             {
-                _task.Wait();
-            }
-            catch (OperationCanceledException)
-            {
-                // nothing we can do here
-            }
-
-            _cts?.Dispose();
-            _cts = null;
-        }
-
-        private class ReplicationHandlerAndPerformanceStatsList<THandler, TStatsAggregator>
-        {
-            public readonly THandler Handler;
-
-            public readonly BlockingCollection<TStatsAggregator> Performance;
-
-            public ReplicationHandlerAndPerformanceStatsList(THandler handler)
-            {
-                Handler = handler;
-                Performance = new BlockingCollection<TStatsAggregator>();
             }
         }
 
