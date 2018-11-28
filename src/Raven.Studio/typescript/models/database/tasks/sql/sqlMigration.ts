@@ -7,7 +7,7 @@ import sqlReference = require("models/database/tasks/sql/sqlReference");
 
 class sqlMigration {
     
-    static possibleProviders = ["MsSQL", "MySQL", "NpgSQL", "OracleClient"] as Array<Raven.Server.SqlMigration.MigrationProvider>;
+    static possibleProviders = ["MsSQL", "MySQL", "NpgSQL", "Oracle"] as Array<Raven.Server.SqlMigration.MigrationProvider>;
     
     databaseType = ko.observable<Raven.Server.SqlMigration.MigrationProvider>("MsSQL");
     binaryToAttachment = ko.observable<boolean>(true);
@@ -27,7 +27,7 @@ class sqlMigration {
     static sqlServerConnectionString = ko.observable<string>();
     static mysqlConnectionString = ko.observable<string>();
     static npgsqlConnectionString = ko.observable<string>();
-    static oracleClientConnectionString = ko.observable<string>();
+    static oracleConnectionString = ko.observable<string>();
 
     sqlServer = {
         connectionString: sqlMigration.sqlServerConnectionString
@@ -49,11 +49,11 @@ class sqlMigration {
 
     npgSqlValidationGroup: KnockoutValidationGroup;
 
-    oracleClient = {
-        connectionString: sqlMigration.oracleClientConnectionString
+    oracle = {
+        connectionString: sqlMigration.oracleConnectionString
     };
 
-    oracleClientValidationGroup: KnockoutValidationGroup;
+    oracleValidationGroup: KnockoutValidationGroup;
 
     tables = ko.observableArray<rootSqlTable>([]);
     
@@ -87,7 +87,7 @@ class sqlMigration {
             required: true
         });
 
-        this.oracleClient.connectionString.extend({
+        this.oracle.connectionString.extend({
             required: true
         });
 
@@ -109,8 +109,8 @@ class sqlMigration {
             maxDocumentsToImportPerTable: this.maxDocumentsToImportPerTable
         });
 
-        this.oracleClientValidationGroup = ko.validatedObservable({
-            connectionString: this.oracleClient.connectionString,
+        this.oracleValidationGroup = ko.validatedObservable({
+            connectionString: this.oracle.connectionString,
             batchSize: this.batchSize,
             maxDocumentsToImportPerTable: this.maxDocumentsToImportPerTable
         });
@@ -148,7 +148,7 @@ class sqlMigration {
                 return "MySQL Server (MySql.Data.MySqlClient)";
             case "NpgSQL":
                 return "PostgreSQL Server (Npgsql)";
-            case "OracleClient":
+            case "Oracle":
                 return "Oracle Database (Oracle.ManagedDataAccess.Client)";
             default:
                 return type;
@@ -286,7 +286,7 @@ class sqlMigration {
                 return "System.Data.SqlClient";
             case "NpgSQL":
                 return "Npgsql";
-            case "OracleClient":
+            case "Oracle":
                 return "Oracle.ManagedDataAccess.Client";
             default:
                 throw new Error(`Can't get factory name: Database type - ${this.databaseType} - is not supported.`);
@@ -309,8 +309,8 @@ class sqlMigration {
             case "NpgSQL":
                 return this.npgSql.connectionString();
 
-            case "OracleClient":
-                return this.oracleClient.connectionString();
+            case "Oracle":
+                return this.oracle.connectionString();
 
             default:
                 throw new Error(`Database type - ${this.databaseType} - is not supported`);
@@ -378,8 +378,8 @@ class sqlMigration {
             case "NpgSQL":
                 return this.npgSqlValidationGroup;
 
-            case "OracleClient":
-                return this.oracleClientValidationGroup;
+            case "Oracle":
+                return this.oracleValidationGroup;
 
             default:
                 throw new Error(`Database type - ${this.databaseType()} - is not supported`);

@@ -102,7 +102,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                     }
 
                     break;
-                case MigrationProvider.OracleClient:
+                case MigrationProvider.Oracle:
                     using (var connection = new OracleConnection(connectionString))
                     {
                         connection.Open();
@@ -130,7 +130,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                 case MigrationProvider.NpgSQL:
                     schemaName = "public";
                     return WithNpgSqlDatabase(out connectionString, out string dbName, dataSet, includeData);
-                case MigrationProvider.OracleClient:
+                case MigrationProvider.Oracle:
                     return WithOracleDatabase(out connectionString, out schemaName, dataSet, includeData);
                 default:
                     throw new InvalidOperationException("Unhandled provider: " + provider);
@@ -327,7 +327,7 @@ namespace SlowTests.Server.Documents.SqlMigration
         {
             databaseName = "C##" + Guid.NewGuid();
             var pass = "pass";
-            var adminConnectionString = OracleClientTests.OracleClientDatabaseConnection.Value;
+            var adminConnectionString = OracleTests.OracleDatabaseConnection.Value;
 
             using (var connection = new OracleConnection(adminConnectionString))
             {
@@ -349,7 +349,7 @@ namespace SlowTests.Server.Documents.SqlMigration
                 }
                 connection.Close();
             }
-            var userConnectionString = OracleClientTests.OracleDataSource + $"USER ID=\"{databaseName}\";password={pass};Pooling=false";
+            var userConnectionString = OracleTests.OracleDataSource + $"USER ID=\"{databaseName}\";password={pass};Pooling=false";
             connectionString = userConnectionString;
             using (var dbConnection = new OracleConnection(connectionString))
             {
