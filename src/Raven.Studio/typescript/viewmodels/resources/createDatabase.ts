@@ -19,6 +19,7 @@ import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import studioSettings = require("common/settings/studioSettings");
 
 class createDatabase extends dialogViewModelBase {
     
@@ -46,6 +47,7 @@ class createDatabase extends dialogViewModelBase {
     disableReplicationFactorInput: KnockoutComputed<boolean>;
     selectionState: KnockoutComputed<checkbox>;
     canUseDynamicOption: KnockoutComputed<boolean>; 
+    defaultReplicationFactor = ko.observable<number>();
 
     databaseLocationCalculated = ko.observable<string>();
     databaseLocationShowing: KnockoutComputed<string>;
@@ -87,12 +89,19 @@ class createDatabase extends dialogViewModelBase {
     }
 
     activate() {
-        const getTopologyTask = new getClusterTopologyCommand()
-            .execute()
-            .done(topology => {
-                this.onTopologyLoaded(topology);
-                this.initObservables();
+        const getStudioSettingsTask = studioSettings.default.globalSettings()
+            .then(settings => {
+                this.defaultReplicationFactor(settings.replicationFactor.getValue());
             });
+        
+        const getTopologyTask = getStudioSettingsTask.then(() => {
+            return new getClusterTopologyCommand()
+                .execute()
+                .done(topology => {
+                    this.setDefaultReplicationFactor(topology);
+                    this.initObservables();
+                });
+        });
 
         const getEncryptionKeyTask = this.encryptionSection.generateEncryptionKey();
 
@@ -101,8 +110,8 @@ class createDatabase extends dialogViewModelBase {
             .done((fullPath: string) => {
                 this.databaseLocationCalculated(fullPath);
             });
-
-        return $.when<any>(getTopologyTask, getEncryptionKeyTask, getDefaultDatabaseLocationTask)
+        
+        return $.when<any>(getTopologyTask, getEncryptionKeyTask, getDefaultDatabaseLocationTask, getStudioSettingsTask)
             .done(() => {
                 // setup validation after we fetch and populate form with data
                 this.databaseModel.setupValidation((name: string) => !this.getDatabaseByName(name), this.clusterNodes.length);
@@ -145,9 +154,10 @@ class createDatabase extends dialogViewModelBase {
         }
     }
 
-    private onTopologyLoaded(topology: clusterTopology) {
+    private setDefaultReplicationFactor(topology: clusterTopology) {
         this.clusterNodes = topology.nodes();
-        const defaultReplicationFactor = this.clusterNodes.length > 1 ? 2 : 1;
+        
+        const defaultReplicationFactor = this.defaultReplicationFactor() || this.clusterNodes.length;
         this.databaseModel.replication.replicationFactor(defaultReplicationFactor);
     }
 
@@ -160,7 +170,7 @@ class createDatabase extends dialogViewModelBase {
             return !fromBackup && !enforceManual && replicationFactor !== 1;
         });
 
-        // hide advanced if respononding bundle was unchecked
+        // hide advanced if corresponding bundle was unchecked
         this.databaseModel.configurationSections.forEach(section => {
             section.enabled.subscribe(enabled => {
                 if (!this.databaseModel.lockActiveTab()) {
