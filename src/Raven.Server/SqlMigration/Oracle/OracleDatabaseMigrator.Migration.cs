@@ -7,13 +7,13 @@ using Raven.Server.SqlMigration.MsSQL;
 using Raven.Server.SqlMigration.Schema;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.SqlMigration.OracleClient
+namespace Raven.Server.SqlMigration.Oracle
 {
-    internal partial class OracleClientDatabaseMigrator : GenericDatabaseMigrator
+    internal partial class OracleDatabaseMigrator : GenericDatabaseMigrator
     {
         protected override string FactoryName => "Oracle.ManagedDataAccess.Client";
 
-        public OracleClientDatabaseMigrator(string connectionString) : base(connectionString)
+        public OracleDatabaseMigrator(string connectionString) : base(connectionString)
         {   
         }
 

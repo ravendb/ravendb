@@ -4,7 +4,7 @@ using Oracle.ManagedDataAccess.Client;
 
 namespace Tests.Infrastructure
 {
-    public class OracleClientTests
+    public class OracleTests
     {
         public const string OracleDataSource = "DATA SOURCE=localhost:1521/orcl;";
         public static string ConnectionString = $"{OracleDataSource}USER ID=sys;password=qwerty;DBA Privilege=SYSDBA"; //todo: use a real connection string
@@ -12,7 +12,7 @@ namespace Tests.Infrastructure
 
         public static string LocalConnectionWithTimeout = $"{LocalConnection};connection timeout=3";
 
-        public static readonly Lazy<string> OracleClientDatabaseConnection = new Lazy<string>(() =>
+        public static readonly Lazy<string> OracleDatabaseConnection = new Lazy<string>(() =>
         {
             using (var con = new OracleConnection(LocalConnection))
             {

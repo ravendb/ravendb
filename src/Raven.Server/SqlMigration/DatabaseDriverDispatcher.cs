@@ -2,7 +2,7 @@
 using Raven.Server.SqlMigration.MsSQL;
 using Raven.Server.SqlMigration.MySQL;
 using Raven.Server.SqlMigration.NpgSQL;
-using Raven.Server.SqlMigration.OracleClient;
+using Raven.Server.SqlMigration.Oracle;
 
 namespace Raven.Server.SqlMigration
 {
@@ -21,8 +21,8 @@ namespace Raven.Server.SqlMigration
                 case MigrationProvider.NpgSQL:
                     return new NpgSqlDatabaseMigrator(connectionString);
 
-                case MigrationProvider.OracleClient:
-                    return new OracleClientDatabaseMigrator(connectionString);
+                case MigrationProvider.Oracle:
+                    return new OracleDatabaseMigrator(connectionString);
 
                 default:
                     throw new InvalidOperationException("Provider " + provider + " is not yet supported");

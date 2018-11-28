@@ -10,7 +10,7 @@ namespace Tests.Infrastructure
         {
             try
             {
-                using (var con = new OracleConnection(OracleClientTests.LocalConnectionWithTimeout))
+                using (var con = new OracleConnection(OracleTests.LocalConnectionWithTimeout))
                 {
                     con.Open();
                 }

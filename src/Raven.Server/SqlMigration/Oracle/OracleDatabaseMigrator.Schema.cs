@@ -4,9 +4,9 @@ using System.Data.Common;
 using System.Linq;
 using Raven.Server.SqlMigration.Schema;
 
-namespace Raven.Server.SqlMigration.OracleClient
+namespace Raven.Server.SqlMigration.Oracle
 {
-    internal partial class OracleClientDatabaseMigrator : GenericDatabaseMigrator
+    internal partial class OracleDatabaseMigrator : GenericDatabaseMigrator
     {
         public const string GetSchema = "select user_cons_columns.owner as TABLE_SCHEMA from user_cons_columns WHERE ROWNUM = 1";
 

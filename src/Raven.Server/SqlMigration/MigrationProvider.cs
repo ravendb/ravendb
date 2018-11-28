@@ -5,6 +5,6 @@
         MsSQL,
         MySQL,
         NpgSQL,
-        OracleClient
+        Oracle
     }
 }

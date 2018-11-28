@@ -1,10 +1,9 @@
 using System.Collections.Generic;
 using System.Reflection;
 using Raven.Server.SqlMigration;
-using Tests.Infrastructure;
 using Xunit.Sdk;
 
-namespace FastTests
+namespace Tests.Infrastructure
 {
     public class RequiresOracleSqlInlineData : DataAttribute
     {
@@ -16,7 +15,7 @@ namespace FastTests
 
         public override IEnumerable<object[]> GetData(MethodInfo testMethod)
         {
-            return new[] { new object[] { MigrationProvider.OracleClient } };
+            return new[] { new object[] { MigrationProvider.Oracle } };
         }
     }
 }

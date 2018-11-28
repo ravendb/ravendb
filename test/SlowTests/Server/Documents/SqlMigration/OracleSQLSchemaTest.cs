@@ -11,14 +11,14 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.SqlMigration
 {
-    public class OracleClientSchemaTest : SqlAwareTestBase
+    public class OracleSchemaTest : SqlAwareTestBase
     {
         [RequiresOracleSqlFact]
         public void CanFetchSchema()
         {
-            using (WithSqlDatabase(MigrationProvider.OracleClient, out var connectionString, out string schemaName, includeData: false))
+            using (WithSqlDatabase(MigrationProvider.Oracle, out var connectionString, out string schemaName, includeData: false))
             {
-                var driver = DatabaseDriverDispatcher.CreateDriver(MigrationProvider.OracleClient, connectionString);
+                var driver = DatabaseDriverDispatcher.CreateDriver(MigrationProvider.Oracle, connectionString);
                 var schema = driver.FindSchema();
 
                 Assert.NotNull(schema.CatalogName);
