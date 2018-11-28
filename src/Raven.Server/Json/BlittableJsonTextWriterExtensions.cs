@@ -69,6 +69,11 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(result.TotalResultsWithOffsetAndLimit));
+            writer.WriteInteger(result.TotalResultsWithOffsetAndLimit);
+            writer.WriteComma();
+
+
             writer.WritePropertyName(nameof(result.DurationInMs));
             writer.WriteInteger(result.DurationInMs);
             writer.WriteComma();
@@ -84,6 +89,10 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName(nameof(result.TotalResults));
             writer.WriteInteger(result.TotalResults);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.TotalResultsWithOffsetAndLimit));
+            writer.WriteInteger(result.TotalResultsWithOffsetAndLimit);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(result.DurationInMs));
@@ -213,6 +222,10 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(result.TotalResultsWithOffsetAndLimit));
+            writer.WriteInteger(result.TotalResultsWithOffsetAndLimit);
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(result.SkippedResults));
             writer.WriteInteger(result.SkippedResults);
             writer.WriteComma();
@@ -232,6 +245,10 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName(nameof(result.TotalResults));
             writer.WriteInteger(result.TotalResults);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.TotalResultsWithOffsetAndLimit));
+            writer.WriteInteger(result.TotalResultsWithOffsetAndLimit);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(result.SkippedResults));

@@ -2288,6 +2288,13 @@ namespace Raven.Server.Documents.Indexes
                                     foreach (var document in documents)
                                     {
                                         resultToFill.TotalResults = totalResults.Value;
+                                        if (query.Offset != null || query.Limit != null)
+                                        {
+                                            resultToFill.TotalResultsWithOffsetAndLimit = Math.Min(
+                                                query.Limit ?? int.MaxValue, 
+                                                totalResults.Value - (query.Offset ?? 0)
+                                                );
+                                        }
                                         resultToFill.AddResult(document.Result);
 
                                         if (document.Highlightings != null)

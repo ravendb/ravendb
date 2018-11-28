@@ -18,6 +18,11 @@ namespace Raven.Server.Documents.Queries
     public class IndexQueryServerSide : IndexQuery<BlittableJsonReaderObject>
     {
         [JsonDeserializationIgnore]
+        public int? Offset;
+        [JsonDeserializationIgnore]
+        public int? Limit;
+
+        [JsonDeserializationIgnore]
         public QueryMetadata Metadata { get; private set; }
 
         [JsonDeserializationIgnore]
@@ -100,13 +105,18 @@ namespace Raven.Server.Documents.Queries
                 if (result.Metadata.Query.Offset != null)
                 {
                     var start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
+                    result.Offset = start;
                     result.Start = result.Start != 0 || json.TryGet(nameof(Start), out int _)
                         ? Math.Min(start, result.Start)
                         : start;
                 }
 
                 if (result.Metadata.Query.Limit != null)
-                    result.PageSize = Math.Min((int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue), result.PageSize);
+                {
+                    var limit = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
+                    result.Limit = limit;   
+                    result.PageSize = Math.Min(limit, result.PageSize);
+                }
 
                 if (tracker != null)
                     tracker.Query = result.Query;
@@ -184,13 +194,15 @@ namespace Raven.Server.Documents.Queries
 
                 if (result.Metadata.Query.Offset != null)
                 {
-                    start += (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
-                    result.Start = start ;
+                    var offset = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
+                    result.Offset = offset;
+                    result.Start = start + offset;
                 }
 
                 if (result.Metadata.Query.Limit != null)
                 {
                     pageSize = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
+                    result.Limit = pageSize;
                     result.PageSize = Math.Min(result.PageSize, pageSize);
                 }
 
