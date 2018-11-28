@@ -12,10 +12,6 @@
                 <label for="importFilePicker" class="btn btn-default">
                     <i class="icon-import"></i><span>Import</span>
                 </label>
-                <button class="btn btn-default" data-bind="click: closeImport, visible: isImport" title="Return to currently selected database replications graph">
-                    <i class="icon-cancel"></i><span data-bind="text: 'Close import (' + importFileName() + ')'">Close import</span>
-                </button>
-
                 <div class="input-group file-input" title="Import performance graph file">
                     <input type="file" id="importFilePicker" data-bind="event: { change: fileSelected }" tabindex="-1" accept=".json">
                 </div>
@@ -33,7 +29,7 @@
             <button class="btn btn-default btn-sm margin-right margin-right-sm" data-bind="click: clearBrush, visible: clearSelectionVisible">
                 <span>Clear selection</span>
             </button>
-            <button class="btn btn-sm btn-default" data-bind="click: closeImport, visible: isImport" title="Return to currently selected database replication stats graph">
+            <button class="btn btn-sm btn-default" data-bind="click: closeImport, visible: isImport" title="Return to currently selected database replications graph">
                 <i class="icon-cancel"></i><span data-bind="text: 'Close import (' + importFileName() + ')'">Close import</span>
             </button>
             <div class="btn-group" data-bind="visible: !isImport()">

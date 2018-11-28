@@ -262,7 +262,7 @@ class ioStats extends viewModelBase {
     private isImport = ko.observable<boolean>(false);
     private trackNames = ko.observableArray<string>();
 
-    private searchText = ko.observable<string>();
+    private searchText = ko.observable<string>("");
     private hasIndexes = ko.observable<boolean>(false);
     private isIndexesExpanded = ko.observable<boolean>(false);     
     private filteredIndexesTracksNames = ko.observableArray<string>();   
@@ -279,6 +279,7 @@ class ioStats extends viewModelBase {
     private data: Raven.Server.Documents.Handlers.IOMetricsResponse;
     private bufferIsFull = ko.observable<boolean>(false);
     private bufferUsage = ko.observable<string>("0.0");
+    private dateCutoff: Date; // used to avoid showing server side cached items, after 'clear' is clicked. 
     private closedIndexesItemsCache: Array<IOMetricsRecentStatsWithCache>;
     private commonPathsPrefix: string;     
     private totalWidth: number;
@@ -517,7 +518,7 @@ class ioStats extends viewModelBase {
         // filteredIndexesTracksNames will be indexes tracks names that are NOT SUPPOSED TO BE SEEN ....
         this.filteredIndexesTracksNames(indexesTracksNames.filter(x => !(x.toLowerCase().includes(criteria))));       
 
-        this.allIndexesAreFiltered(indexesTracks.length === this.filteredIndexesTracksNames().length);     
+        this.allIndexesAreFiltered(this.hasAnyData() && indexesTracks.length === this.filteredIndexesTracksNames().length);     
 
         this.updateClosedIndexesInfo();
         this.drawMainSection();
@@ -528,12 +529,14 @@ class ioStats extends viewModelBase {
 
         const onDataUpdate = (mergedData: Raven.Server.Documents.Handlers.IOMetricsResponse) => {
             let timeRange: [Date, Date];
+            
             if (!firstTime) {
                 const timeToRemap = this.brush.empty() ? this.xBrushNumericScale.domain() as [number, number] : this.brush.extent() as [number, number];
                 timeRange = timeToRemap.map(x => this.xBrushTimeScale.invert(x)) as [Date, Date];
             }
 
             this.data = mergedData;
+
             this.checkBufferUsage();
             this.prepareTimeData();
 
@@ -561,7 +564,7 @@ class ioStats extends viewModelBase {
             }
         };
 
-        this.liveViewClient(new liveIOStatsWebSocketClient(this.activeDatabase(), onDataUpdate));
+        this.liveViewClient(new liveIOStatsWebSocketClient(this.activeDatabase(), onDataUpdate, this.dateCutoff));
     }
     
     private checkBufferUsage() {
@@ -1151,6 +1154,9 @@ class ioStats extends viewModelBase {
      * Rebuild closed track cache
      */
     private updateClosedIndexesInfo() {
+        if (!this.data) {
+            return;
+        }
         const indexesItemsStartEnds = new Map<Sparrow.IoMetrics.MeterType, Array<[Date, Date]>>();
         ioStats.meterTypes.forEach(type => indexesItemsStartEnds.set(type, []));
         
@@ -1228,7 +1234,7 @@ class ioStats extends viewModelBase {
                 addedWidth = 23;
                 drawArrow = true;
                 skipDrawing = this.allIndexesAreFiltered();
-            }           
+            }
         }     
 
         if (!skipDrawing) {
@@ -1378,12 +1384,25 @@ class ioStats extends viewModelBase {
     clearGraph() {
         this.bufferIsFull(false);
         this.cancelLiveView();
+        
+        this.setCutOffDate();
+        
         this.hasAnyData(false);
         this.resetGraphData();
         this.enableLiveView();
     }
+    
+    private setCutOffDate() {
+        const maxDate = d3.max(this.data.Environments, 
+                env => d3.max(env.Files,
+                        file => d3.max(file.Recent, 
+                            (r: IOMetricsRecentStatsWithCache) => r.StartedAsDate)));
+        
+        this.dateCutoff = maxDate;
+    }
 
     closeImport() {
+        this.dateCutoff = null;
         this.isImport(false);
         this.clearGraph();
     }   
@@ -1392,7 +1411,8 @@ class ioStats extends viewModelBase {
         this.data = null;
         this.searchText("");
         this.hasAnyData(false);   
-        this.allIndexesAreFiltered(false);     
+        this.allIndexesAreFiltered(false);
+        this.bufferUsage("0.0");
         this.setZoomAndBrush([0, this.totalWidth], brush => brush.clear());
     }
 
