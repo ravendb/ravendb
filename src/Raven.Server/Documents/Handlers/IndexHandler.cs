@@ -806,7 +806,7 @@ namespace Raven.Server.Documents.Handlers
                 var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
 
                 using (var ms = new MemoryStream())
-                using (var collector = new LiveIndexingPerformanceCollector(Database, Database.DatabaseShutdown, indexes))
+                using (var collector = new LiveIndexingPerformanceCollector(Database, indexes))
                 {
                     // 1. Send data to webSocket without making UI wait upon opening webSocket
                     await SendDataOrHeartbeatToWebSocket(receive, webSocket, collector, ms, 100);
