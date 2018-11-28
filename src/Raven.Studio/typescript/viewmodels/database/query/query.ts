@@ -1044,7 +1044,7 @@ class query extends viewModelBase {
         const args = {
             format: "csv",
         };
-        let payload: any;
+        let payload: { Query: string };
         if (this.criteria().showFields()) {
             payload = {
                 Query: queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(this.criteria().queryText())
