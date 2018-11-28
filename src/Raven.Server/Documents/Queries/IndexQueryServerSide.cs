@@ -146,9 +146,6 @@ namespace Raven.Server.Documents.Queries
                     PageSize = pageSize,
                 };
 
-                var startSet = false;
-                var pageSizeSet = false;
-
                 foreach (var item in httpContext.Request.Query)
                 {
                     try
@@ -172,12 +169,6 @@ namespace Raven.Server.Documents.Queries
                             case "skipDuplicateChecking":
                                 result.SkipDuplicateChecking = bool.Parse(item.Value[0]);
                                 break;
-                            case RequestHandler.StartParameter:
-                                startSet = true;
-                                break;
-                            case RequestHandler.PageSizeParameter:
-                                pageSizeSet = true;
-                                break;
                         }
                     }
                     catch (Exception e)
@@ -193,18 +184,14 @@ namespace Raven.Server.Documents.Queries
 
                 if (result.Metadata.Query.Offset != null)
                 {
-                    start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
-                    result.Start = startSet
-                        ? Math.Min(start, result.Start)
-                        : start;
+                    start += (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
+                    result.Start = start ;
                 }
 
                 if (result.Metadata.Query.Limit != null)
                 {
                     pageSize = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
-                    result.Start = pageSizeSet
-                        ? Math.Min(pageSize, result.PageSize)
-                        : pageSize;
+                    result.PageSize = Math.Min(result.PageSize, pageSize);
                 }
 
                 if (tracker != null)
