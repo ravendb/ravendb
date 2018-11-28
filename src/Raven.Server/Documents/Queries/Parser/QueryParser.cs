@@ -193,6 +193,10 @@ namespace Raven.Server.Documents.Queries.Parser
                     offset = first;
                     limit = second;
                 }
+                else
+                {
+                    limit = first;
+                }
             }
 
             if (Scanner.TryScan("OFFSET"))
