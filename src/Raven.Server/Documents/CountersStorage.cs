@@ -338,7 +338,7 @@ namespace Raven.Server.Documents
             return tx.OpenTable(CountersSchema, tableName);
         }
 
-        public string IncrementCounter(DocumentsOperationContext context, string documentId, string collection, string name, long delta)
+        public string IncrementCounter(DocumentsOperationContext context, string documentId, string collection, string name, long delta, out bool exists)
         {
             if (context.Transaction == null)
             {
@@ -352,7 +352,7 @@ namespace Raven.Server.Documents
             using (GetCounterKey(context, documentId, name, context.Environment.Base64Id, out var counterKey))
             {
                 var value = delta;
-                var exists = table.ReadByKey(counterKey, out var existing);
+                exists = table.ReadByKey(counterKey, out var existing);
                 if (exists)
                 {
                     var prev = *(long*)existing.Read((int)CountersTable.Value, out var size);
@@ -693,22 +693,38 @@ namespace Raven.Server.Documents
             if (hadModifications == false)
                 return;
 
-            var flags = counters.Count == 0 ? DocumentFlags.None : DocumentFlags.HasCounters;
-            doc.Modifications = new DynamicJsonValue(doc);
-            if (metadata == null)
+            var flags = DocumentFlags.None;
+            if (counters.Count == 0)
             {
-                doc.Modifications[Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                if (metadata != null)
                 {
-                    [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(counters)
-                };
+                    metadata.Modifications = new DynamicJsonValue(metadata);
+                    metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
+                    doc.Modifications = new DynamicJsonValue(doc)
+                    {
+                        [Constants.Documents.Metadata.Key] = metadata
+                    };
+                }
             }
             else
             {
-                metadata.Modifications = new DynamicJsonValue(metadata)
+                flags = DocumentFlags.HasCounters;
+                doc.Modifications = new DynamicJsonValue(doc);
+                if (metadata == null)
                 {
-                    [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(counters)
-                };
-                doc.Modifications[Constants.Documents.Metadata.Key] = metadata;
+                    doc.Modifications[Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    {
+                        [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(counters)
+                    };
+                }
+                else
+                {
+                    metadata.Modifications = new DynamicJsonValue(metadata)
+                    {
+                        [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(counters)
+                    };
+                    doc.Modifications[Constants.Documents.Metadata.Key] = metadata;
+                }
             }
 
             var data = context.ReadObject(doc, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);

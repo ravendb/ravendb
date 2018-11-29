@@ -129,17 +129,23 @@ namespace Raven.Server.Documents.Handlers
                         {
                             case CounterOperationType.Increment:
                                 LastChangeVector =
-                                    _database.DocumentsStorage.CountersStorage.IncrementCounter(context, docId, docCollection, operation.CounterName, operation.Delta);
+                                    _database.DocumentsStorage.CountersStorage.IncrementCounter(context, docId, docCollection, operation.CounterName, operation.Delta, out var exists);
                                 GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
 
-                                countersToAdd.Add(operation.CounterName);
-                                countersToRemove.Remove(operation.CounterName);
+                                if (exists == false)
+                                {
+                                    // if exists it is already on the document's metadata
+                                    countersToAdd.Add(operation.CounterName);
+                                    countersToRemove.Remove(operation.CounterName);
+                                }
+
                                 break;
                             case CounterOperationType.Delete:
                                 if (_fromEtl && doc == null)
                                     break;
 
                                 LastChangeVector = _database.DocumentsStorage.CountersStorage.DeleteCounter(context, docId, docCollection, operation.CounterName);
+
                                 countersToAdd.Remove(operation.CounterName);
                                 countersToRemove.Add(operation.CounterName);
                                 break;
