@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class ThreadsHandler : RequestHandler
     {
-        [RavenAction("/admin/debug/threads/stack-trace", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        [RavenAction("/admin/debug/threads/stack-trace", "GET", AuthorizationStatus.Operator)]
         public Task StackTrace()
         {
             if (Debugger.IsAttached)
@@ -128,6 +128,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     foreach (var threadId in threadIds)
                     {
+                        if (int.TryParse(threadId, out _) == false)
+                            throw new ArgumentException($"Could not parse thread id with value '{threadId}' to number.");
+
                         sb.Append($" --tid {threadId}");
                     }
                 }
@@ -162,7 +165,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 process.WaitForExit();
 
                 if (process.ExitCode != 0)
-                    throw new InvalidOperationException("Could not read stack traces.");
+                    throw new InvalidOperationException("Could not read stack traces, " +
+                                                        $"exit code: {process.ExitCode}, error: {sb}");
             }
         }
     }
