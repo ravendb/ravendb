@@ -14,7 +14,7 @@ class queryCommand extends commandBase {
         const selector = (results: Raven.Client.Documents.Queries.QueryResult<Array<any>, any>) =>
             ({
                 items: results.Results.map(d => new document(d)), 
-                totalResultCount: results.TotalResults, 
+                totalResultCount: results.TotalResultsWithOffsetAndLimit || results.TotalResults, 
                 additionalResultInfo: results, 
                 resultEtag: results.ResultEtag.toString(), 
                 highlightings: results.Highlightings,

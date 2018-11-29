@@ -12,6 +12,8 @@ class queryStatsDialog extends dialogViewModelBase {
     canNavigateToIndex: boolean;
     
     isGraphQuery: boolean;
+    
+    totalResults: KnockoutComputed<string>;
 
     constructor(private queryStats: Raven.Client.Documents.Queries.QueryResult<any, any>, private db: database) {
         super();
@@ -20,6 +22,10 @@ class queryStatsDialog extends dialogViewModelBase {
 
         this.canNavigateToIndex = this.physicalIndexExists(queryStats.IndexName);
         this.isGraphQuery = queryStats.IndexName === "@graph";
+        this.totalResults = ko.pureComputed(() => {
+            const results = this.queryStats.TotalResultsWithOffsetAndLimit || this.queryStats.TotalResults || 0;
+            return results.toLocaleString();
+        })
     }
 
     private physicalIndexExists(indexName: string) {
