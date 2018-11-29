@@ -747,7 +747,7 @@ namespace Raven.Server.Documents.Patch
                     value = args[2].AsNumber();
                 }
 
-                _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name, (long)value);
+                _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name, (long)value, out _);
 
                 if (metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false ||
                     counters.BinarySearch(name, StringComparison.OrdinalIgnoreCase) < 0)
