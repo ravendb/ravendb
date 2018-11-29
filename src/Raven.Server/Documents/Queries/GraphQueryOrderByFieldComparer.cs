@@ -253,8 +253,9 @@ namespace Raven.Server.Documents.Queries
             while (xCurr < xBlittableJsonReaderArray.Length && yCurr< yBlittableJsonReaderArray.Length)
             {
                 var res = Compare(xBlittableJsonReaderArray[xCurr++], yBlittableJsonReaderArray[yCurr++]);
+                //Here we don't multiply by order since the recursive call to Compare already applied order.
                 if (res != 0)
-                    return res * _order;
+                    return res;
             }
 
             if (xCurr == xBlittableJsonReaderArray.Length && yCurr == yBlittableJsonReaderArray.Length)

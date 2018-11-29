@@ -67,17 +67,27 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
                 using (var session = store.OpenSession())
                 {
-                    var result = session.Advanced.RawQuery<Order>(@"
-                        match (Orders as o)
-                        order by o.Lines
-                        ").First();
-                    Assert.Equal("orders/1-A", result.Id);
+                    session.Store(new Foo { Numbers = new[] { 3, 7, 5 } }, "foo/1");
+                    session.Store(new Foo { Numbers = new[] { 3, 7, 6 } }, "foo/2");
+                    session.SaveChanges();
+                    var result = session.Advanced.RawQuery<Foo>(@"
+                        match (Foos as f)
+                        order by f.Numbers desc
+                        ").ToList().First();
+                    Assert.Equal("foo/2", result.Id);
                 }
             }
+
         }
+
+        private class Foo
+        {
+            public string Id { get; set; }
+            public int[] Numbers { get; set; }
+        }
+
 
         [Fact]
         public void SortOnObjectShouldWork()
