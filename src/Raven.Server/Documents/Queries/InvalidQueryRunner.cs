@@ -34,6 +34,11 @@ namespace Raven.Server.Documents.Queries
         {
             throw new NotSupportedException(ErrorMessage);
         }
+        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
+            IStreamBlittableJsonReaderObjectQueryResultWriter writer, OperationCancelToken token)
+        {
+            throw new NotSupportedException(ErrorMessage);
+        }
 
         public override Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {

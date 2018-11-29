@@ -63,6 +63,7 @@ using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Compaction;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
+using Raven.Server.Json;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -2118,6 +2119,15 @@ namespace Raven.Server.Documents.Indexes
             DocumentDatabase.QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
         }
 
+        public virtual async Task StreamIndexEntriesQuery(HttpResponse response, IStreamBlittableJsonReaderObjectQueryResultWriter writer,
+            IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        {
+            var result = new StreamDocumentIndexEntriesQueryResult(response, writer, token);
+            await IndexEntriesQueryInternal(result, query, documentsContext, response, token);
+            result.Flush();
+            DocumentDatabase.QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
+        }
+
         public virtual async Task<DocumentQueryResult> Query(IndexQueryServerSide query,
             DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
@@ -2328,6 +2338,143 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
         }
+
+        private async Task IndexEntriesQueryInternal<TQueryResult>(TQueryResult resultToFill, IndexQueryServerSide query,
+          DocumentsOperationContext documentsContext, HttpResponse response, OperationCancelToken token)
+          where TQueryResult : StreamDocumentIndexEntriesQueryResult
+        {
+            AssertIndexState();
+
+            if (State == IndexState.Idle)
+            {
+                try
+                {
+                    SetState(IndexState.Normal);
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Failed to change state of '{Name}' index from {IndexState.Idle} to {IndexState.Normal}. Proceeding with running the query.",
+                            e);
+                }
+            }
+
+            MarkQueried(DocumentDatabase.Time.GetUtcNow());
+
+            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Metadata);
+
+            if (resultToFill.SupportsInclude == false
+                && (query.Metadata.Includes != null && query.Metadata.Includes.Length > 0))
+                throw new NotSupportedException("Includes are not supported by this type of query.");
+
+            if (resultToFill.SupportsHighlighting == false && query.Metadata.HasHighlightings)
+                throw new NotSupportedException("Highlighting is not supported by this type of query.");
+
+            if (query.Metadata.HasHighlightings && (query.Metadata.HasIntersect || query.Metadata.HasMoreLikeThis))
+                throw new NotSupportedException("Highlighting is not supported by this type of query.");
+
+            if (resultToFill.SupportsExplanations == false && query.Metadata.HasExplanations)
+                throw new NotSupportedException("Explanations are not supported by this type of query.");
+
+            if (query.Metadata.HasExplanations && (query.Metadata.HasIntersect || query.Metadata.HasMoreLikeThis))
+                throw new NotSupportedException("Explanations are not supported by this type of query.");
+
+            using (var marker = MarkQueryAsRunning(query, token))
+            {
+                var queryDuration = Stopwatch.StartNew();
+                AsyncWaitForIndexing wait = null;
+                (long? DocEtag, long? ReferenceEtag)? cutoffEtag = null;
+
+                var stalenessScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Staleness), start: false);
+
+                while (true)
+                {
+                    AssertIndexState();
+                    marker.HoldLock();
+
+                    // we take the awaiter _before_ the indexing transaction happens, 
+                    // so if there are any changes, it will already happen to it, and we'll 
+                    // query the index again. This is important because of: 
+                    // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
+                    var frozenAwaiter = GetIndexingBatchAwaiter();
+                    using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+                    using (var indexTx = indexContext.OpenReadTransaction())
+                    {
+                        documentsContext.OpenReadTransaction();
+                        // we have to open read tx for mapResults _after_ we open index tx
+
+                        bool isStale;
+                        using (stalenessScope?.Start())
+                        {
+                            if (query.WaitForNonStaleResults && cutoffEtag == null)
+                                cutoffEtag = GetCutoffEtag(documentsContext);
+
+                            isStale = IsStale(documentsContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag);
+                            if (WillResultBeAcceptable(isStale, query, wait) == false)
+                            {
+                                documentsContext.CloseTransaction();
+
+                                Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
+
+                                if (wait == null)
+                                    wait = new AsyncWaitForIndexing(queryDuration, query.WaitForNonStaleResultsTimeout.Value, this);
+
+                                marker.ReleaseLock();
+
+                                await wait.WaitForIndexingAsync(frozenAwaiter).ConfigureAwait(false);
+                                continue;
+                            }
+                        }
+
+                        FillQueryResult(resultToFill, isStale, query.Metadata, documentsContext, indexContext);
+
+                        using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
+                        {
+                            using (var queryScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Query)))
+                            {
+                                QueryTimingsScope gatherScope = null;
+                                QueryTimingsScope fillScope = null;
+
+                                if (queryScope != null && query.Metadata.Includes?.Length > 0)
+                                {
+                                    var includesScope = queryScope.For(nameof(QueryTimingsScope.Names.Includes), start: false);
+                                    gatherScope = includesScope.For(nameof(QueryTimingsScope.Names.Gather), start: false);
+                                    fillScope = includesScope.For(nameof(QueryTimingsScope.Names.Fill), start: false);
+                                }
+
+                                var totalResults = new Reference<int>();
+                                var skippedResults = new Reference<int>();
+                                IncludeCountersCommand includeCountersCommand = null;
+
+                                var fieldsToFetch = new FieldsToFetch(query, Definition);
+
+
+
+                                foreach (var indexEntry in reader.IndexEntries(documentsContext, query, totalResults, documentsContext, GetOrAddSpatialField, token.Token))
+                                {
+                                    try
+                                    {
+                                        resultToFill.AddResult(indexEntry);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        Console.WriteLine(e);
+                                        throw;
+                                    }
+                                }
+
+
+
+
+                            }
+                        }
+
+                        return;
+                    }
+                }
+            }
+        }
+
 
         public virtual async Task<FacetedQueryResult> FacetedQuery(FacetQuery facetQuery, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {

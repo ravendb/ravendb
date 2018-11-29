@@ -134,26 +134,55 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 var format = GetStringQueryString("format", false);
+                var debug = GetStringQueryString("debug", false);
                 var properties = GetStringValuesQueryString("field", false);
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
                 
                 // set the exported file name
                 string fileName = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
-                fileName = $"{Database.Name}_{fileName}"; 
-
-                using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileName))
+                fileName = $"{Database.Name}_{fileName}";
+                if (string.IsNullOrWhiteSpace(debug) == false)
                 {
-                    try
+                    using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileName))
                     {
-                        await Database.QueryRunner.ExecuteStreamQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
-                    }
-                    catch (IndexDoesNotExistException)
-                    {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        writer.WriteError("Index " + query.Metadata.IndexName + " does not exists");
+                        try
+                        {
+                            await Database.QueryRunner.ExecuteStreamIndexEntriesQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                        }
+                        catch (IndexDoesNotExistException)
+                        {
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            writer.WriteError("Index " + query.Metadata.IndexName + " does not exists");
+                        }
                     }
                 }
+                else
+                {
+                    using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileName))
+                    {
+                        try
+                        {
+                            await Database.QueryRunner.ExecuteStreamQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                        }
+                        catch (IndexDoesNotExistException)
+                        {
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            writer.WriteError("Index " + query.Metadata.IndexName + " does not exists");
+                        }
+                    }
+                }
+
             }
+        }
+
+        private IStreamBlittableJsonReaderObjectQueryResultWriter GetIndexEntriesQueryResultWriter(string format, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream,
+            string[] propertiesArray, string fileName = null)
+        {
+            if (string.IsNullOrEmpty(format))
+            {
+                throw new Exception();
+            }
+            return new StreamCsvBlittableJsonReaderObjectQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileName);
         }
 
         private IStreamDocumentQueryResultWriter GetQueryResultWriter(string format, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream,
@@ -168,6 +197,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 throw new NotSupportedException("Using json output format with custom fields is not supported");
             }
+
             return new StreamJsonDocumentQueryResultWriter(response, responseBodyStream, context);
         }
     }

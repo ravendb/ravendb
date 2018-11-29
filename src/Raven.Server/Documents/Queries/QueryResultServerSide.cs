@@ -4,6 +4,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Explanation;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -41,4 +42,8 @@ namespace Raven.Server.Documents.Queries
     public abstract class QueryResultServerSide : QueryResultServerSide<Document>
     {
     }
+
+
+
+    
 }

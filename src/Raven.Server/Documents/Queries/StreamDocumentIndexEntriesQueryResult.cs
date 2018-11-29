@@ -9,14 +9,14 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class StreamDocumentQueryResult : QueryResultServerSide
+    public class StreamDocumentIndexEntriesQueryResult : QueryResultServerSide<BlittableJsonReaderObject>
     {
-        private readonly IStreamDocumentQueryResultWriter _writer;
+        private readonly IStreamBlittableJsonReaderObjectQueryResultWriter _writer;
         private readonly OperationCancelToken _token;
         private bool _anyWrites;
         private bool _anyExceptions;
 
-        public StreamDocumentQueryResult(HttpResponse response, IStreamDocumentQueryResultWriter writer, OperationCancelToken token)
+        public StreamDocumentIndexEntriesQueryResult(HttpResponse response, IStreamBlittableJsonReaderObjectQueryResultWriter writer, OperationCancelToken token)
         {
             if (response.HasStarted)
                 throw new InvalidOperationException("You cannot start streaming because response has already started.");
@@ -25,15 +25,25 @@ namespace Raven.Server.Documents.Queries
             _token = token;
         }
 
-        public override void AddResult(Document result)
+        public override void AddResult(BlittableJsonReaderObject result)
         {
             if (_anyWrites == false)
                 StartResponseIfNeeded();
 
-            using (result.Data)
+            using (result)
                 _writer.AddResult(result);
             _token.Delay();
         }
+
+        //public override void AddResult(Document result)
+        //{
+        //    if (_anyWrites == false)
+        //        StartResponseIfNeeded();
+
+        //    using (result.Data)
+        //        _writer.AddResult(result);
+        //    _token.Delay();
+        //}
 
         public override void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings)
         {
