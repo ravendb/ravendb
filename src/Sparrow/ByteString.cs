@@ -506,7 +506,7 @@ namespace Sparrow
         {
             SegmentsPool = new ThreadLocal<SegmentStack>(() => new SegmentStack(), trackAllValues: true);
             LowMemoryFlag = new SharedMultipleUseFlag();
-            Cleaner = new NativeMemoryCleaner<SegmentStack, UnmanagedGlobalSegment>(SegmentsPool, LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+            Cleaner = new NativeMemoryCleaner<SegmentStack, UnmanagedGlobalSegment>(() => SegmentsPool.Values, LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 
             ThreadLocalCleanup.ReleaseThreadLocalState += CleanForCurrentThread;
 

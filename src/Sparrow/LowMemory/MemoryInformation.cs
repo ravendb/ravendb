@@ -489,17 +489,7 @@ namespace Sparrow.LowMemory
 
         public static long GetUnManagedAllocationsInBytes()
         {
-            long totalUnmanagedAllocations = 0;
-
-            foreach (var stats in NativeMemory.AllThreadStats)
-            {
-                if (stats.IsThreadAlive() == false)
-                    continue;
-
-                totalUnmanagedAllocations += stats.TotalAllocated;
-            }
-
-            return totalUnmanagedAllocations;
+            return NativeMemory.TotalAllocatedMemory;
         }
 
         public static long GetManagedMemoryInBytes()

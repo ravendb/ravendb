@@ -30,6 +30,10 @@ namespace Sparrow.Utils
 
         public static IEnumerable<ThreadStats> AllThreadStats => ThreadAllocations.Values.Where(x => x != null);
 
+        private static long _totalAllocatedMemory;
+
+        public static long TotalAllocatedMemory => _totalAllocatedMemory;
+
         public static ConcurrentDictionary<string, Lazy<FileMappingInfo>> FileMapping = new ConcurrentDictionary<string, Lazy<FileMappingInfo>>();
 
         public static void SetMinimumFreeCommittedMemory(float min)
@@ -67,6 +71,10 @@ namespace Sparrow.Utils
                 return false;
             }
 
+            private ThreadStats(object marker) { }
+
+            public static ThreadStats Empty = new ThreadStats(null);
+
             public ThreadStats()
             {
                 _threadInstance = Thread.CurrentThread;
@@ -84,12 +92,14 @@ namespace Sparrow.Utils
             if (currentThreadValue == stats)
             {
                 currentThreadValue.Allocations -= size;
+                
                 FixupReleasesFromOtherThreads(currentThreadValue);
             }
             else
             {
                 Interlocked.Add(ref stats.ReleasesFromOtherThreads, size);
             }
+            Interlocked.Add(ref _totalAllocatedMemory, -size);
             Marshal.FreeHGlobal((IntPtr)ptr);
         }
 
@@ -119,6 +129,7 @@ namespace Sparrow.Utils
             {
                 var ptr = (byte*)Marshal.AllocHGlobal((IntPtr)size).ToPointer();
                 thread.Allocations += size;
+                Interlocked.Add(ref _totalAllocatedMemory, size);
                 return ptr;
             }
             catch (OutOfMemoryException e)
@@ -228,6 +239,8 @@ namespace Sparrow.Utils
             thread = ThreadAllocations.Value;
             thread.Allocations += size;
 
+            Interlocked.Add(ref _totalAllocatedMemory, size);
+
             if (PlatformDetails.RunningOnPosix)
             {
                 byte* ptr;
@@ -267,6 +280,7 @@ namespace Sparrow.Utils
                 Interlocked.Add(ref stats.ReleasesFromOtherThreads, size);
             }
 
+            Interlocked.Add(ref _totalAllocatedMemory, -size);
             var p = new IntPtr(ptr);
             if (PlatformDetails.RunningOnPosix)
             {

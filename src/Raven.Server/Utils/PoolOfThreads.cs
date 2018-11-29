@@ -6,7 +6,9 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Raven.Client;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
@@ -86,6 +88,12 @@ namespace Raven.Server.Utils
             [ThreadStatic] public static LongRunningWork Current;
             [ThreadStatic] internal static PooledThread CurrentPooledThread;
             private ManualResetEvent _manualResetEvent;
+
+            public NativeMemory.ThreadStats CurrentThreadStats 
+                // this is initialize when the thread starts work,
+                // setting to to empty value avoid complex null / race conditions
+                = NativeMemory.ThreadStats.Empty;
+
             public string Name;
 
             public LongRunningWork(ManualResetEvent manualResetEvent, string name)
@@ -178,7 +186,10 @@ namespace Raven.Server.Utils
                 {
                     Interlocked.Increment(ref _parent.TotalNumberOfThreads);
                     InitializeProcessThreads();
+                    JsonContextPoolWorkStealing.AvoidForCurrentThread = true;
+
                     LongRunningWork.CurrentPooledThread = this;
+
 
                     while (true)
                     {
@@ -212,6 +223,7 @@ namespace Raven.Server.Utils
 
                 try
                 {
+                    _workIsDone.CurrentThreadStats = NativeMemory.CurrentThreadStats;
                     LongRunningWork.Current = _workIsDone;
                     _action(_state);
                 }

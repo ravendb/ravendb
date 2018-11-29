@@ -1060,7 +1060,6 @@ namespace Voron.Impl
         private PagerState _lastState;
         private bool _isLazyTransaction;
 
-        internal ActiveTransactions.Node ActiveTransactionNode;
         internal bool FlushInProgressLockTaken;
         private ByteString _txHeaderMemory;
         internal ImmutableAppendOnlyList<JournalFile> JournalFiles;

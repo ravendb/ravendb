@@ -621,7 +621,7 @@ namespace Raven.Server.Documents.Indexes
 
             _indexingProcessCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
             _indexDisabled = false;
-
+            
             _indexingThread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
             {
                 try
@@ -2070,17 +2070,11 @@ namespace Raven.Server.Documents.Indexes
             var indexingThread = _indexingThread;
             if (indexingThread != null)
             {
-                foreach (var threadAllocationsValue in NativeMemory.AllThreadStats)
-                {
-                    if (indexingThread.ManagedThreadId == threadAllocationsValue.Id)
-                    {
-                        stats.ThreadAllocations.SizeInBytes = threadAllocationsValue.TotalAllocated;
-                        if (stats.ThreadAllocations.SizeInBytes < 0)
-                            stats.ThreadAllocations.SizeInBytes = 0;
-                        stats.MemoryBudget.SizeInBytes = _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes);
-                        break;
-                    }
-                }
+                var threadAllocationsValue = _indexingThread.CurrentThreadStats;
+                stats.ThreadAllocations.SizeInBytes = threadAllocationsValue.TotalAllocated;
+                if (stats.ThreadAllocations.SizeInBytes < 0)
+                    stats.ThreadAllocations.SizeInBytes = 0;
+                stats.MemoryBudget.SizeInBytes = _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes);
             }
 
             return stats;
