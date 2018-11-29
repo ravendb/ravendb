@@ -63,6 +63,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
             throw new NotSupportedException("Collection query is handled directly by documents storage so index entries aren't created underneath");
         }
 
+        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
+            IStreamBlittableJsonReaderObjectQueryResultWriter writer, OperationCancelToken token)
+        {
+            throw new NotSupportedException("Collection query is handled directly by documents storage so index entries aren't created underneath");
+        }
+
         public override Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             var runner = new CollectionRunner(Database, context, query);

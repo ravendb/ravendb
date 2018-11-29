@@ -40,6 +40,13 @@ namespace Raven.Server.Documents.Queries
             return index.StreamQuery(response, writer, query, documentsContext, token);
         }
 
+        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamBlittableJsonReaderObjectQueryResultWriter writer, OperationCancelToken token)
+        {
+            var index = GetIndex(query.Metadata.IndexName);
+
+            return index.StreamIndexEntriesQuery(response, writer, query, documentsContext, token);
+        }
+
         public override Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);

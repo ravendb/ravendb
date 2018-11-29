@@ -109,6 +109,29 @@ namespace Raven.Server.Documents.Queries
             throw CreateRetriesFailedException(lastException);
         }
 
+        public override async Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
+            IStreamBlittableJsonReaderObjectQueryResultWriter writer, OperationCancelToken token)
+        {
+            ObjectDisposedException lastException = null;
+            for (var i = 0; i < NumberOfRetries; i++)
+            {
+                try
+                {
+                    documentsContext.CloseTransaction();
+                    await GetRunner(query).ExecuteStreamIndexEntriesQuery(query, documentsContext, response, writer, token);
+                    return;
+                }
+                catch (ObjectDisposedException e)
+                {
+                    if (Database.DatabaseShutdown.IsCancellationRequested)
+                        throw;
+
+                    lastException = e;
+                }
+            }
+
+            throw CreateRetriesFailedException(lastException);
+        }
         public async Task<FacetedQueryResult> ExecuteFacetedQuery(IndexQueryServerSide query, long? existingResultEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             if (query.Metadata.IsDynamic)

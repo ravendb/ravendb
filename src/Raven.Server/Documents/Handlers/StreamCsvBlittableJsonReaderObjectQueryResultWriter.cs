@@ -16,7 +16,7 @@ using static System.String;
 
 namespace Raven.Server.Documents.Handlers
 {
-    internal class StreamCsvDocumentQueryResultWriter : IStreamDocumentQueryResultWriter
+    internal class StreamCsvBlittableJsonReaderObjectQueryResultWriter : IStreamBlittableJsonReaderObjectQueryResultWriter
     {
         private HttpResponse _response;
         private DocumentsOperationContext _context;
@@ -24,7 +24,8 @@ namespace Raven.Server.Documents.Handlers
         private CsvWriter _csvWriter;
         private (string, string)[] _properties;
         private bool writeHeader = true;
-        public StreamCsvDocumentQueryResultWriter(HttpResponse response, Stream stream, DocumentsOperationContext context, string[] properties = null, string csvFileName = "export")
+
+        public StreamCsvBlittableJsonReaderObjectQueryResultWriter(HttpResponse response, Stream stream, DocumentsOperationContext context, string[] properties = null, string csvFileName = "export")
         {
             csvFileName = $"{csvFileName}_{SystemTime.UtcNow.ToString("yyyyMMdd_HHmm", CultureInfo.InvariantCulture)}.csv"; 
             
@@ -64,21 +65,14 @@ namespace Raven.Server.Documents.Handlers
         {
         }
 
-        public void AddResult(Document res)
+        public void AddResult(BlittableJsonReaderObject res)
         {            
-            WriteCsvHeaderIfNeeded(res.Data);
+            WriteCsvHeaderIfNeeded(res);
 
             foreach ((var property, var path) in _properties)
             {
-                if (Constants.Documents.Metadata.Id == property)
-                {
-                    _csvWriter.WriteField(res.Id);
-                }
-                else
-                {
-                    var o = new BlittablePath(path).Evaluate(res.Data, false);
-                    _csvWriter.WriteField(o?.ToString());
-                }                
+                var o = new BlittablePath(path).Evaluate(res, false);
+                _csvWriter.WriteField(o?.ToString());
             }
             _csvWriter.NextRecord();
         }
@@ -101,13 +95,9 @@ namespace Raven.Server.Documents.Handlers
             _csvWriter.NextRecord();
         }
 
-        private IEnumerable<(string Property, string Path)> GetPropertiesRecursive((string ParentProperty, string ParentPath) propertyTuple, BlittableJsonReaderObject obj, bool addId = true)
+        private IEnumerable<(string Property, string Path)> GetPropertiesRecursive((string ParentProperty, string ParentPath) propertyTuple, BlittableJsonReaderObject obj)
         {
             var inMetadata = Constants.Documents.Metadata.Key.Equals(propertyTuple.ParentPath);
-            if (addId)
-            {
-                yield return (Constants.Documents.Metadata.Id, Constants.Documents.Metadata.Id);
-            }
             foreach (var p in obj.GetPropertyNames())
             {
                 //skip properties starting with '@' unless we are in the metadata and we need to export @metadata.@collection
@@ -120,7 +110,7 @@ namespace Raven.Server.Documents.Handlers
                 object res;
                 if (obj.TryGetMember(p, out res) && res is BlittableJsonReaderObject)
                 {
-                    foreach (var nested in GetPropertiesRecursive((property, path), res as BlittableJsonReaderObject, addId:false))
+                    foreach (var nested in GetPropertiesRecursive((property, path), res as BlittableJsonReaderObject))
                     {
                         yield return nested;
                     }

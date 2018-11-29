@@ -68,6 +68,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return index.IndexEntries(query, context, token);
         }
 
+        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
+            IStreamBlittableJsonReaderObjectQueryResultWriter writer, OperationCancelToken token)
+        {
+            throw new NotSupportedException("Collection query is handled directly by documents storage so index entries aren't created underneath");
+        }
+
         public override async Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             var index = await MatchIndex(query, true, null, context, token.Token);
