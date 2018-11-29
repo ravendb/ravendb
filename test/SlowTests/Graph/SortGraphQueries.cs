@@ -88,24 +88,6 @@ namespace SlowTests.Graph
             public int[] Numbers { get; set; }
         }
 
-
-        [Fact]
-        public void SortOnObjectShouldWork()
-        {
-            using (var store = GetDocumentStore())
-            {
-                CreateNorthwindDatabase(store);
-                using (var session = store.OpenSession())
-                {
-                    var result = session.Advanced.RawQuery<Order>(@"
-                        match (Orders as o)
-                        order by o.ShipTo
-                        ").First();
-                    Assert.Equal("orders/1-A", result.Id);
-                }
-            }
-        }
-
         [Fact]
         public void SortOnStringShouldWork()
         {
