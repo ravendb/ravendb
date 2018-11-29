@@ -4,6 +4,8 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 using System.Collections.Generic;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace Raven.Debug
 {
@@ -11,8 +13,23 @@ namespace Raven.Debug
     {
         public uint OSThreadId;
 
+        public int ManagedThreadId;
+
         public bool IsNative;
 
+        [JsonConverter(typeof(StringEnumConverter))]
+        public ThreadType ThreadType;
+
         public List<string> StackTrace = new List<string>();
+
+        public List<string> StackObjects;
+    }
+
+    public enum ThreadType
+    {
+        Other,
+        GC,
+        Finalizer,
+        Native
     }
 }
