@@ -7,8 +7,8 @@ namespace Sparrow.Utils
 {
     public class NativeMemoryCleaner<TStack, TPooledItem> : IDisposable where TPooledItem : PooledItem where TStack : StackHeader<TPooledItem>
     {
-        private readonly ThreadLocal<TStack> _pool;
         private readonly object _lock = new object();
+        private readonly Func<ICollection<TStack>> _getContexts;
         private readonly SharedMultipleUseFlag _lowMemoryFlag;
         private readonly TimeSpan _idleTime;
         private readonly Timer _timer;
@@ -17,9 +17,9 @@ namespace Sparrow.Utils
         private bool _disposed;
 #endif
 
-        public NativeMemoryCleaner(ThreadLocal<TStack> pool, SharedMultipleUseFlag lowMemoryFlag, TimeSpan period, TimeSpan idleTime)
+        public NativeMemoryCleaner(Func<ICollection<TStack>> getContexts, SharedMultipleUseFlag lowMemoryFlag, TimeSpan period, TimeSpan idleTime)
         {
-            _pool = pool;
+            _getContexts = getContexts;
             _lowMemoryFlag = lowMemoryFlag;
             _idleTime = idleTime;
             _timer = new Timer(CleanNativeMemory, null, period, period);
@@ -40,10 +40,10 @@ namespace Sparrow.Utils
 #endif
 
                 var now = DateTime.UtcNow;
-                IList<TStack> values;
+                ICollection<TStack> values;
                 try
                 {
-                    values = _pool.Values;
+                    values = _getContexts();
                 }
                 catch (OutOfMemoryException)
                 {
