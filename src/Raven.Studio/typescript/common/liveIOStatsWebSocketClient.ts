@@ -38,10 +38,12 @@ class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Do
     resumeUpdates() {
         this.updatesPaused = false;
 
-        this.pendingDataToApply.forEach(x => this.mergeIncomingData(x));
-        this.pendingDataToApply = [];
+        if (this.pendingDataToApply.length) {
+            this.pendingDataToApply.forEach(x => this.mergeIncomingData(x));
+            this.pendingDataToApply = [];
 
-        this.onData(this.mergedData);
+            this.onData(this.mergedData);    
+        }
     }
 
     protected onHeartBeat() {

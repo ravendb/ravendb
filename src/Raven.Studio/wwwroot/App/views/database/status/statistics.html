@@ -1,5 +1,5 @@
 <section data-bind="if: stats" class="stats content-margin">    
-    <h1>General Stats
+    <h1 class="on-base-background">General Stats
         <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }"><i class="icon-link"></i></a>
     </h1>
     <div id="storage-report" title="Base path for database data files">
@@ -8,7 +8,7 @@
             <span class="small" data-bind="text: dataLocation"></span>
         </div>
     </div>
-    <div class="stats-list margin-bottom">
+    <div class="stats-list panel">
         <div class="row flex-row" data-bind="with: stats">
             <div class="col-sm-6 col-lg-4 col-xl-3">
                 <div class="stats-item">
@@ -95,8 +95,7 @@
             </div>
         </div>
     </div>
-    <h1>Indexes Stats by Type
-    </h1>
+    <h1 class="on-base-background">Indexes Stats by Type</h1>
     <div class="row" data-bind="visible: stats().indexesByType().length === 0">
         <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
             <i class="icon-xl icon-empty-set text-muted"></i>
@@ -105,11 +104,11 @@
     </div>
     <div data-bind="foreach: stats().indexesByType">
         <hr />
-        <h2 data-bind="text: indexType"></h2>
+        <h2 data-bind="text: indexType" class="on-base-background"></h2>
         <div class="row row-sm flex-row" data-bind="foreach: indexes">
 
             <div class="col-sm-6 col-lg-4 col-xl-3 flex-vertical">
-                <div class="stats-list margin-bottom flex-grow">
+                <div class="stats-list panel flex-grow">
                     <div class="flex-horizontal title">
                         <h3 class="flex-grow text-elipsis">
                             <a href="#" data-bind="attr: { href: $root.urlForIndexPerformance(indexName), title: indexName } ">
@@ -169,14 +168,14 @@
     <hr />
     <div class="identities"> 
         <div class="flex-horizontal">
-            <h1 class="flex-end">Identities</h1>
+            <h1 class="flex-end on-base-background">Identities</h1>
             <small class="js-identities-header identities-header flex-end"><i class="icon-info text-info"></i> </small>
         </div>
 
         <div class="row" data-bind="visible: identities().length === 0">
             <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
                 <i class="icon-xl icon-empty-set text-muted"></i>
-                <h2 class="text-center">No identities have been defined for this database.</h2>
+                <h2 class="text-center text-muted">No identities have been defined for this database.</h2>
             </div>
         </div>
         <div class="row row-sm flex-row" data-bind="visible: identities().length">

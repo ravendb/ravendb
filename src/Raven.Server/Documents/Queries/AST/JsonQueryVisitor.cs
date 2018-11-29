@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using Sparrow;
 
@@ -113,7 +114,7 @@ namespace Raven.Server.Documents.Queries.AST
             _writer.WriteStartObject();
             foreach (var declaredFunction in declaredFunctions)
             {
-                _writer.WritePropertyName(declaredFunction.Key);
+                _writer.WritePropertyName(declaredFunction.Key.Value);
                 _writer.WriteValue(declaredFunction.Value.FunctionText);
             }
             _writer.WriteEndObject();
@@ -247,7 +248,7 @@ namespace Raven.Server.Documents.Queries.AST
             if (alias != null)
             {
                 _writer.WritePropertyName("Alias");
-                _writer.WriteValue(alias .Value);
+                _writer.WriteValue(alias.Value.Value);
             }
         }
 

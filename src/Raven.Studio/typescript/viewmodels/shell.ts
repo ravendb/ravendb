@@ -37,6 +37,7 @@ import eventsCollector = require("common/eventsCollector");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import footer = require("common/shell/footer");
 import feedback = require("viewmodels/shell/feedback");
+import chooseTheme = require("viewmodels/shell/chooseTheme");
 import continueTest = require("common/shell/continueTest");
 import globalSettings = require("common/settings/globalSettings");
 
@@ -420,6 +421,11 @@ class shell extends viewModelBase {
 
     static openFeedbackForm() {
         const dialog = new feedback(shell.clientVersion(), buildInfo.serverBuildVersion().FullVersion);
+        app.showBootstrapDialog(dialog);
+    }
+    
+    static chooseTheme() {
+        const dialog = new chooseTheme();
         app.showBootstrapDialog(dialog);
     }
     

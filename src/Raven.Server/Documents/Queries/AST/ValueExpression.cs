@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Primitives;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -26,7 +27,7 @@ namespace Raven.Server.Documents.Queries.AST
                 if (parent.QueryParameters.TryGet(Token, out object o))
                     return o?.ToString();
             }
-            return Token;
+            return Token.Value;
         }
 
         public override bool Equals(QueryExpression other)

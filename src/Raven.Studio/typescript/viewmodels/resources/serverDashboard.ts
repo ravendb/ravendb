@@ -78,7 +78,7 @@ class machineResourcesSection {
             const date = moment(data.date).format(serverDashboard.timeFormat);
             const machine = data.values['machine'].toFixed(0) + "%";
             const process = data.values['process'].toFixed(0) + "%";
-            return `<div>
+            return `<div class="tooltip-inner">
                 Time: <strong>${date}</strong><br />
                 Machine CPU usage: <strong>${machine}</strong><br />
                 Process CPU usage: <strong>${process}</strong>
@@ -94,7 +94,7 @@ class machineResourcesSection {
             const physical = generalUtils.formatBytesToSize(totalMemory); 
             const machine = generalUtils.formatBytesToSize(data.values['machine']); 
             const process = generalUtils.formatBytesToSize(data.values['process']);
-            return `<div>
+            return `<div class="tooltip-inner">
                 Time: <strong>${date}</strong><br />
                 Usable physical memory: <strong>${physical}</strong><br />
                 Machine memory usage: <strong>${machine}</strong><br />
@@ -157,7 +157,7 @@ class indexingSpeedSection {
         if (data) {
             const date = moment(data.date).format(serverDashboard.timeFormat);
             const indexed = data.values['indexing'];
-            return `<div>
+            return `<div class="tooltip-inner">
                 Time: <strong>${date}</strong><br />
                 # Documents indexed/s: <strong>${indexed.toLocaleString()}</strong>
                 </div>`;
@@ -171,7 +171,7 @@ class indexingSpeedSection {
             const date = moment(data.date).format(serverDashboard.timeFormat);
             const map = data.values['map'];
             const reduce = data.values['reduce'];
-            return `<div>
+            return `<div class="tooltip-inner">
                 Time: <strong>${date}</strong><br />
                 # Documents mapped/s: <strong>${map.toLocaleString()}</strong><br />
                 # Mapped entries reduced/s: <strong>${reduce.toLocaleString()}</strong>
@@ -421,7 +421,7 @@ class trafficSection {
             const writes = data.values['writes'];
             const written = data.values['written'];
 
-            return `<div>
+            return `<div class="tooltip-inner">
                 Time: <strong>${date}</strong><br />
                 Requests/s: <strong>${requests.toLocaleString()}</strong><br />
                 Writes/s: <strong>${writes.toLocaleString()}</strong><br />
@@ -589,7 +589,7 @@ class driveUsageSection {
             if (matched) {
                 matched.update(incomingItem);
             } else {
-                const usage = new driveUsage(incomingItem, this.storageChart.getColorProvider(), this.includeTemporaryBuffers);
+                const usage = new driveUsage(incomingItem, this.storageChart.getColorClassProvider(), this.includeTemporaryBuffers);
                 this.table.push(usage);
             }
         });

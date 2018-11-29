@@ -1,36 +1,48 @@
 <div class="content-margin">
     <div class="flex-vertical absolute-fill">
-        <div class="flex-header">
-            <div class="clearfix toolbar" role="form" style="position:relative">
-                <div class="form-inline pull-left">
-                    <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter indexes (Alt+/)" data-bind="textInput: searchText, enable: hasAnyData" />
+        <div class="flex-horizontal flex-wrap margin-bottom margin-bottom-sm" role="form">
+            <div class="form-inline">
+                <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter indexes (Alt+/)" data-bind="textInput: searchText, enable: hasAnyData" />
 
+                <button class="btn btn-default" data-bind="click: expandAll, visible: canExpandAll, enable: hasAnyData" title="Expand all indexes performance details"><i class="icon-expand"></i><span>Expand All</span></button>
+                <button class="btn btn-default" data-bind="click: collapseAll, visible: !canExpandAll(), enable: hasAnyData" title="Collapse all indexes performance details"><i class="icon-collapse"></i><span>Collapse All</span></button>
+                <button class="btn btn-default" data-bind="click: exportAsJson, enable: hasAnyData, visible: !isImport()" title="Export current performance graph to a file">
+                    <i class="icon-export"></i><span>Export</span>
+                </button>
+                <label for="importFilePicker" class="btn btn-default">
+                    <i class="icon-import"></i><span>Import</span>
+                </label>
 
-                    <button class="btn btn-default" data-bind="click: expandAll, visible: canExpandAll, enable: hasAnyData" title="Expand all indexes performance details"><i class="icon-expand"></i><span>Expand All</span></button>
-                    <button class="btn btn-default" data-bind="click: collapseAll, visible: !canExpandAll(), enable: hasAnyData" title="Collapse all indexes performance details"><i class="icon-collapse"></i><span>Collapse All</span></button>
-                    <button class="btn btn-default" data-bind="click: exportAsJson, enable: hasAnyData, visible: !isImport()" title="Export current performance graph to a file">
-                        <i class="icon-export"></i><span>Export</span>
-                    </button>
-                    <label for="importFilePicker" class="btn btn-default">
-                        <i class="icon-import"></i><span>Import</span>
-                    </label>
-                    <button class="btn btn-default" data-bind="click: closeImport, visible: isImport" title="Return to currently selected database performance graph">
-                        <i class="icon-cancel"></i><span data-bind="text: 'Close import (' + importFileName() + ')'">Close import</span>
-                    </button>
-
-                    <div class="input-group file-input" title="Import performance graph file">
-                        <input type="file" id="importFilePicker" data-bind="event: { change: fileSelected }" tabindex="-1" accept=".json">
-                    </div>
-                </div>
-                <div class="pull-right">
-                    <div class="toggle toggle-inline" data-bind="visible: !isImport()">
-                        <input type="checkbox" class="styled" id="autoScroll" data-bind="checked: autoScroll">
-                        <label for="autoScroll"> Auto scroll </label>
-                    </div>
+                <div class="input-group file-input" title="Import performance graph file">
+                    <input type="file" id="importFilePicker" data-bind="event: { change: fileSelected }" tabindex="-1" accept=".json">
                 </div>
             </div>
         </div>
-        <div class="flex-grow dynamic-container margin-top">
+        <div class="flex-horizontal flex-noshrink">
+            <div data-bind="visible: liveViewClient() && !bufferIsFull()">
+                <i class="global-spinner spinner-xs"></i> <small>Collecting indexing performance data... (buffer usage: <span data-bind="text: bufferUsage() + '%'"></span>)</small>
+            </div>
+            <div data-bind="visible: bufferIsFull">
+                <small>Buffer is full, clear graph data to continue</small>
+            </div>
+            <div class="flex-separator"></div>
+
+            <button class="btn btn-default btn-sm margin-right margin-right-sm" data-bind="click: clearBrush, visible: clearSelectionVisible">
+                <span>Clear selection</span>
+            </button>
+            <button class="btn btn-sm btn-default" data-bind="click: closeImport, visible: isImport" title="Return to currently selected database performance graph">
+                <i class="icon-cancel"></i><span data-bind="text: 'Close import (' + importFileName() + ')'">Close import</span>
+            </button>
+            <div class="btn-group" data-bind="visible: !isImport()">
+                <button class="btn btn-sm btn-info btn-checkable" data-bind="click: toggleScroll, css: { active: autoScroll }">
+                    <i class="icon-logs"></i> <span>Monitoring (tail -f)</span>
+                </button>
+                <button class="btn btn-sm btn-danger" data-bind="click: clearGraphWithConfirm">
+                    <i class="icon-cancel"></i><span>Clear graph</span>
+                </button>
+            </div>
+        </div>
+        <div class="flex-grow dynamic-container">
             <div data-bind="visible: !hasAnyData()">
                 <div class="row">
                     <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
@@ -42,19 +54,65 @@
                             <i class="icon-xl global-spinner text-muted"></i>
                             <h2 class="text-center">Loading ...</h2>
                         </div>
-                        
+
                     </div>
                 </div>
             </div>
 
             <section id="indexingPerformance" style="position: relative" data-bind="visible: hasAnyData">
-                <button class="btn btn-default btn-sm clear-button" data-bind="click: clearBrush, visible: clearSelectionVisible">
-                    <span>Clear selection</span>
-                </button>
                 <section class="metricsContainer" id="indexPerfMetricsContainer">
-                    <div class="tooltip" style="opacity: 0; display: none">
+                    <div class="tooltip tooltip-inner" style="opacity: 0; display: none">
                     </div>
                 </section>
+                
+                <div class="color-definitions">
+                    <div class="axis"></div>
+                    <div class="gaps"></div>
+                    <div class="brushChartColor"></div>
+                    <div class="brushChartStrokeColor"></div>
+                    <div class="trackBackground"></div>
+                    <div class="trackNameBg"></div>
+                    <div class="faulty"></div>
+                    <div class="trackNameFg"></div>
+                    <div class="openedTrackArrow"></div>
+                    <div class="closedTrackArrow"></div>
+                    <div class="stripeTextColor"></div>
+                    <div class="progressStripes"></div>
+                    <div class="tracks">
+                        <div class="collection" data-property="Collection"></div>
+                        <div class="indexing" data-property="Indexing"></div>
+                        <div class="cleanup" data-property="Cleanup"></div>
+                        <div class="references" data-property="References"></div>
+                        <div class="map" data-property="Map"></div>
+                        <div class="storageDocumentRead" data-property="Storage/DocumentRead"></div>
+                        <div class="linq" data-property="Linq"></div>
+                        <div class="jint" data-property="Jint"></div>
+                        <div class="loadDocument" data-property="LoadDocument"></div>
+                        <div class="bloom" data-property="Bloom"></div>
+                        <div class="luceneDelete" data-property="Lucene/Delete"></div>
+                        <div class="luceneSuggestion" data-property="Lucene/Suggestion"></div>
+                        <div class="luceneAddDocument" data-property="Lucene/AddDocument"></div>
+                        <div class="luceneConvert" data-property="Lucene/Convert"></div>
+                        <div class="createBlittableJson" data-property="CreateBlittableJson"></div>
+                        <div class="aggregationBlittableJson" data-property="Aggregation/BlittableJson"></div>
+                        <div class="getMapEntriesTree" data-property="GetMapEntriesTree"></div>
+                        <div class="getMapEntries" data-property="GetMapEntries"></div>
+                        <div class="storageRemoveMapResult" data-property="Storage/RemoveMapResult"></div>
+                        <div class="storagePutMapResult" data-property="Storage/PutMapResult"></div>
+                        <div class="reduce" data-property="Reduce"></div>
+                        <div class="tree" data-property="Tree"></div>
+                        <div class="aggregationLeafs" data-property="Aggregation/Leafs"></div>
+                        <div class="aggregationBranches" data-property="Aggregation/Branches"></div>
+                        <div class="storageReduceResults" data-property="Storage/ReduceResults"></div>
+                        <div class="nestedValues" data-property="NestedValues"></div>
+                        <div class="storageRead" data-property="Storage/Read"></div>
+                        <div class="aggregationNestedValues" data-property="Aggregation/NestedValues"></div>
+                        <div class="luceneFlushToDisk" data-property="Lucene/FlushToDisk"></div>
+                        <div class="storageCommit" data-property="Storage/Commit"></div>
+                        <div class="luceneRecreateSearcher" data-property="Lucene/RecreateSearcher"></div>
+                        <div class="saveOutputDocuments" data-property="SaveOutputDocuments"></div>
+                    </div>
+                </div>
             </section>
         </div>
     </div>

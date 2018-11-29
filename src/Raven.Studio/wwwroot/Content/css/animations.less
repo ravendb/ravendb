@@ -64,26 +64,37 @@
 
 
 @-webkit-keyframes blink {
+    
     0% {
-        background-color: transparent;
+        box-shadow: 0 0 0 0 @brand-info;
+        background-color: @brand-info;
     }
-    20% {
-        background-color: @gray-lighter;
+
+    70% {
+        box-shadow: 0 0 0 5px fadeout(@brand-info,100%);
+        background-color: fadeout(@brand-info,100%);
     }
+
     100% {
-        background-color: @gray-darker;
+
+        box-shadow: 0 0 0 0 fadeout(@brand-info,100%);
     }
 }
 
 @keyframes blink {
+
     0% {
-        background-color: transparent;
+        box-shadow: 0 0 0 0 @brand-info;
+        background-color: @brand-info;
     }
-    20% {
-        background-color: @gray-lighter;
+
+    70% {
+        box-shadow: 0 0 0 5px fadeout(@brand-info,100%);
+        background-color: fadeout(@brand-info,100%);
     }
+
     100% {
-        background-color: @gray-darker;
+        box-shadow: 0 0 0 0 fadeout(@brand-info,100%);
     }
 }
 

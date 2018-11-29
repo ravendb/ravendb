@@ -13,4 +13,153 @@
             right: 5px;
         }
     }
+
+    ol {
+        padding-left: 20px;
+    }
+
+    .global-colors {
+        .color-definitions {
+            .highlight {
+                color: @text-emphasis;
+            }
+
+            .treeFill {
+                color: @text-color;
+            }
+
+            .treeStroke {
+                color: @text-muted;
+            }
+
+            .treeLevelCount {
+                color: @text-muted;
+            }
+
+            .pageFill {
+                color: @color-4;
+            }
+
+            .pageStroke {
+                color: @text-muted;
+            }
+
+            .documentName {
+                color: @gray-base;
+            }
+
+            .treeBg {
+                color: @panel-bg;
+            }
+
+            .documents {
+                .doc1 {
+                    color: @color-3;
+                }
+
+                .doc2 {
+                    color: @color-5;
+                }
+
+                .doc3 {
+                    color: @color-1;
+                }
+
+                .doc4 {
+                    color: @color-2;
+                }
+
+                .doc5 {
+                    color: @color-3-2;
+                }
+
+                .doc6 {
+                    color: @color-4-2;
+                }
+
+                .doc7 {
+                    color: @color-5-2;
+                }
+
+                .doc8 {
+                    color: @color-1-2;
+                }
+            }
+        }
+    }
+
+    .details-colors {
+        .color-definitions {
+            .canvasBg {
+                color: @panel-bg;
+            }
+
+            .interPageConnection {
+                color: @text-muted;
+            }
+
+            .pageBg {
+                color: @panel-bg-2;
+            }
+
+            .pageNumber {
+                color: @color-4;
+            }
+
+            .nestedSectionBg {
+                color: @color-4;
+            }
+
+            .nestedSectionFg {
+                color: @gray-lighter;
+            }
+
+            .collapsedLeafsBg {
+                color: @panel-bg-2;
+            }
+
+            .collapsedLeafsFg {
+                color: @text-color;
+            }
+
+            .entriesBg {
+                color: @text-muted;
+            }
+
+            .entryBg {
+                color: @panel-bg;
+            }
+
+            .entryFg {
+                color: @text-color;
+            }
+
+            .aggregationLabel {
+                color: @text-muted;
+            }
+
+            .aggregationValue {
+                color: @text-color;
+            }
+
+            .documentText {
+                color: @gray-base;
+            }
+        }
+    }
+}
+
+#visualizerContainer {
+    position: relative;
+    
+    canvas, svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    rect.pane {
+        fill: none;
+        pointer-events: all;
+    }
 }

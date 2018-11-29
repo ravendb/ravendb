@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Esprima;
 using Esprima.Ast;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
@@ -212,7 +213,7 @@ namespace Raven.Server.Documents.Queries
             string fromAlias = null;
             if (Query.From.Alias != null)
             {
-                fromAlias = Query.From.Alias;
+                fromAlias = Query.From.Alias.Value.Value;
                 RootAliasPaths[fromAlias] = (null, false, false, false, null);
             }
 
@@ -222,7 +223,7 @@ namespace Raven.Server.Documents.Queries
 
                 for (var i = 0; i < Query.GroupBy.Count; i++)
                 {
-                    GroupBy[i] = GetGroupByField(Query.GroupBy[i].Expression, Query.GroupBy[i].Alias, parameters);
+                    GroupBy[i] = GetGroupByField(Query.GroupBy[i].Expression, Query.GroupBy[i].Alias?.Value, parameters);
                 }
             }
 
@@ -282,7 +283,7 @@ namespace Raven.Server.Documents.Queries
             {
                 if (Query.Where is MethodExpression me)
                 {
-                    var methodType = QueryMethod.GetMethodType(me.Name);
+                    var methodType = QueryMethod.GetMethodType(me.Name.Value);
                     switch (methodType)
                     {
                         case MethodType.Id:
@@ -434,10 +435,10 @@ namespace Raven.Server.Documents.Queries
                     case ValueExpression ve:
                         HasIncludeOrLoad = true;
 
-                        AddInclude(include, ve.Token);
+                        AddInclude(include, ve.Token.Value);
                         break;
                     case MethodExpression me:
-                        var methodType = QueryMethod.GetMethodType(me.Name);
+                        var methodType = QueryMethod.GetMethodType(me.Name.Value);
                         switch (methodType)
                         {
                             case MethodType.Highlight:
@@ -503,7 +504,7 @@ namespace Raven.Server.Documents.Queries
             if (expression.Arguments.Count == 1)
             {
                 var ve = (ValueExpression)expression.Arguments[0];
-                result.AddOptions(ve.Token, ve.Value);
+                result.AddOptions(ve.Token.Value, ve.Value);
             }
 
             return result;
@@ -511,7 +512,7 @@ namespace Raven.Server.Documents.Queries
 
         private HighlightingField CreateHighlightingField(MethodExpression expression, BlittableJsonReaderObject parameters)
         {
-            var fieldName = ExtractFieldNameFromFirstArgument(expression.Arguments, expression.Name, parameters);
+            var fieldName = ExtractFieldNameFromFirstArgument(expression.Arguments, expression.Name.Value, parameters);
 
             var result = new HighlightingField(fieldName);
 
@@ -522,13 +523,13 @@ namespace Raven.Server.Documents.Queries
                 switch (i)
                 {
                     case 1:
-                        result.AddFragmentLength(ve.Token, ve.Value);
+                        result.AddFragmentLength(ve.Token.Value, ve.Value);
                         break;
                     case 2:
-                        result.AddFragmentCount(ve.Token, ve.Value);
+                        result.AddFragmentCount(ve.Token.Value, ve.Value);
                         break;
                     case 3:
-                        result.AddOptions(ve.Token, ve.Value);
+                        result.AddOptions(ve.Token.Value, ve.Value);
                         break;
                 }
             }
@@ -571,8 +572,8 @@ namespace Raven.Server.Documents.Queries
             {
                 if (index != 0)
                     sb.Append(", ");
-                sb.Append(alias.Key);
-                args[index++] = SelectField.Create(QueryFieldName.Empty, alias.Key, alias.Value.PropertyPath,
+                sb.Append(alias.Key.Value);
+                args[index++] = SelectField.Create(QueryFieldName.Empty, alias.Key.Value, alias.Value.PropertyPath,
                     alias.Value.Array, true, alias.Value.Parameter, alias.Value.Quoted, alias.Value.LoadFromAlias);
             }
 
@@ -728,7 +729,7 @@ namespace Raven.Server.Documents.Queries
                 }
                 else if (load.Expression is ValueExpression ve)
                 {
-                    path = ve.Token;
+                    path = ve.Token.Value;
                     parameter = ve.Value == ValueTokenType.Parameter;
                 }
                 else
@@ -738,7 +739,7 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 var array = false;
-                if (alias.EndsWith("[]"))
+                if (alias.EndsWith("[]", StringComparison.InvariantCulture))
                 {
                     array = true;
                     alias = alias.Subsegment(0, alias.Length - 2);
@@ -796,7 +797,7 @@ namespace Raven.Server.Documents.Queries
                     null,
                     new[]
                     {
-                        new OrderByField.Argument(token.Token, ValueTokenType.String)
+                        new OrderByField.Argument(token.Token.Value, ValueTokenType.String)
                     });
             }
 
@@ -823,7 +824,7 @@ namespace Raven.Server.Documents.Queries
                     null,
                     new[]
                     {
-                        new OrderByField.Argument(token.Token, ValueTokenType.String)
+                        new OrderByField.Argument(token.Token.Value, ValueTokenType.String)
                     });
             }
 
@@ -851,7 +852,7 @@ namespace Raven.Server.Documents.Queries
                         parameters);
 
                 var methodName = expression.Name;
-                var methodType = QueryMethod.GetMethodType(methodName);
+                var methodType = QueryMethod.GetMethodType(methodName.Value);
 
                 switch (methodType)
                 {
@@ -873,7 +874,7 @@ namespace Raven.Server.Documents.Queries
                 for (var i = 0; i < expression.Arguments.Count; i++)
                 {
                     var argument = (ValueExpression)expression.Arguments[i];
-                    arguments[i] = new OrderByField.Argument(argument.Token, argument.Value);
+                    arguments[i] = new OrderByField.Argument(argument.Token.Value, argument.Value);
                 }
 
                 return new OrderByField(
@@ -947,7 +948,7 @@ namespace Raven.Server.Documents.Queries
                     string alias = null;
 
                     if (fieldInfo.Alias != null)
-                        alias = fieldInfo.Alias;
+                        alias = fieldInfo.Alias.Value.Value;
 
                     var expression = fieldInfo.Expression;
 
@@ -996,7 +997,7 @@ namespace Raven.Server.Documents.Queries
                 if (HasSuggest)
                     ThrowSuggestionQueryMustContainsOnlySuggestInSelect(ve, parameters);
 
-                return SelectField.CreateValue(ve.Token, alias, ve.Value);
+                return SelectField.CreateValue(ve.Token.Value, alias, ve.Value);
             }
 
             if (expression is FieldExpression fe)
@@ -1008,7 +1009,7 @@ namespace Raven.Server.Documents.Queries
                     ThrowSuggestionQueryMustContainsOnlySuggestInSelect(fe, parameters);
 
                 if (fe.IsQuoted && fe.Compound.Count == 1)
-                    return SelectField.CreateValue(fe.Compound[0], alias, ValueTokenType.String);
+                    return SelectField.CreateValue(fe.Compound[0].Value, alias, ValueTokenType.String);
                 return GetSelectValue(alias, fe, parameters);
             }
 
@@ -1029,7 +1030,7 @@ namespace Raven.Server.Documents.Queries
                         for (int i = 0; i < me.Arguments.Count; i++)
                         {
                             if (me.Arguments[i] is ValueExpression vt)
-                                args[i] = SelectField.CreateValue(vt.Token, alias, vt.Value);
+                                args[i] = SelectField.CreateValue(vt.Token.Value, alias, vt.Value);
                             else if (me.Arguments[i] is FieldExpression ft)
                                 args[i] = GetSelectValue(null, ft, parameters);
                             else
@@ -1105,7 +1106,7 @@ namespace Raven.Server.Documents.Queries
                         for (int i = 0; i < me.Arguments.Count; i++)
                         {
                             if (me.Arguments[i] is ValueExpression vt)
-                                args[i] = SelectField.CreateValue(vt.Token, alias, vt.Value);
+                                args[i] = SelectField.CreateValue(vt.Token.Value, alias, vt.Value);
                             else if (me.Arguments[i] is FieldExpression ft)
                                 args[i] = GetSelectValue(null, ft, parameters);
                             else
@@ -1182,14 +1183,14 @@ namespace Raven.Server.Documents.Queries
             var name = ExtractFieldNameFromArgument(expression.Arguments[0], "suggest", parameters, QueryText);
 
             if (expression.Arguments[1] is ValueExpression termExpression)
-                result.AddTerm(termExpression.Token, termExpression.Value);
+                result.AddTerm(termExpression.Token.Value, termExpression.Value);
             else
                 ThrowSuggestMethodArgumentMustBeValue(2, expression.Arguments[1], parameters);
 
             if (expression.Arguments.Count == 3)
             {
                 if (expression.Arguments[2] is ValueExpression optionsExpression)
-                    result.AddOptions(optionsExpression.Token, optionsExpression.Value);
+                    result.AddOptions(optionsExpression.Token.Value, optionsExpression.Value);
                 else
                     ThrowSuggestMethodArgumentMustBeValue(3, expression.Arguments[1], parameters);
             }
@@ -1217,13 +1218,13 @@ namespace Raven.Server.Documents.Queries
 
                 if (argument is ValueExpression ve)
                 {
-                    result.AddOptions(ve.Token, ve.Value);
+                    result.AddOptions(ve.Token.Value, ve.Value);
                     continue;
                 }
 
                 if (argument is MethodExpression me)
                 {
-                    var methodType = QueryMethod.GetMethodType(me.Name);
+                    var methodType = QueryMethod.GetMethodType(me.Name.Value);
                     switch (methodType)
                     {
                         case MethodType.Id:
@@ -1233,7 +1234,7 @@ namespace Raven.Server.Documents.Queries
                             if (me.Arguments.Count != 1)
                                 ThrowInvalidArgumentToIdInFacet(parameters);
 
-                            result.FacetSetupDocumentId = ExtractFieldNameFromArgument(me.Arguments[0], me.Name, parameters, QueryText);
+                            result.FacetSetupDocumentId = ExtractFieldNameFromArgument(me.Arguments[0], me.Name.Value, parameters, QueryText);
                             break;
                         case MethodType.Average:
                             AddFacetAggregation(me, result, FacetAggregation.Average, parameters);
@@ -1248,7 +1249,7 @@ namespace Raven.Server.Documents.Queries
                             AddFacetAggregation(me, result, FacetAggregation.Max, parameters);
                             break;
                         default:
-                            ThrowInvalidAggregationMethod(parameters, me.Name);
+                            ThrowInvalidAggregationMethod(parameters, me.Name.Value);
                             break;
                     }
 
@@ -1281,7 +1282,7 @@ namespace Raven.Server.Documents.Queries
             if (me.Arguments.Count != 1)
                 ThrowInvalidNumberOfArgumentsOfFacetAggregation(aggregation, 1, me.Arguments.Count, parameters);
 
-            var methodFieldName = ExtractFieldNameFromArgument(me.Arguments[0], me.Name, parameters, QueryText);
+            var methodFieldName = ExtractFieldNameFromArgument(me.Arguments[0], me.Name.Value, parameters, QueryText);
 
             try
             {
@@ -1318,14 +1319,14 @@ namespace Raven.Server.Documents.Queries
                 }
                 else if (RootAliasPaths.Count != 0)
                 {
-                    ThrowUnknownAlias(expressionField.Compound[0], parameters);
+                    ThrowUnknownAlias(expressionField.Compound[0].Value, parameters);
                 }
             }
             else if (RootAliasPaths.TryGetValue(expressionField.Compound[0], out sourceAlias))
             {
                 hasSourceAlias = true;
                 if (string.IsNullOrEmpty(alias))
-                    alias = expressionField.Compound[0];
+                    alias = expressionField.Compound[0].Value;
                 array = sourceAlias.Array;
                 name = QueryFieldName.Empty;
                 parameter = sourceAlias.Parameter;
@@ -1339,10 +1340,7 @@ namespace Raven.Server.Documents.Queries
 
         public QueryFieldName GetIndexFieldName(FieldExpression fe, BlittableJsonReaderObject parameters)
         {
-            if (IsGraph)
-                return new QueryFieldName(fe.FieldValue, fe.IsQuoted);
-
-            if (_aliasToName.TryGetValue(fe.Compound[0], out var indexFieldName) &&
+            if (_aliasToName.TryGetValue(fe.Compound[0].Value, out var indexFieldName) &&
                 fe.Compound[0] != Query.From.Alias)
             {
                 if (fe.Compound.Count != 1)
@@ -1350,25 +1348,27 @@ namespace Raven.Server.Documents.Queries
 
                 return indexFieldName;
             }
-
             if (fe.Compound.Count == 1)
-                return new QueryFieldName(fe.Compound[0], fe.IsQuoted);
+                return new QueryFieldName(fe.Compound[0].Value, fe.IsQuoted);
 
-            if(RootAliasPaths.TryGetValue(fe.Compound[0], out _))
+            if (IsGraph == false)
             {
-                if (fe.Compound.Count == 2)
+                if(RootAliasPaths.TryGetValue(fe.Compound[0], out _))
                 {
-                    return new QueryFieldName(fe.Compound[1], fe.IsQuoted);
+                    if (fe.Compound.Count == 2)
+                    {
+                        return new QueryFieldName(fe.Compound[1].Value, fe.IsQuoted);
+                    }
+
+                    return new QueryFieldName(fe.FieldValueWithoutAlias, fe.IsQuoted);
                 }
 
-                return new QueryFieldName(fe.FieldValueWithoutAlias, fe.IsQuoted);
+                if (RootAliasPaths.Count != 0)
+                {
+                    ThrowUnknownAlias(fe.Compound[0].Value, parameters);
+                }
             }
 
-            if (RootAliasPaths.Count != 0)
-            {
-                ThrowUnknownAlias(fe.Compound[0], parameters);
-            }
-            
             return new QueryFieldName(fe.FieldValue, fe.IsQuoted);
         }
 
@@ -1390,7 +1390,7 @@ namespace Raven.Server.Documents.Queries
 
             if (RootAliasPaths.Count != 0)
             {
-                ThrowUnknownAlias(key, parameters);
+                ThrowUnknownAlias(key.Value, parameters);
             }
 
             return fieldNameOrAlias;
@@ -1419,7 +1419,7 @@ namespace Raven.Server.Documents.Queries
             }
             else if (expression is MethodExpression method)
             {
-                var methodType = QueryMethod.GetMethodType(method.Name);
+                var methodType = QueryMethod.GetMethodType(method.Name.Value);
 
                 switch (methodType)
                 {
@@ -1628,7 +1628,7 @@ namespace Raven.Server.Documents.Queries
                 }
                 if (leftSide is MethodExpression lme)
                 {
-                    var methodType = QueryMethod.GetMethodType(lme.Name);
+                    var methodType = QueryMethod.GetMethodType(lme.Name.Value);
                     switch (methodType)
                     {
                         case MethodType.Id:// WHERE id() = [<Func> | <Value>]
@@ -1654,7 +1654,7 @@ namespace Raven.Server.Documents.Queries
 
                 if (rightSide is MethodExpression rme)
                 {
-                    var methodType = QueryMethod.GetMethodType(rme.Name);
+                    var methodType = QueryMethod.GetMethodType(rme.Name.Value);
                     switch (methodType)
                     {
                         case MethodType.CompareExchange:
@@ -1676,7 +1676,7 @@ namespace Raven.Server.Documents.Queries
                     _metadata.AddWhereField(new QueryFieldName(fe.FieldValue, fe.IsQuoted), parameters, exact: _insideExact > 0);
                 if (fieldName is MethodExpression me)
                 {
-                    var methodType = QueryMethod.GetMethodType(me.Name);
+                    var methodType = QueryMethod.GetMethodType(me.Name.Value);
                     switch (methodType)
                     {
                         case MethodType.Id:
@@ -1765,7 +1765,7 @@ namespace Raven.Server.Documents.Queries
             {
                 QueryFieldName fieldName;
 
-                var methodType = QueryMethod.GetMethodType(methodName);
+                var methodType = QueryMethod.GetMethodType(methodName.Value);
 
                 switch (methodType)
                 {
@@ -1810,7 +1810,7 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Search:
                     case MethodType.Regex:
                     case MethodType.Lucene:
-                        fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
+                        fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName.Value, parameters);
 
                         if (arguments.Count == 1)
                             throw new InvalidQueryException($"Method {methodName}() expects second argument to be provided", QueryText, parameters);
@@ -1820,12 +1820,12 @@ namespace Raven.Server.Documents.Queries
                                 parameters);
 
                         if (methodType == MethodType.Search || methodType == MethodType.Lucene)
-                            _metadata.AddWhereField(fieldName, parameters, search: true, methodName: methodName);
+                            _metadata.AddWhereField(fieldName, parameters, search: true, methodName: methodName.Value);
                         else
-                            _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0, methodName: methodName);
+                            _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0, methodName: methodName.Value);
                         break;
                     case MethodType.Exists:
-                        fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
+                        fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName.Value, parameters);
                         _metadata.AddExistField(fieldName, parameters);
                         break;
                     case MethodType.Boost:
@@ -1866,16 +1866,16 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Spatial_Contains:
                     case MethodType.Spatial_Disjoint:
                     case MethodType.Spatial_Intersects:
-                        HandleSpatial(methodName, arguments, parameters);
+                        HandleSpatial(methodName.Value, arguments, parameters);
                         return;
                     case MethodType.MoreLikeThis:
-                        HandleMoreLikeThis(methodName, arguments, parameters);
+                        HandleMoreLikeThis(methodName.Value, arguments, parameters);
                         return;
                     case MethodType.Fuzzy:
-                        HandleFuzzy(methodName, arguments, parameters);
+                        HandleFuzzy(methodName.Value, arguments, parameters);
                         return;
                     case MethodType.Proximity:
-                        HandleProximity(methodName, arguments, parameters);
+                        HandleProximity(methodName.Value, arguments, parameters);
                         return;
                     default:
                         QueryMethod.ThrowMethodNotSupported(methodType, QueryText, parameters);
@@ -1892,7 +1892,7 @@ namespace Raven.Server.Documents.Queries
                 if (firstArgument == null)
                     throw new InvalidQueryException($"Method {methodName}() expects that first argument will be a method expression", QueryText, parameters);
 
-                var method = QueryMethod.GetMethodType(firstArgument.Name);
+                var method = QueryMethod.GetMethodType(firstArgument.Name.Value);
                 if (method != MethodType.Search)
                     throw new InvalidQueryException($"Method {methodName}() expects that first argument will be a search method", QueryText, parameters);
 
@@ -1974,7 +1974,7 @@ namespace Raven.Server.Documents.Queries
                     if (!(arguments[0] is MethodExpression spatialExpression))
                         throw new InvalidQueryException($"Method {methodName}() expects first argument to be a method expression", QueryText, parameters);
 
-                    var spatialType = QueryMethod.GetMethodType(spatialExpression.Name);
+                    var spatialType = QueryMethod.GetMethodType(spatialExpression.Name.Value);
                     switch (spatialType)
                     {
                         case MethodType.Spatial_Wkt:
@@ -2024,7 +2024,7 @@ namespace Raven.Server.Documents.Queries
                         throw new InvalidQueryException($"Method {methodName}() expects value token as third argument, got {arguments[1]} type", QueryText, parameters);
                 }
 
-                methodName = shapeExpression.Name;
+                methodName = shapeExpression.Name.Value;
 
                 var methodType = QueryMethod.GetMethodType(methodName);
                 switch (methodType)
@@ -2073,9 +2073,9 @@ namespace Raven.Server.Documents.Queries
                 return new QueryFieldName(field.FieldValue, field.IsQuoted);
 
             if (argument is ValueExpression value) // escaped string might go there
-                return new QueryFieldName(value.Token, value.Value == ValueTokenType.String);
+                return new QueryFieldName(value.Token.Value, value.Value == ValueTokenType.String);
 
-            if (argument is MethodExpression method && string.Equals(method.Name, Constants.Documents.Indexing.Fields.DocumentIdMethodName, StringComparison.OrdinalIgnoreCase)) //id property might be written as id() or id(<alias>)
+            if (argument is MethodExpression method && string.Equals(method.Name.Value, Constants.Documents.Indexing.Fields.DocumentIdMethodName, StringComparison.OrdinalIgnoreCase)) //id property might be written as id() or id(<alias>)
                 return new QueryFieldName(Constants.Documents.Indexing.Fields.DocumentIdFieldName, false);
 
             throw new InvalidQueryException($"Method {methodName}() expects a field name as its argument", queryText, parameters);
@@ -2099,7 +2099,7 @@ namespace Raven.Server.Documents.Queries
             // patch is sending this, but we can also specify the alias.
             // this is so we can more easily share the code between query patch
             // and per document patch
-            var sb = new StringBuilder("var ").Append(fromAlias).AppendLine(" = this;");
+            var sb = new StringBuilder("var ").Append(fromAlias.Value).AppendLine(" = this;");
 
             if (Query.Load != null)
             {
@@ -2112,7 +2112,7 @@ namespace Raven.Server.Documents.Queries
 
                     sb.Append("var ").Append(load.Alias)
                         .Append(" = loadPath(")
-                        .Append(fromAlias)
+                        .Append(fromAlias.Value)
                         .Append(", '")
                         .Append(string.Join(".", fieldExpression.Compound.Skip(1)).Trim())
                         .AppendLine("');");

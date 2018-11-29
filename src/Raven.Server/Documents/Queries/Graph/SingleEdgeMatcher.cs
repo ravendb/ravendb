@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Primitives;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Json;
 using Raven.Server.Utils;

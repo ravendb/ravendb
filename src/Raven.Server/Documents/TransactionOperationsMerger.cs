@@ -647,6 +647,7 @@ namespace Raven.Server.Documents
                             finally
                             {
                                 current.Transaction?.Dispose();
+                                currentReturnContext.Dispose();
                             }
                         }
 

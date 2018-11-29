@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Esprima;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
@@ -389,7 +390,7 @@ namespace Raven.Server.Documents.Queries.Parser
         private void AddWithQuery(FieldExpression path, FieldExpression project, StringSegment alias, QueryExpression filter, bool isEdge, int start, bool implicitAlias)
         {
             if (_synteticWithQueries == null)
-                _synteticWithQueries = new Dictionary<StringSegment, SynteticWithQuery>(StringSegmentEqualityComparer.Instance);
+                _synteticWithQueries = new Dictionary<StringSegment, SynteticWithQuery>(StringSegmentComparer.Ordinal);
 
             if (_synteticWithQueries.TryGetValue(alias, out var existing))
             {
@@ -612,7 +613,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             {
                                 if (Scanner.Identifier() == false)
                                     throw new InvalidQueryException("Missing alias for 'recursive' after 'as'", Scanner.Input, null);
-                                recursiveAlias = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength);
+                                recursiveAlias = Scanner.Token;
                             }
                             else
                             {
@@ -647,7 +648,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
                                 if (Scanner.Identifier()) // , longest) , etc.
                                 {
-                                    options.Add(new ValueExpression(new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength), ValueTokenType.String));
+                                    options.Add(new ValueExpression(Scanner.Token, ValueTokenType.String));
                                 }
 
                                 if (Scanner.TryScan(")") == false)
@@ -701,7 +702,7 @@ namespace Raven.Server.Documents.Queries.Parser
                                     Alias = recursiveAlias,
                                     Pattern = repeated,
                                     Options = options,
-                                    Aliases = new HashSet<StringSegment>(repeated.Select(x => x.Alias), StringSegmentEqualityComparer.Instance)
+                                    Aliases = new HashSet<StringSegment>(repeated.Select(x => x.Alias), StringSegmentComparer.Ordinal)
                                 },
                                 IsEdge = true
                             });
@@ -921,7 +922,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.Identifier() == false)
                 ThrowParseException("DECLARE functions require a name and cannot be anonymous");
 
-            var name = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength);
+            var name = Scanner.Token;
 
             // this reads the signature of the method: (a,b,c), etc.
             // we are technically allow more complex stuff there that isn't
@@ -1197,23 +1198,18 @@ namespace Raven.Server.Documents.Queries.Parser
             return false;
         }
 
-        internal bool Parameter(out int tokenStart, out int tokenLength)
+        internal bool Parameter(out StringSegment p)
         {
             if (Scanner.TryScan('$') == false)
             {
-                tokenStart = 0;
-                tokenLength = 0;
+                p = default;
                 return false;
             }
-
-            Scanner.TokenStart = Scanner.Position;
-
-            tokenStart = Scanner.TokenStart;
 
             if (Scanner.Identifier(false) == false)
                 ThrowParseException("Expected parameter name");
 
-            tokenLength = Scanner.TokenLength;
+            p = Scanner.Token;
             return true;
         }
 
@@ -1605,8 +1601,7 @@ namespace Raven.Server.Documents.Queries.Parser
             var numberToken = Scanner.TryNumber();
             if (numberToken != null)
             {
-                val = new ValueExpression(
-                    new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
+                val = new ValueExpression(Scanner.Token,
                     numberToken.Value == NumberToken.Long ? ValueTokenType.Long : ValueTokenType.Double
                 );
                 return true;
@@ -1639,15 +1634,15 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
 
                 val = new ValueExpression(
-                    new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
+                    Scanner.Token,
                     type);
                 return true;
             }
 
-            if (Parameter(out _, out _))
+            if (Parameter(out _))
             {
                 val = new ValueExpression(
-                    new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength),
+                    Scanner.Token,
                     ValueTokenType.Parameter
                 );
                 return true;
@@ -1680,14 +1675,14 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
                 else
                 {
-                    parts.Add(new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength));
+                    parts.Add(Scanner.Token);
                 }
                 if (part == 1)
                 {
                     // need to ensure that this isn't a keyword
                     if (Scanner.CurrentTokenMatchesAnyOf(AliasKeywords))
                     {
-                        Scanner.GoBack(Scanner.TokenLength);
+                        Scanner.GoBack();
                         token = null;
                         return false;
                     }
@@ -1702,7 +1697,7 @@ namespace Raven.Server.Documents.Queries.Parser
                         case NumberToken.Long:
                             if (Scanner.TryScan(']') == false)
                                 ThrowParseException("Expected to find closing ]");
-                            parts.Add(new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength));
+                            parts.Add(Scanner.Token);
                             break;
 
                         case null:

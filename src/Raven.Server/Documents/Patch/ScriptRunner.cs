@@ -640,9 +640,6 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue GetCounterInternal(JsValue[] args, bool raw = false)
             {
-                if (_database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                    FeaturesAvailabilityException.Throw("Counters");
-
                 AssertValidDatabaseContext();
                 var signature = raw ? "counterRaw(doc, name)" : "counter(doc, name)";
                 if (args.Length != 2)
@@ -689,9 +686,6 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue IncrementCounter(JsValue self, JsValue[] args)
             {
-                if (_database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                    FeaturesAvailabilityException.Throw("Counters");
-
                 AssertValidDatabaseContext();
 
                 if (args.Length < 2 || args.Length > 3)
@@ -787,9 +781,6 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue DeleteCounter(JsValue self, JsValue[] args)
             {
-                if (_database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
-                    FeaturesAvailabilityException.Throw("Counters");
-
                 AssertValidDatabaseContext();
 
                 if (args.Length != 2)

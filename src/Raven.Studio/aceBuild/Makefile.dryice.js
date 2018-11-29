@@ -227,7 +227,7 @@ function buildAce(options, callback) {
     });
    		
     // themes
-    ["ambiance", "pastel_dark_raven", "pastel_on_dark"].forEach(function(name) {
+    ["ambiance", "raven"].forEach(function(name) {
         buildSubmodule(options, {
             projectType: "theme",
             require: ["ace/theme/" + name]

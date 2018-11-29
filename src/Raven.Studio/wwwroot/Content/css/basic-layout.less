@@ -1,14 +1,4 @@
-﻿@menu-width: 280px;
-@right-panel-width: 400px;
-@menu-width-collapsed: 120px;
-@navbar-height: 70px;
-@navbar-height-xs: 51px;
-@top-alert-height: 23px;
-
-@menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
-@layout-border: @gray-dark;
-
-body,
+﻿body,
 html {
     width: 100%;
     height: 100%;
@@ -46,7 +36,7 @@ html {
         padding: @grid-gutter-width;
         width: 380px;
         max-width: 90%;
-        
+
         .checkbox {
             margin-top: 15px;
         }
@@ -131,7 +121,6 @@ body {
         overflow-y: auto;
         overflow-x: hidden;
     }
-
 }
 
 .top-alert {
@@ -142,7 +131,6 @@ body {
     height: @top-alert-height;
     text-align: center;
     line-height: 19px;
-
     color: @gray-dark;
     font-weight: bold;
     background-color: darken(@brand-warning-light, 10%);
@@ -233,30 +221,30 @@ body {
         left: 0;
         bottom: 0;
         transform: translateY(100%);
-        
+
         span {
             display: none;
         }
-        
+
         &:hover {
             span {
                 display: inline;
             }
         }
     }
-    
+
     .dateContainer {
         border-color: @gray-darker;
         background-color: @gray-dark;
         color: @gray-light;
         padding: 13px;
         font-size: 11px;
-        
+
         .dateValue {
             color: @gray-lighter;
             display: inline-block;
         }
-        
+
         .dateLabel {
             display: inline-block;
             width: 50px;
@@ -273,7 +261,7 @@ body {
     .flex-basis-0 {
         flex-basis: 0;
     }
-    
+
     .flex-grow {
         flex-grow: 1;
         position: relative;
@@ -342,7 +330,7 @@ body {
     align-items: stretch;
     background-color: @gray-dark;
     border-top: 1px solid fadeout(gray,60%);
-    color: @gray-light;
+    color: @footer-color;
 
     a {
         padding: @grid-gutter-width/8 @grid-gutter-width/2;
@@ -416,7 +404,6 @@ body {
 }
 
 .navbar {
-    background-color: @gray-base;
     height: @navbar-height-xs;
     border-bottom: 1px solid @layout-border;
     display: flex;
@@ -590,7 +577,7 @@ body {
     }
 
     .server-environment {
-        background-color: @gray-darker;
+        background-color: @main-menu-hover;
         padding: 2px @grid-gutter-width/2;
         height: 38px;
         margin-right: @grid-gutter-width/2;
@@ -604,7 +591,6 @@ body {
     }
 
     .inputs-container {
-        background-color: @gray-base;
         clear: both;
         -webkit-transition: margin-left @menu-transition-ease, max-height @menu-transition-ease;
         -moz-transition: margin-left @menu-transition-ease, max-height @menu-transition-ease;
@@ -615,8 +601,8 @@ body {
         flex-grow: 1;
 
         .form-control {
-            border-color: @gray-dark;
-            background-color: @gray-base;
+            border-color: @layout-border;
+            background-color: transparent;
         }
 
         .database-switcher-container,
@@ -624,7 +610,7 @@ body {
             position: relative;
 
             .box-container a {
-                color: @gray-lighter;
+                color: @text-emphasis;
                 text-decoration: none;
                 display: block;
                 margin: 0 (@grid-gutter-width / -4);
@@ -641,11 +627,11 @@ body {
                 }
 
                 strong {
-                    color: #FFF;
+                    color: @text-emphasis;
                 }
 
                 &:hover {
-                    background-color: @gray-dark;
+                    background-color: @panel-bg;
                 }
 
                 &.more {
@@ -716,7 +702,7 @@ body {
             .box-container {
                 .shadow-style;
                 padding: 36px (@grid-gutter-width / 4) (@grid-gutter-width / 4);
-                background-color: @gray-dark;
+                background-color: @dropdown-bg;
                 display: none;
                 width: 100%;
                 position: absolute;
@@ -731,8 +717,7 @@ body {
 
                 section {
                     padding: (@grid-gutter-width /2) (@grid-gutter-width / 4);
-                    background-color: @gray-darker;
-
+                    background-color: @well-bg; //@well-bg;
                     & + section {
                         margin-top: (@grid-gutter-width / 4);
                     }
@@ -743,8 +728,8 @@ body {
                 z-index: 23;
 
                 .database-switcher {
-                    background-color: @gray-dark;
-                    border-color: @gray-dark;
+                    background-color: @dropdown-bg;
+                    border-color: @dropdown-bg;
                 }
 
                 .box-container {
@@ -756,6 +741,10 @@ body {
                     }
 
                     display: block;
+                }
+
+                .omnisearch {
+                    border-color: @dropdown-bg;
                 }
             }
         }
@@ -774,7 +763,7 @@ body {
                     background-color: @gray;
                 }
             }
-            
+
             .database-switcher {
                 .label {
                     opacity: 1;
@@ -784,6 +773,7 @@ body {
             &.active {
                 .database-switcher {
                     padding-right: 80px;
+
                     .label {
                         opacity: 0;
                     }
@@ -828,6 +818,8 @@ body {
                 z-index: 22;
 
                 &.active {
+                    background-color: @body-bg;
+                    border-color: @dropdown-bg;
                 }
             }
         }
@@ -880,6 +872,7 @@ body {
             padding-left: 45px;
             position: relative;
             padding-top: 4px;
+            background-color: @body-bg;
 
             & + .icon-search {
                 z-index: 22;
@@ -958,10 +951,10 @@ body {
     -moz-transition: transform @menu-transition-ease;
     -ms-transition: transform @menu-transition-ease;
     -o-transition: transform @menu-transition-ease;
-    transition: transform @menu-transition-ease;    
+    transition: transform @menu-transition-ease;
     width: @right-panel-width;
     flex-basis: @right-panel-width;
-    flex-shrink:0;
+    flex-shrink: 0;
 
     @media (min-width: @screen-md) {
         top: @navbar-height;
@@ -1010,7 +1003,7 @@ body {
     cursor: pointer;
 
     &:hover {
-        color:@brand-primary;
+        color: @brand-primary;
     }
 }
 
@@ -1040,4 +1033,9 @@ body {
     img {
         margin-bottom: @grid-gutter-width/2;
     }
+}
+
+
+.color-definitions {
+    display: none;
 }

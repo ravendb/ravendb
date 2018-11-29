@@ -122,7 +122,7 @@ namespace Raven.Server.ServerWide
 
             _notificationsStorage = new NotificationsStorage(ResourceName);
 
-            NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, null, ServerShutdown);
+            NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, null, ServerShutdown, configuration);
 
             ServerDashboardNotifications = new ServerDashboardNotifications(this, ServerShutdown);
 
@@ -693,7 +693,7 @@ namespace Raven.Server.ServerWide
             var tasks = new Dictionary<string, Task<DocumentDatabase>>();
             foreach (var db in DatabasesLandlord.DatabasesCache)
             {
-                tasks.Add(db.Key, db.Value);
+                tasks.Add(db.Key.Value, db.Value);
             }
             while (tasks.Count != 0)
             {

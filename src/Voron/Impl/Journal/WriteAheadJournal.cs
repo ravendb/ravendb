@@ -1447,7 +1447,7 @@ namespace Voron.Impl.Journal
             if (remainder != 0)
             {
                 // zero the remainder of the page
-                UnmanagedMemory.Set(txHeaderPtr + totalLength, 0, 4 * Constants.Size.Kilobyte - remainder);
+                Memory.Set(txHeaderPtr + totalLength, 0, 4 * Constants.Size.Kilobyte - remainder);
             }
 
             var reportedCompressionLength = performCompression ? compressedLen : -1;

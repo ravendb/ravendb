@@ -4,6 +4,7 @@ import canvasIcons = require("common/helpers/graph/canvasIcons");
 
 import d3 = require('d3');
 import rbush = require("rbush");
+import colorsManager = require("common/colorsManager");
 
 abstract class abstractPageItem {
     static readonly pageWidth = 20;
@@ -463,8 +464,27 @@ interface avgXVals {
 }
 
 class visualizerGraphGlobal {
-
-    static readonly documentColors = ["#2196f5", "#ef6c5a", "#80ced0", "#9ccd64", "#f06292", "#7f45e6", "#fea724", "#01acc0"];
+    private colors = {
+        highlight: undefined as string,
+        treeFill: undefined as string,
+        treeStroke: undefined as string,
+        treeLevelCount: undefined as string,
+        pageFill: undefined as string,
+        pageStroke: undefined as string,
+        documentName: undefined as string,
+        treeBg: undefined as string,
+        documents: {
+            doc1: undefined as string,
+            doc2: undefined as string,
+            doc3: undefined as string,
+            doc4: undefined as string,
+            doc5: undefined as string,
+            doc6: undefined as string,
+            doc7: undefined as string,
+            doc8: undefined as string,
+        }
+    };
+    
     private nextColorIndex = 0;
 
     static margins = {
@@ -569,6 +589,8 @@ class visualizerGraphGlobal {
         this.goToDetailsCallback = goToDetailsCallback;
         this.deleteItemCallback = deleteItemCallback;
         const container = d3.select("#visualizerContainer");
+        
+        colorsManager.setup(".visualizer .global-colors", this.colors);
 
         [this.totalWidth, this.totalHeight] = viewHelpers.getPageHostDimenensions();
 
@@ -598,7 +620,7 @@ class visualizerGraphGlobal {
         this.currentReduceTreeHighlight = this.svg
             .append("svg:rect")
             .attr("class", "highlight")
-            .attr("fill", "white")
+            .attr("fill", this.colors.highlight)
             .style("opacity", 0);
 
         this.svg
@@ -875,7 +897,7 @@ class visualizerGraphGlobal {
     }
 
     private drawTree(ctx: CanvasRenderingContext2D, tree: reduceTreeItem) {
-        ctx.fillStyle = "#2c3333";
+        ctx.fillStyle = this.colors.treeBg;
         ctx.fillRect(tree.x, tree.y, tree.width, tree.height);
 
         ctx.save();
@@ -886,8 +908,8 @@ class visualizerGraphGlobal {
             ctx.beginPath();
             ctx.font = "10px Lato";
             ctx.textAlign = "center";
-            ctx.fillStyle = "#f0f4f6";
-            ctx.strokeStyle = "#686f6f";
+            ctx.fillStyle = this.colors.treeFill;
+            ctx.strokeStyle = this.colors.treeStroke;
             ctx.fillText(tree.displayName, tree.width / 2, reduceTreeItem.margins.treeMargin, tree.width);
 
             // total entries
@@ -897,7 +919,7 @@ class visualizerGraphGlobal {
             const totalEntriesOffset = pageItem.pageHeight +
                 reduceTreeItem.margins.betweenPagesVerticalPadding;
 
-            ctx.fillStyle = "#686f6f";
+            ctx.fillStyle = this.colors.treeLevelCount; 
             for (let i = 1; i < tree.depth; i++) {
                 totalEntiresY += totalEntriesOffset;
                 const items = tree.itemsCountAtDepth[i];
@@ -924,8 +946,8 @@ class visualizerGraphGlobal {
 
     private drawPages(ctx: CanvasRenderingContext2D, tree: reduceTreeItem) {
 
-        ctx.fillStyle = "#008cc9";
-        ctx.strokeStyle = "#686f6f";
+        ctx.fillStyle = this.colors.pageFill;
+        ctx.strokeStyle = this.colors.pageStroke;
 
         tree.itemsAtDepth.forEach(globalItems => {
             for (let i = 0; i < globalItems.length; i++) {
@@ -1037,7 +1059,7 @@ class visualizerGraphGlobal {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.font = "18px Lato";
-        ctx.fillStyle = "black";
+        ctx.fillStyle = this.colors.documentName;
         ctx.fillText(docItem.name, docItem.x + (docItem.width - documentItem.margins.deleteAreaWidth) / 2 , docItem.y + docItem.height / 2);
         
         const offsetX = -5;
@@ -1055,7 +1077,9 @@ class visualizerGraphGlobal {
     }
 
     private getNextColor() {
-        const color = visualizerGraphGlobal.documentColors[this.nextColorIndex % visualizerGraphGlobal.documentColors.length];
+        const colorsCount = Object.keys(this.colors.documents).length;
+        const colorIndex = this.nextColorIndex % colorsCount;
+        const color = (this.colors.documents as any)[Object.keys(this.colors.documents)[colorIndex]];
         this.nextColorIndex++;
         return color;
     }

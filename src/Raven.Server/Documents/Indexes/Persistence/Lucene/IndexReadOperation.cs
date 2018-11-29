@@ -304,7 +304,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var methodName = method.Name;
 
-            if (string.Equals("intersect", methodName) == false)
+            if (string.Equals("intersect", methodName.Value, StringComparison.OrdinalIgnoreCase) == false)
                 throw new InvalidQueryException($"Invalid intersect query. WHERE clause must contains just a single intersect() method call while it got '{methodName}' method", query.Metadata.QueryText, query.QueryParameters);
 
             if (method.Arguments.Count <= 1)

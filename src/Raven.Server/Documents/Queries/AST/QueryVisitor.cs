@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Primitives;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
@@ -99,7 +100,7 @@ namespace Raven.Server.Documents.Queries.AST
         public virtual void VisitWithEdgePredicates(Dictionary<StringSegment, WithEdgesExpression> expression)
         {
             foreach (var withEdgesClause in expression)
-                VisitWithEdgesExpression(withEdgesClause.Key, withEdgesClause.Value);
+                VisitWithEdgesExpression(withEdgesClause.Key.Value, withEdgesClause.Value);
         }
 
         public virtual void VisitWithEdgesExpression(string alias, WithEdgesExpression expression)

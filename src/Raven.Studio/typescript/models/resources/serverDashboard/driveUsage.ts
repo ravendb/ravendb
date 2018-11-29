@@ -12,7 +12,7 @@ import databasesManager = require("common/shell/databasesManager");
 class legendColumn<T> implements virtualColumn {
     constructor(
         protected gridController: virtualGridController<T>,
-        public colorAccessor: (item: T) => string,
+        public colorClassAccessor: (item: T) => string,
         public header: string,
         public width: string) {
     }
@@ -26,8 +26,8 @@ class legendColumn<T> implements virtualColumn {
     }
 
     renderCell(item: T, isSelected: boolean): string {
-        const color = this.colorAccessor(item);
-        return `<div class="cell text-cell" style="width: ${this.width}"><div class="legend-rect" style="background-color: ${color}"></div></div>`;
+        const color = this.colorClassAccessor(item);
+        return `<div class="cell text-cell" style="width: ${this.width}"><div class="legend-rect ${color}"></div></div>`;
     }
     
     toDto(): virtualColumnDto {
@@ -55,10 +55,10 @@ class driveUsage {
     mountPointLabel: KnockoutComputed<string>;
 
     gridController = ko.observable<virtualGridController<driveUsageDetails>>();
-    private colorProvider: (name: string) => string;
+    private colorClassProvider: (name: string) => string;
     
-    constructor(dto: Raven.Server.Dashboard.MountPointUsage, colorProvider: (name: string) => string, includeTemp: KnockoutObservable<boolean>) {
-        this.colorProvider = colorProvider;
+    constructor(dto: Raven.Server.Dashboard.MountPointUsage, colorClassProvider: (name: string) => string, includeTemp: KnockoutObservable<boolean>) {
+        this.colorClassProvider = colorClassProvider;
         this.includeTemp = includeTemp;
         this.update(dto);
         
@@ -106,7 +106,7 @@ class driveUsage {
             }), () => {
                 if (this.includeTemp()) {
                     return [
-                        new legendColumn<driveUsageDetails>(grid, x => this.colorProvider(x.database()), "", "26px"),
+                        new legendColumn<driveUsageDetails>(grid, x => this.colorClassProvider(x.database()), "", "26px"),
                         new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => appUrl.forStatusStorageReport(x.database()), "Database", "42%", {
                             extraClass: d => isDisabled(d.database()) ? "disabled" : ""
                         }),
@@ -117,7 +117,7 @@ class driveUsage {
                     ] 
                 } else {
                     return [ 
-                        new legendColumn<driveUsageDetails>(grid, x => this.colorProvider(x.database()), "", "26px"),
+                        new legendColumn<driveUsageDetails>(grid, x => this.colorClassProvider(x.database()), "", "26px"),
                         new hyperlinkColumn<driveUsageDetails>(grid, x => x.database(), x => appUrl.forStatusStorageReport(x.database()), "Database", "60%", {
                             extraClass: d => isDisabled(d.database()) ? "disabled" : ""
                         }),

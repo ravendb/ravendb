@@ -10,6 +10,7 @@ import liveReplicationStatsWebSocketClient = require("common/liveReplicationStat
 import messagePublisher = require("common/messagePublisher");
 
 import replication = Raven.Client.Documents.Replication;
+import colorsManager = require("common/colorsManager");
 
 type rTreeLeaf = {
     minX: number;
@@ -164,38 +165,6 @@ class hitTest {
 class replicationStats extends viewModelBase {
 
     /* static */
-
-    static readonly colors = {
-        axis: "#546175",
-        gaps: "#ca1c59",
-        brushChartColor: "#37404b",
-        brushChartStrokeColor: "#008cc9",
-        trackBackground: "#2c343a",
-        separatorLine: "rgba(44, 52, 58, 0.65)",
-        trackNameBg: "rgba(57, 67, 79, 0.95)",
-        trackNameFg: "#98a7b7",
-        trackDirectionText: "#baa50b",
-        openedTrackArrow: "#ca1c59",
-        closedTrackArrow: "#98a7b7",
-        collectionNameTextColor: "#2c343a",
-        itemWithError: "#98041b",
-
-        tracks: {
-            "Replication": "#0b4971",
-            "Network/Read": "#046293",
-            "Network/Write": "#046293",
-            "Storage/Read": "#66418c",
-            "Storage/Write": "#66418c", 
-            "Network/DocumentRead": "#0077b5",
-            "Network/AttachmentRead": "#008cc9",
-            "Network/TombstoneRead": "#34b3e4",
-            "Storage/DocumentRead": "#0077b5",
-            "Storage/TombstoneRead": "#34b3e4",
-            "Storage/AttachmentRead": "#008cc9",
-            "Storage/CounterRead": "#27b5c9"
-        }
-    };
-
     static readonly brushSectionHeight = 40;
     private static readonly brushSectionReplicationWorkHeight = 22;
     private static readonly brushSectionLineWidth = 1;
@@ -271,6 +240,40 @@ class replicationStats extends viewModelBase {
     private yScale: d3.scale.Ordinal<string, number>;
     private tooltip: d3.Selection<Raven.Client.Documents.Replication.ReplicationPerformanceOperation | timeGapInfo | ReplicationPerformanceBaseWithCache>;
 
+    /* colors */
+
+    private scrollConfig: scrollColorConfig;
+    private colors = { 
+        axis: undefined as string,
+        gaps: undefined as string,
+        brushChartColor: undefined as string,
+        brushChartStrokeColor: undefined as string,
+        trackBackground: undefined as string,
+        separatorLine: undefined as string,
+        trackNameBg: undefined as string,
+        trackNameFg: undefined as string,
+        trackDirectionText: undefined as string,
+        openedTrackArrow: undefined as string,
+        closedTrackArrow: undefined as string,
+        collectionNameTextColor: undefined as string,
+        itemWithError: undefined as string,
+
+        tracks: {
+            "Replication": undefined as string,
+            "Network/Read": undefined as string,
+            "Network/Write": undefined as string,
+            "Storage/Read": undefined as string,
+            "Storage/Write": undefined as string,
+            "Network/DocumentRead": undefined as string,
+            "Network/AttachmentRead": undefined as string,
+            "Network/TombstoneRead": undefined as string,
+            "Storage/DocumentRead": undefined as string,
+            "Storage/TombstoneRead": undefined as string,
+            "Storage/AttachmentRead": undefined as string,
+            "Storage/CounterRead": undefined as string
+        }
+    };
+    
     constructor() {
         super();
 
@@ -320,6 +323,9 @@ class replicationStats extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
+        
+        colorsManager.setup(".replication-stats", this.colors);
+        this.scrollConfig = graphHelper.readScrollConfig();
 
         this.tooltip = d3.select(".tooltip");
 
@@ -575,11 +581,11 @@ class replicationStats extends viewModelBase {
         this.drawXaxisTimeLines(context, ticks, 0, replicationStats.brushSectionHeight);
         this.drawXaxisTimeLabels(context, ticks, 5, 5);
 
-        context.strokeStyle = replicationStats.colors.axis;
+        context.strokeStyle = this.colors.axis;
         context.strokeRect(0.5, 0.5, this.totalWidth, replicationStats.brushSectionHeight - 1);
 
-        context.fillStyle = replicationStats.colors.brushChartColor;
-        context.strokeStyle = replicationStats.colors.brushChartStrokeColor;
+        context.fillStyle = this.colors.brushChartColor;
+        context.strokeStyle = this.colors.brushChartStrokeColor;
         context.lineWidth = replicationStats.brushSectionLineWidth;
 
         // Draw area chart showing replication work
@@ -617,7 +623,7 @@ class replicationStats extends viewModelBase {
         for (let i = 0; i < this.gapFinder.gapsPositions.length; i++) {
             const gap = this.gapFinder.gapsPositions[i];
 
-            context.strokeStyle = replicationStats.colors.gaps;
+            context.strokeStyle = this.colors.gaps;
 
             const gapX = this.xBrushTimeScale(gap.start);
             context.moveTo(gapX, 1);
@@ -713,7 +719,7 @@ class replicationStats extends viewModelBase {
             context.beginPath();
 
             context.setLineDash([4, 2]);
-            context.strokeStyle = replicationStats.colors.axis;
+            context.strokeStyle = this.colors.axis;
 
             ticks.forEach((x, i) => {
                 context.moveTo(replicationStats.initialOffset + (i * replicationStats.step) + 0.5, yStart);
@@ -735,7 +741,7 @@ class replicationStats extends viewModelBase {
             context.textAlign = "left";
             context.textBaseline = "top";
             context.font = "10px Lato";
-            context.fillStyle = replicationStats.colors.axis;
+            context.fillStyle = this.colors.axis;
           
             ticks.forEach((x, i) => {
                 context.fillText(this.xTickFormat(x), replicationStats.initialOffset + (i * replicationStats.step) + timePaddingLeft, timePaddingTop);
@@ -837,7 +843,8 @@ class replicationStats extends viewModelBase {
                     { left: this.totalWidth, top: replicationStats.axisHeight },
                     this.currentYOffset,
                     this.totalHeight - replicationStats.brushSectionHeight - replicationStats.axisHeight,
-                    this.maxYOffset ? this.maxYOffset + this.totalHeight - replicationStats.brushSectionHeight - replicationStats.axisHeight : 0);
+                    this.maxYOffset ? this.maxYOffset + this.totalHeight - replicationStats.brushSectionHeight - replicationStats.axisHeight : 0, 
+                    this.scrollConfig);
 
             } finally {
                 context.restore();
@@ -859,7 +866,7 @@ class replicationStats extends viewModelBase {
             const isOpened = _.includes(this.expandedTracks(), replicationStat.Description); 
 
             context.beginPath();
-            context.fillStyle = replicationStats.colors.trackBackground;
+            context.fillStyle = this.colors.trackBackground;
             context.fillRect(0, yStart, this.totalWidth, isOpened ? replicationStats.openedTrackHeight : replicationStats.closedTrackHeight);
         });
 
@@ -911,7 +918,7 @@ class replicationStats extends viewModelBase {
 
                 // 2. Draw a separating line between adjacent perf items if needed
                 if (perfIdx >= 1 && perfCompleted === perf.Started) {
-                    context.fillStyle = replicationStats.colors.separatorLine;
+                    context.fillStyle = this.colors.separatorLine;
                     context.fillRect(x1, yStart + (isOpened ? yOffset : 0), 1, replicationStats.trackHeight);
                 }
 
@@ -924,7 +931,7 @@ class replicationStats extends viewModelBase {
     }
 
     private getColorForOperation(operationName: string): string {
-        const { tracks } = replicationStats.colors;
+        const { tracks } = this.colors;
 
         if (operationName in tracks) {
             return (tracks as dictionary<string>)[operationName];
@@ -980,7 +987,7 @@ class replicationStats extends viewModelBase {
             // 4. Handle errors if exist..(The very first 'replication' rect will be drawn on top of all others)
             if (perfItemWithCache) {
                 if (perfItemWithCache.Errors) {
-                    context.fillStyle = replicationStats.colors.itemWithError; 
+                    context.fillStyle = this.colors.itemWithError; 
                     context.fillRect(currentX, yStart, dx, replicationStats.trackHeight);
                 }
             }
@@ -1005,17 +1012,17 @@ class replicationStats extends viewModelBase {
 
             const rectWidth = directionTextWidth + restOfTextWidth + 2 * 3 /* left right padding */ + 8 /* arrow space */ + 4; /* padding between arrow and text */
 
-            context.fillStyle = replicationStats.colors.trackNameBg;
+            context.fillStyle = this.colors.trackNameBg;
             context.fillRect(2, yScale(replicationName) + replicationStats.closedTrackPadding, rectWidth, replicationStats.trackHeight);
             this.hitTest.registerReplicationToggle(2, yScale(replicationName), rectWidth, replicationStats.trackHeight, replicationName);
             
-            context.fillStyle = replicationStats.colors.trackDirectionText; 
+            context.fillStyle = this.colors.trackDirectionText; 
             context.fillText(replicationType, textStart + 0.5, yScale(replicationName) + textShift);
-            context.fillStyle = replicationStats.colors.trackNameFg;
+            context.fillStyle = this.colors.trackNameFg;
             context.fillText(restOfText, textStart + directionTextWidth + 0.5, yScale(replicationName) + textShift);
 
             const isOpened = _.includes(this.expandedTracks(), replicationName);
-            context.fillStyle = isOpened ? replicationStats.colors.openedTrackArrow : replicationStats.colors.closedTrackArrow;
+            context.fillStyle = isOpened ? this.colors.openedTrackArrow : this.colors.closedTrackArrow;
             graphHelper.drawArrow(context, 5, yScale(replicationName) + 6, !isOpened);
         });
     }
@@ -1027,7 +1034,7 @@ class replicationStats extends viewModelBase {
         const range = xScale.range();
 
         context.beginPath();
-        context.strokeStyle = replicationStats.colors.gaps;
+        context.strokeStyle = this.colors.gaps;
 
         for (let i = 1; i < range.length - 1; i += 2) {
             const gapX = Math.floor(range[i]) + 0.5;

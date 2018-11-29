@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Json;
 using Sparrow;
@@ -31,7 +32,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             _aliases.UnionWith(_left.GetAllAliases());
             _aliases.UnionWith(_right.GetAllAliases());
-            _aliases.Add(edgePath.Alias);
+            _aliases.Add(edgePath.Alias.Value);
 
             _edgePath = edgePath;
             _queryParameters = queryParameters;
@@ -48,7 +49,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
             _aliases.UnionWith(_left.GetAllAliases());
             _aliases.UnionWith(_right.GetAllAliases());
-            _aliases.Add(eqs._edgePath.Alias);
+            _aliases.Add(eqs._edgePath.Alias.Value);
 
             _edgePath = eqs._edgePath;
             _queryParameters = eqs._queryParameters;
@@ -246,7 +247,7 @@ namespace Raven.Server.Documents.Queries.Graph
         public static string AnalyzeEdge(WithEdgesExpression _edgesExpression, StringSegment edgeAlias, Match match, object prev,
             GraphDebugInfo graphDebugInfo)
         {
-            var edge = match.GetResult(edgeAlias);
+            var edge = match.GetResult(edgeAlias.Value);
 
             if (edge == null || prev == null)
                 return null;
@@ -288,7 +289,7 @@ namespace Raven.Server.Documents.Queries.Graph
                 source = d.Id;
             }
 
-            graphDebugInfo.AddEdge(edgeAlias, edge, source, result);
+            graphDebugInfo.AddEdge(edgeAlias.Value, edge, source, result);
 
             return result;
         }

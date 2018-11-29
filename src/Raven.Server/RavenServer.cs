@@ -50,14 +50,13 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Cpu;
 using Raven.Server.Web.ResponseCompression;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Platform;
-using Sparrow.Utils;
-using Voron;
 
 namespace Raven.Server
 {
@@ -90,6 +89,8 @@ namespace Raven.Server
 
         public event EventHandler ServerCertificateChanged;
 
+        public ICpuUsageCalculator CpuUsageCalculator;
+
         public RavenServer(RavenConfiguration configuration)
         {
             JsonDeserializationValidator.Validate();
@@ -121,7 +122,11 @@ namespace Raven.Server
             var sp = Stopwatch.StartNew();
             Certificate = LoadCertificate() ?? new CertificateHolder();
 
-            
+            CpuUsageCalculator = string.IsNullOrEmpty(Configuration.Monitoring.CpuUsageMonitorExec) 
+                ? CpuHelper.GetOSCpuUsageCalculator()
+                : CpuHelper.GetExtensionPointCpuUsageCalculator(_tcpContextPool, Configuration.Monitoring, ServerStore.NotificationCenter) ;
+
+            CpuUsageCalculator.Init();
 
             if (Logger.IsInfoEnabled)
                 Logger.Info(string.Format("Server store started took {0:#,#;;0} ms", sp.ElapsedMilliseconds));
@@ -1654,6 +1659,7 @@ namespace Raven.Server
                 ea.Execute(() => ServerMaintenanceTimer?.Dispose());
                 ea.Execute(() => AfterDisposal?.Invoke());
                 ea.Execute(() => _clusterMaintenanceWorker?.Dispose());
+                ea.Execute(() => CpuUsageCalculator.Dispose());
 
                 ea.ThrowIfNeeded();
             }

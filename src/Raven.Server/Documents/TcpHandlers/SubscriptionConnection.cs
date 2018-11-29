@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Cluster;
@@ -893,7 +894,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     case OperatorType.NotEqual:
                         if (!(filter.Left is FieldExpression fe) || fe.Compound.Count != 1)
                             throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
-                        if (string.Equals(fe.Compound[0], "Revisions", StringComparison.OrdinalIgnoreCase) == false)
+                        if (string.Equals(fe.Compound[0].Value, "Revisions", StringComparison.OrdinalIgnoreCase) == false)
                             throw new NotSupportedException("Subscription collection filter can only specify 'Revisions = true'");
                         if (filter.Right is ValueExpression ve)
                         {
@@ -930,7 +931,7 @@ namespace Raven.Server.Documents.TcpHandlers
                             includes.Add(fieldPath);
                             break;
                         case ValueExpression ve:
-                            (string memberPath, string _) = QueryMetadata.ParseExpressionPath(include, ve.Token, q.From.Alias);
+                            (string memberPath, string _) = QueryMetadata.ParseExpressionPath(include, ve.Token.Value, q.From.Alias);
                             includes.Add(memberPath);
                             break;
                         default:

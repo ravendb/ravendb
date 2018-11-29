@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -10,10 +11,12 @@ using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Documents.Operations;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Extensions;
@@ -509,6 +512,92 @@ namespace SlowTests.Server.NotificationCenter
                     Assert.Equal("Foos", (collections.First() as DynamicJsonValue)["Name"]);
                 }
             }
+        }
+
+        [Fact]
+        public void Should_skip_filtered_out_notifications()
+        {
+            // Filtering out two AlertType notifications and two entire notification types: PerformanceHint and DatabaseChanged
+            IDictionary<string, string> customSettings = new ConcurrentDictionary<string, string>();
+            customSettings[RavenConfiguration.GetKey(x => x.Notifications.FilteredOutNotifications)] = $"{nameof(AlertType.LicenseManager_AGPL3)};" +
+                                                                                                       $"{nameof(AlertType.RevisionsConfigurationNotValid)};" +
+                                                                                                       $"{nameof(NotificationType.PerformanceHint)};" +
+                                                                                                       $"{nameof(NotificationType.DatabaseChanged)};";
+            var notifications = CreateSampleNotificationsForFilterOutTest();
+
+            UseNewLocalServer(customSettings);
+
+            using (var database = CreateDocumentDatabase())
+            {
+                foreach (var n in notifications)
+                {
+                    database.NotificationCenter.Add(n);
+                }
+
+                using (database.NotificationCenter.GetStored(out var alerts, postponed: false))
+                {
+                    var jsonAlerts = alerts.ToList();
+
+                    Assert.Equal(4, jsonAlerts.Count); // 6 out of 10 are being filtered out
+                }
+            }
+        }
+
+        private static List<Notification> CreateSampleNotificationsForFilterOutTest()
+        {
+            return new List<Notification>
+            {
+                AlertRaised.Create(
+                    null,
+                    "DatabaseTopologyWarning",
+                    "DatabaseTopologyWarning_MSG",
+                    AlertType.DatabaseTopologyWarning,
+                    NotificationSeverity.Info),
+                DatabaseChanged.Create(null, DatabaseChangeType.Put), // filtered out, DatabaseChange
+                AlertRaised.Create(
+                    null,
+                    "LicenseManager_AGPL3",
+                    "LicenseManager_AGPL3_MSG",
+                    AlertType.ClusterTransactionFailure,
+                    NotificationSeverity.Info),
+                AlertRaised.Create(
+                    null,
+                    "LicenseManager_AGPL3",
+                    "LicenseManager_AGPL3_MSG",
+                    AlertType.LicenseManager_AGPL3, // filtered out explicitly
+                    NotificationSeverity.Info),
+                AlertRaised.Create(
+                    null,
+                    "RevisionsConfigurationNotValid",
+                    "RevisionsConfigurationNotValid_MSG",
+                    AlertType.RevisionsConfigurationNotValid, // filtered out explicitly
+                    NotificationSeverity.Info),
+                AlertRaised.Create(
+                    null,
+                    "Certificates_ReplaceError",
+                    "Certificates_ReplaceError_MSG",
+                    AlertType.Certificates_ReplaceError,
+                    NotificationSeverity.Info),
+                PerformanceHint.Create(
+                    null,
+                    "SlowIO",
+                    "SlowIO_MSG",
+                    PerformanceHintType.SlowIO, // filtered out, PerformanceHint
+                    NotificationSeverity.Info,
+                    "test"),
+                PerformanceHint.Create(
+                    null,
+                    "SqlEtl_SlowSql",
+                    "SqlEtl_SlowSql_MSG",
+                    PerformanceHintType.SqlEtl_SlowSql, // filtered out, PerformanceHint
+                    NotificationSeverity.Info,
+                    "test"),
+                OperationChanged.Create(null,1, new Operations.OperationDescription(), new OperationState()
+                {
+                    Result = new PersistableResult()
+                }, false),
+                DatabaseChanged.Create(null, DatabaseChangeType.Delete) // filtered out, DatabaseChange
+            };
         }
 
         protected class TestWebSocketWriter : IWebsocketWriter

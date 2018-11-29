@@ -853,45 +853,6 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
-        public void CreatingCounterWithFeaturesAvailabilitySetToStableWillThrow()
-        {
-            DoNotReuseServer();
-            using (var store = GetDocumentStore())
-            {
-                Server.Configuration.Core.FeaturesAvailability = FeaturesAvailability.Stable;
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User(), "users/1-A");
-                    session.SaveChanges();
-                }
-
-                var e = Assert.Throws<RavenException>(() => 
-                    store.Operations.Send(new CounterBatchOperation(new CounterBatch
-                    {
-                        Documents = new List<DocumentCountersOperation>
-                        {
-                            new DocumentCountersOperation
-                            {
-                                DocumentId = "users/1-A",
-                                Operations = new List<CounterOperation>
-                                {
-                                    new CounterOperation
-                                    {
-                                        Type = CounterOperationType.Increment,
-                                        CounterName = "Likes"
-                                    }
-                                }
-                            }
-                        }
-                    })));
-                Assert.Contains(
-                    "Can not use 'Counters', as this is an experimental feature and the server does not support experimental features. " +
-                    "Please enable experimental features by changing 'Features.Availability' configuration value to 'Experimental'.",
-                    e.Message);
-            }
-        }
-
         private class UsersByAge : AbstractIndexCreationTask<User, UsersByAgeResult>
         {
             public UsersByAge()
