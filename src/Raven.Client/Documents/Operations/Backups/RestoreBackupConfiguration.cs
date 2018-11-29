@@ -15,5 +15,7 @@ namespace Raven.Client.Documents.Operations.Backups
         public bool DisableOngoingTasks { get; set; }
 
         public bool SkipIndexes { get; set; }
+
+        public EncryptionSettings EncryptionSettings { get; set; }
     }
 }

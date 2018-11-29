@@ -7,7 +7,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Client.ServerWide;
-
 namespace Raven.Client.Documents.Operations.Backups
 {
     public class PeriodicBackupConfiguration : IDatabaseTask
@@ -21,6 +20,8 @@ namespace Raven.Client.Documents.Operations.Backups
         public string MentorNode { get; set; }
 
         public BackupType BackupType { get; set; }
+
+        public EncryptionSettings EncryptionSettings { get; set; }
 
         /// <summary>
         /// Frequency of full backup jobs in cron format

@@ -49,7 +49,6 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly PathSetting _tempBackupPath;
         private readonly Logger _logger;
         private readonly CancellationToken _databaseShutdownCancellationToken;
-
         public readonly OperationCancelToken TaskCancelToken;
         private readonly BackupResult _backupResult;
 
@@ -488,11 +487,21 @@ namespace Raven.Server.Documents.PeriodicBackup
             // the last etag is already included in the last backup
             startDocumentEtag = startDocumentEtag == null ? 0 : ++startDocumentEtag;
 
-            using (var file = File.Open(backupFilePath, FileMode.CreateNew))
+            Stream stream;
+            if (_configuration.EncryptionSettings != null)
+            {
+                var key = _configuration.EncryptionSettings.Key;
+                stream = new EncryptingXChaCha20Poly1305Stream(File.Open(backupFilePath, FileMode.CreateNew), 
+                    Convert.FromBase64String(key), _configuration);
+            }
+            else
+                stream = File.Open(backupFilePath, FileMode.CreateNew);
+
+            using (stream)
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var smugglerSource = new DatabaseSource(_database, startDocumentEtag.Value);
-                var smugglerDestination = new StreamDestination(file, context, smugglerSource);
+                var smugglerDestination = new StreamDestination(stream, context, smugglerSource);
                 var smuggler = new DatabaseSmuggler(_database,
                     smugglerSource,
                     smugglerDestination,
@@ -503,7 +512,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     token: TaskCancelToken.Token);
 
                 smuggler.Execute();
-                file.Flush(flushToDisk: true);
+                stream.Flush();
 
                 return smugglerSource.LastEtag;
             }

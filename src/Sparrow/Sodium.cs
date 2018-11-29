@@ -609,6 +609,126 @@ namespace Sparrow
 			 }
 		}
 
+		public static void crypto_secretstream_xchacha20poly1305_keygen(byte* k)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				Posix.crypto_secretstream_xchacha20poly1305_keygen(k);
+			 }
+             else
+			 {
+			 	Windows.crypto_secretstream_xchacha20poly1305_keygen(k);
+			 }
+		}
+
+		public static UIntPtr crypto_secretstream_xchacha20poly1305_keybytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_secretstream_xchacha20poly1305_keybytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_secretstream_xchacha20poly1305_keybytes();
+			 }
+		}
+
+		public static UIntPtr crypto_secretstream_xchacha20poly1305_statebytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_secretstream_xchacha20poly1305_statebytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_secretstream_xchacha20poly1305_statebytes();
+			 }
+		}
+
+		public static UIntPtr crypto_secretstream_xchacha20poly1305_headerbytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_secretstream_xchacha20poly1305_headerbytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_secretstream_xchacha20poly1305_headerbytes();
+			 }
+		}
+
+		public static int crypto_secretstream_xchacha20poly1305_init_push(byte* state, byte* header, byte* k)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_secretstream_xchacha20poly1305_init_push(state, header, k);
+			 }
+             else
+			 {
+			 	return Windows.crypto_secretstream_xchacha20poly1305_init_push(state, header, k);
+			 }
+		}
+
+		public static int crypto_secretstream_xchacha20poly1305_push(byte* state, byte* c, ulong* clen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte tag)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_secretstream_xchacha20poly1305_push(state, c, clen_p, m, mlen, ad, adlen, tag);
+			 }
+             else
+			 {
+			 	return Windows.crypto_secretstream_xchacha20poly1305_push(state, c, clen_p, m, mlen, ad, adlen, tag);
+			 }
+		}
+
+		public static byte crypto_secretstream_xchacha20poly1305_tag_final()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_secretstream_xchacha20poly1305_tag_final();
+			 }
+             else
+			 {
+			 	return Windows.crypto_secretstream_xchacha20poly1305_tag_final();
+			 }
+		}
+
+		public static int crypto_secretstream_xchacha20poly1305_init_pull(byte* state, byte* header, byte* k)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_secretstream_xchacha20poly1305_init_pull(state, header, k);
+			 }
+             else
+			 {
+			 	return Windows.crypto_secretstream_xchacha20poly1305_init_pull(state, header, k);
+			 }
+		}
+
+		public static int crypto_secretstream_xchacha20poly1305_pull(byte *state, byte *m, ulong* mlen_p, byte *tag_p,byte* c, ulong clen,byte*ad, ulong adlen)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_secretstream_xchacha20poly1305_pull(state, m, mlen_p, tag_p, c, clen, ad, adlen);
+			 }
+             else
+			 {
+			 	return Windows.crypto_secretstream_xchacha20poly1305_pull(state, m, mlen_p, tag_p, c, clen, ad, adlen);
+			 }
+		}
+
+		public static UIntPtr crypto_secretstream_xchacha20poly1305_abytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_secretstream_xchacha20poly1305_abytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_secretstream_xchacha20poly1305_abytes();
+			 }
+		}
+
 		public static int sodium_munlock(byte* addr, UIntPtr len)
 		{
 			 if(PlatformDetails.RunningOnPosix)
@@ -1995,6 +2115,266 @@ namespace Sparrow
 				 }
 			}
 
+			public static void crypto_secretstream_xchacha20poly1305_keygen(byte* k)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						Arm.crypto_secretstream_xchacha20poly1305_keygen(k);
+					}
+					else
+					{
+						X86.crypto_secretstream_xchacha20poly1305_keygen(k);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						MacOsxX64.crypto_secretstream_xchacha20poly1305_keygen(k);
+					}
+					else
+					{
+						X64.crypto_secretstream_xchacha20poly1305_keygen(k);
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_secretstream_xchacha20poly1305_keybytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_secretstream_xchacha20poly1305_keybytes();
+					}
+					else
+					{
+						return X86.crypto_secretstream_xchacha20poly1305_keybytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_secretstream_xchacha20poly1305_keybytes();
+					}
+					else
+					{
+						return X64.crypto_secretstream_xchacha20poly1305_keybytes();
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_secretstream_xchacha20poly1305_statebytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_secretstream_xchacha20poly1305_statebytes();
+					}
+					else
+					{
+						return X86.crypto_secretstream_xchacha20poly1305_statebytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_secretstream_xchacha20poly1305_statebytes();
+					}
+					else
+					{
+						return X64.crypto_secretstream_xchacha20poly1305_statebytes();
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_secretstream_xchacha20poly1305_headerbytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_secretstream_xchacha20poly1305_headerbytes();
+					}
+					else
+					{
+						return X86.crypto_secretstream_xchacha20poly1305_headerbytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_secretstream_xchacha20poly1305_headerbytes();
+					}
+					else
+					{
+						return X64.crypto_secretstream_xchacha20poly1305_headerbytes();
+					}
+				 }
+			}
+
+			public static int crypto_secretstream_xchacha20poly1305_init_push(byte* state, byte* header, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_secretstream_xchacha20poly1305_init_push(state, header, k);
+					}
+					else
+					{
+						return X86.crypto_secretstream_xchacha20poly1305_init_push(state, header, k);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_secretstream_xchacha20poly1305_init_push(state, header, k);
+					}
+					else
+					{
+						return X64.crypto_secretstream_xchacha20poly1305_init_push(state, header, k);
+					}
+				 }
+			}
+
+			public static int crypto_secretstream_xchacha20poly1305_push(byte* state, byte* c, ulong* clen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte tag)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_secretstream_xchacha20poly1305_push(state, c, clen_p, m, mlen, ad, adlen, tag);
+					}
+					else
+					{
+						return X86.crypto_secretstream_xchacha20poly1305_push(state, c, clen_p, m, mlen, ad, adlen, tag);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_secretstream_xchacha20poly1305_push(state, c, clen_p, m, mlen, ad, adlen, tag);
+					}
+					else
+					{
+						return X64.crypto_secretstream_xchacha20poly1305_push(state, c, clen_p, m, mlen, ad, adlen, tag);
+					}
+				 }
+			}
+
+			public static byte crypto_secretstream_xchacha20poly1305_tag_final()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_secretstream_xchacha20poly1305_tag_final();
+					}
+					else
+					{
+						return X86.crypto_secretstream_xchacha20poly1305_tag_final();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_secretstream_xchacha20poly1305_tag_final();
+					}
+					else
+					{
+						return X64.crypto_secretstream_xchacha20poly1305_tag_final();
+					}
+				 }
+			}
+
+			public static int crypto_secretstream_xchacha20poly1305_init_pull(byte* state, byte* header, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_secretstream_xchacha20poly1305_init_pull(state, header, k);
+					}
+					else
+					{
+						return X86.crypto_secretstream_xchacha20poly1305_init_pull(state, header, k);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_secretstream_xchacha20poly1305_init_pull(state, header, k);
+					}
+					else
+					{
+						return X64.crypto_secretstream_xchacha20poly1305_init_pull(state, header, k);
+					}
+				 }
+			}
+
+			public static int crypto_secretstream_xchacha20poly1305_pull(byte *state, byte *m, ulong* mlen_p, byte *tag_p,byte* c, ulong clen,byte*ad, ulong adlen)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_secretstream_xchacha20poly1305_pull(state, m, mlen_p, tag_p, c, clen, ad, adlen);
+					}
+					else
+					{
+						return X86.crypto_secretstream_xchacha20poly1305_pull(state, m, mlen_p, tag_p, c, clen, ad, adlen);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_secretstream_xchacha20poly1305_pull(state, m, mlen_p, tag_p, c, clen, ad, adlen);
+					}
+					else
+					{
+						return X64.crypto_secretstream_xchacha20poly1305_pull(state, m, mlen_p, tag_p, c, clen, ad, adlen);
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_secretstream_xchacha20poly1305_abytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_secretstream_xchacha20poly1305_abytes();
+					}
+					else
+					{
+						return X86.crypto_secretstream_xchacha20poly1305_abytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_secretstream_xchacha20poly1305_abytes();
+					}
+					else
+					{
+						return X64.crypto_secretstream_xchacha20poly1305_abytes();
+					}
+				 }
+			}
+
 			public static int sodium_munlock(byte* addr, UIntPtr len)
 			{
 				 if(_is32bits)
@@ -2224,6 +2604,36 @@ namespace Sparrow
 				public extern static UIntPtr crypto_generichash_statebytes();
 
 				[DllImport(LIB_SODIUM)]
+				public extern static void crypto_secretstream_xchacha20poly1305_keygen(byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_headerbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_init_push(byte* state, byte* header, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_push(byte* state, byte* c, ulong* clen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte tag);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static byte crypto_secretstream_xchacha20poly1305_tag_final();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_init_pull(byte* state, byte* header, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_pull(byte *state, byte *m, ulong* mlen_p, byte *tag_p,byte* c, ulong clen,byte*ad, ulong adlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_abytes();
+
+				[DllImport(LIB_SODIUM)]
 				public extern static int sodium_munlock(byte* addr, UIntPtr len);
 
 				[DllImport(LIB_SODIUM)]
@@ -2407,6 +2817,36 @@ namespace Sparrow
 
 				[DllImport(LIB_SODIUM)]
 				public extern static UIntPtr crypto_generichash_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void crypto_secretstream_xchacha20poly1305_keygen(byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_headerbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_init_push(byte* state, byte* header, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_push(byte* state, byte* c, ulong* clen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte tag);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static byte crypto_secretstream_xchacha20poly1305_tag_final();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_init_pull(byte* state, byte* header, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_pull(byte *state, byte *m, ulong* mlen_p, byte *tag_p,byte* c, ulong clen,byte*ad, ulong adlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_abytes();
 
 				[DllImport(LIB_SODIUM)]
 				public extern static int sodium_munlock(byte* addr, UIntPtr len);
@@ -2595,6 +3035,36 @@ namespace Sparrow
 				public extern static UIntPtr crypto_generichash_statebytes();
 
 				[DllImport(LIB_SODIUM)]
+				public extern static void crypto_secretstream_xchacha20poly1305_keygen(byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_headerbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_init_push(byte* state, byte* header, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_push(byte* state, byte* c, ulong* clen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte tag);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static byte crypto_secretstream_xchacha20poly1305_tag_final();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_init_pull(byte* state, byte* header, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_pull(byte *state, byte *m, ulong* mlen_p, byte *tag_p,byte* c, ulong clen,byte*ad, ulong adlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_abytes();
+
+				[DllImport(LIB_SODIUM)]
 				public extern static int sodium_munlock(byte* addr, UIntPtr len);
 
 				[DllImport(LIB_SODIUM)]
@@ -2779,6 +3249,36 @@ namespace Sparrow
 
 				[DllImport(LIB_SODIUM)]
 				public extern static UIntPtr crypto_generichash_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void crypto_secretstream_xchacha20poly1305_keygen(byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_headerbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_init_push(byte* state, byte* header, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_push(byte* state, byte* c, ulong* clen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte tag);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static byte crypto_secretstream_xchacha20poly1305_tag_final();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_init_pull(byte* state, byte* header, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_pull(byte *state, byte *m, ulong* mlen_p, byte *tag_p,byte* c, ulong clen,byte*ad, ulong adlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_abytes();
 
 				[DllImport(LIB_SODIUM)]
 				public extern static int sodium_munlock(byte* addr, UIntPtr len);
@@ -3417,6 +3917,126 @@ namespace Sparrow
 				 }
 			}
 
+			public static void crypto_secretstream_xchacha20poly1305_keygen(byte* k)
+			{
+				 if(_is32bits)
+				 {
+					X86.crypto_secretstream_xchacha20poly1305_keygen(k);
+				 }
+				 else
+				 {
+			 		X64.crypto_secretstream_xchacha20poly1305_keygen(k);
+				 }
+			}
+
+			public static UIntPtr crypto_secretstream_xchacha20poly1305_keybytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_secretstream_xchacha20poly1305_keybytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_secretstream_xchacha20poly1305_keybytes();
+				 }
+			}
+
+			public static UIntPtr crypto_secretstream_xchacha20poly1305_statebytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_secretstream_xchacha20poly1305_statebytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_secretstream_xchacha20poly1305_statebytes();
+				 }
+			}
+
+			public static UIntPtr crypto_secretstream_xchacha20poly1305_headerbytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_secretstream_xchacha20poly1305_headerbytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_secretstream_xchacha20poly1305_headerbytes();
+				 }
+			}
+
+			public static int crypto_secretstream_xchacha20poly1305_init_push(byte* state, byte* header, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_secretstream_xchacha20poly1305_init_push(state, header, k);
+				 }
+				 else
+				 {
+			 		return X64.crypto_secretstream_xchacha20poly1305_init_push(state, header, k);
+				 }
+			}
+
+			public static int crypto_secretstream_xchacha20poly1305_push(byte* state, byte* c, ulong* clen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte tag)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_secretstream_xchacha20poly1305_push(state, c, clen_p, m, mlen, ad, adlen, tag);
+				 }
+				 else
+				 {
+			 		return X64.crypto_secretstream_xchacha20poly1305_push(state, c, clen_p, m, mlen, ad, adlen, tag);
+				 }
+			}
+
+			public static byte crypto_secretstream_xchacha20poly1305_tag_final()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_secretstream_xchacha20poly1305_tag_final();
+				 }
+				 else
+				 {
+			 		return X64.crypto_secretstream_xchacha20poly1305_tag_final();
+				 }
+			}
+
+			public static int crypto_secretstream_xchacha20poly1305_init_pull(byte* state, byte* header, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_secretstream_xchacha20poly1305_init_pull(state, header, k);
+				 }
+				 else
+				 {
+			 		return X64.crypto_secretstream_xchacha20poly1305_init_pull(state, header, k);
+				 }
+			}
+
+			public static int crypto_secretstream_xchacha20poly1305_pull(byte *state, byte *m, ulong* mlen_p, byte *tag_p,byte* c, ulong clen,byte*ad, ulong adlen)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_secretstream_xchacha20poly1305_pull(state, m, mlen_p, tag_p, c, clen, ad, adlen);
+				 }
+				 else
+				 {
+			 		return X64.crypto_secretstream_xchacha20poly1305_pull(state, m, mlen_p, tag_p, c, clen, ad, adlen);
+				 }
+			}
+
+			public static UIntPtr crypto_secretstream_xchacha20poly1305_abytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_secretstream_xchacha20poly1305_abytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_secretstream_xchacha20poly1305_abytes();
+				 }
+			}
+
 			public static int sodium_munlock(byte* addr, UIntPtr len)
 			{
 				 if(_is32bits)
@@ -3627,6 +4247,36 @@ namespace Sparrow
 				public extern static UIntPtr crypto_generichash_statebytes();
 
 				[DllImport(LIB_SODIUM)]
+				public extern static void crypto_secretstream_xchacha20poly1305_keygen(byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_headerbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_init_push(byte* state, byte* header, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_push(byte* state, byte* c, ulong* clen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte tag);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static byte crypto_secretstream_xchacha20poly1305_tag_final();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_init_pull(byte* state, byte* header, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_pull(byte *state, byte *m, ulong* mlen_p, byte *tag_p,byte* c, ulong clen,byte*ad, ulong adlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_abytes();
+
+				[DllImport(LIB_SODIUM)]
 				public extern static int sodium_munlock(byte* addr, UIntPtr len);
 
 				[DllImport(LIB_SODIUM)]
@@ -3819,6 +4469,36 @@ namespace Sparrow
 
 				[DllImport(LIB_SODIUM)]
 				public extern static UIntPtr crypto_generichash_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void crypto_secretstream_xchacha20poly1305_keygen(byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_headerbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_init_push(byte* state, byte* header, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_push(byte* state, byte* c, ulong* clen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte tag);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static byte crypto_secretstream_xchacha20poly1305_tag_final();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_init_pull(byte* state, byte* header, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_secretstream_xchacha20poly1305_pull(byte *state, byte *m, ulong* mlen_p, byte *tag_p,byte* c, ulong clen,byte*ad, ulong adlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_secretstream_xchacha20poly1305_abytes();
 
 				[DllImport(LIB_SODIUM)]
 				public extern static int sodium_munlock(byte* addr, UIntPtr len);

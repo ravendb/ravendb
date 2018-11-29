@@ -114,23 +114,25 @@ sodium_memzero | void | pnt, len |  sodium_memzero(byte* pnt, UIntPtr len)
 
 crypto_generichash_statebytes | UIntPtr | | crypto_generichash_statebytes()
 
-# crypto_secretstream_xchacha20poly1305_keygen | void | k | crypto_secretstream_xchacha20poly1305_keygen(byte* k)
+crypto_secretstream_xchacha20poly1305_keygen | void | k | crypto_secretstream_xchacha20poly1305_keygen(byte* k)
 
-# crypto_secretstream_xchacha20poly1305_keybytes | UIntPtr | | crypto_secretstream_xchacha20poly1305_keybytes()
+crypto_secretstream_xchacha20poly1305_keybytes | UIntPtr | | crypto_secretstream_xchacha20poly1305_keybytes()
 
-# crypto_secretstream_xchacha20poly1305_statebytes | UIntrPtr | | crypto_secretstream_xchacha20poly1305_statebytes()
+crypto_secretstream_xchacha20poly1305_statebytes | UIntPtr | | crypto_secretstream_xchacha20poly1305_statebytes()
 
-# crypto_secretstream_xchacha20poly1305_headerbytes | UIntPtr | | crypto_secretstream_xchacha20poly1305_headerbytes()
+crypto_secretstream_xchacha20poly1305_headerbytes | UIntPtr | | crypto_secretstream_xchacha20poly1305_headerbytes()
 
-# crypto_secretstream_xchacha20poly1305_init_push | int | state, header, k |  crypto_secretstream_xchacha20poly1305_init_push(byte* state, byte* header, byte* k)
+crypto_secretstream_xchacha20poly1305_init_push | int | state, header, k |  crypto_secretstream_xchacha20poly1305_init_push(byte* state, byte* header, byte* k)
 
-# crypto_secretstream_xchacha20poly1305_push | int | state, c, clen_p, m, mlem, ad, adlen, tag |  crypto_secretstream_xchacha20poly1305_push(byte* state, byte* c, ulong* clen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte tag)
+crypto_secretstream_xchacha20poly1305_push | int | state, c, clen_p, m, mlen, ad, adlen, tag |  crypto_secretstream_xchacha20poly1305_push(byte* state, byte* c, ulong* clen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte tag)
 
-# crypto_secretstream_xchacha20poly1305_tag_final | byte | | crypto_secretstream_xchacha20poly1305_tag_final()
+crypto_secretstream_xchacha20poly1305_tag_final | byte | | crypto_secretstream_xchacha20poly1305_tag_final()
 
-# crypto_secretstream_xchacha20poly1305_init_pull | int | state, header, k |  crypto_secretstream_xchacha20poly1305_init_pull(byte* state, byte* header, byte* k)
+crypto_secretstream_xchacha20poly1305_init_pull | int | state, header, k |  crypto_secretstream_xchacha20poly1305_init_pull(byte* state, byte* header, byte* k)
 
-# crypto_secretstream_xchacha20poly1305_pull | int | state, m, mlen_p, tag_p, c, clen, ad, adlen | crypto_secretstream_xchacha20poly1305_pull(byte *state, byte *m, ulong* mlen_p, byte *tag_p,byte* c, ulong clen,byte*ad, ulong adlen)
+crypto_secretstream_xchacha20poly1305_pull | int | state, m, mlen_p, tag_p, c, clen, ad, adlen | crypto_secretstream_xchacha20poly1305_pull(byte *state, byte *m, ulong* mlen_p, byte *tag_p,byte* c, ulong clen,byte*ad, ulong adlen)
+
+crypto_secretstream_xchacha20poly1305_abytes | UIntPtr || crypto_secretstream_xchacha20poly1305_abytes()
 
 sodium_munlock | int | addr, len | sodium_munlock(byte* addr, UIntPtr len)
 
