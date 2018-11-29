@@ -358,7 +358,7 @@ class query extends viewModelBase {
                 return 0;
             }
             
-            return stats.TotalResults || 0;
+            return stats.TotalResultsWithOffsetAndLimit || stats.TotalResults || 0;
         });
 
          /* TODO
