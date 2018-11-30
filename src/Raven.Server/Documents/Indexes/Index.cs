@@ -2290,7 +2290,7 @@ namespace Raven.Server.Documents.Indexes
                                         resultToFill.TotalResults = totalResults.Value;
                                         if (query.Offset != null || query.Limit != null)
                                         {
-                                            resultToFill.TotalResultsWithOffsetAndLimit = Math.Min(
+                                            resultToFill.CappedMaxResults = Math.Min(
                                                 query.Limit ?? int.MaxValue, 
                                                 totalResults.Value - (query.Offset ?? 0)
                                                 );

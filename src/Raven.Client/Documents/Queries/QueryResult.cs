@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Queries
        /// The total results for the query, taking into account the 
        /// offset / limit clauses for this query
        /// </summary>
-        public int? TotalResultsWithOffsetAndLimit { get; set; }
+        public int? CappedMaxResults { get; set; }
 
         /// <summary>
         /// Gets or sets the skipped results

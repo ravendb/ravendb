@@ -128,7 +128,7 @@
                         <button type="button" class="btn btn-danger btn-sm" data-bind="enable: canDeleteDocumentsMatchingQuery, click: deleteDocsMatchingQuery"><i class="icon-trash"></i> <span>Delete documents</span></button>
                     </div>
                     <button type="button" class="btn btn-default" title="Export query results as CSV"
-                        data-bind="click: exportCsv, enable: totalResults()">
+                        data-bind="click: exportCsv, enable: totalResultsForUi()">
                         <i class="icon-csv-export"></i> <span>Export CSV</span>
                     </button>
                     <button class="btn btn-default statistics" data-bind="click: openQueryStats, enable: queryStats">
@@ -184,7 +184,7 @@
         <div class="flex-window-head">
             <button type="button" class="btn btn-sm" 
                     data-bind="css: { active: currentTab() === 'results'}, click: goToResultsTab">
-                Results &nbsp; <span class="label" data-bind="text: totalResults().toLocaleString() + (hasMoreUnboundedResults() ? '+' : ''), css: { 'label-primary': totalResults(), 'label-default': !totalResults() }"></span>
+                Results &nbsp; <span class="label" data-bind="text: totalResultsForUi().toLocaleString() + (hasMoreUnboundedResults() ? '+' : ''), css: { 'label-primary': totalResultsForUi(), 'label-default': !totalResultsForUi() }"></span>
             </button>
             <!-- ko foreach: includesCache -->
                 <button type="button" class="btn btn-sm" data-bind="click: $root.goToIncludesTab, css: { active: $parent.currentTab() === $data }">

@@ -69,9 +69,9 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
-            if (result.TotalResultsWithOffsetAndLimit != null) {
-                writer.WritePropertyName(nameof(result.TotalResultsWithOffsetAndLimit));
-                writer.WriteInteger(result.TotalResultsWithOffsetAndLimit.Value);
+            if (result.CappedMaxResults != null) {
+                writer.WritePropertyName(nameof(result.CappedMaxResults));
+                writer.WriteInteger(result.CappedMaxResults.Value);
                 writer.WriteComma();
             }
 
@@ -92,9 +92,9 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
-            if (result.TotalResultsWithOffsetAndLimit != null) {
-                writer.WritePropertyName(nameof(result.TotalResultsWithOffsetAndLimit));
-                writer.WriteInteger(result.TotalResultsWithOffsetAndLimit.Value);
+            if (result.CappedMaxResults != null) {
+                writer.WritePropertyName(nameof(result.CappedMaxResults));
+                writer.WriteInteger(result.CappedMaxResults.Value);
                 writer.WriteComma();
             }
 
@@ -225,9 +225,9 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
-            if (result.TotalResultsWithOffsetAndLimit != null) {
-                writer.WritePropertyName(nameof(result.TotalResultsWithOffsetAndLimit));
-                writer.WriteInteger(result.TotalResultsWithOffsetAndLimit.Value);
+            if (result.CappedMaxResults != null) {
+                writer.WritePropertyName(nameof(result.CappedMaxResults));
+                writer.WriteInteger(result.CappedMaxResults.Value);
                 writer.WriteComma();
             }
 
@@ -252,9 +252,9 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
-            if (result.TotalResultsWithOffsetAndLimit != null) {
-                writer.WritePropertyName(nameof(result.TotalResultsWithOffsetAndLimit));
-                writer.WriteInteger(result.TotalResultsWithOffsetAndLimit.Value);
+            if (result.CappedMaxResults != null) {
+                writer.WritePropertyName(nameof(result.CappedMaxResults));
+                writer.WriteInteger(result.CappedMaxResults.Value);
                 writer.WriteComma();
             }
 

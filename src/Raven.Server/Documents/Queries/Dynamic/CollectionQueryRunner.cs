@@ -161,10 +161,17 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (query.Offset != null || query.Limit != null)
                 {
-                    resultToFill.TotalResultsWithOffsetAndLimit = Math.Min(
-                        query.Limit ?? int.MaxValue,
-                        resultToFill.TotalResults - (query.Offset ?? 0)
-                        );
+                    if (resultToFill.TotalResults == -1)
+                    {
+                        resultToFill.CappedMaxResults = query.Limit ?? -1;
+                    }
+                    else
+                    {
+                        resultToFill.CappedMaxResults = Math.Min(
+                            query.Limit ?? int.MaxValue,
+                            resultToFill.TotalResults - (query.Offset ?? 0)
+                        );    
+                    }
                 }
             }
         }

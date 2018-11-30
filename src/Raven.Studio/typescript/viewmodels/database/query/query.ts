@@ -142,7 +142,7 @@ class query extends viewModelBase {
     fromCache = ko.observable<boolean>(false);
     dirtyResult = ko.observable<boolean>();
     currentTab = ko.observable<queryResultTab | highlightSection | perCollectionIncludes>("results");
-    totalResults: KnockoutComputed<number>;
+    totalResultsForUi = ko.observable<number>(0);
     hasMoreUnboundedResults = ko.observable<boolean>(false);
 
     includesCache = ko.observableArray<perCollectionIncludes>([]);
@@ -350,15 +350,6 @@ class query extends viewModelBase {
 
         criteria.name.extend({
             required: true
-        });
-
-        this.totalResults = ko.pureComputed(() => {
-            const stats = this.queryStats();
-            if (!stats) {
-                return 0;
-            }
-            
-            return stats.TotalResultsWithOffsetAndLimit || stats.TotalResults || 0;
         });
 
          /* TODO
@@ -626,6 +617,7 @@ class query extends viewModelBase {
 
             // we declare this variable here, if any result returns skippedResults <> 0 we enter infinite scroll mode 
             let totalSkippedResults = 0;
+            let itemsSoFar = 0;
             
             this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCmd.getUrl());
             this.csvUrl(queryCmd.getCsvUrl());
@@ -637,7 +629,7 @@ class query extends viewModelBase {
                 const queryForAllFields = this.criteria().showFields();
                                 
                 // Note: 
-                // When server resoponse is '304 Not Modified' then the browser cached data contains duration time from the 'first' execution  
+                // When server response is '304 Not Modified' then the browser cached data contains duration time from the 'first' execution  
                 // If we ask browser to report the 304 state then 'response content' is empty 
                 // This is why we need to measure the execution time here ourselves..
                 const startQueryTime = new Date().getTime();                             
@@ -648,21 +640,31 @@ class query extends viewModelBase {
                     })
                     .done((queryResults: pagedResultExtended<document>) => {
                         this.hasMoreUnboundedResults(false);
+                        
+                        const totalFromQuery = queryResults.totalResultCount || 0;
+                        
+                        itemsSoFar += queryResults.items.length;
+                        
+                        this.totalResultsForUi(totalFromQuery);
                     
-                        if (queryResults.totalResultCount === -1) {
-                            // unbounded result set
+                        if (queryResults.additionalResultInfo.TotalResults === -1) {
+                            // unbounded result set - startsWith() on collection 
                             if (queryResults.items.length === take + 1) {
                                 // returned all or have more
-                                this.hasMoreUnboundedResults(true);
-                                queryResults.totalResultCount = skip + take + 30;
+                                const returnedLimit = queryResults.additionalResultInfo.CappedMaxResults || Number.MAX_SAFE_INTEGER;
+                                this.hasMoreUnboundedResults(returnedLimit > itemsSoFar);
+                                queryResults.totalResultCount = Math.min(skip + take + 30, returnedLimit - 1 /* subtract one since we fetch n+1 records */);
                             } else {
                                 queryResults.totalResultCount = skip + queryResults.items.length;
                             }
                             
                             queryResults.additionalResultInfo.TotalResults = queryResults.totalResultCount;
+                            
+                            this.totalResultsForUi(this.hasMoreUnboundedResults() ? itemsSoFar - 1 : itemsSoFar);
                         }
                         
                         if (queryResults.additionalResultInfo.SkippedResults) {
+                            // apply skipped results (if any)
                             totalSkippedResults += queryResults.additionalResultInfo.SkippedResults;
                         }
                         
@@ -670,11 +672,16 @@ class query extends viewModelBase {
                             queryResults.totalResultCount = skip + queryResults.items.length;
                             if (queryResults.items.length === take + 1) {
                                 queryResults.totalResultCount += 30;
-                                this.hasMoreUnboundedResults(true);
+                                const totalWithOffsetAndLimit = queryResults.additionalResultInfo.CappedMaxResults;
+                                if (totalWithOffsetAndLimit && totalWithOffsetAndLimit < queryResults.totalResultCount) { 
+                                    queryResults.totalResultCount = totalWithOffsetAndLimit - 1;
+                                }
+                                
+                                this.hasMoreUnboundedResults(itemsSoFar < totalFromQuery);
                             }
-                            queryResults.additionalResultInfo.TotalResults = skip + queryResults.items.length;
+                            this.totalResultsForUi(this.hasMoreUnboundedResults() ? itemsSoFar - 1 : itemsSoFar);
                         }
-                    
+                        
                         const endQueryTime = new Date().getTime();
                         const localQueryTime = endQueryTime - startQueryTime;
                         if (localQueryTime < queryResults.additionalResultInfo.DurationInMs) {
@@ -920,7 +927,8 @@ class query extends viewModelBase {
     openQueryStats() {
         //TODO: work on explain in dialog
         eventsCollector.default.reportEvent("query", "show-stats");
-        const viewModel = new queryStatsDialog(this.queryStats(), this.activeDatabase());
+        const totalResultsFormatted = this.totalResultsForUi().toLocaleString() + (this.hasMoreUnboundedResults() ? "+" : "");
+        const viewModel = new queryStatsDialog(this.queryStats(), totalResultsFormatted, this.activeDatabase());
         app.showBootstrapDialog(viewModel);
     }
 
