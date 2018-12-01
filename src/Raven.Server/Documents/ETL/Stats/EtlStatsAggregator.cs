@@ -47,5 +47,20 @@ namespace Raven.Server.Documents.ETL.Stats
                 BatchCompleteReason = Stats.BatchCompleteReason
             };
         }
+
+        public EtlPerformanceStats ToPerformanceLiveStatsWithDetails()
+        {
+            if (_performanceStats != null)
+                return _performanceStats;
+
+            if (Scope == null || Stats == null)
+                return null;
+
+            if (Completed)
+                return ToPerformanceStats();
+
+            return CreatePerformanceStats(completed: false);
+
+        }
     }
 }

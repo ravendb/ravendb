@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Json;
 using Raven.Server.Routing;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -15,7 +16,15 @@ namespace Raven.Server.Documents.ETL.Handlers
         [RavenAction("/databases/*/etl/stats", "GET", AuthorizationStatus.ValidUser)]
         public Task GetStats()
         {
-            var etlStats = GetProcessesToReportOn().Select(x => x.Statistics).ToArray();
+            var etlStats = GetProcessesToReportOn().Select(x => new EtlTaskStats
+            {
+                TaskName = x.Key,
+                Stats = x.Value.Select(y => new EtlProcessTransformationStats
+                {
+                    TransformationName = y.TransformationName,
+                    Statistics = y.Statistics
+                }).ToArray()
+            }).ToArray();
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -36,13 +45,22 @@ namespace Raven.Server.Documents.ETL.Handlers
         [RavenAction("/databases/*/etl/debug/stats", "GET", AuthorizationStatus.ValidUser)]
         public Task GetDebugStats()
         {
-            var debugStats = GetProcessesToReportOn()
-                .Select(etl => new DynamicJsonValue
+            var debugStats = GetProcessesToReportOn().Select(x => new DynamicJsonValue()
+            {
+                ["TaskName"] = x.Key,
+                ["Stats"] = x.Value.Select(y =>
                 {
-                    [nameof(etl.Name)] = etl.Name,
-                    [nameof(etl.Statistics)] = etl.Statistics.ToJson(),
-                    [nameof(etl.Metrics)] = etl.Metrics.ToJson()
-                }).ToArray();
+                    var stats = new EtlProcessTransformationStats
+                    {
+                        TransformationName = y.TransformationName,
+                        Statistics = y.Statistics
+                    }.ToJson();
+
+                    stats[nameof(y.Metrics)] = y.Metrics.ToJson();
+
+                    return stats;
+                }).ToArray()
+            }).ToArray();
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -62,35 +80,20 @@ namespace Raven.Server.Documents.ETL.Handlers
         [RavenAction("/databases/*/etl/performance", "GET", AuthorizationStatus.ValidUser)]
         public Task Performance()
         {
-            var stats = GetProcessesToReportOn()
-                .Select(x => new EtlProcessPerformanceStats
+            var stats = GetProcessesToReportOn().Select(x => new EtlTaskPerformanceStats
+            {
+                TaskName = x.Key,
+                Stats = x.Value.Select(y => new EtlProcessPerformanceStats
                 {
-                    ProcessName = x.Name,
-                    Performance = x.GetPerformanceStats()
-                })
-                .ToArray();
+                    TransformationName = y.TransformationName,
+                    Performance = y.GetPerformanceStats()
+                }).ToArray()
+            }).ToArray();
 
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteStartObject();
-                writer.WriteArray(context, "Results", stats, (w, c, stat) =>
-                {
-                    w.WriteStartObject();
-
-                    w.WritePropertyName(nameof(stat.ProcessName));
-                    w.WriteString(stat.ProcessName);
-                    w.WriteComma();
-
-                    w.WriteArray(c, nameof(stat.Performance), stat.Performance, (wp, cp, performance) =>
-                    {
-                        var statsDjv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(performance);
-                        wp.WriteObject(context.ReadObject(statsDjv, "etl/performance"));
-                    });
-
-                    w.WriteEndObject();
-                });
-                writer.WriteEndObject();
+                writer.WriteEtlTaskPerformanceStats(context, stats);
             }
 
             return Task.CompletedTask;
@@ -101,41 +104,46 @@ namespace Raven.Server.Documents.ETL.Handlers
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
-                var etls = GetProcessesToReportOn().ToArray();
+                var etls = GetProcessesToReportOn();
 
                 var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
                 var receive = webSocket.ReceiveAsync(receiveBuffer, Database.DatabaseShutdown);
 
-                //using (var ms = new MemoryStream())
-                //using (var collector = new LiveIndexingPerformanceCollector(Database, Database.DatabaseShutdown, etls))
-                //{
-                //    // 1. Send data to webSocket without making UI wait upon opening webSocket
-                //    await SendDataOrHeartbeatToWebSocket(receive, webSocket, collector, ms, 100);
+                using (var ms = new MemoryStream())
+                using (var collector = new LiveEtlPerformanceCollector(Database, etls))
+                {
+                    // 1. Send data to webSocket without making UI wait upon opening webSocket
+                    await collector.SendStatsOrHeartbeatToWebSocket(receive, webSocket, ContextPool, ms, 100);
 
-                //    // 2. Send data to webSocket when available
-                //    while (Database.DatabaseShutdown.IsCancellationRequested == false)
-                //    {
-                //        if (await SendDataOrHeartbeatToWebSocket(receive, webSocket, collector, ms, 4000) == false)
-                //        {
-                //            break;
-                //        }
-                //    }
-                //}
+                    // 2. Send data to webSocket when available
+                    while (Database.DatabaseShutdown.IsCancellationRequested == false)
+                    {
+                        if (await collector.SendStatsOrHeartbeatToWebSocket(receive, webSocket, ContextPool, ms, 4000) == false)
+                        {
+                            break;
+                        }
+                    }
+                }
             }
         }
 
-        private IEnumerable<EtlProcess> GetProcessesToReportOn()
+        private Dictionary<string, List<EtlProcess>> GetProcessesToReportOn()
         {
-            IEnumerable<EtlProcess> etls;
+            Dictionary<string, List<EtlProcess>> etls;
             var names = HttpContext.Request.Query["name"];
 
             if (names.Count == 0)
                 etls = Database.EtlLoader.Processes
-                    .OrderBy(x => x.Name);
+                    .GroupBy(x => x.ConfigurationName)
+                    .OrderBy(x => x.Key)
+                    .ToDictionary(x => x.Key, x => x.OrderBy(y => y.TransformationName).ToList());
             else
             {
                 etls = Database.EtlLoader.Processes
-                    .Where(x => names.Contains(x.Name, StringComparer.OrdinalIgnoreCase));
+                    .Where(x => names.Contains(x.ConfigurationName, StringComparer.OrdinalIgnoreCase) || names.Contains(x.Name, StringComparer.OrdinalIgnoreCase))
+                    .GroupBy(x => x.ConfigurationName)
+                    .OrderBy(x => x.Key)
+                    .ToDictionary(x => x.Key, x => x.OrderBy(y => y.TransformationName).ToList());
             }
 
             return etls;
