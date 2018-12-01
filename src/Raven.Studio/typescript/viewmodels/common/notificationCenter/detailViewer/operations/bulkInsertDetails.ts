@@ -63,7 +63,7 @@ class bulkInsertDetails extends abstractOperationDetails {
                 notificationsContainer.remove(existingOperation);
             }
             
-            // create or update cumulative bulk insert notification
+            // create or update cumulative notification
             let cumulativeNotification = notificationsContainer().find(x => x instanceof virtualBulkInsert) as virtualBulkInsert;
             if (!cumulativeNotification) {
                 cumulativeNotification = new virtualBulkInsert(database);

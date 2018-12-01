@@ -1,0 +1,27 @@
+<div class="modal-dialog  modal-lg virtualUpdateByQueryDetails" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <div class="flex-horizontal">
+                <div class="flex-grow">
+                    <h3 class="modal-title text-success" id="myModalLabel">Update by query</h3>
+                </div>
+                <div>
+                    <button type="button" class="close" data-bind="click: $root.close" aria-hidden="true">
+                        <i class="icon-cancel"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div class="margin-bottom" style="position: relative; height: 300px">
+                <virtual-grid style="height: 300px" class="resizable flex-window" params="controller: gridController"></virtual-grid>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>
+        </div>
+    </div>
+</div>
+
+<div class="tooltip json-preview js-virtual-update-by-query-details-tooltip" style="opacity: 0">
+</div>

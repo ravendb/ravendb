@@ -3,17 +3,17 @@ import abstractNotification = require("common/notifications/models/abstractNotif
 import database = require("models/resources/database");
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 
-class virtualBulkInsert extends abstractNotification {
+class virtualDeleteByQuery extends abstractNotification {
     
-    static readonly Id = "virtual$$bulkInsert";
+    static readonly Id = "virtual$$deleteByQuery";
     
-    operations = ko.observableArray<virtualBulkOperationItem>([]);
+    operations = ko.observableArray<queryBasedVirtualBulkOperationItem>([]);
     
     constructor(db: database) {
         super(db, {
-            Id: virtualBulkInsert.Id,
+            Id: virtualDeleteByQuery.Id,
             IsPersistent: false,
-            Type: "CumulativeBulkInsert",
+            Type: "CumulativeDeleteByQuery",
             Database: db.name,
             
             // properties below will be initialized later
@@ -23,7 +23,7 @@ class virtualBulkInsert extends abstractNotification {
             Severity: null,
         });
         
-        this.title("Bulk inserts");
+        this.title("Delete by query");
         this.severity("Success");
     }
     
@@ -34,12 +34,21 @@ class virtualBulkInsert extends abstractNotification {
         
         const bulkResult = dto.State.Result as Raven.Client.Documents.Operations.BulkOperationResult;
         
+        const query = dto.TaskType === "DeleteByQuery" 
+            ? (dto.DetailedDescription as Raven.Client.Documents.Operations.BulkOperationResult.OperationDetails).Query
+            : "n/a";
+        const indexOrCollection = dto.TaskType === "DeleteByQuery"
+            ? dto.Message
+            : "dynamic/" + dto.Message;
+        
         const item = {
             id: dto.Id,
             date: dto.StartTime,
             duration: moment.utc(dto.EndTime).diff(moment.utc(dto.StartTime)),
-            items: bulkResult.Total
-        } as virtualBulkOperationItem;
+            items: bulkResult.Total,
+            query: query,
+            indexOrCollectionUsed: indexOrCollection
+        } as queryBasedVirtualBulkOperationItem;
         
         if (existingItemIndex !== -1) {
             this.operations.splice(existingItemIndex, 1, item);
@@ -47,11 +56,9 @@ class virtualBulkInsert extends abstractNotification {
             this.operations.unshift(item);
         }
         
-        const totalDocumentsCount = _.sumBy(this.operations(), x => x.items);
-        this.message(pluralizeHelpers.pluralize(this.operations().length, "bulk insert", "bulk inserts")
-            + " completed successfully. "
-            + pluralizeHelpers.pluralize(totalDocumentsCount, " document was created.", "documents were created.") );
+        this.message(pluralizeHelpers.pluralize(this.operations().length, "operation", "operations")
+            + " has been completed successfully. ");
     }
 }
 
-export = virtualBulkInsert;
+export = virtualDeleteByQuery;
