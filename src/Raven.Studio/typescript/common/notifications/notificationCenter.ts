@@ -24,6 +24,8 @@ import smugglerDatabaseDetails = require("viewmodels/common/notificationCenter/d
 import sqlMigrationDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/sqlMigrationDetails");
 import patchDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/patchDocumentsDetails");
 import virtualBulkInsertDetails = require("viewmodels/common/notificationCenter/detailViewer/virtualOperations/virtualBulkInsertDetails");
+import virtualUpdateByQueryDetails = require("viewmodels/common/notificationCenter/detailViewer/virtualOperations/virtualUpdateByQueryDetails");
+import virtualDeleteByQueryDetails = require("viewmodels/common/notificationCenter/detailViewer/virtualOperations/virtualDeleteByQueryDetails");
 import bulkInsertDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/bulkInsertDetails");
 import replayTransactionCommandsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/replayTransactionCommandsDetails");
 import deleteDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/deleteDocumentsDetails");
@@ -128,6 +130,8 @@ class notificationCenter {
             
             // virtual operations:
             virtualBulkInsertDetails,
+            virtualUpdateByQueryDetails,
+            virtualDeleteByQueryDetails,
 
             // performance hints:
             indexingDetails,
@@ -148,6 +152,8 @@ class notificationCenter {
         this.customOperationMerger.push(compactDatabaseDetails);
         
         this.customOperationHandler.push(bulkInsertDetails);
+        this.customOperationHandler.push(patchDocumentsDetails);
+        this.customOperationHandler.push(deleteDocumentsDetails);
 
         this.allNotifications = ko.pureComputed(() => {
             const globalNotifications = this.globalNotifications();
