@@ -185,9 +185,9 @@ namespace RachisTests.DatabaseCluster
                     .ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(srcDb);
 
                 var etlDone = new ManualResetEventSlim();
-                database.EtlLoader.BatchCompleted += (n, s) =>
+                database.EtlLoader.BatchCompleted += x =>
                 {
-                    if (s.LoadSuccesses > 0)
+                    if (x.Statistics.LoadSuccesses > 0)
                         etlDone.Set();
                 };
 

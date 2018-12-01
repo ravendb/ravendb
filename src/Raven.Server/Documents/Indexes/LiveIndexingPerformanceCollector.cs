@@ -5,7 +5,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Json;
 using Raven.Server.Utils.Stats;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -85,6 +87,11 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
             return preparedStats;
+        }
+
+        protected override void WriteStats(List<IndexPerformanceStats> stats, AsyncBlittableJsonTextWriter writer, JsonOperationContext context)
+        {
+            writer.WritePerformanceStats(context, stats);
         }
 
         private void OnIndexChange(IndexChange change)

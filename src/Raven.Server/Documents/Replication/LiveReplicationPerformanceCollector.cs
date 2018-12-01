@@ -138,6 +138,15 @@ namespace Raven.Server.Documents.Replication
             return results;
         }
 
+        protected override void WriteStats(List<IReplicationPerformanceStats> stats, AsyncBlittableJsonTextWriter writer, JsonOperationContext context)
+        {
+            writer.WriteStartObject();
+
+            writer.WriteArray(context, "Results", stats, (w, c, p) => { p.Write(c, w); });
+
+            writer.WriteEndObject();
+        }
+
         private void OutgoingHandlerRemoved(OutgoingReplicationHandler handler)
         {
             if (_outgoing.TryRemove(handler, out var stats))

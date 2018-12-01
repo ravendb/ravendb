@@ -62,9 +62,9 @@ namespace SlowTests.Server.Documents.ETL
 
             var mre = new ManualResetEventSlim();
 
-            database.EtlLoader.BatchCompleted += (n, s) =>
+            database.EtlLoader.BatchCompleted += x =>
             {
-                if (predicate(n, s))
+                if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics))
                     mre.Set();
             };
 

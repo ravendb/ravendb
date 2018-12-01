@@ -69,6 +69,8 @@ namespace Raven.Server.Documents.ETL
 
         public abstract EtlPerformanceStats[] GetPerformanceStats();
 
+        public abstract EtlStatsAggregator GetLatestPerformanceStats();
+
         public string TombstoneCleanerIdentifier => $"ETL '{Name}'";
 
         public abstract Dictionary<string, long> GetLastProcessedTombstonesPerCollection();
@@ -671,7 +673,7 @@ namespace Raven.Server.Documents.ETL
                         if (CancellationToken.IsCancellationRequested == false)
                         {
                             var batchCompleted = Database.EtlLoader.BatchCompleted;
-                            batchCompleted?.Invoke(Name, Statistics);
+                            batchCompleted?.Invoke((ConfigurationName, TransformationName, Statistics));
                         }
 
                         continue;
@@ -779,12 +781,16 @@ namespace Raven.Server.Documents.ETL
 
         public override EtlPerformanceStats[] GetPerformanceStats()
         {
-            //var lastStats = _lastStats;
+            var lastStats = _lastStats;
 
             return _lastEtlStats
-                // .Select(x => x == lastStats ? x.ToEtlPerformanceStats().ToIndexingPerformanceLiveStatsWithDetails() : x.ToIndexingPerformanceStats())
-                .Select(x => x.ToPerformanceStats())
+                .Select(x => x == lastStats ? x.ToPerformanceLiveStatsWithDetails() : x.ToPerformanceStats())
                 .ToArray();
+        }
+
+        public override EtlStatsAggregator GetLatestPerformanceStats()
+        {
+            return _lastStats;
         }
 
         private void LogSuccessfulBatchInfo(EtlStatsScope stats)
