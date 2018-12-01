@@ -2971,7 +2971,22 @@ namespace Raven.Client.Connection.Async
             currentlyExecuting = true;
             try
             {
-                await updateTopologyTask.ConfigureAwait(false);
+                if (updateTopologyTask.IsCompleted == false)
+                {
+#if !DNXCORE50
+                    if (RavenTransactionAccessor.GetTransactionInformation() != null)
+                    {
+                        // if DTC is involved then let's wait synchronously for topology update to ensure we won't change the thread 
+                        AsyncHelpers.RunSync(() => updateTopologyTask);
+                    }
+                    else
+                    {
+                        await updateTopologyTask.ConfigureAwait(false);
+                    }
+#else
+                    await updateTopologyTask.ConfigureAwait(false);
+#endif
+                }
 
                 return await RequestExecuter.ExecuteOperationAsync(this, method, currentRequest, operation, token).ConfigureAwait(false);
             }
