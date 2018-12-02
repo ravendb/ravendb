@@ -441,7 +441,7 @@ namespace Raven.Server.Smuggler.Documents
             if (_state.CurrentTokenType != JsonParserToken.StartObject)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start object, got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
-            using (var builder = CreateBuilder(_context, null))
+            using (var builder = CreateBuilder(_context))
             {
                 _context.CachedProperties.NewDocument();
                 ReadObject(builder);
@@ -530,7 +530,7 @@ namespace Raven.Server.Smuggler.Documents
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start array, got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
-            var builder = CreateBuilder(_context, null);
+            var builder = CreateBuilder(_context);
             try
             {
                 while (true)
@@ -547,7 +547,7 @@ namespace Raven.Server.Smuggler.Documents
                         if (_context != oldContext)
                         {
                             builder.Dispose();
-                            builder = CreateBuilder(context, null);
+                            builder = CreateBuilder(context);
                         }
                     }
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
@@ -597,8 +597,7 @@ namespace Raven.Server.Smuggler.Documents
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
             var context = _context;
-            var modifier = new BlittableMetadataModifier(context);
-            var builder = CreateBuilder(context, modifier);
+            var builder = CreateBuilder(context, new BlittableMetadataModifier(context));
             try
             {
                 while (true)
@@ -616,7 +615,7 @@ namespace Raven.Server.Smuggler.Documents
                         if (oldContext != context)
                         {
                             builder.Dispose();
-                            builder = CreateBuilder(context, modifier);
+                            builder = CreateBuilder(context, new BlittableMetadataModifier(context));
                         }
                     }
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
@@ -708,12 +707,7 @@ namespace Raven.Server.Smuggler.Documents
 
             var context = _context;
             var legacyImport = _buildVersionType == BuildVersionType.V3;
-            var modifier = new BlittableMetadataModifier(context)
-            {
-                ReadFirstEtagOfLegacyRevision = legacyImport,
-                ReadLegacyEtag = _readLegacyEtag,
-                OperateOnTypes = _operateOnTypes
-            };
+            var modifier = new BlittableMetadataModifier(context, legacyImport, _readLegacyEtag, _operateOnTypes);
             var builder = CreateBuilder(context, modifier);
             try
             {
@@ -733,6 +727,7 @@ namespace Raven.Server.Smuggler.Documents
                         if (oldContext != context)
                         {
                             builder.Dispose();
+                            modifier = new BlittableMetadataModifier(context, legacyImport, _readLegacyEtag, _operateOnTypes);
                             builder = CreateBuilder(context, modifier);
                         }
                     }
@@ -821,7 +816,7 @@ namespace Raven.Server.Smuggler.Documents
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
             var context = _context;
-            var builder = CreateBuilder(context, null);
+            var builder = CreateBuilder(context);
             try
             {
                 while (true)
@@ -839,7 +834,7 @@ namespace Raven.Server.Smuggler.Documents
                         if (oldContext != context)
                         {
                             builder.Dispose();
-                            builder = CreateBuilder(context, null);
+                            builder = CreateBuilder(context);
                         }
                     }
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
@@ -897,7 +892,7 @@ namespace Raven.Server.Smuggler.Documents
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start array, but got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
             var context = _context;
-            var builder = CreateBuilder(context, null);
+            var builder = CreateBuilder(context);
             try
             {
                 while (true)
@@ -915,7 +910,7 @@ namespace Raven.Server.Smuggler.Documents
                         if (oldContext != context)
                         {
                             builder.Dispose();
-                            builder = CreateBuilder(context, null);
+                            builder = CreateBuilder(context);
                         }
                     }
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
@@ -1082,6 +1077,12 @@ namespace Raven.Server.Smuggler.Documents
             return new BlittableJsonDocumentBuilder(context,
                 BlittableJsonDocumentBuilder.UsageMode.ToDisk, "import/object", _parser, _state,
                 modifier: modifier);
+        }
+
+        private BlittableJsonDocumentBuilder CreateBuilder(JsonOperationContext context)
+        {
+            return new BlittableJsonDocumentBuilder(context,
+                BlittableJsonDocumentBuilder.UsageMode.ToDisk, "import/object", _parser, _state);
         }
 
         private DatabaseItemType GetType(string type)
