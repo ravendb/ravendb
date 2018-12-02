@@ -833,7 +833,7 @@ namespace Voron.Impl.Journal
 
                 public bool SyncDataFile()
                 {
-                    if (WaitToGatherInformationToStartSync(out var syncCounter, _parent._waj._env.Token) == false)
+                    if (WaitToGatherInformationToStartSync(_parent._waj._env.Token) == false)
                         return false;
 
                     if (_parent._waj._env.Disposed)
@@ -852,33 +852,12 @@ namespace Voron.Impl.Journal
                             _parent.TestingWait?.WaitOne();
                     }
 
-                    UpdateDatabaseStateAfterSync(syncCounter);
+                    UpdateDatabaseStateAfterSync();
 
                     return true;
                 }
 
-                public void CompleteSync(long syncCounter)
-                {
-                    try
-                    {
-                        using (this)
-                        {
-                            if (_parent._waj._env.Disposed == false)// not already disposed / disposing
-                            {
-                                CallPagerSync();
-
-                                UpdateDatabaseStateAfterSync(syncCounter);
-                            }
-                            _tcs.TrySetResult(null);
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        _tcs.TrySetException(e);
-                    }
-                }
-
-                private void UpdateDatabaseStateAfterSync(long previousSyncedCounter)
+                private void UpdateDatabaseStateAfterSync()
                 {
                     lock (_parent._flushingLock)
                     {
@@ -915,10 +894,8 @@ namespace Voron.Impl.Journal
                     }
                 }
 
-                public bool WaitToGatherInformationToStartSync(out long syncCounter, CancellationToken token)
+                public bool WaitToGatherInformationToStartSync(CancellationToken token)
                 {
-                    long localSyncCounter = -1;
-                    syncCounter = -1;
                     // We need _transactionHeader to be the frozen value at the time we _started_ the
                     // sync process
                     try
@@ -946,7 +923,6 @@ namespace Voron.Impl.Journal
                             }
                         } while (_parent._gatherInformationToStartSync == GatherInformationToStartSync);
 
-                        syncCounter = localSyncCounter;
                         return true;
 
                         void GatherInformationToStartSync()
