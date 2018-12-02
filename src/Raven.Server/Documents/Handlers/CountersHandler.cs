@@ -83,16 +83,17 @@ namespace Raven.Server.Documents.Handlers
                 _dictionary = new Dictionary<string, List<CounterOperation>>();
             }
 
-            public void Add(string id, CounterOperation op, out bool isNew)
+            public int Add(string id, CounterOperation op, out bool isNew)
             {
                 isNew = false;
                 if (_dictionary.TryGetValue(id, out var existing) == false)
                 {
                     isNew = true;
                     _dictionary[id] = new List<CounterOperation> { op };
-                    return;
+                    return 1;
                 }
                 existing.Add(op);
+                return existing.Count;
             }
 
             protected override int ExecuteCmd(DocumentsOperationContext context)
