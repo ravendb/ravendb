@@ -24,6 +24,15 @@ namespace Raven.Server.Documents
             _ctx = context;
         }
 
+        public BlittableMetadataModifier(JsonOperationContext context, bool legacyImport, bool readLegacyEtag, DatabaseItemType operateOnTypes)
+        {
+            _ctx = context;
+            ReadFirstEtagOfLegacyRevision = legacyImport;
+            ReadLegacyEtag = readLegacyEtag;
+            OperateOnTypes = operateOnTypes;
+
+
+        }
         public LazyStringValue Id;
         public string ChangeVector;
         public DocumentFlags Flags;
