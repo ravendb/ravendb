@@ -93,28 +93,39 @@ namespace Raven.Server.Web.System
 
             switch (feature.Status)
             {
-                case RavenServer.AuthenticationStatus.Allowed:
                 case RavenServer.AuthenticationStatus.Operator:
                 case RavenServer.AuthenticationStatus.ClusterAdmin:
                     // we can trust this certificate
                     return;
 
+                case RavenServer.AuthenticationStatus.Allowed:
+                    // check that the certificate is allowed for this database.
+                    if (feature.CanAccess(database, requireAdmin: false))
+                        return;
+
+                    throw new AuthorizationException(PullReplicationAuthorizationExceptionMessage(database, remoteTask));
+
                 case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
                     using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        var pullReplication = serverStore.Cluster.ReadPullReplicationDefinition(database, remoteTask, context);
-                        var cert = httpContext.Connection.ClientCertificate;
-                        if (pullReplication.CanAccess(cert?.Thumbprint, out var err) == false)
+                        if (serverStore.Cluster.TryReadPullReplicationDefinition(database, remoteTask, context, out var pullReplication))
                         {
-                            throw new AuthorizationException(err);
+                            var cert = httpContext.Connection.ClientCertificate;
+                            if (pullReplication.CanAccess(cert?.Thumbprint))
+                                return;
                         }
+                        throw new AuthorizationException(PullReplicationAuthorizationExceptionMessage(database, remoteTask));
                     }
-                    return;
 
                 default:
                     throw new ArgumentException($"This is a bug, we should deal with '{feature?.Status}' authentication status at RequestRoute.TryAuthorize function.");
             }
+        }
+
+        private static string PullReplicationAuthorizationExceptionMessage(string database, string remoteTask)
+        {
+            return $"Cannot connect to '{remoteTask}' on '{database}'. The database or task may not exists or you don't have the credentials to access it.";
         }
 
         private List<string> GetResponsibleNodes(DatabaseTopology topology, string databaseGroupId, PullReplicationDefinition pullReplication)

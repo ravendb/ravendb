@@ -33,22 +33,19 @@ namespace Raven.Client.Documents.Operations.Replication
             };
         }
 
-        public bool CanAccess(string thumbprint, out string err)
+        public bool CanAccess(string thumbprint)
         {
-            err = null;
             if (string.IsNullOrEmpty(thumbprint))
             {
                 if (Certificates == null || Certificates.Count == 0)
                     return true;
 
-                err = $"Certificate is needed for pull replication '{Name}'";
                 return false;
             }
 
             if (Certificates.ContainsKey(thumbprint))
                 return true; // we will authenticate the certificate later on the tcp level.
 
-            err = $"Certificate with the thumbprint {thumbprint} was not found for pull replication '{Name}'";
             return false;
         }
 

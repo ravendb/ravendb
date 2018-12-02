@@ -1590,11 +1590,11 @@ namespace Raven.Server
                         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {
-                            var pullReplicationDefinition = ServerStore.Cluster.ReadPullReplicationDefinition(header.DatabaseName, info.AuthorizationFor, ctx);
-                            if (pullReplicationDefinition.CanAccess(certificate.Thumbprint, out var err))
+                            if (ServerStore.Cluster.TryReadPullReplicationDefinition(header.DatabaseName, info.AuthorizationFor, ctx, out var pullReplication)
+                                && pullReplication.CanAccess(certificate.Thumbprint))
                                 return true;
 
-                            msg = err;
+                            msg = "The certificate " + certificate.FriendlyName + " does not allow access to " + header.DatabaseName;
                             return false;
                         }
                     }

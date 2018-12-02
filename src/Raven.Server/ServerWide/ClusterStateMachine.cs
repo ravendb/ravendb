@@ -1443,6 +1443,20 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public bool TryReadPullReplicationDefinition(string database, string definitionName, TransactionOperationContext context, out PullReplicationDefinition pullReplication)
+        {
+            pullReplication = null;
+            try
+            {
+                pullReplication = ReadPullReplicationDefinition(database, definitionName, context);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public PullReplicationDefinition ReadPullReplicationDefinition(string database, string definitionName, TransactionOperationContext context)
         {
             using (var databaseRecord = ReadRawDatabase(context, database, out _))
