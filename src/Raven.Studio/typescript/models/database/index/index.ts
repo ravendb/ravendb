@@ -118,11 +118,6 @@ class index {
         this.isLowPriority = ko.pureComputed(() => this.priority() === "Low");
         this.isHighPriority = ko.pureComputed(() => this.priority() === "High");
 
-        this.isIdleState = ko.pureComputed(() => {
-            const stateIsIdle = this.state() === "Idle";
-            const globalStatusIsNotDisabled = this.globalIndexingStatus() === "Running";
-            return stateIsIdle && globalStatusIsNotDisabled;
-        });
         this.isDisabledState = ko.pureComputed(() => {
             const stateIsDisabled = this.state() === "Disabled";
             const globalStatusIsDisabled = this.globalIndexingStatus() === "Disabled";
@@ -133,6 +128,12 @@ class index {
             const globalStatusIsPaused = this.globalIndexingStatus() === "Paused";
             const isInDisableState = this.isDisabledState();
             return (localStatusIsPaused || globalStatusIsPaused) && !isInDisableState;
+        });
+        this.isIdleState = ko.pureComputed(() => {
+            const stateIsIdle = this.state() === "Idle";
+            const globalStatusIsNotDisabled = this.globalIndexingStatus() === "Running";
+            const isPaused = this.isPausedState();
+            return stateIsIdle && globalStatusIsNotDisabled && !isPaused;
         });
         this.isErrorState = ko.pureComputed(() => this.state() === "Error");
         this.isNormalState = ko.pureComputed(() => {
