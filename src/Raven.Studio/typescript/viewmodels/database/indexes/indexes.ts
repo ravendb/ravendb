@@ -240,7 +240,7 @@ class indexes extends viewModelBase {
         if (group) {
             const oldIndex = group.indexes().find((cur: index) => cur.name === i.name);
             if (oldIndex) {
-                group.indexes.replace(oldIndex, i);
+                oldIndex.updateWith(i);
             } else {
                 group.indexes.push(i);
             }
@@ -537,7 +537,7 @@ class indexes extends viewModelBase {
                 if (can) {
                     eventsCollector.default.reportEvent("index", "set-lock-mode-selected", lockModeString);
            
-                    const indexes = this.getSelectedIndexes().filter(index => index.type !== "AutoMap" && index.type !== "AutoMapReduce");
+                    const indexes = this.getSelectedIndexes().filter(index => index.type() !== "AutoMap" && index.type() !== "AutoMapReduce");
                        
                     if (indexes.length) {
                         this.spinners.globalLockChanges(true);
