@@ -43,7 +43,7 @@ class compactDatabaseDetails extends abstractOperationDetails {
                 return [];
             }
 
-            const status = (this.op.isCompleted() ? this.op.result() : this.op.progress()) as Raven.Server.Documents.CompactionProgressBase;
+            const status = (this.op.isCompleted() ? this.op.result() : this.op.progress()) as Raven.Client.ServerWide.Operations.CompactionProgressBase;
 
             if (!status) {
                 return [];
@@ -69,10 +69,10 @@ class compactDatabaseDetails extends abstractOperationDetails {
                 const previousMessages = this.previousProgressMessages || [];
                 return previousMessages.concat(...errors);
             } else if (this.op.isCompleted()) {
-                const result = this.op.result() as Raven.Server.Documents.CompactionResult;
+                const result = this.op.result() as Raven.Client.ServerWide.Operations.CompactionResult;
                 return result ? result.Messages : [];
             } else {
-                const progress = this.op.progress() as Raven.Server.Documents.CompactionResult;
+                const progress = this.op.progress() as Raven.Client.ServerWide.Operations.CompactionResult;
                 if (progress) {
                     this.previousProgressMessages = progress.Messages;
                 }
@@ -120,7 +120,7 @@ class compactDatabaseDetails extends abstractOperationDetails {
         return app.showBootstrapDialog(new compactDatabaseDetails(op, center));
     }
 
-    private mapToCompactItem(name: string, item: Raven.Server.Documents.CompactionProgressBase): compactListItem {
+    private mapToCompactItem(name: string, item: Raven.Client.ServerWide.Operations.CompactionProgressBase): compactListItem {
         let stage: compactListItemStatus = "pending";
         if (item.Processed) {
             if (item.Skipped) {
@@ -165,13 +165,13 @@ class compactDatabaseDetails extends abstractOperationDetails {
             // object was just created  - only copy message -> message field
 
             if (!existing.isCompleted()) {
-                const result = existing.progress() as Raven.Server.Documents.CompactionResult;
+                const result = existing.progress() as Raven.Client.ServerWide.Operations.CompactionResult;
                 result.Messages = [result.Message];
             }
 
         } else if (incoming.State.Status === "InProgress") { // if incoming operaton is in progress, then merge messages into existing item
-            const incomingResult = incoming.State.Progress as Raven.Server.Documents.CompactionResult;
-            const existingResult = existing.progress() as Raven.Server.Documents.CompactionResult;
+            const incomingResult = incoming.State.Progress as Raven.Client.ServerWide.Operations.CompactionResult;
+            const existingResult = existing.progress() as Raven.Client.ServerWide.Operations.CompactionResult;
 
             incomingResult.Messages = existingResult.Messages.concat(incomingResult.Message);
         }
