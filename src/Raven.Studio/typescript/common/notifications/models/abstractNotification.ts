@@ -76,8 +76,13 @@ abstract class abstractNotification {
         this.createdAt(incomingChanges.CreatedAt ? moment.utc(incomingChanges.CreatedAt) : null);
         this.isPersistent(incomingChanges.IsPersistent);
 
-        const escapedMessage = utils.escape(incomingChanges.Message);
-        this.message(utils.nl2br(escapedMessage));
+        if (incomingChanges.Message) {
+            const escapedMessage = utils.escape(incomingChanges.Message);
+            this.message(utils.nl2br(escapedMessage));    
+        } else {
+            this.message("");
+        }
+        
         this.title(incomingChanges.Title);
         this.severity(incomingChanges.Severity);
     }
