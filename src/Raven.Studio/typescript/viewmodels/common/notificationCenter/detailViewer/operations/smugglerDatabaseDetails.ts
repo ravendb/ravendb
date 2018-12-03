@@ -214,9 +214,8 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             return;
         }
 
-        const uploadedInBytes = backupStatus.UploadProgress.UploadedInBytes;
         const uploadProgress = new progress(
-            uploadedInBytes,
+            backupStatus.UploadProgress.UploadedInBytes,
             backupStatus.UploadProgress.TotalInBytes,
             (number: number) => this.sizeFormatter(number),
             backupStatus.UploadProgress.BytesPutsPerSec);
