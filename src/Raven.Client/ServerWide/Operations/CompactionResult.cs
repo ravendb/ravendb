@@ -4,7 +4,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents
+namespace Raven.Client.ServerWide.Operations
 {
     public class CompactionResult : CompactionProgressBase, IOperationResult, IOperationProgress
     {
