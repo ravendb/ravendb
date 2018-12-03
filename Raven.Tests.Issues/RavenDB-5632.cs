@@ -130,7 +130,7 @@ namespace Raven.Tests.Issues
 
                 using (var session = store2.OpenSession())
                 {
-                    var users = session.Query<User>().ToList();
+                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).ToList();
                     Assert.Equal(2, users.Count);
                     Assert.True(users[0].Name == "AnotherName Name" || users[0].Name == "AnotherName2 Name2");
                     Assert.True(users[1].Name == "AnotherName Name" || users[1].Name == "AnotherName2 Name2");
