@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             var requestStream = request.GetRequestStream();
             while ((count = await stream.ReadAsync(readBuffer, 0, readBuffer.Length)) != 0)
             {
-                await requestStream.WriteAsync(readBuffer, 0, count);
+                await requestStream.WriteAsync(readBuffer, 0, count, CancellationToken);
 
                 Progress?.UploadProgress.ChangeState(UploadState.Uploading);
                 Progress?.UploadProgress.UpdateUploaded(count);
