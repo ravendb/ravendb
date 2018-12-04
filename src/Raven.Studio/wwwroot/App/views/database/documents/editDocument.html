@@ -87,7 +87,7 @@
         </div>
         <div class="flex-window-scroll">
             <pre id="docEditor" class="form-control absolute-fill" 
-                 data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/json', readOnly: inReadOnlyMode() }, disable: isBusy, validationOptions: { errorsAsTitle: false }, validationElement: documentText, visible: !isDeleteRevision()"></pre>
+                 data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/raven_document', readOnly: inReadOnlyMode() }, disable: isBusy, validationOptions: { errorsAsTitle: false }, validationElement: documentText, visible: !isDeleteRevision()"></pre>
             <div class="absolute-fill" data-bind="visible: isDeleteRevision()">
                 <div class="absolute-center padding bg-info text-center">
                     <i class="icon-trash icon-xl"></i>
