@@ -426,7 +426,7 @@ namespace Voron.Impl.Journal
             private readonly SemaphoreSlim _fsyncLock = new SemaphoreSlim(1);
             private readonly WriteAheadJournal _waj;
             private readonly ManualResetEventSlim _waitForJournalStateUpdateUnderTx = new ManualResetEventSlim();
-            private readonly ManualResetEventSlim _waitForGatherInformationToStartSync = new ManualResetEventSlim();
+            private readonly LockTaskResponsible _flashLockTaskResponsible;
 
             private long _lastFlushedTransactionId;
             private long _lastFlushedJournalId;
@@ -434,7 +434,6 @@ namespace Voron.Impl.Journal
             private bool _ignoreLockAlreadyTaken;
             private long _totalWrittenButUnsyncedBytes;
             private Action<LowLevelTransaction> _updateJournalStateAfterFlush;
-            private Action _gatherInformationToStartSync;
             private Task _pendingSync = Task.CompletedTask;
 
             public void OnTransactionCommitted(LowLevelTransaction tx)
@@ -448,6 +447,7 @@ namespace Voron.Impl.Journal
             public JournalApplicator(WriteAheadJournal waj)
             {
                 _waj = waj;
+                _flashLockTaskResponsible = new LockTaskResponsible(_flushingLock, waj._env.Token);
             }
 
 
@@ -576,7 +576,7 @@ namespace Voron.Impl.Journal
                     ApplyJournalStateAfterFlush(token, lastProcessedJournal, lastFlushedTransactionId, unusedJournals);
 
                     _waj._env.SuggestSyncDataFileSyncDataFile();
-                    _gatherInformationToStartSync?.Invoke();
+                    _flashLockTaskResponsible.RunTaskIfNotAlreadyRan();
                 }
                 finally
                 {
@@ -826,6 +826,14 @@ namespace Voron.Impl.Journal
 
                 public bool SyncDataFile()
                 {
+                    _fsyncLockTaken = _parent._fsyncLock.Wait(0);
+                    if (_fsyncLockTaken == false)
+                    {
+                        // probably another sync taking place right now, let us schedule another one, just in case
+                        _parent._waj._env.SuggestSyncDataFileSyncDataFile();
+                        return false;
+                    }
+
                     if (WaitToGatherInformationToStartSync(_parent._waj._env.Token) == false)
                         return false;
 
@@ -882,91 +890,44 @@ namespace Voron.Impl.Journal
 
                 public bool WaitToGatherInformationToStartSync(CancellationToken token)
                 {
-                    // We need _transactionHeader to be the frozen value at the time we _started_ the
-                    // sync process
-                    try
+                    return _parent._flashLockTaskResponsible.WaitForTaskToBeDone(GatherInformationToStartSync);
+                }
+
+                private void GatherInformationToStartSync()
+                {
+                    if (_parent._waj._env.Disposed)
+                        return; // we have already disposed, nothing to do here
+
+                    if (_parent._lastFlushedJournal == null)
+                        // nothing was flushed since we last synced, nothing to do
+                        return;
+
+                    _currentTotalWrittenBytes = Interlocked.Read(ref _parent._totalWrittenButUnsyncedBytes);
+                    _lastSyncedJournal = _parent._lastFlushedJournalId;
+                    _lastSyncedTransactionId = _parent._lastFlushedTransactionId;
+                    _parent._lastFlushedJournal.SetLastReadTxHeader(_lastSyncedTransactionId, ref _transactionHeader);
+                    if (_lastSyncedTransactionId != _transactionHeader.TransactionId)
                     {
-                        _fsyncLockTaken = _parent._fsyncLock.Wait(0);
-                        if (_fsyncLockTaken == false)
-                        {
-                            // probably another sync taking place right now, let us schedule another one, just in case
-                            _parent._waj._env.SuggestSyncDataFileSyncDataFile();
-                            return false;
-                        }
-
-                        _parent._waitForGatherInformationToStartSync.Reset();
-                        _parent._gatherInformationToStartSync = GatherInformationToStartSync;
-                        do
-                        {
-                            Monitor.TryEnter(_parent._flushingLock, 0, ref _flushLockTaken);
-                            if (_flushLockTaken)
-                            {
-                                _parent._gatherInformationToStartSync?.Invoke();
-                                break;
-                            }
-
-                            try
-                            {
-                                if (_parent._waitForGatherInformationToStartSync.Wait(TimeSpan.FromMilliseconds(250), token))
-                                    break;
-                            }
-                            catch (OperationCanceledException)
-                            {
-                                _parent._gatherInformationToStartSync = null;
-                                return false;
-                            }
-                        } while (_parent._gatherInformationToStartSync == GatherInformationToStartSync);
-
-                        return true;
-
-                        void GatherInformationToStartSync()
-                        {
-                            if (token.IsCancellationRequested)
-                                return;
-
-                            if (_parent._waj._env.Disposed)
-                                return; // we have already disposed, nothing to do here
-
-                            if (_parent._lastFlushedJournal == null)
-                                // nothing was flushed since we last synced, nothing to do
-                                return;
-
-                            _currentTotalWrittenBytes = Interlocked.Read(ref _parent._totalWrittenButUnsyncedBytes);
-                            _lastSyncedJournal = _parent._lastFlushedJournalId;
-                            _lastSyncedTransactionId = _parent._lastFlushedTransactionId;
-                            _parent._lastFlushedJournal.SetLastReadTxHeader(_lastSyncedTransactionId, ref _transactionHeader);
-                            if (_lastSyncedTransactionId != _transactionHeader.TransactionId)
-                            {
-                                VoronUnrecoverableErrorException.Raise(_parent._waj._env,
-                                    $"Error syncing the data file. The last sync tx is {_lastSyncedTransactionId}, but the journal's last tx id is {_transactionHeader.TransactionId}, possible file corruption?"
-                                );
-                            }
-
-                            _parent._lastFlushedJournal = null;
-
-                            foreach (var toDelete in _parent._journalsToDelete)
-                            {
-                                if (toDelete.Key > _lastSyncedJournal)
-                                    continue;
-
-                                _journalsToDelete.Add(toDelete);
-                            }
-
-                            _parent._waj._env.Options.SetLastReusedJournalCountOnSync(_journalsToDelete.Count);
-
-                            foreach (var kvp in _journalsToDelete)
-                            {
-                                _parent._journalsToDelete.Remove(kvp.Key);
-                            }
-
-                            _parent._gatherInformationToStartSync = null;
-                            _parent._waitForGatherInformationToStartSync.Set();
-                        }
+                        VoronUnrecoverableErrorException.Raise(_parent._waj._env,
+                            $"Error syncing the data file. The last sync tx is {_lastSyncedTransactionId}, but the journal's last tx id is {_transactionHeader.TransactionId}, possible file corruption?"
+                        );
                     }
-                    finally
+
+                    _parent._lastFlushedJournal = null;
+
+                    foreach (var toDelete in _parent._journalsToDelete)
                     {
-                        if (_flushLockTaken)
-                            Monitor.Exit(_parent._flushingLock);
+                        if (toDelete.Key > _lastSyncedJournal)
+                            continue;
+
+                        _journalsToDelete.Add(toDelete);
+                    }
+
+                    _parent._waj._env.Options.SetLastReusedJournalCountOnSync(_journalsToDelete.Count);
+
+                    foreach (var kvp in _journalsToDelete)
+                    {
+                        _parent._journalsToDelete.Remove(kvp.Key);
                     }
                 }
 
@@ -974,6 +935,72 @@ namespace Voron.Impl.Journal
                 {
                     if (_fsyncLockTaken)
                         _parent._fsyncLock.Release();
+                }
+            }
+
+            private class LockTaskResponsible
+            {
+                private readonly object _lock;
+                private readonly CancellationToken _token;
+                private Action _task;
+
+                private readonly ManualResetEventSlim _waitForTaskToBeDone = new ManualResetEventSlim();
+
+                public LockTaskResponsible(object @lock, CancellationToken token)
+                {
+                    _lock = @lock;
+                    _token = token;
+                }
+
+                public bool WaitForTaskToBeDone(Action task)
+                {
+                    var flushLockTaken = false;
+                    try
+                    {
+                        _waitForTaskToBeDone.Reset();
+                        _task += task;
+                        do
+                        {
+                            Monitor.TryEnter(_lock, 0, ref flushLockTaken);
+                            if (flushLockTaken)
+                            {
+                                RunTaskIfNotAlreadyRan();
+                                break;
+                            }
+
+                            try
+                            {
+                                if (_waitForTaskToBeDone.Wait(TimeSpan.FromMilliseconds(250), _token))
+                                    break;
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                _task = null;
+                                return false;
+                            }
+                        } while (_task != task);
+
+                        return true;
+                    }
+                    finally
+                    {
+                        if (flushLockTaken)
+                            Monitor.Exit(_lock);
+                    }
+                }
+
+                public void RunTaskIfNotAlreadyRan()
+                {
+                    if (_task == null)
+                        return;
+
+                    if (_token.IsCancellationRequested)
+                        return;
+
+                    _task();
+
+                    _task = null;
+                    _waitForTaskToBeDone.Set();
                 }
             }
 
