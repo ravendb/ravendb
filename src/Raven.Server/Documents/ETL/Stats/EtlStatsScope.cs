@@ -29,6 +29,8 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public long LastLoadedEtag => _stats.LastLoadedEtag;
 
+        public int TransformationErrorCount => _stats.TransformationErrorCount;
+
         public Dictionary<EtlItemType, long> LastFilteredOutEtags => _stats.LastFilteredOutEtags;
 
         public string ChangeVector => _stats.ChangeVector;
@@ -101,6 +103,21 @@ namespace Raven.Server.Documents.ETL.Stats
         public long GetLastTransformedOrFilteredEtag(EtlItemType type)
         {
             return Math.Max(LastTransformedEtags[type], LastFilteredOutEtags[type]);
+        }
+
+        public void RecordTransformationError()
+        {
+            _stats.TransformationErrorCount++;
+        }
+
+        public void RecordLoadSuccess()
+        {
+            _stats.SuccesfullyLoaded = true;
+        }
+
+        public void RecordLoadFailure()
+        {
+            _stats.SuccesfullyLoaded = false;
         }
     }
 }

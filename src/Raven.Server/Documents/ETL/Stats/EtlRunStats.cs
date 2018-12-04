@@ -30,8 +30,12 @@ namespace Raven.Server.Documents.ETL.Stats
             {EtlItemType.Counter, 0}
         };
 
+        public int TransformationErrorCount;
+
         public string BatchCompleteReason;
 
         public string ChangeVector;
+
+        public bool? SuccesfullyLoaded;
     }
 }
