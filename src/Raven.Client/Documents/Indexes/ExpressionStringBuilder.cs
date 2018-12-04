@@ -36,6 +36,7 @@ namespace Raven.Client.Documents.Indexes
         private Dictionary<object, int> _ids;
         private readonly Dictionary<string, object> _duplicatedParams = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         private bool _castLambdas;
+        private bool _isDictionary;
 
         // Methods
         private ExpressionStringBuilder(DocumentConventions conventions, bool translateIdentityProperty, Type queryRoot,
@@ -1444,12 +1445,14 @@ namespace Raven.Client.Documents.Indexes
                 return node; // we don't do anything here on the server
             }
 
+            var isExtension = false;
             var num = 0;
             var expression = node.Object;
             if (IsExtensionMethod(node))
             {
                 num = 1;
                 expression = node.Arguments[0];
+                isExtension = true;
             }
             if (expression != null)
             {
@@ -1473,7 +1476,7 @@ namespace Raven.Client.Documents.Indexes
             {
                 Out("DynamicEnumerable.");
             }
-            else if (node.Method.IsStatic && IsExtensionMethod(node) == false)
+            else if (node.Method.IsStatic && isExtension == false)
             {
                 if (node.Method.DeclaringType == typeof(Enumerable) && node.Method.Name == "Cast")
                 {
@@ -1507,6 +1510,12 @@ namespace Raven.Client.Documents.Indexes
                         break;
                     // Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).AssemblyQualifiedName)
                     case "OfType":
+                        if (JavascriptConversionExtensions.LinqMethodsSupport
+                            .IsDictionary(node.Arguments[0].Type))
+                        {
+                            _isDictionary = true;
+                            goto default;
+                        }
                         Out("Where");
                         break;
                     case nameof(AbstractIndexCreationTask.LoadDocument):
@@ -1566,7 +1575,7 @@ namespace Raven.Client.Documents.Indexes
             }
 
             // Convert OfType<Foo>() to Where(x => x["$type"] == typeof(Foo).AssemblyQualifiedName)
-            if (node.Method.Name == "OfType")
+            if (node.Method.Name == "OfType" && _isDictionary == false)
             {
                 var type = node.Method.GetGenericArguments()[0];
                 var typeFullName = ReflectionUtil.GetFullNameWithoutVersionInformation(type);
@@ -1611,11 +1620,15 @@ namespace Raven.Client.Documents.Indexes
             var genericArguments = method.GetGenericArguments();
             if (genericArguments.All(TypeExistsOnServer) == false)
                 return; // no point if the types aren't on the server
-            switch (method.DeclaringType.Name)
+
+            if (_isDictionary == false)
             {
-                case "Enumerable":
-                case "Queryable":
-                    return; // we don't need those, we have LinqOnDynamic for it
+                switch (method.DeclaringType.Name)
+                {
+                    case "Enumerable":
+                    case "Queryable":
+                        return; // we don't need those, we have LinqOnDynamic for it
+                }
             }
 
             Out("<");
