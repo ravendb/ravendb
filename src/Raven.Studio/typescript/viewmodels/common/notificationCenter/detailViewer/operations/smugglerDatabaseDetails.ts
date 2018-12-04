@@ -4,7 +4,7 @@ import abstractNotification = require("common/notifications/models/abstractNotif
 import notificationCenter = require("common/notifications/notificationCenter");
 import abstractOperationDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/abstractOperationDetails");
 import generalUtils = require("common/generalUtils");
-import progress = require("common/helpers/database/progress");
+import genericProgress = require("common/helpers/database/genericProgress");
 
 type smugglerListItemStatus = "processed" | "skipped" | "processing" | "pending";
 
@@ -24,7 +24,7 @@ type smugglerListItem = {
 
 type uploadListItem = {
     name: string;
-    uploadProgress: progress;
+    uploadProgress: genericProgress;
 }
 
 type attachmentsListItem = {
@@ -214,7 +214,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             return;
         }
 
-        const uploadProgress = new progress(
+        const uploadProgress = new genericProgress(
             backupStatus.UploadProgress.UploadedInBytes,
             backupStatus.UploadProgress.TotalInBytes,
             (number: number) => this.sizeFormatter(number),
