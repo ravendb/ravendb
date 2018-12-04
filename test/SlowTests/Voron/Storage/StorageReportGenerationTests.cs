@@ -58,7 +58,7 @@ namespace SlowTests.Voron.Storage
 
             using (var tx = Env.ReadTransaction())
             {
-                var report = Env.GenerateDetailedReport(tx, calculateExactSizes: true);
+                var report = Env.GenerateDetailedReport(tx, includeDetails: true);
 
                 Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.UsedSpaceInBytes + report.DataFile.FreeSpaceInBytes);
                 Assert.Equal(numberOfTrees + 1/*$Database-Metadata*/, report.Trees.Count);
@@ -122,7 +122,7 @@ namespace SlowTests.Voron.Storage
 
             using (var tx = Env.ReadTransaction())
             {
-                var report = Env.GenerateDetailedReport(tx, calculateExactSizes: true);
+                var report = Env.GenerateDetailedReport(tx, includeDetails: true);
 
                 Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.UsedSpaceInBytes + report.DataFile.FreeSpaceInBytes);
                 Assert.Equal(numberOfTrees + 1/*$Database-Metadata*/, report.Trees.Count);
@@ -240,7 +240,7 @@ namespace SlowTests.Voron.Storage
 
             using (var tx = Env.ReadTransaction())
             {
-                var report = Env.GenerateDetailedReport(tx, calculateExactSizes: true);
+                var report = Env.GenerateDetailedReport(tx, includeDetails: true);
 
                 Assert.Equal(report.DataFile.AllocatedSpaceInBytes, report.DataFile.UsedSpaceInBytes + report.DataFile.FreeSpaceInBytes);
                 Assert.Equal(1 + 1/*$Database-Metadata*/, report.Trees.Count);
@@ -280,7 +280,7 @@ namespace SlowTests.Voron.Storage
 
             using (var tx = Env.ReadTransaction())
             {
-                var report = Env.GenerateDetailedReport(tx, calculateExactSizes: true);
+                var report = Env.GenerateDetailedReport(tx, includeDetails: true);
 
                 Assert.Equal(keys.Length, report.Trees[1].NumberOfEntries);
 
@@ -305,7 +305,7 @@ namespace SlowTests.Voron.Storage
 
             using (var tx = Env.ReadTransaction())
             {
-                var report = Env.GenerateDetailedReport(tx, calculateExactSizes: true);
+                var report = Env.GenerateDetailedReport(tx, includeDetails: true);
 
                 Assert.True(report.Trees[1].MultiValues.PageCount > 0);
                 Assert.Equal(report.Trees[1].MultiValues.PageCount, 
@@ -326,7 +326,7 @@ namespace SlowTests.Voron.Storage
 
             using (var tx = Env.ReadTransaction())
             {
-                var report = Env.GenerateDetailedReport(tx, calculateExactSizes: true);
+                var report = Env.GenerateDetailedReport(tx, includeDetails: true);
 
                 Assert.True(report.Trees[1].MultiValues.PageCount == 0);
                 Assert.Equal(report.Trees[1].MultiValues.PageCount, 
@@ -366,7 +366,7 @@ namespace SlowTests.Voron.Storage
 
             using (var tx = Env.ReadTransaction())
             {
-                var report = Env.GenerateDetailedReport(tx, calculateExactSizes: true);
+                var report = Env.GenerateDetailedReport(tx, includeDetails: true);
 
                 var treeReport = report.Trees.Find(x => x.Name == "streams-tree");
 

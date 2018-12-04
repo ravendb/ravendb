@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
@@ -21,7 +22,7 @@ namespace Raven.Server.Web.Studio
     public class StudioTasksHandler : RequestHandler
     {
         // return the calculated full data directory for the database before it is created according to the name & path supplied
-        [RavenAction("/studio-tasks/full-data-directory", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/admin/studio-tasks/full-data-directory", "GET", AuthorizationStatus.Operator)]
         public Task FullDataDirectory()
         {
             var path = GetStringQueryString("path", required: false);
@@ -45,6 +46,13 @@ namespace Raven.Server.Web.Studio
                 result = RavenConfiguration.GetDataDirectoryPath(ServerStore.Configuration.Core, name, ResourceType.Database);
             }
 
+            if (ServerStore.Configuration.Core.EnforceDataDirectoryPath)
+            {
+                if (PathUtil.IsSubDirectory(result, ServerStore.Configuration.Core.DataDirectory.FullPath) == false)
+                {
+                    result = $"The administrator has restricted databases to be created only under the {RavenConfiguration.GetKey(x => x.Core.DataDirectory)} directory: '{ServerStore.Configuration.Core.DataDirectory.FullPath}'.";
+                }
+            }
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {

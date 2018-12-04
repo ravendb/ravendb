@@ -1,14 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Model;
-using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Server.Documents.SqlMigration
@@ -18,6 +16,8 @@ namespace SlowTests.Server.Documents.SqlMigration
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresMySqlInlineData]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
         public async Task CanLinkOnParent(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
@@ -67,6 +67,8 @@ namespace SlowTests.Server.Documents.SqlMigration
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresMySqlInlineData]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
         public async Task CanLinkOnChild(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
@@ -114,6 +116,8 @@ namespace SlowTests.Server.Documents.SqlMigration
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
         [RequiresMySqlInlineData]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
         public async Task CanEmbedOnParent(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))

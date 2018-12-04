@@ -13,9 +13,13 @@ class simpleStudioSetting<T> extends studioSetting<T> {
     }
 
     setValue(value: T) {
-        this.value = value;
+        this.setValueLazy(value);
 
-        this.save();
+        return this.save();
+    }
+    
+    setValueLazy(value: T) {
+        this.value = value;
     }
 }
 

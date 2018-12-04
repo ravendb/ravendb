@@ -200,11 +200,13 @@ namespace Raven.Server
                                     $"2) Run the server from the command line with --ServerUrl option.{Environment.NewLine}" +
                                     $"3) Add RAVEN_ServerUrl to the Environment Variables.{Environment.NewLine}" +
                                     "For more information go to https://ravendb.net/l/EJS81M/4.2";
-                            }else if (e is SocketException && PlatformDetails.RunningOnPosix)
+                            }
+                            else if (e is SocketException && PlatformDetails.RunningOnPosix)
                             {
                                 message =
-                                    $"{Environment.NewLine}In Linux low-level port (below 1024) will need a special permission, if this is your case please run{Environment.NewLine}" +
-                                    $"sudo setcap CAP_NET_BIND_SERVICE=+eip {typeof(RavenServer).Assembly.Location}";
+                                    $"{Environment.NewLine}In Linux low-level port (below 1024) will need a special permission, " +
+                                    $"if this is your case please run{Environment.NewLine}" +
+                                    $"sudo setcap CAP_NET_BIND_SERVICE=+eip Raven.Server";
                             }
 
                             if (Logger.IsOperationsEnabled)

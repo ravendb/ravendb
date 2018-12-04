@@ -183,12 +183,11 @@ namespace Raven.Server.Documents.Queries
                     }
                     catch (Exception e)
                     {
-                        throw new ArgumentException($"Could not handle query string parameter '{item.Key}' (value: {item.Value})", e);
+                        throw new ArgumentException($"Could not handle query string parameter '{item.Key}' (value: {item.Value}) for query: {result.Query}", e);
                     }
                 }
 
-                result.Metadata = new QueryMetadata(result.Query, null, 0);
-
+                result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, 0);
                 if (result.Metadata.HasTimings)
                     result.Timings = new QueryTimingsScope(start: false);
 

@@ -59,6 +59,10 @@ class domainInfo {
         
         this.domain.extend({
             required: true,
+            pattern: {
+                params: "^[a-zA-Z0-9-]+$",
+                message: "Domain name can only contain A-Z, a-z, 0-9, '-'"
+            },
             validation: {
                 message: "Sorry, domain name is taken.",
                 async: true,
