@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Replication
@@ -16,11 +17,12 @@ namespace Raven.Client.Documents.Operations.Replication
             DelayReplicationFor = delay;
         }
 
-        public ExternalReplication ToExternalReplication(string database, long taskId)
+        public ExternalReplication ToExternalReplication(ReplicationInitialRequest request, long taskId)
         {
             return new ExternalReplication
             {
-                Database = database,
+                Url = request.SourceUrl,
+                Database = request.Database,
                 DelayReplicationFor = DelayReplicationFor,
                 MentorNode = MentorNode,
                 TaskId = taskId

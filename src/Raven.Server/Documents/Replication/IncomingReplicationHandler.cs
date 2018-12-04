@@ -43,6 +43,33 @@ namespace Raven.Server.Documents.Replication
         public event Action<IncomingReplicationHandler> DocumentsReceived;
         public event Action<LiveReplicationPulsesCollector.ReplicationPulse> HandleReplicationPulse;
 
+        public void ClearEvents()
+        {
+            if (Failed != null)
+            {
+                foreach (var del in Failed.GetInvocationList())
+                {
+                    Failed -= (Action<IncomingReplicationHandler, Exception>)del;
+                }
+            }
+
+            if (DocumentsReceived != null)
+            {
+                foreach (var del in DocumentsReceived.GetInvocationList())
+                {
+                    DocumentsReceived -= (Action<IncomingReplicationHandler>)del;
+                }
+            }
+
+            if (HandleReplicationPulse != null)
+            {
+                foreach (var del in HandleReplicationPulse.GetInvocationList())
+                {
+                    HandleReplicationPulse -= (Action<LiveReplicationPulsesCollector.ReplicationPulse>)del;
+                }
+            }
+        }
+
         public long LastDocumentEtag;
         public long LastHeartbeatTicks;
 
@@ -50,11 +77,14 @@ namespace Raven.Server.Documents.Replication
 
         private IncomingReplicationStatsAggregator _lastStats;
 
+        public readonly string PullReplicationName;
+
         public IncomingReplicationHandler(
             TcpConnectionOptions options,
             ReplicationLatestEtagRequest replicatedLastEtag,
             ReplicationLoader parent,
-            JsonOperationContext.ManagedPinnedBuffer bufferToCopy)
+            JsonOperationContext.ManagedPinnedBuffer bufferToCopy,
+            string pullReplicationName)
         {
             _connectionOptions = options;
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
@@ -65,6 +95,7 @@ namespace Raven.Server.Documents.Replication
             SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(options.Operation, options.ProtocolVersion);
             ConnectionInfo.RemoteIp = ((IPEndPoint)_tcpClient.Client.RemoteEndPoint).Address.ToString();
             _parent = parent;
+            PullReplicationName = pullReplicationName;
 
             _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
@@ -72,7 +103,6 @@ namespace Raven.Server.Documents.Replication
             _conflictManager = new ConflictManager(_database, _parent.ConflictResolver);
 
             _attachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("replication");
-
             _copiedBuffer = bufferToCopy.Clone(_connectionOptions.ContextPool);
         }
 

@@ -5,20 +5,20 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class UpdatePullReplicationCommand : UpdateDatabaseCommand
+    public class UpdatePullReplicationAsCentralCommand : UpdateDatabaseCommand
     {
         public PullReplicationDefinition Definition;
 
-        public UpdatePullReplicationCommand():base(null) { }
+        public UpdatePullReplicationAsCentralCommand():base(null) { }
 
-        public UpdatePullReplicationCommand(string databaseName) : base(databaseName)
+        public UpdatePullReplicationAsCentralCommand(string databaseName) : base(databaseName)
         {
         }
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             Definition.TaskId = etag;
-            record.PullReplications[Definition.Name] = Definition;
+            record.CentralPullReplications[Definition.Name] = Definition;
             return null;
         }
 

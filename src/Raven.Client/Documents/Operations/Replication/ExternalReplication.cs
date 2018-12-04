@@ -16,8 +16,6 @@ namespace Raven.Client.Documents.Operations.Replication
         public string MentorNode;
         public TimeSpan DelayReplicationFor;
 
-        public PullReplicationAsEdgeSettings PullReplicationAsEdgeOptions;
-
         [JsonDeserializationIgnore]
         public RavenConnectionString ConnectionString; // this is in memory only
 
@@ -35,13 +33,13 @@ namespace Raven.Client.Documents.Operations.Replication
             ConnectionStringName = connectionStringName;
         }
 
-        public static void RemoveWatcher(List<ExternalReplication> watchers, long taskId)
+        public static void RemoveExternalReplication<T>(List<T> replicationTasks, long taskId) where T : ExternalReplication
         {
-            foreach (var watcher in watchers)
+            foreach (var task in replicationTasks)
             {
-                if (watcher.TaskId != taskId)
+                if (task.TaskId != taskId)
                     continue;
-                watchers.Remove(watcher);
+                replicationTasks.Remove(task);
                 return;
             }
         }
@@ -54,7 +52,6 @@ namespace Raven.Client.Documents.Operations.Replication
             json[nameof(MentorNode)] = MentorNode;
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(DelayReplicationFor)] = DelayReplicationFor;
-            json[nameof(PullReplicationAsEdgeOptions)] = PullReplicationAsEdgeOptions?.ToJson();
             return json;
         }
 
@@ -63,7 +60,7 @@ namespace Raven.Client.Documents.Operations.Replication
             return $"[{Database} @ {Url}]";
         }
 
-        public ulong GetTaskKey()
+        public virtual ulong GetTaskKey()
         {
             var hashCode = CalculateStringHash(Database);
             hashCode = (hashCode * 397) ^ CalculateStringHash(ConnectionStringName);
@@ -98,7 +95,7 @@ namespace Raven.Client.Documents.Operations.Replication
             return MentorNode;
         }
 
-        public string GetDefaultTaskName()
+        public virtual string GetDefaultTaskName()
         {
             return $"External Replication to {ConnectionStringName}";
         }
@@ -106,33 +103,6 @@ namespace Raven.Client.Documents.Operations.Replication
         public string GetTaskName()
         {
             return Name;
-        }
-    }
-
-    public class PullReplicationAsEdgeSettings
-    {
-        public string CertificateWithPrivateKey; // base64
-        public string CertificatePassword;
-
-        public string PullReplicationDefinition;
-        public PullReplicationAsEdgeSettings() { }
-
-        public PullReplicationAsEdgeSettings(string pullReplicationDefinition)
-        {
-            PullReplicationDefinition = pullReplicationDefinition;
-        }
-
-        public DynamicJsonValue ToJson()
-        {
-            if (string.IsNullOrEmpty(PullReplicationDefinition))
-                throw new ArgumentException("Must be not empty", nameof(PullReplicationDefinition));
-
-            return new DynamicJsonValue
-            {
-                [nameof(CertificateWithPrivateKey)] = CertificateWithPrivateKey,
-                [nameof(PullReplicationDefinition)] = PullReplicationDefinition,
-                [nameof(CertificatePassword)] = CertificatePassword
-            };
         }
     }
 }

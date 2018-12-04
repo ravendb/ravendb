@@ -23,6 +23,8 @@ namespace Raven.Client.Documents.Replication.Messages
 
         public string Database { get; set; }
 
+        public string SourceUrl { get; set; }
+
         public string DatabaseGroupId { get; set; }
     }
 }

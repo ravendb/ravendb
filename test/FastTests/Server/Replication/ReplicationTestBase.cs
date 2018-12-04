@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -193,10 +194,10 @@ namespace FastTests.Server.Replication
             }
         }
 
-        protected static async Task<ModifyOngoingTaskResult> AddWatcherToReplicationTopology(
+        protected static async Task<ModifyOngoingTaskResult> AddWatcherToReplicationTopology<T>(
             DocumentStore store,
-            ExternalReplication watcher,
-            string[] urls = null)
+            T watcher,
+            string[] urls = null) where T : ExternalReplication
         {
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
             {
@@ -205,7 +206,15 @@ namespace FastTests.Server.Replication
                 TopologyDiscoveryUrls = urls ?? store.Urls
             }));
 
-            var op = new UpdateExternalReplicationOperation(watcher);
+            IMaintenanceOperation<ModifyOngoingTaskResult> op;
+            if (watcher is PullReplicationAsEdge pull)
+            {
+                op = new UpdatePullReplicationAsEdgeOperation(pull);
+            }
+            else
+            {
+                op = new UpdateExternalReplicationOperation(watcher);
+            }
             return await store.Maintenance.SendAsync(op);
         }
 

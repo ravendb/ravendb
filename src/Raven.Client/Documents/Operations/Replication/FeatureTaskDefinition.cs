@@ -37,13 +37,10 @@ namespace Raven.Client.Documents.Operations.Replication
         {
             if (string.IsNullOrEmpty(thumbprint))
             {
-                if (Certificates == null || Certificates.Count == 0)
-                    return true;
-
                 return false;
             }
 
-            if (Certificates.ContainsKey(thumbprint))
+            if (Certificates?.ContainsKey(thumbprint) == true)
                 return true; // we will authenticate the certificate later on the tcp level.
 
             return false;

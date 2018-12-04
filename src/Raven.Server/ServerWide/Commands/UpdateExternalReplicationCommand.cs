@@ -30,7 +30,7 @@ namespace Raven.Server.ServerWide.Commands
             else
             {
                 //modified watcher, remove the old one
-                ExternalReplication.RemoveWatcher(record.ExternalReplications, Watcher.TaskId);
+                ExternalReplication.RemoveExternalReplication(record.ExternalReplications, Watcher.TaskId);
             }
             //this covers the case of a new watcher and edit of an old watcher
             if (string.IsNullOrEmpty(Watcher.Name))

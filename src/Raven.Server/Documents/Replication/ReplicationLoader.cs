@@ -184,26 +184,7 @@ namespace Raven.Server.Documents.Replication
                     var initialRequest = JsonDeserializationServer.ReplicationInitialRequest(readerObject);
                     if (initialRequest.PullReplicationDefinitionName != null)
                     {
-                        PullReplicationDefinition pullReplicationDefinition;
-                        using (_server.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                        using (ctx.OpenReadTransaction())
-                        {
-                            pullReplicationDefinition = _server.Cluster.ReadPullReplicationDefinition(Database.Name, initialRequest.PullReplicationDefinitionName, ctx);
-                        }
-
-                        var taskId = Hashing.Mix(Hashing.XXHash64.Calculate(initialRequest.DatabaseGroupId, Encodings.Utf8));
-                        var externalReplication = pullReplicationDefinition.ToExternalReplication(initialRequest.Database, taskId);
-                        var outgoingReplication = new OutgoingReplicationHandler(this, Database, externalReplication, external: true, initialRequest.Info)
-                        {
-                            PullReplicationDefinitionName = initialRequest.PullReplicationDefinitionName
-                        };
-
-                        outgoingReplication.Failed += OnOutgoingSendingFailed;
-                        outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
-                        _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
-
-                        outgoingReplication.StartPullReplicationAsCentral(tcpConnectionOptions.Stream, supportedVersions);
-                        OutgoingReplicationAdded?.Invoke(outgoingReplication);
+                        CreatePullReplicationAsCentral(tcpConnectionOptions, initialRequest, supportedVersions);
                         return;
                     }
                 }
@@ -212,19 +193,58 @@ namespace Raven.Server.Documents.Replication
             CreateIncomingInstance(tcpConnectionOptions, buffer);
         }
 
-        public void RunPullReplicationAsEdge(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer, ReplicationNode destination)
+        private void CreatePullReplicationAsCentral(TcpConnectionOptions tcpConnectionOptions, ReplicationInitialRequest initialRequest, TcpConnectionHeaderMessage.SupportedFeatures supportedVersions)
         {
-            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer);
-            IncomingReplicationAdded?.Invoke(newIncoming);
+            PullReplicationDefinition pullReplicationDefinition;
+            using (_server.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                pullReplicationDefinition = _server.Cluster.ReadPullReplicationDefinition(Database.Name, initialRequest.PullReplicationDefinitionName, ctx);
+            }
+
+            var taskId = pullReplicationDefinition.TaskId; // every connection to this pull replication on the central will have the same task id.
+            var externalReplication = pullReplicationDefinition.ToExternalReplication(initialRequest, taskId);
+            var outgoingReplication = new OutgoingReplicationHandler(this, Database, externalReplication, external: true, initialRequest.Info)
+            {
+                PullReplicationDefinitionName = initialRequest.PullReplicationDefinitionName
+            };
+
+            outgoingReplication.Failed += OnOutgoingSendingFailed;
+            outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
+            _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
+            Console.WriteLine($"({_server.GetNodeHttpServerUrl()}) Central to {initialRequest.SourceUrl}");
+
+            outgoingReplication.StartPullReplicationAsCentral(tcpConnectionOptions.Stream, supportedVersions);
+            OutgoingReplicationAdded?.Invoke(outgoingReplication);
+        }
+
+        public void RunPullReplicationAsEdge(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer, PullReplicationAsEdge destination)
+        {
+            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, destination.CentralPullReplicationName);
             newIncoming.Failed += RetryPullReplication;
 
-            // Update current thread name
+            PoolOfThreads.PooledThread.ResetCurrentThreadName();
+            Thread.CurrentThread.Name = $"Pull Replication as Edge from {destination.Database} at {destination.Url}";
+            _incoming[newIncoming.ConnectionInfo.SourceDatabaseId] = newIncoming;
+            IncomingReplicationAdded?.Invoke(newIncoming);
+            Console.WriteLine($"({_server.GetNodeHttpServerUrl()}) Edge from {newIncoming.ConnectionInfo.SourceUrl}");
             newIncoming.DoIncomingReplication();
 
-            void RetryPullReplication(IncomingReplicationHandler incomingReplicationHandler, Exception exception)
+            void RetryPullReplication(IncomingReplicationHandler instance, Exception e)
             {
+                Console.WriteLine($"Edge Failed to recieve from {instance.ConnectionInfo.SourceUrl}");
+                using (instance)
+                {
+                    if (_incoming.TryRemove(instance.ConnectionInfo.SourceDatabaseId, out _))
+                        IncomingReplicationRemoved?.Invoke(instance);
+
+                    instance.Failed -= RetryPullReplication;
+                    instance.DocumentsReceived -= OnIncomingReceiveSucceeded;
+                    if (_log.IsInfoEnabled)
+                        _log.Info($"Pull replication edge handler has thrown an unhandled exception. ({instance.FromToString})", e);
+                }
+
                 // if the stream closed, it is our duty to reconnect
-                incomingReplicationHandler.Failed -= RetryPullReplication;
                 AddAndStartOutgoingReplication(destination, true);
             }
         }
@@ -232,6 +252,7 @@ namespace Raven.Server.Documents.Replication
         public IncomingReplicationHandler CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
             var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer);
+            newIncoming.Failed += OnIncomingReceiveFailed;
 
             // need to safeguard against two concurrent connection attempts
             var newConnection = _incoming.GetOrAdd(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming);
@@ -249,7 +270,8 @@ namespace Raven.Server.Documents.Replication
 
         private IncomingReplicationHandler CreateIncomingReplicationHandler(
             TcpConnectionOptions tcpConnectionOptions, 
-            JsonOperationContext.ManagedPinnedBuffer buffer)
+            JsonOperationContext.ManagedPinnedBuffer buffer,
+            string pullReplicationName = null)
         {
             var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, buffer);
 
@@ -257,9 +279,9 @@ namespace Raven.Server.Documents.Replication
                 tcpConnectionOptions,
                 getLatestEtagMessage,
                 this,
-                buffer);
+                buffer,
+                pullReplicationName);
 
-            newIncoming.Failed += OnIncomingReceiveFailed;
             newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
             return newIncoming;
         }
@@ -486,10 +508,11 @@ namespace Raven.Server.Documents.Replication
 
         private void HandleTopologyChange(DatabaseRecord newRecord)
         {
-            var instancesToDispose = new List<OutgoingReplicationHandler>();
+            var instancesToDispose = new List<IDisposable>();
             if (newRecord == null || _server.IsPassive())
             {
                 DropOutgoingConnections(Destinations, instancesToDispose);
+                DropIncomingConnections(Destinations, instancesToDispose);
                 _internalDestinations.Clear();
                 _externalDestinations.Clear();
                 _destinations.Clear();
@@ -501,6 +524,7 @@ namespace Raven.Server.Documents.Replication
 
             HandleInternalReplication(newRecord, instancesToDispose);
             HandleExternalReplication(newRecord, instancesToDispose);
+            HandleCentralPullReplication(newRecord, instancesToDispose);
             var destinations = new List<ReplicationNode>();
             destinations.AddRange(_internalDestinations);
             destinations.AddRange(_externalDestinations);
@@ -510,11 +534,66 @@ namespace Raven.Server.Documents.Replication
             DisposeConnections(instancesToDispose);
         }
 
-        private void DisposeConnections(List<OutgoingReplicationHandler> instancesToDispose)
+        private void HandleCentralPullReplication(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)
+        {
+            foreach (var instance in OutgoingHandlers)
+            {
+                if (instance.PullReplicationDefinitionName == null)
+                    continue;
+
+                if (newRecord.CentralPullReplications.TryGetValue(instance.PullReplicationDefinitionName, out var pullReplication))
+                {
+                    // update the destination
+                    var current = instance.Destination as ExternalReplication;
+                    if (current.DelayReplicationFor != pullReplication.DelayReplicationFor)
+                    {
+                        current.DelayReplicationFor = pullReplication.DelayReplicationFor;
+                        instance.NextReplicateTicks = 0;
+                    }
+                    current.MentorNode = pullReplication.MentorNode;
+                    continue;
+                }
+
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Stopping replication to {instance.Destination.FromString()}");
+
+                instance.Failed -= OnOutgoingSendingFailed;
+                instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
+                instancesToDispose.Add(instance);
+                _outgoing.TryRemove(instance);
+                _lastSendEtagPerDestination.TryRemove(instance.Destination, out LastEtagPerDestination _);
+                _outgoingFailureInfo.TryRemove(instance.Destination, out ConnectionShutdownInfo info);
+                if (info != null)
+                    _reconnectQueue.TryRemove(info);
+            }
+        }
+
+        private void DropIncomingConnections(IEnumerable<ReplicationNode> connectionsToRemove, List<IDisposable> instancesToDispose)
+        {
+            var toRemove = connectionsToRemove?.ToList();
+            if (toRemove == null || toRemove.Count  == 0)
+                return;
+
+            // this is relevant for edge pull replication
+            foreach (var incoming in _incoming)
+            {
+                var instance = incoming.Value;
+                if (toRemove.Any(conn => conn.Url == instance.ConnectionInfo.SourceUrl))
+                {
+                    if (_incoming.TryRemove(instance.ConnectionInfo.SourceDatabaseId, out _))
+                        IncomingReplicationRemoved?.Invoke(instance);
+
+                    instance.ClearEvents();
+                    instancesToDispose.Add(instance);
+                }
+            }
+        }
+
+        private void DisposeConnections(List<IDisposable> instancesToDispose)
         {
             TaskExecutor.Execute(toDispose =>
             {
-                Parallel.ForEach((List<OutgoingReplicationHandler>)toDispose, instance =>
+                Parallel.ForEach((List<IDisposable>)toDispose, instance =>
                 {
                     try
                     {
@@ -523,17 +602,33 @@ namespace Raven.Server.Documents.Replication
                     catch (Exception e)
                     {
                         if (_log.IsInfoEnabled)
-                            _log.Info($"Failed to dispose outgoing replication to {instance?.DestinationFormatted}", e);
+                        {
+                            switch (instance)
+                            {
+                                case OutgoingReplicationHandler outHandler:
+                                    _log.Info($"Failed to dispose outgoing replication to {outHandler.DestinationFormatted}", e);
+                                    break;
+                                case IncomingReplicationHandler inHandler:
+                                    _log.Info($"Failed to dispose incoming replication to {inHandler.SourceFormatted}", e);
+                                    break;
+                                default:
+                                    _log.Info($"Failed to dispose an unknown type '{instance?.GetType()}", e);
+                                    break;
+                            }
+                        }
                     }
                 });
             }, instancesToDispose);
         }
 
         private (List<ExternalReplication> AddedDestinations, List<ExternalReplication> RemovedDestiantions) FindExternalReplicationChanges(
-            HashSet<ExternalReplication> current, List<ExternalReplication> newDestinations)
+            HashSet<ExternalReplication> current, 
+            List<ExternalReplication> newDestinations)
         {
             if (newDestinations == null)
                 newDestinations = new List<ExternalReplication>();
+
+            var outgoingHandlers = OutgoingHandlers.ToList();
 
             var addedDestinations = new List<ExternalReplication>();
             var removedDestinations = current.ToList();
@@ -543,18 +638,41 @@ namespace Raven.Server.Documents.Replication
                     continue;
 
                 removedDestinations.Remove(newDestination);
-                if (current.Contains(newDestination) == false)
-                    addedDestinations.Add(newDestination);
+                if (current.TryGetValue(newDestination, out var actual))
+                {
+                    // if we update the delay we don't want to break the replication (the hash code will be the same),
+                    // but we need to update the Destination instance
+
+                    // ReSharper disable once PossibleUnintendedReferenceComparison
+                    var handler = outgoingHandlers.Find(o => o.Destination == actual); // we explicitly compare references.
+                    if (handler == null)
+                        continue;
+
+                    if (handler.Destination is ExternalReplication ex)
+                    {
+                        if (ex.DelayReplicationFor != actual.DelayReplicationFor)
+                            handler.NextReplicateTicks = 0;
+
+                        ex.DelayReplicationFor = newDestination.DelayReplicationFor;
+                        ex.MentorNode = newDestination.MentorNode;
+                    }
+                    continue;
+                }
+
+                addedDestinations.Add(newDestination);
             }
 
             return (addedDestinations, removedDestinations);
         }
 
-        private void HandleExternalReplication(DatabaseRecord newRecord, List<OutgoingReplicationHandler> instancesToDispose)
+        private void HandleExternalReplication(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)
         {
-            var changes = FindExternalReplicationChanges(_externalDestinations, newRecord.ExternalReplications);
+            var externalReplications = newRecord.ExternalReplications.Concat(newRecord.EdgePullReplications).ToList();
+            var changes = FindExternalReplicationChanges(_externalDestinations, externalReplications);
 
             DropOutgoingConnections(changes.RemovedDestiantions, instancesToDispose);
+            DropIncomingConnections(changes.RemovedDestiantions, instancesToDispose);
+
             var newDestinations = changes.AddedDestinations.Where(configuration =>
             {
                 var taskStatus = GetExternalReplicationState(_server, Database.Name, configuration.TaskId);
@@ -676,7 +794,7 @@ namespace Raven.Server.Documents.Replication
             return true;
         }
 
-        private void HandleInternalReplication(DatabaseRecord newRecord, List<OutgoingReplicationHandler> instancesToDispose)
+        private void HandleInternalReplication(DatabaseRecord newRecord, List<IDisposable> instancesToDispose)
         {
             var newInternalDestinations =
                 newRecord.Topology?.GetDestinations(_server.NodeTag, Database.Name, newRecord.DeletionInProgress, _clusterTopology, _server.Engine.CurrentState);
@@ -732,7 +850,7 @@ namespace Raven.Server.Documents.Replication
                 _log.Info("Finished initialization of outgoing replications..");
         }
 
-        private void DropOutgoingConnections(IEnumerable<ReplicationNode> connectionsToRemove, List<OutgoingReplicationHandler> instancesToDispose)
+        private void DropOutgoingConnections(IEnumerable<ReplicationNode> connectionsToRemove, List<IDisposable> instancesToDispose)
         {
             var toRemove = connectionsToRemove.ToList();
             foreach (var replication in _reconnectQueue.ToList())
@@ -800,57 +918,25 @@ namespace Raven.Server.Documents.Replication
             _outgoingFailureInfo.TryAdd(node, shutdownInfo);
             try
             {
+                var certificate = GetCertificateForReplication(node, out _);
+
                 if (node is ExternalReplication exNode)
                 {
                     var database = exNode.ConnectionString.Database;
-                    var certificate = GetCertificateForReplication(exNode, out _);
-
-                    if (exNode.PullReplicationAsEdgeOptions == null)
+                    if (node is PullReplicationAsEdge edge)
                     {
-                        // normal external replication
-                        using (var requestExecutor = RequestExecutor.Create(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.ConnectionString.Database, certificate,
-                            DocumentConventions.Default))
-                        using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                        {
-                            var cmd = new GetTcpInfoCommand("external-replication", database);
-                            requestExecutor.Execute(cmd, ctx);
-                            node.Database = database;
-                            node.Url = requestExecutor.Url;
-                            return cmd.Result;
-                        }
+                        return GetPullReplicationTcpInfo(edge, certificate, database);
                     }
 
-                    var remoteTask = exNode.PullReplicationAsEdgeOptions.PullReplicationDefinition;
-                    using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                    {
-                        string[] remoteDatabaseUrls;
-                        // fetch central cluster node urls
-                        using (var requestExecutor = RequestExecutor.CreateForFixedTopology(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.ConnectionString.Database,
-                            certificate, DocumentConventions.Default))
-                        {
-                            var cmd = new GetRemoteTaskTopologyCommand(database, Database.DatabaseGroupId, remoteTask);
-                            requestExecutor.Execute(cmd, ctx);
-                            remoteDatabaseUrls = cmd.Result;
-                        }
-
-                        // fetch tcp info for the central nodes
-                        using (var requestExecutor = RequestExecutor.CreateForFixedTopology(remoteDatabaseUrls,
-                            exNode.ConnectionString.Database, certificate, DocumentConventions.Default))
-                        {
-                            var cmd = new GetTcpInfoForRemoteTaskCommand(database, remoteTask);
-                            requestExecutor.Execute(cmd, ctx);
-                            node.Database = database;
-                            node.Url = requestExecutor.Url;
-                            return cmd.Result;
-                        }
-                    }
+                    // normal external replication
+                    return GetExternalReplicationTcpInfo(exNode, certificate, database);
                 }
 
                 if (node is InternalReplication internalNode)
                 {
                     using (var cts = new CancellationTokenSource(_server.Engine.TcpConnectionTimeout))
                     {
-                        return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, "Replication", _server.Server.Certificate.Certificate, cts.Token);
+                        return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, "Replication", certificate, cts.Token);
                     }
                 }
 
@@ -868,7 +954,49 @@ namespace Raven.Server.Documents.Replication
 
             return null;
         }
-        
+
+        private TcpConnectionInfo GetPullReplicationTcpInfo(PullReplicationAsEdge pullReplicationAsEdge, X509Certificate2 certificate, string database)
+        {
+            var remoteTask = pullReplicationAsEdge.CentralPullReplicationName;
+            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                string[] remoteDatabaseUrls;
+                // fetch central cluster node urls
+                using (var requestExecutor = RequestExecutor.CreateForFixedTopology(pullReplicationAsEdge.ConnectionString.TopologyDiscoveryUrls, pullReplicationAsEdge.ConnectionString.Database,
+                    certificate, DocumentConventions.Default))
+                {
+                    var cmd = new GetRemoteTaskTopologyCommand(database, Database.DatabaseGroupId, remoteTask);
+                    requestExecutor.Execute(cmd, ctx);
+                    remoteDatabaseUrls = cmd.Result;
+                }
+
+                // fetch tcp info for the central nodes
+                using (var requestExecutor = RequestExecutor.CreateForFixedTopology(remoteDatabaseUrls,
+                    pullReplicationAsEdge.ConnectionString.Database, certificate, DocumentConventions.Default))
+                {
+                    var cmd = new GetTcpInfoForRemoteTaskCommand(database, remoteTask);
+                    requestExecutor.Execute(cmd, ctx);
+                    pullReplicationAsEdge.Database = database;
+                    pullReplicationAsEdge.Url = requestExecutor.Url;
+                    return cmd.Result;
+                }
+            }
+        }
+
+        private TcpConnectionInfo GetExternalReplicationTcpInfo(ExternalReplication exNode, X509Certificate2 certificate, string database)
+        {
+            using (var requestExecutor = RequestExecutor.Create(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.ConnectionString.Database, certificate,
+                DocumentConventions.Default))
+            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                var cmd = new GetTcpInfoCommand("external-replication", database);
+                requestExecutor.Execute(cmd, ctx);
+                exNode.Database = database;
+                exNode.Url = requestExecutor.Url;
+                return cmd.Result;
+            }
+        }
+
         public X509Certificate2 GetCertificateForReplication(ReplicationNode node, out TcpConnectionHeaderMessage.AuthorizationInfo authorizationInfo)
         {
             authorizationInfo = null;
@@ -876,23 +1004,34 @@ namespace Raven.Server.Documents.Replication
             if (exNode == null) // internal replication
                 return _server.Server.Certificate.Certificate;
 
-            var options = exNode.PullReplicationAsEdgeOptions;
-            if (options == null) // normal external replication
+            var edge = exNode as PullReplicationAsEdge;
+            if (edge == null) // normal external replication
                 return _server.Server.Certificate.Certificate;
 
             // pull replication
             authorizationInfo = new TcpConnectionHeaderMessage.AuthorizationInfo
             {
                 AuthorizeAs = TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication,
-                AuthorizationFor = options.PullReplicationDefinition
+                AuthorizationFor = edge.CentralPullReplicationName
             };
 
-            if (options.CertificateWithPrivateKey == null)
+            if (edge.CertificateWithPrivateKey == null)
                 return _server.Server.Certificate.Certificate;
 
-            var certBytes = Convert.FromBase64String(options.CertificateWithPrivateKey);
-            return new X509Certificate2(certBytes, options.CertificatePassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+            var certBytes = Convert.FromBase64String(edge.CertificateWithPrivateKey);
+            return new X509Certificate2(certBytes, edge.CertificatePassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
 
+        }
+
+        public (string Url, OngoingTaskConnectionStatus Status) GetPullReplicationAsEdgeDestination(string name)
+        {
+            foreach (var incoming in IncomingHandlers)
+            {
+                if (incoming.PullReplicationName == name)
+                    return (incoming.ConnectionInfo.SourceUrl, OngoingTaskConnectionStatus.Active);
+            }
+           
+            return (null, OngoingTaskConnectionStatus.NotActive);
         }
 
         public (string Url, OngoingTaskConnectionStatus Status) GetExternalReplicationDestination(long taskId)
@@ -933,6 +1072,9 @@ namespace Raven.Server.Documents.Replication
 
                 _outgoing.TryRemove(instance);
                 OutgoingReplicationRemoved?.Invoke(instance);
+
+                if (instance.IsPullReplicationAsCentral)
+                    _externalDestinations.Remove(instance.Destination as ExternalReplication);
 
                 if (_outgoingFailureInfo.TryGetValue(instance.Node, out ConnectionShutdownInfo failureInfo) == false)
                     return;

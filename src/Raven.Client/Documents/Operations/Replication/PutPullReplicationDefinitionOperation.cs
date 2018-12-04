@@ -9,11 +9,11 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class PutPullReplicationOperation : IMaintenanceOperation<ModifyOngoingTaskResult>
+    public class PutPullReplicationDefinitionOperation : IMaintenanceOperation<ModifyOngoingTaskResult>
     {
         private readonly FeatureTaskDefinition _pullReplicationDefinition;
 
-        public PutPullReplicationOperation(string name)
+        public PutPullReplicationDefinitionOperation(string name)
         {
             if (string.IsNullOrEmpty(name))
             {
@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations.Replication
             _pullReplicationDefinition = new PullReplicationDefinition(name);
         }
 
-        public PutPullReplicationOperation(PullReplicationDefinition pullReplicationDefinition)
+        public PutPullReplicationDefinitionOperation(PullReplicationDefinition pullReplicationDefinition)
         {
             if (string.IsNullOrEmpty(pullReplicationDefinition.Name))
             {
@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Operations.Replication
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/tasks/pull-replication";
+                url = $"{node.Url}/databases/{node.Database}/admin/tasks/central-pull-replication";
 
                 var request = new HttpRequestMessage
                 {

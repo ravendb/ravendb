@@ -14,7 +14,9 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         RavenEtl,
         SqlEtl,
         Backup,
-        Subscription
+        Subscription,
+        PullReplicationAsCentral,
+        PullReplicationAsEdge
     }
 
     public enum OngoingTaskState
@@ -99,6 +101,54 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(MentorNode)] = MentorNode;
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(DelayReplicationFor)] = DelayReplicationFor;
+            return json;
+        }
+    }
+
+    public class OngoingTaskPullReplicationAsCentral : OngoingTask
+    {
+        public OngoingTaskPullReplicationAsCentral()
+        {
+            TaskType = OngoingTaskType.PullReplicationAsCentral;
+        }
+
+        public string DestinationUrl { get; set; }
+        public string DestinationDatabase { get; set; }
+        public string MentorNode { get; set; }
+        public TimeSpan DelayReplicationFor { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(DestinationUrl)] = DestinationUrl;
+            json[nameof(DestinationDatabase)] = DestinationDatabase;
+            json[nameof(MentorNode)] = MentorNode;
+            json[nameof(DelayReplicationFor)] = DelayReplicationFor;
+            return json;
+        }
+    }
+
+    public class OngoingTaskPullReplicationAsEdge : OngoingTask
+    {
+        public OngoingTaskPullReplicationAsEdge()
+        {
+            TaskType = OngoingTaskType.PullReplicationAsEdge;
+        }
+
+        public string DestinationUrl { get; set; }
+        public string[] TopologyDiscoveryUrls { get; set; }
+        public string DestinationDatabase { get; set; }
+        public string MentorNode { get; set; }
+        public string ConnectionStringName { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(DestinationUrl)] = DestinationUrl;
+            json[nameof(TopologyDiscoveryUrls)] = TopologyDiscoveryUrls;
+            json[nameof(DestinationDatabase)] = DestinationDatabase;
+            json[nameof(MentorNode)] = MentorNode;
+            json[nameof(ConnectionStringName)] = ConnectionStringName;
             return json;
         }
     }

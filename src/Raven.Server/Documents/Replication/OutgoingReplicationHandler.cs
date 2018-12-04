@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Replication
         public event Action<OutgoingReplicationHandler, Exception> Failed;
 
         public event Action<OutgoingReplicationHandler> SuccessfulTwoWaysCommunication;
-        public readonly ReplicationNode Destination;
+        public ReplicationNode Destination;
         private readonly bool _external;
 
         private readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
@@ -119,12 +119,21 @@ namespace Raven.Server.Documents.Replication
         {
             SupportedFeatures = supportedVersions;
             _stream = stream;
-
+            IsPullReplicationAsCentral = true;
+            OutgoingReplicationThreadName = $"Pull replication as central {FromToString}";
             _longRunningSendingWork =
                 PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(PullReplication), null, OutgoingReplicationThreadName);
         }
 
-        public string OutgoingReplicationThreadName => $"Outgoing replication {FromToString}";
+        private string _outgoingReplicationThreadName;
+
+        public string OutgoingReplicationThreadName
+        {
+            set => _outgoingReplicationThreadName = value;
+            get => _outgoingReplicationThreadName ?? (_outgoingReplicationThreadName = $"Outgoing replication {FromToString}");
+        }
+
+        public bool IsPullReplicationAsCentral;
 
         public string GetNode()
         {
@@ -138,7 +147,7 @@ namespace Raven.Server.Documents.Replication
 
             AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
             if (_log.IsInfoEnabled)
-                _log.Info($"Pull replicate to {Destination.FromString()}");
+                _log.Info($"Start pull replication as central {FromToString}");
 
             using (_stream)
             using (_interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
@@ -206,20 +215,20 @@ namespace Raven.Server.Documents.Replication
 
         private bool SendPreliminaryData()
         {
-            var destination = Destination as ExternalReplication;
-            var isPullReplication = destination?.PullReplicationAsEdgeOptions != null;
+            var destination = Destination as PullReplicationAsEdge;
 
             var request = new DynamicJsonValue
             {
                 ["Type"] = nameof(ReplicationInitialRequest),
             };
 
-            if (isPullReplication)
+            if (destination != null)
             {
                 request[nameof(ReplicationInitialRequest.Database)] = _parent.Database.Name; // my database
                 request[nameof(ReplicationInitialRequest.DatabaseGroupId)] = _parent.Database.DatabaseGroupId; // my database id
+                request[nameof(ReplicationInitialRequest.SourceUrl)] = _parent._server.GetNodeHttpServerUrl(); 
                 request[nameof(ReplicationInitialRequest.Info)] = _parent._server.GetTcpInfoAndCertificates(null); // my connection info
-                request[nameof(ReplicationInitialRequest.PullReplicationDefinitionName)] = destination.PullReplicationAsEdgeOptions.PullReplicationDefinition;
+                request[nameof(ReplicationInitialRequest.PullReplicationDefinitionName)] = destination.CentralPullReplicationName;
             }
 
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
@@ -229,7 +238,7 @@ namespace Raven.Server.Documents.Replication
                 writer.Flush();
             }
 
-            return isPullReplication;
+            return destination != null;
         }
 
         private void InitiatePullReplicationAsEdge(TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures)
@@ -247,7 +256,7 @@ namespace Raven.Server.Documents.Replication
             using (_parent._server.Server._tcpContextPool.AllocateOperationContext(out var ctx))
             using (ctx.GetManagedBuffer(out _buffer))
             {
-                _parent.RunPullReplicationAsEdge(tcpOptions, _buffer, Destination);
+                _parent.RunPullReplicationAsEdge(tcpOptions, _buffer, Destination as PullReplicationAsEdge);
             }
         }
 
@@ -332,14 +341,15 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        public long NextReplicateTicks;
+
         private void Replicate()
         {
-            DateTime nextReplicateAt = default(DateTime);
             var documentSender = new ReplicationDocumentSender(_stream, this, _log);
 
             while (_cts.IsCancellationRequested == false)
             {
-                while (_database.Time.GetUtcNow() > nextReplicateAt)
+                while (_database.Time.GetUtcNow().Ticks > NextReplicateTicks)
                 {
                     if (_parent.DebugWaitAndRunReplicationOnce != null)
                     {
@@ -363,13 +373,14 @@ namespace Raven.Server.Documents.Replication
                                     _parent.EnsureNotDeleted(dest.NodeTag);
                                 }
 
-                                var didWork = documentSender.ExecuteReplicationOnce(scope, ref nextReplicateAt);
+                                var didWork = documentSender.ExecuteReplicationOnce(scope, ref NextReplicateTicks);
                                 if (documentSender.MissingAttachmentsInLastBatch)
                                     continue;
                                 if (didWork == false)
                                     break;
 
-                                if (Destination is ExternalReplication externalReplication)
+                                if (Destination is ExternalReplication externalReplication && 
+                                    IsPullReplicationAsCentral == false) // we might have a lot of pull connections and we don't want to keep track of them.
                                 {
                                     var taskId = externalReplication.TaskId;
                                     UpdateExternalReplicationInfo(taskId);
@@ -428,7 +439,7 @@ namespace Raven.Server.Documents.Replication
                             SendHeartbeat(DocumentsStorage.GetDatabaseChangeVector(ctx));
                             _parent.CompleteDeletionIfNeeded(_cts);
                         }
-                        else if (nextReplicateAt > DateTime.UtcNow)
+                        else if (NextReplicateTicks > DateTime.UtcNow.Ticks)
                         {
                             SendHeartbeat(null);
                         }

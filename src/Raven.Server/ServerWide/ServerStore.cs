@@ -1260,6 +1260,21 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(addWatcherCommand);
         }
 
+        public Task<(long Index, object Result)> UpdatePullReplicationAsEdge(string dbName, BlittableJsonReaderObject blittableJson, out PullReplicationAsEdge pullReplicationAsEdge)
+        {
+            if (blittableJson.TryGet(nameof(UpdatePullReplicationAsEdgeCommand.PullReplicationAsEdge), out BlittableJsonReaderObject pullReplicationBlittable) == false)
+            {
+                throw new InvalidDataException($"{nameof(UpdatePullReplicationAsEdgeCommand.PullReplicationAsEdge)} was not found.");
+            }
+
+            pullReplicationAsEdge = JsonDeserializationClient.EdgePullReplication(pullReplicationBlittable);
+            var pullReplicationAsEdgeCommand = new UpdatePullReplicationAsEdgeCommand(dbName)
+            {
+                PullReplicationAsEdge = pullReplicationAsEdge
+            };
+            return SendToLeaderAsync(pullReplicationAsEdgeCommand);
+        }
+
         public Task<(long Index, object Result)> DeleteOngoingTask(long taskId, string taskName, OngoingTaskType taskType, string dbName)
         {
             var deleteTaskCommand =
