@@ -36,7 +36,12 @@ namespace Raven.Server.Documents.ETL
 
         protected Logger Logger;
 
-        public Action<(string ConfigurationName, string TransformationName, EtlProcessStatistics Statistics)> BatchCompleted;
+        public event Action<(string ConfigurationName, string TransformationName, EtlProcessStatistics Statistics)> BatchCompleted;
+
+        public void OnBatchCompleted(string configurationName, string transformationName, EtlProcessStatistics statistics)
+        {
+            BatchCompleted?.Invoke((configurationName, transformationName, statistics));
+        }
 
         public EtlLoader(DocumentDatabase database, ServerStore serverStore)
         {

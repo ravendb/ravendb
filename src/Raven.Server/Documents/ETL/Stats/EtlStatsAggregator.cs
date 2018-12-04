@@ -42,8 +42,12 @@ namespace Raven.Server.Documents.ETL.Stats
                 Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
                 Details = Scope.ToPerformanceOperation("ETL"),
                 LastLoadedEtag = Stats.LastLoadedEtag,
-                LastTransformedEtag = Stats.LastTransformedEtags,
+                LastTransformedEtags = Stats.LastTransformedEtags,
+                LastFilteredOutEtags = Stats.LastFilteredOutEtags,
                 NumberOfExtractedItems = Stats.NumberOfExtractedItems,
+                NumberOfTransformedItems = Stats.NumberOfTransformedItems,
+                TransformationErrorCount = Scope.TransformationErrorCount,
+                SuccesfullyLoaded = Stats.SuccesfullyLoaded,
                 BatchCompleteReason = Stats.BatchCompleteReason
             };
         }

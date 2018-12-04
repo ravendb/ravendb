@@ -22,10 +22,18 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public long LastLoadedEtag { get; set; }
 
-        public Dictionary<EtlItemType, long> LastTransformedEtag { get; set; }
+        public Dictionary<EtlItemType, long> LastTransformedEtags { get; set; }
+
+        public Dictionary<EtlItemType, long> LastFilteredOutEtags { get; set; }
 
         public Dictionary<EtlItemType, int> NumberOfExtractedItems { get; set; }
 
+        public Dictionary<EtlItemType, int> NumberOfTransformedItems { get; set; }
+
         public string BatchCompleteReason { get; set; }
+
+        public int TransformationErrorCount { get; set; }
+
+        public bool? SuccesfullyLoaded { get; set; }
     }
 }

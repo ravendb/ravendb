@@ -332,6 +332,8 @@ namespace Raven.Server.Documents.ETL
 
                             Database.NotificationCenter.Add(alert);
 
+                            stats.RecordBatchCompleteReason(message);
+
                             Stop();
 
                             break;
@@ -339,6 +341,8 @@ namespace Raven.Server.Documents.ETL
                         catch (Exception e)
                         {
                             Statistics.RecordTransformationError(e, item.DocumentId);
+
+                            stats.RecordTransformationError();
 
                             if (Logger.IsInfoEnabled)
                                 Logger.Info($"Could not process SQL ETL script for '{Name}', skipping document: {item.DocumentId}", e);
@@ -363,11 +367,15 @@ namespace Raven.Server.Documents.ETL
                     stats.RecordLastLoadedEtag(stats.LastTransformedEtags.Values.Max());
 
                     Statistics.LoadSuccess(stats.NumberOfTransformedItems.Sum(x => x.Value));
+
+                    stats.RecordLoadSuccess();
                 }
                 catch (Exception e)
                 {
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations($"Failed to load transformed data for '{Name}'", e);
+
+                    stats.RecordLoadFailure();
 
                     EnterFallbackMode();
 
@@ -672,8 +680,7 @@ namespace Raven.Server.Documents.ETL
 
                         if (CancellationToken.IsCancellationRequested == false)
                         {
-                            var batchCompleted = Database.EtlLoader.BatchCompleted;
-                            batchCompleted?.Invoke((ConfigurationName, TransformationName, Statistics));
+                            Database.EtlLoader.OnBatchCompleted(ConfigurationName, TransformationName, Statistics);
                         }
 
                         continue;
