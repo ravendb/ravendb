@@ -23,72 +23,72 @@ namespace Voron.Data.Tables
             Structure = new List<TreeReport>();
         }
 
-        public void AddStructure(FixedSizeTree fst, bool calculateExactSizes)
+        public void AddStructure(FixedSizeTree fst, bool includeDetails)
         {
-            var report = StorageReportGenerator.GetReport(fst, calculateExactSizes);
-            AddStructure(report, Constants.Storage.PageSize, calculateExactSizes);
+            var report = StorageReportGenerator.GetReport(fst, includeDetails);
+            AddStructure(report, Constants.Storage.PageSize, includeDetails);
         }
 
-        public void AddStructure(Tree tree, bool calculateExactSizes)
+        public void AddStructure(Tree tree, bool includeDetails)
         {
-            var report = StorageReportGenerator.GetReport(tree, calculateExactSizes);
-            AddStructure(report, Constants.Storage.PageSize, calculateExactSizes);
+            var report = StorageReportGenerator.GetReport(tree, includeDetails);
+            AddStructure(report, Constants.Storage.PageSize, includeDetails);
         }
 
-        private void AddStructure(TreeReport report, int pageSize, bool calculateExactSizes)
+        private void AddStructure(TreeReport report, int pageSize, bool includeDetails)
         {
             Structure.Add(report);
 
             var allocatedSpaceInBytes = report.PageCount * pageSize;
             AllocatedSpaceInBytes += allocatedSpaceInBytes;
 
-            if (calculateExactSizes)
+            if (includeDetails)
                 UsedSizeInBytes += (long)(allocatedSpaceInBytes * report.Density);
         }
 
-        public void AddIndex(FixedSizeTree fst, bool calculateExactSizes)
+        public void AddIndex(FixedSizeTree fst, bool includeDetails)
         {
-            var report = StorageReportGenerator.GetReport(fst, calculateExactSizes);
-            AddIndex(report, Constants.Storage.PageSize, calculateExactSizes);
+            var report = StorageReportGenerator.GetReport(fst, includeDetails);
+            AddIndex(report, Constants.Storage.PageSize, includeDetails);
         }
 
-        public void AddIndex(Tree tree, bool calculateExactSizes)
+        public void AddIndex(Tree tree, bool includeDetails)
         {
-            var report = StorageReportGenerator.GetReport(tree, calculateExactSizes);
-            AddIndex(report, Constants.Storage.PageSize, calculateExactSizes);
+            var report = StorageReportGenerator.GetReport(tree, includeDetails);
+            AddIndex(report, Constants.Storage.PageSize, includeDetails);
         }
 
-        private void AddIndex(TreeReport report, int pageSize, bool calculateExactSizes)
+        private void AddIndex(TreeReport report, int pageSize, bool includeDetails)
         {
             Indexes.Add(report);
 
             var allocatedSpaceInBytes = report.PageCount * pageSize;
             AllocatedSpaceInBytes += allocatedSpaceInBytes;
 
-            if (calculateExactSizes)
+            if (includeDetails)
                 UsedSizeInBytes += (long)(allocatedSpaceInBytes * report.Density);
         }
 
-        public void AddData(RawDataSection section, bool calculateExactSizes)
+        public void AddData(RawDataSection section, bool includeDetails)
         {
             var allocatedSpaceInBytes = section.Size;
             AllocatedSpaceInBytes += allocatedSpaceInBytes;
             DataSizeInBytes += allocatedSpaceInBytes;
 
-            if (calculateExactSizes)
+            if (includeDetails)
                 UsedSizeInBytes += (long)(allocatedSpaceInBytes * section.Density);
         }
 
-        public void AddPreAllocatedBuffers(NewPageAllocator tablePageAllocator, bool calculateExactSizes)
+        public void AddPreAllocatedBuffers(NewPageAllocator tablePageAllocator, bool includeDetails)
         {
             if (PreAllocatedBuffers != null)
                 throw new InvalidOperationException("Pre allocated buffers already defined");
 
-            PreAllocatedBuffers = StorageReportGenerator.GetReport(tablePageAllocator, calculateExactSizes);
+            PreAllocatedBuffers = StorageReportGenerator.GetReport(tablePageAllocator, includeDetails);
 
             AllocatedSpaceInBytes += PreAllocatedBuffers.AllocatedSpaceInBytes;
 
-            if (calculateExactSizes)
+            if (includeDetails)
             {
                 var allocationTree = PreAllocatedBuffers.AllocationTree;
                 UsedSizeInBytes += (long)(allocationTree.AllocatedSpaceInBytes * allocationTree.Density);

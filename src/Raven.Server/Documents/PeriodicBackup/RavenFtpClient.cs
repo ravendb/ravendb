@@ -74,23 +74,26 @@ namespace Raven.Server.Documents.PeriodicBackup
             var requestStream = request.GetRequestStream();
             while ((count = await stream.ReadAsync(readBuffer, 0, readBuffer.Length)) != 0)
             {
-                await requestStream.WriteAsync(readBuffer, 0, count);
+                await requestStream.WriteAsync(readBuffer, 0, count, CancellationToken);
+
+                Progress?.UploadProgress.ChangeState(UploadState.Uploading);
                 Progress?.UploadProgress.UpdateUploaded(count);
+                Progress?.OnUploadProgress();
             }
 
-            requestStream.Flush();
+            await requestStream.FlushAsync();
             requestStream.Close();
 
             Progress?.UploadProgress.ChangeState(UploadState.PendingResponse);
-            var response = await request.GetResponseAsync();
-            response.Dispose();
-
-            Progress?.UploadProgress.ChangeState(UploadState.Done);
+            using (await request.GetResponseAsync())
+            {
+                Progress?.UploadProgress.ChangeState(UploadState.Done);
+            }
         }
 
         private async Task <string> CreateNestedFoldersIfNeeded(string folderName)
         {
-            ExtractUrlAndDirectories(out string url, out List<string> directories);
+            ExtractUrlAndDirectories(out var url, out var directories);
 
             // create the nested folders including the new folder
             directories.Add(folderName);
@@ -170,7 +173,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (_useSsl && string.IsNullOrWhiteSpace(_certificateAsBase64))
                 throw new ArgumentException("Certificate must be provided when using ftp with SSL!");
 
-            ExtractUrlAndDirectories(out string url, out List<string> _);
+            ExtractUrlAndDirectories(out var url, out _);
             var request = CreateFtpWebRequest(url, WebRequestMethods.Ftp.ListDirectory, keepAlive: false);
 
             try

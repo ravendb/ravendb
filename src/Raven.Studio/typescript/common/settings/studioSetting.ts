@@ -12,7 +12,7 @@ abstract class studioSetting<T> {
         this.saveHandler = saveHandler;
     }
 
-    protected save() {
+    protected save(): JQueryPromise<void> {
         return this.saveHandler(this);
     }
 
@@ -24,8 +24,8 @@ abstract class studioSetting<T> {
         }
     }
     
-    propertyNameInStorage(propertyName: string) {
-        return this.saveLocation === "local" ? propertyName : _.upperFirst(propertyName);
+    static propertyNameInStorage(propertyName: string, location: studio.settings.saveLocation) {
+        return location === "local" ? propertyName : _.upperFirst(propertyName);
     }
 
     loadUsingValue(value: any) {

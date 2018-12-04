@@ -3,6 +3,8 @@
     public enum MigrationProvider
     {
         MsSQL,
-        MySQL
+        MySQL,
+        NpgSQL,
+        Oracle
     }
 }

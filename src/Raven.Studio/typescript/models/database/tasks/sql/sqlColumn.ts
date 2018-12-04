@@ -24,6 +24,10 @@ class sqlColumn {
         }
         return ': ' + this.type;
     }
+
+    isUnsupported() {
+        return this.type === "Unsupported";
+    }
 }
 
 

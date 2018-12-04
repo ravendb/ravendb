@@ -7,7 +7,7 @@ class virtualBulkInsert extends abstractNotification {
     
     static readonly Id = "virtual$$bulkInsert";
     
-    operations = ko.observableArray<virtualBulkInsertItem>([]);
+    operations = ko.observableArray<virtualBulkOperationItem>([]);
     
     constructor(db: database) {
         super(db, {
@@ -39,7 +39,7 @@ class virtualBulkInsert extends abstractNotification {
             date: dto.StartTime,
             duration: moment.utc(dto.EndTime).diff(moment.utc(dto.StartTime)),
             items: bulkResult.Total
-        } as virtualBulkInsertItem;
+        } as virtualBulkOperationItem;
         
         if (existingItemIndex !== -1) {
             this.operations.splice(existingItemIndex, 1, item);

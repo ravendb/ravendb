@@ -1,13 +1,13 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import getGlobalStudioConfigurationCommand = require("commands/resources/getGlobalStudioConfigurationCommand");
 import studioConfigurationModel = require("models/database/settings/studioConfigurationModel");
-import eventsCollector = require("common/eventsCollector");
-import saveGlobalStudioConfigurationCommand = require("commands/resources/saveGlobalStudioConfigurationCommand");
 import studioSettings = require("common/settings/studioSettings");
-import databaseSettings = require("common/settings/databaseSettings");
 import globalSettings = require("common/settings/globalSettings");
 
 class studioConfiguration extends viewModelBase {
+
+    spinners = {
+        save: ko.observable<boolean>(false)
+    };
 
     model: studioConfigurationModel;
 
@@ -21,27 +21,28 @@ class studioConfiguration extends viewModelBase {
                 this.model = new studioConfigurationModel({
                     Environment: settings.environment.getValue(),
                     Disabled: settings.disabled.getValue(),
+                    ReplicationFactor: settings.replicationFactor.getValue(),
                     SendUsageStats: settings.sendUsageStats.getValue()
                 });
-                
-                this.bindActions();
             });
     }
     
-    private bindActions() {
-        this.model.environment.subscribe((newEnvironment) => {
-            studioSettings.default.globalSettings()
-                .done(settings => {
-                    settings.environment.setValue(newEnvironment);
-                })
-        });
+    saveConfiguration() {
+        this.spinners.save(true);
         
-        this.model.sendUsageStats.subscribe(sendStats => {
-            studioSettings.default.globalSettings().done(settings => {
-                settings.sendUsageStats.setValue(sendStats);
-            });
-        });
+        studioSettings.default.globalSettings()
+            .done(settings => {
+                const model = this.model;
+                
+                settings.environment.setValueLazy(model.environment());
+                settings.sendUsageStats.setValueLazy(model.sendUsageStats());
+                settings.replicationFactor.setValueLazy(model.replicationFactor());
+                
+                settings.save()
+                    .always(() => this.spinners.save(false));
+            })
     }
+    
 }
 
 export = studioConfiguration;

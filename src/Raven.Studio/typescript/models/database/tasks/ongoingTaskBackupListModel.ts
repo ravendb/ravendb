@@ -102,7 +102,7 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
             const now = timeHelpers.utcNowWithSecondPrecision();
             const diff = moment.utc(nextBackup.DateTime).diff(now);
             if (diff <= 0) {
-                this.refreshBackupInfo();
+                this.refreshBackupInfo(true);
             }
 
             const backupType = this.getBackupType(this.backupType(), nextBackup.IsFull);
@@ -190,17 +190,17 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
         this.showDetails.toggle();
 
         if (this.showDetails()) {
-            this.refreshBackupInfo();
+            this.refreshBackupInfo(true);
         } 
     }
 
-    refreshBackupInfo() {
+    refreshBackupInfo(reportFailure: boolean) {
         if (shell.showConnectionLost()) {
             // looks like we don't have connection to server, skip index progress update 
             return $.Deferred<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup>().fail();
         }
 
-        return ongoingTaskInfoCommand.forBackup(this.activeDatabase(), this.taskId)
+        return ongoingTaskInfoCommand.forBackup(this.activeDatabase(), this.taskId, reportFailure)
             .execute()
             .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup) => this.update(result));
     }
@@ -226,7 +226,7 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
                     const task = new backupNowCommand(this.activeDatabase(), this.taskId, confirmResult.isFullBackup, this.taskName());
                     task.execute()
                         .done((backupNowResult: Raven.Client.Documents.Operations.Backups.StartBackupOperationResult) => {
-                            this.refreshBackupInfo();
+                            this.refreshBackupInfo(true);
                             this.watchProvider(this);
 
                             if (backupNowResult && clusterTopologyManager.default.localNodeTag() === backupNowResult.ResponsibleNode) {

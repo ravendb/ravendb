@@ -1870,13 +1870,14 @@ namespace Raven.Server.Commercial
                     string linuxMsg = null;
                     if (PlatformDetails.RunningOnPosix && (port == 80 || port == 443))
                     {
-                        linuxMsg = $"It can happen if port {port} is not allowed for the non-root ravendb process. Try using setcap to allow it.";
+                        linuxMsg = $"It can happen if port '{port}' is not allowed for the non-root RavenDB process." +
+                                   $"Try using setcap to allow it: sudo setcap CAP_NET_BIND_SERVICE=+eip Raven.Server";
                     }
 
-                    var also = linuxMsg == null ? "" : "also";
+                    var also = linuxMsg == null ? string.Empty : "also";
                     var externalIpMsg = setupMode == SetupMode.LetsEncrypt
                         ? $"It can {also} happen if the ip is external (behind a firewall, docker). If this is the case, try going back to the previous screen and add the same ip as an external ip."
-                        : "";
+                        : string.Empty;
                     
                     throw new InvalidOperationException($"Failed to start webhost on node '{nodeTag}'. The specified ip address might not be reachable due to network issues. {linuxMsg}{Environment.NewLine}{externalIpMsg}{Environment.NewLine}" +
                                                         $"Settings file:{settingsPath}.{Environment.NewLine}" +

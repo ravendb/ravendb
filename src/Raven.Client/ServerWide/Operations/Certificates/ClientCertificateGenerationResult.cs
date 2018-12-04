@@ -1,7 +1,7 @@
 using Raven.Client.Documents.Operations;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents
+namespace Raven.Client.ServerWide.Operations.Certificates
 {
     public sealed class ClientCertificateGenerationResult : IOperationResult
     {

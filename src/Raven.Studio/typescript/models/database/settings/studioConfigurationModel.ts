@@ -1,6 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
-interface globalStudionConfigurationOptions extends Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration {
+interface globalStudioConfigurationOptions extends Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration {
     SendUsageStats: boolean;
 }
 
@@ -11,15 +11,17 @@ class studioConfigurationModel {
     environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
     sendUsageStats = ko.observable<boolean>(false);
     disabled = ko.observable<boolean>();
+    replicationFactor = ko.observable<number>(null);
     
     validationGroup: KnockoutValidationGroup;
     
-    constructor(dto: globalStudionConfigurationOptions) {
+    constructor(dto: globalStudioConfigurationOptions) {
         this.initValidation();
         
         this.environment(dto.Environment);
         this.disabled(dto.Disabled);
         this.sendUsageStats(dto.SendUsageStats);
+        this.replicationFactor(dto.ReplicationFactor);
     }
     
     private initValidation() {
@@ -31,7 +33,8 @@ class studioConfigurationModel {
     toRemoteDto(): Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration {
         return {
             Environment: this.environment(),
-            Disabled: this.disabled()
+            Disabled: this.disabled(),
+            ReplicationFactor: this.replicationFactor()
         }
     }
 }

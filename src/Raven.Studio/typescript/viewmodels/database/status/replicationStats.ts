@@ -180,6 +180,7 @@ class replicationStats extends viewModelBase {
     private static readonly minGapSize = 10 * 1000; // 10 seconds
     private static readonly initialOffset = 100;
     private static readonly step = 200;
+    private static readonly bufferSize = 10000;
 
 
     private static readonly openedTrackHeight = replicationStats.openedTrackPadding
@@ -195,7 +196,7 @@ class replicationStats extends viewModelBase {
 
     hasAnyData = ko.observable<boolean>(false);
     loading: KnockoutComputed<boolean>;
-    private searchText = ko.observable<string>();
+    private searchText = ko.observable<string>("");
 
     private liveViewClient = ko.observable<liveReplicationStatsWebSocketClient>();
     private autoScroll = ko.observable<boolean>(false);
@@ -214,6 +215,9 @@ class replicationStats extends viewModelBase {
     // The live data from endpoint
     private data: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
 
+    private bufferIsFull = ko.observable<boolean>(false);
+    private bufferUsage = ko.observable<string>("0.0");
+    private dateCutoff: Date; // used to avoid showing server side cached items, after 'clear' is clicked. 
     private totalWidth: number;
     private totalHeight: number;
     private currentYOffset = 0;
@@ -277,6 +281,8 @@ class replicationStats extends viewModelBase {
     constructor() {
         super();
 
+        this.bindToCurrentInstance("clearGraphWithConfirm");
+        
         this.canExpandAll = ko.pureComputed(() => {
             const replicationTracksNames = this.replicationTracksNames();
             const expandedTracks = this.expandedTracks();
@@ -466,6 +472,7 @@ class replicationStats extends viewModelBase {
             }
 
             this.data = data;
+            this.checkBufferUsage();
 
             const [workData, maxConcurrentReplications] = this.prepareTimeData();
 
@@ -485,7 +492,19 @@ class replicationStats extends viewModelBase {
             }
         };
 
-        this.liveViewClient(new liveReplicationStatsWebSocketClient(this.activeDatabase(), onDataUpdate));
+        this.liveViewClient(new liveReplicationStatsWebSocketClient(this.activeDatabase(), onDataUpdate, this.dateCutoff));
+    }
+
+    private checkBufferUsage() {
+        const dataCount = _.sumBy(this.data, x => x.Performance.length);
+
+        const usage = Math.min(100, dataCount * 100.0 / replicationStats.bufferSize);
+        this.bufferUsage(usage.toFixed(1));
+
+        if (dataCount > replicationStats.bufferSize) {
+            this.bufferIsFull(true);
+            this.cancelLiveView();
+        }
     }
 
     scrollToRight() {
@@ -520,6 +539,10 @@ class replicationStats extends viewModelBase {
                     }
                 });
         }
+    }
+    
+    toggleScroll() {
+        this.autoScroll.toggle();
     }
 
     private cancelLiveView() {
@@ -1208,6 +1231,7 @@ class replicationStats extends viewModelBase {
 
     private dataImported(result: string) {
         this.cancelLiveView();
+        this.bufferIsFull(false);
 
         try {
             const importedData: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = JSON.parse(result);
@@ -1240,11 +1264,36 @@ class replicationStats extends viewModelBase {
         });
     }
 
-    closeImport() {
-        this.isImport(false);
+    clearGraphWithConfirm() {
+        this.confirmationMessage("Clear graph data", "Do you want to discard all collected replication statistics?")
+            .done(result => {
+                if (result.can) {
+                    this.clearGraph();
+                }
+            })
+    }
+
+    clearGraph() {
+        this.bufferIsFull(false);
+        this.cancelLiveView();
+        
+        this.setCutOffDate();
+        
         this.hasAnyData(false);
         this.resetGraphData();
         this.enableLiveView();
+    }
+    
+    private setCutOffDate() {
+        this.dateCutoff = d3.max(this.data, 
+                d => d3.max(d.Performance, 
+                    (p: ReplicationPerformanceBaseWithCache) => p.StartedAsDate));
+    }
+
+    closeImport() {
+        this.dateCutoff = null;
+        this.isImport(false);
+        this.clearGraph();
     }
 
     private resetGraphData() {
@@ -1252,6 +1301,7 @@ class replicationStats extends viewModelBase {
 
         this.expandedTracks([]);
         this.searchText("");
+        this.bufferUsage("0.0");
     }
 
     private setZoomAndBrush(scale: [number, number], brushAction: (brush: d3.svg.Brush<any>) => void) {

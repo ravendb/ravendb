@@ -13,7 +13,7 @@ class getDatabaseLocationCommand extends commandBase {
             path: this.inputPath
         };
 
-        const url =  endpoints.global.studioTasks.studioTasksFullDataDirectory + this.urlEncodeArgs(args);
+        const url =  endpoints.global.studioTasks.adminStudioTasksFullDataDirectory + this.urlEncodeArgs(args);
 
         return this.query<string>(url, null, null, x => x.FullPath)
             .fail((response: JQueryXHR) => this.reportError("Failed to calculate the database full path", response.responseText, response.statusText));

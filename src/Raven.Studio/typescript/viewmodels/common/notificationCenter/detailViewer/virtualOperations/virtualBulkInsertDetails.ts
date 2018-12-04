@@ -13,8 +13,8 @@ import generalUtils = require("common/generalUtils");
 class virtualBulkInsertDetails extends dialogViewModelBase {
 
     private bulkInserts: virtualBulkInsert;
-    private gridController = ko.observable<virtualGridController<virtualBulkInsertItem>>();
-    private columnPreview = new columnPreviewPlugin<virtualBulkInsertItem>();
+    private gridController = ko.observable<virtualGridController<virtualBulkOperationItem>>();
+    private columnPreview = new columnPreviewPlugin<virtualBulkOperationItem>();
     
     constructor(bulkInserts: virtualBulkInsert) {
         super();
@@ -30,15 +30,15 @@ class virtualBulkInsertDetails extends dialogViewModelBase {
 
         grid.init((s, t) => this.fetcher(s, t), () => {
             return [
-                new textColumn<virtualBulkInsertItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.date), "Date", "40%"),
-                new textColumn<virtualBulkInsertItem>(grid, x => x.duration, "Duration (ms)", "30%"),
-                new textColumn<virtualBulkInsertItem>(grid, x => x.items, "Inserted documents", "20%")
+                new textColumn<virtualBulkOperationItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.date), "Date", "40%"),
+                new textColumn<virtualBulkOperationItem>(grid, x => x.duration, "Duration (ms)", "30%"),
+                new textColumn<virtualBulkOperationItem>(grid, x => x.items, "Inserted documents", "20%")
             ];
         });
 
         this.columnPreview.install(".virtualBulkInsertDetails", ".js-virtual-bulk-insert-details-tooltip",
-            (details: virtualBulkInsertItem,
-             column: textColumn<virtualBulkInsertItem>,
+            (details: virtualBulkOperationItem,
+             column: textColumn<virtualBulkOperationItem>,
              e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
                 if (!(column instanceof actionColumn)) {
                     if (column.header === "Date") {
@@ -53,8 +53,8 @@ class virtualBulkInsertDetails extends dialogViewModelBase {
             });
     }
 
-    private fetcher(skip: number, take: number): JQueryPromise<pagedResult<virtualBulkInsertItem>> {
-        return $.Deferred<pagedResult<virtualBulkInsertItem>>()
+    private fetcher(skip: number, take: number): JQueryPromise<pagedResult<virtualBulkOperationItem>> {
+        return $.Deferred<pagedResult<virtualBulkOperationItem>>()
             .resolve({
                 items: this.bulkInserts.operations(),
                 totalResultCount: this.bulkInserts.operations().length
