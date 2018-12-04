@@ -816,6 +816,27 @@ namespace Raven.Client.Util
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
+                if (context.Node is BinaryExpression binaryExpression &&
+                    (binaryExpression.NodeType == ExpressionType.GreaterThanOrEqual ||
+                     binaryExpression.NodeType == ExpressionType.LessThanOrEqual) &&
+                    (binaryExpression.Left.Type.IsNullableType() ||
+                     binaryExpression.Right.Type.IsNullableType()))
+                {
+                    // RavenDB-12359
+                    // In order to avoid null >= 0  (and null<=0)
+                    // we translate x>=y  to x>y||x===y 
+                    //https://blog.campvanilla.com/javascript-the-curious-case-of-null-0-7b131644e274
+
+                    var expr = Expression.OrElse(binaryExpression.NodeType == ExpressionType.GreaterThanOrEqual
+                            ? Expression.GreaterThan(binaryExpression.Left, binaryExpression.Right)
+                            : Expression.LessThan(binaryExpression.Left, binaryExpression.Right), 
+                        Expression.Equal(binaryExpression.Left, binaryExpression.Right));
+                    context.PreventDefault();
+                    context.Visitor.Visit(expr);
+                    return;
+                }   
+
+
                 if (!(context.Node is MemberExpression memberExpression) || 
                     memberExpression.Expression.Type.IsNullableType() == false)
                     return;
