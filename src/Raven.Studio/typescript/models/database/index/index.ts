@@ -292,9 +292,8 @@ class index {
         
         this.memory(incomingData.memory());
         this.isStale(incomingData.isStale());
-        
-        this.progress(incomingData.progress());
     }
+    
 }
 
 export = index; 
