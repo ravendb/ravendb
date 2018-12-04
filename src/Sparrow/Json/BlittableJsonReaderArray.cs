@@ -39,7 +39,7 @@ namespace Sparrow.Json
 
         public override string ToString()
         {
-            using (var memoryStream = new MemoryStream())
+            using (var memoryStream = this._context.CreateMemoryStream())
             using (var tw = new BlittableJsonTextWriter(_context, memoryStream))
             {
                 tw.WriteValue(BlittableJsonToken.StartArray, this);

@@ -978,6 +978,8 @@ namespace Raven.Server.Smuggler.Documents
                 _result.LegacyLastAttachmentEtag = etag;
             }
 
+            //TODO: We should figure out a way to avoid using MemoryStream here to avoid huge allocations to happen when
+            //      big data needs to be sent over the wire.
             var memoryStream = new MemoryStream();
 
             fixed (char* pdata = base64data)

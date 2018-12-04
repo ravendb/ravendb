@@ -51,7 +51,7 @@ namespace Raven.Client.ServerWide.Commands
 
         public override void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
         {
-            Result = new MemoryStream();
+            Result = context.CreateMemoryStream();
             stream.CopyTo(Result);
         }
 

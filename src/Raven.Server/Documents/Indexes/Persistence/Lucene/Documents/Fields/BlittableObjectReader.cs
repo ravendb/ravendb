@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using Microsoft.IO;
 using Sparrow;
 using Sparrow.Json;
 
@@ -8,6 +9,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 {
     public class BlittableObjectReader : IDisposable
     {
+        private static readonly RecyclableMemoryStreamManager _streamManager = new RecyclableMemoryStreamManager(4096, 2, 1 * Voron.Global.Constants.Size.Megabyte);
+
         private readonly StreamReader _reader;
         private readonly MemoryStream _ms;
 
@@ -16,7 +19,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 
         public BlittableObjectReader()
         {
-            _ms = new MemoryStream();
+            _ms = _streamManager.GetStream();
             _reader = new StreamReader(_ms, Encodings.Utf8, true, 1024, leaveOpen: true);
         }
 
@@ -24,12 +27,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
         {
             _reader.DiscardBufferedData();
 
-            var ms = _reader.BaseStream;
-
-            ms.Position = 0;
-            value.WriteJsonTo(ms);
-            ms.SetLength(ms.Position);
-            ms.Position = 0;
+            _ms.Position = 0;
+            value.WriteJsonTo(_ms);
+            _ms.SetLength(_ms.Position);
+            _ms.Position = 0;
 
             return _reader;
         }

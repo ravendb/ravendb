@@ -1190,7 +1190,7 @@ namespace Raven.Client.Http
             if (response != null)
             {
                 var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-                var ms = new MemoryStream(); // todo: have a pool of those
+                var ms = context.CreateMemoryStream();
                 await stream.CopyToAsync(ms).ConfigureAwait(false);
                 try
                 {

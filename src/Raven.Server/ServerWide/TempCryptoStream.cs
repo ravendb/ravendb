@@ -19,13 +19,7 @@ namespace Raven.Server.ServerWide
         public override bool CanSeek => true;
         public override bool CanWrite => true;
 
-        public override long Length
-        {
-            get
-            {
-                return _maxLength;
-            }
-        }
+        public override long Length => _maxLength;
 
         public override long Position
         {

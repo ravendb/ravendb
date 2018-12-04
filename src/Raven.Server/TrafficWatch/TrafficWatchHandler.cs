@@ -55,7 +55,7 @@ namespace Raven.Server.TrafficWatch
                                         ["Exception"] = ex
                                     });
                                 }
-
+                                
                                 ms.TryGetBuffer(out ArraySegment<byte> bytes);
                                 await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, ServerStore.ServerShutdown);
                             }

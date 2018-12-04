@@ -103,13 +103,15 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                 if (response == null)
                     return;
 
-                var ms = new MemoryStream();
-                stream.CopyTo(ms);
-
-                Result = new CertificateRawData
+                using (var ms = context.CreateMemoryStream())
                 {
-                    RawData = ms.ToArray()
-                };
+                    stream.CopyTo(ms);
+
+                    Result = new CertificateRawData
+                    {
+                        RawData = ms.ToArray()
+                    };
+                }
             }
         }
     }

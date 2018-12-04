@@ -63,8 +63,8 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     var (etag, result) = await ServerStore.Engine.PutAsync(command);
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                    var ms = context.CheckoutMemoryStream();
-                    try
+
+                    using (var ms = context.CreateMemoryStream())
                     {
                         using (var writer = new BlittableJsonTextWriter(context, ms))
                         {
@@ -79,10 +79,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                         // now that we know that we properly serialized it
                         ms.Position = 0;
                         await ms.CopyToAsync(ResponseBodyStream());
-                    }
-                    finally
-                    {
-                        context.ReturnMemoryStream(ms);
                     }
                 }
                 catch (NotLeadingException e)

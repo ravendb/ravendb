@@ -14,7 +14,7 @@ namespace Sparrow.Json
         private readonly Stream _outputStream;
         private readonly CancellationToken _cancellationToken;
 
-        public AsyncBlittableJsonTextWriter(JsonOperationContext context, Stream stream, CancellationToken cancellationToken) : base(context, context.CheckoutMemoryStream())
+        public AsyncBlittableJsonTextWriter(JsonOperationContext context, Stream stream, CancellationToken cancellationToken) : base(context, context.CreateMemoryStream())
         {
             _outputStream = stream;
             _cancellationToken = cancellationToken;
@@ -38,12 +38,14 @@ namespace Sparrow.Json
             var innerStream = _stream as MemoryStream;
             if (innerStream == null)
                 ThrowInvalidTypeException(_stream?.GetType());
+
             Flush();
-            innerStream.TryGetBuffer(out var bytes);
-            var bytesCount = bytes.Count;
+            
+            int bytesCount = (int)innerStream.Position;
             if (bytesCount == 0)
                 return 0;
-            await _outputStream.WriteAsync(bytes.Array, bytes.Offset, bytesCount, _cancellationToken).ConfigureAwait(false);
+
+            innerStream.WriteTo(_outputStream);
             innerStream.SetLength(0);
             return bytesCount;
         }
@@ -53,12 +55,14 @@ namespace Sparrow.Json
             var innerStream = _stream as MemoryStream;
             if (innerStream == null)
                 ThrowInvalidTypeException(_stream?.GetType());
+
             Flush();
-            innerStream.TryGetBuffer(out var bytes);
-            var bytesCount = bytes.Count;
+
+            int bytesCount = (int)innerStream.Position;
             if (bytesCount == 0)
                 return 0;
-            _outputStream.Write(bytes.Array, bytes.Offset, bytesCount);
+
+            innerStream.WriteTo(_outputStream);
             _stream.SetLength(0);
             return bytesCount;
         }
@@ -67,7 +71,7 @@ namespace Sparrow.Json
         {
             base.Dispose();
             OuterFlush();
-            _context.ReturnMemoryStream((MemoryStream)_stream);
+            _stream?.Dispose();
         }
 
         private void ThrowInvalidTypeException(Type typeOfStream)

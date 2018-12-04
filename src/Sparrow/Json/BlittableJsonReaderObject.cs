@@ -29,7 +29,7 @@ namespace Sparrow.Json
 
         public override string ToString()
         {
-            using (var memoryStream = new MemoryStream())
+            using (var memoryStream = this._context.CreateMemoryStream())
             {
                 WriteJsonTo(memoryStream);
                 memoryStream.Position = 0;

@@ -115,7 +115,7 @@ namespace Raven.Server.Web.Authentication
 
             var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint, newCertDef));
             await serverStore.Cluster.WaitForIndexNotification(res.Index);
-
+            
             var ms = new MemoryStream();
             using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
             {

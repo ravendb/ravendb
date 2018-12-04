@@ -312,8 +312,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext finalContext))
-            {
-                var memoryStream = new MemoryStream();
+            using (var memoryStream = finalContext.CreateMemoryStream())
+            {               
                 WriteImportResult(finalContext, finalResult, memoryStream);
                 memoryStream.Position = 0;
                 try

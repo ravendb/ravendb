@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.IO;
 using Sparrow.Collections;
 using Sparrow.Global;
 using Sparrow.Json.Parsing;
@@ -29,6 +30,8 @@ namespace Sparrow.Json
     /// </summary>
     public class JsonOperationContext : PooledItem
     {
+        private static readonly RecyclableMemoryStreamManager _operationContextStreamManager = new RecyclableMemoryStreamManager();
+
         private int _generation;
         public const int InitialStreamSize = 4096;
         private const int MaxInitialStreamSize = 16 * 1024 * 1024;
@@ -56,7 +59,6 @@ namespace Sparrow.Json
 
         private int _numberOfAllocatedPathCaches = -1;
         private readonly PathCacheHolder[] _allocatePathCaches = new PathCacheHolder[512];
-        private Stack<MemoryStream> _cachedMemoryStreams = new Stack<MemoryStream>();
 
         private int _numberOfAllocatedStringsValues;
         private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
@@ -573,6 +575,16 @@ namespace Sparrow.Json
         public BlittableJsonReaderObject ReadForMemory(Stream stream, string documentId)
         {
             return ParseToMemory(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
+        }
+
+        public MemoryStream CreateMemoryStream(int size)
+        {
+            return _operationContextStreamManager.GetStream(string.Empty, size);
+        }
+
+        public MemoryStream CreateMemoryStream()
+        {
+            return _operationContextStreamManager.GetStream();
         }
 
         public unsafe BlittableJsonReaderObject ReadForMemory(string jsonString, string documentId)
@@ -1293,24 +1305,6 @@ namespace Sparrow.Json
         {
             EnsureNotDisposed();
             return _arenaAllocator.GrowAllocation(allocation, sizeIncrease);
-        }
-
-        public MemoryStream CheckoutMemoryStream()
-        {
-            EnsureNotDisposed();
-            if (_cachedMemoryStreams.Count == 0)
-            {
-                return new MemoryStream();
-            }
-
-            return _cachedMemoryStreams.Pop();
-        }
-
-        public void ReturnMemoryStream(MemoryStream stream)
-        {
-            EnsureNotDisposed();
-            stream.SetLength(0);
-            _cachedMemoryStreams.Push(stream);
         }
 
         public void ReturnMemory(AllocatedMemoryData allocation)

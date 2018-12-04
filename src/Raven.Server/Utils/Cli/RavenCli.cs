@@ -947,8 +947,8 @@ namespace Raven.Server.Utils.Cli
 
         public static string ConvertResultToString(ScriptRunnerResult result)
         {
-            var ms = new MemoryStream();
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            using (var ms = ctx.CreateMemoryStream())
             using (var writer = new BlittableJsonTextWriter(ctx, ms))
             {
                 writer.WriteStartObject();
@@ -983,10 +983,10 @@ namespace Raven.Server.Utils.Cli
 
                 writer.WriteEndObject();
                 writer.Flush();
-            }
 
-            var str = Encoding.UTF8.GetString(ms.ToArray());
-            return str;
+                var str = Encoding.UTF8.GetString(ms.ToArray());
+                return str;
+            }
         }
 
         private static bool CommandLowMem(List<string> args, RavenCli cli)
