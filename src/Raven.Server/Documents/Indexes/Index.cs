@@ -206,9 +206,7 @@ namespace Raven.Server.Documents.Indexes
                 GetRegexFactory = GetOrAddRegex
             };
 
-            _txAllocationsRatio = type == IndexType.MapReduce ||
-                           type == IndexType.AutoMapReduce ||
-                           type == IndexType.JavaScriptMapReduce ? 2.5 : 2;
+            _txAllocationsRatio = type.IsMapReduce() ? 2.5 : 2;
 
             _disposeOne = new DisposeOnce<SingleAttempt>(() =>
             {
