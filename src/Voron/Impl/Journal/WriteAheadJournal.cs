@@ -7,7 +7,6 @@
 using Sparrow;
 using Sparrow.Binary;
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -438,13 +437,6 @@ namespace Voron.Impl.Journal
             private Action _gatherInformationToStartSync;
             private Task _pendingSync = Task.CompletedTask;
 
-            // for testing pupose:
-            public bool TestingNowWaitingSignal = false;
-            public ManualResetEvent TestingWait = null;
-            private readonly Stopwatch _timeSinceLastImmediateSync = Stopwatch.StartNew();
-            public bool TestingSkippedUpdateDatabaseStateAfterSync { get; set; }
-            public bool TestingDoNotWait { get; set; }
-
             public void OnTransactionCommitted(LowLevelTransaction tx)
             {
                 var action = _updateJournalStateAfterFlush;
@@ -845,13 +837,6 @@ namespace Voron.Impl.Journal
                     // can take a long time, need to check again
                     if (_parent._waj._env.Disposed)
                         return false;
-
-                    if (_parent != null)
-                    {
-                        _parent.TestingNowWaitingSignal = true;
-                        if (_parent.TestingDoNotWait == false)
-                            _parent.TestingWait?.WaitOne();
-                    }
 
                     UpdateDatabaseStateAfterSync();
 
