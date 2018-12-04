@@ -192,7 +192,7 @@ namespace Voron.Util
                 // we scanned the array, couldn't find any available space
                 var newArray = new Node[copy.Length + _growthFactor];
                 Array.Copy(copy, newArray, copy.Length);
-                for (int i = copy.Length; i < _growthFactor; i++)
+                for (int i = copy.Length; i < newArray.Length; i++)
                 {
                     newArray[i] = new Node();
                 }
