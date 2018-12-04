@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
+using Sparrow.Threading;
 using Voron.Debugging;
 using Voron.Impl;
 
@@ -10,7 +12,7 @@ namespace Voron.Util
 {
     public class ActiveTransactions
     {
-        private RacyConcurrentBag _activeTxs = new RacyConcurrentBag(growthFactor: 16);
+        private RacyConcurrentBag _activeTxs = new RacyConcurrentBag(growthFactor: 64);
 
         private long _oldestTransaction;
 
@@ -90,7 +92,7 @@ namespace Voron.Util
             for (int i = 0; i < copy.Length; i++)
             {
                 var item = copy[i].Value;
-                if (item != null)
+                if (item != null && item != InvalidLowLevelTransaction)
                 {
                     yield return func(item);
                 }
@@ -104,7 +106,7 @@ namespace Voron.Util
             for (int i = 0; i < copy.Length; i++)
             {
                 var item = copy[i].Value;
-                if (item != null)
+                if (item != null && item != InvalidLowLevelTransaction)
                 {
                     list.Add(item);
                 }
@@ -114,6 +116,8 @@ namespace Voron.Util
 
         private static LowLevelTransaction InvalidLowLevelTransaction = (LowLevelTransaction)FormatterServices.GetUninitializedObject(typeof(LowLevelTransaction));
 
+        private MultipleUseFlag _compactionInProgress = new MultipleUseFlag();
+
         public bool Remove(LowLevelTransaction tx)
         {
             var copy = _array;
@@ -122,36 +126,47 @@ namespace Voron.Util
                 return false;
 
             var result = Interlocked.Decrement(ref _inUse);
-            if (result > 0 && copy.Length > _growthFactor * 4)
+            if (result > 0 ||
+                copy.Length < _growthFactor * 4)
                 return true;
 
-            bool failed = false;
-            for (int i = 0; i < copy.Length; i++)
+            if (_compactionInProgress.Raise() == false)
+                return true;
+
+            try
             {
-                if(Interlocked.CompareExchange(ref copy[i].Value, InvalidLowLevelTransaction, null) != null)
+                bool failed = false;
+                for (int i = 0; i < copy.Length; i++)
                 {
-                    failed = true;
-                    break;
+                    if (Interlocked.CompareExchange(ref copy[i].Value, InvalidLowLevelTransaction, null) != null)
+                    {
+                        failed = true;
+                        break;
+                    }
                 }
-            }
 
-            if(failed == false)
-            {
-                var newArray = new Node[_growthFactor];
-                for (int i = 0; i < newArray.Length; i++)
+                if (failed == false)
                 {
-                    newArray[i] = new Node();
+                    var newArray = new Node[_growthFactor];
+                    for (int i = 0; i < newArray.Length; i++)
+                    {
+                        newArray[i] = new Node();
+                    }
+                    if (Interlocked.CompareExchange(ref _array, newArray, copy) == copy)
+                        return true;
                 }
-                if (Interlocked.CompareExchange(ref _array, newArray, copy) == copy)
-                    return true;
-            }
 
-             // someone raced us for this, let's clean up
-            for (int i = 0; i < copy.Length; i++)
+                // someone raced us for this, let's clean up
+                for (int i = 0; i < copy.Length; i++)
+                {
+                    Interlocked.CompareExchange(ref copy[i].Value, null, InvalidLowLevelTransaction);
+                }
+
+            }
+            finally
             {
-                Interlocked.CompareExchange(ref copy[i].Value, null, InvalidLowLevelTransaction);
+                _compactionInProgress.Lower();
             }
-
             return true;
         }
 
@@ -181,7 +196,7 @@ namespace Voron.Util
                     }
                 }
 
-                if (compactionInProgress)
+                if (compactionInProgress || _compactionInProgress.IsRaised())
                 {
                     // let the Remove() a chance to do its work
                     Thread.Yield();
