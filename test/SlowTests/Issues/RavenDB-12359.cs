@@ -19,7 +19,7 @@ namespace SlowTests.Issues
             public object SomeProp;
         }
 
-        public void Setup(IDocumentStore store)
+        private void Setup(IDocumentStore store)
         {
             using (var s = store.OpenSession())
             {
@@ -99,7 +99,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact (Skip = "RavenDB-12359")]
+        [Fact]
         public void TestGreaterThanOrEqualToZero()
         {
             using (var store = GetDocumentStore())
@@ -114,14 +114,14 @@ namespace SlowTests.Issues
                                     HasValue = d.NullableInt >= 0
                                 };
 
-                    // this uses JS projection
-                    // d.NullableInt is null
-                    // 'null >= 0' evaluates to 'true' in JavaScript
+                    Assert.Equal("from MyDocs as d select { " +
+                                 "HasValue : d.NullableInt>0||d.NullableInt===0 }"
+                                 , query.ToString());
 
                     var results = query.ToList();
 
                     Assert.Equal(results.Count, 2);
-                    Assert.False(results[0].HasValue); // fails here
+                    Assert.False(results[0].HasValue);
                     Assert.True(results[1].HasValue);
                 }
             }
