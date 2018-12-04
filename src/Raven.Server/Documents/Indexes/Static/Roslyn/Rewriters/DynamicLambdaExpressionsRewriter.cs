@@ -99,6 +99,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "Count":
                 case "SingleOrDefault":
                     return Visit(ModifyLambdaForBools(node));
+                case "Zip":
+                    return Visit(ModifyLambdaForZip(node));
             }
 
             return node;
@@ -177,6 +179,11 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             var cast = (CastExpressionSyntax)SyntaxFactory.ParseExpression($"(decimal)({lambda.Body})");
 
             return SyntaxFactory.ParseExpression($"(Func<dynamic, decimal>)({lambda.WithBody(cast)})");
+        }
+
+        private static SyntaxNode ModifyLambdaForZip(LambdaExpressionSyntax node)
+        {
+            return SyntaxFactory.ParseExpression($"(Func<dynamic, dynamic, dynamic>)({node})");
         }
 
         private static CastExpressionSyntax GetAsCastExpression(CSharpSyntaxNode expressionBody)
