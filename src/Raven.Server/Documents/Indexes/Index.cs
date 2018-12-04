@@ -206,6 +206,10 @@ namespace Raven.Server.Documents.Indexes
                 GetRegexFactory = GetOrAddRegex
             };
 
+            _txAllocationsRatio = type == IndexType.MapReduce ||
+                           type == IndexType.AutoMapReduce ||
+                           type == IndexType.JavaScriptMapReduce ? 2.5 : 2;
+
             _disposeOne = new DisposeOnce<SingleAttempt>(() =>
             {
                 using (DrainRunningQueries())
@@ -365,6 +369,8 @@ namespace Raven.Server.Documents.Indexes
         public string Name => Definition?.Name;
 
         public int MaxNumberOfOutputsPerDocument { get; private set; }
+
+        private readonly double _txAllocationsRatio;
 
         public virtual IndexRunningStatus Status
         {
@@ -3167,9 +3173,9 @@ namespace Raven.Server.Documents.Indexes
             }
 
             var allocatedForProcessing = threadAllocations + indexWriterAllocations +
-                                         // we multiple it by two to take into account additional work
+                                         // we multiple it to take into account additional work
                                          // that will need to be done during the commit phase of the index
-                                         totalTxAllocations * 2;
+                                         (long)(totalTxAllocations * _txAllocationsRatio);
 
             _threadAllocations.CurrentlyAllocatedForProcessing = allocatedForProcessing;
 
