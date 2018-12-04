@@ -1066,6 +1066,7 @@ namespace Voron.Impl
         internal bool AlreadyAllowedDisposeWithLazyTransactionRunning;
         public DateTime TxStartTime;
         internal long? LocalPossibleOldestReadTransaction;
+        internal RacyConcurrentBag.Node ActiveTransactionNode;
 
         public void EnsurePagerStateReference(PagerState state)
         {
