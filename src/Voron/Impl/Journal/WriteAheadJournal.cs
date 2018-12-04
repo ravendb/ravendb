@@ -584,6 +584,7 @@ namespace Voron.Impl.Journal
                     ApplyJournalStateAfterFlush(token, lastProcessedJournal, lastFlushedTransactionId, unusedJournals);
 
                     _waj._env.SuggestSyncDataFileSyncDataFile();
+                    _gatherInformationToStartSync?.Invoke();
                 }
                 finally
                 {
@@ -900,6 +901,14 @@ namespace Voron.Impl.Journal
                     // sync process
                     try
                     {
+                        _fsyncLockTaken = _parent._fsyncLock.Wait(0);
+                        if (_fsyncLockTaken == false)
+                        {
+                            // probably another sync taking place right now, let us schedule another one, just in case
+                            _parent._waj._env.SuggestSyncDataFileSyncDataFile();
+                            return false;
+                        }
+
                         _parent._waitForGatherInformationToStartSync.Reset();
                         _parent._gatherInformationToStartSync = GatherInformationToStartSync;
                         do
@@ -936,16 +945,6 @@ namespace Voron.Impl.Journal
                             if (_parent._lastFlushedJournal == null)
                                 // nothing was flushed since we last synced, nothing to do
                                 return;
-
-                            // we only ever take the _fsyncLock _after_ we already took the flush lock
-                            // so this will never be contended
-                            _fsyncLockTaken = _parent._fsyncLock.Wait(0);
-                            if (_fsyncLockTaken == false)
-                            {
-                                // probably another sync taking place right now, let us schedule another one, just in case
-                                _parent._waj._env.SuggestSyncDataFileSyncDataFile();
-                                return;
-                            }
 
                             _currentTotalWrittenBytes = Interlocked.Read(ref _parent._totalWrittenButUnsyncedBytes);
                             _lastSyncedJournal = _parent._lastFlushedJournalId;
