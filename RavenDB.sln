@@ -56,6 +56,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Tests.Helpers", "Rave
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.Client.Embedded", "Raven.Client.Embedded\Raven.Client.Embedded.csproj", "{0F5287AD-37B3-4375-BA3E-3CED64B1FC5B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.IndexCleaner", "Tools\Raven.IndexCleaner\Raven.IndexCleaner.csproj", "{5CB5D7D9-6754-4D2F-83E4-32256C414C7E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Azure-Debug|Any CPU = Azure-Debug|Any CPU
@@ -3040,6 +3042,7 @@ Global
 		{D185331D-2B7C-4251-8EBE-140EDE1FAB9F} = {B7C4AD28-873C-45D5-8331-5CF9EEB41CC8}
 		{93287FBA-732A-4603-9BBE-9CFDC82FC8BE} = {DB0F0968-FB58-4A29-8BEA-F73E55D92665}
 		{14F2D508-8E06-407B-9451-97E99538E26B} = {DB0F0968-FB58-4A29-8BEA-F73E55D92665}
+		{5CB5D7D9-6754-4D2F-83E4-32256C414C7E} = {702CE58F-C8D5-4C3E-8138-98D20B0E26F9}
 	EndGlobalSection
 	GlobalSection(CodealikeProperties) = postSolution
 		SolutionGuid = 6944aade-3195-477c-8aed-9ebe2902fc57

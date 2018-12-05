@@ -47,5 +47,6 @@ namespace Raven.Database.Storage
         List<TransactionContextData> GetPreparedTransactions();
 
 		object GetInFlightTransactionsInternalStateForDebugOnly();
+	    void DropAllIndexingInformation();
 	}
 }

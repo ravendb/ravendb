@@ -85,7 +85,7 @@ namespace Raven.Storage.Esent
 			});
 		}
 
-		private void CreateIndexingStatsTable(JET_DBID dbid)
+	    internal void CreateIndexingStatsTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
 			Api.JetCreateTable(session, dbid, "indexes_stats", 1, 80, out tableid);
@@ -165,7 +165,7 @@ namespace Raven.Storage.Esent
 		// this table exists solely so that other threads can touch the index
 		// etag, such as when we remove an item from the index, without causing
 		// concurrency conflicts with the indexing thread
-		private void CreateIndexingEtagsTable(JET_DBID dbid)
+	    internal void CreateIndexingEtagsTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
 			Api.JetCreateTable(session, dbid, "indexes_etag", 1, 80, out tableid);
@@ -194,7 +194,7 @@ namespace Raven.Storage.Esent
 			});
 		}
 
-		private void CreateIndexingStatsReduceTable(JET_DBID dbid)
+	    internal void CreateIndexingStatsReduceTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
 			Api.JetCreateTable(session, dbid, "indexes_stats_reduce", 1, 80, out tableid);
@@ -352,7 +352,7 @@ namespace Raven.Storage.Esent
 			}
 		}
 
-		private void CreateScheduledReductionsTable(JET_DBID dbid)
+	    internal void CreateScheduledReductionsTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
 			Api.JetCreateTable(session, dbid, "scheduled_reductions", 1, 80, out tableid);
@@ -426,7 +426,7 @@ namespace Raven.Storage.Esent
 				});
 		}
 
-		private void CreateMapResultsTable(JET_DBID dbid)
+	    internal void CreateMapResultsTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
 			Api.JetCreateTable(session, dbid, "mapped_results", 1, 80, out tableid);
@@ -514,7 +514,7 @@ namespace Raven.Storage.Esent
 				});
 		}
 
-		private void CreateReduceResultsTable(JET_DBID dbid)
+	    internal void CreateReduceResultsTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
 			Api.JetCreateTable(session, dbid, "reduce_results", 1, 80, out tableid);
@@ -604,7 +604,8 @@ namespace Raven.Storage.Esent
 							  szKey = "+view\0+level\0+source_bucket\0+hashed_reduce_key\0\0",
 						  });
 		}
-		private void CreateTasksTable(JET_DBID dbid)
+
+		internal void CreateTasksTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
 			Api.JetCreateTable(session, dbid, "tasks", 1, 80, out tableid);
@@ -897,7 +898,7 @@ namespace Raven.Storage.Esent
 			}
 		}
 
-		private void CreateReduceKeysCountsTable(JET_DBID dbid)
+	    internal void CreateReduceKeysCountsTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
 			Api.JetCreateTable(session, dbid, "reduce_keys_counts", 1, 80, out tableid);
@@ -953,7 +954,7 @@ namespace Raven.Storage.Esent
 				});
 		}
 
-		private void CreateReduceKeysStatusTable(JET_DBID dbid)
+	    internal void CreateReduceKeysStatusTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
 			Api.JetCreateTable(session, dbid, "reduce_keys_status", 1, 80, out tableid);
@@ -1009,7 +1010,7 @@ namespace Raven.Storage.Esent
 				});
 		}
 
-		private void CreateIndexedDocumentsReferencesTable(JET_DBID dbid)
+	    internal void CreateIndexedDocumentsReferencesTable(JET_DBID dbid)
 		{
 			JET_TABLEID tableid;
 			Api.JetCreateTable(session, dbid, "indexed_documents_references", 1, 80, out tableid);
