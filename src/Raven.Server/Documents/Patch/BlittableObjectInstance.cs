@@ -284,16 +284,21 @@ namespace Raven.Server.Documents.Patch
 
         public override PropertyDescriptor GetOwnProperty(string propertyName)
         {
-            if (OwnValues.TryGetValue(propertyName, out var val) == false)
+            if (OwnValues.TryGetValue(propertyName, out var val))
+                return val;
+
+            Deletes?.Remove(propertyName);
+
+            val = new BlittableObjectProperty(this, propertyName);
+
+            if (DocumentId == null && val.Value.IsUndefined())
             {
-                Deletes?.Remove(propertyName);
-
-                val = new BlittableObjectProperty(this, propertyName);
-
-                OwnValues[propertyName] = val;
+                return PropertyDescriptor.Undefined;
             }
 
-            return val.Value.IsUndefined() ? PropertyDescriptor.Undefined : val;
+            OwnValues[propertyName] = val;
+
+            return val;
         }
 
         public override IEnumerable<KeyValuePair<string, PropertyDescriptor>> GetOwnProperties()
