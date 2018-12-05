@@ -777,5 +777,47 @@ namespace Raven.Storage.Esent
 		{
 			return inFlightTransactionalState.GetInFlightTransactionsInternalStateForDebugOnly();
 		}
+
+        private static readonly string[] IndexingDropTables = {"tasks", "scheduled_reductions", "mapped_results", "reduce_results",
+            "indexes_stats", "indexes_stats_reduce", "indexes_etag", "reduce_keys_counts", "reduce_keys_status", "indexed_documents_references"};
+
+        public void DropAllIndexingInformation()
+        {
+            Batch(accessor =>
+            {
+                using (var session = new Session(instance))
+                {
+                    JET_DBID dbid;
+                    Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
+
+                    try
+                    {
+                        foreach (var table in IndexingDropTables)
+                        {
+                            Api.JetDeleteTable(session, dbid, table);
+                        }
+
+                        var schemaCreator = new SchemaCreator(session);
+                        schemaCreator.CreateTasksTable(dbid);
+                        schemaCreator.CreateScheduledReductionsTable(dbid);
+                        schemaCreator.CreateMapResultsTable(dbid);
+                        schemaCreator.CreateReduceResultsTable(dbid);
+                        schemaCreator.CreateIndexingStatsTable(dbid);
+                        schemaCreator.CreateIndexingStatsReduceTable(dbid);
+                        schemaCreator.CreateIndexingEtagsTable(dbid);
+                        schemaCreator.CreateReduceKeysCountsTable(dbid);
+                        schemaCreator.CreateReduceKeysStatusTable(dbid);
+                        schemaCreator.CreateIndexedDocumentsReferencesTable(dbid);
+                    }
+                    finally
+                    {
+                        Api.JetCloseDatabase(session, dbid, CloseDatabaseGrbit.None);
+                    }
+                }
+
+                accessor.Lists.RemoveAllOlderThan("Raven/Indexes/QueryTime", DateTime.MinValue);
+                accessor.Lists.RemoveAllOlderThan("Raven/Indexes/PendingDeletion", DateTime.MinValue);
+            });
+        }
     }
 }

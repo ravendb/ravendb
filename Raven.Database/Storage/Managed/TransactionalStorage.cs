@@ -335,5 +335,10 @@ namespace Raven.Storage.Managed
 		{
 			return inFlightTransactionalState.GetInFlightTransactionsInternalStateForDebugOnly();
 		}
-    }
+
+	    public void DropAllIndexingInformation()
+	    {
+	        throw new NotSupportedException("Drop all indexes isn't supported for this storage");
+	    }
+	}
 }
