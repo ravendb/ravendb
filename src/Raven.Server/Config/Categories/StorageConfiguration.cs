@@ -64,10 +64,10 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.PrefetchResetThresholdInGb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size PrefetchResetThreshold { get; set; }
 
-        [Description("Size of journal files in gigabytes for each storage, before forcing a sync and removing the journal files.")]
-        [DefaultValue(1)]
-        [SizeUnit(SizeUnit.Gigabytes)]
-        [ConfigurationEntry("Storage.JournalsSizeThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [Description("Size of journal files in megabytes for each storage, before forcing a sync and removing the journal files.")]
+        [DefaultValue(1024)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Storage.JournalsSizeThresholdInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size JournalsSizeThreshold { get; set; }
 
         [Description("EXPERT: A command or executable to run when creating/opening a directory (storage environment). RavenDB will execute: command [user-arg-1] ... [user-arg-n] <environment-type> <database-name> <data-dir-path> <temp-dir-path> <journal-dir-path>")]
