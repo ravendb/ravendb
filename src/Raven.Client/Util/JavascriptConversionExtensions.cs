@@ -640,6 +640,10 @@ namespace Raven.Client.Util
                         OrderByToSort(context, methodCallExpression, true);
                         return;
                     }
+                    case "ContainsKey":
+                    {
+                        return;
+                    }
                     default:
                         throw new NotSupportedException($"Unable to translate '{methodName}' to RQL operation because this method is not familiar to the RavenDB query provider.")
                         {
