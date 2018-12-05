@@ -6,6 +6,7 @@
 <pre class="margin-bottom">
 <span class="token keyword">from</span> <span class="token string">Orders</span>
 <span class="token keyword">where</span> Lines.Count <span class="token operator">></span> <span class="token number">4</span>
+<span class="token keyword">order by</span> Freight <span class="token keyword">as double</span>
 <span class="token keyword">select</span> Lines[].ProductName <span class="token keyword">as</span> ProductNames, OrderedAt, ShipTo.City
 </pre>            
             <div>Using JavaScript select:</div>
