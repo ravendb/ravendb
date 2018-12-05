@@ -33,7 +33,7 @@ namespace Raven.Server.Dashboard
         
         public long FreeSpace { get; set; }
         
-        public FreeSpaceLevel FreeSpaceLevel { get; set; }
+        public bool IsLowSpace { get; set; }
         
         public List<DatabaseDiskUsage> Items { get; set; }
         
@@ -50,22 +50,10 @@ namespace Raven.Server.Dashboard
                 [nameof(VolumeLabel)] = VolumeLabel,
                 [nameof(TotalCapacity)] = TotalCapacity,
                 [nameof(FreeSpace)] = FreeSpace,
-                [nameof(FreeSpaceLevel)] = FreeSpaceLevel,
+                [nameof(IsLowSpace)] = IsLowSpace,
                 [nameof(Items)] = new DynamicJsonArray(Items.Select(x => x.ToJson()))
             };
         }
-    }
-    
-    /**
-     * High - we have a lot of disk space
-     * Medium - warn user about free space
-     * Low - we almost run out of empty space
-     */
-    public enum FreeSpaceLevel
-    {
-        High, 
-        Medium, 
-        Low 
     }
     
     public class DatabaseDiskUsage : IDynamicJson

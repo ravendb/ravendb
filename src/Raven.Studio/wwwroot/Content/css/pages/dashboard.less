@@ -9,6 +9,8 @@
 @dashboard-map-color: @color-1-3;
 @dashboard-reduce-color: @color-5-3;
 
+@dashboard-used-space-color: #009de0;
+
 #dashboard-container {
 
     .disabled {
@@ -36,6 +38,89 @@
         left: 0;
     }
 
+    .disk-usage {
+        font-size: 14px;
+        .usage {
+            margin-right: @grid-gutter-width / 4;
+        }
+        .usage-rect {
+            width: 10px;
+            height: 10px;
+            margin-right: 4px;
+            display: inline-block;;
+        }
+        .server-usage {
+            .usage-rect {
+                background-color: @brand-primary;
+            }
+            strong {
+                color: @brand-primary;
+            }
+        }
+        .total-usage {
+            .usage-rect {
+                background-color: @dashboard-used-space-color;
+            }
+            strong {
+                color: @dashboard-used-space-color;
+            }
+        }
+        .free-space {
+            .usage-rect {
+                background-color: @brand-success;
+            }
+            strong {
+                color: @brand-success;
+            }
+            
+            .icon-warning {
+                display: none;
+            }
+            
+            &.free-space-warning {
+                color: @brand-warning;
+                
+                strong {
+                    color: @brand-warning;
+                }
+                
+                .usage-rect {
+                    display: none;
+                }
+                
+                .icon-warning {
+                    display: inline-block;
+                }
+            }
+        }
+        small {
+            font-size: 70%;
+        }
+    }
+    
+    .drive-usage-container {
+        overflow: auto;
+        padding-right: 5px;
+    }
+    
+    .usage-bars {
+        background-color: @brand-success;
+        height: 18px;
+        
+        .used {
+            height: 18px;
+            line-height: 0;
+            background-color: @dashboard-used-space-color;
+            padding: 2px;
+            
+            .ravendb {
+                height: 14px;
+                background-color: @brand-primary;
+                line-height: 0;
+                min-width: 2px;
+            }
+        }
+    }
 
     .graph-container {
         height: 100%;

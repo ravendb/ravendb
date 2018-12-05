@@ -143,7 +143,7 @@ class genUtils {
     /***  Size Methods ***/
 
     // Format bytes to human size string
-    static formatBytesToSize(bytes: number) : string {
+    static formatBytesToSize(bytes: number, digitsAfterDecimalPoint = 2) : string {
         const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
         if (bytes === 0) {
             return "0 Bytes";
@@ -156,11 +156,11 @@ class genUtils {
 
         if (i < 0) {
             // number < 1
-            return genUtils.formatAsCommaSeperatedString(bytes, 4) + ' Bytes';
+            return genUtils.formatAsCommaSeperatedString(bytes, digitsAfterDecimalPoint) + ' Bytes';
         }
 
         const res = bytes / Math.pow(1024, i);
-        const newRes = genUtils.formatAsCommaSeperatedString(res, 2);
+        const newRes = genUtils.formatAsCommaSeperatedString(res, digitsAfterDecimalPoint);
 
         return newRes + ' ' + sizes[i];
     }
@@ -289,10 +289,14 @@ class genUtils {
         const parts = input.toString().split(".");
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
-        if (parts.length == 2 && parts[1].length > digitsAfterDecimalPoint) {
-            parts[1] = parts[1].substring(0, digitsAfterDecimalPoint);
+        if (digitsAfterDecimalPoint > 0) {
+            if (parts.length == 2 && parts[1].length > digitsAfterDecimalPoint) {
+                parts[1] = parts[1].substring(0, digitsAfterDecimalPoint);
+            }
+            return parts.join(".");
         }
-        return parts.join(".");
+        
+        return parts[0];
     }
 
     // Replace characters with their char codes, but leave A-Za-z0-9 and - in place. 

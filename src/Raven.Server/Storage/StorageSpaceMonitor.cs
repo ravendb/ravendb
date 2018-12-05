@@ -151,7 +151,7 @@ namespace Raven.Server.Storage
                             if (diskSpace == null)
                                 return;
 
-                            if (IsLowSpace(diskSpace, storageConfig, out var reason) == false)
+                            if (IsLowSpace(diskSpace.TotalFreeSpace, diskSpace.TotalSize, storageConfig, out var reason, SimulateLowDiskSpace) == false)
                                 return;
 
                             var lowSpace = new LowDiskSpace(diskSpace, reason);
@@ -172,34 +172,34 @@ namespace Raven.Server.Storage
             }
 
             return (lowSpaceDisks, environmentsRunningOnLowSpaceDisks);
-
-            bool IsLowSpace(DiskSpaceResult diskSpace, StorageConfiguration config, out string reason)
+        }
+        
+        internal static bool IsLowSpace(Size totalFreeSpace, Size diskSpace, StorageConfiguration config, out string reason, bool simulateLowDiskSpace = false)
+        {
+            if (config.FreeSpaceAlertThresholdInMb != null &&
+                totalFreeSpace < config.FreeSpaceAlertThresholdInMb.Value)
             {
-                if (config.FreeSpaceAlertThresholdInMb != null &&
-                    diskSpace.TotalFreeSpace < config.FreeSpaceAlertThresholdInMb.Value)
-                {
-                    reason = $"has {diskSpace.TotalFreeSpace} free what is below configured threshold ({config.FreeSpaceAlertThresholdInMb.Value})";
-                    return true;
-                }
-
-                var availableInPercentages = diskSpace.TotalFreeSpace.GetValue(SizeUnit.Bytes) * 100f / diskSpace.TotalSize.GetValue(SizeUnit.Bytes);
-
-                if (config.FreeSpaceAlertThresholdInPercentages != null &&
-                    availableInPercentages < config.FreeSpaceAlertThresholdInPercentages.Value)
-                {
-                    reason = $"has {availableInPercentages:#.#}% free what is below configured threshold ({config.FreeSpaceAlertThresholdInPercentages}%)";
-                    return true;
-                }
-
-                if (SimulateLowDiskSpace)
-                {
-                    reason = "low disk space simulation";
-                    return true;
-                }
-
-                reason = null;
-                return false;
+                reason = $"has {totalFreeSpace} free what is below configured threshold ({config.FreeSpaceAlertThresholdInMb.Value})";
+                return true;
             }
+
+            var availableInPercentages = totalFreeSpace.GetValue(SizeUnit.Bytes) * 100f / diskSpace.GetValue(SizeUnit.Bytes);
+
+            if (config.FreeSpaceAlertThresholdInPercentages != null &&
+                availableInPercentages < config.FreeSpaceAlertThresholdInPercentages.Value)
+            {
+                reason = $"has {availableInPercentages:#.#}% free what is below configured threshold ({config.FreeSpaceAlertThresholdInPercentages}%)";
+                return true;
+            }
+
+            if (simulateLowDiskSpace)
+            {
+                reason = "low disk space simulation";
+                return true;
+            }
+
+            reason = null;
+            return false;
         }
 
         public void Dispose()
