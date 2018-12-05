@@ -244,7 +244,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                             _logger.Info($"Insert took: {elapsedMilliseconds:#,#;;0}ms, statement: {stmt}");
 
                         var tableMetrics = _etl.SqlMetrics.GetTableMetrics(tableName);
-                        tableMetrics.InsertActionsMeter.Mark(1);
+                        tableMetrics.InsertActionsMeter.MarkSingleThreaded(1);
 
                         if (elapsedMilliseconds > LongStatementWarnThresholdInMs)
                         {
@@ -357,7 +357,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                             _logger.Info($"Delete took: {elapsedMilliseconds:#,#;;0}ms, statement: {stmt}");
 
                         var tableMetrics = _etl.SqlMetrics.GetTableMetrics(tableName);
-                        tableMetrics.DeleteActionsMeter.Mark(1);
+                        tableMetrics.DeleteActionsMeter.MarkSingleThreaded(1);
 
                         if (elapsedMilliseconds > LongStatementWarnThresholdInMs)
                         {

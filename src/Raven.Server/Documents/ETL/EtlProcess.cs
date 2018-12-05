@@ -455,7 +455,7 @@ namespace Raven.Server.Documents.ETL
 
         protected void UpdateMetrics(DateTime startTime, EtlStatsScope stats)
         {
-            Metrics.BatchSizeMeter.Mark(stats.NumberOfExtractedItems.Sum(x => x.Value));
+            Metrics.BatchSizeMeter.MarkSingleThreaded(stats.NumberOfExtractedItems.Sum(x => x.Value));
         }
 
         public override void Reset()
