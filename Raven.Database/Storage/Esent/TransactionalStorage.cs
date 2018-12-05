@@ -654,23 +654,32 @@ namespace Raven.Storage.Esent
                 {
                     JET_DBID dbid;
                     Api.JetOpenDatabase(session, database, null, out dbid, OpenDatabaseGrbit.None);
-                    foreach (var table in indexingDropTables)
-                    {
-                        Api.JetDeleteTable(session, dbid, table);
-                    }
-                    var schemaCreator = new SchemaCreator(session);
-                    schemaCreator.CreateTasksTable(dbid);
-                    schemaCreator.CreateScheduledReductionsTable(dbid);
-                    schemaCreator.CreateMapResultsTable(dbid);
-                    schemaCreator.CreateReduceResultsTable(dbid);
-                    schemaCreator.CreateIndexingStatsTable(dbid);
-                    schemaCreator.CreateIndexingStatsReduceTable(dbid);
-                    schemaCreator.CreateIndexingEtagsTable(dbid);
 
-                    schemaCreator.CreateReduceKeysCountsTable(dbid);
-                    schemaCreator.CreateReduceKeysStatusTable(dbid);
-                    schemaCreator.CreateIndexedDocumentsReferencesTable(dbid);
+                    try
+                    {
+                        foreach (var table in indexingDropTables)
+                        {
+                            Api.JetDeleteTable(session, dbid, table);
+                        }
+
+                        var schemaCreator = new SchemaCreator(session);
+                        schemaCreator.CreateTasksTable(dbid);
+                        schemaCreator.CreateScheduledReductionsTable(dbid);
+                        schemaCreator.CreateMapResultsTable(dbid);
+                        schemaCreator.CreateReduceResultsTable(dbid);
+                        schemaCreator.CreateIndexingStatsTable(dbid);
+                        schemaCreator.CreateIndexingStatsReduceTable(dbid);
+                        schemaCreator.CreateIndexingEtagsTable(dbid);
+                        schemaCreator.CreateReduceKeysCountsTable(dbid);
+                        schemaCreator.CreateReduceKeysStatusTable(dbid);
+                        schemaCreator.CreateIndexedDocumentsReferencesTable(dbid);
+                    }
+                    finally
+                    {
+                        Api.JetCloseDatabase(session, dbid, CloseDatabaseGrbit.None);
+                    }
                 }
+
                 accessor.Lists.RemoveAllOlderThan("Raven/Indexes/QueryTime", DateTime.MinValue);
                 accessor.Lists.RemoveAllOlderThan("Raven/Indexes/PendingDeletion", DateTime.MinValue);
             });
