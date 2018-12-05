@@ -183,7 +183,11 @@ namespace Raven.Database.Server.Controllers
                 };
                 streamQueryContent = new StreamQueryContent(parameters);
                 msg.Content = streamQueryContent;
-                var header = await streamQueryContent.HeaderReady.WaitWithTimeout(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+                var header = await Task.Run(
+                    async ()=>
+                        await streamQueryContent.HeaderReady.ConfigureAwait(false),
+                    cts.Token)
+                    .ConfigureAwait(false);
                 
                 msg.Headers.Add("Raven-Result-Etag", header.ResultEtag.ToString());
                 msg.Headers.Add("Raven-Index-Etag", header.IndexEtag.ToString());
@@ -268,7 +272,8 @@ namespace Raven.Database.Server.Controllers
                     };
                     streamQueryContent = new StreamQueryContent(parameters);
                     msg.Content = streamQueryContent;
-                    var header = await streamQueryContent.HeaderReady.WaitWithTimeout(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
+
+                    var header = await Task.Run(async ()=> await streamQueryContent.HeaderReady.ConfigureAwait(false), cts.Token).ConfigureAwait(false);
                     //This is just a callback, it should be invoked in the same thread as the query was invoked at.
                     streamQueryContent.ModifyDocument = (queryOp, o) =>
                         {
@@ -373,11 +378,7 @@ namespace Raven.Database.Server.Controllers
                     QueryOp = new QueryActions.DatabaseQueryOperation(parameters.Database, parameters.IndexName, parameters.Query, accessor, parameters.Cts);
                     QueryOp.Init();
                     _headerReady.TrySetResult(QueryOp.Header);
-                    if (_streamReady.Task.Wait(TimeSpan.FromSeconds(10)) == false)
-                    {
-                        throw new TimeoutException("Waited 10 seconds for stream query to start but it didn't, we are probably shutting down.");
-                    }
-
+                    _streamReady.Task.Wait(parameters.Cts.Token);
                     SerializeToStream(_streamReady.Task.Result, QueryOp.Header.TotalResults);
                 } 
                 catch( Exception e)
