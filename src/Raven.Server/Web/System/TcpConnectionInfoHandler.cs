@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
@@ -45,6 +46,9 @@ namespace Raven.Server.Web.System
             using (context.OpenReadTransaction())
             {
                 var pullReplication = ServerStore.Cluster.ReadPullReplicationDefinition(database, remoteTask, context);
+                if (pullReplication.Disabled)
+                    throw new InvalidOperationException($"The pull replication '{remoteTask}' is disabled.");
+
                 var topology = ServerStore.Cluster.ReadDatabaseTopology(context, database);
                 nodes = GetResponsibleNodes(topology, databaseGroupId, pullReplication);
             }

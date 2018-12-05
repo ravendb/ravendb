@@ -28,7 +28,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
@@ -541,7 +540,8 @@ namespace Raven.Server.Documents.Replication
                 if (instance.PullReplicationDefinitionName == null)
                     continue;
 
-                if (newRecord.CentralPullReplications.TryGetValue(instance.PullReplicationDefinitionName, out var pullReplication))
+                if (newRecord.CentralPullReplications.TryGetValue(instance.PullReplicationDefinitionName, out var pullReplication) && 
+                    pullReplication.Disabled == false)
                 {
                     // update the destination
                     var current = instance.Destination as ExternalReplication;

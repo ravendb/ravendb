@@ -168,6 +168,92 @@ namespace SlowTests.Server.Replication
         }
 
         [Fact]
+        public async Task DisablePullReplicationOnEdge()
+        {
+            var definitionName = $"pull-replication {GetDatabaseName()}";
+            var timeout = 3000;
+
+            using (var edge = GetDocumentStore())
+            using (var central = GetDocumentStore())
+            {
+                await central.Maintenance.ForDatabase(central.Database).SendAsync(new PutPullReplicationDefinitionOperation(definitionName));
+
+                using (var main = central.OpenSession())
+                {
+                    main.Store(new User(), "central/1");
+                    main.SaveChanges();
+                }
+                var pullTasks = await SetupPullReplicationAsync(definitionName, edge, central);
+                Assert.True(WaitForDocument(edge, "central/1", timeout), edge.Identifier);
+
+
+                var pull = new PullReplicationAsEdge(central.Database, $"ConnectionString-{edge.Database}", definitionName)
+                {
+                    Disabled = true,
+                    TaskId = pullTasks[0].TaskId
+                };
+                await AddWatcherToReplicationTopology(edge, pull, central.Urls);
+
+                using (var main = central.OpenSession())
+                {
+                    main.Store(new User(), "central/2");
+                    main.SaveChanges();
+                }
+                Assert.False(WaitForDocument(edge, "central/2", timeout), edge.Identifier);
+
+                pull.Disabled = false;
+                await AddWatcherToReplicationTopology(edge, pull, central.Urls);
+
+                using (var main = central.OpenSession())
+                {
+                    main.Store(new User(), "central/3");
+                    main.SaveChanges();
+                }
+                Assert.True(WaitForDocument(edge, "central/2", timeout), edge.Identifier);
+                Assert.True(WaitForDocument(edge, "central/3", timeout), edge.Identifier);
+            }
+        }
+
+        [Fact]
+        public async Task DisablePullReplicationOnCentral()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+
+            var definitionName = $"pull-replication {GetDatabaseName()}";
+            var timeout = 3_000;
+
+            using (var edge = GetDocumentStore())
+            using (var central = GetDocumentStore())
+            {
+                var pullDefinition = new PullReplicationDefinition(definitionName);
+                await central.Maintenance.ForDatabase(central.Database).SendAsync(new PutPullReplicationDefinitionOperation(pullDefinition));
+
+                using (var main = central.OpenSession())
+                {
+                    main.Store(new User(), "users/1");
+                    main.SaveChanges();
+                }
+                await SetupPullReplicationAsync(definitionName, edge, central);
+                Assert.True(WaitForDocument(edge, "users/1", timeout), edge.Identifier);
+
+                pullDefinition.Disabled = true;
+                await central.Maintenance.ForDatabase(central.Database).SendAsync(new PutPullReplicationDefinitionOperation(pullDefinition));
+
+                using (var main = central.OpenSession())
+                {
+                    main.Store(new User(), "users/2");
+                    main.SaveChanges();
+                }
+                Assert.False(WaitForDocument(edge, "users/2", timeout), edge.Identifier);
+
+                pullDefinition.Disabled = false;
+                await central.Maintenance.ForDatabase(central.Database).SendAsync(new PutPullReplicationDefinitionOperation(pullDefinition));
+
+                Assert.True(WaitForDocument(edge, "users/2", timeout), edge.Identifier);
+            }
+        }
+
+        [Fact]
         public async Task MultiplePullExternalReplicationShouldWork()
         {
             var name = $"pull-replication {GetDatabaseName()}";

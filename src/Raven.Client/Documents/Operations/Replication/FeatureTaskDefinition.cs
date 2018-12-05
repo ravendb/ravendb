@@ -10,6 +10,7 @@ namespace Raven.Client.Documents.Operations.Replication
         public Dictionary<string, string> Certificates; // <thumbprint, base64 cert>
         public string Name;
         public long TaskId;
+        public bool Disabled;
 
         protected FeatureTaskDefinition() { }
 
@@ -29,7 +30,8 @@ namespace Raven.Client.Documents.Operations.Replication
             {
                 [nameof(Name)] = Name,
                 [nameof(Certificates)] = certs,
-                [nameof(TaskId)] = TaskId
+                [nameof(TaskId)] = TaskId,
+                [nameof(Disabled)] = Disabled
             };
         }
 
