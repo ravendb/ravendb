@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Patch
         public readonly BlittableJsonReaderObject Blittable;
         public readonly string DocumentId;
         public HashSet<string> Deletes;
-        public Dictionary<string, BlittableObjectProperty > OwnValues = 
+        public Dictionary<string, BlittableObjectProperty> OwnValues = 
             new Dictionary<string, BlittableObjectProperty>();
         public Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes;
         public Lucene.Net.Documents.Document LuceneDocument;
@@ -40,8 +40,7 @@ namespace Raven.Server.Documents.Patch
 
         public ObjectInstance GetOrCreate(string key)
         {
-            BlittableObjectProperty property;
-            if (OwnValues.TryGetValue(key, out property) == false)
+            if (OwnValues.TryGetValue(key, out var property) == false)
             {
                 property = GenerateProperty(key);
 
@@ -269,6 +268,7 @@ namespace Raven.Server.Documents.Patch
             ChangeVector = changeVector;
             Blittable = blittable;
             DocumentId = docId;
+            Prototype = engine.Object.PrototypeObject;
         }
 
 
@@ -284,17 +284,16 @@ namespace Raven.Server.Documents.Patch
 
         public override PropertyDescriptor GetOwnProperty(string propertyName)
         {
-            if (OwnValues.TryGetValue(propertyName, out var val))
+            if (OwnValues.TryGetValue(propertyName, out var val) == false)
             {
-                return val;
-            }
-                
-            Deletes?.Remove(propertyName);
+                Deletes?.Remove(propertyName);
 
-            val = new BlittableObjectProperty(this, propertyName);
-            
-            OwnValues[propertyName] = val;
-            return val;
+                val = new BlittableObjectProperty(this, propertyName);
+
+                OwnValues[propertyName] = val;
+            }
+
+            return val.Value.IsUndefined() ? PropertyDescriptor.Undefined : val;
         }
 
         public override IEnumerable<KeyValuePair<string, PropertyDescriptor>> GetOwnProperties()
