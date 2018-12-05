@@ -426,7 +426,7 @@ namespace Voron.Impl.Journal
             private readonly SemaphoreSlim _fsyncLock = new SemaphoreSlim(1);
             private readonly WriteAheadJournal _waj;
             private readonly ManualResetEventSlim _waitForJournalStateUpdateUnderTx = new ManualResetEventSlim();
-            private readonly LockTaskResponsible _flashLockTaskResponsible;
+            private readonly LockTaskResponsible _flushLockTaskResponsible;
 
             private long _lastFlushedTransactionId;
             private long _lastFlushedJournalId;
@@ -447,7 +447,7 @@ namespace Voron.Impl.Journal
             public JournalApplicator(WriteAheadJournal waj)
             {
                 _waj = waj;
-                _flashLockTaskResponsible = new LockTaskResponsible(_flushingLock, waj._env.Token);
+                _flushLockTaskResponsible = new LockTaskResponsible(_flushingLock, waj._env.Token);
             }
 
 
@@ -576,7 +576,7 @@ namespace Voron.Impl.Journal
                     ApplyJournalStateAfterFlush(token, lastProcessedJournal, lastFlushedTransactionId, unusedJournals);
 
                     _waj._env.SuggestSyncDataFileSyncDataFile();
-                    _flashLockTaskResponsible.RunTaskIfNotAlreadyRan();
+                    _flushLockTaskResponsible.RunTaskIfNotAlreadyRan();
                 }
                 finally
                 {
@@ -806,7 +806,6 @@ namespace Voron.Impl.Journal
                 long _currentTotalWrittenBytes;
                 long _lastSyncedTransactionId;
                 private readonly List<KeyValuePair<long, JournalFile>> _journalsToDelete;
-                bool _flushLockTaken;
                 private TransactionHeader _transactionHeader;
                 private readonly TaskCompletionSource<object> _tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -818,7 +817,6 @@ namespace Voron.Impl.Journal
                     _lastSyncedJournal = 0;
                     _currentTotalWrittenBytes = 0;
                     _lastSyncedTransactionId = 0;
-                    _flushLockTaken = false;
                     _transactionHeader = new TransactionHeader();
                 }
 
@@ -834,7 +832,7 @@ namespace Voron.Impl.Journal
                         return false;
                     }
 
-                    if (WaitToGatherInformationToStartSync(_parent._waj._env.Token) == false)
+                    if (WaitToGatherInformationToStartSync() == false)
                         return false;
 
                     if (_parent._waj._env.Disposed)
@@ -888,9 +886,9 @@ namespace Voron.Impl.Journal
                     }
                 }
 
-                public bool WaitToGatherInformationToStartSync(CancellationToken token)
+                private bool WaitToGatherInformationToStartSync()
                 {
-                    return _parent._flashLockTaskResponsible.WaitForTaskToBeDone(GatherInformationToStartSync);
+                    return _parent._flushLockTaskResponsible.WaitForTaskToBeDone(GatherInformationToStartSync);
                 }
 
                 private void GatherInformationToStartSync()

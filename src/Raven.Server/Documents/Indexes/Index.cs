@@ -1172,10 +1172,7 @@ namespace Raven.Server.Documents.Indexes
 
                                 if (_logsAppliedEvent.Wait(Configuration.MaxTimeToWaitAfterFlushAndSyncWhenExceedingScratchSpaceLimit.AsTimeSpan))
                                 {
-                                    // we've just flushed let's start the sync process
-                                //    GlobalFlushingBehavior.GlobalFlusher.Value.ForceSyncEnvironment(storageEnvironment);
-
-                                    // and cleanup scratch space immediately
+                                    // we've just flushed let's cleanup scratch space immediately
                                     storageEnvironment.Cleanup();
                                 }
                             }

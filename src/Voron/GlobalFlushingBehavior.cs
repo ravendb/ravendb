@@ -37,7 +37,7 @@ namespace Voron
 
         private readonly ManualResetEventSlim _flushWriterEvent = new ManualResetEventSlim();
         private readonly int _lowNumberOfFlushingResources = Math.Max(StorageEnvironment.MaxConcurrentFlushes / 10, 3);
-        private readonly SemaphoreSlim _concurrentFlushes = new SemaphoreSlim(StorageEnvironment.MaxConcurrentFlushes);
+        private readonly SemaphoreSlim _concurrentFlushesAvailable = new SemaphoreSlim(StorageEnvironment.MaxConcurrentFlushes);
 
         private readonly ConcurrentQueue<EnvSyncReq> _maybeNeedToFlush = new ConcurrentQueue<EnvSyncReq>();
 
@@ -52,7 +52,7 @@ namespace Voron
             public readonly ConcurrentQueue<EnvSyncReq> StorageEnvironments = new ConcurrentQueue<EnvSyncReq>();
         }
 
-        public bool HasLowNumberOfFlushingResources => _concurrentFlushes.CurrentCount <= _lowNumberOfFlushingResources;
+        public bool HasLowNumberOfFlushingResources => _concurrentFlushesAvailable.CurrentCount <= _lowNumberOfFlushingResources;
 
 
         private void VoronEnvironmentFlushing()
@@ -126,8 +126,8 @@ namespace Voron
                    env.Journal.Applicator.TotalWrittenButUnsyncedBytes < env.Options.JournalsSizeThreshold)
                     continue;
 
-                var exchange = Interlocked.Exchange(ref envSyncReq.Value.IsSyncRun, 1);
-                if (exchange == 1)
+                var isSyncRun = Interlocked.CompareExchange(ref envSyncReq.Value.IsSyncRun, 1, 0);
+                if (isSyncRun != 0)
                     continue;
 
                 var mpi = _mountPoints.GetOrAdd(env.Options.DataPager.UniquePhysicalDriveId,
@@ -209,7 +209,7 @@ namespace Voron
                     // we haven't reached the point where we have to flush, but we might want to, if we have enough 
                     // resources available, if we have more than half the flushing capacity, we can do it now, otherwise, we'll wait
                     // until it is actually required.
-                    if (_concurrentFlushes.CurrentCount < StorageEnvironment.MaxConcurrentFlushes / 2)
+                    if (_concurrentFlushesAvailable.CurrentCount < StorageEnvironment.MaxConcurrentFlushes / 2)
                         continue;
 
                     // At the same time, we want to avoid excessive flushes, so we'll limit it to once in a while if we don't
@@ -221,7 +221,7 @@ namespace Voron
                 envToFlush.LastFlushTime = DateTime.UtcNow;
                 Interlocked.Add(ref envToFlush.SizeOfUnflushedTransactionsInJournalFile, -sizeOfUnflushedTransactionsInJournalFile);
 
-                _concurrentFlushes.Wait();
+                _concurrentFlushesAvailable.Wait();
                 limit--;
 
                 ThreadPool.QueueUserWorkItem(env =>
@@ -244,7 +244,7 @@ namespace Voron
                     }
                     finally
                     {
-                        _concurrentFlushes.Release();
+                        _concurrentFlushesAvailable.Release();
                     }
                 }, envToFlush);
             }
