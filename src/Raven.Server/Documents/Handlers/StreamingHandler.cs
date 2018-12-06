@@ -177,14 +177,13 @@ namespace Raven.Server.Documents.Handlers
         private StreamCsvBlittableQueryResultWriter GetIndexEntriesQueryResultWriter(string format, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream,
             string[] propertiesArray, string fileName = null)
         {
-            if (string.IsNullOrEmpty(format))
-            {
-                throw new Exception();
-            }
+            if (string.IsNullOrEmpty(format) || format.StartsWith("csv") == false)
+                ThrowUnsupportedException("Using output format other than csv is not supported.");
+
             return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileName);
         }
 
-        private StreamCsvDocumentQueryResultWriter GetQueryResultWriter(string format, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream,
+        private IStreamQueryResultWriter<Document> GetQueryResultWriter(string format, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream,
             string[] propertiesArray, string fileName = null)
         {
             if (string.IsNullOrEmpty(format) == false && format.StartsWith("csv"))
@@ -194,10 +193,15 @@ namespace Raven.Server.Documents.Handlers
 
             if (propertiesArray != null)
             {
-                throw new NotSupportedException("Using json output format with custom fields is not supported");
+                ThrowUnsupportedException("Using json output format with custom fields is not supported.");
             }
 
-            return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, context);
+            return new StreamJsonDocumentQueryResultWriter(response, responseBodyStream, context);
+        }
+
+        private void ThrowUnsupportedException(string message)
+        {
+            throw new NotSupportedException(message);
         }
     }
 }

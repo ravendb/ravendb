@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException(ErrorMessage);
         }
 
-        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, StreamCsvDocumentQueryResultWriter writer,
+        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer,
             OperationCancelToken token)
         {
             throw new NotSupportedException(ErrorMessage);
@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException(ErrorMessage);
         }
         public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
-            StreamCsvBlittableQueryResultWriter writer, OperationCancelToken token)
+            IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
         {
             throw new NotSupportedException(ErrorMessage);
         }
