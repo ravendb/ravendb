@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Handlers
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
                 
                 // set the exported file name
-                string fileName = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
+                var fileName = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
                 fileName = $"{Database.Name}_{fileName}";
                 if (string.IsNullOrWhiteSpace(debug) == false)
                 {
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Handlers
                         catch (IndexDoesNotExistException)
                         {
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            writer.WriteError("Index " + query.Metadata.IndexName + " does not exists");
+                            writer.WriteError($"Index {query.Metadata.IndexName}  does not exists");
                         }
                     }
                 }
@@ -167,11 +167,10 @@ namespace Raven.Server.Documents.Handlers
                         catch (IndexDoesNotExistException)
                         {
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            writer.WriteError("Index " + query.Metadata.IndexName + " does not exists");
+                            writer.WriteError($"Index {query.Metadata.IndexName} does not exists");
                         }
                     }
                 }
-
             }
         }
 

@@ -2392,18 +2392,11 @@ namespace Raven.Server.Documents.Indexes
                 {
                     AssertIndexState();
                     marker.HoldLock();
-
-                    // we take the awaiter _before_ the indexing transaction happens, 
-                    // so if there are any changes, it will already happen to it, and we'll 
-                    // query the index again. This is important because of: 
-                    // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
                     var frozenAwaiter = GetIndexingBatchAwaiter();
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
                         documentsContext.OpenReadTransaction();
-                        // we have to open read tx for mapResults _after_ we open index tx
-
                         bool isStale;
                         using (stalenessScope?.Start())
                         {
@@ -2431,51 +2424,16 @@ namespace Raven.Server.Documents.Indexes
 
                         using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
                         {
-                            using (var queryScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Query)))
+                            foreach (var indexEntry in reader.IndexEntries(documentsContext, query, new Reference<int>(), documentsContext, GetOrAddSpatialField, token.Token))
                             {
-                                QueryTimingsScope gatherScope = null;
-                                QueryTimingsScope fillScope = null;
-
-                                if (queryScope != null && query.Metadata.Includes?.Length > 0)
-                                {
-                                    var includesScope = queryScope.For(nameof(QueryTimingsScope.Names.Includes), start: false);
-                                    gatherScope = includesScope.For(nameof(QueryTimingsScope.Names.Gather), start: false);
-                                    fillScope = includesScope.For(nameof(QueryTimingsScope.Names.Fill), start: false);
-                                }
-
-                                var totalResults = new Reference<int>();
-                                var skippedResults = new Reference<int>();
-                                IncludeCountersCommand includeCountersCommand = null;
-
-                                var fieldsToFetch = new FieldsToFetch(query, Definition);
-
-
-
-                                foreach (var indexEntry in reader.IndexEntries(documentsContext, query, totalResults, documentsContext, GetOrAddSpatialField, token.Token))
-                                {
-                                    try
-                                    {
-                                        resultToFill.AddResult(indexEntry);
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        Console.WriteLine(e);
-                                        throw;
-                                    }
-                                }
-
-
-
-
+                                resultToFill.AddResult(indexEntry);
                             }
                         }
-
                         return;
                     }
                 }
             }
         }
-
 
         public virtual async Task<FacetedQueryResult> FacetedQuery(FacetQuery facetQuery, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
