@@ -7,7 +7,7 @@ namespace Raven.Database.Storage
 {
     public interface IListsStorageActions
     {
-        void Set(string name, string key, RavenJObject data, UuidType uuidType);
+        Etag Set(string name, string key, RavenJObject data, UuidType uuidType);
         
         void Remove(string name, string key);
 

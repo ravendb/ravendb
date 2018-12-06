@@ -19,7 +19,7 @@ namespace Raven.Database.Storage.Esent.StorageActions
 {
     public partial class DocumentStorageActions : IListsStorageActions
     {
-        public void Set(string name, string key, RavenJObject data, UuidType uuidType)
+        public Etag Set(string name, string key, RavenJObject data, UuidType uuidType)
         {
             Api.JetSetCurrentIndex(session, Lists, "by_name_and_key");
             Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
@@ -32,7 +32,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
             {
                 Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["name"], name, Encoding.Unicode);
                 Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["key"], key, Encoding.Unicode);
-                Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["etag"], uuidGenerator.CreateSequentialUuid(uuidType).TransformToValueForEsentSorting());
+                Etag etag = uuidGenerator.CreateSequentialUuid(uuidType);
+                Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["etag"], etag.TransformToValueForEsentSorting());
                 Api.SetColumn(session, Lists, tableColumnsCache.ListsColumns["created_at"], SystemTime.UtcNow);
 
                 using (var columnStream = new ColumnStream(session, Lists, tableColumnsCache.ListsColumns["data"]))
@@ -46,6 +47,8 @@ namespace Raven.Database.Storage.Esent.StorageActions
                     }
                 }
                 update.Save();
+
+                return etag;
             }
         }
 
