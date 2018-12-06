@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }, patch, patchArgs, onProgress, token);
         }
 
-        private void ExecuteCollectionQuery(QueryResultServerSide resultToFill, IndexQueryServerSide query, string collection, DocumentsOperationContext context, CancellationToken cancellationToken)
+        private void ExecuteCollectionQuery(QueryResultServerSide<Document> resultToFill, IndexQueryServerSide query, string collection, DocumentsOperationContext context, CancellationToken cancellationToken)
         {
             using (var queryScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Query)))
             {
@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
         }
 
-        private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide resultToFill, QueryMetadata query, DocumentsOperationContext context)
+        private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide<Document> resultToFill, QueryMetadata query, DocumentsOperationContext context)
         {
             var collection = query.CollectionName;
             var buffer = stackalloc long[3];

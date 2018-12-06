@@ -16,15 +16,15 @@ namespace Raven.Server.Documents.Handlers
             {
                 if (Constants.Documents.Metadata.Id == property)
                 {
-                    GetCscWriter().WriteField(res.Id);
+                    GetCsvWriter().WriteField(res.Id);
                 }
                 else
                 {
                     var o = new BlittablePath(path).Evaluate(res.Data, false);
-                    GetCscWriter().WriteField(o?.ToString());
+                    GetCsvWriter().WriteField(o?.ToString());
                 }
             }
-            GetCscWriter().NextRecord();
+            GetCsvWriter().NextRecord();
         }
 
         public StreamCsvDocumentQueryResultWriter(HttpResponse response, Stream stream, DocumentsOperationContext context, string[] properties = null,
