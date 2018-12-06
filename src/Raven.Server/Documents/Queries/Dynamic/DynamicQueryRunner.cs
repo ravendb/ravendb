@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     return IndexEntriesQueryResult.NotModifiedResult;
             }
 
-            return index.IndexEntries(query, context, token);
+            return await index.IndexEntries(query, context, token);
         }
 
         public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,

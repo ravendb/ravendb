@@ -25,9 +25,9 @@ namespace Raven.Server.Documents.Handlers
         private (string, string)[] _properties;
         private bool writeHeader = true;
 
-        protected StreamCsvResultWriter(HttpResponse response, Stream stream, DocumentsOperationContext context, string[] properties = null, string csvFileName = "export")
+        protected StreamCsvResultWriter(HttpResponse response, Stream stream, DocumentsOperationContext context, string[] properties = null, string csvFileNamePrefix = "export")
         {
-            csvFileName = $"{csvFileName}_{SystemTime.UtcNow.ToString("yyyyMMdd_HHmm", CultureInfo.InvariantCulture)}.csv";
+            var csvFileName = $"{csvFileNamePrefix}_{SystemTime.UtcNow.ToString("yyyyMMdd_HHmm", CultureInfo.InvariantCulture)}.csv";
 
             _response = response;
             _response.Headers["Content-Disposition"] = $"attachment; filename=\"{csvFileName}\"; filename*=UTF-8''{csvFileName}";
@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Handlers
 
         public abstract void AddResult(T res);
 
-        public CsvWriter GetCscWriter()
+        public CsvWriter GetCsvWriter()
         {
             return _csvWriter;
         }

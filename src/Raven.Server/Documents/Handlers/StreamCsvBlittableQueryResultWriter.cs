@@ -15,10 +15,10 @@ namespace Raven.Server.Documents.Handlers
             foreach ((var property, var path) in GetProperties())
             {
                 var o = new BlittablePath(path).Evaluate(res, false);
-                GetCscWriter().WriteField(o?.ToString());
+                GetCsvWriter().WriteField(o?.ToString());
             }
 
-            GetCscWriter().NextRecord();
+            GetCsvWriter().NextRecord();
         }
 
         public StreamCsvBlittableQueryResultWriter(HttpResponse response, Stream stream, DocumentsOperationContext context, string[] properties = null,

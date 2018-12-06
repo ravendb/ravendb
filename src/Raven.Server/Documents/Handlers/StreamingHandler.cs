@@ -138,12 +138,12 @@ namespace Raven.Server.Documents.Handlers
                 var properties = GetStringValuesQueryString("field", false);
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
                 
-                // set the exported file name
-                var fileName = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
-                fileName = $"{Database.Name}_{fileName}";
+                // set the exported file name prefix
+                var fileNamePrefix = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
+                fileNamePrefix = $"{Database.Name}_{fileNamePrefix}";
                 if (string.IsNullOrWhiteSpace(debug) == false)
                 {
-                    using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileName))
+                    using (var writer = GetIndexEntriesQueryResultWriter(format, debug, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileNamePrefix))
                     {
                         try
                         {
@@ -152,13 +152,13 @@ namespace Raven.Server.Documents.Handlers
                         catch (IndexDoesNotExistException)
                         {
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            writer.WriteError($"Index {query.Metadata.IndexName}  does not exists");
+                            writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
                         }
                     }
                 }
                 else
                 {
-                    using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileName))
+                    using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileNamePrefix))
                     {
                         try
                         {
@@ -167,28 +167,28 @@ namespace Raven.Server.Documents.Handlers
                         catch (IndexDoesNotExistException)
                         {
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            writer.WriteError($"Index {query.Metadata.IndexName} does not exists");
+                            writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
                         }
                     }
                 }
             }
         }
 
-        private StreamCsvBlittableQueryResultWriter GetIndexEntriesQueryResultWriter(string format, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream,
-            string[] propertiesArray, string fileName = null)
+        private StreamCsvBlittableQueryResultWriter GetIndexEntriesQueryResultWriter(string format, string debug, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream,
+            string[] propertiesArray, string fileNamePrefix = null)
         {
-            if (string.IsNullOrEmpty(format) || format.StartsWith("csv") == false)
+            if (string.IsNullOrEmpty(format) || string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase) == false || string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase) == false)
                 ThrowUnsupportedException("Using output format other than csv is not supported.");
 
-            return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileName);
+            return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileNamePrefix);
         }
 
         private IStreamQueryResultWriter<Document> GetQueryResultWriter(string format, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream,
-            string[] propertiesArray, string fileName = null)
+            string[] propertiesArray, string fileNamePrefix = null)
         {
-            if (string.IsNullOrEmpty(format) == false && format.StartsWith("csv"))
+            if (string.IsNullOrEmpty(format) == false && string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase))
             {
-                return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileName);
+                return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileNamePrefix);
             }
 
             if (propertiesArray != null)

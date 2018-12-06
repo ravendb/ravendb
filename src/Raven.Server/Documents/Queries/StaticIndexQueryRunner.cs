@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Queries
                     return Task.FromResult(IndexEntriesQueryResult.NotModifiedResult);
             }
 
-            return Task.FromResult(index.IndexEntries(query, context, token));
+            return index.IndexEntries(query, context, token);
         }
 
         public async Task<FacetedQueryResult> ExecuteFacetedQuery(IndexQueryServerSide query, long? existingResultEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)

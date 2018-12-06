@@ -2124,7 +2124,7 @@ namespace Raven.Server.Documents.Indexes
             IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             var result = new StreamDocumentIndexEntriesQueryResult(response, writer, token);
-            await IndexEntriesQueryInternal(result, query, documentsContext, response, token);
+            await IndexEntriesQueryInternal(result, query, documentsContext, token);
             result.Flush();
             DocumentDatabase.QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
         }
@@ -2139,27 +2139,9 @@ namespace Raven.Server.Documents.Indexes
 
         private async Task QueryInternal<TQueryResult>(TQueryResult resultToFill, IndexQueryServerSide query,
             DocumentsOperationContext documentsContext, OperationCancelToken token)
-            where TQueryResult : QueryResultServerSide
+            where TQueryResult : QueryResultServerSide<Document>
         {
-            AssertIndexState();
-
-            if (State == IndexState.Idle)
-            {
-                try
-                {
-                    SetState(IndexState.Normal);
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Failed to change state of '{Name}' index from {IndexState.Idle} to {IndexState.Normal}. Proceeding with running the query.",
-                            e);
-                }
-            }
-
-            MarkQueried(DocumentDatabase.Time.GetUtcNow());
-
-            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Metadata);
+            QueryInternalPreparation(query);
 
             if (resultToFill.SupportsInclude == false
                 && (query.Metadata.Includes != null && query.Metadata.Includes.Length > 0))
@@ -2341,28 +2323,10 @@ namespace Raven.Server.Documents.Indexes
         }
 
         private async Task IndexEntriesQueryInternal<TQueryResult>(TQueryResult resultToFill, IndexQueryServerSide query,
-          DocumentsOperationContext documentsContext, HttpResponse response, OperationCancelToken token)
-          where TQueryResult : StreamDocumentIndexEntriesQueryResult
+          DocumentsOperationContext documentsContext, OperationCancelToken token)
+          where TQueryResult : QueryResultServerSide<BlittableJsonReaderObject>
         {
-            AssertIndexState();
-
-            if (State == IndexState.Idle)
-            {
-                try
-                {
-                    SetState(IndexState.Normal);
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Failed to change state of '{Name}' index from {IndexState.Idle} to {IndexState.Normal}. Proceeding with running the query.",
-                            e);
-                }
-            }
-
-            MarkQueried(DocumentDatabase.Time.GetUtcNow());
-
-            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Metadata);
+            QueryInternalPreparation(query);
 
             if (resultToFill.SupportsInclude == false
                 && (query.Metadata.Includes != null && query.Metadata.Includes.Length > 0))
@@ -2424,8 +2388,11 @@ namespace Raven.Server.Documents.Indexes
 
                         using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
                         {
-                            foreach (var indexEntry in reader.IndexEntries(documentsContext, query, new Reference<int>(), documentsContext, GetOrAddSpatialField, token.Token))
+                            var totalResults = new Reference<int>();
+
+                            foreach (var indexEntry in reader.IndexEntries(documentsContext, query, totalResults, documentsContext, GetOrAddSpatialField, token.Token))
                             {
+                                resultToFill.TotalResults = totalResults.Value;
                                 resultToFill.AddResult(indexEntry);
                             }
                         }
@@ -2433,6 +2400,28 @@ namespace Raven.Server.Documents.Indexes
                     }
                 }
             }
+        }
+
+        private void QueryInternalPreparation(IndexQueryServerSide query)
+        {
+            AssertIndexState();
+
+            if (State == IndexState.Idle)
+            {
+                try
+                {
+                    SetState(IndexState.Normal);
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Failed to change state of '{Name}' index from {IndexState.Idle} to {IndexState.Normal}. Proceeding with running the query.",
+                            e);
+                }
+            }
+
+            MarkQueried(DocumentDatabase.Time.GetUtcNow());
+            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Metadata);
         }
 
         public virtual async Task<FacetedQueryResult> FacetedQuery(FacetQuery facetQuery, DocumentsOperationContext documentsContext, OperationCancelToken token)
@@ -2606,42 +2595,13 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
         }
-        public IndexEntriesQueryResult IndexEntries(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+
+        public virtual async Task<IndexEntriesQueryResult> IndexEntries(IndexQueryServerSide query,
+            DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
-            AssertIndexState();
-
-            if (State == IndexState.Idle)
-                SetState(IndexState.Normal);
-
-            MarkQueried(DocumentDatabase.Time.GetUtcNow());
-            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Metadata);
-
-            using (var marker = MarkQueryAsRunning(query, token))
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
-            using (var indexTx = indexContext.OpenReadTransaction())
-            using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
-            {
-                AssertIndexState();
-                marker.HoldLock();
-
-                var result = new IndexEntriesQueryResult();
-
-                using (documentsContext.OpenReadTransaction())
-                {
-                    var isStale = IsStale(documentsContext, indexContext);
-                    FillQueryResult(result, isStale, query.Metadata, documentsContext, indexContext);
-                }
-
-                var totalResults = new Reference<int>();
-                foreach (var indexEntry in reader.IndexEntries(documentsContext, query, totalResults, documentsContext, GetOrAddSpatialField, token.Token))
-                {
-                    result.AddResult(indexEntry);
-                }
-
-                result.TotalResults = totalResults.Value;
-
-                return result;
-            }
+            var result = new IndexEntriesQueryResult();
+            await IndexEntriesQueryInternal(result, query, documentsContext, token);
+            return result;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
