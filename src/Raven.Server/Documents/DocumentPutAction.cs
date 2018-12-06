@@ -99,21 +99,25 @@ namespace Raven.Server.Documents
 
                     var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
 
-                    if ((nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
+                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false)
                     {
-                        if ((nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate &&
-                            (oldFlags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByAttachmentUpdate) == false &&
+                            oldFlags .Contain(DocumentFlags.HasAttachments))
                         {
                             flags |= DocumentFlags.HasAttachments;
                         }
 
-                        if ((nonPersistentFlags & NonPersistentDocumentFlags.ByCountersUpdate) != NonPersistentDocumentFlags.ByCountersUpdate &&
-                            (oldFlags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters)
+                        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByCountersUpdate) == false &&
+                            oldFlags.Contain(DocumentFlags.HasCounters))
                         {
                             flags |= DocumentFlags.HasCounters;
                         }
-                    }
 
+                        if (oldFlags.Contain(DocumentFlags.HasRevisions))
+                        {
+                            flags |= DocumentFlags.HasRevisions;
+                        }
+                    }
                 }
 
                 var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldValue);
@@ -173,17 +177,22 @@ namespace Raven.Server.Documents
 #endif
                     }
 
-                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false && 
-                        (flags.Contain(DocumentFlags.Resolved) || 
-                        _documentDatabase.DocumentsStorage.RevisionsStorage.Configuration != null
-                        ))
+                    var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
+                        ref flags, out RevisionsCollectionConfiguration configuration);
+                    if (shouldVersion)
                     {
-                        var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
-                            ref flags, out RevisionsCollectionConfiguration configuration);
-                        if (shouldVersion)
+                        if (flags.Contain(DocumentFlags.HasRevisions) == false && oldDoc != null)
                         {
-                            _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
+                            var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
+                            var oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
+                            var oldTicks = TableValueToDateTime((int)DocumentsTable.LastModified, ref oldValue);
+                            
+                            _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, oldDoc, oldFlags | DocumentFlags.HasRevisions, NonPersistentDocumentFlags.None,
+                                oldChangeVector, oldTicks.Ticks, configuration, collectionName);
                         }
+                        flags |= DocumentFlags.HasRevisions;
+
+                        _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, changeVector, modifiedTicks, configuration, collectionName);
                     }
                 }
 

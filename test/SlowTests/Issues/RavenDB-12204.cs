@@ -11,7 +11,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_12204 : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-12414")]
+        [Fact]
         public async Task CanMigrateFromRavenDb()
         {
             var file = Path.Combine(NewDataPath(forceCreateDir: true), "export.ravendbdump");
