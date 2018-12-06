@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Abstractions;
@@ -93,7 +94,10 @@ namespace Raven.Database.Bundles.SqlReplication
 
                 if (notification.Type == DocumentChangeTypes.Delete)
                 {
-                    RecordDelete(notification.Id, metadata);
+                    using(Database.DocumentLock.Lock())
+                    {
+                        RecordDelete(notification.Id, metadata);
+                    }
                 }
 
                 if (!notification.Id.StartsWith("Raven/SqlReplication/Configuration/", StringComparison.InvariantCultureIgnoreCase)
@@ -136,6 +140,7 @@ namespace Raven.Database.Bundles.SqlReplication
 
         private void RecordDelete(string id, RavenJObject metadata)
         {
+            Etag etag = null;
             Database.TransactionalStorage.Batch(accessor =>
             {
                 bool hasChanges = false;
@@ -145,13 +150,18 @@ namespace Raven.Database.Bundles.SqlReplication
                         continue;
 
                     hasChanges = true;
-                    accessor.Lists.Set(GetSqlReplicationDeletionName(config), id, metadata, UuidType.Documents);
+                    string sqlReplicationName = GetSqlReplicationDeletionName(config);
+                    etag = accessor.Lists.Set(sqlReplicationName, id, metadata, UuidType.Documents);
+                    if (Log.IsDebugEnabled)
+                    {
+                        Log.Debug(() => $"For sql replication replication {sqlReplicationName} recorded a deleted document, under etag: {etag}, document etag: { metadata.Value<string>(Constants.MetadataEtagField)} id: {id}");
+                    }
                 }
                 if (hasChanges)
                     Database.WorkContext.ShouldNotifyAboutWork(() => "recorded a deleted document " + id);
             });
-            if (Log.IsDebugEnabled)
-                Log.Debug(() => "recorded a deleted document " + id);
+            
+                
         }
 
         private SqlReplicationStatus GetReplicationStatus()
@@ -219,6 +229,13 @@ namespace Raven.Database.Bundles.SqlReplication
                     continue;
                 }
 
+
+                if (Log.IsDebugEnabled)
+                {
+                    Log.Debug($@"SqlReplication grouping: {Environment.NewLine} {string.Join(";",configGroups.Select(x => $"{x.Key}: ({string.Join(",", x.Value.Select(y => y.Name))}){Environment.NewLine}"))}");
+                }
+
+
                 var usedPrefetchers = new ConcurrentSet<PrefetchingBehavior>();
 
                 var groupedConfigs = configGroups
@@ -245,20 +262,17 @@ namespace Raven.Database.Bundles.SqlReplication
                         Database.WorkContext.CancellationToken.ThrowIfCancellationRequested();
                         
                         var prefetchingBehavior = sqlConfigGroup.PrefetchingBehavior;
-                        var configsToWorkOn = sqlConfigGroup.ConfigsToWorkOn;
+                        var configsToWorkOn = sqlConfigGroup.ConfigsToWorkOn.ToList();//create clone
 
                         List<JsonDocument> documents;
                         using (prefetchingBehavior.DocumentBatchFrom(sqlConfigGroup.LastReplicatedEtag, changesBatchSize, out documents))
                         {
-                            Etag latestEtag = null, lastBatchEtag = null;
+                            Etag lastBatchEtag = null;
                             if (documents.Count != 0)
                                 lastBatchEtag = documents[documents.Count - 1].Etag;
 
                             var replicationDuration = Stopwatch.StartNew();
                             documents.RemoveAll(x => x.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)); // we ignore system documents here
-
-                            if (documents.Count != 0)
-                                latestEtag = documents[documents.Count - 1].Etag;
 
                             documents.RemoveAll(x => prefetchingBehavior.FilterDocuments(x) == false);
 
@@ -266,33 +280,89 @@ namespace Raven.Database.Bundles.SqlReplication
 
                             foreach (var configToWorkOn in configsToWorkOn)
                             {
-                                var cfg = configToWorkOn;   
-                                
+                                var cfg = configToWorkOn;
+
                                 Database.TransactionalStorage.Batch(accessor =>
                                 {
-                                    deletedDocsByConfig[cfg] = accessor.Lists.Read(GetSqlReplicationDeletionName(cfg),
+                                    List<ListItem> deletedDocs = accessor.Lists.Read(GetSqlReplicationDeletionName(cfg),
                                             cfg.LastReplicatedEtag,
-                                            latestEtag,
+                                            lastBatchEtag,
                                             MaxNumberOfDeletionsToReplicate + 1)
                                         .ToList();
+
+                                    if (deletedDocs.Count > MaxNumberOfDeletionsToReplicate-1 && 
+                                        lastBatchEtag != null)
+                                    {
+
+
+                                        // we have more docs in range then we allow for, so we need to trim
+                                        // the documents to the last delete here
+
+                                        var lastDeleteEtag = deletedDocs[deletedDocs.Count - 1].Etag;
+                                        var docsCountBeforeRemovalOfDocumentsAfterLastDeletedDocToSend = documents.Count;
+                                        documents.RemoveAll(x => x.Etag.CompareTo(lastBatchEtag) >= 0);
+                                        if (lastBatchEtag.CompareTo(lastDeleteEtag) > 0)
+                                        {
+                                            if (Log.IsDebugEnabled)
+                                            {
+                                                var sb = new StringBuilder();
+                                                sb.Append($"For sqlReplications {cfg.Name} there were more deleted docs then {MaxNumberOfDeletionsToReplicate - 1}. ");
+                                                sb.Append($"In order to maintain replication order, lastBatchEtag was modified from {lastBatchEtag} to {lastDeleteEtag}. ");
+
+                                                if (docsCountBeforeRemovalOfDocumentsAfterLastDeletedDocToSend > documents.Count)
+                                                {
+                                                    sb.Append($"{docsCountBeforeRemovalOfDocumentsAfterLastDeletedDocToSend - documents.Count} won't be sent");
+                                                }
+
+                                                Log.Debug(sb.ToString());
+                                            }
+                                            lastBatchEtag = lastDeleteEtag;
+                                        }
+                                        else if (Log.IsDebugEnabled)
+                                        {
+                                            var sb = new StringBuilder();
+                                            sb.Append($"For sqlReplications {cfg.Name} there were more deleted docs then {MaxNumberOfDeletionsToReplicate - 1}. ");
+                                            if (docsCountBeforeRemovalOfDocumentsAfterLastDeletedDocToSend > documents.Count)
+                                            {
+                                                sb.Append($"{docsCountBeforeRemovalOfDocumentsAfterLastDeletedDocToSend - documents.Count} won't be sent");
+                                            }
+                                            
+                                            Log.Debug(sb.ToString());                                                
+                                        }
+                                    }
+
+                                    if (Log.IsDebugEnabled)
+                                    {
+                                        var docIDsToDelete = string.Join(" , ", deletedDocs.Select(x => x.Key));
+                                        Log.Debug($"For sqlReplication {cfg.Name} for Documents found to delete from etag {cfg.LastReplicatedEtag } to etag {lastBatchEtag} in sql replication {cfg.Name}: {docIDsToDelete}");
+                                    }
+                                    deletedDocsByConfig[cfg] = deletedDocs;
                                 });
                             }
 
                             // No documents AND there aren't any deletes to replicate
-                            if (documents.Count == 0 && deletedDocsByConfig.Sum(x => x.Value.Count) == 0)
+                            if (documents.Count == 0)
                             {
-                                // so we filtered some documents, let us update the etag about that.
-                                if (latestEtag != null)
+                                foreach (var item in deletedDocsByConfig)
                                 {
-                                    foreach (var configToWorkOn in configsToWorkOn)
-                                        successes.Enqueue(Tuple.Create(configToWorkOn, latestEtag));
-                                }
-                                else
-                                {
-                                    waitForWork[i] = true;
-                                }
+                                    var cfg = configsToWorkOn.Single(x => x.Name == item.Key.Name);
+                                    if (item.Value.Count == 0)
+                                    {                                        
+                                        waitForWork[i] = true;
 
-                                return;
+                                        if (Log.IsDebugEnabled)                                                                                   
+                                            Log.Debug($"For sqlReplication {cfg.Name}, there are no documents or deletes to be sent, there will be no attempt to replicate. ");                                                                                       
+
+                                        configsToWorkOn.Remove(cfg);
+                                    }
+                                }
+                                if (configsToWorkOn.Count == 0)
+                                {
+                                    if (Log.IsDebugEnabled)
+                                        Log.Debug($"No documents or deletes were found in current batch, all sqlReplication group activated ");
+
+                                    return;
+                                }
                             }
 
                             var itemsToReplicate = documents.Select(x =>
@@ -326,13 +396,25 @@ namespace Raven.Database.Bundles.SqlReplication
                                             .Where(x => lastReplicatedEtag.CompareTo(x.Etag) < 0); // haven't replicate the etag yet
 
                                         if (deletedDocs.Count >= MaxNumberOfDeletionsToReplicate + 1)
+                                        {
+                                            if (Log.IsDebugEnabled)
+                                            {
+                                                Log.Debug($"Found too much documents to replicate in sql replication task: {replicationConfig.Name}");
+                                            }
                                             docsToReplicate = docsToReplicate.Where(x => EtagUtil.IsGreaterThan(x.Etag, deletedDocs[deletedDocs.Count - 1].Etag) == false);
+                                        }
 
                                         var docsToReplicateAsList = docsToReplicate.ToList();
 
-                                        var currentLatestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicateAsList);
+                                        var currentLatestEtag = HandleDeletesAndChangesMerging(deletedDocs, docsToReplicateAsList, replicationConfig);
                                         if (currentLatestEtag == null && itemsToReplicate.Count > 0 && docsToReplicateAsList.Count == 0)
+                                        {
+                                            if (Log.IsDebugEnabled)
+                                            {
+                                                Log.Debug($"for sqlReplication {replicationConfig.Name} currentLatestEtag could not be found from deletedDocs and docsToReplicateAsList, bumping currentLastEtag to {lastBatchEtag}");
+                                            }
                                             currentLatestEtag = lastBatchEtag;
+                                        }
 
                                         int countOfReplicatedItems = 0;
                                         if (ReplicateDeletionsToDestination(replicationConfig, deletedDocs) &&
@@ -340,8 +422,18 @@ namespace Raven.Database.Bundles.SqlReplication
                                         {
                                             if (deletedDocs.Count > 0)
                                             {
+                                                if (Log.IsDebugEnabled)
+                                                {
+                                                    Log.Debug($"For sqlReplication {replicationConfig.Name} Removing all replicated deletes prior to etag {deletedDocs[deletedDocs.Count - 1].Etag}");
+                                                }
+
                                                 Database.TransactionalStorage.Batch(accessor =>
                                                     accessor.Lists.RemoveAllBefore(GetSqlReplicationDeletionName(replicationConfig), deletedDocs[deletedDocs.Count - 1].Etag));
+                                            }
+
+                                            if (Log.IsDebugEnabled)
+                                            {
+                                                Log.Debug($"For sqlReplication {replicationConfig.Name} updating successes with etag {currentLatestEtag}");
                                             }
                                             successes.Enqueue(Tuple.Create(replicationConfig, currentLatestEtag));
 
@@ -390,6 +482,10 @@ namespace Raven.Database.Bundles.SqlReplication
                         }
                     });
 
+
+                    if (Log.IsDebugEnabled)
+                        Log.Debug($"Successes count is: {successes.Count}, waitForWork count is: {waitForWork.Count(x=>x)} out of {successes.Count}");
+
                     if (successes.Count == 0)
                     {
                         if (waitForWork.All(x => x))
@@ -421,8 +517,12 @@ namespace Raven.Database.Bundles.SqlReplication
                         {
                             var lastDocEtag = destEtag.LastDocEtag;
                             if (currentLatestEtag != null && EtagUtil.IsGreaterThan(currentLatestEtag, lastDocEtag))
-                                lastDocEtag = currentLatestEtag;
+                            {
+                                if (Log.IsDebugEnabled)
+                                    Log.Debug($"Switched LastDocEtag ({destEtag.LastDocEtag})to a higher one ({currentLatestEtag}) in {cfg.Name}");
 
+                                lastDocEtag = currentLatestEtag;
+                            }
                             destEtag.LastDocEtag = lastDocEtag;
                         }
                     }
@@ -553,17 +653,21 @@ namespace Raven.Database.Bundles.SqlReplication
                 }
                 catch (SynchronizationLockException)
                 {
+                    if (Log.IsDebugEnabled)
+                        Log.Debug($"SaveNewReplicationStatus failed due to SynchronizationLockException");
                     // just ignore it, we'll save that next time
                     break;
                 }
                 catch (ConcurrencyException)
                 {
+                    if (Log.IsDebugEnabled)
+                        Log.Debug($"SaveNewReplicationStatus failed due to ConcurrencyException");
                     Thread.Sleep(50);
                 }
             }
         }
 
-        private Etag HandleDeletesAndChangesMerging(List<ListItem> deletedDocs, List<ReplicatedDoc> docsToReplicate)
+        private Etag HandleDeletesAndChangesMerging(List<ListItem> deletedDocs, List<ReplicatedDoc> docsToReplicate, SqlReplicationConfigWithLastReplicatedEtag replicationConfig)
         {
             // This code is O(N^2), I don't like it, but we don't have a lot of deletes, and in order for it to be really bad
             // we need a lot of deletes WITH a lot of changes at the same time
@@ -579,11 +683,19 @@ namespace Raven.Database.Bundles.SqlReplication
                 // delete > doc
                 if (deletedDoc.Etag.CompareTo(docsToReplicate[change].Etag) > 0)
                 {
+                    if (Log.IsDebugEnabled)
+                    {
+                        Log.Debug($"In task {replicationConfig.Name} Document with ID {deletedDoc.Key} won't be sql replicated because it's registered for deletion after the modification");
+                    }
                     // the delete came AFTER the doc, so we can remove the doc and just replicate the delete
                     docsToReplicate.RemoveAt(change);
                 }
                 else
                 {
+                    if (Log.IsDebugEnabled)
+                    {
+                        Log.Debug($"In task {replicationConfig.Name} Deletion of document with ID {deletedDoc.Key} won't be sql replicated because it has been modified after it was registered for deletion");
+                    }
                     // the delete came BEFORE the doc, so we can remove the delte and just replicate the change
                     deletedDocs.RemoveAt(index);
                     index--;
@@ -599,9 +711,21 @@ namespace Raven.Database.Bundles.SqlReplication
                 var maybeLatest = docsToReplicate[docsToReplicate.Count - 1].Etag;
                 Debug.Assert(maybeLatest != null);
                 if (latest == null)
+                {
+                    if (Log.IsDebugEnabled)
+                    {
+                        Log.Debug($"In task {replicationConfig.Name} Latest Etag will be set to {maybeLatest} because there were no documents to delete");
+                    }
                     return maybeLatest;
+                }
                 if (maybeLatest.CompareTo(latest) > 0)
+                {
+                    if (Log.IsDebugEnabled)
+                    {
+                        Log.Debug($"In task {replicationConfig.Name} Latest Etag will be set to {maybeLatest} instead of {latest} because last modified etag is higher then last deleted one");
+                    }
                     return maybeLatest;
+                }                    
             }
 
             return latest;

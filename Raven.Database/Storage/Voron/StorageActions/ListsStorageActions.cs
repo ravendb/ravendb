@@ -47,7 +47,7 @@ namespace Raven.Database.Storage.Voron.StorageActions
             this.generalStorageActions = generalStorageActions;
         }
 
-        public void Set(string name, string key, RavenJObject data, UuidType type)
+        public Etag Set(string name, string key, RavenJObject data, UuidType type)
         {
             var listsByName = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByName);
             var listsByNameAndKey = tableStorage.Lists.GetIndex(Tables.Lists.Indices.ByNameAndKey);
@@ -93,6 +93,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
                 listsByName.MultiAdd(writeBatch.Value, nameKeySlice, internalKeyAsSlice);
                 listsByNameAndKey.Add(writeBatch.Value, nameAndKeySlice, internalKey);
             }
+
+            return etag;
         }
 
         public void Remove(string name, string key)
