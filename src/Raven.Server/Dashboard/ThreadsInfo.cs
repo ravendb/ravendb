@@ -31,7 +31,7 @@ namespace Raven.Server.Dashboard
         }
     }
 
-    public class ThreadInfo : IDynamicJson
+    public class ThreadInfo : IDynamicJson, IComparable<ThreadInfo>
     {
         public int Id { get; set; }
 
@@ -62,6 +62,11 @@ namespace Raven.Server.Dashboard
                 [nameof(Priority)] = Priority,
                 [nameof(ThreadWaitReason)] = ThreadWaitReason
             };
+        }
+
+        public int CompareTo(ThreadInfo other)
+        {
+            return other.CpuUsage.CompareTo(CpuUsage);
         }
     }
 }
