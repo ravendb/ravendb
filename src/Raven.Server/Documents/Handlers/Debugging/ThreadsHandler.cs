@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
+using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -13,6 +14,32 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class ThreadsHandler : RequestHandler
     {
+        [RavenAction("/admin/debug/threads/top", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        public async Task TopThreads()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var threadsUsage = new ThreadsUsage();
+
+                    //need to wait to get a result after an interval
+                    await Task.Delay(100);
+                    threadsUsage.Calculate();
+
+                    await Task.Delay(100);
+                    var result = threadsUsage.Calculate();
+
+                    context.Write(write,
+                        new DynamicJsonValue
+                        {
+                            ["Top Threads"] = result.ToJson()
+                        });
+                    write.Flush();
+                }
+            }
+        }
+
         [RavenAction("/admin/debug/threads/runaway", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public Task RunawayThreads()
         {
