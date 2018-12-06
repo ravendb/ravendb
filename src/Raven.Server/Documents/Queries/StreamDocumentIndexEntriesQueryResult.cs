@@ -36,16 +36,6 @@ namespace Raven.Server.Documents.Queries
             _token.Delay();
         }
 
-        //public override void AddResult(Document result)
-        //{
-        //    if (_anyWrites == false)
-        //        StartResponseIfNeeded();
-
-        //    using (result.Data)
-        //        _writer.AddResult(result);
-        //    _token.Delay();
-        //}
-
         public override void AddHighlightings(Dictionary<string, Dictionary<string, string[]>> highlightings)
         {
             throw new NotSupportedException();
