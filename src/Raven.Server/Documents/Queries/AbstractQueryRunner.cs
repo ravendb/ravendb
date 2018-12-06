@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Util.RateLimiting;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TransactionCommands;
@@ -39,10 +40,10 @@ namespace Raven.Server.Documents.Queries
         public abstract Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token);
 
         public abstract Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
-            IStreamDocumentQueryResultWriter writer, OperationCancelToken token);
+            StreamCsvDocumentQueryResultWriter writer, OperationCancelToken token);
 
         public abstract Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
-            IStreamBlittableJsonReaderObjectQueryResultWriter writer, OperationCancelToken token);
+            StreamCsvBlittableQueryResultWriter writer, OperationCancelToken token);
 
         public abstract Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token);
 

@@ -23,6 +23,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
@@ -2109,7 +2110,7 @@ namespace Raven.Server.Documents.Indexes
             return Definition.GetOrCreateIndexDefinitionInternal();
         }
 
-        public virtual async Task StreamQuery(HttpResponse response, IStreamDocumentQueryResultWriter writer,
+        public virtual async Task StreamQuery(HttpResponse response, StreamCsvDocumentQueryResultWriter writer,
             IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             var result = new StreamDocumentQueryResult(response, writer, token);
@@ -2119,7 +2120,7 @@ namespace Raven.Server.Documents.Indexes
             DocumentDatabase.QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
         }
 
-        public virtual async Task StreamIndexEntriesQuery(HttpResponse response, IStreamBlittableJsonReaderObjectQueryResultWriter writer,
+        public virtual async Task StreamIndexEntriesQuery(HttpResponse response, StreamCsvBlittableQueryResultWriter writer,
             IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             var result = new StreamDocumentIndexEntriesQueryResult(response, writer, token);

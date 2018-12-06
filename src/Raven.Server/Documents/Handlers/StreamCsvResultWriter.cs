@@ -16,19 +16,19 @@ using static System.String;
 
 namespace Raven.Server.Documents.Handlers
 {
-    internal class StreamCsvBlittableJsonReaderObjectQueryResultWriter : IStreamBlittableJsonReaderObjectQueryResultWriter
+    public abstract class StreamCsvResultWriter<T> : IStreamQueryResultWriter<T>
     {
-        private HttpResponse _response;
-        private DocumentsOperationContext _context;
-        private StreamWriter _writer;
+        private readonly HttpResponse _response;
+        private readonly DocumentsOperationContext _context;
+        private readonly StreamWriter _writer;
         private CsvWriter _csvWriter;
         private (string, string)[] _properties;
         private bool writeHeader = true;
 
-        public StreamCsvBlittableJsonReaderObjectQueryResultWriter(HttpResponse response, Stream stream, DocumentsOperationContext context, string[] properties = null, string csvFileName = "export")
+        protected StreamCsvResultWriter(HttpResponse response, Stream stream, DocumentsOperationContext context, string[] properties = null, string csvFileName = "export")
         {
-            csvFileName = $"{csvFileName}_{SystemTime.UtcNow.ToString("yyyyMMdd_HHmm", CultureInfo.InvariantCulture)}.csv"; 
-            
+            csvFileName = $"{csvFileName}_{SystemTime.UtcNow.ToString("yyyyMMdd_HHmm", CultureInfo.InvariantCulture)}.csv";
+
             _response = response;
             _response.Headers["Content-Disposition"] = $"attachment; filename=\"{csvFileName}\"; filename*=UTF-8''{csvFileName}";
             _writer = new StreamWriter(stream, Encoding.UTF8);
@@ -39,11 +39,29 @@ namespace Raven.Server.Documents.Handlers
             //We can't escape while constructing the path since we will write the escaping in the header this way, we need both.
             _properties = properties?.Select(p => (p, Escape(p))).ToArray();
         }
-        
-        private char[] splitter = {'.'};
+
+        protected void WriteCsvHeaderIfNeeded(BlittableJsonReaderObject blittable, bool writeIds = true)
+        {
+            if (writeHeader == false)
+                return;
+            if (_properties == null)
+            {
+                _properties = GetPropertiesRecursive((Empty, Empty), blittable, writeIds).ToArray();
+
+            }
+            writeHeader = false;
+            foreach ((var property, var path) in _properties)
+            {
+                _csvWriter.WriteField(property);
+            }
+
+            _csvWriter.NextRecord();
+        }
+
+        private char[] splitter = { '.' };
         private string Escape(string s)
         {
-            var tokens = s.Split(splitter,StringSplitOptions.RemoveEmptyEntries);
+            var tokens = s.Split(splitter, StringSplitOptions.RemoveEmptyEntries);
             return Join('.', tokens.Select(BlittablePath.EscapeString));
         }
 
@@ -65,58 +83,43 @@ namespace Raven.Server.Documents.Handlers
         {
         }
 
-        public void AddResult(BlittableJsonReaderObject res)
-        {            
-            WriteCsvHeaderIfNeeded(res);
+        public abstract void AddResult(T res);
 
-            foreach ((var property, var path) in _properties)
-            {
-                var o = new BlittablePath(path).Evaluate(res, false);
-                _csvWriter.WriteField(o?.ToString());
-            }
-            _csvWriter.NextRecord();
-        }
-
-        private void WriteCsvHeaderIfNeeded(BlittableJsonReaderObject blittable)
+        public CsvWriter GetCscWriter()
         {
-            if(writeHeader == false)
-                return;
-            if (_properties == null)
-            {
-                _properties = GetPropertiesRecursive((Empty, Empty), blittable).ToArray();
-
-            }
-            writeHeader = false;
-            foreach ((var property, var path) in _properties)
-            {
-                _csvWriter.WriteField(property);
-            }
-
-            _csvWriter.NextRecord();
+            return _csvWriter;
         }
 
-        private IEnumerable<(string Property, string Path)> GetPropertiesRecursive((string ParentProperty, string ParentPath) propertyTuple, BlittableJsonReaderObject obj)
+        public (string, string)[] GetProperties()
+        {
+            return _properties;
+        }
+        private IEnumerable<(string Property, string Path)> GetPropertiesRecursive((string ParentProperty, string ParentPath) propertyTuple, BlittableJsonReaderObject obj, bool addId = true)
         {
             var inMetadata = Constants.Documents.Metadata.Key.Equals(propertyTuple.ParentPath);
+            if (addId)
+            {
+                yield return (Constants.Documents.Metadata.Id, Constants.Documents.Metadata.Id);
+            }
             foreach (var p in obj.GetPropertyNames())
             {
                 //skip properties starting with '@' unless we are in the metadata and we need to export @metadata.@collection
                 if (inMetadata && p.Equals(Constants.Documents.Metadata.Collection) == false)
-                    continue;                
-                if(p.StartsWith('@') && p.Equals(Constants.Documents.Metadata.Key) == false && propertyTuple.ParentPath.Equals(Constants.Documents.Metadata.Key) == false)
-                    continue; 
+                    continue;
+                if (p.StartsWith('@') && p.Equals(Constants.Documents.Metadata.Key) == false && propertyTuple.ParentPath.Equals(Constants.Documents.Metadata.Key) == false)
+                    continue;
                 var path = IsNullOrEmpty(propertyTuple.ParentPath) ? BlittablePath.EscapeString(p) : $"{propertyTuple.ParentPath}.{BlittablePath.EscapeString(p)}";
                 var property = IsNullOrEmpty(propertyTuple.ParentPath) ? p : $"{propertyTuple.ParentPath}.{p}";
                 object res;
                 if (obj.TryGetMember(p, out res) && res is BlittableJsonReaderObject)
                 {
-                    foreach (var nested in GetPropertiesRecursive((property, path), res as BlittableJsonReaderObject))
+                    foreach (var nested in GetPropertiesRecursive((property, path), res as BlittableJsonReaderObject, addId: false))
                     {
                         yield return nested;
                     }
                 }
                 else
-                {                    
+                {
                     yield return (property, path);
                 }
             }
