@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide;
@@ -43,7 +44,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return Task.FromResult(result);
         }
 
-        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer,
+        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, StreamCsvDocumentQueryResultWriter writer,
             OperationCancelToken token)
         {
             var result = new StreamDocumentQueryResult(response, writer, token);
@@ -64,7 +65,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         }
 
         public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
-            IStreamBlittableJsonReaderObjectQueryResultWriter writer, OperationCancelToken token)
+            StreamCsvBlittableQueryResultWriter writer, OperationCancelToken token)
         {
             throw new NotSupportedException("Collection query is handled directly by documents storage so index entries aren't created underneath");
         }

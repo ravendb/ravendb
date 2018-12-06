@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -33,14 +34,14 @@ namespace Raven.Server.Documents.Queries
             return index.Query(query, documentsContext, token);
         }
 
-        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer, OperationCancelToken token)
+        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, StreamCsvDocumentQueryResultWriter writer, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 
             return index.StreamQuery(response, writer, query, documentsContext, token);
         }
 
-        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamBlittableJsonReaderObjectQueryResultWriter writer, OperationCancelToken token)
+        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, StreamCsvBlittableQueryResultWriter writer, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 

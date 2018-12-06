@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Explanation;
 using Raven.Server.ServerWide;
@@ -11,12 +12,12 @@ namespace Raven.Server.Documents.Queries
 {
     public class StreamDocumentQueryResult : QueryResultServerSide
     {
-        private readonly IStreamDocumentQueryResultWriter _writer;
+        private readonly StreamCsvDocumentQueryResultWriter _writer;
         private readonly OperationCancelToken _token;
         private bool _anyWrites;
         private bool _anyExceptions;
 
-        public StreamDocumentQueryResult(HttpResponse response, IStreamDocumentQueryResultWriter writer, OperationCancelToken token)
+        public StreamDocumentQueryResult(HttpResponse response, StreamCsvDocumentQueryResultWriter writer, OperationCancelToken token)
         {
             if (response.HasStarted)
                 throw new InvalidOperationException("You cannot start streaming because response has already started.");

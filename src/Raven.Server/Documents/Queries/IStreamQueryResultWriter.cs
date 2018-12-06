@@ -3,16 +3,6 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {
-    public interface IStreamDocumentQueryResultWriter : IStreamQueryResultWriter<Document>
-    {
-    }
-    public interface IStreamBlittableJsonReaderObjectQueryResultWriter : IStreamQueryResultWriter<BlittableJsonReaderObject>
-    {
-    }
-    //public interface IStreamCsvQueryResultWriter<T> : IStreamQueryResultWriter<T>
-    //{
-    //}
-
     public interface IStreamQueryResultWriter<T> : IDisposable
     {
         void StartResponse();
