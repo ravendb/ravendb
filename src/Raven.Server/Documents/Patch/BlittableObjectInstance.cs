@@ -306,8 +306,14 @@ namespace Raven.Server.Documents.Patch
         public override void Put(string propertyName, JsValue value, bool throwOnError)
         {
             _put = true;
-            base.Put(propertyName, value, throwOnError);
-            _put = false;
+            try
+            {
+                base.Put(propertyName, value, throwOnError);
+            }
+            finally
+            {
+                _put = false;
+            }
         }
 
         public override IEnumerable<KeyValuePair<string, PropertyDescriptor>> GetOwnProperties()
