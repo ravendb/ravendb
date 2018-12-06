@@ -12,12 +12,12 @@ namespace Raven.Server.Documents.Queries
 {
     public class StreamDocumentQueryResult : QueryResultServerSide
     {
-        private readonly StreamCsvDocumentQueryResultWriter _writer;
+        private readonly IStreamQueryResultWriter<Document> _writer;
         private readonly OperationCancelToken _token;
         private bool _anyWrites;
         private bool _anyExceptions;
 
-        public StreamDocumentQueryResult(HttpResponse response, StreamCsvDocumentQueryResultWriter writer, OperationCancelToken token)
+        public StreamDocumentQueryResult(HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
         {
             if (response.HasStarted)
                 throw new InvalidOperationException("You cannot start streaming because response has already started.");

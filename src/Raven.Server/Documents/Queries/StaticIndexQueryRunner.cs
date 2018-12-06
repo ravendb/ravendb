@@ -34,14 +34,14 @@ namespace Raven.Server.Documents.Queries
             return index.Query(query, documentsContext, token);
         }
 
-        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, StreamCsvDocumentQueryResultWriter writer, OperationCancelToken token)
+        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 
             return index.StreamQuery(response, writer, query, documentsContext, token);
         }
 
-        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, StreamCsvBlittableQueryResultWriter writer, OperationCancelToken token)
+        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
         {
             var index = GetIndex(query.Metadata.IndexName);
 

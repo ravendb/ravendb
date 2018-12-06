@@ -40,10 +40,10 @@ namespace Raven.Server.Documents.Queries
         public abstract Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token);
 
         public abstract Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
-            StreamCsvDocumentQueryResultWriter writer, OperationCancelToken token);
+            IStreamQueryResultWriter<Document> writer, OperationCancelToken token);
 
         public abstract Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
-            StreamCsvBlittableQueryResultWriter writer, OperationCancelToken token);
+            IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token);
 
         public abstract Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token);
 

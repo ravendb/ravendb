@@ -2110,7 +2110,7 @@ namespace Raven.Server.Documents.Indexes
             return Definition.GetOrCreateIndexDefinitionInternal();
         }
 
-        public virtual async Task StreamQuery(HttpResponse response, StreamCsvDocumentQueryResultWriter writer,
+        public virtual async Task StreamQuery(HttpResponse response, IStreamQueryResultWriter<Document> writer,
             IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             var result = new StreamDocumentQueryResult(response, writer, token);
@@ -2120,7 +2120,7 @@ namespace Raven.Server.Documents.Indexes
             DocumentDatabase.QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
         }
 
-        public virtual async Task StreamIndexEntriesQuery(HttpResponse response, StreamCsvBlittableQueryResultWriter writer,
+        public virtual async Task StreamIndexEntriesQuery(HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer,
             IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             var result = new StreamDocumentIndexEntriesQueryResult(response, writer, token);

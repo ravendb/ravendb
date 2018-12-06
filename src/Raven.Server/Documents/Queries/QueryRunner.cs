@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Queries
             throw CreateRetriesFailedException(lastException);
         }
 
-        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, StreamCsvDocumentQueryResultWriter writer, OperationCancelToken token)
+        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
         {
             ObjectDisposedException lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)
@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         public override async Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
-            StreamCsvBlittableQueryResultWriter writer, OperationCancelToken token)
+            IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
         {
             ObjectDisposedException lastException = null;
             for (var i = 0; i < NumberOfRetries; i++)

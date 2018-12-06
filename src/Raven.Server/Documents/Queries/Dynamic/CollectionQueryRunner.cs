@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return Task.FromResult(result);
         }
 
-        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, StreamCsvDocumentQueryResultWriter writer,
+        public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer,
             OperationCancelToken token)
         {
             var result = new StreamDocumentQueryResult(response, writer, token);
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         }
 
         public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response,
-            StreamCsvBlittableQueryResultWriter writer, OperationCancelToken token)
+            IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token)
         {
             throw new NotSupportedException("Collection query is handled directly by documents storage so index entries aren't created underneath");
         }
