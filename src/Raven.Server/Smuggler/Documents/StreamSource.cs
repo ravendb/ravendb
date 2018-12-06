@@ -577,6 +577,7 @@ namespace Raven.Server.Smuggler.Documents
                         if (oldContext != context)
                         {
                             builder.Dispose();
+                            modifier = new BlittableMetadataModifier(context);
                             builder = CreateBuilder(context, modifier);
                         }
                     }
@@ -693,6 +694,11 @@ namespace Raven.Server.Smuggler.Documents
                         if (oldContext != context)
                         {
                             builder.Dispose();
+                            modifier = new BlittableMetadataModifier(context)
+                            {
+                                ReadFirstEtagOfLegacyRevision = legacyImport,
+                                ReadLegacyEtag = _readLegacyEtag
+                            };
                             builder = CreateBuilder(context, modifier);
                         }
                     }
