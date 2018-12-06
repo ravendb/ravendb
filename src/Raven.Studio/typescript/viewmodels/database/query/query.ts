@@ -83,6 +83,8 @@ class query extends viewModelBase {
 
     static lastQuery = new Map<string, string>();
 
+    clientVersion = viewModelBase.clientVersion;
+
     hasAnySavedQuery = ko.pureComputed(() => this.savedQueries().length > 0);
 
     filteredQueries = ko.pureComputed(() => {
@@ -183,6 +185,8 @@ class query extends viewModelBase {
     queriedIndexEntries = ko.observable<boolean>(false);
     
     isEmptyFieldsResult = ko.observable<boolean>(false);
+    
+    showFanOutWarning = ko.observable<boolean>(false);
 
     $downloadForm: JQuery;
 
@@ -602,6 +606,7 @@ class query extends viewModelBase {
         this.highlightsCache.removeAll();
         this.explanationsCache.clear();
         this.timings(null);
+        this.showFanOutWarning(false);
         
         this.isEmptyFieldsResult(false);
         
@@ -673,6 +678,12 @@ class query extends viewModelBase {
                         if (queryResults.additionalResultInfo.SkippedResults) {
                             // apply skipped results (if any)
                             totalSkippedResults += queryResults.additionalResultInfo.SkippedResults;
+                            
+                            // find if query contains positive offset or limit, if so warn about paging. 
+                            const [_, rqlWithoutParameters] = queryCommand.extractQueryParameters(this.criteria().queryText());
+                            if (/\s+(offset|limit)\s+/img.test(rqlWithoutParameters)) {
+                                this.showFanOutWarning(true);
+                            }
                         }
                         
                         if (totalSkippedResults) {

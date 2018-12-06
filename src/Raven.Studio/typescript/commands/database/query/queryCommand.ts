@@ -37,7 +37,7 @@ class queryCommand extends commandBase {
             return [undefined, undefined];
         }
 
-        let [parameters, rql] = this.extractQueryParameters(queryText);
+        let [parameters, rql] = queryCommand.extractQueryParameters(queryText);
 
         if (this.criteria.showFields()) {
             rql = queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(rql);
@@ -46,7 +46,7 @@ class queryCommand extends commandBase {
         return [parameters, rql];
     }
 
-    private extractQueryParameters(queryText: string) {
+    static extractQueryParameters(queryText: string) {
         const parametersEndRegex = /^\s*(with|match|from|declare)/mi;
         const match = parametersEndRegex.exec(queryText);
         if (!match) {
