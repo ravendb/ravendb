@@ -9,11 +9,13 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Graph;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -101,6 +103,9 @@ namespace Raven.Server.Documents.Queries
 
         private async Task<TResult> ExecuteQuery<TResult>(TResult final,IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token) where TResult : QueryResultServerSide
         {
+            if (Database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
+                FeaturesAvailabilityException.Throw("Graph Queries");
+
             using (var timingScope = new QueryTimingsScope())
             {
                 var qr = await GetQueryResults(query, documentsContext, existingResultEtag, token);
