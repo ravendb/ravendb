@@ -140,6 +140,7 @@ class query extends viewModelBase {
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any, any>>();
     staleResult: KnockoutComputed<boolean>;
     fromCache = ko.observable<boolean>(false);
+    originalRequestTime = ko.observable<number>();
     dirtyResult = ko.observable<boolean>();
     currentTab = ko.observable<queryResultTab | highlightSection | perCollectionIncludes>("results");
     totalResultsForUi = ko.observable<number>(0);
@@ -177,6 +178,9 @@ class query extends viewModelBase {
     queriedIndex: KnockoutComputed<string>;
     queriedIndexLabel: KnockoutComputed<string>;
     queriedIndexDescription: KnockoutComputed<string>;
+
+    queriedFieldsOnly = ko.observable<boolean>(false);
+    queriedIndexEntries = ko.observable<boolean>(false);
     
     isEmptyFieldsResult = ko.observable<boolean>(false);
 
@@ -603,8 +607,11 @@ class query extends viewModelBase {
         
         eventsCollector.default.reportEvent("query", "run");
         const criteria = this.criteria();
+
+        this.saveQueryOptions(criteria);
         
         const criteriaDto = criteria.toStorageDto();
+        const disableCache = !this.cacheEnabled();
 
         if (criteria.queryText()) {
             this.isLoading(true);
@@ -613,7 +620,7 @@ class query extends viewModelBase {
 
             //TODO: this.currentColumnsParams().enabled(this.showFields() === false && this.indexEntries() === false);
 
-            const queryCmd = new queryCommand(database, 0, 25, this.criteria(), !this.cacheEnabled());
+            const queryCmd = new queryCommand(database, 0, 25, this.criteria(), disableCache);
 
             // we declare this variable here, if any result returns skippedResults <> 0 we enter infinite scroll mode 
             let totalSkippedResults = 0;
@@ -623,7 +630,7 @@ class query extends viewModelBase {
             this.csvUrl(queryCmd.getCsvUrl());
 
             const resultsFetcher = (skip: number, take: number) => {
-                const command = new queryCommand(database, skip + totalSkippedResults, take + 1, this.criteria(), !this.cacheEnabled());
+                const command = new queryCommand(database, skip + totalSkippedResults, take + 1, this.criteria(), disableCache);
                 
                 const resultsTask = $.Deferred<pagedResultExtended<document>>();
                 const queryForAllFields = this.criteria().showFields();
@@ -684,10 +691,12 @@ class query extends viewModelBase {
                         
                         const endQueryTime = new Date().getTime();
                         const localQueryTime = endQueryTime - startQueryTime;
-                        if (localQueryTime < queryResults.additionalResultInfo.DurationInMs) {
+                        if (!disableCache && localQueryTime < queryResults.additionalResultInfo.DurationInMs) {
+                            this.originalRequestTime(queryResults.additionalResultInfo.DurationInMs);
                             queryResults.additionalResultInfo.DurationInMs = localQueryTime;
                             this.fromCache(true);
                         } else {
+                            this.originalRequestTime(null);
                             this.fromCache(false);
                         }
                         
@@ -714,7 +723,7 @@ class query extends viewModelBase {
                         }
                         this.saveLastQuery("");
                         this.saveRecentQuery(criteriaDto, optionalSavedQueryName);
-
+                        
                         this.setupDisableReasons(); 
                     })
                     .fail((request: JQueryXHR) => {
@@ -760,6 +769,11 @@ class query extends viewModelBase {
                 this.inSaveMode(true);
             }
         }
+    }
+    
+    private saveQueryOptions(criteria: queryCriteria) {
+        this.queriedFieldsOnly(criteria.showFields());
+        this.queriedIndexEntries(criteria.indexEntries());
     }
     
     private saveQueryToStorage(criteria: storedQueryDto) {

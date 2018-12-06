@@ -111,8 +111,13 @@
                                 <i class="icon-documents"></i><span data-bind="text: queriedIndexDescription"></span>
                             </strong>
                             <span data-bind="visible: queriedIndex() && queriedIndex().indexOf('collection') === 0">&nbsp;collection</span>
-                            &nbsp;was used to get the results in
+                            &nbsp;was used to get <span data-bind="text: fromCache() ? 'cached' : 'the'"></span> results in
                             <strong data-bind="text: queryStats().DurationInMs.toLocaleString() + ' ms'"></strong>
+                            <span data-bind="visible: originalRequestTime, if: originalRequestTime">(original request took: <strong data-bind="text: originalRequestTime().toLocaleString() + ' ms'"></strong>)</span>
+                            <span data-bind="visible: queriedFieldsOnly">
+                                . Showing <strong>stored index fields</strong> only. 
+                            </span>
+                            <span data-bind="visible: queriedIndexEntries">. Showing <strong>raw index entries</strong>.</span>
                         </span>
                         <span data-bind="if: isGraphQuery">
                             <strong>
