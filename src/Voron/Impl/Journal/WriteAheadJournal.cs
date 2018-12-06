@@ -572,11 +572,9 @@ namespace Voron.Impl.Journal
 
                     var unusedJournals = GetUnusedJournalFiles(jrnls, lastProcessedJournal, lastFlushedTransactionId);
 
-
                     ApplyJournalStateAfterFlush(token, lastProcessedJournal, lastFlushedTransactionId, unusedJournals);
 
                     _waj._env.SuggestSyncDataFileSyncDataFile();
-                    _flushLockTaskResponsible.RunTaskIfNotAlreadyRan();
                 }
                 finally
                 {
@@ -655,6 +653,7 @@ namespace Voron.Impl.Journal
                             // for a bit, and then try again
                             try
                             {
+                                _flushLockTaskResponsible.RunTaskIfNotAlreadyRan();
                                 if (_waitForJournalStateUpdateUnderTx.Wait(TimeSpan.FromMilliseconds(250), token))
                                     break;
                             }
@@ -844,28 +843,30 @@ namespace Voron.Impl.Journal
                     if (_parent._waj._env.Disposed)
                         return false;
 
-                    UpdateDatabaseStateAfterSync();
+                    WaitForUpdateDatabaseStateAfterSync();
 
                     return true;
                 }
 
+                private void WaitForUpdateDatabaseStateAfterSync()
+                {
+                    _parent._flushLockTaskResponsible.WaitForTaskToBeDone(UpdateDatabaseStateAfterSync);
+                }
+
                 private void UpdateDatabaseStateAfterSync()
                 {
-                    lock (_parent._flushingLock)
+                    if (_parent._waj._env.Disposed)
+                        return;
+
+                    Interlocked.Add(ref _parent._totalWrittenButUnsyncedBytes, -_currentTotalWrittenBytes);
+                    _parent.UpdateFileHeaderAfterDataFileSync(_lastSyncedJournal, _lastSyncedTransactionId, ref _transactionHeader);
+
+                    foreach (var toDelete in _journalsToDelete)
                     {
-                        if (_parent._waj._env.Disposed)
-                            return;
+                        if (_parent._waj._env.Options.IncrementalBackupEnabled == false)
+                            toDelete.Value.DeleteOnClose = true;
 
-                        Interlocked.Add(ref _parent._totalWrittenButUnsyncedBytes, -_currentTotalWrittenBytes);
-                        _parent.UpdateFileHeaderAfterDataFileSync(_lastSyncedJournal, _lastSyncedTransactionId, ref _transactionHeader);
-
-                        foreach (var toDelete in _journalsToDelete)
-                        {
-                            if (_parent._waj._env.Options.IncrementalBackupEnabled == false)
-                                toDelete.Value.DeleteOnClose = true;
-
-                            toDelete.Value.Release();
-                        }
+                        toDelete.Value.Release();
                     }
                 }
 
@@ -952,15 +953,15 @@ namespace Voron.Impl.Journal
 
                 public bool WaitForTaskToBeDone(Action task)
                 {
-                    var flushLockTaken = false;
+                    var isLockTaken = false;
                     try
                     {
                         _waitForTaskToBeDone.Reset();
                         _task += task;
                         do
                         {
-                            Monitor.TryEnter(_lock, 0, ref flushLockTaken);
-                            if (flushLockTaken)
+                            Monitor.TryEnter(_lock, 0, ref isLockTaken);
+                            if (isLockTaken)
                             {
                                 RunTaskIfNotAlreadyRan();
                                 break;
@@ -982,7 +983,7 @@ namespace Voron.Impl.Journal
                     }
                     finally
                     {
-                        if (flushLockTaken)
+                        if (isLockTaken)
                             Monitor.Exit(_lock);
                     }
                 }
