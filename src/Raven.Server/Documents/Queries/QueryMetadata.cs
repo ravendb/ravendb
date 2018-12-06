@@ -554,7 +554,8 @@ namespace Raven.Server.Documents.Queries
             }
             catch (Exception e)
             {
-                throw new InvalidQueryException("Select clause contains invalid script", QueryText, parameters, e);
+                var msg = QueryParser.AddLineAndColumnNumberToErrorMessage(e, "Select clause contains invalid script");
+                throw new InvalidQueryException(msg, QueryText, parameters, e);
             }
 
             if (Query.DeclaredFunctions != null &&

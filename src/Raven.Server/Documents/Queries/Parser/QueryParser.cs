@@ -159,7 +159,8 @@ namespace Raven.Server.Documents.Queries.Parser
                     }
                     catch (Exception e)
                     {
-                        throw new InvalidQueryException("Update clause contains invalid script", Scanner.Input, null, e);
+                        var msg = AddLineAndColumnNumberToErrorMessage(e, "Update clause contains invalid script");
+                        throw new InvalidQueryException(msg, Scanner.Input, null, e);
                     }
                     break;
                 default:
@@ -877,6 +878,14 @@ namespace Raven.Server.Documents.Queries.Parser
             throw new ArgumentOutOfRangeException(nameof(queryType), queryType, "Unknown query type");
         }
 
+        internal static string AddLineAndColumnNumberToErrorMessage(Exception e, string msg)
+        {
+            if (!(e is ParserException pe))
+                return msg;
+
+            return $"{msg}{Environment.NewLine}At Line : {pe.LineNumber}, Column : {pe.Column}";
+        }
+
         private List<QueryExpression> IncludeClause()
         {
             List<QueryExpression> includes = new List<QueryExpression>();
@@ -950,7 +959,8 @@ namespace Raven.Server.Documents.Queries.Parser
             }
             catch (Exception e)
             {
-                throw new InvalidQueryException("Invalid script inside function " + name, Scanner.Input, null, e);
+                var msg = AddLineAndColumnNumberToErrorMessage(e, $"Invalid script inside function {name}");
+                throw new InvalidQueryException(msg, Scanner.Input, null, e);
             }
         }
 
