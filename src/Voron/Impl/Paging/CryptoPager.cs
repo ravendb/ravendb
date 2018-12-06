@@ -83,12 +83,12 @@ namespace Voron.Impl.Paging
 
         public override void DiscardPages(long pageNumber, int numberOfPages)
         {
-            // REVIEW: Nothing to do here?.
+            Inner.DiscardPages(pageNumber, numberOfPages);
         }
 
         public override void DiscardWholeFile()
         {
-            // REVIEW: Nothing to do here?.
+            Inner.DiscardWholeFile();
         }
 
         protected internal override unsafe void PrefetchRanges(Win32MemoryMapNativeMethods.WIN32_MEMORY_RANGE_ENTRY* list, int count)
