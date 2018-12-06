@@ -4,7 +4,6 @@ using System.Diagnostics;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
-using Jint.Native.Json;
 using Jint.Native.Object;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
@@ -19,7 +18,8 @@ namespace Raven.Server.Documents.Patch
     public class BlittableObjectInstance : ObjectInstance
     {
         public bool Changed;
-        private readonly BlittableObjectInstance _parent;        
+        private readonly BlittableObjectInstance _parent;
+        private bool _put;
 
         public readonly DateTime? LastModified;
         public readonly string ChangeVector;
@@ -291,7 +291,9 @@ namespace Raven.Server.Documents.Patch
 
             val = new BlittableObjectProperty(this, propertyName);
 
-            if (DocumentId == null && val.Value.IsUndefined())
+            if (val.Value.IsUndefined() && 
+                DocumentId == null &&
+                _put == false)
             {
                 return PropertyDescriptor.Undefined;
             }
@@ -299,6 +301,13 @@ namespace Raven.Server.Documents.Patch
             OwnValues[propertyName] = val;
 
             return val;
+        }
+
+        public override void Put(string propertyName, JsValue value, bool throwOnError)
+        {
+            _put = true;
+            base.Put(propertyName, value, throwOnError);
+            _put = false;
         }
 
         public override IEnumerable<KeyValuePair<string, PropertyDescriptor>> GetOwnProperties()
