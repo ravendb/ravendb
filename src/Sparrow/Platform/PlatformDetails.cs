@@ -19,7 +19,7 @@ namespace Sparrow.Platform
         public static readonly bool RunningOnLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
 
         public static readonly bool CanPrefetch = IsWindows8OrNewer() || RunningOnPosix;
-        public static readonly bool CanDiscardMemory = IsWindows8OrNewer() || RunningOnPosix;
+        public static readonly bool CanDiscardMemory = IsWindows10OrNewer() || RunningOnPosix;
 
         public static bool RunningOnDocker => string.Equals(Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER"), "true", StringComparison.OrdinalIgnoreCase);
 
@@ -51,17 +51,46 @@ namespace Sparrow.Platform
 
                 var ver = os.Substring(idx + winString.Length);
 
-                if (ver != null)
-                {
-                    // remove second occurence of '.' (win 10 might be 10.123.456)
-                    var index = ver.IndexOf('.', ver.IndexOf('.') + 1);
-                    ver = string.Concat(ver.Substring(0, index), ver.Substring(index + 1));
+                // remove second occurence of '.' (win 10 might be 10.123.456)
+                var index = ver.IndexOf('.', ver.IndexOf('.') + 1);
+                ver = string.Concat(ver.Substring(0, index), ver.Substring(index + 1));
 
-                    decimal output;
-                    if (decimal.TryParse(ver, out output))
-                    {
-                        return output >= 6.19M; // 6.2 is win8, 6.1 win7..
-                    }
+                if (decimal.TryParse(ver, out decimal output))
+                {
+                    return output >= 6.19m; // 6.2 is win8, 6.1 win7..
+                }
+
+                return false;
+            }
+            catch (DllNotFoundException)
+            {
+                return false;
+            }
+        }
+
+        private static bool IsWindows10OrNewer()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) == false)
+                return false;
+
+            try
+            {
+                const string winString = "Windows ";
+                var os = RuntimeInformation.OSDescription;
+
+                var idx = os.IndexOf(winString, StringComparison.OrdinalIgnoreCase);
+                if (idx < 0)
+                    return false;
+
+                var ver = os.Substring(idx + winString.Length);
+
+                // remove second occurence of '.' (win 10 might be 10.123.456)
+                var index = ver.IndexOf('.', ver.IndexOf('.') + 1);
+                ver = string.Concat(ver.Substring(0, index), ver.Substring(index + 1));
+
+                if (decimal.TryParse(ver, out decimal output))
+                {
+                    return output >= 10m; // 6.2 is win8, 6.1 win7..
                 }
 
                 return false;
