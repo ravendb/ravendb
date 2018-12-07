@@ -245,9 +245,7 @@ namespace Raven.Server
                 RequestUri = context.Request.GetEncodedUrl(),
                 AbsoluteUri = $"{context.Request.Scheme}://{context.Request.Host}",
                 DatabaseName = database ?? "N/A",
-                CustomInfo = "",
-                InnerRequestsCount = 0,
-                QueryTimings = null
+                CustomInfo = string.Empty
             };
 
             TrafficWatchManager.DispatchMessage(twn);

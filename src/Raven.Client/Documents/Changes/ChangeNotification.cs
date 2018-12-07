@@ -171,7 +171,5 @@ namespace Raven.Client.Documents.Changes
         public string AbsoluteUri { get; set; }
         public string DatabaseName { get; set; }
         public string CustomInfo { get; set; }
-        public int InnerRequestsCount { get; set; }
-        public object QueryTimings { get; set; }
     }
 }
