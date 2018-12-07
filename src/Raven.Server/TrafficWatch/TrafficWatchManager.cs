@@ -37,7 +37,7 @@ namespace Raven.Server.TrafficWatch
                         continue;
                 }
 
-                connection.EnqueMsg(trafficWatchData);
+                connection.EnqueueMsg(trafficWatchData);
             }
         }
     }
