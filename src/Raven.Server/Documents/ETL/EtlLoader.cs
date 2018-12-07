@@ -31,6 +31,8 @@ namespace Raven.Server.Documents.ETL
         private readonly object _loadProcessedLock = new object();
         private readonly DocumentDatabase _database;
         private readonly ServerStore _serverStore;
+        private bool _isSubscribedToDocumentChanges;
+        private bool _isSubscribedToCounterChanges;
 
         protected Logger Logger;
 
@@ -42,8 +44,6 @@ namespace Raven.Server.Documents.ETL
 
             _database = database;
             _serverStore = serverStore;
-            _database.Changes.OnDocumentChange += OnDocumentChange;
-            _database.Changes.OnCounterChange += OnCounterChange;
         }
 
         public EtlProcess[] Processes => _processes;
@@ -89,11 +89,51 @@ namespace Raven.Server.Documents.ETL
                 processes.AddRange(newProcesses);
                 _processes = processes.ToArray();
 
+                HandleChangesSubscriptions();
+
                 foreach (var process in newProcesses)
                 {
                     _database.TombstoneCleaner.Subscribe(process);
                     process.Start();
                 }
+            }
+        }
+
+        private void HandleChangesSubscriptions()
+        {
+            // this is supposed to be called only under lock
+
+            if (_processes.Length > 0)
+            {
+                if (_isSubscribedToDocumentChanges == false)
+                {
+                    _database.Changes.OnDocumentChange += OnDocumentChange;
+                    _isSubscribedToDocumentChanges = true;
+                }
+
+                var needToWatchCounters = _processes.Any(x => x.ShouldTrackCounters());
+
+                if (needToWatchCounters)
+                {
+                    if (_isSubscribedToCounterChanges == false)
+                    {
+                        _database.Changes.OnCounterChange += OnCounterChange;
+                        _isSubscribedToCounterChanges = true;
+                    }
+                }
+                else
+                {
+                    _database.Changes.OnCounterChange -= OnCounterChange;
+                    _isSubscribedToCounterChanges = false;
+                }
+            }
+            else
+            {
+                _database.Changes.OnDocumentChange -= OnDocumentChange;
+                _isSubscribedToDocumentChanges = false;
+
+                _database.Changes.OnCounterChange -= OnCounterChange;
+                _isSubscribedToCounterChanges = false;
             }
         }
 
