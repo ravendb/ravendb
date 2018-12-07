@@ -34,6 +34,6 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public int TransformationErrorCount { get; set; }
 
-        public bool? SuccesfullyLoaded { get; set; }
+        public bool? SuccessfullyLoaded { get; set; }
     }
 }

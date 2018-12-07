@@ -232,9 +232,9 @@ interface aggregatedRange {
     value: number;
 }
 
-interface indexesWorkData {
+interface workData {
     pointInTime: number;
-    numberOfIndexesWorking: number;
+    numberOfItems: number;
 }
 
 interface workTimeUnit {
@@ -283,11 +283,19 @@ interface IOMetricsRecentStatsWithCache extends Raven.Server.Documents.Handlers.
     CompletedAsDate: Date; // used for caching
 }
 
+type ongoingTaskStatType = Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType | Raven.Client.Documents.Operations.ETL.EtlType;
+
 interface ReplicationPerformanceBaseWithCache extends Raven.Client.Documents.Replication.ReplicationPerformanceBase {
     StartedAsDate: Date;
     CompletedAsDate: Date;
     Type: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType;
     Description: string;
+}
+
+interface EtlPerformanceBaseWithCache extends Raven.Server.Documents.ETL.Stats.EtlPerformanceStats {
+    StartedAsDate: Date;
+    CompletedAsDate: Date;
+    Type: Raven.Client.Documents.Operations.ETL.EtlType;
 }
 
 interface IndexingPerformanceOperationWithParent extends Raven.Client.Documents.Indexes.IndexingPerformanceOperation {

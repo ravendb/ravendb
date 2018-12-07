@@ -36,6 +36,6 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public string ChangeVector;
 
-        public bool? SuccesfullyLoaded;
+        public bool? SuccessfullyLoaded;
     }
 }

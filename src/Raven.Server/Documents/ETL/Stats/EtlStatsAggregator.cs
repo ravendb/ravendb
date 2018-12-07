@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.ETL.Stats
                 NumberOfExtractedItems = Stats.NumberOfExtractedItems,
                 NumberOfTransformedItems = Stats.NumberOfTransformedItems,
                 TransformationErrorCount = Scope.TransformationErrorCount,
-                SuccesfullyLoaded = Stats.SuccesfullyLoaded,
+                SuccessfullyLoaded = Stats.SuccessfullyLoaded,
                 BatchCompleteReason = Stats.BatchCompleteReason
             };
         }

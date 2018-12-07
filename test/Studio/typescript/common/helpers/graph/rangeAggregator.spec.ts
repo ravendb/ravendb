@@ -21,18 +21,18 @@ describe(helperUnderTest, () => {
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(2);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[1];
         chai.expect(item.pointInTime).to.equal(3);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
         item = output[2];
         chai.expect(item.pointInTime).to.equal(15);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[3];
         chai.expect(item.pointInTime).to.equal(16);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
 
-       chai.expect(finder.maxConcurrentIndexes).to.equal(1);
+       chai.expect(finder.maxConcurrentItems).to.equal(1);
     });
 
     it('Calculate number of concurrent working indexes - When one range starts immidiately after previous range', () => {
@@ -49,15 +49,15 @@ describe(helperUnderTest, () => {
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(2);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[1];
         chai.expect(item.pointInTime).to.equal(15);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[2];
         chai.expect(item.pointInTime).to.equal(37);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
 
-        chai.expect(finder.maxConcurrentIndexes).to.equal(1);
+        chai.expect(finder.maxConcurrentItems).to.equal(1);
     });
 
     it('Calculate number of concurrent working indexes - More than one index is working at the same time ranges', () => {
@@ -76,18 +76,18 @@ describe(helperUnderTest, () => {
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(2);
-        chai.expect(item.numberOfIndexesWorking).to.equal(2);
+        chai.expect(item.numberOfItems).to.equal(2);
         item = output[1];
         chai.expect(item.pointInTime).to.equal(7);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
         item = output[2];
         chai.expect(item.pointInTime).to.equal(8);
-        chai.expect(item.numberOfIndexesWorking).to.equal(2);
+        chai.expect(item.numberOfItems).to.equal(2);
         item = output[3];
         chai.expect(item.pointInTime).to.equal(11);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
 
-        chai.expect(finder.maxConcurrentIndexes).to.equal(2);
+        chai.expect(finder.maxConcurrentItems).to.equal(2);
     });
 
     it('Calculate number of concurrent working indexes - Multiple time ranges', () => {
@@ -108,39 +108,39 @@ describe(helperUnderTest, () => {
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(0);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[1];
         chai.expect(item.pointInTime).to.equal(2);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
         item = output[2];
         chai.expect(item.pointInTime).to.equal(20);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[3];
         chai.expect(item.pointInTime).to.equal(25);
-        chai.expect(item.numberOfIndexesWorking).to.equal(2);
+        chai.expect(item.numberOfItems).to.equal(2);
         item = output[4];
         chai.expect(item.pointInTime).to.equal(61);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[5];
         chai.expect(item.pointInTime).to.equal(66);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
         item = output[6];
         chai.expect(item.pointInTime).to.equal(90);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[7];
         chai.expect(item.pointInTime).to.equal(97);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[8];
         chai.expect(item.pointInTime).to.equal(118);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
         item = output[9];
         chai.expect(item.pointInTime).to.equal(200);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[10];
         chai.expect(item.pointInTime).to.equal(234);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
 
-        chai.expect(finder.maxConcurrentIndexes).to.equal(2);
+        chai.expect(finder.maxConcurrentItems).to.equal(2);
     });
 
     it('Calculate number of concurrent working indexes - Single time range', () => {
@@ -154,12 +154,12 @@ describe(helperUnderTest, () => {
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(2);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[1];
         chai.expect(item.pointInTime).to.equal(7);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
 
-        chai.expect(finder.maxConcurrentIndexes).to.equal(1);
+        chai.expect(finder.maxConcurrentItems).to.equal(1);
     });
 
     it('Calculate number of concurrent working indexes - Two different, separated time ranges', () => {
@@ -176,18 +176,18 @@ describe(helperUnderTest, () => {
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(2);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[1];
         chai.expect(item.pointInTime).to.equal(7);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
         item = output[2];
         chai.expect(item.pointInTime).to.equal(11);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[3];
         chai.expect(item.pointInTime).to.equal(18);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
 
-        chai.expect(finder.maxConcurrentIndexes).to.equal(1);
+        chai.expect(finder.maxConcurrentItems).to.equal(1);
     });
 
     it('Calculate number of concurrent working indexes - Many indexes with the same start time, different end times', () => {
@@ -205,18 +205,18 @@ describe(helperUnderTest, () => {
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(5);
-        chai.expect(item.numberOfIndexesWorking).to.equal(3);
+        chai.expect(item.numberOfItems).to.equal(3);
         item = output[1];
         chai.expect(item.pointInTime).to.equal(14);
-        chai.expect(item.numberOfIndexesWorking).to.equal(2);
+        chai.expect(item.numberOfItems).to.equal(2);
         item = output[2];
         chai.expect(item.pointInTime).to.equal(15);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[3];
         chai.expect(item.pointInTime).to.equal(71);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
 
-        chai.expect(finder.maxConcurrentIndexes).to.equal(3);
+        chai.expect(finder.maxConcurrentItems).to.equal(3);
     });
 
     it('Calculate number of concurrent working indexes - Multiple indexes, some with the same start & end time points', () => {
@@ -238,36 +238,36 @@ describe(helperUnderTest, () => {
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(1);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[1];
         chai.expect(item.pointInTime).to.equal(5);
-        chai.expect(item.numberOfIndexesWorking).to.equal(3);
+        chai.expect(item.numberOfItems).to.equal(3);
         item = output[2];
         chai.expect(item.pointInTime).to.equal(6);
-        chai.expect(item.numberOfIndexesWorking).to.equal(4);
+        chai.expect(item.numberOfItems).to.equal(4);
         item = output[3];
         chai.expect(item.pointInTime).to.equal(8);
-        chai.expect(item.numberOfIndexesWorking).to.equal(5);
+        chai.expect(item.numberOfItems).to.equal(5);
         item = output[4];
         chai.expect(item.pointInTime).to.equal(12);
-        chai.expect(item.numberOfIndexesWorking).to.equal(7);
+        chai.expect(item.numberOfItems).to.equal(7);
         item = output[5];
         chai.expect(item.pointInTime).to.equal(14);
-        chai.expect(item.numberOfIndexesWorking).to.equal(6);
+        chai.expect(item.numberOfItems).to.equal(6);
         item = output[6];
         chai.expect(item.pointInTime).to.equal(15);
-        chai.expect(item.numberOfIndexesWorking).to.equal(4);
+        chai.expect(item.numberOfItems).to.equal(4);
         item = output[7];
         chai.expect(item.pointInTime).to.equal(22);
-        chai.expect(item.numberOfIndexesWorking).to.equal(3);
+        chai.expect(item.numberOfItems).to.equal(3);
         item = output[8];
         chai.expect(item.pointInTime).to.equal(71);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[9];
         chai.expect(item.pointInTime).to.equal(72);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
 
-        chai.expect(finder.maxConcurrentIndexes).to.equal(7);
+        chai.expect(finder.maxConcurrentItems).to.equal(7);
     });
 
     it('Calculate number of concurrent working indexes - Many indexes with the same end time, different start times', () => {
@@ -286,24 +286,24 @@ describe(helperUnderTest, () => {
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(1);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[1];
         chai.expect(item.pointInTime).to.equal(5);
-        chai.expect(item.numberOfIndexesWorking).to.equal(2);
+        chai.expect(item.numberOfItems).to.equal(2);
         item = output[2];
         chai.expect(item.pointInTime).to.equal(8);
-        chai.expect(item.numberOfIndexesWorking).to.equal(3);
+        chai.expect(item.numberOfItems).to.equal(3);
         item = output[3];
         chai.expect(item.pointInTime).to.equal(12);
-        chai.expect(item.numberOfIndexesWorking).to.equal(4);
+        chai.expect(item.numberOfItems).to.equal(4);
         item = output[4];
         chai.expect(item.pointInTime).to.equal(15);
-        chai.expect(item.numberOfIndexesWorking).to.equal(3);
+        chai.expect(item.numberOfItems).to.equal(3);
         item = output[5];
         chai.expect(item.pointInTime).to.equal(71);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
 
-        chai.expect(finder.maxConcurrentIndexes).to.equal(4);
+        chai.expect(finder.maxConcurrentItems).to.equal(4);
     });
 
     it('Calculate number of concurrent working indexes - Multiple indexes with overlaping time ranges - sample flow 1', () => {
@@ -323,36 +323,36 @@ describe(helperUnderTest, () => {
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(0);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[1];
         chai.expect(item.pointInTime).to.equal(2);
-        chai.expect(item.numberOfIndexesWorking).to.equal(2);
+        chai.expect(item.numberOfItems).to.equal(2);
         item = output[2];
         chai.expect(item.pointInTime).to.equal(3);
-        chai.expect(item.numberOfIndexesWorking).to.equal(3);
+        chai.expect(item.numberOfItems).to.equal(3);
         item = output[3];
         chai.expect(item.pointInTime).to.equal(5);
-        chai.expect(item.numberOfIndexesWorking).to.equal(4);
+        chai.expect(item.numberOfItems).to.equal(4);
         item = output[4];
         chai.expect(item.pointInTime).to.equal(11);
-        chai.expect(item.numberOfIndexesWorking).to.equal(3);
+        chai.expect(item.numberOfItems).to.equal(3);
         item = output[5];
         chai.expect(item.pointInTime).to.equal(15);
-        chai.expect(item.numberOfIndexesWorking).to.equal(2);
+        chai.expect(item.numberOfItems).to.equal(2);
         item = output[6];
         chai.expect(item.pointInTime).to.equal(20);
-        chai.expect(item.numberOfIndexesWorking).to.equal(3);
+        chai.expect(item.numberOfItems).to.equal(3);
         item = output[7];
         chai.expect(item.pointInTime).to.equal(28);
-        chai.expect(item.numberOfIndexesWorking).to.equal(2);
+        chai.expect(item.numberOfItems).to.equal(2);
         item = output[8];
         chai.expect(item.pointInTime).to.equal(41);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[9];
         chai.expect(item.pointInTime).to.equal(44);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
 
-        chai.expect(finder.maxConcurrentIndexes).to.equal(4);
+        chai.expect(finder.maxConcurrentItems).to.equal(4);
     });
 
     it('Calculate number of concurrent working indexes - Multiple indexes with overlaping time ranges - sample flow 2', () => {
@@ -370,24 +370,24 @@ describe(helperUnderTest, () => {
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(1);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[1];
         chai.expect(item.pointInTime).to.equal(2);
-        chai.expect(item.numberOfIndexesWorking).to.equal(2);
+        chai.expect(item.numberOfItems).to.equal(2);
         item = output[2];
         chai.expect(item.pointInTime).to.equal(5);
-        chai.expect(item.numberOfIndexesWorking).to.equal(3);
+        chai.expect(item.numberOfItems).to.equal(3);
         item = output[3];
         chai.expect(item.pointInTime).to.equal(8);
-        chai.expect(item.numberOfIndexesWorking).to.equal(2);
+        chai.expect(item.numberOfItems).to.equal(2);
         item = output[4];
         chai.expect(item.pointInTime).to.equal(11);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[5];
         chai.expect(item.pointInTime).to.equal(15);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
 
-        chai.expect(finder.maxConcurrentIndexes).to.equal(3);
+        chai.expect(finder.maxConcurrentItems).to.equal(3);
     });
 
     it('Calculate number of concurrent working indexes - Multiple indexes with overlaping time ranges - sample flow 3', () => {
@@ -404,18 +404,18 @@ describe(helperUnderTest, () => {
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(2);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[1];
         chai.expect(item.pointInTime).to.equal(5);
-        chai.expect(item.numberOfIndexesWorking).to.equal(2);
+        chai.expect(item.numberOfItems).to.equal(2);
         item = output[2];
         chai.expect(item.pointInTime).to.equal(11);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[3];
         chai.expect(item.pointInTime).to.equal(15);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
 
-        chai.expect(finder.maxConcurrentIndexes).to.equal(2);
+        chai.expect(finder.maxConcurrentItems).to.equal(2);
     });
 
     it('Calculate number of concurrent working indexes - Index time range is within another index time range', () => {
@@ -432,18 +432,18 @@ describe(helperUnderTest, () => {
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(2);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[1];
         chai.expect(item.pointInTime).to.equal(3);
-        chai.expect(item.numberOfIndexesWorking).to.equal(2);
+        chai.expect(item.numberOfItems).to.equal(2);
         item = output[2];
         chai.expect(item.pointInTime).to.equal(5);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[3];
         chai.expect(item.pointInTime).to.equal(7);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
 
-        chai.expect(finder.maxConcurrentIndexes).to.equal(2);
+        chai.expect(finder.maxConcurrentItems).to.equal(2);
     });
 
     it('Calculate number of concurrent working indexes - Many indexes time range within another range', () => {
@@ -462,30 +462,30 @@ describe(helperUnderTest, () => {
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(2);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[1];
         chai.expect(item.pointInTime).to.equal(30);
-        chai.expect(item.numberOfIndexesWorking).to.equal(2);
+        chai.expect(item.numberOfItems).to.equal(2);
         item = output[2];
         chai.expect(item.pointInTime).to.equal(41);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[3];
         chai.expect(item.pointInTime).to.equal(50);
-        chai.expect(item.numberOfIndexesWorking).to.equal(2);
+        chai.expect(item.numberOfItems).to.equal(2);
         item = output[4];
         chai.expect(item.pointInTime).to.equal(61);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[5];
         chai.expect(item.pointInTime).to.equal(70);
-        chai.expect(item.numberOfIndexesWorking).to.equal(2);
+        chai.expect(item.numberOfItems).to.equal(2);
         item = output[6];
         chai.expect(item.pointInTime).to.equal(81);
-        chai.expect(item.numberOfIndexesWorking).to.equal(1);
+        chai.expect(item.numberOfItems).to.equal(1);
         item = output[7];
         chai.expect(item.pointInTime).to.equal(601);
-        chai.expect(item.numberOfIndexesWorking).to.equal(0);
+        chai.expect(item.numberOfItems).to.equal(0);
 
-        chai.expect(finder.maxConcurrentIndexes).to.equal(2);
+        chai.expect(finder.maxConcurrentItems).to.equal(2);
     });
 
 });   

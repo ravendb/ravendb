@@ -112,12 +112,12 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public void RecordLoadSuccess()
         {
-            _stats.SuccesfullyLoaded = true;
+            _stats.SuccessfullyLoaded = true;
         }
 
         public void RecordLoadFailure()
         {
-            _stats.SuccesfullyLoaded = false;
+            _stats.SuccessfullyLoaded = false;
         }
     }
 }

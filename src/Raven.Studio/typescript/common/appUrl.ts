@@ -68,7 +68,7 @@ class appUrl {
 
         settings: ko.pureComputed(() => appUrl.forSettings(appUrl.currentDatabase())),
         indexErrors: ko.pureComputed(() => appUrl.forIndexErrors(appUrl.currentDatabase())),
-        replicationStats: ko.pureComputed(() => appUrl.forReplicationStats(appUrl.currentDatabase())),
+        ongoingTasksStats: ko.pureComputed(() => appUrl.forOngoingTasksStats(appUrl.currentDatabase())),
         visualizer: ko.pureComputed(() => appUrl.forVisualizer(appUrl.currentDatabase())),
         databaseRecord: ko.pureComputed(() => appUrl.forDatabaseRecord(appUrl.currentDatabase())),
         revisions: ko.pureComputed(() => appUrl.forRevisions(appUrl.currentDatabase())),
@@ -219,8 +219,8 @@ class appUrl {
         return "#databases/indexes/indexErrors?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forReplicationStats(db: database | databaseInfo): string {
-        return "#databases/status/replicationStats?" + appUrl.getEncodedDbPart(db);
+    static forOngoingTasksStats(db: database | databaseInfo): string {
+        return "#databases/status/ongoingTasksStats?" + appUrl.getEncodedDbPart(db);
     }
 
     static forVisualizer(db: database | databaseInfo, index: string = null): string {

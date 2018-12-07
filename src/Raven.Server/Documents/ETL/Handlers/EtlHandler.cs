@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -83,6 +84,7 @@ namespace Raven.Server.Documents.ETL.Handlers
             var stats = GetProcessesToReportOn().Select(x => new EtlTaskPerformanceStats
             {
                 TaskName = x.Key,
+                EtlType = EtlType.Raven, //TODO:
                 Stats = x.Value.Select(y => new EtlProcessPerformanceStats
                 {
                     TransformationName = y.TransformationName,
