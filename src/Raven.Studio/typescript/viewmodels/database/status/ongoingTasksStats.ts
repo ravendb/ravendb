@@ -18,7 +18,7 @@ type rTreeLeaf = {
     minY: number;
     maxX: number;
     maxY: number;
-    actionType: "toggleTrack" | "trackItem" | "closedTrackItem" | "gapItem";
+    actionType: "toggleTrack" | "trackItem" | "gapItem";
     arg: any;
 }
 
@@ -34,13 +34,17 @@ type exportFileFormat = {
     Etl: Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats[];
 }
 
+type trackItemContext = {
+    rootStats: performanceBaseWithCache;
+    item: taskOperation;
+}
+
 class hitTest {
     cursor = ko.observable<string>("auto");
     private rTree = rbush<rTreeLeaf>();
     private container: d3.Selection<any>;
     private onToggleTrack: (trackName: string) => void;
-    private handleTrackTooltip: (item: taskOperation, x: number, y: number) => void; 
-    private handleClosedTrackTooltip: (item: performanceBaseWithCache, x: number, y: number) => void;
+    private handleTrackTooltip: (context: trackItemContext, x: number, y: number) => void; 
     private handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void;
     private removeTooltip: () => void;
 
@@ -50,38 +54,26 @@ class hitTest {
 
     init(container: d3.Selection<any>,
         onToggleTrack: (trackName: string) => void,
-        handleTrackTooltip: (item: taskOperation, x: number, y: number) => void,
-        handleClosedTrackTooltip: (item: performanceBaseWithCache, x: number, y: number) => void,
+        handleTrackTooltip: (context: trackItemContext, x: number, y: number) => void,
         handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void,
         removeTooltip: () => void) {
         this.container = container;
         this.onToggleTrack = onToggleTrack;
         this.handleTrackTooltip = handleTrackTooltip;
-        this.handleClosedTrackTooltip = handleClosedTrackTooltip;
         this.handleGapTooltip = handleGapTooltip;
         this.removeTooltip = removeTooltip;
     }
 
-    registerTrackItem(x: number, y: number, width: number, height: number, element: taskOperation) {
+    registerTrackItem(x: number, y: number, width: number, height: number, rootStats: performanceBaseWithCache, item: taskOperation) {
         const data = {
             minX: x,
             minY: y,
             maxX: x + width,
             maxY: y + height,
             actionType: "trackItem",
-            arg: element
-        } as rTreeLeaf;
-        this.rTree.insert(data);
-    }
-
-    registerClosedTrackItem(x: number, y: number, width: number, height: number, element: performanceBaseWithCache) {
-        const data = {
-            minX: x,
-            minY: y,
-            maxX: x + width,
-            maxY: y + height,
-            actionType: "closedTrackItem",
-            arg: element
+            arg: {
+                rootStats, item
+            } as trackItemContext
         } as rTreeLeaf;
         this.rTree.insert(data);
     }
@@ -143,24 +135,18 @@ class hitTest {
 
         const overToggleTrack = items.filter(x => x.actionType === "toggleTrack").length > 0;
         
-        const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as taskOperation)[0];
+        const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as trackItemContext)[0];
         if (currentItem) {
             this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);
             this.cursor("auto");
         } else {
-            const currentItem = items.filter(x => x.actionType === "closedTrackItem").map(x => x.arg as performanceBaseWithCache)[0];
-            if (currentItem) {
-                this.handleClosedTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);
+            const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as timeGapInfo)[0];
+            if (currentGapItem) {
+                this.handleGapTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
                 this.cursor("auto");
             } else {
-                const currentGapItem = items.filter(x => x.actionType === "gapItem").map(x => x.arg as timeGapInfo)[0];
-                if (currentGapItem) {
-                    this.handleGapTooltip(currentGapItem, clickLocation[0], clickLocation[1]);
-                    this.cursor("auto");
-                } else {
-                    this.removeTooltip();
-                    this.cursor(overToggleTrack ? "pointer" : graphHelper.prefixStyle("grab"));
-                }
+                this.removeTooltip();
+                this.cursor(overToggleTrack ? "pointer" : graphHelper.prefixStyle("grab"));
             }
         }
     }
@@ -369,8 +355,7 @@ class ongoingTasksStats extends viewModelBase {
 
         this.hitTest.init(this.svg,
             (replicationName) => this.onToggleTrack(replicationName),
-            (item, x, y) => this.handleTrackTooltip(item, x, y),
-            (closedTrackItem, x, y) => this.handleClosedTrackTooltip(closedTrackItem, x, y),
+            (context, x, y) => this.handleTrackTooltip(context, x, y),
             (gapItem, x, y) => this.handleGapTooltip(gapItem, x, y),
             () => this.hideTooltip());
 
@@ -1013,7 +998,7 @@ class ongoingTasksStats extends viewModelBase {
             yStart += isOpened ? ongoingTasksStats.openedTrackPadding : ongoingTasksStats.closedTrackPadding;
 
             const perfLength = performance.length;
-            let perfCompleted: string;
+            let perfCompleted: string = null;
 
             for (let perfIdx = 0; perfIdx < perfLength; perfIdx++) {
                 const perf = performance[perfIdx];   // each performance[i] has:  completed, details, DurationInMilliseconds, id, started
@@ -1048,7 +1033,7 @@ class ongoingTasksStats extends viewModelBase {
                 perfCompleted = perf.Completed;
 
                 if (!perf.Completed) {
-                    this.findInProgressAction(context, perf, extentFunc, x1, stripesYStart, yOffset);
+                    this.findInProgressAction(perf, extentFunc, x1, stripesYStart, yOffset);
                 }
             }
         };
@@ -1061,7 +1046,7 @@ class ongoingTasksStats extends viewModelBase {
         })
     }
 
-    private findInProgressAction(context: CanvasRenderingContext2D, perf: performanceBaseWithCache, extentFunc: (duration: number) => number,
+    private findInProgressAction(perf: performanceBaseWithCache, extentFunc: (duration: number) => number,
                                  xStart: number, yStart: number, yOffset: number): void {
 
         const extractor = (perfs: taskOperation[], xStart: number, yStart: number, yOffset: number) => {
@@ -1108,7 +1093,6 @@ class ongoingTasksStats extends viewModelBase {
         return "";
     }
 
-    //TODO: review this function
     private drawStripes(context: CanvasRenderingContext2D, operations: Array<taskOperation>,
         xStart: number, yStart: number, yOffset: number, extentFunc: (duration: number) => number,
         perfItemWithCache: performanceBaseWithCache = null) {
@@ -1127,29 +1111,23 @@ class ongoingTasksStats extends viewModelBase {
             // 1. Track is open
             if (yOffset !== 0) {
                 if (dx >= 0.8) { // Don't show tooltip for very small items
-                    //TODO: 
-                    if (op.Name !== "Replication") {
-                        this.hitTest.registerTrackItem(currentX, yStart, dx, ongoingTasksStats.trackHeight, op);
-                    } else if (perfItemWithCache) {
-                        // Better to show full details for the first stripe.. 
-                        this.hitTest.registerClosedTrackItem(currentX, yStart, dx, ongoingTasksStats.trackHeight, perfItemWithCache);
-                    }
+                    this.hitTest.registerTrackItem(currentX, yStart, dx, ongoingTasksStats.trackHeight, perfItemWithCache, op);
                 }
             }
             // 2. Track is closed
             else if (perfItemWithCache) { 
                 if (dx >= 0.8) { 
-                    this.hitTest.registerClosedTrackItem(currentX, yStart, dx, ongoingTasksStats.trackHeight, perfItemWithCache);
-                    //TODO: this.hitTest.registerToggleTrack(currentX, yStart, dx, ongoingTasksStats.trackHeight, perfItemWithCache.Description); 
+                    this.hitTest.registerTrackItem(currentX, yStart, dx, ongoingTasksStats.trackHeight, perfItemWithCache, op);
+                    //TODO:this.hitTest.registerToggleTrack(currentX, yStart, dx, ongoingTasksStats.trackHeight, perfItemWithCache.Description); 
                 }
             }
 
             // 3. Draw inner/nested operations/stripes..
             if (op.Operations.length > 0) {
-                this.drawStripes(context, op.Operations, currentX, yStart + yOffset, yOffset, extentFunc);
+                this.drawStripes(context, op.Operations, currentX, yStart + yOffset, yOffset, extentFunc, perfItemWithCache);
             }
 
-            // 4. Handle errors if exist..(The very first 'replication' rect will be drawn on top of all others)
+            // 4. Handle errors if exist... 
             /* TODO
             if (perfItemWithCache) {
                 if (perfItemWithCache.Errors) {
@@ -1251,58 +1229,55 @@ class ongoingTasksStats extends viewModelBase {
         }
     }
 
-    private handleClosedTrackTooltip(element: performanceBaseWithCache, x: number, y: number) {
+    private handleTrackTooltip(context: trackItemContext, x: number, y: number) {
         const currentDatum = this.tooltip.datum();
-        const baseElement = element as Raven.Client.Documents.Replication.ReplicationPerformanceBase;
 
-        /* TODO
-        if (currentDatum !== element) {
-            const duration = (element.DurationInMs === 0) ? "0" : generalUtils.formatMillis(element.DurationInMs);
-            const direction = (element.Type === 'Outgoing') ? "Outgoing" : "Incoming";
-
-            let tooltipHtml = `*** ${direction} Replication ***<br/>`;
-            tooltipHtml += `Total duration: ${duration}<br/>`;
-
-            switch (element.Type) {
-                case "Incoming":
-                    {
-                        const elementWithData = baseElement as Raven.Client.Documents.Replication.IncomingReplicationPerformanceStats;
+        if (currentDatum !== context.item) {
+            const type = context.rootStats.Type;
+            const isRootItem = context.rootStats.Details === context.item;
+            
+            let sectionName = context.item.Name;
+            if (isRootItem) {
+                if (type === "Outgoing") {
+                    sectionName = "Outgoing Replication";
+                } else if (type === "Incoming") {
+                    sectionName = "Incoming Replication";
+                }
+            }
+            
+            let tooltipHtml = `*** ${sectionName} ***<br/>`;
+            tooltipHtml += (isRootItem ? "Total duration" : "Duration") + ": " + generalUtils.formatMillis(context.item.DurationInMs) + "<br />";
+            
+            if (isRootItem) {
+                switch (context.rootStats.Type) {
+                    case "Incoming": {
+                        const elementWithData = context.rootStats as any as Raven.Client.Documents.Replication.IncomingReplicationPerformanceStats;
                         tooltipHtml += `Received last Etag: ${elementWithData.ReceivedLastEtag}<br/>`;
-                        tooltipHtml += `Network input count: ${elementWithData.Network.InputCount}<br/>`; 
+                        tooltipHtml += `Network input count: ${elementWithData.Network.InputCount}<br/>`;
                         tooltipHtml += `Documents read count: ${elementWithData.Network.DocumentReadCount}<br/>`;
                         tooltipHtml += `Attachments read count: ${elementWithData.Network.AttachmentReadCount}<br/>`;
                     }
-                    break;
-                case "Outgoing":
-                    {
-                        const elementWithData = baseElement as Raven.Client.Documents.Replication.OutgoingReplicationPerformanceStats;
+                        break;
+                    case "Outgoing": {
+                        const elementWithData = context.rootStats as any as Raven.Client.Documents.Replication.OutgoingReplicationPerformanceStats;
                         tooltipHtml += `Sent last Etag: ${elementWithData.SendLastEtag}<br/>`;
                         tooltipHtml += `Storage input count: ${elementWithData.Storage.InputCount}<br/>`;
                         tooltipHtml += `Documents output count: ${elementWithData.Network.DocumentOutputCount}<br/>`;
                         tooltipHtml += `Attachments read count: ${elementWithData.Network.AttachmentOutputCount}<br/>`;
                     }
-                    break;
+                        break;
+                }
             }
-
+            
+            /* TODO:
             // Handle Errors:
             if (baseElement.Errors) {
                 tooltipHtml += `<span style=color:Crimson;"><strong>Errors:</strong></span><br/>`;
                 baseElement.Errors.forEach(err => tooltipHtml += `Errors: ${err.Error}<br/>`);
             }
+             */
 
-            this.handleTooltip(element, x, y, tooltipHtml);
-        }*/
-    }
-
-    private handleTrackTooltip(element: taskOperation,
-                               x: number, y: number) {
-        const currentDatum = this.tooltip.datum();
-
-        if (currentDatum !== element) {
-            let tooltipHtml = `*** ${element.Name} ***<br/>`;
-            tooltipHtml += `Duration: ${generalUtils.formatMillis((element).DurationInMs)}<br/>`;
-
-            this.handleTooltip(element, x, y, tooltipHtml); 
+            this.handleTooltip(context.item, x, y, tooltipHtml); 
         }
     }
 
