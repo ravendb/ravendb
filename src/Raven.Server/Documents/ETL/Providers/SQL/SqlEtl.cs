@@ -27,6 +27,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             Metrics = SqlMetrics;
         }
 
+        public override EtlType EtlType => EtlType.Sql;
+        
         protected override IEnumerator<ToSqlItem> ConvertDocsEnumerator(IEnumerator<Document> docs, string collection)
         {
             return new DocumentsToSqlItems(docs, collection);

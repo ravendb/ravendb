@@ -43,6 +43,8 @@ namespace Raven.Server.Documents.ETL
     {
         public string Tag { get; protected set; }
 
+        public abstract EtlType EtlType { get; }
+
         public EtlProcessStatistics Statistics { get; protected set; }
 
         public EtlMetricsCountersManager Metrics { get; protected set; }

@@ -38,15 +38,31 @@ namespace Raven.Server.Documents.ETL
             try
             {
                 var stats = Client.Extensions.EnumerableExtension.ForceEnumerateInThreadSafeManner(_perEtlProcessStats)
-                    .Select(x => new EtlTaskPerformanceStats
+                    .Select(x =>
                     {
-                        TaskName = x.Key,
-                        EtlType = EtlType.Raven, //TODO:
-                        Stats = Client.Extensions.EnumerableExtension.ForceEnumerateInThreadSafeManner(x.Value).Select(y => new EtlProcessPerformanceStats
+                        var result = new EtlTaskPerformanceStats()
                         {
-                            TransformationName = y.Value.Handler.TransformationName,
-                            Performance = y.Value.Handler.GetPerformanceStats()
-                        }).ToArray()
+                            TaskName = x.Key,
+                        };
+
+                        var perfStats = new List<EtlProcessPerformanceStats>();
+
+                        foreach (var eltAndStats in x.Value)
+                        {
+                            var process = eltAndStats.Value.Handler;
+
+                            perfStats.Add(new EtlProcessPerformanceStats
+                            {
+                                TransformationName = process.TransformationName,
+                                Performance = process.GetPerformanceStats()
+                            });
+
+                            result.EtlType = process.EtlType;
+                        }
+
+                        result.Stats = perfStats.ToArray();
+
+                        return result;
                     })
                     .ToList();
 
@@ -95,6 +111,8 @@ namespace Raven.Server.Documents.ETL
             {
                 List<EtlProcessPerformanceStats> processesStats = null;
 
+                var type = EtlType.Raven;
+
                 foreach (var etlItem in taskProcesses.Value)
                 {
                     var etlAndPerformanceStatsList = etlItem.Value;
@@ -124,6 +142,8 @@ namespace Raven.Server.Documents.ETL
                             TransformationName = etl.Name,
                             Performance = itemsToSend.Select(item => item.ToPerformanceLiveStatsWithDetails()).ToArray()
                         });
+
+                        type = etl.EtlType;
                     }
                 }
 
@@ -132,7 +152,7 @@ namespace Raven.Server.Documents.ETL
                     preparedStats.Add(new EtlTaskPerformanceStats
                     {
                         TaskName = taskProcesses.Key,
-                        EtlType = EtlType.Raven, //TODO:
+                        EtlType = type,
                         Stats = processesStats.ToArray()
                     });
                 }

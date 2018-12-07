@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.ETL.Handlers
             var stats = GetProcessesToReportOn().Select(x => new EtlTaskPerformanceStats
             {
                 TaskName = x.Key,
-                EtlType = EtlType.Raven, //TODO:
+                EtlType = x.Value.First().EtlType,
                 Stats = x.Value.Select(y => new EtlProcessPerformanceStats
                 {
                     TransformationName = y.TransformationName,
