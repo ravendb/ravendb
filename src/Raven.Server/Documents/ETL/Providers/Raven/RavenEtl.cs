@@ -46,6 +46,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             _script = new RavenEtlDocumentTransformer.ScriptInput(transformation);
         }
 
+        public override EtlType EtlType => EtlType.Raven;
+
         private void OnServerCertificateChanged(object sender, EventArgs e)
         {
             // When the server certificate changes, we need to start using the new one.
