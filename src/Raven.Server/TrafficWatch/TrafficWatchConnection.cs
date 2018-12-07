@@ -17,25 +17,32 @@ namespace Raven.Server.TrafficWatch
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<TrafficWatchConnection>("Server");
 
-        private readonly WebSocket _websocket;
+        private readonly WebSocket _webSocket;
         private readonly JsonOperationContext _context;
         public string TenantSpecific { get; set; }
-        public bool IsAlive => _cancellationTokenSource.IsCancellationRequested == false;
+        public bool IsAlive => _receive.IsCompleted == false &&
+                               _cancellationTokenSource.IsCancellationRequested == false;
 
         private readonly AsyncManualResetEvent _manualResetEvent;
         private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly Task<WebSocketReceiveResult> _receive;
 
         private readonly ConcurrentQueue<TrafficWatchChange> _messages = new ConcurrentQueue<TrafficWatchChange>();
         private readonly MemoryStream _bufferStream = new MemoryStream();
 
+        private bool _disposed;
+
         public TrafficWatchConnection(WebSocket webSocket, string resourceName, JsonOperationContext context, CancellationToken ctk)
         {
-            _websocket = webSocket;
+            _webSocket = webSocket;
             TenantSpecific = resourceName;
             _context = context;
 
             _manualResetEvent = new AsyncManualResetEvent(ctk);
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ctk);
+
+            var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
+            _receive = _webSocket.ReceiveAsync(receiveBuffer, _cancellationTokenSource.Token);
         }
 
         public async Task StartSendingNotifications()
@@ -45,8 +52,8 @@ namespace Raven.Server.TrafficWatch
                 while (_cancellationTokenSource.IsCancellationRequested == false)
                 {
                     var result = await _manualResetEvent.WaitAsync(TimeSpan.FromMilliseconds(5000)).ConfigureAwait(false);
-                    if (_cancellationTokenSource.IsCancellationRequested)
-                        break;
+                    if (IsAlive == false)
+                        return;
 
                     if (result == false)
                     {
@@ -58,8 +65,8 @@ namespace Raven.Server.TrafficWatch
 
                     while (_messages.TryDequeue(out var message))
                     {
-                        if (_cancellationTokenSource.IsCancellationRequested)
-                            break;
+                        if (IsAlive == false)
+                            return;
 
                         await SendMessage(ToByteArraySegment(message)).ConfigureAwait(false);
                     }
@@ -69,14 +76,15 @@ namespace Raven.Server.TrafficWatch
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info("Error when handling web socket connection", e);
-                _cancellationTokenSource.Cancel();
             }
             finally
             {
                 TrafficWatchManager.Disconnect(this);
+
                 try
                 {
-                    await _websocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "NORNAL_CLOSE", _cancellationTokenSource?.Token ?? CancellationToken.None);
+                    if (_disposed == false)
+                        await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "NORMAL_CLOSE", _cancellationTokenSource.Token);
                 }
                 catch
                 {
@@ -113,10 +121,10 @@ namespace Raven.Server.TrafficWatch
 
         private async Task SendMessage(ArraySegment<byte> message)
         {
-            await _websocket.SendAsync(message, WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
+            await _webSocket.SendAsync(message, WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
         }
 
-        public void EnqueMsg(TrafficWatchChange msg)
+        public void EnqueueMsg(TrafficWatchChange msg)
         {
             _messages.Enqueue(msg);
             _manualResetEvent.Set();
@@ -124,7 +132,12 @@ namespace Raven.Server.TrafficWatch
 
         public void Dispose()
         {
-            _websocket.Dispose();
+            if (_disposed)
+                return;
+
+            _disposed = true;
+
+            _webSocket.Dispose();
             _cancellationTokenSource.Dispose();
         }
     }
