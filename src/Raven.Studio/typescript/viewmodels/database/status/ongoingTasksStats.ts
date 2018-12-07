@@ -7,10 +7,10 @@ import gapFinder = require("common/helpers/graph/gapFinder");
 import generalUtils = require("common/generalUtils");
 import rangeAggregator = require("common/helpers/graph/rangeAggregator");
 import liveReplicationStatsWebSocketClient = require("common/liveReplicationStatsWebSocketClient");
+import liveEtlStatsWebSocketClient = require("common/liveEtlStatsWebSocketClient");
 import messagePublisher = require("common/messagePublisher");
 import inProgressAnimator = require("common/helpers/graph/inProgressAnimator");
 
-import replication = Raven.Client.Documents.Replication;
 import colorsManager = require("common/colorsManager");
 
 type rTreeLeaf = {
@@ -18,17 +18,29 @@ type rTreeLeaf = {
     minY: number;
     maxX: number;
     maxY: number;
-    actionType: "toggleReplication" | "trackItem" | "closedTrackItem" | "gapItem";
+    actionType: "toggleTrack" | "trackItem" | "closedTrackItem" | "gapItem";
     arg: any;
+}
+
+type taskOperation = Raven.Client.Documents.Replication.ReplicationPerformanceOperation | Raven.Server.Documents.ETL.Stats.EtlPerformanceOperation;
+type performanceBaseWithCache = ReplicationPerformanceBaseWithCache | EtlPerformanceBaseWithCache;
+type trackInfo = {
+    name: string;
+    type: ongoingTaskStatType;
+}
+
+type exportFileFormat = {
+    Replication: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[];
+    Etl: Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats[];
 }
 
 class hitTest {
     cursor = ko.observable<string>("auto");
     private rTree = rbush<rTreeLeaf>();
     private container: d3.Selection<any>;
-    private onToggleReplicationTrack: (replicationName: string) => void;
-    private handleTrackTooltip: (item: Raven.Client.Documents.Replication.ReplicationPerformanceOperation, x: number, y: number) => void; 
-    private handleClosedTrackTooltip: (item: ReplicationPerformanceBaseWithCache, x: number, y: number) => void;
+    private onToggleTrack: (trackName: string) => void;
+    private handleTrackTooltip: (item: taskOperation, x: number, y: number) => void; 
+    private handleClosedTrackTooltip: (item: performanceBaseWithCache, x: number, y: number) => void;
     private handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void;
     private removeTooltip: () => void;
 
@@ -37,20 +49,20 @@ class hitTest {
     }
 
     init(container: d3.Selection<any>,
-        onToggleReplication: (replicationName: string) => void,
-        handleTrackTooltip: (item: Raven.Client.Documents.Replication.ReplicationPerformanceOperation, x: number, y: number) => void,
-        handleClosedTrackTooltip: (item: ReplicationPerformanceBaseWithCache, x: number, y: number) => void,
+        onToggleTrack: (trackName: string) => void,
+        handleTrackTooltip: (item: taskOperation, x: number, y: number) => void,
+        handleClosedTrackTooltip: (item: performanceBaseWithCache, x: number, y: number) => void,
         handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void,
         removeTooltip: () => void) {
         this.container = container;
-        this.onToggleReplicationTrack = onToggleReplication;
+        this.onToggleTrack = onToggleTrack;
         this.handleTrackTooltip = handleTrackTooltip;
         this.handleClosedTrackTooltip = handleClosedTrackTooltip;
         this.handleGapTooltip = handleGapTooltip;
         this.removeTooltip = removeTooltip;
     }
 
-    registerTrackItem(x: number, y: number, width: number, height: number, element: Raven.Client.Documents.Replication.ReplicationPerformanceOperation) { //// !!! ???
+    registerTrackItem(x: number, y: number, width: number, height: number, element: taskOperation) {
         const data = {
             minX: x,
             minY: y,
@@ -62,7 +74,7 @@ class hitTest {
         this.rTree.insert(data);
     }
 
-    registerClosedTrackItem(x: number, y: number, width: number, height: number, element: ReplicationPerformanceBaseWithCache) {
+    registerClosedTrackItem(x: number, y: number, width: number, height: number, element: performanceBaseWithCache) {
         const data = {
             minX: x,
             minY: y,
@@ -74,14 +86,14 @@ class hitTest {
         this.rTree.insert(data);
     }
 
-    registerReplicationToggle(x: number, y: number, width: number, height: number, replicationName: string) {
+    registerToggleTrack(x: number, y: number, width: number, height: number, trackName: string) {
         const data = {
             minX: x,
             minY: y,
             maxX: x + width,
             maxY: y + height,
-            actionType: "toggleReplication",
-            arg: replicationName
+            actionType: "toggleTrack",
+            arg: trackName
         } as rTreeLeaf;
         this.rTree.insert(data);
     }
@@ -110,8 +122,8 @@ class hitTest {
         for (let i = 0; i < items.length; i++) {
             const item = items[i];
 
-            if (item.actionType === "toggleReplication") {
-                this.onToggleReplicationTrack(item.arg as string);
+            if (item.actionType === "toggleTrack") {
+                this.onToggleTrack(item.arg as string);
                 break;
             }
         }
@@ -129,14 +141,14 @@ class hitTest {
         const clickLocation = d3.mouse(this.container.node());
         const items = this.findItems(clickLocation[0], clickLocation[1]);
 
-        const overToggleReplication = items.filter(x => x.actionType === "toggleReplication").length > 0;
+        const overToggleTrack = items.filter(x => x.actionType === "toggleTrack").length > 0;
         
-        const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as Raven.Client.Documents.Replication.ReplicationPerformanceOperation)[0];
+        const currentItem = items.filter(x => x.actionType === "trackItem").map(x => x.arg as taskOperation)[0];
         if (currentItem) {
             this.handleTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);
             this.cursor("auto");
         } else {
-            const currentItem = items.filter(x => x.actionType === "closedTrackItem").map(x => x.arg as ReplicationPerformanceBaseWithCache)[0];
+            const currentItem = items.filter(x => x.actionType === "closedTrackItem").map(x => x.arg as performanceBaseWithCache)[0];
             if (currentItem) {
                 this.handleClosedTrackTooltip(currentItem, clickLocation[0], clickLocation[1]);
                 this.cursor("auto");
@@ -147,7 +159,7 @@ class hitTest {
                     this.cursor("auto");
                 } else {
                     this.removeTooltip();
-                    this.cursor(overToggleReplication ? "pointer" : graphHelper.prefixStyle("grab"));
+                    this.cursor(overToggleTrack ? "pointer" : graphHelper.prefixStyle("grab"));
                 }
             }
         }
@@ -157,17 +169,17 @@ class hitTest {
         return this.rTree.search({
             minX: x,
             maxX: x,
-            minY: y - replicationStats.brushSectionHeight,
-            maxY: y - replicationStats.brushSectionHeight
+            minY: y - ongoingTasksStats.brushSectionHeight,
+            maxY: y - ongoingTasksStats.brushSectionHeight
         });
     }
 }
 
-class replicationStats extends viewModelBase {
+class ongoingTasksStats extends viewModelBase {
 
     /* static */
     static readonly brushSectionHeight = 40;
-    private static readonly brushSectionReplicationWorkHeight = 22;
+    private static readonly brushSectionTrackWorkHeight = 22;
     private static readonly brushSectionLineWidth = 1;
     private static readonly trackHeight = 18; // height used for callstack item
     private static readonly stackPadding = 1; // space between call stacks
@@ -175,7 +187,6 @@ class replicationStats extends viewModelBase {
     private static readonly closedTrackPadding = 2;
     private static readonly openedTrackPadding = 4;
     private static readonly axisHeight = 35;
-    private static readonly inProgressStripesPadding = 7;
 
     private static readonly maxRecursion = 5;
     private static readonly minGapSize = 10 * 1000; // 10 seconds
@@ -184,26 +195,28 @@ class replicationStats extends viewModelBase {
     private static readonly bufferSize = 10000;
 
 
-    private static readonly openedTrackHeight = replicationStats.openedTrackPadding
-        + (replicationStats.maxRecursion + 1) * replicationStats.trackHeight
-        + replicationStats.maxRecursion * replicationStats.stackPadding
-        + replicationStats.openedTrackPadding;
+    private static readonly openedTrackHeight = ongoingTasksStats.openedTrackPadding
+        + (ongoingTasksStats.maxRecursion + 1) * ongoingTasksStats.trackHeight
+        + ongoingTasksStats.maxRecursion * ongoingTasksStats.stackPadding
+        + ongoingTasksStats.openedTrackPadding;
 
-    private static readonly closedTrackHeight = replicationStats.closedTrackPadding
-        + replicationStats.trackHeight
-        + replicationStats.closedTrackPadding;
+    private static readonly closedTrackHeight = ongoingTasksStats.closedTrackPadding
+        + ongoingTasksStats.trackHeight
+        + ongoingTasksStats.closedTrackPadding;
 
     /* observables */
 
     hasAnyData = ko.observable<boolean>(false);
+    private firstDataChunkReceived = false;
     loading: KnockoutComputed<boolean>;
     private searchText = ko.observable<string>("");
 
-    private liveViewClient = ko.observable<liveReplicationStatsWebSocketClient>();
+    private liveViewReplicationClient = ko.observable<liveReplicationStatsWebSocketClient>();
+    private liveViewEtlClient = ko.observable<liveEtlStatsWebSocketClient>();
     private autoScroll = ko.observable<boolean>(false);
     private clearSelectionVisible = ko.observable<boolean>(false); 
     
-    private replicationTracksNames = ko.observableArray<string>();
+    private tracksInfo = ko.observableArray<trackInfo>();
     private filteredTrackNames = ko.observableArray<string>(); // the tracks to show - those that include the filter criteria..
     private expandedTracks = ko.observableArray<string>();
     private isImport = ko.observable<boolean>(false);
@@ -214,7 +227,8 @@ class replicationStats extends viewModelBase {
     /* private */
 
     // The live data from endpoint
-    private data: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
+    private replicationData: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
+    private etlData: Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats[] = [];
 
     private bufferIsFull = ko.observable<boolean>(false);
     private bufferUsage = ko.observable<string>("0.0");
@@ -245,7 +259,7 @@ class replicationStats extends viewModelBase {
     private brushContainer: d3.Selection<any>;
     private zoom: d3.behavior.Zoom<any>;
     private yScale: d3.scale.Ordinal<string, number>;
-    private tooltip: d3.Selection<Raven.Client.Documents.Replication.ReplicationPerformanceOperation | timeGapInfo | ReplicationPerformanceBaseWithCache>;
+    private tooltip: d3.Selection<taskOperation | timeGapInfo | performanceBaseWithCache>;
 
     /* colors */
 
@@ -278,7 +292,11 @@ class replicationStats extends viewModelBase {
             "Storage/DocumentRead": undefined as string,
             "Storage/TombstoneRead": undefined as string,
             "Storage/AttachmentRead": undefined as string,
-            "Storage/CounterRead": undefined as string
+            "Storage/CounterRead": undefined as string,
+            "ETL": undefined as string,
+            "Extract": undefined as string,
+            "Transform": undefined as string,
+            "Load" : undefined as string
         }
     };
     
@@ -288,14 +306,14 @@ class replicationStats extends viewModelBase {
         this.bindToCurrentInstance("clearGraphWithConfirm");
         
         this.canExpandAll = ko.pureComputed(() => {
-            const replicationTracksNames = this.replicationTracksNames();
+            const tracksInfo = this.tracksInfo();
             const expandedTracks = this.expandedTracks();
 
-            return replicationTracksNames.length && replicationTracksNames.length !== expandedTracks.length;
+            return tracksInfo.length && tracksInfo.length !== expandedTracks.length;
         });
 
         this.searchText.throttle(200).subscribe(() => {
-            this.filterReplications();
+            this.filterTracks();
             this.drawMainSection();
         });
 
@@ -310,23 +328,28 @@ class replicationStats extends viewModelBase {
         });
 
         this.loading = ko.pureComputed(() => {
-            const client = this.liveViewClient();
-            return client ? client.loading() : true;
+            const replicationClient = this.liveViewReplicationClient();
+            const etlClient = this.liveViewEtlClient();
+
+            const replicationLoading = replicationClient ? replicationClient.loading() : true;
+            const etlLoading = etlClient ? etlClient.loading() : true;
+            
+            return replicationLoading || etlLoading;
         });
     }
 
-    activate(args: { ReplicationName: string, database: string }): void {
+    activate(args: { TaskName: string, database: string }): void {
         super.activate(args);
 
-        if (args.ReplicationName) {
-            this.expandedTracks.push(args.ReplicationName);
+        if (args.TaskName) {
+            this.expandedTracks.push(args.TaskName);
         }
     }
 
     deactivate() {
         super.deactivate();
 
-        if (this.liveViewClient()) {
+        if (this.liveViewReplicationClient() || this.liveViewEtlClient()) {
             this.cancelLiveView();
         }
     }
@@ -334,7 +357,7 @@ class replicationStats extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         
-        colorsManager.setup(".replication-stats", this.colors);
+        colorsManager.setup(".ongoing-tasks-stats", this.colors);
         this.scrollConfig = graphHelper.readScrollConfig();
 
         this.tooltip = d3.select(".tooltip");
@@ -345,7 +368,7 @@ class replicationStats extends viewModelBase {
         this.initCanvases();
 
         this.hitTest.init(this.svg,
-            (replicationName) => this.onToggleReplication(replicationName),
+            (replicationName) => this.onToggleTrack(replicationName),
             (item, x, y) => this.handleTrackTooltip(item, x, y),
             (closedTrackItem, x, y) => this.handleClosedTrackTooltip(closedTrackItem, x, y),
             (gapItem, x, y) => this.handleGapTooltip(gapItem, x, y),
@@ -355,7 +378,7 @@ class replicationStats extends viewModelBase {
     }
 
     private initCanvases() {
-        const metricsContainer = d3.select("#replicationStatsContainer");
+        const metricsContainer = d3.select("#ongoingTasksStatsContainer"); 
         this.canvas = metricsContainer
             .append("canvas")
             .attr("width", this.totalWidth + 1)
@@ -364,12 +387,12 @@ class replicationStats extends viewModelBase {
         this.inProgressCanvas = metricsContainer
             .append("canvas")
             .attr("width", this.totalWidth + 1)
-            .attr("height", this.totalHeight - replicationStats.brushSectionHeight - replicationStats.axisHeight) 
-            .style("top", (replicationStats.brushSectionHeight + replicationStats.axisHeight) + "px");
+            .attr("height", this.totalHeight - ongoingTasksStats.brushSectionHeight - ongoingTasksStats.axisHeight) 
+            .style("top", (ongoingTasksStats.brushSectionHeight + ongoingTasksStats.axisHeight) + "px");
 
         const inProgressCanvasNode = this.inProgressCanvas.node() as HTMLCanvasElement;
         const inProgressContext = inProgressCanvasNode.getContext("2d");
-        inProgressContext.translate(0, -replicationStats.axisHeight);
+        inProgressContext.translate(0, -ongoingTasksStats.axisHeight);
 
         this.inProgressAnimator = new inProgressAnimator(inProgressCanvasNode);
 
@@ -400,18 +423,16 @@ class replicationStats extends viewModelBase {
             .append("svg:rect")
             .attr("class", "pane")
             .attr("width", this.totalWidth)
-            .attr("height", this.totalHeight - replicationStats.brushSectionHeight)
-            .attr("transform", "translate(" + 0 + "," + replicationStats.brushSectionHeight + ")")
+            .attr("height", this.totalHeight - ongoingTasksStats.brushSectionHeight)
+            .attr("transform", "translate(" + 0 + "," + ongoingTasksStats.brushSectionHeight + ")")
             .call(this.zoom)
             .call(d => this.setupEvents(d));
     }
 
     private setupEvents(selection: d3.Selection<any>) {
-        let mousePressed = false;
-
         const onMove = () => {
             this.hitTest.onMouseMove();
-        }
+        };
 
         this.hitTest.cursor.subscribe((cursor) => {
             selection.style("cursor", cursor);
@@ -425,16 +446,22 @@ class replicationStats extends viewModelBase {
             .on("mousedown.hit", () => {
                 this.hitTest.onMouseDown();
                 selection.on("mousemove.tip", null);
-                if (this.liveViewClient()) {
-                    this.liveViewClient().pauseUpdates();
+                if (this.liveViewReplicationClient()) {
+                    this.liveViewReplicationClient().pauseUpdates();
+                }
+                if (this.liveViewEtlClient()) {
+                    this.liveViewEtlClient().pauseUpdates();
                 }
             });
         selection
             .on("mouseup.hit", () => {
                 this.hitTest.onMouseUp();
                 selection.on("mousemove.tip", onMove);
-                if (this.liveViewClient()) {
-                    this.liveViewClient().resumeUpdates();
+                if (this.liveViewReplicationClient()) {
+                    this.liveViewReplicationClient().resumeUpdates();
+                }
+                if (this.liveViewEtlClient()) {
+                    this.liveViewEtlClient().resumeUpdates();
                 }
             });
 
@@ -448,9 +475,7 @@ class replicationStats extends viewModelBase {
                     const currentMouseLocation = d3.mouse(node);
                     const yDiff = currentMouseLocation[1] - initialClickLocation[1];
 
-                    const newYOffset = initialOffset - yDiff;
-
-                    this.currentYOffset = newYOffset;
+                    this.currentYOffset = initialOffset - yDiff;
                     this.fixCurrentOffset();
                 });
 
@@ -460,31 +485,33 @@ class replicationStats extends viewModelBase {
         selection.on("dblclick.zoom", null);
     }
 
-    private filterReplications() {
-        this.filteredTrackNames(this.replicationTracksNames());
+    private filterTracks() {
+        let tracks = this.tracksInfo().map(x => x.name);
+        
 
         const criteria = this.searchText().toLowerCase();
         if (criteria) {
-            this.filteredTrackNames(this.replicationTracksNames().filter(x => x.toLowerCase().includes(criteria)));
+            tracks = tracks.filter(x => x.toLowerCase().includes(criteria));
         }
+
+        this.filteredTrackNames(tracks);
     }
 
-    private enableLiveView() {
-        let firstTime = true;
-
-        const onDataUpdate = (data: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]) => {
+    private onDataUpdate<T>(assignData: (data: T[]) => void) {
+        return (data: T[]) => {
             let timeRange: [Date, Date];
-            if (!firstTime) {
+            if (this.firstDataChunkReceived) {
                 const timeToRemap: [number,  number] = this.brush.empty() ? this.xBrushNumericScale.domain() as [number, number] : this.brush.extent() as [number, number];
+                // noinspection JSSuspiciousNameCombination
                 timeRange = timeToRemap.map(x => this.xBrushTimeScale.invert(x)) as [Date, Date];
             }
 
-            this.data = data;
+            assignData(data);
             this.checkBufferUsage();
 
-            const [workData, maxConcurrentReplications] = this.prepareTimeData();
+            const [workData, maxConcurrentActions] = this.prepareTimeData();
 
-            if (!firstTime) {
+            if (this.firstDataChunkReceived) {
                 const newBrush = timeRange.map(x => this.xBrushTimeScale(x)) as [number,  number];
                 this.setZoomAndBrush(newBrush, brush => brush.extent(newBrush));
             }
@@ -493,23 +520,36 @@ class replicationStats extends viewModelBase {
                 this.scrollToRight();
             }
 
-            this.draw(workData, maxConcurrentReplications, firstTime);
+            this.draw(workData, maxConcurrentActions, this.firstDataChunkReceived);
 
-            if (firstTime) {
-                firstTime = false;
+            if (!this.firstDataChunkReceived) {
+                this.firstDataChunkReceived = true;
             }
-        };
+        }
+    }
+    
+    private enableLiveView() {
+        this.firstDataChunkReceived = false;
+        
+        //TODO: throttle updates to avoid to many jumps on UI
 
-        this.liveViewClient(new liveReplicationStatsWebSocketClient(this.activeDatabase(), onDataUpdate, this.dateCutoff));
+        const onReplicationDataUpdate = this.onDataUpdate<Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>>(d => this.replicationData = d);
+        const onEtlDataUpdate = this.onDataUpdate<Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats>(d => this.etlData = d);
+
+        this.liveViewReplicationClient(new liveReplicationStatsWebSocketClient(this.activeDatabase(), onReplicationDataUpdate, this.dateCutoff));
+        this.liveViewEtlClient(new liveEtlStatsWebSocketClient(this.activeDatabase(), onEtlDataUpdate, this.dateCutoff));
     }
 
     private checkBufferUsage() {
-        const dataCount = _.sumBy(this.data, x => x.Performance.length);
+        const replicationDataCount = _.sumBy(this.replicationData, x => x.Performance.length);
+        const etlDataCount = _.sumBy(this.etlData, t => _.sumBy(t.Stats, s => s.Performance.length));
+        
+        const dataCount = replicationDataCount + etlDataCount;
 
-        const usage = Math.min(100, dataCount * 100.0 / replicationStats.bufferSize);
+        const usage = Math.min(100, dataCount * 100.0 / ongoingTasksStats.bufferSize);
         this.bufferUsage(usage.toFixed(1));
 
-        if (dataCount > replicationStats.bufferSize) {
+        if (dataCount > ongoingTasksStats.bufferSize) {
             this.bufferIsFull(true);
             this.cancelLiveView();
         }
@@ -554,70 +594,75 @@ class replicationStats extends viewModelBase {
     }
 
     private cancelLiveView() {
-        if (!!this.liveViewClient()) {
-            this.liveViewClient().dispose();
-            this.liveViewClient(null);
+        if (!!this.liveViewReplicationClient()) {
+            this.liveViewReplicationClient().dispose();
+            this.liveViewReplicationClient(null);
+        }
+
+        if (!!this.liveViewEtlClient()) {
+            this.liveViewEtlClient().dispose();
+            this.liveViewEtlClient(null);
         }
     }
 
-    private draw(workData: indexesWorkData[], maxConcurrentReplications: number, resetFilteredReplicationNames: boolean) {
-        this.hasAnyData(this.data.length > 0);
+    private draw(workData: workData[], maxConcurrentActions: number, resetFilter: boolean) {
+        this.hasAnyData(this.replicationData.length > 0 || this.etlData.length > 0);
 
-        this.prepareBrushSection(workData, maxConcurrentReplications);
-        this.prepareMainSection(resetFilteredReplicationNames);
+        this.prepareBrushSection(workData, maxConcurrentActions);
+        this.prepareMainSection(resetFilter);
 
         const canvas = this.canvas.node() as HTMLCanvasElement;
         const context = canvas.getContext("2d");
 
-        context.clearRect(0, 0, this.totalWidth, replicationStats.brushSectionHeight);
+        context.clearRect(0, 0, this.totalWidth, ongoingTasksStats.brushSectionHeight);
         context.drawImage(this.brushSection, 0, 0);
         this.drawMainSection();
     }
 
-    private prepareTimeData(): [indexesWorkData[], number] {
+    private prepareTimeData(): [workData[], number] {
         let timeRanges = this.extractTimeRanges();
 
-        let maxConcurrentReplications: number;
-        let workData: indexesWorkData[];
+        let maxConcurrentActions: number;
+        let workData: workData[];
 
         if (timeRanges.length === 0) {
             // no data - create fake scale
             timeRanges = [[new Date(), new Date()]];
-            maxConcurrentReplications = 1;
+            maxConcurrentActions = 1;
             workData = [];
         } else {
             const aggregatedRanges = new rangeAggregator(timeRanges);
             workData = aggregatedRanges.aggregate();
-            maxConcurrentReplications = aggregatedRanges.maxConcurrentIndexes;
+            maxConcurrentActions = aggregatedRanges.maxConcurrentItems;
         }
 
-        this.gapFinder = new gapFinder(timeRanges, replicationStats.minGapSize);
+        this.gapFinder = new gapFinder(timeRanges, ongoingTasksStats.minGapSize);
         this.xBrushTimeScale = this.gapFinder.createScale(this.totalWidth, 0);
 
-        return [workData, maxConcurrentReplications];
+        return [workData, maxConcurrentActions];
     }
 
-    private prepareBrushSection(workData: indexesWorkData[], maxConcurrentReplications: number) {
+    private prepareBrushSection(workData: workData[], maxConcurrentActions: number) {
         this.brushSection = document.createElement("canvas");
         this.brushSection.width = this.totalWidth + 1;
-        this.brushSection.height = replicationStats.brushSectionHeight;
+        this.brushSection.height = ongoingTasksStats.brushSectionHeight;
 
         this.yBrushValueScale = d3.scale.linear()
-            .domain([0, maxConcurrentReplications])
-            .range([0, replicationStats.brushSectionReplicationWorkHeight]);
+            .domain([0, maxConcurrentActions])
+            .range([0, ongoingTasksStats.brushSectionTrackWorkHeight]);
 
         const context = this.brushSection.getContext("2d");
 
         const ticks = this.getTicks(this.xBrushTimeScale);
-        this.drawXaxisTimeLines(context, ticks, 0, replicationStats.brushSectionHeight);
+        this.drawXaxisTimeLines(context, ticks, 0, ongoingTasksStats.brushSectionHeight);
         this.drawXaxisTimeLabels(context, ticks, 5, 5);
 
         context.strokeStyle = this.colors.axis;
-        context.strokeRect(0.5, 0.5, this.totalWidth, replicationStats.brushSectionHeight - 1);
+        context.strokeRect(0.5, 0.5, this.totalWidth, ongoingTasksStats.brushSectionHeight - 1);
 
         context.fillStyle = this.colors.brushChartColor;
         context.strokeStyle = this.colors.brushChartStrokeColor;
-        context.lineWidth = replicationStats.brushSectionLineWidth;
+        context.lineWidth = ongoingTasksStats.brushSectionLineWidth;
 
         // Draw area chart showing replication work
         let x1: number, x2: number, y0: number = 0, y1: number;
@@ -625,15 +670,15 @@ class replicationStats extends viewModelBase {
 
             context.beginPath();
             x1 = this.xBrushTimeScale(new Date(workData[i].pointInTime));
-            y1 = Math.round(this.yBrushValueScale(workData[i].numberOfIndexesWorking)) + 0.5;
+            y1 = Math.round(this.yBrushValueScale(workData[i].numberOfItems)) + 0.5;
             x2 = this.xBrushTimeScale(new Date(workData[i + 1].pointInTime));
-            context.moveTo(x1, replicationStats.brushSectionHeight - y0);
-            context.lineTo(x1, replicationStats.brushSectionHeight - y1);
+            context.moveTo(x1, ongoingTasksStats.brushSectionHeight - y0);
+            context.lineTo(x1, ongoingTasksStats.brushSectionHeight - y1);
 
             // Don't want to draw line -or- rect at level 0
             if (y1 !== 0) {
-                context.lineTo(x2, replicationStats.brushSectionHeight - y1);
-                context.fillRect(x1, replicationStats.brushSectionHeight - y1, x2 - x1, y1);
+                context.lineTo(x2, ongoingTasksStats.brushSectionHeight - y1);
+                context.fillRect(x1, ongoingTasksStats.brushSectionHeight - y1, x2 - x1, y1);
             }
 
             context.stroke();
@@ -642,8 +687,8 @@ class replicationStats extends viewModelBase {
 
         // Draw last line:
         context.beginPath();
-        context.moveTo(x2, replicationStats.brushSectionHeight - y1);
-        context.lineTo(x2, replicationStats.brushSectionHeight);
+        context.moveTo(x2, ongoingTasksStats.brushSectionHeight - y1);
+        context.lineTo(x2, ongoingTasksStats.brushSectionHeight);
         context.stroke();
 
         this.drawBrushGaps(context);
@@ -658,7 +703,7 @@ class replicationStats extends viewModelBase {
 
             const gapX = this.xBrushTimeScale(gap.start);
             context.moveTo(gapX, 1);
-            context.lineTo(gapX, replicationStats.brushSectionHeight - 2);
+            context.lineTo(gapX, ongoingTasksStats.brushSectionHeight - 2);
             context.stroke();
         }
     }
@@ -675,22 +720,46 @@ class replicationStats extends viewModelBase {
                 .call(this.brush)
                 .selectAll("rect")
                 .attr("y", 1)
-                .attr("height", replicationStats.brushSectionHeight - 1);
+                .attr("height", ongoingTasksStats.brushSectionHeight - 1);
         }
     }
 
-    private prepareMainSection(resetFilteredReplicationsNames: boolean) {
-        this.findAndSetReplicationsNames();
+    private prepareMainSection(resetFilter: boolean) {
+        this.findAndSetTaskNames();
 
-        if (resetFilteredReplicationsNames) {
+        if (resetFilter) {
             this.searchText("");
         }
-        this.filterReplications();
+        this.filterTracks();
     }
 
-    private findAndSetReplicationsNames() {
-        this.data = _.orderBy(this.data, [x => x.Type, x => x.Description], ["desc", "asc"]);
-        this.replicationTracksNames(_.uniq(this.data.map(x => x.Description)));
+    private findAndSetTaskNames() {
+        this.replicationData = _.orderBy(this.replicationData, [x => x.Type, x => x.Description], ["desc", "asc"]);
+        this.etlData = _.orderBy(this.etlData, [x => x.EtlType, x => x.TaskName], ["asc", "asc"]);
+        
+        const trackInfos = [] as trackInfo[];
+        
+        this.replicationData.forEach(replication => {
+            trackInfos.push({
+                name: replication.Description,
+                type: replication.Type
+            })
+        });
+        
+        this.etlData.forEach(taskInfo => {
+            taskInfo.Stats.forEach(scriptInfo => {
+                trackInfos.push({
+                    name: ongoingTasksStats.generateEtlTaskName(taskInfo, scriptInfo),
+                    type: taskInfo.EtlType
+                });
+            })
+        });
+        
+        this.tracksInfo(trackInfos);
+    }
+    
+    private static generateEtlTaskName(taskStats: Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats, scriptStats: Raven.Server.Documents.ETL.Stats.EtlProcessPerformanceStats) {
+        return taskStats.TaskName + " - " + scriptStats.TransformationName;
     }
 
     private fixCurrentOffset() {
@@ -698,23 +767,23 @@ class replicationStats extends viewModelBase {
     }
 
     private constructYScale() {
-        let currentOffset = replicationStats.axisHeight - this.currentYOffset;
+        let currentOffset = ongoingTasksStats.axisHeight - this.currentYOffset;
         const domain = [] as Array<string>;
         const range = [] as Array<number>;
 
-        const replicationsInfo = this.filteredTrackNames();
+        const trackNames = this.filteredTrackNames();
 
-        for (let i = 0; i < replicationsInfo.length; i++) {
-            const replicationName = replicationsInfo[i];
+        for (let i = 0; i < trackNames.length; i++) {
+            const trackName = trackNames[i];
 
-            domain.push(replicationName);
+            domain.push(trackName);
             range.push(currentOffset);
 
-            const isOpened = _.includes(this.expandedTracks(), replicationName);
+            const isOpened = _.includes(this.expandedTracks(), trackName);
 
-            const itemHeight = isOpened ? replicationStats.openedTrackHeight : replicationStats.closedTrackHeight;
+            const itemHeight = isOpened ? ongoingTasksStats.openedTrackHeight : ongoingTasksStats.closedTrackHeight;
 
-            currentOffset += itemHeight + replicationStats.trackMargin;
+            currentOffset += itemHeight + ongoingTasksStats.trackMargin;
         }
 
         this.yScale = d3.scale.ordinal<string, number>()
@@ -726,12 +795,12 @@ class replicationStats extends viewModelBase {
         const expandedTracksCount = this.expandedTracks().length;
         const closedTracksCount = this.filteredTrackNames().length - expandedTracksCount;
 
-        const offset = replicationStats.axisHeight
-            + this.filteredTrackNames().length * replicationStats.trackMargin
-            + expandedTracksCount * replicationStats.openedTrackHeight
-            + closedTracksCount * replicationStats.closedTrackHeight;
+        const offset = ongoingTasksStats.axisHeight
+            + this.filteredTrackNames().length * ongoingTasksStats.trackMargin
+            + expandedTracksCount * ongoingTasksStats.openedTrackHeight
+            + closedTracksCount * ongoingTasksStats.closedTrackHeight;
 
-        const availableHeightForTracks = this.totalHeight - replicationStats.brushSectionHeight;
+        const availableHeightForTracks = this.totalHeight - ongoingTasksStats.brushSectionHeight;
 
         const extraBottomMargin = 10;
 
@@ -739,8 +808,7 @@ class replicationStats extends viewModelBase {
     }
 
     private getTicks(scale: d3.time.Scale<number, number>): Date[] {
-        
-        return d3.range(replicationStats.initialOffset, this.totalWidth - replicationStats.step, replicationStats.step)
+        return d3.range(ongoingTasksStats.initialOffset, this.totalWidth - ongoingTasksStats.step, ongoingTasksStats.step)
             .map(y => scale.invert(y));
     }
 
@@ -753,8 +821,8 @@ class replicationStats extends viewModelBase {
             context.strokeStyle = this.colors.axis;
 
             ticks.forEach((x, i) => {
-                context.moveTo(replicationStats.initialOffset + (i * replicationStats.step) + 0.5, yStart);
-                context.lineTo(replicationStats.initialOffset + (i * replicationStats.step) + 0.5, yEnd);
+                context.moveTo(ongoingTasksStats.initialOffset + (i * ongoingTasksStats.step) + 0.5, yStart);
+                context.lineTo(ongoingTasksStats.initialOffset + (i * ongoingTasksStats.step) + 0.5, yEnd);
             });
 
             context.stroke();
@@ -775,7 +843,7 @@ class replicationStats extends viewModelBase {
             context.fillStyle = this.colors.axis;
           
             ticks.forEach((x, i) => {
-                context.fillText(this.xTickFormat(x), replicationStats.initialOffset + (i * replicationStats.step) + timePaddingLeft, timePaddingTop);
+                context.fillText(this.xTickFormat(x), ongoingTasksStats.initialOffset + (i * ongoingTasksStats.step) + timePaddingLeft, timePaddingTop);
             });
         }
         finally {
@@ -809,18 +877,26 @@ class replicationStats extends viewModelBase {
 
     private extractTimeRanges(): Array<[Date, Date]> {
         const result = [] as Array<[Date, Date]>;
-        this.data.forEach(replicationStats => {
-            replicationStats.Performance.forEach(perfStat => {
-                const perfStatsWithCache = perfStat as ReplicationPerformanceBaseWithCache;
-                const start = perfStatsWithCache.StartedAsDate;
-                let end: Date;
-                if (perfStat.Completed) {
-                    end = perfStatsWithCache.CompletedAsDate;
-                } else {
-                    end = new Date(start.getTime() + perfStat.DurationInMs);
-                }
-                result.push([start, end]);
-            });
+        
+        const onPerf = (perfStatsWithCache: performanceBaseWithCache) => {
+            const start = perfStatsWithCache.StartedAsDate;
+            let end: Date;
+            if (perfStatsWithCache.Completed) {
+                end = perfStatsWithCache.CompletedAsDate;
+            } else {
+                end = new Date(start.getTime() + perfStatsWithCache.DurationInMs);
+            }
+            result.push([start, end]);
+        };
+        
+        this.replicationData.forEach(replicationStats => {
+            replicationStats.Performance.forEach(perfStat => onPerf(perfStat as performanceBaseWithCache));
+        });
+        
+        this.etlData.forEach(etlStats => {
+            etlStats.Stats.forEach(etlStat => {
+                etlStat.Performance.forEach(perfStat => onPerf(perfStat as performanceBaseWithCache));
+            })
         });
 
         return result;
@@ -833,6 +909,7 @@ class replicationStats extends viewModelBase {
         this.fixCurrentOffset();
         this.constructYScale();
 
+        // noinspection JSSuspiciousNameCombination
         const visibleTimeFrame = this.xNumericScale.domain().map(x => this.xBrushTimeScale.invert(x)) as [Date, Date];
         const xScale = this.gapFinder.trimmedScale(visibleTimeFrame, this.totalWidth, 0);
 
@@ -841,10 +918,10 @@ class replicationStats extends viewModelBase {
 
         context.save();
         try {
-            context.translate(0, replicationStats.brushSectionHeight);
-            context.clearRect(0, 0, this.totalWidth, this.totalHeight - replicationStats.brushSectionHeight);
+            context.translate(0, ongoingTasksStats.brushSectionHeight);
+            context.clearRect(0, 0, this.totalWidth, this.totalHeight - ongoingTasksStats.brushSectionHeight);
 
-            this.drawTracksBackground(context, xScale);
+            this.drawTracksBackground(context);
 
             if (xScale.domain().length) {
 
@@ -852,9 +929,9 @@ class replicationStats extends viewModelBase {
 
                 context.save();
                 context.beginPath();
-                context.rect(0, replicationStats.axisHeight - 3, this.totalWidth, this.totalHeight - replicationStats.brushSectionHeight);
+                context.rect(0, ongoingTasksStats.axisHeight - 3, this.totalWidth, this.totalHeight - ongoingTasksStats.brushSectionHeight);
                 context.clip();
-                const timeYStart = this.yScale.range()[0] || replicationStats.axisHeight;
+                const timeYStart = this.yScale.range()[0] || ongoingTasksStats.axisHeight;
                 this.drawXaxisTimeLines(context, ticks, timeYStart - 3, this.totalHeight);
                 context.restore();
 
@@ -864,18 +941,18 @@ class replicationStats extends viewModelBase {
             context.save();
             try {
                 context.beginPath();
-                context.rect(0, replicationStats.axisHeight, this.totalWidth, this.totalHeight - replicationStats.brushSectionHeight);
+                context.rect(0, ongoingTasksStats.axisHeight, this.totalWidth, this.totalHeight - ongoingTasksStats.brushSectionHeight);
                 context.clip();
 
                 this.drawTracks(context, xScale, visibleTimeFrame);
-                this.drawReplicationTracksNames(context);
+                this.drawTracksNames(context);
                 this.drawGaps(context, xScale);
 
                 graphHelper.drawScroll(context,
-                    { left: this.totalWidth, top: replicationStats.axisHeight },
+                    { left: this.totalWidth, top: ongoingTasksStats.axisHeight },
                     this.currentYOffset,
-                    this.totalHeight - replicationStats.brushSectionHeight - replicationStats.axisHeight,
-                    this.maxYOffset ? this.maxYOffset + this.totalHeight - replicationStats.brushSectionHeight - replicationStats.axisHeight : 0, 
+                    this.totalHeight - ongoingTasksStats.brushSectionHeight - ongoingTasksStats.axisHeight,
+                    this.maxYOffset ? this.maxYOffset + this.totalHeight - ongoingTasksStats.brushSectionHeight - ongoingTasksStats.axisHeight : 0, 
                     this.scrollConfig);
 
             } finally {
@@ -888,20 +965,29 @@ class replicationStats extends viewModelBase {
         this.inProgressAnimator.animate(this.colors.progressStripes);
     }
 
-    private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
+    private drawTracksBackground(context: CanvasRenderingContext2D) {
         context.save();
 
         context.beginPath();
-        context.rect(0, replicationStats.axisHeight, this.totalWidth, this.totalHeight - replicationStats.brushSectionHeight);
+        context.rect(0, ongoingTasksStats.axisHeight, this.totalWidth, this.totalHeight - ongoingTasksStats.brushSectionHeight);
         context.clip();
 
-        this.data.forEach(replicationStat => {
-            const yStart = this.yScale(replicationStat.Description);
-            const isOpened = _.includes(this.expandedTracks(), replicationStat.Description); 
+        const drawBackground = (trackName: string) => {
+            const yStart = this.yScale(trackName);
+            const isOpened = _.includes(this.expandedTracks(), trackName);
 
             context.beginPath();
             context.fillStyle = this.colors.trackBackground;
-            context.fillRect(0, yStart, this.totalWidth, isOpened ? replicationStats.openedTrackHeight : replicationStats.closedTrackHeight);
+            context.fillRect(0, yStart, this.totalWidth, isOpened ? ongoingTasksStats.openedTrackHeight : ongoingTasksStats.closedTrackHeight);
+        };
+        
+        this.replicationData.forEach(replicationStat => {
+           drawBackground(replicationStat.Description);
+        });
+        this.etlData.forEach(x => {
+            x.Stats.forEach(stat => {
+                drawBackground(ongoingTasksStats.generateEtlTaskName(x, stat));
+            })
         });
 
         context.restore();
@@ -917,24 +1003,23 @@ class replicationStats extends viewModelBase {
 
         const extentFunc = gapFinder.extentGeneratorForScaleWithGaps(xScale);
 
-        this.data.forEach(replicationTrack => {
-            if (!_.includes(this.filteredTrackNames(), replicationTrack.Description)) {
+        const drawTrack = (trackName: string, performance: performanceBaseWithCache[]) => {
+            if (!_.includes(this.filteredTrackNames(), trackName)) {
                 return;
             }
 
-            const isOpened = _.includes(this.expandedTracks(), replicationTrack.Description);
-            let yStart = this.yScale(replicationTrack.Description);
-            yStart += isOpened ? replicationStats.openedTrackPadding : replicationStats.closedTrackPadding;
+            const isOpened = _.includes(this.expandedTracks(), trackName);
+            let yStart = this.yScale(trackName);
+            yStart += isOpened ? ongoingTasksStats.openedTrackPadding : ongoingTasksStats.closedTrackPadding;
 
-            const performance = replicationTrack.Performance; 
             const perfLength = performance.length;
-            let perfCompleted: string; 
+            let perfCompleted: string;
 
             for (let perfIdx = 0; perfIdx < perfLength; perfIdx++) {
-                const perf = performance[perfIdx];   // each performance[i] has:  completed, deteails, DurationInMilliseconds, id, started
+                const perf = performance[perfIdx];   // each performance[i] has:  completed, details, DurationInMilliseconds, id, started
 
-                const perfWithCache = perf as ReplicationPerformanceBaseWithCache; // cache has also: startedAsDate, CompletedAsDate, Type
-                const startDate = perfWithCache.StartedAsDate; 
+                const perfWithCache = perf as performanceBaseWithCache; // cache has also: startedAsDate, CompletedAsDate, Type
+                const startDate = perfWithCache.StartedAsDate;
 
                 const x1 = xScale(startDate);
                 const startDateAsInt = startDate.getTime();
@@ -943,7 +1028,7 @@ class replicationStats extends viewModelBase {
                 if (endDateAsInt < visibleStartDateAsInt || visibleEndDateAsInt < startDateAsInt)
                     continue;
 
-                const yOffset = isOpened ? replicationStats.trackHeight + replicationStats.stackPadding : 0;
+                const yOffset = isOpened ? ongoingTasksStats.trackHeight + ongoingTasksStats.stackPadding : 0;
                 const stripesYStart = yStart + (isOpened ? yOffset : 0);
 
                 context.save();
@@ -954,32 +1039,39 @@ class replicationStats extends viewModelBase {
                 // 2. Draw a separating line between adjacent perf items if needed
                 if (perfIdx >= 1 && perfCompleted === perf.Started) {
                     context.fillStyle = this.colors.separatorLine;
-                    context.fillRect(x1, yStart + (isOpened ? yOffset : 0), 1, replicationStats.trackHeight);
+                    context.fillRect(x1, yStart + (isOpened ? yOffset : 0), 1, ongoingTasksStats.trackHeight);
                 }
 
                 context.restore();
 
                 // Save to compare with the start time of the next item...
-                perfCompleted = perf.Completed; 
-                
+                perfCompleted = perf.Completed;
+
                 if (!perf.Completed) {
                     this.findInProgressAction(context, perf, extentFunc, x1, stripesYStart, yOffset);
                 }
             }
-        });
+        };
+        
+        this.replicationData.forEach(replicationTrack => drawTrack(replicationTrack.Description, replicationTrack.Performance as performanceBaseWithCache[]));
+        this.etlData.forEach(etlItem => {
+            etlItem.Stats.forEach(etlStat => {
+                drawTrack(ongoingTasksStats.generateEtlTaskName(etlItem, etlStat), etlStat.Performance as performanceBaseWithCache[]);
+            })
+        })
     }
 
-    private findInProgressAction(context: CanvasRenderingContext2D, perf: Raven.Client.Documents.Replication.ReplicationPerformanceBase, extentFunc: (duration: number) => number,
+    private findInProgressAction(context: CanvasRenderingContext2D, perf: performanceBaseWithCache, extentFunc: (duration: number) => number,
                                  xStart: number, yStart: number, yOffset: number): void {
 
-        const extractor = (perfs: Raven.Client.Documents.Replication.ReplicationPerformanceOperation[], xStart: number, yStart: number, yOffset: number) => {
+        const extractor = (perfs: taskOperation[], xStart: number, yStart: number, yOffset: number) => {
 
             let currentX = xStart;
 
             perfs.forEach(op => {
                 const dx = extentFunc(op.DurationInMs);
 
-                this.inProgressAnimator.register([currentX, yStart, dx, replicationStats.trackHeight]);
+                this.inProgressAnimator.register([currentX, yStart, dx, ongoingTasksStats.trackHeight]);
 
                 if (op.Operations.length > 0) {
                     extractor(op.Operations, currentX, yStart + yOffset, yOffset);
@@ -1001,14 +1093,25 @@ class replicationStats extends viewModelBase {
         throw new Error("Unable to find color for: " + operationName);
     }
 
-    private getType(replicationName: string): Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType {
-        const replication = this.data.find(x => x.Description === replicationName);
-        return replication.Type;
+    private getTaskTypeDescription(taskName: string): string {
+        const type = this.tracksInfo().find(x => x.name === taskName).type;
+        switch (type) {
+            case "Incoming":
+                return "Incoming replication";
+            case "Outgoing":
+                return "Outgoing replication";
+            case "Raven":
+                return "Raven ETL";
+            case "Sql":
+                return "SQL ETL";
+        }
+        return "";
     }
 
-    private drawStripes(context: CanvasRenderingContext2D, operations: Array<Raven.Client.Documents.Replication.ReplicationPerformanceOperation>,
+    //TODO: review this function
+    private drawStripes(context: CanvasRenderingContext2D, operations: Array<taskOperation>,
         xStart: number, yStart: number, yOffset: number, extentFunc: (duration: number) => number,
-        perfItemWithCache: ReplicationPerformanceBaseWithCache = null) {
+        perfItemWithCache: performanceBaseWithCache = null) {
 
         let currentX = xStart;
         const length = operations.length;
@@ -1018,25 +1121,26 @@ class replicationStats extends viewModelBase {
 
             // 0. Draw item:
             context.fillStyle = this.getColorForOperation(op.Name);
-            context.fillRect(currentX, yStart, dx, replicationStats.trackHeight);
+            context.fillRect(currentX, yStart, dx, ongoingTasksStats.trackHeight);
 
             // Register items:
             // 1. Track is open
             if (yOffset !== 0) {
                 if (dx >= 0.8) { // Don't show tooltip for very small items
+                    //TODO: 
                     if (op.Name !== "Replication") {
-                        this.hitTest.registerTrackItem(currentX, yStart, dx, replicationStats.trackHeight, op);
+                        this.hitTest.registerTrackItem(currentX, yStart, dx, ongoingTasksStats.trackHeight, op);
                     } else if (perfItemWithCache) {
                         // Better to show full details for the first stripe.. 
-                        this.hitTest.registerClosedTrackItem(currentX, yStart, dx, replicationStats.trackHeight, perfItemWithCache);
+                        this.hitTest.registerClosedTrackItem(currentX, yStart, dx, ongoingTasksStats.trackHeight, perfItemWithCache);
                     }
                 }
             }
             // 2. Track is closed
             else if (perfItemWithCache) { 
                 if (dx >= 0.8) { 
-                    this.hitTest.registerClosedTrackItem(currentX, yStart, dx, replicationStats.trackHeight, perfItemWithCache);
-                    this.hitTest.registerReplicationToggle(currentX, yStart, dx, replicationStats.trackHeight, perfItemWithCache.Description); 
+                    this.hitTest.registerClosedTrackItem(currentX, yStart, dx, ongoingTasksStats.trackHeight, perfItemWithCache);
+                    //TODO: this.hitTest.registerToggleTrack(currentX, yStart, dx, ongoingTasksStats.trackHeight, perfItemWithCache.Description); 
                 }
             }
 
@@ -1046,45 +1150,45 @@ class replicationStats extends viewModelBase {
             }
 
             // 4. Handle errors if exist..(The very first 'replication' rect will be drawn on top of all others)
+            /* TODO
             if (perfItemWithCache) {
                 if (perfItemWithCache.Errors) {
                     context.fillStyle = this.colors.itemWithError; 
-                    context.fillRect(currentX, yStart, dx, replicationStats.trackHeight);
+                    context.fillRect(currentX, yStart, dx, ongoingTasksStats.trackHeight);
                 }
-            }
+            }*/
 
             currentX += dx;
         }
     }
-
-    private drawReplicationTracksNames(context: CanvasRenderingContext2D) {
+    
+    private drawTracksNames(context: CanvasRenderingContext2D) {
         const yScale = this.yScale;
         const textShift = 14.5;
         const textStart = 3 + 8 + 4;
 
-        this.filteredTrackNames().forEach((replicationName) => {
+        this.filteredTrackNames().forEach((trackName) => {
             context.font = "bold 12px Lato";
-            const replicationType = this.getType(replicationName);
+            const trackDescription = this.getTaskTypeDescription(trackName);
 
-            const directionTextWidth = context.measureText(replicationType).width;
-            let restOfText = (replicationType === "Outgoing") ? " to " : " from ";
-            restOfText += replicationName;
+            const directionTextWidth = context.measureText(trackDescription).width;
+            let restOfText = ": " + trackName;
             const restOfTextWidth = context.measureText(restOfText).width;
 
             const rectWidth = directionTextWidth + restOfTextWidth + 2 * 3 /* left right padding */ + 8 /* arrow space */ + 4; /* padding between arrow and text */
 
             context.fillStyle = this.colors.trackNameBg;
-            context.fillRect(2, yScale(replicationName) + replicationStats.closedTrackPadding, rectWidth, replicationStats.trackHeight);
-            this.hitTest.registerReplicationToggle(2, yScale(replicationName), rectWidth, replicationStats.trackHeight, replicationName);
+            context.fillRect(2, yScale(trackName) + ongoingTasksStats.closedTrackPadding, rectWidth, ongoingTasksStats.trackHeight);
+            this.hitTest.registerToggleTrack(2, yScale(trackName), rectWidth, ongoingTasksStats.trackHeight, trackName);
             
             context.fillStyle = this.colors.trackDirectionText; 
-            context.fillText(replicationType, textStart + 0.5, yScale(replicationName) + textShift);
+            context.fillText(trackDescription, textStart + 0.5, yScale(trackName) + textShift);
             context.fillStyle = this.colors.trackNameFg;
-            context.fillText(restOfText, textStart + directionTextWidth + 0.5, yScale(replicationName) + textShift);
+            context.fillText(restOfText, textStart + directionTextWidth + 0.5, yScale(trackName) + textShift);
 
-            const isOpened = _.includes(this.expandedTracks(), replicationName);
+            const isOpened = _.includes(this.expandedTracks(), trackName);
             context.fillStyle = isOpened ? this.colors.openedTrackArrow : this.colors.closedTrackArrow;
-            graphHelper.drawArrow(context, 5, yScale(replicationName) + 6, !isOpened);
+            graphHelper.drawArrow(context, 5, yScale(trackName) + 6, !isOpened);
         });
     }
 
@@ -1100,7 +1204,7 @@ class replicationStats extends viewModelBase {
         for (let i = 1; i < range.length - 1; i += 2) {
             const gapX = Math.floor(range[i]) + 0.5;
 
-            context.moveTo(gapX, replicationStats.axisHeight);
+            context.moveTo(gapX, ongoingTasksStats.axisHeight);
             context.lineTo(gapX, this.totalHeight);
 
             // Can't use xScale.invert here because there are Duplicate Values in xScale.range,
@@ -1109,7 +1213,7 @@ class replicationStats extends viewModelBase {
             const gapInfo = this.gapFinder.getGapInfoByTime(gapStartTime);
 
             if (gapInfo) {
-                this.hitTest.registerGapItem(gapX - 5, replicationStats.axisHeight, 10, this.totalHeight,
+                this.hitTest.registerGapItem(gapX - 5, ongoingTasksStats.axisHeight, 10, this.totalHeight,
                     { durationInMillis: gapInfo.durationInMillis, start: gapInfo.start });
             }
         }
@@ -1117,18 +1221,18 @@ class replicationStats extends viewModelBase {
         context.stroke();
     }
 
-    private onToggleReplication(replicationName: string) {
-        if (_.includes(this.expandedTracks(), replicationName)) {
-            this.expandedTracks.remove(replicationName);
+    private onToggleTrack(trackName: string) {
+        if (_.includes(this.expandedTracks(), trackName)) {
+            this.expandedTracks.remove(trackName);
         } else {
-            this.expandedTracks.push(replicationName);
+            this.expandedTracks.push(trackName);
         }
 
         this.drawMainSection();
     }
 
     expandAll() {
-        this.expandedTracks(this.replicationTracksNames().slice());
+        this.expandedTracks(this.tracksInfo().map(x => x.name));
         this.drawMainSection();
     }
 
@@ -1147,10 +1251,11 @@ class replicationStats extends viewModelBase {
         }
     }
 
-    private handleClosedTrackTooltip(element: ReplicationPerformanceBaseWithCache, x: number, y: number) {
+    private handleClosedTrackTooltip(element: performanceBaseWithCache, x: number, y: number) {
         const currentDatum = this.tooltip.datum();
         const baseElement = element as Raven.Client.Documents.Replication.ReplicationPerformanceBase;
 
+        /* TODO
         if (currentDatum !== element) {
             const duration = (element.DurationInMs === 0) ? "0" : generalUtils.formatMillis(element.DurationInMs);
             const direction = (element.Type === 'Outgoing') ? "Outgoing" : "Incoming";
@@ -1186,10 +1291,10 @@ class replicationStats extends viewModelBase {
             }
 
             this.handleTooltip(element, x, y, tooltipHtml);
-        }
+        }*/
     }
 
-    private handleTrackTooltip(element: Raven.Client.Documents.Replication.ReplicationPerformanceOperation,
+    private handleTrackTooltip(element: taskOperation,
                                x: number, y: number) {
         const currentDatum = this.tooltip.datum();
 
@@ -1201,7 +1306,7 @@ class replicationStats extends viewModelBase {
         }
     }
 
-    private handleTooltip(element: Raven.Client.Documents.Replication.ReplicationPerformanceOperation | timeGapInfo | ReplicationPerformanceBaseWithCache,
+    private handleTooltip(element: taskOperation | timeGapInfo | performanceBaseWithCache,
                           x: number, y: number, tooltipHtml: string) {
         if (element && !this.dialogVisible) {
             const canvas = this.canvas.node() as HTMLCanvasElement;
@@ -1272,19 +1377,21 @@ class replicationStats extends viewModelBase {
         this.bufferIsFull(false);
 
         try {
-            const importedData: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = JSON.parse(result);
+            const importedData: exportFileFormat = JSON.parse(result);
+            
+            //TODO: handle old format as well!
 
             // Data validation (currently only checking if this is an array, may do deeper validation later..
             if (!_.isArray(importedData)) { 
                 messagePublisher.reportError("Invalid replication stats file format", undefined, undefined);
             } else {
-                this.data = importedData;
+                //TODO: this.replicationData = importedData; 
 
                 this.fillCache();
                 this.prepareBrush(); 
                 this.resetGraphData();
-                const [workData, maxConcurrentReplications] = this.prepareTimeData();
-                this.draw(workData, maxConcurrentReplications, true);
+                const [workData, maxConcurrentActions] = this.prepareTimeData();
+                this.draw(workData, maxConcurrentActions, true);
 
                 this.isImport(true);
             }
@@ -1295,15 +1402,23 @@ class replicationStats extends viewModelBase {
     }
 
     private fillCache() {
-        this.data.forEach(replicationStat => {
+        this.replicationData.forEach(replicationStat => {
             replicationStat.Performance.forEach(perfStat => {
                 liveReplicationStatsWebSocketClient.fillCache(perfStat, replicationStat.Type, replicationStat.Description);
             });
         });
+        
+        this.etlData.forEach(etlTaskData => {
+            etlTaskData.Stats.forEach(etlStats => {
+                etlStats.Performance.forEach(perfStat => {
+                    liveEtlStatsWebSocketClient.fillCache(perfStat, etlTaskData.EtlType);
+                });
+            })
+        });
     }
 
     clearGraphWithConfirm() {
-        this.confirmationMessage("Clear graph data", "Do you want to discard all collected replication statistics?")
+        this.confirmationMessage("Clear graph data", "Do you want to discard all collected ongoing tasks statistics?")
             .done(result => {
                 if (result.can) {
                     this.clearGraph();
@@ -1323,9 +1438,16 @@ class replicationStats extends viewModelBase {
     }
     
     private setCutOffDate() {
-        this.dateCutoff = d3.max(this.data, 
-                d => d3.max(d.Performance, 
-                    (p: ReplicationPerformanceBaseWithCache) => p.StartedAsDate));
+        const replicationMax = d3.max(this.replicationData,
+            d => d3.max(d.Performance,
+                (p: ReplicationPerformanceBaseWithCache) => p.StartedAsDate));
+        
+        const etlMax = d3.max(this.etlData, 
+                taskData => d3.max(taskData.Stats,
+                        stats => d3.max(stats.Performance, 
+                            (p: EtlPerformanceBaseWithCache) => p.StartedAsDate)));
+        
+        this.dateCutoff = d3.max([replicationMax, etlMax]);
     }
 
     closeImport() {
@@ -1361,11 +1483,15 @@ class replicationStats extends viewModelBase {
         if (this.isImport()) {
             exportFileName = this.importFileName().substring(0, this.importFileName().lastIndexOf('.'));
         } else {
-            exportFileName = `ReplicationStats of ${this.activeDatabase().name} ${moment().format("YYYY-MM-DD HH-mm")}`;
+            exportFileName = `OngoingTasksStats of ${this.activeDatabase().name} ${moment().format("YYYY-MM-DD HH-mm")}`;
         }
 
-        const keysToIgnore: Array<keyof ReplicationPerformanceBaseWithCache> = ["StartedAsDate", "CompletedAsDate"];
-        fileDownloader.downloadAsJson(this.data, exportFileName + ".json", exportFileName, (key, value) => {
+        const keysToIgnore: Array<keyof performanceBaseWithCache> = ["StartedAsDate", "CompletedAsDate"];
+        const filePayload: exportFileFormat = {
+            Replication: this.replicationData,
+            Etl: this.etlData
+        };
+        fileDownloader.downloadAsJson(filePayload, exportFileName + ".json", exportFileName, (key, value) => {
             if (_.includes(keysToIgnore, key)) {
                 return undefined;
             }
@@ -1382,5 +1508,5 @@ class replicationStats extends viewModelBase {
     }
 }
 
-export = replicationStats;
+export = ongoingTasksStats;
 

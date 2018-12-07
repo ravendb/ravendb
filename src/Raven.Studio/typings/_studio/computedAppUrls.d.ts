@@ -39,7 +39,7 @@ interface computedAppUrls {
     indexPerformance: KnockoutComputed<string>;
     settings: KnockoutComputed<string>;
     indexErrors: KnockoutComputed<string>;
-    replicationStats: KnockoutComputed<string>;
+    ongoingTasksStats: KnockoutComputed<string>;
     visualizer: KnockoutComputed<string>;
     databaseRecord: KnockoutComputed<string>;
     revisions: KnockoutComputed<string>;

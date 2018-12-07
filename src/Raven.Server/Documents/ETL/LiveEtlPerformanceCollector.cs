@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Json;
 using Raven.Server.Utils.Stats;
@@ -40,6 +41,7 @@ namespace Raven.Server.Documents.ETL
                     .Select(x => new EtlTaskPerformanceStats
                     {
                         TaskName = x.Key,
+                        EtlType = EtlType.Raven, //TODO:
                         Stats = Client.Extensions.EnumerableExtension.ForceEnumerateInThreadSafeManner(x.Value).Select(y => new EtlProcessPerformanceStats
                         {
                             TransformationName = y.Value.Handler.TransformationName,
@@ -130,6 +132,7 @@ namespace Raven.Server.Documents.ETL
                     preparedStats.Add(new EtlTaskPerformanceStats
                     {
                         TaskName = taskProcesses.Key,
+                        EtlType = EtlType.Raven, //TODO:
                         Stats = processesStats.ToArray()
                     });
                 }

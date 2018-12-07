@@ -19,7 +19,7 @@ rect.pane {
     pointer-events: all;
 }
 
-.replication-stats {
+.ongoing-tasks-stats {
     .color-definitions {
         .axis {
             color: #546175;
@@ -102,6 +102,19 @@ rect.pane {
             
             .storageCounterRead {
                 color: @color-3-1;
+            }
+            
+            .etl {
+                color: @color-1; //TODO: update me
+            }
+            .extract {
+                color: @color-3-1; //TODO: update me
+            }
+            .transform {
+                color: @color-3-2; //TODO: update me
+            }
+            .load {
+                color: @color-3-3; //TODO: update me
             }
         }
     }   
