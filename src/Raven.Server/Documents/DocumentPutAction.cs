@@ -178,10 +178,10 @@ namespace Raven.Server.Documents
                     }
 
                     var shouldVersion = _documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
-                        ref flags, out RevisionsCollectionConfiguration configuration);
+                        ref flags, out var configuration);
                     if (shouldVersion)
                     {
-                        if (flags.Contain(DocumentFlags.HasRevisions) == false && oldDoc != null)
+                        if (ShouldVersionOldDocument(flags, oldDoc))
                         {
                             var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
                             var oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
@@ -256,6 +256,20 @@ namespace Raven.Server.Documents
                     LastModified = new DateTime(modifiedTicks)
                 };
             }
+        }
+
+        private static bool ShouldVersionOldDocument(DocumentFlags flags, BlittableJsonReaderObject oldDoc)
+        {
+            if (oldDoc == null)
+                return false; // no document to version
+
+            if (flags.Contain(DocumentFlags.HasRevisions))
+                return false; // version already exists
+
+            if (flags.Contain(DocumentFlags.Resolved))
+                return false; // we already versioned it with the a conflicted flag
+
+            return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
