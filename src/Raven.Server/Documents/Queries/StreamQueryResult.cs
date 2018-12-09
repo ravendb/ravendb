@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Queries
             return _token;
         }
 
-        public bool GetAnyWrites()
+        public bool HasAnyWrites()
         {
             return _anyWrites;
         }
