@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Queries
     {
         public override void AddResult(BlittableJsonReaderObject result)
         {
-            if (GetAnyWrites() == false)
+            if (HasAnyWrites() == false)
                 StartResponseIfNeeded();
 
             using (result)

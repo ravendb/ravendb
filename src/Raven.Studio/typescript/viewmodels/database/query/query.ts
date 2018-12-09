@@ -1041,15 +1041,15 @@ class query extends viewModelBase {
     exportCsv() {
         eventsCollector.default.reportEvent("query", "export-csv");
 
-        let args: any;
+        let args: { format: string, debug?: string };
         if (this.criteria().indexEntries()) {
             args = {
                 format: "csv",
-                debug: "entries",
+                debug: "entries"
             };
         } else {
             args = {
-                format: "csv",
+                format: "csv"
             };
         }
         let payload: { Query: string };

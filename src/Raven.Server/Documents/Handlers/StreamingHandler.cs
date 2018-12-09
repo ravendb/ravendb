@@ -143,17 +143,24 @@ namespace Raven.Server.Documents.Handlers
                 fileNamePrefix = $"{Database.Name}_{fileNamePrefix}";
                 if (string.IsNullOrWhiteSpace(debug) == false)
                 {
-                    using (var writer = GetIndexEntriesQueryResultWriter(format, debug, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                    if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
                     {
-                        try
+                        using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileNamePrefix))
                         {
-                            await Database.QueryRunner.ExecuteStreamIndexEntriesQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                            try
+                            {
+                                await Database.QueryRunner.ExecuteStreamIndexEntriesQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                            }
+                            catch (IndexDoesNotExistException)
+                            {
+                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                                writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
+                            }
                         }
-                        catch (IndexDoesNotExistException)
-                        {
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                            writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
-                        }
+                    }
+                    else
+                    {
+                        ThrowUnsupportedException($"You have selected {debug} debug mode, which is not supported.");
                     }
                 }
                 else
@@ -174,11 +181,11 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private StreamCsvBlittableQueryResultWriter GetIndexEntriesQueryResultWriter(string format, string debug, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream,
+        private StreamCsvBlittableQueryResultWriter GetIndexEntriesQueryResultWriter(string format, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream,
             string[] propertiesArray, string fileNamePrefix = null)
         {
-            if (string.IsNullOrEmpty(format) || string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase) == false || string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase) == false)
-                ThrowUnsupportedException("Using output format other than csv is not supported.");
+            if (string.IsNullOrEmpty(format) || string.Equals(format, "csv", StringComparison.OrdinalIgnoreCase) == false)
+                ThrowUnsupportedException($"You have selected \"{format}\" file format, which is not supported.");
 
             return new StreamCsvBlittableQueryResultWriter(response, responseBodyStream, context, propertiesArray, fileNamePrefix);
         }
