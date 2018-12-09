@@ -1,14 +1,17 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Exceptions;
 using Raven.Server.Config;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -36,7 +39,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         FolderPath = backupPath
                     },
-                    IncrementalBackupFrequency = "* * * * *", //every minute
+                    IncrementalBackupFrequency = "0 */6 * * *",
                     EncryptionSettings = new EncryptionSettings
                     {
                         Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
@@ -140,7 +143,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         FolderPath = backupPath
                     },
-                    IncrementalBackupFrequency = "* * * * *", //every minute
+                    IncrementalBackupFrequency = "0 */6 * * *",
                     EncryptionSettings = new EncryptionSettings
                     {
                         Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
@@ -197,5 +200,66 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        [Fact]
+        public unsafe void failed_to_restore_wrong_key()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                     session.Store(new User { Name = "oren" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", 100);
+                    session.SaveChanges();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 */6 * * *",
+                    EncryptionSettings = new EncryptionSettings
+                    {
+                        Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
+                    }
+                };
+
+                var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
+                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var status = store.Maintenance.Send(operation).Status;
+                    return status?.LastEtag;
+                }, 3);
+                Assert.Equal(3, value);
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                var key = new byte[(int)Sodium.crypto_secretstream_xchacha20poly1305_keybytes()];
+                fixed (byte* pKey = key)
+                {
+                    Sodium.crypto_secretstream_xchacha20poly1305_keygen(pKey);
+                }
+
+                var e = Assert.Throws<RavenException>(() =>
+                {
+                    using (RestoreDatabase(store, new RestoreBackupConfiguration
+                    {
+                        BackupLocation = Directory.GetDirectories(backupPath).First(),
+                        DatabaseName = databaseName,
+                        EncryptionSettings = new EncryptionSettings
+                        {
+                            Key = Convert.ToBase64String(key)
+                        }
+                    }));
+                });
+                Assert.IsType<CryptographicException>(e.InnerException);
+            }
+        }
     }
 }

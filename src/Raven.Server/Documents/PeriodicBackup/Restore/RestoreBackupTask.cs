@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Extensions.Streams;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
@@ -521,30 +522,28 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             Action<IndexDefinitionAndType> onIndexAction = null,
             Action<DatabaseRecord> onDatabaseRecordAction = null)
         {
-            Stream stream;
-            if (_restoreConfiguration.EncryptionSettings != null)
+            using (var fileStream = File.Open(filePath, FileMode.Open))
+            using (var inputStream = GetInputStream(fileStream))
+            using (var gzipStream = new GZipStream(inputStream ?? fileStream, CompressionMode.Decompress))
+            using (var source = new StreamSource(gzipStream, context, database))
             {
-                var keyAsString = _restoreConfiguration.EncryptionSettings.Key;
-                stream = new DecryptingXChaCha20Oly1305Stream(File.Open(filePath, FileMode.Open), Convert.FromBase64String(keyAsString));
-            }
-            else
-                stream = File.Open(filePath, FileMode.Open);
-
-            using (stream)
-            {
-                using (var gzipStream = new GZipStream(stream, CompressionMode.Decompress))
-                using (var source = new StreamSource(gzipStream, context, database))
+                var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
+                    database.Time, options, result: restoreResult, onProgress: onProgress, token: _operationCancelToken.Token)
                 {
-                    var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
-                        database.Time, options, result: restoreResult, onProgress: onProgress, token: _operationCancelToken.Token)
-                    {
-                        OnIndexAction = onIndexAction,
-                        OnDatabaseRecordAction = onDatabaseRecordAction
-                    };
-
-                    smuggler.Execute(ensureStepsProcessed: false);
-                }
+                    OnIndexAction = onIndexAction,
+                    OnDatabaseRecordAction = onDatabaseRecordAction
+                };
+                smuggler.Execute(ensureStepsProcessed: false);
             }
+        }
+
+        private Stream GetInputStream(FileStream fileStream)
+        {
+            if (_restoreConfiguration.EncryptionSettings == null)
+                return null;
+
+            var keyAsString = _restoreConfiguration.EncryptionSettings.Key;
+            return new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(keyAsString));
         }
 
         private RestoreSettings SnapshotRestore(

@@ -5,18 +5,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Sparrow;
+using Sparrow.Global;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
     public class DecryptingXChaCha20Oly1305Stream : Stream
     {
-        private static readonly int XChachaAdLen = (int)Sodium.crypto_secretstream_xchacha20poly1305_abytes();
-        private static readonly int DefaultBufferSize = 4096;
-
         private readonly Stream _inner;
         private readonly byte[] _pullState;
-        private readonly byte[] _encryptedBuffer = new byte[DefaultBufferSize + XChachaAdLen];
-        private readonly byte[] _plainTextBufer = new byte[DefaultBufferSize];
+        private readonly byte[] _encryptedBuffer = new byte[Constants.Encryption.DefaultBufferSize + Constants.Encryption.XChachaAdLen];
+        private readonly byte[] _plainTextBufer = new byte[Constants.Encryption.DefaultBufferSize];
         private Memory<byte> _plainTextWindow = Memory<byte>.Empty;
 
         public unsafe DecryptingXChaCha20Oly1305Stream(Stream inner, byte[] key)
@@ -36,14 +34,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 var read = _inner.Read(readingHeader);  
                 if (read == 0)
-                    throw new EndOfStreamException("Wrong or corrupted file");
+                    throw new EndOfStreamException("Wrong or corrupted file, we are missing the header");
 
                 readingHeader = readingHeader.Slice(read);
             }
             fixed (byte* ps = _pullState, pKey = key)
             {
                 if (Sodium.crypto_secretstream_xchacha20poly1305_init_pull(ps, header, pKey) != 0)
-                    throw new CryptographicException("Wrong key or corrupted file");
+                    throw new CryptographicException("Failed to init state, wrong key or corrupted file");
             }
         }
 
@@ -84,7 +82,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 ulong s;
                 if (Sodium.crypto_secretstream_xchacha20poly1305_pull(statePtr, plain, &s, null, ciphertextPtr, (ulong)read, null, 0) != 0)
-                    throw new CryptographicException("Wrong or corrupted file");
+                    throw new CryptographicException("Failed to decryped file. Wrong or corrupted file or key");
                 _plainTextWindow = new Memory<byte>(_plainTextBufer, 0, (int)s);
             }
         }
@@ -164,12 +162,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
     public class EncryptingXChaCha20Poly1305Stream : Stream
     {
-        private static readonly int XChachaAdLen = (int)Sodium.crypto_secretstream_xchacha20poly1305_abytes();
-        private const int DefaultBufferSize = 4096;
         private readonly Stream _inner;
         private readonly byte[] _pushState;
-        private readonly byte[] _cyrptedBuffer = new byte[DefaultBufferSize + XChachaAdLen];
-        private readonly byte[] _innerBuffer = new byte[DefaultBufferSize];
+        private readonly byte[] _cyrptedBuffer = new byte[Constants.Encryption.DefaultBufferSize + Constants.Encryption.XChachaAdLen];
+        private readonly byte[] _innerBuffer = new byte[Constants.Encryption.DefaultBufferSize];
         private int _pos = 0;
 
         public unsafe EncryptingXChaCha20Poly1305Stream(Stream inner, byte[] key, PeriodicBackupConfiguration configuration)
@@ -187,7 +183,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             fixed (byte* ps = _pushState, pKey = key)
             {
                 if ( Sodium.crypto_secretstream_xchacha20poly1305_init_push(ps, header, pKey) != 0)
-                    throw new CryptographicException("Wrong or corrupted key");
+                    throw new CryptographicException("Failed to init state, wrong or corrupted key");
 
                 _inner.Write(new ReadOnlySpan<byte>(header, headerbytes));
             }
@@ -215,6 +211,18 @@ namespace Raven.Server.Documents.PeriodicBackup
             await _inner.FlushAsync(cancellationToken);
         }
 
+        public void Flush(bool flushToDisk)
+        {
+            if (_pos > 0)
+            {
+                var sizeToWrite = EncryptBuffer();
+                _inner.Write(_cyrptedBuffer, 0, sizeToWrite);
+                _pos = 0;
+            }
+            if (_inner is FileStream innerFS)
+                innerFS.Flush(flushToDisk: true);
+        }
+
         public override int Read(byte[] buffer, int offset, int count)
         {
             throw new NotSupportedException();
@@ -236,7 +244,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 ulong size;
                 if (Sodium.crypto_secretstream_xchacha20poly1305_push(statePtr, ciphertextPtr, &size, fileBlockPtr , (ulong)_pos, null, 0, 0) != 0)
-                    throw new CryptographicException();
+                    throw new CryptographicException("Failed to encrypt backup");
                 return (int)size;
             }
         }
@@ -245,12 +253,12 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             while (count > 0)
             {
-                var sizeToWrite = Math.Min(DefaultBufferSize - _pos, count);
+                var sizeToWrite = Math.Min(Constants.Encryption.DefaultBufferSize - _pos, count);
                 Buffer.BlockCopy(buffer, offset, _innerBuffer, _pos, sizeToWrite);
                 count -= sizeToWrite;
                 offset += sizeToWrite;
                 _pos += sizeToWrite;
-                if (_pos == DefaultBufferSize)
+                if (_pos == Constants.Encryption.DefaultBufferSize)
                 {
                     sizeToWrite = EncryptBuffer();
                     _inner.Write(_cyrptedBuffer, 0, sizeToWrite);
@@ -263,12 +271,12 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             while (count > 0)
             {
-                var sizeToWrite = Math.Min(DefaultBufferSize - _pos, count);
+                var sizeToWrite = Math.Min(Constants.Encryption.DefaultBufferSize - _pos, count);
                 Buffer.BlockCopy(buffer, offset, _innerBuffer, _pos, sizeToWrite);
                 count -= sizeToWrite;
                 offset += sizeToWrite;
                 _pos += sizeToWrite;
-                if (_pos == DefaultBufferSize)
+                if (_pos == Constants.Encryption.DefaultBufferSize)
                 {
                     sizeToWrite = EncryptBuffer();
                     await _inner.WriteAsync(_cyrptedBuffer, 0, sizeToWrite, cancellationToken);
