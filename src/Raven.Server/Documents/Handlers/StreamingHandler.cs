@@ -93,18 +93,47 @@ namespace Raven.Server.Documents.Handlers
                 }
                 var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context, tracker, overrideQuery);
                 var format = GetStringQueryString("format", false);
+                var debug = GetStringQueryString("debug", false);
                 var properties = GetStringValuesQueryString("field", false);
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
-                using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray))
+                // set the exported file name prefix
+                var fileNamePrefix = query.Metadata.IsCollectionQuery ? query.Metadata.CollectionName + "_collection" : "query_result";
+                fileNamePrefix = $"{Database.Name}_{fileNamePrefix}";
+                if (string.IsNullOrWhiteSpace(debug) == false)
                 {
-                    try
+                    if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
                     {
-                        await Database.QueryRunner.ExecuteStreamQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                        using (var writer = GetIndexEntriesQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                        {
+                            try
+                            {
+                                await Database.QueryRunner.ExecuteStreamIndexEntriesQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                            }
+                            catch (IndexDoesNotExistException)
+                            {
+                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                                writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
+                            }
+                        }
                     }
-                    catch (IndexDoesNotExistException)
+                    else
                     {
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        writer.WriteError("Index " + query.Metadata.IndexName + " does not exists");
+                        ThrowUnsupportedException($"You have selected {debug} debug mode, which is not supported.");
+                    }
+                }
+                else
+                {
+                    using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray, fileNamePrefix))
+                    {
+                        try
+                        {
+                            await Database.QueryRunner.ExecuteStreamQuery(query, context, HttpContext.Response, writer, token).ConfigureAwait(false);
+                        }
+                        catch (IndexDoesNotExistException)
+                        {
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            writer.WriteError($"Index {query.Metadata.IndexName} does not exist");
+                        }
                     }
                 }
             }
