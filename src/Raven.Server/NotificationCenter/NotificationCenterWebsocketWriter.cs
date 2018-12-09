@@ -14,23 +14,19 @@ namespace Raven.Server.NotificationCenter
 {
     public class NotificationCenterWebSocketWriter : IWebsocketWriter, IDisposable
     {
-        private readonly CancellationToken _resourceShutdown;
-        private readonly NotificationsBase _notificationsBase;
-        private readonly IMemoryContextPool _contextPool;
         private readonly WebSocket _webSocket;
+        private readonly NotificationsBase _notificationsBase;
+        private readonly JsonOperationContext _context;
+        private readonly CancellationToken _resourceShutdown;
+        
         private readonly MemoryStream _ms = new MemoryStream();
-
+        
         public NotificationCenterWebSocketWriter(WebSocket webSocket, NotificationsBase notificationsBase, IMemoryContextPool contextPool, CancellationToken resourceShutdown)
         {
-            _notificationsBase = notificationsBase;
-            _contextPool = contextPool;
-            _resourceShutdown = resourceShutdown;
             _webSocket = webSocket;
-        }
-
-        public void Dispose()
-        {
-            _ms.Dispose();
+            _notificationsBase = notificationsBase;
+            contextPool.AllocateOperationContext(out _context);
+            _resourceShutdown = resourceShutdown;
         }
 
         public async Task WriteNotifications(Func<string, bool> shouldWriteByDb)
@@ -85,15 +81,14 @@ namespace Raven.Server.NotificationCenter
         {
             _ms.SetLength(0);
 
-            using (_contextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, _ms))
+            using (var writer = new BlittableJsonTextWriter(_context, _ms))
             {
                 var notificationType = notification.GetType();
 
                 if (notificationType == typeof(DynamicJsonValue))
-                    context.Write(writer, notification as DynamicJsonValue);
+                    _context.Write(writer, notification as DynamicJsonValue);
                 else if (notificationType == typeof(BlittableJsonReaderObject))
-                    context.Write(writer, notification as BlittableJsonReaderObject);
+                    _context.Write(writer, notification as BlittableJsonReaderObject);
                 else
                     ThrowNotSupportedType(notification);
             }
@@ -111,6 +106,14 @@ namespace Raven.Server.NotificationCenter
         private static void ThrowNotSupportedType<TNotification>(TNotification notification)
         {
             throw new NotSupportedException($"Not supported notification type: {notification.GetType()}");
+        }
+
+        public void Dispose()
+        {
+            using (_ms)
+            using (_context)
+            {
+            }
         }
     }
 }
