@@ -268,9 +268,10 @@ namespace Raven.Server.Documents.Revisions
                     return false;
             }
 
-            // no need to keep revision if no configuration is defined, unless it is a conflict resolution
-            if (Configuration == null && 
-                documentFlags.Contain(DocumentFlags.Resolved) == false)
+            if (documentFlags.Contain(DocumentFlags.Resolved))
+                return true;
+
+            if (Configuration == null)
             {
                 documentFlags = documentFlags.Strip(DocumentFlags.HasRevisions);
                 return false;
@@ -292,7 +293,13 @@ namespace Raven.Server.Documents.Revisions
 
                 // we are not going to create a revision if it's an import from v3
                 // (since this import is going to import revisions as well)
-                return nonPersistentFlags.Contain(NonPersistentDocumentFlags.LegacyHasRevisions) == false;
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.LegacyHasRevisions))
+                {
+                    documentFlags |= DocumentFlags.HasRevisions;
+                    return false;
+                }
+
+                return true;
             }
 
             // compare the contents of the existing and the new document
