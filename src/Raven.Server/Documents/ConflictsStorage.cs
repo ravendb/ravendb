@@ -365,16 +365,16 @@ namespace Raven.Server.Documents
             // will not detect a conflict. It is an optimization only that
             // we have to do, so we'll handle it.
 
-            // Only register the event if we actually deleted any conflicts
             var listCount = changeVectors.Count;
-            if (listCount > 0)
+            if (listCount == 0) // there were no conflicts for this document
+                return (changeVectors, nonPersistentFlags);
+            
+            // Only register the event if we actually deleted any conflicts
+            var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
+            tx.AfterCommitWhenNewReadTransactionsPrevented += () =>
             {
-                var tx = context.Transaction.InnerTransaction.LowLevelTransaction;
-                tx.AfterCommitWhenNewReadTransactionsPrevented += () =>
-                {
-                    Interlocked.Add(ref ConflictsCount, -listCount);
-                };
-            }
+                Interlocked.Add(ref ConflictsCount, -listCount);
+            };
             return (changeVectors, nonPersistentFlags | NonPersistentDocumentFlags.Resolved);
         }
 
@@ -578,11 +578,12 @@ namespace Raven.Server.Documents
                 if (existing.Document != null)
                 {
                     var existingDoc = existing.Document;
+                    collectionName = _documentsStorage.ExtractCollectionName(context, existingDoc.Data);
 
                     if (fromSmuggler == false)
                     {
                         using (Slice.From(context.Allocator, existingDoc.ChangeVector, out Slice cv))
-                        using (DocumentIdWorker.GetStringPreserveCase(context, CollectionName.GetLazyCollectionNameFrom(context, existingDoc.Data), out Slice collectionSlice))
+                        using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                         using (conflictsTable.Allocate(out TableValueBuilder tvb))
                         {
                             tvb.Add(lowerId);
@@ -602,8 +603,6 @@ namespace Raven.Server.Documents
                     // we delete the data directly, without generating a tombstone, because we have a 
                     // conflict instead
                     _documentsStorage.EnsureLastEtagIsPersisted(context, existingDoc.Etag);
-
-                    collectionName = _documentsStorage.ExtractCollectionName(context, existingDoc.Data);
 
                     //make sure that the relevant collection tree exists
                     var table = tx.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
@@ -688,7 +687,7 @@ namespace Raven.Server.Documents
                 {
                     doc = incomingDoc.BasePointer;
                     docSize = incomingDoc.Size;
-                    collection = CollectionName.GetLazyCollectionNameFrom(context, incomingDoc);
+                    collection = _documentsStorage.ExtractCollectionName(context, incomingDoc).Name;
                 }
                 else
                 {
