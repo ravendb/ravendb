@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
@@ -41,6 +42,7 @@ namespace Raven.Server.NotificationCenter
 
             try
             {
+                var sp = shouldWriteByDb == null ? null : Stopwatch.StartNew();
                 using (_notificationsBase.TrackActions(asyncQueue, this))
                 {
                     while (_resourceShutdown.IsCancellationRequested == false)
@@ -54,13 +56,21 @@ namespace Raven.Server.NotificationCenter
                         var tuple = await asyncQueue.TryDequeueAsync(TimeSpan.FromSeconds(5));
                         if (tuple.Item1 == false)
                         {
-                            await _webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, _resourceShutdown);
+                            await SendHeartbeat();
                             continue;
                         }
 
-                        if(shouldWriteByDb != null && 
+                        if (shouldWriteByDb != null &&
                             shouldWriteByDb((string)tuple.Item2["Database"]) == false)
+                        {
+                            if (sp.ElapsedMilliseconds > 5000)
+                            {
+                                sp.Restart();
+                                await SendHeartbeat();
+                            }
+                            
                             continue;
+                        }
 
                         await WriteToWebSocket(tuple.Item2);
                     }
@@ -91,6 +101,11 @@ namespace Raven.Server.NotificationCenter
             _ms.TryGetBuffer(out ArraySegment<byte> bytes);
 
             return _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _resourceShutdown);
+        }
+
+        private async Task SendHeartbeat()
+        {
+            await _webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, _resourceShutdown);
         }
 
         private static void ThrowNotSupportedType<TNotification>(TNotification notification)
