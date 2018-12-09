@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries;
@@ -277,6 +278,34 @@ Limit 1,1
             Assert.Equal(1, results.Count);
             var res = results.First();
             Assert.Equal("Ipoh Coffee" ,res.Product);
+        }
+
+        [Fact]
+        public void CanIncludeInGraphQueries()
+        {
+            var rawQuery =
+                @"
+match (Orders where id() = 'orders/821-A')
+include Lines.Product
+";
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new CreateSampleDataOperation());
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var res = session.Advanced.RawQuery<Order>(rawQuery).ToList();
+                    var numberOfRequests = session.Advanced.NumberOfRequests;
+                    var products = session.Load<Product>(new[] {"products/28-A", "products/43-A", "products/77-A"});
+                    Assert.Equal(products.Count, 3);
+                    Assert.True(products.ContainsKey("products/28-A"));
+                    Assert.True(products.ContainsKey("products/43-A"));
+                    Assert.True(products.ContainsKey("products/77-A"));
+                    Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+                }
+            }
         }
 
         [Fact]

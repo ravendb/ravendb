@@ -9,6 +9,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Graph;
@@ -112,7 +113,6 @@ namespace Raven.Server.Documents.Queries
                 var q = query.Metadata.Query;
 
                 //TODO: handle order by, load,  clauses
-               
 
                 if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
                 {
@@ -141,9 +141,17 @@ namespace Raven.Server.Documents.Queries
                         final.AddResult(result);
                     }
 
-                    //include clause
                 }
 
+                if (query.Metadata.Includes?.Length > 0)
+                {
+                    var idc = new IncludeDocumentsCommand(Database.DocumentsStorage,documentsContext, query.Metadata.Includes);
+                    foreach (var result in final.Results)
+                    {
+                        idc.Gather(result);
+                    }
+                    idc.Fill(final.Includes);
+                }
                 final.TotalResults = final.Results.Count;
                 return final;
             }
