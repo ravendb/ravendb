@@ -2165,6 +2165,14 @@ namespace Raven.Server.ServerWide
                     Logger.Info($"Failed to accept new RAFT connection via TCP from node {header.SourceNodeTag} ({remoteEndpoint}).", e);
                 }
             }
+            catch (RachisException e)
+            {
+                // rachis exceptions are expected, so we will not raise an alert, but only log them.
+                if (Logger.IsInfoEnabled)
+                {
+                    Logger.Info($"Failed to accept new RAFT connection via TCP from node {header.SourceNodeTag} ({remoteEndpoint}).", e);
+                }
+            }
             catch (Exception e)
             {
                 var msg = $"Failed to accept new RAFT connection via TCP from {header.SourceNodeTag} ({remoteEndpoint}).";
