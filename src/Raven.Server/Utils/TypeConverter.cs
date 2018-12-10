@@ -107,9 +107,7 @@ namespace Raven.Server.Utils
                 if (ShouldTreatAsEnumerable(enumerable))
                 {
                     var isSupportedObjects = true;
-                    var objectEnumerable = value as IEnumerable<object>;
-                    if (objectEnumerable == null)
-                        EnumerableNullException();
+                    var objectEnumerable = (IEnumerable)value;
 
                     foreach (var x in objectEnumerable)
                     {
@@ -255,7 +253,7 @@ namespace Raven.Server.Utils
             {
                 if (ShouldTreatAsEnumerable(enumerable))
                 {
-                    var objectEnumerable = value as IEnumerable<object>;
+                    var objectEnumerable = (IEnumerable)value;
                     return EnumerableToJsonArray(flattenArrays ? Flatten(objectEnumerable) : objectEnumerable, root, flattenArrays, recursiveLevel, engine, context);
                 }
             }
@@ -294,11 +292,8 @@ namespace Raven.Server.Utils
             }
         }
 
-        private static DynamicJsonArray EnumerableToJsonArray(IEnumerable<object> propertyEnumerable, object root, bool flattenArrays, int recursiveLevel, Engine engine, JsonOperationContext context)
+        private static DynamicJsonArray EnumerableToJsonArray(IEnumerable propertyEnumerable, object root, bool flattenArrays, int recursiveLevel, Engine engine, JsonOperationContext context)
         {
-            if (propertyEnumerable == null)
-                EnumerableNullException();
-
             var dja = new DynamicJsonArray();
 
             foreach (var x in propertyEnumerable)
@@ -319,9 +314,6 @@ namespace Raven.Server.Utils
 
         private static IEnumerable<object> Flatten(IEnumerable items)
         {
-            if (items == null)
-                EnumerableNullException();
-
             foreach (var item in items)
             {
                 if (item is IEnumerable enumerable && ShouldTreatAsEnumerable(enumerable))
@@ -336,11 +328,6 @@ namespace Raven.Server.Utils
 
                 yield return item;
             }
-        }
-
-        private static void EnumerableNullException()
-        {
-            throw new InvalidOperationException("Cannot enumerate on null.");
         }
 
         public static dynamic ToDynamicType(object value)
