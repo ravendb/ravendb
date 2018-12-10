@@ -132,6 +132,11 @@ namespace Raven.StorageExporter
             }
         }
 
+        private void ReportCompletedNoMoreItemsFound(string stage, long from, long outof)
+        {
+            ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Green, "Completed exporting {0} out of {1} {2} - no more {2} has been found", from, outof, stage);
+        }
+
         private void ReportProgress(string stage, long from, long outof)
         {
             if (from == outof)
@@ -187,11 +192,15 @@ namespace Raven.StorageExporter
 
                 try
                 {
+                    var foundDocs = false;
+
                     storage.Batch(accsesor =>
                     {
                         var docs = accsesor.Documents.GetDocuments(start: (int) currentDocsCount);
                         foreach (var doc in docs)
                         {
+                            foundDocs = true;
+
                             doc.ToJson(true).WriteTo(jsonWriter);
                             currentDocsCount++;
 
@@ -199,6 +208,12 @@ namespace Raven.StorageExporter
                                 ReportProgress("documents", currentDocsCount, totalDocsCount);
                         }
                     });
+
+                    if (foundDocs == false)
+                    {
+                        ReportCompletedNoMoreItemsFound("documents", currentDocsCount, totalDocsCount);
+                        break;
+                    }
                 }
                 catch (Exception e)
                 {
@@ -229,11 +244,15 @@ namespace Raven.StorageExporter
                 var previousDocsCount = currentDocsCount;
                 try
                 {
+                    var foundDocs = false;
+
                     storage.Batch(accsesor =>
                     {
                         var docs = accsesor.Documents.GetDocumentsAfter(currentLastEtag, batchSize, ct);
                         foreach (var doc in docs)
                         {
+                            foundDocs = true;
+
                             doc.ToJson(true).WriteTo(jsonWriter);
                             currentDocsCount++;
                             currentLastEtag = doc.Etag;
@@ -242,6 +261,12 @@ namespace Raven.StorageExporter
                                 ReportProgress("documents", currentDocsCount, totalDocsCount);
                         }
                     });
+
+                    if (foundDocs == false)
+                    {
+                        ReportCompletedNoMoreItemsFound("documents", currentDocsCount, totalDocsCount);
+                        break;
+                    }
                 }
                 catch (Exception e)
                 {
@@ -301,12 +326,16 @@ namespace Raven.StorageExporter
             var currentIdentitiesCount = 0;
             do
             {
+                var foundIdentities = false;
+
                 storage.Batch(accsesor =>
                 {
                     var identities = accsesor.General.GetIdentities(currentIdentitiesCount, batchSize, out totalIdentities);
                     var filteredIdentities = identities.Where(x => FilterIdentity(x.Key));
                     foreach (var identityInfo in filteredIdentities)
                     {
+                        foundIdentities = true;
+
                         new RavenJObject
                         {
                             {"Key", identityInfo.Key},
@@ -316,6 +345,13 @@ namespace Raven.StorageExporter
                     currentIdentitiesCount += identities.Count();
                     ReportProgress("identities", currentIdentitiesCount, totalIdentities);
                 });
+
+                if (foundIdentities == false)
+                {
+                    ReportCompletedNoMoreItemsFound("identities", currentIdentitiesCount, totalIdentities);
+                    break;
+                }
+
             } while (totalIdentities > currentIdentitiesCount);
         }
 
@@ -448,11 +484,15 @@ namespace Raven.StorageExporter
 
                 try
                 {
+                    var foundAttachments = false;
+
                     storage.Batch(accsesor =>
                     {
                         var attachments = accsesor.Attachments.GetAttachmentsAfter(lastEtag, batchSize, long.MaxValue);
                         foreach (var attachmentInformation in attachments)
                         {
+                            foundAttachments = true;
+
                             var attachment = accsesor.Attachments.GetAttachment(attachmentInformation.Key);
                             if (attachment == null)
                             {
@@ -490,6 +530,12 @@ namespace Raven.StorageExporter
                                 ReportProgress("attachments", currentAttachmentsCount, totalAttachmentsCount);
                         }
                     });
+
+                    if (foundAttachments == false)
+                    {
+                        ReportCompletedNoMoreItemsFound("attachments", currentAttachmentsCount, totalAttachmentsCount);
+                        break;
+                    }
                 }
                 catch (Exception e)
                 {
