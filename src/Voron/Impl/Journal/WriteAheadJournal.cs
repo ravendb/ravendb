@@ -977,7 +977,7 @@ namespace Voron.Impl.Journal
                                 _task = null;
                                 return false;
                             }
-                        } while (_task != task);
+                        } while (_task != null);
 
                         return true;
                     }
