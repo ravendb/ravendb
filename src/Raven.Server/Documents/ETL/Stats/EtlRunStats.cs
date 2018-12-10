@@ -16,7 +16,19 @@ namespace Raven.Server.Documents.ETL.Stats
             {EtlItemType.Counter, 0}
         };
 
+        public Dictionary<EtlItemType, long> LastExtractedEtags = new Dictionary<EtlItemType, long>
+        {
+            {EtlItemType.Document, 0},
+            {EtlItemType.Counter, 0}
+        };
+
         public Dictionary<EtlItemType, long> LastTransformedEtags = new Dictionary<EtlItemType, long>
+        {
+            {EtlItemType.Document, 0},
+            {EtlItemType.Counter, 0}
+        };
+        
+        public Dictionary<EtlItemType, long> LastFilteredOutEtags = new Dictionary<EtlItemType, long>
         {
             {EtlItemType.Document, 0},
             {EtlItemType.Counter, 0}
@@ -24,11 +36,7 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public long LastLoadedEtag;
 
-        public Dictionary<EtlItemType, long> LastFilteredOutEtags = new Dictionary<EtlItemType, long>
-        {
-            {EtlItemType.Document, 0},
-            {EtlItemType.Counter, 0}
-        };
+        public int NumberOfLoadedItems;
 
         public int TransformationErrorCount;
 

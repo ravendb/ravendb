@@ -280,6 +280,8 @@ namespace Raven.Server.Documents.ETL
 
                 foreach (var item in items)
                 {
+                    stats.RecordLastExtractedEtag(item.Etag, item.Type);
+
                     if (AlreadyLoadedByDifferentNode(item, state))
                     {
                         stats.RecordChangeVector(item.ChangeVector);
@@ -372,13 +374,13 @@ namespace Raven.Server.Documents.ETL
             {
                 try
                 {
-                    LoadInternal(items, context);
+                    var count = LoadInternal(items, context);
 
                     stats.RecordLastLoadedEtag(stats.LastTransformedEtags.Values.Max());
 
                     Statistics.LoadSuccess(stats.NumberOfTransformedItems.Sum(x => x.Value));
 
-                    stats.RecordLoadSuccess();
+                    stats.RecordLoadSuccess(count);
                 }
                 catch (Exception e)
                 {
@@ -407,7 +409,7 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        protected abstract void LoadInternal(IEnumerable<TTransformed> items, JsonOperationContext context);
+        protected abstract int LoadInternal(IEnumerable<TTransformed> items, JsonOperationContext context);
 
         public bool CanContinueBatch(EtlStatsScope stats, TExtracted currentItem, int batchSize, JsonOperationContext ctx)
         {

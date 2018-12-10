@@ -27,11 +27,15 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public Dictionary<EtlItemType, long> LastTransformedEtags => _stats.LastTransformedEtags;
 
+        public Dictionary<EtlItemType, long> LastFilteredOutEtags => _stats.LastFilteredOutEtags;
+
+        public Dictionary<EtlItemType, long> LastExtractedEtags => _stats.LastExtractedEtags;
+
         public long LastLoadedEtag => _stats.LastLoadedEtag;
 
-        public int TransformationErrorCount => _stats.TransformationErrorCount;
+        public int NumberOfLoadedItems => _stats.NumberOfLoadedItems;
 
-        public Dictionary<EtlItemType, long> LastFilteredOutEtags => _stats.LastFilteredOutEtags;
+        public int TransformationErrorCount => _stats.TransformationErrorCount;
 
         public string ChangeVector => _stats.ChangeVector;
 
@@ -45,6 +49,16 @@ namespace Raven.Server.Documents.ETL.Stats
         public void RecordTransformedItem(EtlItemType itemType)
         {
             _stats.NumberOfTransformedItems[itemType]++;
+        }
+
+        public void RecordLastExtractedEtag(long etag, EtlItemType type)
+        {
+            Debug.Assert(type != EtlItemType.None);
+
+            var current = _stats.LastExtractedEtags[type];
+
+            if (etag > current)
+                _stats.LastExtractedEtags[type] = etag;
         }
 
         public void RecordLastTransformedEtag(long etag, EtlItemType type)
@@ -110,9 +124,10 @@ namespace Raven.Server.Documents.ETL.Stats
             _stats.TransformationErrorCount++;
         }
 
-        public void RecordLoadSuccess()
+        public void RecordLoadSuccess(int count)
         {
             _stats.SuccessfullyLoaded = true;
+            _stats.NumberOfLoadedItems = count;
         }
 
         public void RecordLoadFailure()

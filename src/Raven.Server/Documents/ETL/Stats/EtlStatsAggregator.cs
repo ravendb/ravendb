@@ -42,6 +42,8 @@ namespace Raven.Server.Documents.ETL.Stats
                 Completed = completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
                 Details = Scope.ToPerformanceOperation("ETL"),
                 LastLoadedEtag = Stats.LastLoadedEtag,
+                NumberOfLoadedItems = Stats.NumberOfLoadedItems,
+                LastExtractedEtags = Stats.LastExtractedEtags,
                 LastTransformedEtags = Stats.LastTransformedEtags,
                 LastFilteredOutEtags = Stats.LastFilteredOutEtags,
                 NumberOfExtractedItems = Stats.NumberOfExtractedItems,
