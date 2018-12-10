@@ -524,7 +524,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             using (var fileStream = File.Open(filePath, FileMode.Open))
             using (var inputStream = GetInputStream(fileStream))
-            using (var gzipStream = new GZipStream(inputStream ?? fileStream, CompressionMode.Decompress))
+            using (var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress))
             using (var source = new StreamSource(gzipStream, context, database))
             {
                 var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
@@ -540,7 +540,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private Stream GetInputStream(FileStream fileStream)
         {
             if (_restoreConfiguration.EncryptionSettings == null)
-                return null;
+                return fileStream;
 
             var keyAsString = _restoreConfiguration.EncryptionSettings.Key;
             return new DecryptingXChaCha20Oly1305Stream(fileStream, Convert.FromBase64String(keyAsString));

@@ -492,7 +492,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var smugglerSource = new DatabaseSource(_database, startDocumentEtag.Value);
-                var smugglerDestination = new StreamDestination(outputStream ?? fileStream, context, smugglerSource);
+                var smugglerDestination = new StreamDestination(outputStream, context, smugglerSource);
                 var smuggler = new DatabaseSmuggler(_database,
                     smugglerSource,
                     smugglerDestination,
@@ -504,7 +504,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 smuggler.Execute();
 
-                switch (outputStream ?? fileStream)
+                switch (outputStream)
                 {
                     case EncryptingXChaCha20Poly1305Stream encryptedStream:
                         encryptedStream.Flush(flushToDisk: true);
@@ -521,7 +521,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private Stream GetOutputStream(Stream fileStream)
         {
             if (_configuration.EncryptionSettings == null)
-                return null;
+                return fileStream;
 
             var key = _configuration.EncryptionSettings.Key;
             return new EncryptingXChaCha20Poly1305Stream(fileStream,
