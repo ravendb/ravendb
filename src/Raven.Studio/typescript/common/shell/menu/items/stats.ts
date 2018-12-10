@@ -38,7 +38,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/status/ongoingTasksStats',
             title: 'Ongoing Tasks Stats',
             nav: true,
-            css: 'icon-replication-stats', //TODO:
+            css: 'icon-replication-stats',
             dynamicHash: appUrls.ongoingTasksStats
         }),
         new leafMenuItem({

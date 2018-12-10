@@ -17,7 +17,7 @@ describe(helperUnderTest, () => {
         ]);
 
         finder.aggregate();
-        const output = finder.indexesWork;
+        const output = finder.workData;
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(2);
@@ -45,7 +45,7 @@ describe(helperUnderTest, () => {
         ]);
 
         finder.aggregate();
-        const output = finder.indexesWork;
+        const output = finder.workData;
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(2);
@@ -72,7 +72,7 @@ describe(helperUnderTest, () => {
         ]);
 
         finder.aggregate();
-        const output = finder.indexesWork;
+        const output = finder.workData;
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(2);
@@ -104,7 +104,7 @@ describe(helperUnderTest, () => {
         ]);
 
         finder.aggregate();
-        const output = finder.indexesWork;
+        const output = finder.workData;
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(0);
@@ -150,7 +150,7 @@ describe(helperUnderTest, () => {
         finder.inputItems([{ startTime: 2, endTime: 6 }]);
 
         finder.aggregate();
-        const output = finder.indexesWork;
+        const output = finder.workData;
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(2);
@@ -172,7 +172,7 @@ describe(helperUnderTest, () => {
         ]);
 
         finder.aggregate();
-        const output = finder.indexesWork;
+        const output = finder.workData;
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(2);
@@ -201,7 +201,7 @@ describe(helperUnderTest, () => {
         ]);
 
         finder.aggregate();
-        const output = finder.indexesWork;
+        const output = finder.workData;
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(5);
@@ -234,7 +234,7 @@ describe(helperUnderTest, () => {
         ]);
 
         finder.aggregate();
-        const output = finder.indexesWork;
+        const output = finder.workData;
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(1);
@@ -282,7 +282,7 @@ describe(helperUnderTest, () => {
         ]);
 
         finder.aggregate();
-        const output = finder.indexesWork;
+        const output = finder.workData;
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(1);
@@ -319,7 +319,7 @@ describe(helperUnderTest, () => {
         ]);
 
         finder.aggregate();
-        const output = finder.indexesWork;
+        const output = finder.workData;
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(0);
@@ -366,7 +366,7 @@ describe(helperUnderTest, () => {
         ]);
 
         finder.aggregate();
-        const output = finder.indexesWork;
+        const output = finder.workData;
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(1);
@@ -400,7 +400,7 @@ describe(helperUnderTest, () => {
         ]);
 
         finder.aggregate();
-        const output = finder.indexesWork;
+        const output = finder.workData;
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(2);
@@ -428,7 +428,7 @@ describe(helperUnderTest, () => {
         ]);
 
         finder.aggregate();
-        const output = finder.indexesWork;
+        const output = finder.workData;
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(2);
@@ -458,7 +458,7 @@ describe(helperUnderTest, () => {
         ]);
 
         finder.aggregate();
-        const output = finder.indexesWork;
+        const output = finder.workData;
 
         let item = output[0];
         chai.expect(item.pointInTime).to.equal(2);
