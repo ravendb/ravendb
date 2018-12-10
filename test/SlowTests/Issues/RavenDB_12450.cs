@@ -42,6 +42,44 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public void JsProjectionIdFromMapReduceIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new DocumentIndex().Execute(store);
+
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new Document
+                    {
+                        Name = "name"
+                    });
+
+                    s.Advanced.WaitForIndexesAfterSaveChanges(indexes: new[] { nameof(DocumentIndex) });
+                    s.SaveChanges();
+                }
+
+                using (var s = store.OpenSession())
+                {
+                    var query = from doc in s.Query<Document, DocumentIndex>()
+                        select new
+                        {
+                            Id = doc.Id + " test",
+                            doc.Name
+                        };
+
+                    Assert.Equal("from index 'DocumentIndex' as doc select { Id : doc.Id+\" test\", Name : doc.Name }"
+                        , query.ToString());
+
+                    var item = query.Single();
+                    Assert.NotNull(item);
+                    Assert.NotNull(item.Id);
+                    Assert.Equal("name", item.Name);
+                }
+            }
+        }
+
         private class Document
         {
             public string Id { get; set; }
