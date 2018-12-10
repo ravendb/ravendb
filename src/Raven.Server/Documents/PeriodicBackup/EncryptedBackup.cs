@@ -220,7 +220,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 _pos = 0;
             }
             if (_inner is FileStream innerFS)
-                innerFS.Flush(flushToDisk: true);
+                innerFS.Flush(flushToDisk: flushToDisk);
+            else
+                _inner.Flush();
         }
 
         public override int Read(byte[] buffer, int offset, int count)
