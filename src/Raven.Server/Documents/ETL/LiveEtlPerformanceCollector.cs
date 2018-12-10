@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.ETL
                         
                         processesStats.Add(new EtlProcessPerformanceStats
                         {
-                            TransformationName = etl.Name,
+                            TransformationName = etl.TransformationName,
                             Performance = itemsToSend.Select(item => item.ToPerformanceLiveStatsWithDetails()).ToArray()
                         });
 
