@@ -937,11 +937,12 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            private class LockTaskResponsible
+            internal class LockTaskResponsible
             {
                 private readonly object _lock;
                 private readonly CancellationToken _token;
                 private Action _task;
+                private Exception _exception;
 
                 private readonly ManualResetEventSlim _waitForTaskToBeDone = new ManualResetEventSlim();
 
@@ -957,7 +958,9 @@ namespace Voron.Impl.Journal
                     try
                     {
                         _waitForTaskToBeDone.Reset();
-                        _task += task;
+                        Debug.Assert(_task == null);
+                        _exception = null;
+                        _task = task;
                         do
                         {
                             Monitor.TryEnter(_lock, 0, ref isLockTaken);
@@ -969,8 +972,7 @@ namespace Voron.Impl.Journal
 
                             try
                             {
-                                if (_waitForTaskToBeDone.Wait(TimeSpan.FromMilliseconds(250), _token))
-                                    break;
+                                _waitForTaskToBeDone.Wait(TimeSpan.FromMilliseconds(250), _token);
                             }
                             catch (OperationCanceledException)
                             {
@@ -978,6 +980,9 @@ namespace Voron.Impl.Journal
                                 return false;
                             }
                         } while (_task != null);
+
+                        if (_exception != null)
+                            throw _exception;
 
                         return true;
                     }
@@ -990,16 +995,27 @@ namespace Voron.Impl.Journal
 
                 public void RunTaskIfNotAlreadyRan()
                 {
-                    if (_task == null)
-                        return;
+                    Debug.Assert(Monitor.IsEntered(_lock));
 
                     if (_token.IsCancellationRequested)
                         return;
 
-                    _task();
+                    if (_task == null)
+                        return;
 
-                    _task = null;
-                    _waitForTaskToBeDone.Set();
+                    try
+                    {
+                        _task();
+                    }
+                    catch (Exception e)
+                    {
+                        _exception = e;
+                    }
+                    finally
+                    {
+                        _task = null;
+                        _waitForTaskToBeDone.Set();
+                    }
                 }
             }
 
