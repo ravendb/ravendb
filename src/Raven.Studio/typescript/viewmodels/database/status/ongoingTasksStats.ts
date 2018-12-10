@@ -27,6 +27,8 @@ type performanceBaseWithCache = ReplicationPerformanceBaseWithCache | EtlPerform
 type trackInfo = {
     name: string;
     type: ongoingTaskStatType;
+    openedHeight: number;
+    closedHeight: number;
 }
 
 type exportFileFormat = {
@@ -170,23 +172,28 @@ class ongoingTasksStats extends viewModelBase {
     private static readonly trackHeight = 18; // height used for callstack item
     private static readonly stackPadding = 1; // space between call stacks
     private static readonly trackMargin = 4;
+    private static readonly betweenScriptsPadding = 4;
     private static readonly closedTrackPadding = 2;
     private static readonly openedTrackPadding = 4;
     private static readonly axisHeight = 35;
+    private static readonly scriptNameLeftPadding = 14;
 
-    private static readonly maxRecursion = 5;
+    private static readonly maxReplicationRecursion = 3;
+    private static readonly maxEtlRecursion = 2;
     private static readonly minGapSize = 10 * 1000; // 10 seconds
     private static readonly initialOffset = 100;
     private static readonly step = 200;
     private static readonly bufferSize = 10000;
 
-
-    private static readonly openedTrackHeight = ongoingTasksStats.openedTrackPadding
-        + (ongoingTasksStats.maxRecursion + 1) * ongoingTasksStats.trackHeight
-        + ongoingTasksStats.maxRecursion * ongoingTasksStats.stackPadding
+    private static readonly singleOpenedEtlItemHeight = ongoingTasksStats.maxEtlRecursion * ongoingTasksStats.trackHeight
+        + (ongoingTasksStats.maxEtlRecursion - 1) * ongoingTasksStats.stackPadding;
+    
+    private static readonly openedReplicationTrackHeight = ongoingTasksStats.openedTrackPadding
+        + (ongoingTasksStats.maxReplicationRecursion + 1) * ongoingTasksStats.trackHeight
+        + ongoingTasksStats.maxReplicationRecursion * ongoingTasksStats.stackPadding
         + ongoingTasksStats.openedTrackPadding;
 
-    private static readonly closedTrackHeight = ongoingTasksStats.closedTrackPadding
+    private static readonly closedReplicationTrackHeight = ongoingTasksStats.closedTrackPadding
         + ongoingTasksStats.trackHeight
         + ongoingTasksStats.closedTrackPadding;
 
@@ -226,6 +233,7 @@ class ongoingTasksStats extends viewModelBase {
     private hitTest = new hitTest();
     private gapFinder: gapFinder;
     private dialogVisible = false;
+    private updatesPaused = false;
 
     private inProgressAnimator: inProgressAnimator;
 
@@ -437,6 +445,7 @@ class ongoingTasksStats extends viewModelBase {
                 if (this.liveViewEtlClient()) {
                     this.liveViewEtlClient().pauseUpdates();
                 }
+                this.updatesPaused = true;
             });
         selection
             .on("mouseup.hit", () => {
@@ -448,6 +457,7 @@ class ongoingTasksStats extends viewModelBase {
                 if (this.liveViewEtlClient()) {
                     this.liveViewEtlClient().resumeUpdates();
                 }
+                this.updatesPaused = false;
             });
 
         selection
@@ -473,7 +483,6 @@ class ongoingTasksStats extends viewModelBase {
     private filterTracks() {
         let tracks = this.tracksInfo().map(x => x.name);
         
-
         const criteria = this.searchText().toLowerCase();
         if (criteria) {
             tracks = tracks.filter(x => x.toLowerCase().includes(criteria));
@@ -503,7 +512,7 @@ class ongoingTasksStats extends viewModelBase {
             this.scrollToRight();
         }
 
-        this.draw(workData, maxConcurrentActions, this.firstDataChunkReceived);
+        this.draw(workData, maxConcurrentActions, !this.firstDataChunkReceived);
 
         if (!this.firstDataChunkReceived) {
             this.firstDataChunkReceived = true;
@@ -515,7 +524,11 @@ class ongoingTasksStats extends viewModelBase {
         
         // since we are fetching data from 2 different sources
         // let's throttle updates to avoid jumpy UI
-        const onDataUpdatedThrottle = _.debounce(() => this.onDataUpdated(), 1000, { maxWait: 3000 });
+        const onDataUpdatedThrottle = _.debounce(() => {
+            if (!this.updatesPaused) {
+                this.onDataUpdated(); 
+            }
+        }, 1000, { maxWait: 3000 });
 
         this.liveViewReplicationClient(new liveReplicationStatsWebSocketClient(this.activeDatabase(), d => {
             this.replicationData = d;
@@ -724,31 +737,46 @@ class ongoingTasksStats extends viewModelBase {
         this.replicationData = _.orderBy(this.replicationData, [x => x.Type, x => x.Description], ["desc", "asc"]);
         this.etlData = _.orderBy(this.etlData, [x => x.EtlType, x => x.TaskName], ["asc", "asc"]);
         
+        this.etlData.forEach(etl => {
+            etl.Stats = _.orderBy(etl.Stats, [x => x.TransformationName], ["asc"]);
+        });
+        
         const trackInfos = [] as trackInfo[];
         
         this.replicationData.forEach(replication => {
             trackInfos.push({
                 name: replication.Description,
-                type: replication.Type
+                type: replication.Type,
+                openedHeight: ongoingTasksStats.openedReplicationTrackHeight,
+                closedHeight: ongoingTasksStats.closedReplicationTrackHeight
             })
         });
         
         this.etlData.forEach(taskInfo => {
-            taskInfo.Stats.forEach(scriptInfo => {
-                trackInfos.push({
-                    name: ongoingTasksStats.generateEtlTaskName(taskInfo, scriptInfo),
-                    type: taskInfo.EtlType
-                });
-            })
+            const scriptsCount = taskInfo.Stats.length;
+
+            const closedHeight = ongoingTasksStats.openedTrackPadding
+                + (scriptsCount + 1) * ongoingTasksStats.trackHeight
+                + scriptsCount * ongoingTasksStats.betweenScriptsPadding
+                + ongoingTasksStats.openedTrackPadding;
+            
+            const openedHeight = 2 * ongoingTasksStats.openedTrackPadding
+                + ongoingTasksStats.trackHeight
+                + (scriptsCount - 1) * ongoingTasksStats.betweenScriptsPadding
+                + scriptsCount * ongoingTasksStats.singleOpenedEtlItemHeight
+                + ongoingTasksStats.openedTrackPadding;
+            
+            trackInfos.push({
+                name: taskInfo.TaskName,
+                type: taskInfo.EtlType,
+                openedHeight: openedHeight, 
+                closedHeight: closedHeight
+            });
         });
         
         this.tracksInfo(trackInfos);
     }
     
-    private static generateEtlTaskName(taskStats: Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats, scriptStats: Raven.Server.Documents.ETL.Stats.EtlProcessPerformanceStats) {
-        return taskStats.TaskName + " - " + scriptStats.TransformationName;
-    }
-
     private fixCurrentOffset() {
         this.currentYOffset = Math.min(Math.max(0, this.currentYOffset), this.maxYOffset);
     }
@@ -768,24 +796,26 @@ class ongoingTasksStats extends viewModelBase {
 
             const isOpened = _.includes(this.expandedTracks(), trackName);
 
-            const itemHeight = isOpened ? ongoingTasksStats.openedTrackHeight : ongoingTasksStats.closedTrackHeight;
+            const trackInfo = this.tracksInfo().find(x => x.name === trackName);
 
-            currentOffset += itemHeight + ongoingTasksStats.trackMargin;
+            currentOffset += (isOpened ? trackInfo.openedHeight : trackInfo.closedHeight) + ongoingTasksStats.trackMargin;
         }
 
         this.yScale = d3.scale.ordinal<string, number>()
             .domain(domain)
             .range(range);
     }
-
+    
     private calcMaxYOffset() {
-        const expandedTracksCount = this.expandedTracks().length;
-        const closedTracksCount = this.filteredTrackNames().length - expandedTracksCount;
-
+        const heightSum = _.sumBy(this.filteredTrackNames(), track => {
+            const isOpened = _.includes(this.expandedTracks(), track);
+            const trackInfo = this.tracksInfo().find(x => x.name === track);
+            return isOpened ? trackInfo.openedHeight : trackInfo.closedHeight;
+        });
+        
         const offset = ongoingTasksStats.axisHeight
             + this.filteredTrackNames().length * ongoingTasksStats.trackMargin
-            + expandedTracksCount * ongoingTasksStats.openedTrackHeight
-            + closedTracksCount * ongoingTasksStats.closedTrackHeight;
+            + heightSum;
 
         const availableHeightForTracks = this.totalHeight - ongoingTasksStats.brushSectionHeight;
 
@@ -962,19 +992,18 @@ class ongoingTasksStats extends viewModelBase {
         const drawBackground = (trackName: string) => {
             const yStart = this.yScale(trackName);
             const isOpened = _.includes(this.expandedTracks(), trackName);
+            const trackInfo = this.tracksInfo().find(x => x.name === trackName);
 
             context.beginPath();
             context.fillStyle = this.colors.trackBackground;
-            context.fillRect(0, yStart, this.totalWidth, isOpened ? ongoingTasksStats.openedTrackHeight : ongoingTasksStats.closedTrackHeight);
+            context.fillRect(0, yStart, this.totalWidth, isOpened ? trackInfo.openedHeight : trackInfo.closedHeight);
         };
         
         this.replicationData.forEach(replicationStat => {
            drawBackground(replicationStat.Description);
         });
         this.etlData.forEach(x => {
-            x.Stats.forEach(stat => {
-                drawBackground(ongoingTasksStats.generateEtlTaskName(x, stat));
-            })
+            drawBackground(x.TaskName);
         });
 
         context.restore();
@@ -990,13 +1019,7 @@ class ongoingTasksStats extends viewModelBase {
 
         const extentFunc = gapFinder.extentGeneratorForScaleWithGaps(xScale);
 
-        const drawTrack = (trackName: string, performance: performanceBaseWithCache[]) => {
-            if (!_.includes(this.filteredTrackNames(), trackName)) {
-                return;
-            }
-
-            const isOpened = _.includes(this.expandedTracks(), trackName);
-            let yStart = this.yScale(trackName);
+        const drawTrack = (trackName: string, yStart: number, isOpened: boolean, performance: performanceBaseWithCache[]) => {
             yStart += isOpened ? ongoingTasksStats.openedTrackPadding : ongoingTasksStats.closedTrackPadding;
 
             const perfLength = performance.length;
@@ -1040,12 +1063,46 @@ class ongoingTasksStats extends viewModelBase {
             }
         };
         
-        this.replicationData.forEach(replicationTrack => drawTrack(replicationTrack.Description, replicationTrack.Performance as performanceBaseWithCache[]));
+        this.replicationData.forEach(replicationTrack => {
+            const trackName = replicationTrack.Description;
+            if (_.includes(this.filteredTrackNames(), trackName)) {
+                const isOpened = _.includes(this.expandedTracks(), trackName);
+                drawTrack(trackName, this.yScale(trackName), isOpened, replicationTrack.Performance as performanceBaseWithCache[]);
+            }
+            
+        });
+        
         this.etlData.forEach(etlItem => {
-            etlItem.Stats.forEach(etlStat => {
-                drawTrack(ongoingTasksStats.generateEtlTaskName(etlItem, etlStat), etlStat.Performance as performanceBaseWithCache[]);
-            })
+            const trackName = etlItem.TaskName;
+            if (_.includes(this.filteredTrackNames(), trackName)) {
+                const yStartBase = this.yScale(trackName);
+                const isOpened = _.includes(this.expandedTracks(), trackName);
+                const extraPadding = isOpened 
+                    ? ongoingTasksStats.trackHeight + ongoingTasksStats.stackPadding + ongoingTasksStats.openedTrackPadding 
+                    : ongoingTasksStats.closedTrackPadding;
+                
+                etlItem.Stats.forEach((etlStat, idx) => {
+                    context.font = "10px Lato";
+                    const openedTrackItemOffset = ongoingTasksStats.betweenScriptsPadding + ongoingTasksStats.singleOpenedEtlItemHeight;
+                    const closedTrackItemOffset = ongoingTasksStats.betweenScriptsPadding + ongoingTasksStats.trackHeight;
+                    const offset = isOpened ? idx * openedTrackItemOffset : (idx + 1) * closedTrackItemOffset;
+                    drawTrack(trackName, yStartBase + offset, isOpened, etlStat.Performance as performanceBaseWithCache[]);
+                    this.drawScriptName(context, etlStat.TransformationName, yStartBase + offset + extraPadding);
+                });
+            }
         })
+    }
+    
+    private drawScriptName(context: CanvasRenderingContext2D, transformationName: string, yStart: number) {
+        const textShift = 12.5;
+        context.font = "bold 12px Lato";
+        const transformationNameWidth = context.measureText(transformationName).width + 8;
+
+        context.fillStyle = this.colors.trackNameBg;
+        context.fillRect(2, yStart, transformationNameWidth + ongoingTasksStats.scriptNameLeftPadding * 2, ongoingTasksStats.trackHeight);
+
+        context.fillStyle = this.colors.trackNameFg;
+        context.fillText(transformationName, ongoingTasksStats.scriptNameLeftPadding + 4, yStart + textShift);
     }
 
     private findInProgressAction(perf: performanceBaseWithCache, extentFunc: (duration: number) => number,
@@ -1145,7 +1202,7 @@ class ongoingTasksStats extends viewModelBase {
         const textShift = 14.5;
         const textStart = 3 + 8 + 4;
 
-        this.filteredTrackNames().forEach((trackName) => {
+        this.filteredTrackNames().forEach(trackName => {
             context.font = "bold 12px Lato";
             const trackDescription = this.getTaskTypeDescription(trackName);
 
@@ -1169,7 +1226,7 @@ class ongoingTasksStats extends viewModelBase {
             graphHelper.drawArrow(context, 5, yScale(trackName) + 6, !isOpened);
         });
     }
-
+    
     private drawGaps(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
         // xScale.range has screen pixels locations of Activity periods
         // xScale.domain has Start & End times of Activity periods
@@ -1235,6 +1292,7 @@ class ongoingTasksStats extends viewModelBase {
         if (currentDatum !== context.item) {
             const type = context.rootStats.Type;
             const isReplication = type === "Outgoing" || type === "Incoming";
+            const isEtl = type === "Raven" || type === "Sql";
             const isRootItem = context.rootStats.Details === context.item;
             
             let sectionName = context.item.Name;
@@ -1270,8 +1328,10 @@ class ongoingTasksStats extends viewModelBase {
                     case "Raven":
                     case "Sql":
                         const elementWithData = context.rootStats as EtlPerformanceBaseWithCache;
-                        tooltipHtml += this.prepareEtlTooltip(elementWithData);
-                        
+                        if (elementWithData.BatchCompleteReason) {
+                            tooltipHtml += `Batch complete reason: ${elementWithData.BatchCompleteReason}<br/>`;
+                        }
+                        break;
                 }
                 
                 if (isReplication) {
@@ -1281,78 +1341,55 @@ class ongoingTasksStats extends viewModelBase {
                         baseElement.Errors.forEach(err => tooltipHtml += `Errors: ${err.Error}<br/>`);
                     }
                 }
+            } else { // child item
+                if (isEtl) {
+                    const baseElement = context.rootStats as EtlPerformanceBaseWithCache;
+                    switch (context.item.Name) {
+                        case "Extract":
+                            _.forIn(baseElement.NumberOfExtractedItems, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
+                                if (value) {
+                                    tooltipHtml += `Extracted ${ongoingTasksStats.etlItemTypeToUi(key)}: ${value.toLocaleString()}<br/>`;
+                                }
+                            });
+
+                            _.forIn(baseElement.LastFilteredOutEtags, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
+                                if (value) {
+                                    tooltipHtml += `Last filtered out Etag for ${key}: ${value}<br/>`;
+                                }
+                            });
+                            break;
+                        case "Transform":
+                            _.forIn(baseElement.NumberOfTransformedItems, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
+                                if (value) {
+                                    tooltipHtml += `Transformed ${ongoingTasksStats.etlItemTypeToUi(key)}: ${value.toLocaleString()}<br/>`;
+                                }
+                            });
+
+                            if (baseElement.TransformationErrorCount) {
+                                tooltipHtml += `Transformation error count: ${baseElement.TransformationErrorCount.toLocaleString()}<br/>`;
+                            }
+
+                            _.forIn(baseElement.LastTransformedEtags, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
+                                if (value) {
+                                    tooltipHtml += `Last transformed Etag for ${key}: ${value}<br/>`;
+                                }
+                            });
+                            break;
+                        case "Load":
+                            if (baseElement.SuccessfullyLoaded != null) {
+                                tooltipHtml += `Successfully loaded: ${baseElement.SuccessfullyLoaded ? "Yes": "No"}<br/>`;
+                            }
+
+                            if (baseElement.LastLoadedEtag) {
+                                tooltipHtml += `Last loaded Etag: ${baseElement.LastLoadedEtag}<br/>`;
+                            }
+                            break;
+                    }
+                }
             }
             
             this.handleTooltip(context.item, x, y, tooltipHtml); 
         }
-    }
-    
-    private prepareEtlTooltip(element: EtlPerformanceBaseWithCache) {
-        let tooltipHtml = "";
-        
-        if (element.BatchCompleteReason) {
-            tooltipHtml += `Batch complete reason: ${element.BatchCompleteReason}<br/>`;
-        }
-        
-        // extract
-        let extractHtml = "";
-        _.forIn(element.NumberOfExtractedItems, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
-            if (value) {
-                extractHtml += `Extracted ${ongoingTasksStats.etlItemTypeToUi(key)}: ${value.toLocaleString()}<br/>`;
-            }
-        });
-        
-        // transform
-        let transformHtml = "";
-        _.forIn(element.NumberOfTransformedItems, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
-            if (value) {
-                transformHtml += `Transformed ${ongoingTasksStats.etlItemTypeToUi(key)}: ${value.toLocaleString()}<br/>`;
-            }
-        });
-
-        if (element.TransformationErrorCount) {
-            transformHtml += `Transformation error count: ${element.TransformationErrorCount.toLocaleString()}<br/>`;
-        }
-
-        _.forIn(element.LastTransformedEtags, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
-            if (value) {
-                transformHtml += `Last transformed Etag for ${key}: ${value}<br/>`;    
-            }
-        });
-
-        _.forIn(element.LastFilteredOutEtags, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
-            if (value) {
-                transformHtml += `Last filtered out Etag for ${key}: ${value}<br/>`;    
-            }
-        });
-        
-        // load 
-        let loadHtml = "";
-        if (element.SuccessfullyLoaded != null) {
-            loadHtml += `Successfully loaded: ${element.SuccessfullyLoaded ? "Yes": "No"}<br/>`;
-        }
-
-        if (element.LastLoadedEtag) {
-            loadHtml += `Last loaded Etag: ${element.LastLoadedEtag}<br/>`;    
-        }
-        
-        // collect all sections
-        if (extractHtml) {
-            tooltipHtml += "*** Extract ***<br/>";
-            tooltipHtml += extractHtml;
-        }
-
-        if (transformHtml) {
-            tooltipHtml += "*** Transform ***<br/>";
-            tooltipHtml += transformHtml;
-        }
-        
-        if (loadHtml) {
-            tooltipHtml += "*** Load ***<br/>";
-            tooltipHtml += loadHtml;
-        }
-        
-        return tooltipHtml;
     }
     
     static etlItemTypeToUi(value: Raven.Server.Documents.ETL.EtlItemType) {
