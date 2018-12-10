@@ -11,17 +11,20 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Background;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Storage;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Platform;
 using Sparrow.Utils;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Dashboard
 {
@@ -162,7 +165,7 @@ namespace Raven.Server.Dashboard
                             {
                                 foreach (var cachedMountPoint in item.MountPoints)
                                 {
-                                    UpdateMountPoint(cachedMountPoint, database.Name, drivesUsage);
+                                    UpdateMountPoint(database.Configuration.Storage, cachedMountPoint, database.Name, drivesUsage);
                                 }
                             }
                         }
@@ -212,17 +215,15 @@ namespace Raven.Server.Dashboard
                 if (cts.IsCancellationRequested)
                     return;
 
-                UpdateMountPoint(mountPointUsage, database.Name, drivesUsage);
+                UpdateMountPoint(database.Configuration.Storage, mountPointUsage, database.Name, drivesUsage);
                 item.MountPoints.Add(mountPointUsage);
             }
 
             item.NextDiskSpaceCheck = SystemTime.UtcNow.AddSeconds(30);
         }
 
-        private static void UpdateMountPoint(
-            Client.ServerWide.Operations.MountPointUsage mountPointUsage,
-            string databaseName,
-            DrivesUsage drivesUsage)
+        private static void UpdateMountPoint(StorageConfiguration storageConfiguration, Client.ServerWide.Operations.MountPointUsage mountPointUsage,
+            string databaseName, DrivesUsage drivesUsage)
         {
             var mountPoint = mountPointUsage.DiskSpaceResult.DriveName;
             var usage = drivesUsage.Items.FirstOrDefault(x => x.MountPoint == mountPoint);
@@ -231,9 +232,6 @@ namespace Raven.Server.Dashboard
                 usage = new MountPointUsage
                 {
                     MountPoint = mountPoint,
-                    VolumeLabel = mountPointUsage.DiskSpaceResult.VolumeLabel,
-                    FreeSpace = mountPointUsage.DiskSpaceResult.TotalFreeSpaceInBytes,
-                    TotalCapacity = mountPointUsage.DiskSpaceResult.TotalSizeInBytes
                 };
                 drivesUsage.Items.Add(usage);
             }
@@ -241,6 +239,7 @@ namespace Raven.Server.Dashboard
             usage.VolumeLabel = mountPointUsage.DiskSpaceResult.VolumeLabel;
             usage.FreeSpace = mountPointUsage.DiskSpaceResult.TotalFreeSpaceInBytes;
             usage.TotalCapacity = mountPointUsage.DiskSpaceResult.TotalSizeInBytes;
+            usage.IsLowSpace = StorageSpaceMonitor.IsLowSpace(new Size(usage.FreeSpace, SizeUnit.Bytes), new Size(usage.TotalCapacity, SizeUnit.Bytes), storageConfiguration, out string _);    
 
             var existingDatabaseUsage = usage.Items.FirstOrDefault(x => x.Database == databaseName);
             if (existingDatabaseUsage == null)
@@ -334,7 +333,7 @@ namespace Raven.Server.Dashboard
                     };
                 }
 
-                UpdateMountPoint(mountPointUsage, databaseName, existingDrivesUsage);
+                UpdateMountPoint(serverStore.Configuration.Storage, mountPointUsage, databaseName, existingDrivesUsage);
             }
         }
 

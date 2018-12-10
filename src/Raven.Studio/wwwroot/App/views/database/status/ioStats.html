@@ -33,53 +33,60 @@
     </div>
     
     <div class="flex-vertical absolute-fill">
-        <div class="flex-header">
-            <div class="row">
-                <div class="col-xl-4 col-xs-12">
-                    <div class="form-inline toolbar" role="form">
-                        <div class="clearfix">
-                            <input type="text" accesskey="/" class="form-control" placeholder="Filter indexes" title="Filter Indexes (Alt+/)" data-bind="textInput: searchText, enable: hasIndexes" />
+        <div class="flex-horizontal margin-bottom margin-bottom-sm">
+            <div class="form-inline">
+                <input type="text" accesskey="/" class="form-control" placeholder="Filter indexes" title="Filter Indexes (Alt+/)" data-bind="textInput: searchText, enable: hasIndexes" />
 
-                            <button class="btn btn-default" data-bind="click: expandIndexes, enable: indexesVisible, visible: !isIndexesExpanded()" title="Expand indexes IO stats details"><i class="icon-expand"></i> <span>Expand</span></button>
-                            <button class="btn btn-default" data-bind="click: collapseIndexes, enable: indexesVisible, visible: isIndexesExpanded" title="Collapse indexes IO stats details"><i class="icon-collapse"></i> <span>Collapse</span></button>
-                            
-                            <button class="btn btn-default" data-bind="click: exportAsJson, enable: hasAnyData, visible: !isImport()" title="Export current IO stats graph to a file">
-                                <i class="icon-export"></i><span>Export</span>
-                            </button>
-                            <label for="importFilePicker" class="btn btn-default">
-                                <i class="icon-import"></i><span>Import</span>
-                            </label>
+                <button class="btn btn-default" data-bind="click: expandIndexes, enable: indexesVisible, visible: !isIndexesExpanded()" title="Expand indexes IO stats details"><i class="icon-expand"></i> <span>Expand</span></button>
+                <button class="btn btn-default" data-bind="click: collapseIndexes, enable: indexesVisible, visible: isIndexesExpanded" title="Collapse indexes IO stats details"><i class="icon-collapse"></i> <span>Collapse</span></button>
 
-                            <span class="input-group file-input" title="Import IO stats graph file">
-                                <input type="file" id="importFilePicker" data-bind="event: { change: fileSelected }" tabindex="-1" accept=".json" style="width: 10px">
-                            </span>
+                <button class="btn btn-default" data-bind="click: exportAsJson, enable: hasAnyData, visible: !isImport()" title="Export current IO stats graph to a file">
+                    <i class="icon-export"></i><span>Export</span>
+                </button>
+                <label for="importFilePicker" class="btn btn-default">
+                    <i class="icon-import"></i><span>Import</span>
+                </label>
 
-                            <div data-bind="visible: isImport" class="margin-top">
-                                <button class="btn btn-default" data-bind="click: closeImport" title="Return to currently selected database IO stats graph">
-                                    <i class="icon-cancel"></i><span data-bind="text: 'Close import (' + importFileName() + ')'"></span>
-                                </button>
-                            </div>
-                        </div>
+                <span class="input-group file-input" title="Import IO stats graph file">
+                    <input type="file" id="importFilePicker" data-bind="event: { change: fileSelected }" tabindex="-1" accept=".json" style="width: 10px">
+                </span>
+            </div>
+            <div class="flex-separator"></div>
+            <div data-bind="visible: hasAnyData, if: hasAnyData">
+                <div id="IOMetricsLegend">
+                    <div class="legend-container" data-bind="template: { name: 'legend-template', data: { type: 'Compression', text: 'Compression' }}">
+                    </div>
+                    <div class="legend-container" data-bind="template: { name: 'legend-template', data: { type: 'JournalWrite', text: 'Journal Write' }}">
+                    </div>
+                    <div class="legend-container" data-bind="template: { name: 'legend-template', data: { type: 'DataFlush', text: 'Data Flush' }}">
+                    </div>
+                    <div class="legend-container" data-bind="template: { name: 'legend-template', data: { type: 'DataSync', text: 'Data Sync' }}">
                     </div>
                 </div>
-                <div class="col-xl-8 col-xs-12" data-bind="visible: hasAnyData, if: hasAnyData">
-                    <div id="IOMetricsLegend">
-                        <div class="legend-container" data-bind="template: { name: 'legend-template', data: { type: 'Compression', text: 'Compression' }}">
-                        </div>
-                        <div class="legend-container" data-bind="template: { name: 'legend-template', data: { type: 'JournalWrite', text: 'Journal Write' }}">
-                        </div>
-                        <div class="legend-container" data-bind="template: { name: 'legend-template', data: { type: 'DataFlush', text: 'Data Flush' }}">
-                        </div>
-                        <div class="legend-container" data-bind="template: { name: 'legend-template', data: { type: 'DataSync', text: 'Data Sync' }}">
-                        </div>
-                    </div>
-                    
-                    <div class="toggle toggle-inline pull-right on-base-background" data-bind="visible: !isImport()">
-                        <input type="checkbox" class="styled" id="autoScroll" data-bind="checked: autoScroll">
-                        <label for="autoScroll"> Auto scroll </label>
-                    </div>
+            </div>
+        </div>
+        <div class="flex-horizontal flex-noshrink">
+            <div data-bind="visible: liveViewClient() && !bufferIsFull()">
+                <i class="global-spinner spinner-xs"></i> <small>Collecting IO statistics... (buffer usage: <span data-bind="text: bufferUsage() + '%'"></span>)</small>
+            </div>
+            <div data-bind="visible: bufferIsFull">
+                <small>Buffer is full, clear graph data to continue</small>
+            </div>
+            <div class="flex-separator"></div>
 
-                </div>
+            <button class="btn btn-default btn-sm margin-right margin-right-sm" data-bind="click: clearBrush, visible: clearSelectionVisible">
+                <span>Clear selection</span>
+            </button>
+            <button class="btn btn-sm btn-default" data-bind="click: closeImport, visible: isImport" title="Return to currently selected database IO stats graph">
+                <i class="icon-cancel"></i><span data-bind="text: 'Close import (' + importFileName() + ')'">Close import</span>
+            </button>
+            <div class="btn-group" data-bind="visible: !isImport()">
+                <button class="btn btn-sm btn-info btn-checkable" data-bind="click: toggleScroll, css: { active: autoScroll }">
+                    <i class="icon-logs"></i> <span>Monitoring (tail -f)</span>
+                </button>
+                <button class="btn btn-sm btn-danger" data-bind="click: clearGraphWithConfirm">
+                    <i class="icon-cancel"></i><span>Clear graph</span>
+                </button>
             </div>
         </div>
         <div class="flex-grow dynamic-container">
@@ -97,9 +104,6 @@
             </div>
 
             <div id="ioStats" style="position: relative" data-bind="visible: hasAnyData">
-                <button class="btn btn-default btn-sm clear-button" data-bind="click: clearBrush, visible: clearSelectionVisible">
-                    <span>Clear selection</span>
-                </button>
                 <section class="metricsContainer" id="IOMetricsContainer">
                     <div class="tooltip tooltip-inner" style="opacity: 0; display: none">
                     </div>

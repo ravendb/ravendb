@@ -338,7 +338,7 @@ namespace Raven.Server.Documents
             return tx.OpenTable(CountersSchema, tableName);
         }
 
-        public string IncrementCounter(DocumentsOperationContext context, string documentId, string collection, string name, long delta)
+        public string IncrementCounter(DocumentsOperationContext context, string documentId, string collection, string name, long delta, out bool exists)
         {
             if (context.Transaction == null)
             {
@@ -352,7 +352,7 @@ namespace Raven.Server.Documents
             using (GetCounterKey(context, documentId, name, context.Environment.Base64Id, out var counterKey))
             {
                 var value = delta;
-                var exists = table.ReadByKey(counterKey, out var existing);
+                exists = table.ReadByKey(counterKey, out var existing);
                 if (exists)
                 {
                     var prev = *(long*)existing.Read((int)CountersTable.Value, out var size);
@@ -409,12 +409,12 @@ namespace Raven.Server.Documents
 
             using (GetCounterPartialKey(context, docId, out var key))
             {
-                var prev = string.Empty;
+                LazyStringValue prev = null;
                 foreach (var result in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
                 {
                     var current = ExtractCounterName(context, result.Value.Reader);
 
-                    if (prev.Equals(current))
+                    if (prev?.Equals(current) == true)
                     {
                         // already seen this one, skip it 
                         continue;
@@ -422,6 +422,7 @@ namespace Raven.Server.Documents
 
                     yield return current;
 
+                    prev?.Dispose();
                     prev = current;
                 }
             }
@@ -676,39 +677,38 @@ namespace Raven.Server.Documents
             return fst.NumberOfEntries;
         }
 
-        public void UpdateDocumentCounters(DocumentsOperationContext context, BlittableJsonReaderObject doc, string docId)
+        public void UpdateDocumentCounters(DocumentsOperationContext context, BlittableJsonReaderObject doc, string docId,
+            SortedSet<string> countersToAdd, HashSet<string> countersToRemove)
         {
+            if (countersToRemove.Count == 0 && countersToAdd.Count == 0)
+                return;
+
             BlittableJsonReaderArray metadataCounters = null;
             if (doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
             {
                 metadata.TryGet(Constants.Documents.Metadata.Counters, out metadataCounters);
             }
 
-            var counters = GetCountersForDocument(context, docId).ToList();
+            var counters = GetCountersForDocument(metadataCounters, countersToAdd, countersToRemove, out var hadModifications);
+            if (hadModifications == false)
+                return;
 
             var flags = DocumentFlags.None;
             if (counters.Count == 0)
             {
-                if (metadataCounters == null)
+                if (metadata != null)
                 {
-                    return;
+                    metadata.Modifications = new DynamicJsonValue(metadata);
+                    metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
+                    doc.Modifications = new DynamicJsonValue(doc)
+                    {
+                        [Constants.Documents.Metadata.Key] = metadata
+                    };
                 }
-
-                metadata.Modifications = new DynamicJsonValue(metadata);
-                metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
-                doc.Modifications = new DynamicJsonValue(doc)
-                {
-                    [Constants.Documents.Metadata.Key] = metadata
-                };
             }
             else
             {
-                if (metadataCounters != null &&
-                    metadataCounters.SequenceEqual(counters))
-                {
-                    return;
-                }
-
+                flags = DocumentFlags.HasCounters;
                 doc.Modifications = new DynamicJsonValue(doc);
                 if (metadata == null)
                 {
@@ -725,12 +725,40 @@ namespace Raven.Server.Documents
                     };
                     doc.Modifications[Constants.Documents.Metadata.Key] = metadata;
                 }
-
-                flags = DocumentFlags.HasCounters;
             }
 
             var data = context.ReadObject(doc, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             _documentDatabase.DocumentsStorage.Put(context, docId, null, data, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByCountersUpdate);
+        }
+
+        private static SortedSet<string> GetCountersForDocument(BlittableJsonReaderArray metadataCounters, SortedSet<string> countersToAdd, HashSet<string> countersToRemove, out bool modified)
+        {
+            modified = false;
+            if (metadataCounters == null)
+            {
+                modified = true;
+                return countersToAdd;
+            }
+
+            foreach (var counter in metadataCounters)
+            {
+                var str = counter.ToString();
+                if (countersToRemove.Contains(str))
+                {
+                    modified = true;
+                    continue;
+                }
+
+                countersToAdd.Add(str);
+            }
+
+            if (modified == false)
+            {
+                // if no counter was removed, we can be sure that there are no modification when the counter's count in the metadata is equal to the count of countersToAdd 
+                modified = countersToAdd.Count != metadataCounters.Length;
+            }
+
+            return countersToAdd;
         }
     }
 }

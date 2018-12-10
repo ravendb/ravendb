@@ -18,6 +18,11 @@ namespace Raven.Server.Documents.Queries
     public class IndexQueryServerSide : IndexQuery<BlittableJsonReaderObject>
     {
         [JsonDeserializationIgnore]
+        public int? Offset;
+        [JsonDeserializationIgnore]
+        public int? Limit;
+
+        [JsonDeserializationIgnore]
         public QueryMetadata Metadata { get; private set; }
 
         [JsonDeserializationIgnore]
@@ -100,13 +105,18 @@ namespace Raven.Server.Documents.Queries
                 if (result.Metadata.Query.Offset != null)
                 {
                     var start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
+                    result.Offset = start;
                     result.Start = result.Start != 0 || json.TryGet(nameof(Start), out int _)
                         ? Math.Min(start, result.Start)
                         : start;
                 }
 
                 if (result.Metadata.Query.Limit != null)
-                    result.PageSize = Math.Min((int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue), result.PageSize);
+                {
+                    var limit = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
+                    result.Limit = limit;   
+                    result.PageSize = Math.Min(limit, result.PageSize);
+                }
 
                 if (tracker != null)
                     tracker.Query = result.Query;
@@ -146,9 +156,6 @@ namespace Raven.Server.Documents.Queries
                     PageSize = pageSize,
                 };
 
-                var startSet = false;
-                var pageSizeSet = false;
-
                 foreach (var item in httpContext.Request.Query)
                 {
                     try
@@ -172,39 +179,30 @@ namespace Raven.Server.Documents.Queries
                             case "skipDuplicateChecking":
                                 result.SkipDuplicateChecking = bool.Parse(item.Value[0]);
                                 break;
-                            case RequestHandler.StartParameter:
-                                startSet = true;
-                                break;
-                            case RequestHandler.PageSizeParameter:
-                                pageSizeSet = true;
-                                break;
                         }
                     }
                     catch (Exception e)
                     {
-                        throw new ArgumentException($"Could not handle query string parameter '{item.Key}' (value: {item.Value})", e);
+                        throw new ArgumentException($"Could not handle query string parameter '{item.Key}' (value: {item.Value}) for query: {result.Query}", e);
                     }
                 }
 
-                result.Metadata = new QueryMetadata(result.Query, null, 0);
-
+                result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, 0);
                 if (result.Metadata.HasTimings)
                     result.Timings = new QueryTimingsScope(start: false);
 
                 if (result.Metadata.Query.Offset != null)
                 {
-                    start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
-                    result.Start = startSet
-                        ? Math.Min(start, result.Start)
-                        : start;
+                    var offset = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
+                    result.Offset = offset;
+                    result.Start = start + offset;
                 }
 
                 if (result.Metadata.Query.Limit != null)
                 {
                     pageSize = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
-                    result.Start = pageSizeSet
-                        ? Math.Min(pageSize, result.PageSize)
-                        : pageSize;
+                    result.Limit = pageSize;
+                    result.PageSize = Math.Min(result.PageSize, pageSize);
                 }
 
                 if (tracker != null)

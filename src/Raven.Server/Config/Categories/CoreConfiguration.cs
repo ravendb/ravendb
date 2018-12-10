@@ -47,6 +47,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("DataDir", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public PathSetting DataDirectory { get; set; }
 
+        [Description("Databases can only be created under the DataDir path.")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("DataDir.EnforcePath", ConfigurationEntryScope.ServerWideOnly)]
+        public bool EnforceDataDirectoryPath { get; set; }
+
         [Description("Determines what kind of security was chosen during setup.")]
         [DefaultValue(SetupMode.None)]
         [ConfigurationEntry("Setup.Mode", ConfigurationEntryScope.ServerWideOnly)]

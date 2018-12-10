@@ -397,7 +397,7 @@ namespace Raven.Server.Documents.Queries
 
         public static QueryExpression EvaluateMethod(Query query, QueryMetadata metadata, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, MethodExpression method, ref BlittableJsonReaderObject parameters)
         {
-            var methodType = QueryMethod.GetMethodType(method.Name);
+            var methodType = QueryMethod.GetMethodType(method.Name.Value);
 
             var server = documentsContext.DocumentDatabase.ServerStore;
             switch (methodType)
@@ -482,7 +482,7 @@ namespace Raven.Server.Documents.Queries
                 return metadata.GetIndexFieldName(fe, parameters);
 
             if (field is ValueExpression ve)
-                return metadata.GetIndexFieldName(new QueryFieldName(ve.Token, false), parameters);
+                return metadata.GetIndexFieldName(new QueryFieldName(ve.Token.Value, false), parameters);
 
             if (field is MethodExpression me)
             {
@@ -506,7 +506,7 @@ namespace Raven.Server.Documents.Queries
                         if (me.Arguments != null && me.Arguments.Count == 1 &&
                             me.Arguments[0] is FieldExpression f &&
                             f.Compound.Count == 1)
-                            return new QueryFieldName(f.Compound[0], f.IsQuoted);
+                            return new QueryFieldName(f.Compound[0].Value, f.IsQuoted);
 
                         throw new InvalidQueryException("sum() must be called with a single field name, but was called: " + me, query.QueryText, parameters);
 
@@ -689,6 +689,7 @@ namespace Raven.Server.Documents.Queries
                 return pq;
             }
 
+
             BooleanQuery q = null;
             var occur = Occur.SHOULD;
             Lucene.Net.Search.Query firstQuery = null;
@@ -699,26 +700,29 @@ namespace Raven.Server.Documents.Queries
                 {
                     firstQuery = t;
                     continue;
-                }
+            }
+
 
                 if (q == null)
                 {
                     q = new BooleanQuery();
 
-                    if (expression.Arguments.Count == 3)
-                    {
-                        var fieldExpression = (FieldExpression)expression.Arguments[2];
-                        if (fieldExpression.Compound.Count != 1)
-                            ThrowInvalidOperatorInSearch(metadata, parameters, fieldExpression);
+            if (expression.Arguments.Count == 3)
+            {
+                var fieldExpression = (FieldExpression)expression.Arguments[2];
+                if (fieldExpression.Compound.Count != 1)
+                    ThrowInvalidOperatorInSearch(metadata, parameters, fieldExpression);
 
-                        var op = fieldExpression.Compound[0];
-                        if (string.Equals("AND", op, StringComparison.OrdinalIgnoreCase))
-                            occur = Occur.MUST;
-                        else if (string.Equals("OR", op, StringComparison.OrdinalIgnoreCase))
-                            occur = Occur.SHOULD;
-                        else
-                            ThrowInvalidOperatorInSearch(metadata, parameters, fieldExpression);
-                    }
+                var op = fieldExpression.Compound[0];
+
+                if (string.Equals("AND", op.Value, StringComparison.OrdinalIgnoreCase))
+                    occur = Occur.MUST;
+
+                else if (string.Equals("OR", op.Value, StringComparison.OrdinalIgnoreCase))
+                    occur = Occur.SHOULD;
+                else
+                    ThrowInvalidOperatorInSearch(metadata, parameters, fieldExpression);
+            }
 
                     q.Add(firstQuery, occur);
                     firstQuery = null;
@@ -780,7 +784,7 @@ namespace Raven.Server.Documents.Queries
                                     escapePositions = new List<int>(16);
 
                                 escapePositions.Add(nextCharIndex - 1);
-                            }
+        }
 
                         } while (shouldContinue);
 
@@ -878,7 +882,7 @@ namespace Raven.Server.Documents.Queries
             var spatialField = getSpatialField(fieldName);
 
             var methodName = shapeExpression.Name;
-            var methodType = QueryMethod.GetMethodType(methodName);
+            var methodType = QueryMethod.GetMethodType(methodName.Value);
 
             Shape shape = null;
             switch (methodType)
@@ -1114,10 +1118,10 @@ namespace Raven.Server.Documents.Queries
                 case ValueTokenType.String:
                     return (value.Token, ValueTokenType.String);
                 case ValueTokenType.Long:
-                    var valueAsLong = ParseInt64WithSeparators(value.Token);
+                    var valueAsLong = ParseInt64WithSeparators(value.Token.Value);
                     return (valueAsLong, ValueTokenType.Long);
                 case ValueTokenType.Double:
-                    var valueAsDouble = double.Parse(value.Token, CultureInfo.InvariantCulture);
+                    var valueAsDouble = double.Parse(value.Token.Value, CultureInfo.InvariantCulture);
                     return (valueAsDouble, ValueTokenType.Double);
                 case ValueTokenType.True:
                     return (LuceneDocumentConverterBase.TrueString, ValueTokenType.String);

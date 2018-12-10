@@ -111,8 +111,13 @@
                                 <i class="icon-documents"></i><span data-bind="text: queriedIndexDescription"></span>
                             </strong>
                             <span data-bind="visible: queriedIndex() && queriedIndex().indexOf('collection') === 0">&nbsp;collection</span>
-                            &nbsp;was used to get the results in
+                            &nbsp;was used to get <span data-bind="text: fromCache() ? 'cached' : 'the'"></span> results in
                             <strong data-bind="text: queryStats().DurationInMs.toLocaleString() + ' ms'"></strong>
+                            <span data-bind="visible: originalRequestTime, if: originalRequestTime">(original request took: <strong data-bind="text: originalRequestTime().toLocaleString() + ' ms'"></strong>)</span>
+                            <span data-bind="visible: queriedFieldsOnly">
+                                . Showing <strong>stored index fields</strong> only. 
+                            </span>
+                            <span data-bind="visible: queriedIndexEntries">. Showing <strong>raw index entries</strong>.</span>
                         </span>
                         <span data-bind="if: isGraphQuery">
                             <strong>
@@ -128,7 +133,7 @@
                         <button type="button" class="btn btn-danger btn-sm" data-bind="enable: canDeleteDocumentsMatchingQuery, click: deleteDocsMatchingQuery"><i class="icon-trash"></i> <span>Delete documents</span></button>
                     </div>
                     <button type="button" class="btn btn-default" title="Export query results as CSV"
-                        data-bind="click: exportCsv, enable: totalResults()">
+                        data-bind="click: exportCsv, enable: totalResultsForUi()">
                         <i class="icon-csv-export"></i> <span>Export CSV</span>
                     </button>
                     <button class="btn btn-default statistics" data-bind="click: openQueryStats, enable: queryStats">
@@ -155,6 +160,14 @@
             <div class="has-error results-error" data-bind="visible: dirtyResult() && !staleResult()">
                 <div class="help-block">
                     <i class="icon-danger"></i><span>Your data has changed. The results may contain duplicates or non-current entries. <a href="#" data-bind="click: refresh">Refresh.</a></span>
+                </div>
+            </div>
+            <div class="has-warning results-error" data-bind="visible: showFanOutWarning()">
+                <div class="help-block">
+                    <i class="icon-warning"></i>
+                    <span>Using <code>offset</code> or <code>limit</code> in RQL for fanout indexes may produce unpredictable paging. 
+                        <a href="#" target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/LT8GZF/' +  $root.clientVersion() }">See details.</a>
+                    </span>
                 </div>
             </div>
             <div class="scroll-stretch">
@@ -184,7 +197,7 @@
         <div class="flex-window-head">
             <button type="button" class="btn btn-sm" 
                     data-bind="css: { active: currentTab() === 'results'}, click: goToResultsTab">
-                Results &nbsp; <span class="label" data-bind="text: totalResults().toLocaleString() + (hasMoreUnboundedResults() ? '+' : ''), css: { 'label-primary': totalResults(), 'label-default': !totalResults() }"></span>
+                Results &nbsp; <span class="label" data-bind="text: totalResultsForUi().toLocaleString() + (hasMoreUnboundedResults() ? '+' : ''), css: { 'label-primary': totalResultsForUi(), 'label-default': !totalResultsForUi() }"></span>
             </button>
             <!-- ko foreach: includesCache -->
                 <button type="button" class="btn btn-sm" data-bind="click: $root.goToIncludesTab, css: { active: $parent.currentTab() === $data }">

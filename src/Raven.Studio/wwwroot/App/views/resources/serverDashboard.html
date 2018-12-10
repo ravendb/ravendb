@@ -61,7 +61,7 @@
                                 </div>
                             </div>
                             <div class="infogrid-graph" >
-                                <div class="graph-container fix-size" id="cpuChart">
+                                <div class="graph-container" id="cpuChart">
                                 </div>
                             </div>
                             <div class="separator"></div>
@@ -96,7 +96,7 @@
                                 </div>
                             </div>
                             <div class="infogrid-graph">
-                                <div class="graph-container fix-size" id="memoryChart">
+                                <div class="graph-container" id="memoryChart">
                                 </div>
                             </div>
                         </div>
@@ -131,7 +131,7 @@
                             </div>
                         </div>
                         <div class="infogrid-graph">
-                            <div class="graph-container fix-size" id="trafficChart"></div>
+                            <div class="graph-container" id="trafficChart"></div>
                         </div>
                     </div>
                     <div class="list-container">
@@ -139,7 +139,7 @@
                             <div><i class="icon-empty-set"></i><span>No data</span></div>
                             <button  data-bind="click: $root.newDatabase" class="btn btn-primary btn-xs text-uppercase" >Create Database</button>
                         </div>
-                        <div class="list absolute-fill fix-size">
+                        <div class="list absolute-fill">
                             <virtual-grid class="resizable no-margin" params="controller: gridController, condensed: true"></virtual-grid>
                             <div class="absolute-center loading" data-bind="visible: $root.spinners.loading"><div class="global-spinner"></div></div>
                         </div>
@@ -191,7 +191,7 @@
                             <div><i class="icon-empty-set"></i><span>No data</span></div>
                             <button  data-bind="click: $root.newDatabase" class="btn btn-primary btn-xs text-uppercase" >Create Database</button>
                         </div>
-                        <div class="list absolute-fill fix-size">
+                        <div class="list absolute-fill">
                             <virtual-grid class="resizable no-margin" params="controller: gridController, condensed: true"></virtual-grid>
                             <div class="absolute-center loading" data-bind="visible: $root.spinners.loading"><div class="global-spinner"></div></div>
                         </div>
@@ -267,18 +267,37 @@
                             <div class="text-center margin-bottom">
                                 Total DB(s) size: <strong data-bind="text: $root.sizeFormatter(totalDocumentsSize())"></strong>
                             </div>
-                            <div class="graph-container fix-size" id="storageChart">
+                            <div class="graph-container" id="storageChart">
                             </div>
                         </div>
-                        <div class="flex-grow flex-vertical fix-size" data-bind="foreach: table">
-                            <div class="flex-horizontal">
-                                <div data-bind="text: mountPointLabel"></div>
+                        <div class="flex-grow flex-vertical drive-usage-container" data-bind="foreach: table">
+                            <div data-bind="text: mountPointLabel"></div>
+                            <div class="flex-horizontal disk-usage flex-noshrink">
+                                <div class="usage server-usage">
+                                    <i class="usage-rect"></i>
+                                    <strong data-bind="text: $root.sizeFormatter(totalDocumentsSpaceUsed(), 0)"></strong>
+                                    <small>RAVENDB</small>
+                                </div>
+                                <div class="usage total-usage">
+                                    <i class="usage-rect"></i>
+                                    <strong data-bind="text: $root.sizeFormatter(usedSpace(), 0)"></strong>
+                                    <small>USED</small>
+                                </div>
+                                <div class="usage free-space" data-bind="css: { 'free-space-warning': isLowSpace }">
+                                    <i class="usage-rect"></i>
+                                    <i class="icon-warning"></i>
+                                    <strong data-bind="text: $root.sizeFormatter(freeSpace(), 0)"></strong>
+                                    <small>FREE</small>
+                                </div>
                                 <div class="flex-separator"></div>
-                                <div><small> <span data-bind="text: $root.sizeFormatter(totalDocumentsSpaceUsed()) + ' used'"></span> / <span data-bind="text: $root.sizeFormatter(freeSpace()) + ' free', attr: { class: freeSpaceLevelClass }"></span> </small></div>
-                                <div class="progress">
-                                    <div class="progress-bar progress-bar-success" role="progressbar" data-bind="style: { width: percentageUsage() + '%' }">
-                                        <span class="sr-only" data-bind="text: percentageUsage() + '%'"></span>
-                                    </div>
+                                <div class="total-capacity">
+                                    <strong data-bind="text: $root.sizeFormatter(totalCapacity(), 0)"></strong>
+                                    <small>TOTAL</small>
+                                </div>
+                            </div>
+                            <div class="usage-bars">
+                                <div class="used" data-bind="style: { width: usedSpacePercentage() + '%' }">
+                                    <div class="ravendb" data-bind="style: { width: ravendbToUsedSpacePercentage() + '%' }"></div>
                                 </div>
                             </div>
                             <div class="list-container">

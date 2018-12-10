@@ -20,7 +20,6 @@ using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Platform;
-using Sparrow.Utils;
 using Voron.Platform.Posix;
 
 namespace Raven.Server.Documents.Handlers.Debugging
@@ -33,7 +32,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/admin/debug/remote-cluster-info-package", "GET", AuthorizationStatus.Operator)]
         public async Task GetClusterWideInfoPackageForRemote()
         {
-            var stacktraces = Stacktraces();
+            var stackTraces = StackTraces();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
@@ -51,7 +50,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             requestHeader = JsonDeserializationServer.NodeDebugInfoRequestHeader(requestHeaderJson);
                         }
 
-                        await WriteServerWide(archive, jsonOperationContext, localEndpointClient, stacktraces);
+                        await WriteServerWide(archive, jsonOperationContext, localEndpointClient, stackTraces);
                         foreach (var databaseName in requestHeader.DatabaseNames)
                         {
                             await WriteForDatabase(archive, jsonOperationContext, localEndpointClient, databaseName);
@@ -68,7 +67,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/admin/debug/cluster-info-package", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task GetClusterWideInfoPackage()
         {
-            var stacktraces = Stacktraces();
+            var stacktraces = StackTraces();
 
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} Cluster Wide.zip";
 
@@ -199,7 +198,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/admin/debug/info-package", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public async Task GetInfoPackage()
         {
-            var stacktraces = Stacktraces();
+            var stacktraces = StackTraces();
 
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Node [{ServerStore.NodeTag}].zip";
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
@@ -220,57 +219,23 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private void DumpStacktraces(ZipArchive archive, string prefix)
+        private static void DumpStackTraces(ZipArchive archive, string prefix)
         {
-            var stacktraces = archive.CreateEntry($"{prefix}/stacktraces.json", CompressionLevel.Optimal);
+            var zipArchiveEntry = archive.CreateEntry($"{prefix}/stacktraces.json", CompressionLevel.Optimal);
 
-            var ravenDebugExec = Path.Combine(AppContext.BaseDirectory, "Raven.Debug.exe");
-
-            using (var stacktraceStream = stacktraces.Open())
-            using (var stacktraceWriter = new StreamWriter(stacktraceStream))
+            using (var stackTraceStream = zipArchiveEntry.Open())
+            using (var sw = new StreamWriter(stackTraceStream))
             {
                 try
                 {
                     if (Debugger.IsAttached)
-                        throw new InvalidOperationException("Cannot get stacktraces when debugger is attached");
+                        throw new InvalidOperationException("Cannot get stack traces when debugger is attached");
 
-                    if (File.Exists(ravenDebugExec) == false)
-                        throw new FileNotFoundException($"Could not find debugger tool at '{ravenDebugExec}'");
-
-                    using (var currentProcess = Process.GetCurrentProcess())
-                    {
-                        var process = new Process
-                        {
-                            StartInfo = new ProcessStartInfo
-                            {
-                                Arguments = $"stacktraces --pid {currentProcess.Id}",
-                                FileName = ravenDebugExec,
-                                WindowStyle = ProcessWindowStyle.Normal,
-                                LoadUserProfile = false,
-                                RedirectStandardError = true,
-                                RedirectStandardOutput = true,
-                                UseShellExecute = false
-                            },
-                            EnableRaisingEvents = true
-                        };
-
-                        process.OutputDataReceived += (sender, args) => stacktraceWriter.Write(args.Data);
-                        process.ErrorDataReceived += (sender, args) => stacktraceWriter.Write(args.Data);
-
-                        process.Start();
-
-                        process.BeginErrorReadLine();
-                        process.BeginOutputReadLine();
-
-                        process.WaitForExit();
-
-                        if (process.ExitCode != 0)
-                            throw new InvalidOperationException("Could not read stacktraces.");
-                    }
+                    ThreadsHandler.OutputResultToStream(sw);
                 }
                 catch (Exception e)
                 {
-                    using (var writer = new StreamWriter(stacktraceStream))
+                    using (var writer = new StreamWriter(stackTraceStream))
                     {
                         var jsonSerializer = DocumentConventions.Default.CreateSerializer();
                         jsonSerializer.Formatting = Formatting.Indented;
@@ -289,7 +254,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             string url,
             IEnumerable<string> databaseNames,
             X509Certificate2 certificate,
-            bool stacktraces)
+            bool stackTraces)
         {
             var bodyJson = new DynamicJsonValue
             {
@@ -307,7 +272,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate);
                 requestExecutor.DefaultTimeout = ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan;
 
-                var rawStreamCommand = new GetRawStreamResultCommand($"admin/debug/remote-cluster-info-package?stacktraces={stacktraces}", ms);
+                var rawStreamCommand = new GetRawStreamResultCommand($"admin/debug/remote-cluster-info-package?stacktraces={stackTraces}", ms);
 
                 await requestExecutor.ExecuteAsync(rawStreamCommand, jsonOperationContext);
                 rawStreamCommand.Result.Position = 0;
@@ -343,7 +308,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
 
             if (stacktraces)
-                DumpStacktraces(archive, prefix);
+                DumpStackTraces(archive, prefix);
         }
 
         private async Task WriteForAllLocalDatabases(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, string prefix = null)
@@ -431,7 +396,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return nodeUrlToDatabaseNames;
         }
 
-        private bool Stacktraces()
+        private bool StackTraces()
         {
             if (PlatformDetails.RunningOnPosix)
                 return false;

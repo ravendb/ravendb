@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.Primitives;
 using Sparrow.Collections;
 
 namespace Sparrow.Json.Parsing
@@ -45,7 +46,7 @@ namespace Sparrow.Json.Parsing
             return count;
         }
 
-        public static int FindEscapePositionsMaxSize(string str)
+        public static int FindEscapePositionsMaxSize(StringSegment str)
         {
             var count = 0;
             var controlCount = 0;

@@ -20,6 +20,12 @@ namespace Raven.Client.Documents.Queries
         /// </summary>
         public int TotalResults { get; set; }
 
+       /// <summary>
+       /// The total results for the query, taking into account the 
+       /// offset / limit clauses for this query
+       /// </summary>
+        public int? CappedMaxResults { get; set; }
+
         /// <summary>
         /// Gets or sets the skipped results
         /// </summary>

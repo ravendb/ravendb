@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -68,6 +69,12 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
+            if (result.CappedMaxResults != null) {
+                writer.WritePropertyName(nameof(result.CappedMaxResults));
+                writer.WriteInteger(result.CappedMaxResults.Value);
+                writer.WriteComma();
+            }
+
             writer.WritePropertyName(nameof(result.DurationInMs));
             writer.WriteInteger(result.DurationInMs);
             writer.WriteComma();
@@ -84,6 +91,12 @@ namespace Raven.Server.Json
             writer.WritePropertyName(nameof(result.TotalResults));
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
+
+            if (result.CappedMaxResults != null) {
+                writer.WritePropertyName(nameof(result.CappedMaxResults));
+                writer.WriteInteger(result.CappedMaxResults.Value);
+                writer.WriteComma();
+            }
 
             writer.WritePropertyName(nameof(result.DurationInMs));
             writer.WriteInteger(result.DurationInMs);
@@ -212,6 +225,12 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
 
+            if (result.CappedMaxResults != null) {
+                writer.WritePropertyName(nameof(result.CappedMaxResults));
+                writer.WriteInteger(result.CappedMaxResults.Value);
+                writer.WriteComma();
+            }
+
             writer.WritePropertyName(nameof(result.SkippedResults));
             writer.WriteInteger(result.SkippedResults);
             writer.WriteComma();
@@ -232,6 +251,12 @@ namespace Raven.Server.Json
             writer.WritePropertyName(nameof(result.TotalResults));
             writer.WriteInteger(result.TotalResults);
             writer.WriteComma();
+
+            if (result.CappedMaxResults != null) {
+                writer.WritePropertyName(nameof(result.CappedMaxResults));
+                writer.WriteInteger(result.CappedMaxResults.Value);
+                writer.WriteComma();
+            }
 
             writer.WritePropertyName(nameof(result.SkippedResults));
             writer.WriteInteger(result.SkippedResults);

@@ -8,6 +8,7 @@ import generalUtils = require("common/generalUtils");
 import rangeAggregator = require("common/helpers/graph/rangeAggregator");
 import liveReplicationStatsWebSocketClient = require("common/liveReplicationStatsWebSocketClient");
 import messagePublisher = require("common/messagePublisher");
+import inProgressAnimator = require("common/helpers/graph/inProgressAnimator");
 
 import replication = Raven.Client.Documents.Replication;
 import colorsManager = require("common/colorsManager");
@@ -180,6 +181,7 @@ class replicationStats extends viewModelBase {
     private static readonly minGapSize = 10 * 1000; // 10 seconds
     private static readonly initialOffset = 100;
     private static readonly step = 200;
+    private static readonly bufferSize = 10000;
 
 
     private static readonly openedTrackHeight = replicationStats.openedTrackPadding
@@ -195,7 +197,7 @@ class replicationStats extends viewModelBase {
 
     hasAnyData = ko.observable<boolean>(false);
     loading: KnockoutComputed<boolean>;
-    private searchText = ko.observable<string>();
+    private searchText = ko.observable<string>("");
 
     private liveViewClient = ko.observable<liveReplicationStatsWebSocketClient>();
     private autoScroll = ko.observable<boolean>(false);
@@ -214,6 +216,9 @@ class replicationStats extends viewModelBase {
     // The live data from endpoint
     private data: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = [];
 
+    private bufferIsFull = ko.observable<boolean>(false);
+    private bufferUsage = ko.observable<string>("0.0");
+    private dateCutoff: Date; // used to avoid showing server side cached items, after 'clear' is clicked. 
     private totalWidth: number;
     private totalHeight: number;
     private currentYOffset = 0;
@@ -221,6 +226,8 @@ class replicationStats extends viewModelBase {
     private hitTest = new hitTest();
     private gapFinder: gapFinder;
     private dialogVisible = false;
+
+    private inProgressAnimator: inProgressAnimator;
 
     /* d3 */
 
@@ -257,6 +264,7 @@ class replicationStats extends viewModelBase {
         closedTrackArrow: undefined as string,
         collectionNameTextColor: undefined as string,
         itemWithError: undefined as string,
+        progressStripes: undefined as string,
 
         tracks: {
             "Replication": undefined as string,
@@ -277,6 +285,8 @@ class replicationStats extends viewModelBase {
     constructor() {
         super();
 
+        this.bindToCurrentInstance("clearGraphWithConfirm");
+        
         this.canExpandAll = ko.pureComputed(() => {
             const replicationTracksNames = this.replicationTracksNames();
             const expandedTracks = this.expandedTracks();
@@ -361,6 +371,10 @@ class replicationStats extends viewModelBase {
         const inProgressContext = inProgressCanvasNode.getContext("2d");
         inProgressContext.translate(0, -replicationStats.axisHeight);
 
+        this.inProgressAnimator = new inProgressAnimator(inProgressCanvasNode);
+
+        this.registerDisposable(this.inProgressAnimator);
+        
         this.svg = metricsContainer
             .append("svg")
             .attr("width", this.totalWidth + 1)
@@ -466,6 +480,7 @@ class replicationStats extends viewModelBase {
             }
 
             this.data = data;
+            this.checkBufferUsage();
 
             const [workData, maxConcurrentReplications] = this.prepareTimeData();
 
@@ -485,7 +500,19 @@ class replicationStats extends viewModelBase {
             }
         };
 
-        this.liveViewClient(new liveReplicationStatsWebSocketClient(this.activeDatabase(), onDataUpdate));
+        this.liveViewClient(new liveReplicationStatsWebSocketClient(this.activeDatabase(), onDataUpdate, this.dateCutoff));
+    }
+
+    private checkBufferUsage() {
+        const dataCount = _.sumBy(this.data, x => x.Performance.length);
+
+        const usage = Math.min(100, dataCount * 100.0 / replicationStats.bufferSize);
+        this.bufferUsage(usage.toFixed(1));
+
+        if (dataCount > replicationStats.bufferSize) {
+            this.bufferIsFull(true);
+            this.cancelLiveView();
+        }
     }
 
     scrollToRight() {
@@ -520,6 +547,10 @@ class replicationStats extends viewModelBase {
                     }
                 });
         }
+    }
+    
+    toggleScroll() {
+        this.autoScroll.toggle();
     }
 
     private cancelLiveView() {
@@ -796,6 +827,7 @@ class replicationStats extends viewModelBase {
     }
 
     private drawMainSection() {
+        this.inProgressAnimator.reset();
         this.hitTest.reset();
         this.calcMaxYOffset();
         this.fixCurrentOffset();
@@ -852,6 +884,8 @@ class replicationStats extends viewModelBase {
         } finally {
             context.restore();
         }
+        
+        this.inProgressAnimator.animate(this.colors.progressStripes);
     }
 
     private drawTracksBackground(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
@@ -910,11 +944,12 @@ class replicationStats extends viewModelBase {
                     continue;
 
                 const yOffset = isOpened ? replicationStats.trackHeight + replicationStats.stackPadding : 0;
+                const stripesYStart = yStart + (isOpened ? yOffset : 0);
 
                 context.save();
 
                 // 1. Draw perf items
-                this.drawStripes(context, [perfWithCache.Details], x1, yStart + (isOpened ? yOffset : 0), yOffset, extentFunc, perfWithCache);
+                this.drawStripes(context, [perfWithCache.Details], x1, stripesYStart, yOffset, extentFunc, perfWithCache);
 
                 // 2. Draw a separating line between adjacent perf items if needed
                 if (perfIdx >= 1 && perfCompleted === perf.Started) {
@@ -926,8 +961,34 @@ class replicationStats extends viewModelBase {
 
                 // Save to compare with the start time of the next item...
                 perfCompleted = perf.Completed; 
+                
+                if (!perf.Completed) {
+                    this.findInProgressAction(context, perf, extentFunc, x1, stripesYStart, yOffset);
+                }
             }
         });
+    }
+
+    private findInProgressAction(context: CanvasRenderingContext2D, perf: Raven.Client.Documents.Replication.ReplicationPerformanceBase, extentFunc: (duration: number) => number,
+                                 xStart: number, yStart: number, yOffset: number): void {
+
+        const extractor = (perfs: Raven.Client.Documents.Replication.ReplicationPerformanceOperation[], xStart: number, yStart: number, yOffset: number) => {
+
+            let currentX = xStart;
+
+            perfs.forEach(op => {
+                const dx = extentFunc(op.DurationInMs);
+
+                this.inProgressAnimator.register([currentX, yStart, dx, replicationStats.trackHeight]);
+
+                if (op.Operations.length > 0) {
+                    extractor(op.Operations, currentX, yStart + yOffset, yOffset);
+                }
+                currentX += dx;
+            });
+        };
+
+        extractor([perf.Details], xStart, yStart, yOffset);
     }
 
     private getColorForOperation(operationName: string): string {
@@ -1208,6 +1269,7 @@ class replicationStats extends viewModelBase {
 
     private dataImported(result: string) {
         this.cancelLiveView();
+        this.bufferIsFull(false);
 
         try {
             const importedData: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[] = JSON.parse(result);
@@ -1240,11 +1302,36 @@ class replicationStats extends viewModelBase {
         });
     }
 
-    closeImport() {
-        this.isImport(false);
+    clearGraphWithConfirm() {
+        this.confirmationMessage("Clear graph data", "Do you want to discard all collected replication statistics?")
+            .done(result => {
+                if (result.can) {
+                    this.clearGraph();
+                }
+            })
+    }
+
+    clearGraph() {
+        this.bufferIsFull(false);
+        this.cancelLiveView();
+        
+        this.setCutOffDate();
+        
         this.hasAnyData(false);
         this.resetGraphData();
         this.enableLiveView();
+    }
+    
+    private setCutOffDate() {
+        this.dateCutoff = d3.max(this.data, 
+                d => d3.max(d.Performance, 
+                    (p: ReplicationPerformanceBaseWithCache) => p.StartedAsDate));
+    }
+
+    closeImport() {
+        this.dateCutoff = null;
+        this.isImport(false);
+        this.clearGraph();
     }
 
     private resetGraphData() {
@@ -1252,6 +1339,7 @@ class replicationStats extends viewModelBase {
 
         this.expandedTracks([]);
         this.searchText("");
+        this.bufferUsage("0.0");
     }
 
     private setZoomAndBrush(scale: [number, number], brushAction: (brush: d3.svg.Brush<any>) => void) {

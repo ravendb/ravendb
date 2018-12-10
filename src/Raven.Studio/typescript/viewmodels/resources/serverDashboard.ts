@@ -704,6 +704,11 @@ class serverDashboard extends viewModelBase {
         this.machineResourcesSection.init();
         this.driveUsageSection.init();
         
+        $(".drive-usage-container").each((idx, el) => {
+            const $el = $(el);
+            $el.height($el.innerHeight());
+        });
+        
         this.registerDisposableHandler($(window), "resize", _.debounce(() => this.onResize(), 700));
     }
     

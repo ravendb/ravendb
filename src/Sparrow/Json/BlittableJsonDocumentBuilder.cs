@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.CompilerServices;
+using Microsoft.Extensions.Primitives;
 using Sparrow.Collections;
 using Sparrow.Exceptions;
 using Sparrow.Json.Parsing;

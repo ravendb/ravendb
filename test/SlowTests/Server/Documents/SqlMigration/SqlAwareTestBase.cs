@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using FastTests;
 using MySql.Data.MySqlClient;
+using Npgsql;
+using Oracle.ManagedDataAccess.Client;
 using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Model;
 using Raven.Server.SqlMigration.Schema;
@@ -88,6 +91,28 @@ namespace SlowTests.Server.Documents.SqlMigration
                     }
 
                     break;
+                case MigrationProvider.NpgSQL:
+                    using (var connection = new NpgsqlConnection(connectionString))
+                    {
+                        connection.Open();
+                        using (var cmd = new NpgsqlCommand(query, connection))
+                        {
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+
+                    break;
+                case MigrationProvider.Oracle:
+                    using (var connection = new OracleConnection(connectionString))
+                    {
+                        connection.Open();
+                        using (var cmd = new OracleCommand(query, connection))
+                        {
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+
+                    break;
                 default:
                     throw new InvalidOperationException("Unable to run query. Unsupported provider: " + provider);
             }
@@ -102,6 +127,11 @@ namespace SlowTests.Server.Documents.SqlMigration
                 case MigrationProvider.MsSQL:
                     schemaName = "dbo";
                     return WithMsSqlDatabase(out connectionString, out string databaseName, dataSet, includeData);
+                case MigrationProvider.NpgSQL:
+                    schemaName = "public";
+                    return WithNpgSqlDatabase(out connectionString, out string dbName, dataSet, includeData);
+                case MigrationProvider.Oracle:
+                    return WithOracleDatabase(out connectionString, out schemaName, dataSet, includeData);
                 default:
                     throw new InvalidOperationException("Unhandled provider: " + provider);
             }
@@ -229,6 +259,141 @@ namespace SlowTests.Server.Documents.SqlMigration
                         var dropDatabaseQuery = "DROP DATABASE `{0}`";
                         dbCommand.CommandText = string.Format(dropDatabaseQuery, dbName);
 
+                        dbCommand.ExecuteNonQuery();
+                    }
+                }
+            });
+        }
+
+        protected DisposableAction WithNpgSqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
+        {
+            databaseName = "npgSql_test_" + Guid.NewGuid();
+            var rawConnectionString = NpgSqlTests.NpgSqlDatabaseConnection.Value;
+            connectionString = rawConnectionString + $";Database=\"{databaseName}\"";
+
+            using (var connection = new NpgsqlConnection(rawConnectionString))
+            {
+                connection.Open();
+                using (var dbCommand = connection.CreateCommand())
+                {
+                    const string createDatabaseQuery = "CREATE DATABASE \"{0}\"";
+                    dbCommand.CommandText = string.Format(createDatabaseQuery, databaseName);
+                    dbCommand.ExecuteNonQuery();
+                }
+                connection.Close();
+            }
+
+            using (var dbConnection = new NpgsqlConnection(connectionString))
+            {
+                // ConnectionString with DB
+                dbConnection.Open();
+                var assembly = Assembly.GetExecutingAssembly();
+
+                using (var dbCommand = dbConnection.CreateCommand())
+                {
+                    var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.npgsql." + dataSet + ".create.sql"));
+                    dbCommand.CommandText = textStreamReader.ReadToEnd();
+                    dbCommand.ExecuteNonQuery();
+                }
+
+                if (includeData)
+                {
+                    using (var dbCommand = dbConnection.CreateCommand())
+                    {
+                        var dataStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.npgsql." + dataSet + ".insert.sql"));
+                        dbCommand.CommandText = dataStreamReader.ReadToEnd();
+                        dbCommand.ExecuteNonQuery();
+                    }
+                }
+            }
+
+            var dbName = databaseName;
+            return new DisposableAction(() =>
+            {
+                using (var con = new NpgsqlConnection(rawConnectionString))
+                {
+                    con.Open();
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        const string dropDatabaseQuery = "DROP DATABASE IF EXISTS \"{0}\"";
+                        dbCommand.CommandText = string.Format(dropDatabaseQuery, dbName);
+                        dbCommand.ExecuteNonQuery();
+                    }
+                }
+            });
+        }
+
+        protected DisposableAction WithOracleDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
+        {
+            databaseName = "C##" + Guid.NewGuid();
+            var pass = "pass";
+            var adminConnectionString = OracleTests.OracleDatabaseConnection.Value;
+
+            using (var connection = new OracleConnection(adminConnectionString))
+            {
+                connection.Open();
+                using (var dbCommand = connection.CreateCommand())
+                {
+                    List<string> cmdList = new List<string>();
+                    cmdList.Add($"CREATE USER \"{databaseName}\" IDENTIFIED BY {pass}");
+                    cmdList.Add($"GRANT CONNECT, RESOURCE, DBA TO \"{databaseName}\"");
+                    cmdList.Add($"GRANT CREATE SESSION, create table, create sequence, create trigger TO \"{databaseName}\"");
+                    cmdList.Add($"GRANT UNLIMITED TABLESPACE TO \"{databaseName}\"");
+
+
+                    foreach (var cmd in cmdList)
+                    {
+                        dbCommand.CommandText = cmd;
+                        dbCommand.ExecuteNonQuery();
+                    }
+                }
+                connection.Close();
+            }
+            var userConnectionString = OracleTests.OracleDataSource + $"USER ID=\"{databaseName}\";password={pass};Pooling=false";
+            connectionString = userConnectionString;
+            using (var dbConnection = new OracleConnection(connectionString))
+            {
+                // ConnectionString with DB
+                dbConnection.Open();
+                var assembly = Assembly.GetExecutingAssembly();
+                using (var dbCommand = dbConnection.CreateCommand())
+                {
+                    using (var reader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.oraclesql." + dataSet + ".create.sql")))
+                    {
+                        while (reader.Peek() >= 0)
+                        {
+                            dbCommand.CommandText = reader.ReadLine();
+                            dbCommand.ExecuteNonQuery();
+                        }
+                    }
+                }
+                if (includeData)
+                {
+                    using (var dbCommand = dbConnection.CreateCommand())
+                    {
+                        using (var reader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.oraclesql." + dataSet + ".insert.sql")))
+                        {
+                            while (reader.Peek() >= 0)
+                            {
+                                dbCommand.CommandText = reader.ReadLine();
+                                dbCommand.ExecuteNonQuery();
+                            }
+                        }
+                    }
+                }
+                dbConnection.Close();
+            }
+
+            var dbName = databaseName;
+            return new DisposableAction(() =>
+            {
+                using (var con = new OracleConnection(adminConnectionString))
+                {
+                    con.Open();
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        var dropDatabaseQuery = $"DROP USER \"{dbName}\" CASCADE";
+                        dbCommand.CommandText = dropDatabaseQuery;
                         dbCommand.ExecuteNonQuery();
                     }
                 }

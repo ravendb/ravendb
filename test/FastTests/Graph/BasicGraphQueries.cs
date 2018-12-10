@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries;
@@ -120,8 +121,8 @@ namespace FastTests.Graph
                 CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
-                    var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (v)").ToList();
-                    Assert.False(allVerticesQuery.Any(row => row.ContainsKey("v"))); //we have "flat" results
+                    var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (_ as v)").ToList();
+                    Assert.False(allVerticesQuery.Any(row => row.ContainsKey("_ as v"))); //we have "flat" results
                 }
             }
         }
@@ -134,7 +135,7 @@ namespace FastTests.Graph
                 CreateMoviesData(store);
                 using (var session = store.OpenSession())
                 {
-                    var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (u)-[HasRated select Movie]->(m)").ToList();
+                    var allVerticesQuery = session.Advanced.RawQuery<JObject>(@"match (_ as u)-[HasRated select Movie]->(_ as m)").ToList();
                     Assert.True(allVerticesQuery.All(row => row.ContainsKey("m")));
                     Assert.True(allVerticesQuery.All(row => row.ContainsKey("u")));
                 }
@@ -277,6 +278,34 @@ Limit 1,1
             Assert.Equal(1, results.Count);
             var res = results.First();
             Assert.Equal("Ipoh Coffee" ,res.Product);
+        }
+
+        [Fact]
+        public void CanIncludeInGraphQueries()
+        {
+            var rawQuery =
+                @"
+match (Orders where id() = 'orders/821-A')
+include Lines.Product
+";
+            using (var store = GetDocumentStore())
+            {
+                store.Maintenance.Send(new CreateSampleDataOperation());
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var res = session.Advanced.RawQuery<Order>(rawQuery).ToList();
+                    var numberOfRequests = session.Advanced.NumberOfRequests;
+                    var products = session.Load<Product>(new[] {"products/28-A", "products/43-A", "products/77-A"});
+                    Assert.Equal(products.Count, 3);
+                    Assert.True(products.ContainsKey("products/28-A"));
+                    Assert.True(products.ContainsKey("products/43-A"));
+                    Assert.True(products.ContainsKey("products/77-A"));
+                    Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
+                }
+            }
         }
 
         [Fact]
@@ -440,6 +469,18 @@ select son.Name as Son, evil.Name as Evil")
                     Assert.Equal(1, results.Count);
                     Assert.Equal("Longo", results[0].Evil);
                     Assert.Equal("Otho Sackville-Baggins", results[0].Son);
+                }
+            }
+        }
+
+        [Fact]
+        public void Query_with_non_existing_collection_should_fail()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    Assert.Throws<InvalidQueryException>(() => session.Advanced.RawQuery<JObject>(@"match (FooBar)").ToList());
                 }
             }
         }

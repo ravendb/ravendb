@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }
                 else
                 {
-                    var val = match.GetResult(fieldToFetch.QueryField.ExpressionField.Compound[0]);
+                    var val = match.GetResult(fieldToFetch.QueryField.ExpressionField.Compound[0].Value);
                     if (val is Document d)
                     {
                         if (TryGetValue(fieldToFetch, d, null, null, out key, out fieldVal) == false)

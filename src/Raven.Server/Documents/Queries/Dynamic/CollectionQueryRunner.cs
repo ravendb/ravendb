@@ -158,6 +158,21 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     resultToFill.AddCounterIncludes(includeCountersCommand);
 
                 resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
+
+                if (query.Offset != null || query.Limit != null)
+                {
+                    if (resultToFill.TotalResults == -1)
+                    {
+                        resultToFill.CappedMaxResults = query.Limit ?? -1;
+                    }
+                    else
+                    {
+                        resultToFill.CappedMaxResults = Math.Min(
+                            query.Limit ?? int.MaxValue,
+                            resultToFill.TotalResults - (query.Offset ?? 0)
+                        );    
+                    }
+                }
             }
         }
 

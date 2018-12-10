@@ -93,7 +93,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
         grid.init(fetcher, () =>
             [
                 new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => x.Name, "Name", "25%"),
-                new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => (x.ManagedThreadId || 'n/a') + " (" + x.Id + ")", "Thread Id", "10%"),
+                new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => x.Id + " (" + (x.ManagedThreadId || 'n/a') + ")", "Thread Id", "10%"),
                 new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => generalUtils.formatUtcDateAsLocal(x.StartingTime), "Start Time", "20%"),
                 new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => generalUtils.formatTimeSpan(x.Duration, false), "Duration", "10%"),
                 new textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>(grid, x => x.State, "State", "10%"),

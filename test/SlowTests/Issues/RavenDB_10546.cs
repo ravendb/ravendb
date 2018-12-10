@@ -24,23 +24,25 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore())
             {
-                StudioConfiguration studioConfiguration = store.Maintenance.Server.Send(new GetServerWideStudioConfigurationOperation());
+                ServerWideStudioConfiguration serverWideStudioConfiguration = store.Maintenance.Server.Send(new GetServerWideStudioConfigurationOperation());
 
-                Assert.Null(studioConfiguration);
+                Assert.Null(serverWideStudioConfiguration);
 
-                studioConfiguration = store.Maintenance.Send(new GetStudioConfigurationOperation());
+                StudioConfiguration studioConfiguration = store.Maintenance.Send(new GetStudioConfigurationOperation());
 
                 Assert.Null(studioConfiguration);
 
                 store.Maintenance.Server.Send(new PutServerWideStudioConfigurationOperation(new ServerWideStudioConfiguration
                 {
-                    Environment = StudioConfiguration.StudioEnvironment.Development
+                    Environment = StudioConfiguration.StudioEnvironment.Development,
+                    ReplicationFactor = 2
                 }));
 
-                studioConfiguration = store.Maintenance.Server.Send(new GetServerWideStudioConfigurationOperation());
+                serverWideStudioConfiguration = store.Maintenance.Server.Send(new GetServerWideStudioConfigurationOperation());
 
-                Assert.NotNull(studioConfiguration);
-                Assert.Equal(StudioConfiguration.StudioEnvironment.Development, studioConfiguration.Environment); // from server
+                Assert.NotNull(serverWideStudioConfiguration);
+                Assert.Equal(StudioConfiguration.StudioEnvironment.Development, serverWideStudioConfiguration.Environment); // from server
+                Assert.Equal(2, serverWideStudioConfiguration.ReplicationFactor);
 
                 studioConfiguration = store.Maintenance.Send(new GetStudioConfigurationOperation());
 

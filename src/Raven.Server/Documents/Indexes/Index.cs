@@ -19,6 +19,7 @@ using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
@@ -2282,6 +2283,13 @@ namespace Raven.Server.Documents.Indexes
                                     foreach (var document in documents)
                                     {
                                         resultToFill.TotalResults = totalResults.Value;
+                                        if (query.Offset != null || query.Limit != null)
+                                        {
+                                            resultToFill.CappedMaxResults = Math.Min(
+                                                query.Limit ?? int.MaxValue, 
+                                                totalResults.Value - (query.Offset ?? 0)
+                                                );
+                                        }
                                         resultToFill.AddResult(document.Result);
 
                                         if (document.Highlightings != null)

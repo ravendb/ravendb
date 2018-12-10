@@ -4,15 +4,19 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Includes;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Graph;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -100,20 +104,18 @@ namespace Raven.Server.Documents.Queries
 
         private async Task<TResult> ExecuteQuery<TResult>(TResult final,IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token) where TResult : QueryResultServerSide
         {
+            if (Database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
+                FeaturesAvailabilityException.Throw("Graph Queries");
+
             using (var timingScope = new QueryTimingsScope())
             {
                 var qr = await GetQueryResults(query, documentsContext, existingResultEtag, token);
                 var q = query.Metadata.Query;
 
                 //TODO: handle order by, load,  clauses
-                if (query.Metadata.OrderBy != null)
-                {
-                    Sort(qr, query.Metadata.OrderBy);
-                }
 
                 if (q.Select == null && q.SelectFunctionBody.FunctionText == null)
                 {
-                    // include clause
                     HandleResultsWithoutSelect(documentsContext, qr.Matches, final);
                 }
                 else if (q.Select != null)
@@ -139,21 +141,33 @@ namespace Raven.Server.Documents.Queries
                         final.AddResult(result);
                     }
 
-                    //include clause
                 }
 
+                if (query.Metadata.Includes?.Length > 0)
+                {
+                    var idc = new IncludeDocumentsCommand(Database.DocumentsStorage,documentsContext, query.Metadata.Includes);
+                    foreach (var result in final.Results)
+                    {
+                        idc.Gather(result);
+                    }
+                    idc.Fill(final.Includes);
+                }
                 final.TotalResults = final.Results.Count;
                 return final;
             }
         }
 
-        private void Sort((List<Match> Matches, GraphQueryPlan QueryPlan) qr, OrderByField[] orderBy)
+        private void Sort(List<Match> matches, OrderByField[] orderBy, string databaseName, string query)
         {
-            foreach (var field in orderBy)
+            if (orderBy.Length == 1)
             {
-                var orderByFieldSorter = new GraphQueryOrderByFieldSorter(field);
-                qr.Matches.Sort(orderByFieldSorter);
+                var orderByFieldSorter = new GraphQueryOrderByFieldComparer(orderBy.First(), databaseName, query);
+                matches.Sort(orderByFieldSorter);
+                return;
             }
+
+            var orderByMltipleFieldsSorter = new GraphQueryMultipleFieldsComparer(orderBy, databaseName, query);
+            matches.Sort(orderByMltipleFieldsSorter);
         }
 
 
@@ -165,6 +179,11 @@ namespace Raven.Server.Documents.Queries
             qp.OptimizeQueryPlan(); //TODO: audit optimization
             await qp.Initialize();            
             var matchResults = qp.Execute();
+
+            if (query.Metadata.OrderBy != null)
+            {
+                Sort(matchResults, query.Metadata.OrderBy, Database.Name, query.Query);
+            }
 
             var filter = q.GraphQuery.Where;
             if (filter != null)
@@ -180,8 +199,18 @@ namespace Raven.Server.Documents.Queries
                             matchResults[i] = default;
                     }
                 }
-            }            
-            return (matchResults.Skip(query.Start).Take(query.PageSize).ToList(), qp);
+            }
+
+            if (query.Start > 0)
+            {
+                matchResults.RemoveRange(0,Math.Min(query.Start, matchResults.Count));
+            }
+
+            if (query.PageSize < matchResults.Count)
+            {
+                matchResults.RemoveRange(query.PageSize, matchResults.Count - query.PageSize);
+            }
+            return (matchResults, qp);
         }
 
         private static void HandleResultsWithoutSelect<TResult>(

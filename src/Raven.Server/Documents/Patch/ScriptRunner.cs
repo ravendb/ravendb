@@ -22,6 +22,7 @@ using Raven.Client.Extensions;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide.Commands;
@@ -739,7 +740,7 @@ namespace Raven.Server.Documents.Patch
                     value = args[2].AsNumber();
                 }
 
-                _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name, (long)value);
+                _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name, (long)value, out _);
 
                 if (metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray counters) == false ||
                     counters.BinarySearch(name, StringComparison.OrdinalIgnoreCase) < 0)
@@ -1177,10 +1178,8 @@ namespace Raven.Server.Documents.Patch
                 Reset();
                 OriginalDocumentId = documentId;
 
-                if (_args.Length != args.Length)
-                    _args = new JsValue[args.Length];
-                for (var i = 0; i < args.Length; i++)
-                    _args[i] = TranslateToJs(ScriptEngine, jsonCtx, args[i]);
+                SetArgs(jsonCtx, method, args);
+
                 try
                 {
                     var call = ScriptEngine.GetValue(method).TryCast<ICallable>();
@@ -1196,6 +1195,22 @@ namespace Raven.Server.Documents.Patch
                     _refResolver.ExplodeArgsOn(null, null);
                     _docsCtx = null;
                     _jsonCtx = null;
+                }
+            }
+
+            private void SetArgs(JsonOperationContext jsonCtx, string method, object[] args)
+            {
+                if (_args.Length != args.Length)
+                    _args = new JsValue[args.Length];
+                for (var i = 0; i < args.Length; i++)
+                    _args[i] = TranslateToJs(ScriptEngine, jsonCtx, args[i]);
+
+                if (method != QueryMetadata.SelectOutput &&
+                    _args.Length == 2 &&
+                    _args[1].IsObject() &&
+                    _args[1].AsObject() is BlittableObjectInstance boi)
+                {
+                    _refResolver.ExplodeArgsOn(null, boi);
                 }
             }
 

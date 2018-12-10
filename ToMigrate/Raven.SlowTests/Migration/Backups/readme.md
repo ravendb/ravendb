@@ -1,1 +1,0 @@
-RavenDB 4.0 is not binary compatible with lesser versions. Add backups here only after v4.0 RC to ensure proper migration of the data store. 

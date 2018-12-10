@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -12,7 +14,7 @@ namespace Raven.Server.Documents.Queries.Graph
     public class QueryQueryStep : IGraphQueryStep
     {
         private Query _query;
-        private Sparrow.StringSegment _alias;
+        private StringSegment _alias;
         private HashSet<string> _aliases;
         private DocumentsOperationContext _context;
         private long? _resultEtag;
@@ -27,18 +29,30 @@ namespace Raven.Server.Documents.Queries.Graph
         private List<Match> _results = new List<Match>();
         private Dictionary<string, Match> _resultsById = new Dictionary<string, Match>(StringComparer.OrdinalIgnoreCase);
 
-        public QueryQueryStep(QueryRunner queryRunner, Sparrow.StringSegment alias, Query query, QueryMetadata queryMetadata, Sparrow.Json.BlittableJsonReaderObject queryParameters, DocumentsOperationContext documentsContext, long? existingResultEtag,
+        public QueryQueryStep(QueryRunner queryRunner, StringSegment alias, Query query, QueryMetadata queryMetadata, Sparrow.Json.BlittableJsonReaderObject queryParameters, DocumentsOperationContext documentsContext, long? existingResultEtag,
             OperationCancelToken token)
         {
             _query = query;
             _alias = alias;
-            _aliases = new HashSet<string> { _alias };
+            _aliases = new HashSet<string> { _alias.Value };
             _queryRunner = queryRunner;
             _queryMetadata = queryMetadata;
             _queryParameters = queryParameters;
             _context = documentsContext;
             _resultEtag = existingResultEtag;
             _token = token;
+
+            if (!string.IsNullOrEmpty(queryMetadata.CollectionName)) //not a '_' collection
+            {
+                try
+                {
+                    var _ = _queryRunner.Database.DocumentsStorage.GetCollection(queryMetadata.CollectionName, throwIfDoesNotExist: true);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidQueryException("Query on collection " + queryMetadata.CollectionName + " failed, because there is no such collection. If you meant to use " + queryMetadata.CollectionName + " as an alias, use: (_ as " + queryMetadata.CollectionName +")", e );
+                }
+            }
         }
 
         public bool IsCollectionQuery => _queryMetadata.IsCollectionQuery;
@@ -124,7 +138,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public string GetOutputAlias()
         {
-            return _alias;
+            return _alias.Value;
         }
 
         public HashSet<string> GetAllAliases()
@@ -134,7 +148,7 @@ namespace Raven.Server.Documents.Queries.Graph
 
         public void Analyze(Match match, GraphQueryRunner.GraphDebugInfo graphDebugInfo)
         {
-            var result = match.GetResult(_alias);
+            var result = match.GetResult(_alias.Value);
             if (result == null)
                 return;
 

@@ -398,6 +398,10 @@ class importDatabaseFromSql extends viewModelBase {
                 return "ace/mode/sqlserver";
             case "MySQL":
                 return "ace/mode/mysql";
+            case "NpgSQL":
+                return "ace/mode/sql";
+            case "Oracle":
+                return "ace/mode/sql";
             default: 
                 return "ace/mode/sql";
         }

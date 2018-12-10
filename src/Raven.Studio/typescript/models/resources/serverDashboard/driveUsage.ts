@@ -45,14 +45,16 @@ class driveUsage {
     volumeLabel = ko.observable<string>();
     totalCapacity = ko.observable<number>(0);
     freeSpace = ko.observable<number>(0);
-    freeSpaceLevel = ko.observable<Raven.Server.Dashboard.FreeSpaceLevel>();
+    isLowSpace = ko.observable<boolean>();
     
-    freeSpaceLevelClass: KnockoutComputed<string>;
-    percentageUsage: KnockoutComputed<number>;
+    usedSpace: KnockoutComputed<number>;
     
     items = ko.observableArray<driveUsageDetails>([]);
     totalDocumentsSpaceUsed: KnockoutComputed<number>;
     mountPointLabel: KnockoutComputed<string>;
+    
+    usedSpacePercentage: KnockoutComputed<number>;
+    ravendbToUsedSpacePercentage: KnockoutComputed<number>;
 
     gridController = ko.observable<virtualGridController<driveUsageDetails>>();
     private colorClassProvider: (name: string) => string;
@@ -62,31 +64,37 @@ class driveUsage {
         this.includeTemp = includeTemp;
         this.update(dto);
         
-        this.freeSpaceLevelClass = ko.pureComputed(() => {
-            const level = this.freeSpaceLevel();
-            switch (level) {
-                case "High":
-                    return "text-success";
-                case "Medium":
-                    return "text-warning";
-                case "Low":
-                    return "text-danger";
-            }
-            return "";
-        });
-
-        this.percentageUsage = ko.pureComputed(() => {
+        this.usedSpacePercentage = ko.pureComputed(() => {
             const total = this.totalCapacity();
-            const free = this.freeSpace();
+            const used = this.usedSpace();
+            
             if (!total) {
                 return 0;
             }
-            return (total - free) * 100 / total;
+            
+            return used * 100.0 / total;
         });
         
+        this.usedSpace = ko.pureComputed(() => {
+            const total = this.totalCapacity();
+            const free = this.freeSpace();
+            return total - free;
+        });
+
         this.totalDocumentsSpaceUsed = ko.pureComputed(() => {
             const includeTemp = this.includeTemp();
             return _.sum(this.items().map(x => includeTemp ? x.size() + x.tempBuffersSize() : x.size()));
+        });
+
+        this.ravendbToUsedSpacePercentage = ko.pureComputed(() => {
+            const totalUsed = this.usedSpace();
+            const documentsUsed = this.totalDocumentsSpaceUsed();
+            
+            if (!totalUsed) {
+                return 0;
+            }
+            
+            return documentsUsed *  100.0 / totalUsed;
         });
         
         const isDisabled = (dbName: string) => {
@@ -145,7 +153,7 @@ class driveUsage {
         this.volumeLabel(dto.VolumeLabel);
         this.totalCapacity(dto.TotalCapacity);
         this.freeSpace(dto.FreeSpace);
-        this.freeSpaceLevel(dto.FreeSpaceLevel);
+        this.isLowSpace(dto.IsLowSpace);
         
         const newDbs = dto.Items.map(x => x.Database);
         const oldDbs = this.items().map(x => x.database());

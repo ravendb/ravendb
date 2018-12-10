@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents;
@@ -85,7 +86,7 @@ namespace Raven.Server.Routing
                 context.Database = database.Result;
 
                 if (context.Database == null)
-                    DatabaseDoesNotExistException.Throw(databaseName);
+                    DatabaseDoesNotExistException.Throw(databaseName.Value);
 
                 return context.Database?.DatabaseShutdown.IsCancellationRequested == false
                     ? Task.CompletedTask
@@ -113,7 +114,7 @@ namespace Raven.Server.Routing
             await Task.WhenAny(database, Task.Delay(time));
             if (database.IsCompleted == false)
             {
-                if (databasesLandlord.InitLog.TryGetValue(databaseName, out var initLogQueue))
+                if (databasesLandlord.InitLog.TryGetValue(databaseName.Value, out var initLogQueue))
                 {
                     var sb = new StringBuilder();
                     foreach (var logline in initLogQueue)
@@ -125,7 +126,7 @@ namespace Raven.Server.Routing
             }
             context.Database = await database;
             if (context.Database == null)
-                DatabaseDoesNotExistException.Throw(databaseName);
+                DatabaseDoesNotExistException.Throw(databaseName.Value);
         }
 
         private static void ThrowDatabaseUnloadTimeout(StringSegment databaseName, TimeSpan timeout)

@@ -133,7 +133,7 @@ class ongoingTasks extends viewModelBase {
     private watchBackupCompletion(task: ongoingTaskBackupListModel) {
         if (!this.watchedBackups.has(task.taskId)) {
             let intervalId = setInterval(() => {
-            task.refreshBackupInfo()
+            task.refreshBackupInfo(false)
                 .done(result => {
                     if (!result.OnGoingBackup) {
                         clearInterval(intervalId);

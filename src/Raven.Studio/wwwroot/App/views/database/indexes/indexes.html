@@ -1,4 +1,4 @@
-<div class="indexes content-margin">
+<div class="indexes content-margin no-transition" data-bind="css: { 'no-transition': indexesCount() > 50 }">
     <div data-bind="visible: sortedGroups().length === 0">
         <div class="row">
             <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
@@ -152,7 +152,7 @@
                     <a href="#" data-bind="text: name, attr: { href: editUrl(), title: 'Index: ' + name }"></a>
                 </h3>
                 <div class="index-type">
-                    <span data-bind="text: getTypeForUI()"></span>
+                    <span data-bind="text: typeForUI"></span>
                     <!--<span data-bind="visible: isTestIndex">&nbsp; <span class="label label-warning">TEST INDEX</span></span>-->
                     <span data-bind="visible: replacement">&nbsp; <span class="label label-warning">OLD</span></span>
                     <span data-bind="visible: parent">&nbsp; <span class="label label-warning">NEW</span></span>
@@ -291,7 +291,7 @@
                 <div class="properties-item entriesCount">
                     <div class="properties-value value-only">
                         <div class="set-size">
-                            <i class="icon-list"></i><span data-bind="text: $root.pluralize(entriesCount, 'entry', 'entries')"></span>
+                            <i class="icon-list"></i><span data-bind="text: $root.pluralize(entriesCount(), 'entry', 'entries')"></span>
                         </div>
                     </div>
                 </div>
@@ -311,7 +311,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="properties-item errors" data-bind="visible: errorsCount">
+                <div class="properties-item errors" data-bind="visible: errorsCount()">
                     <div class="properties-value value-only">
                         <a title="View indexing errors" data-bind="attr: { href: $root.indexErrorsUrl() }">
                             <div class="set-size text-danger">

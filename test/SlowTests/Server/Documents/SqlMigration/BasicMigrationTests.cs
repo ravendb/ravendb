@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Model;
-using Raven.Server.SqlMigration.Schema;
-using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Server.Documents.SqlMigration
@@ -18,6 +15,8 @@ namespace SlowTests.Server.Documents.SqlMigration
     {
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanMigrateSkipOnParent(MigrationProvider provider)
         {
@@ -66,6 +65,8 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanMigrateEmbedOnParent(MigrationProvider provider)
         {
@@ -127,6 +128,8 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanMigrateLinkOnParent(MigrationProvider provider)
         {
@@ -186,6 +189,8 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanMigrateSkipOnChild(MigrationProvider provider)
         {
@@ -234,6 +239,8 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanMigrateEmbedOnChild(MigrationProvider provider)
         {
@@ -295,6 +302,7 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanMigrateLinkOnChild(MigrationProvider provider)
         {
@@ -365,6 +373,8 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task NestedEmbedding(MigrationProvider provider)
         {
@@ -443,6 +453,8 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task LinkInsideEmbed(MigrationProvider provider)
         {
@@ -517,14 +529,17 @@ namespace SlowTests.Server.Documents.SqlMigration
         
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanHandleMissingParentEmbed(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
-                
-                ExecuteSqlQuery(provider, connectionString, "update order_item set order_id = null");
+                var query = provider.Equals(MigrationProvider.Oracle) == false ? "update order_item set order_id = null" : "update \"order_item\" set \"order_id\" = null";
+
+                ExecuteSqlQuery(provider, connectionString, query);
                 
                 using (var store = GetDocumentStore())
                 {
@@ -567,14 +582,17 @@ namespace SlowTests.Server.Documents.SqlMigration
 
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanHandleMissingParentLink(MigrationProvider provider)
         {
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
-                
-                ExecuteSqlQuery(provider, connectionString, "update order_item set order_id = null");
+                var query = provider.Equals(MigrationProvider.Oracle) == false ? "update order_item set order_id = null" : "update \"order_item\" set \"order_id\" = null";
+
+                ExecuteSqlQuery(provider, connectionString, query);
                 
                 
                 using (var store = GetDocumentStore())
@@ -621,6 +639,8 @@ namespace SlowTests.Server.Documents.SqlMigration
         
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanLimitRows(MigrationProvider provider)
         {
@@ -659,6 +679,8 @@ namespace SlowTests.Server.Documents.SqlMigration
         
         [Theory]
         [InlineData(MigrationProvider.MsSQL)]
+        [RequiresNpgSqlInlineData]
+        [RequiresOracleSqlInlineData]
         [RequiresMySqlInlineData]
         public async Task CanImportWithRelationToNonPrimaryKey(MigrationProvider provider)
         {

@@ -24,6 +24,15 @@ namespace Raven.Server.Documents
             _ctx = context;
         }
 
+        public BlittableMetadataModifier(JsonOperationContext context, bool legacyImport, bool readLegacyEtag, DatabaseItemType operateOnTypes)
+        {
+            _ctx = context;
+            ReadFirstEtagOfLegacyRevision = legacyImport;
+            ReadLegacyEtag = readLegacyEtag;
+            OperateOnTypes = operateOnTypes;
+
+
+        }
         public LazyStringValue Id;
         public string ChangeVector;
         public DocumentFlags Flags;
@@ -361,26 +370,25 @@ namespace Raven.Server.Documents
                     break;
 
                 case 9: // @counters
-                    if (OperateOnTypes.HasFlag(DatabaseItemType.Counters) == false)
-                    {
-                        if (state.StringBuffer[0] != (byte)'@' ||
+                    // always remove the @counters metadata
+                    // not doing so might cause us to have counter on the document but not in the storage.
+                    // the counters will be updated when we import the counters themselves
+                    if (state.StringBuffer[0] != (byte)'@' ||
                         *(long*)(state.StringBuffer + 1) != 8318823012450529123)
-                        {
-                            aboutToReadPropertyName = true;
-                            return true;
-                        }
-
-                        if (reader.Read() == false)
-                        {
-                            _verifyStartArray = true;
-                            _state = State.IgnoreArray;
-                            aboutToReadPropertyName = false;
-                            return true;
-                        }
-                        goto case -2;
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
                     }
-                    
-                    return true;
+
+                    if (reader.Read() == false)
+                    {
+                        _verifyStartArray = true;
+                        _state = State.IgnoreArray;
+                        aboutToReadPropertyName = false;
+                        return true;
+                    }
+                    goto case -2;
+
                 case 12: // @index-score OR @attachments
                     if (state.StringBuffer[0] == (byte)'@')
                     {   // @index-score

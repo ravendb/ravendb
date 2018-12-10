@@ -7,7 +7,7 @@ import sqlReference = require("models/database/tasks/sql/sqlReference");
 
 class sqlMigration {
     
-    static possibleProviders = ["MsSQL", "MySQL"] as Array<Raven.Server.SqlMigration.MigrationProvider>;
+    static possibleProviders = ["MsSQL", "MySQL", "NpgSQL", "Oracle"] as Array<Raven.Server.SqlMigration.MigrationProvider>;
     
     databaseType = ko.observable<Raven.Server.SqlMigration.MigrationProvider>("MsSQL");
     binaryToAttachment = ko.observable<boolean>(true);
@@ -20,12 +20,15 @@ class sqlMigration {
         usePascalCase: ko.observable<boolean>(true),
         trimSuffix: ko.observable<boolean>(true),
         suffixToTrim: ko.observable<string>("_id"),
-        detectManyToMany: ko.observable<boolean>(true) 
+        detectManyToMany: ko.observable<boolean>(true),
+        includeUnsupported: ko.observable<boolean>(false)
     };
     
     static sqlServerConnectionString = ko.observable<string>();
     static mysqlConnectionString = ko.observable<string>();
-    
+    static npgsqlConnectionString = ko.observable<string>();
+    static oracleConnectionString = ko.observable<string>();
+
     sqlServer = {
         connectionString: sqlMigration.sqlServerConnectionString
     };
@@ -39,7 +42,19 @@ class sqlMigration {
     connectionStringOverride = ko.observable<string>();
     
     mySqlValidationGroup: KnockoutValidationGroup;
-    
+
+    npgSql = {
+        connectionString: sqlMigration.npgsqlConnectionString
+    };
+
+    npgSqlValidationGroup: KnockoutValidationGroup;
+
+    oracle = {
+        connectionString: sqlMigration.oracleConnectionString
+    };
+
+    oracleValidationGroup: KnockoutValidationGroup;
+
     tables = ko.observableArray<rootSqlTable>([]);
     
     dbSchema: Raven.Server.SqlMigration.Schema.DatabaseSchema;
@@ -67,7 +82,15 @@ class sqlMigration {
         this.mySql.connectionString.extend({
             required: true
         });
-        
+
+        this.npgSql.connectionString.extend({
+            required: true
+        });
+
+        this.oracle.connectionString.extend({
+            required: true
+        });
+
         this.sqlServerValidationGroup = ko.validatedObservable({
             connectionString: this.sqlServer.connectionString,
             batchSize: this.batchSize,
@@ -79,7 +102,19 @@ class sqlMigration {
             batchSize: this.batchSize,
             maxDocumentsToImportPerTable: this.maxDocumentsToImportPerTable
         });
-        
+
+        this.npgSqlValidationGroup = ko.validatedObservable({
+            connectionString: this.npgSql.connectionString,
+            batchSize: this.batchSize,
+            maxDocumentsToImportPerTable: this.maxDocumentsToImportPerTable
+        });
+
+        this.oracleValidationGroup = ko.validatedObservable({
+            connectionString: this.oracle.connectionString,
+            batchSize: this.batchSize,
+            maxDocumentsToImportPerTable: this.maxDocumentsToImportPerTable
+        });
+
         this.batchSize.extend({
             required: true
         });
@@ -111,6 +146,10 @@ class sqlMigration {
                 return "Microsoft SQL Server (System.Data.SqlClient)";
             case "MySQL":
                 return "MySQL Server (MySql.Data.MySqlClient)";
+            case "NpgSQL":
+                return "PostgreSQL Server (Npgsql)";
+            case "Oracle":
+                return "Oracle Database (Oracle.ManagedDataAccess.Client)";
             default:
                 return type;
         }
@@ -145,8 +184,14 @@ class sqlMigration {
             const primaryKeyColumns = columns.filter(c => _.includes(tableDto.PrimaryKeyColumns, c.sqlName));
             const specialColumnNames = this.findSpecialColumnNames(dbSchema, tableDto.Schema, tableDto.TableName);
             const primaryKeyColumnNames = primaryKeyColumns.map(x => x.sqlName);
-            
-            table.documentColumns(columns.filter(c => !_.includes(specialColumnNames, c.sqlName) && !_.includes(primaryKeyColumnNames, c.sqlName)));
+            if (this.advanced.includeUnsupported()) {
+                table.documentColumns(columns.filter(c => !_.includes(specialColumnNames, c.sqlName) && !_.includes(primaryKeyColumnNames, c.sqlName)));
+            } else {
+                const unsupportedColumnNames = columns.filter(c => c.type == "Unsupported").map(c => c.sqlName);
+                table.documentColumns(columns.filter(c => !_.includes(specialColumnNames, c.sqlName) && !_.includes(primaryKeyColumnNames, c.sqlName)
+                    && !_.includes(unsupportedColumnNames, c.sqlName)));
+            }
+
             table.primaryKeyColumns(primaryKeyColumns);
             
             return table;
@@ -239,6 +284,10 @@ class sqlMigration {
                 return "MySql.Data.MySqlClient";
             case "MsSQL":
                 return "System.Data.SqlClient";
+            case "NpgSQL":
+                return "Npgsql";
+            case "Oracle":
+                return "Oracle.ManagedDataAccess.Client";
             default:
                 throw new Error(`Can't get factory name: Database type - ${this.databaseType} - is not supported.`);
         }
@@ -256,7 +305,13 @@ class sqlMigration {
                 
             case "MsSQL":
                 return this.sqlServer.connectionString();
-                
+
+            case "NpgSQL":
+                return this.npgSql.connectionString();
+
+            case "Oracle":
+                return this.oracle.connectionString();
+
             default:
                 throw new Error(`Database type - ${this.databaseType} - is not supported`);
         }
@@ -319,6 +374,12 @@ class sqlMigration {
 
             case "MsSQL":
                 return this.sqlServerValidationGroup;
+
+            case "NpgSQL":
+                return this.npgSqlValidationGroup;
+
+            case "Oracle":
+                return this.oracleValidationGroup;
 
             default:
                 throw new Error(`Database type - ${this.databaseType()} - is not supported`);

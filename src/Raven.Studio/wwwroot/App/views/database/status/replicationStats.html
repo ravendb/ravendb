@@ -13,6 +13,7 @@
         <div class="closedTrackArrow"></div>
         <div class="collectionNameTextColor"></div>
         <div class="itemWithError"></div>
+        <div class="progressStripes"></div>
         
         <div class="tracks">
             <div class="replication" data-property="Replication"></div>
@@ -30,36 +31,49 @@
         </div>
     </div>
     <div class="flex-vertical absolute-fill">
-        <div class="flex-header">
-            <div class="clearfix toolbar" role="form" style="position:relative">
-                <div class="form-inline pull-left">
-                    <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter replications (Alt+/)" data-bind="textInput: searchText, enable: hasAnyData" />
+        <div class="flex-horizontal margin-bottom margin-bottom-sm">
+            <div class="form-inline">
+                <input type="text" accesskey="/" class="form-control" placeholder="Filter" title="Filter replications (Alt+/)" data-bind="textInput: searchText, enable: hasAnyData" />
 
-                    <button class="btn btn-default" data-bind="click: expandAll, visible: canExpandAll, enable: hasAnyData" title="Expand all replications performance details"><i class="icon-expand"></i><span>Expand all</span></button>
-                    <button class="btn btn-default" data-bind="click: collapseAll, visible: !canExpandAll(), enable: hasAnyData" title="Collapse all replications performance details"><i class="icon-collapse"></i><span>Collapse all</span></button>
-                    <button class="btn btn-default" data-bind="click: exportAsJson, enable: hasAnyData, visible: !isImport()" title="Export current replications graph to a file">
-                        <i class="icon-export"></i><span>Export</span>
-                    </button>
-                    <label for="importFilePicker" class="btn btn-default">
-                        <i class="icon-import"></i><span>Import</span>
-                    </label>
-                    <button class="btn btn-default" data-bind="click: closeImport, visible: isImport" title="Return to currently selected database replications graph">
-                        <i class="icon-cancel"></i><span data-bind="text: 'Close import (' + importFileName() + ')'">Close import</span>
-                    </button>
-
-                    <div class="input-group file-input" title="Import performance graph file">
-                        <input type="file" id="importFilePicker" data-bind="event: { change: fileSelected }" tabindex="-1" accept=".json">
-                    </div>
-                </div>
-                <div class="pull-right">
-                    <div class="toggle toggle-inline on-base-background" data-bind="visible: !isImport()">
-                        <input type="checkbox" class="styled" id="autoScroll" data-bind="checked: autoScroll">
-                        <label for="autoScroll"> Auto scroll </label>
-                    </div>
+                <button class="btn btn-default" data-bind="click: expandAll, visible: canExpandAll, enable: hasAnyData" title="Expand all replications performance details"><i class="icon-expand"></i><span>Expand all</span></button>
+                <button class="btn btn-default" data-bind="click: collapseAll, visible: !canExpandAll(), enable: hasAnyData" title="Collapse all replications performance details"><i class="icon-collapse"></i><span>Collapse all</span></button>
+                <button class="btn btn-default" data-bind="click: exportAsJson, enable: hasAnyData, visible: !isImport()" title="Export current replications graph to a file">
+                    <i class="icon-export"></i><span>Export</span>
+                </button>
+                <label for="importFilePicker" class="btn btn-default">
+                    <i class="icon-import"></i><span>Import</span>
+                </label>
+                <div class="input-group file-input" title="Import performance graph file">
+                    <input type="file" id="importFilePicker" data-bind="event: { change: fileSelected }" tabindex="-1" accept=".json">
                 </div>
             </div>
         </div>
-        <div class="flex-grow dynamic-container margin-top">
+        <div class="flex-horizontal flex-noshrink">
+            <div data-bind="visible: liveViewClient() && !bufferIsFull()">
+                <i class="global-spinner spinner-xs"></i> <small>Collecting replication statistics... (buffer usage: <span data-bind="text: bufferUsage() + '%'"></span>)</small>
+            </div>
+            <div data-bind="visible: bufferIsFull">
+                <small>Buffer is full, clear graph data to continue</small>
+            </div>
+            <div class="flex-separator"></div>
+
+            <button class="btn btn-default btn-sm margin-right margin-right-sm" data-bind="click: clearBrush, visible: clearSelectionVisible">
+                <span>Clear selection</span>
+            </button>
+            <button class="btn btn-sm btn-default" data-bind="click: closeImport, visible: isImport" title="Return to currently selected database replications graph">
+                <i class="icon-cancel"></i><span data-bind="text: 'Close import (' + importFileName() + ')'">Close import</span>
+            </button>
+            <div class="btn-group" data-bind="visible: !isImport()">
+                <button class="btn btn-sm btn-info btn-checkable" data-bind="click: toggleScroll, css: { active: autoScroll }">
+                    <i class="icon-logs"></i> <span>Monitoring (tail -f)</span>
+                </button>
+                <button class="btn btn-sm btn-danger" data-bind="click: clearGraphWithConfirm">
+                    <i class="icon-cancel"></i><span>Clear graph</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="flex-grow dynamic-container">
             <div data-bind="visible: !hasAnyData()">
                 <div class="row">
                     <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
@@ -76,9 +90,6 @@
             </div>
 
             <section id="replicationStats" style="position: relative" data-bind="visible: hasAnyData">
-                <button class="btn btn-default btn-sm clear-button" data-bind="click: clearBrush, visible: clearSelectionVisible">
-                    <span>Clear selection</span>
-                </button>
                 <section class="metricsContainer" id="replicationStatsContainer">
                     <div class="tooltip" style="opacity: 0; display: none">
                     </div>

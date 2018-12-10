@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Queries
 {
     public abstract class AbstractQueryRunner
     {
-        protected readonly DocumentDatabase Database;
+        public readonly DocumentDatabase Database;
 
         protected AbstractQueryRunner(DocumentDatabase database)
         {

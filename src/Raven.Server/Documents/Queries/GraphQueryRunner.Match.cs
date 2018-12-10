@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Primitives;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
 using Sparrow.Json;
@@ -109,7 +110,7 @@ namespace Raven.Server.Documents.Queries
             public void Set(StringSegment alias, object val)
             {
                 EnsureInnerInitialized();
-                _inner[alias] = val;
+                _inner[alias.Value] = val;
             }
 
             public void PopulateVertices(DynamicJsonValue j)

@@ -83,6 +83,8 @@ class query extends viewModelBase {
 
     static lastQuery = new Map<string, string>();
 
+    clientVersion = viewModelBase.clientVersion;
+
     hasAnySavedQuery = ko.pureComputed(() => this.savedQueries().length > 0);
 
     filteredQueries = ko.pureComputed(() => {
@@ -140,9 +142,10 @@ class query extends viewModelBase {
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any, any>>();
     staleResult: KnockoutComputed<boolean>;
     fromCache = ko.observable<boolean>(false);
+    originalRequestTime = ko.observable<number>();
     dirtyResult = ko.observable<boolean>();
     currentTab = ko.observable<queryResultTab | highlightSection | perCollectionIncludes>("results");
-    totalResults: KnockoutComputed<number>;
+    totalResultsForUi = ko.observable<number>(0);
     hasMoreUnboundedResults = ko.observable<boolean>(false);
 
     includesCache = ko.observableArray<perCollectionIncludes>([]);
@@ -177,8 +180,13 @@ class query extends viewModelBase {
     queriedIndex: KnockoutComputed<string>;
     queriedIndexLabel: KnockoutComputed<string>;
     queriedIndexDescription: KnockoutComputed<string>;
+
+    queriedFieldsOnly = ko.observable<boolean>(false);
+    queriedIndexEntries = ko.observable<boolean>(false);
     
     isEmptyFieldsResult = ko.observable<boolean>(false);
+    
+    showFanOutWarning = ko.observable<boolean>(false);
 
     $downloadForm: JQuery;
 
@@ -350,15 +358,6 @@ class query extends viewModelBase {
 
         criteria.name.extend({
             required: true
-        });
-
-        this.totalResults = ko.pureComputed(() => {
-            const stats = this.queryStats();
-            if (!stats) {
-                return 0;
-            }
-            
-            return stats.TotalResults || 0;
         });
 
          /* TODO
@@ -607,13 +606,17 @@ class query extends viewModelBase {
         this.highlightsCache.removeAll();
         this.explanationsCache.clear();
         this.timings(null);
+        this.showFanOutWarning(false);
         
         this.isEmptyFieldsResult(false);
         
         eventsCollector.default.reportEvent("query", "run");
         const criteria = this.criteria();
+
+        this.saveQueryOptions(criteria);
         
         const criteriaDto = criteria.toStorageDto();
+        const disableCache = !this.cacheEnabled();
 
         if (criteria.queryText()) {
             this.isLoading(true);
@@ -622,22 +625,23 @@ class query extends viewModelBase {
 
             //TODO: this.currentColumnsParams().enabled(this.showFields() === false && this.indexEntries() === false);
 
-            const queryCmd = new queryCommand(database, 0, 25, this.criteria(), !this.cacheEnabled());
+            const queryCmd = new queryCommand(database, 0, 25, this.criteria(), disableCache);
 
             // we declare this variable here, if any result returns skippedResults <> 0 we enter infinite scroll mode 
             let totalSkippedResults = 0;
+            let itemsSoFar = 0;
             
             this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCmd.getUrl());
             this.csvUrl(queryCmd.getCsvUrl());
 
             const resultsFetcher = (skip: number, take: number) => {
-                const command = new queryCommand(database, skip + totalSkippedResults, take + 1, this.criteria(), !this.cacheEnabled());
+                const command = new queryCommand(database, skip + totalSkippedResults, take + 1, this.criteria(), disableCache);
                 
                 const resultsTask = $.Deferred<pagedResultExtended<document>>();
                 const queryForAllFields = this.criteria().showFields();
                                 
                 // Note: 
-                // When server resoponse is '304 Not Modified' then the browser cached data contains duration time from the 'first' execution  
+                // When server response is '304 Not Modified' then the browser cached data contains duration time from the 'first' execution  
                 // If we ask browser to report the 304 state then 'response content' is empty 
                 // This is why we need to measure the execution time here ourselves..
                 const startQueryTime = new Date().getTime();                             
@@ -648,39 +652,62 @@ class query extends viewModelBase {
                     })
                     .done((queryResults: pagedResultExtended<document>) => {
                         this.hasMoreUnboundedResults(false);
+                        
+                        const totalFromQuery = queryResults.totalResultCount || 0;
+                        
+                        itemsSoFar += queryResults.items.length;
+                        
+                        this.totalResultsForUi(totalFromQuery);
                     
-                        if (queryResults.totalResultCount === -1) {
-                            // unbounded result set
+                        if (queryResults.additionalResultInfo.TotalResults === -1) {
+                            // unbounded result set - startsWith() on collection 
                             if (queryResults.items.length === take + 1) {
                                 // returned all or have more
-                                this.hasMoreUnboundedResults(true);
-                                queryResults.totalResultCount = skip + take + 30;
+                                const returnedLimit = queryResults.additionalResultInfo.CappedMaxResults || Number.MAX_SAFE_INTEGER;
+                                this.hasMoreUnboundedResults(returnedLimit > itemsSoFar);
+                                queryResults.totalResultCount = Math.min(skip + take + 30, returnedLimit - 1 /* subtract one since we fetch n+1 records */);
                             } else {
                                 queryResults.totalResultCount = skip + queryResults.items.length;
                             }
                             
                             queryResults.additionalResultInfo.TotalResults = queryResults.totalResultCount;
+                            
+                            this.totalResultsForUi(this.hasMoreUnboundedResults() ? itemsSoFar - 1 : itemsSoFar);
                         }
                         
                         if (queryResults.additionalResultInfo.SkippedResults) {
+                            // apply skipped results (if any)
                             totalSkippedResults += queryResults.additionalResultInfo.SkippedResults;
+                            
+                            // find if query contains positive offset or limit, if so warn about paging. 
+                            const [_, rqlWithoutParameters] = queryCommand.extractQueryParameters(this.criteria().queryText());
+                            if (/\s+(offset|limit)\s+/img.test(rqlWithoutParameters)) {
+                                this.showFanOutWarning(true);
+                            }
                         }
                         
                         if (totalSkippedResults) {
                             queryResults.totalResultCount = skip + queryResults.items.length;
                             if (queryResults.items.length === take + 1) {
                                 queryResults.totalResultCount += 30;
-                                this.hasMoreUnboundedResults(true);
+                                const totalWithOffsetAndLimit = queryResults.additionalResultInfo.CappedMaxResults;
+                                if (totalWithOffsetAndLimit && totalWithOffsetAndLimit < queryResults.totalResultCount) { 
+                                    queryResults.totalResultCount = totalWithOffsetAndLimit - 1;
+                                }
+                                
+                                this.hasMoreUnboundedResults(itemsSoFar < totalFromQuery);
                             }
-                            queryResults.additionalResultInfo.TotalResults = skip + queryResults.items.length;
+                            this.totalResultsForUi(this.hasMoreUnboundedResults() ? itemsSoFar - 1 : itemsSoFar);
                         }
-                    
+                        
                         const endQueryTime = new Date().getTime();
                         const localQueryTime = endQueryTime - startQueryTime;
-                        if (localQueryTime < queryResults.additionalResultInfo.DurationInMs) {
+                        if (!disableCache && localQueryTime < queryResults.additionalResultInfo.DurationInMs) {
+                            this.originalRequestTime(queryResults.additionalResultInfo.DurationInMs);
                             queryResults.additionalResultInfo.DurationInMs = localQueryTime;
                             this.fromCache(true);
                         } else {
+                            this.originalRequestTime(null);
                             this.fromCache(false);
                         }
                         
@@ -707,7 +734,7 @@ class query extends viewModelBase {
                         }
                         this.saveLastQuery("");
                         this.saveRecentQuery(criteriaDto, optionalSavedQueryName);
-
+                        
                         this.setupDisableReasons(); 
                     })
                     .fail((request: JQueryXHR) => {
@@ -753,6 +780,11 @@ class query extends viewModelBase {
                 this.inSaveMode(true);
             }
         }
+    }
+    
+    private saveQueryOptions(criteria: queryCriteria) {
+        this.queriedFieldsOnly(criteria.showFields());
+        this.queriedIndexEntries(criteria.indexEntries());
     }
     
     private saveQueryToStorage(criteria: storedQueryDto) {
@@ -920,7 +952,8 @@ class query extends viewModelBase {
     openQueryStats() {
         //TODO: work on explain in dialog
         eventsCollector.default.reportEvent("query", "show-stats");
-        const viewModel = new queryStatsDialog(this.queryStats(), this.activeDatabase());
+        const totalResultsFormatted = this.totalResultsForUi().toLocaleString() + (this.hasMoreUnboundedResults() ? "+" : "");
+        const viewModel = new queryStatsDialog(this.queryStats(), totalResultsFormatted, this.activeDatabase());
         app.showBootstrapDialog(viewModel);
     }
 
@@ -1073,11 +1106,16 @@ class query extends viewModelBase {
         const args = {
             format: "csv",
         };
-
-        const payload = {
-            Query: this.criteria().queryText()
-        };
-
+        let payload: { Query: string };
+        if (this.criteria().showFields()) {
+            payload = {
+                Query: queryUtil.replaceSelectAndIncludeWithFetchAllStoredFields(this.criteria().queryText())
+            };
+        } else {
+            payload = {
+                Query: this.criteria().queryText()
+            };
+        }
         $("input[name=ExportOptions]").val(JSON.stringify(payload));
 
         const url = appUrl.forDatabaseQuery(this.activeDatabase()) + endpoints.databases.streaming.streamsQueries + appUrl.urlEncodeArgs(args);

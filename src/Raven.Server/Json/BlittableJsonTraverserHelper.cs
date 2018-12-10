@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Server.Documents;
 using Sparrow;
@@ -145,7 +146,7 @@ namespace Raven.Server.Json
                         leftPath = leftPath.Subsegment(0, indexOfPropertySeparator);
 
                     var accessor = TypeConverter.GetPropertyAccessor(value);
-                    value = accessor.GetValue(leftPath, value);
+                    value = accessor.GetValue(leftPath.Value, value);
 
                     if (value == null)
                         return false;
