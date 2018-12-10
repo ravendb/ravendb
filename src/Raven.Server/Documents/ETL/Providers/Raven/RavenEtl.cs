@@ -101,14 +101,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return new RavenEtlDocumentTransformer(Transformation, Database, context, _script);
         }
 
-        protected override void LoadInternal(IEnumerable<ICommandData> items, JsonOperationContext context)
+        protected override int LoadInternal(IEnumerable<ICommandData> items, JsonOperationContext context)
         {
             var commands = items as List<ICommandData>;
 
             Debug.Assert(commands != null);
 
             if (commands.Count == 0)
-                return;
+                return 0;
 
             BatchOptions options = null;
             if (Configuration.LoadRequestTimeoutInSec != null)
@@ -125,6 +125,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 AsyncHelpers.RunSync(() => _requestExecutor.ExecuteAsync(batchCommand, context, token: CancellationToken));
                 _recentUrl = _requestExecutor.Url;
+
+                return commands.Count;
             }
             catch (OperationCanceledException e)
             {
