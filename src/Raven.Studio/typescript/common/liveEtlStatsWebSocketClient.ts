@@ -135,6 +135,7 @@ class liveEtlStatsWebSocketClient extends abstractWebSocketClient<resultsDto<Rav
         const withCache = perf as EtlPerformanceBaseWithCache;
         withCache.CompletedAsDate = perf.Completed ? liveEtlStatsWebSocketClient.isoParser.parse(perf.Completed) : undefined;
         withCache.StartedAsDate = liveEtlStatsWebSocketClient.isoParser.parse(perf.Started);
+        withCache.HasErrors = perf.TransformationErrorCount > 0 || perf.SuccessfullyLoaded === false;
         withCache.Type = type;
     }
 }

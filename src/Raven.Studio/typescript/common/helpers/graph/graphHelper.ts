@@ -85,6 +85,25 @@ class graphHelper {
         return config;
     }
     
+    static drawErrorMark(ctx: CanvasRenderingContext2D, x: number, y: number, dx: number) {
+        const markWidth = 8;
+        if (dx > markWidth) {
+            // draw full triangle
+            ctx.beginPath();
+            ctx.moveTo(x+ dx, y);
+            ctx.lineTo(x + dx - markWidth, y);
+            ctx.lineTo(x + dx, y + markWidth);
+            ctx.fill();
+        } else if (dx > 1) {
+            ctx.beginPath();
+            ctx.moveTo(x+ dx, y);
+            ctx.lineTo(x, y);
+            ctx.lineTo(x, y + markWidth - dx);
+            ctx.lineTo(x + dx, y + markWidth);
+            ctx.fill();
+        }
+    }
+    
     static drawScroll(ctx: CanvasRenderingContext2D, scrollLocation: { left: number, top: number }, topScrollOffset: number, visibleHeight: number, 
                       totalHeight: number, colors: scrollColorConfig) {
         if (!colors) {

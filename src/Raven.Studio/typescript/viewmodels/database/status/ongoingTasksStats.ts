@@ -482,47 +482,49 @@ class ongoingTasksStats extends viewModelBase {
         this.filteredTrackNames(tracks);
     }
 
-    private onDataUpdate<T>(assignData: (data: T[]) => void) {
-        return (data: T[]) => {
-            let timeRange: [Date, Date];
-            if (this.firstDataChunkReceived) {
-                const timeToRemap: [number,  number] = this.brush.empty() ? this.xBrushNumericScale.domain() as [number, number] : this.brush.extent() as [number, number];
-                // noinspection JSSuspiciousNameCombination
-                timeRange = timeToRemap.map(x => this.xBrushTimeScale.invert(x)) as [Date, Date];
-            }
+    private onDataUpdated() {
+        let timeRange: [Date, Date];
+        if (this.firstDataChunkReceived) {
+            const timeToRemap: [number,  number] = this.brush.empty() ? this.xBrushNumericScale.domain() as [number, number] : this.brush.extent() as [number, number];
+            // noinspection JSSuspiciousNameCombination
+            timeRange = timeToRemap.map(x => this.xBrushTimeScale.invert(x)) as [Date, Date];
+        }
+        
+        this.checkBufferUsage();
 
-            assignData(data);
-            this.checkBufferUsage();
+        const [workData, maxConcurrentActions] = this.prepareTimeData();
 
-            const [workData, maxConcurrentActions] = this.prepareTimeData();
+        if (this.firstDataChunkReceived) {
+            const newBrush = timeRange.map(x => this.xBrushTimeScale(x)) as [number,  number];
+            this.setZoomAndBrush(newBrush, brush => brush.extent(newBrush));
+        }
 
-            if (this.firstDataChunkReceived) {
-                const newBrush = timeRange.map(x => this.xBrushTimeScale(x)) as [number,  number];
-                this.setZoomAndBrush(newBrush, brush => brush.extent(newBrush));
-            }
+        if (this.autoScroll()) {
+            this.scrollToRight();
+        }
 
-            if (this.autoScroll()) {
-                this.scrollToRight();
-            }
+        this.draw(workData, maxConcurrentActions, this.firstDataChunkReceived);
 
-            this.draw(workData, maxConcurrentActions, this.firstDataChunkReceived);
-
-            if (!this.firstDataChunkReceived) {
-                this.firstDataChunkReceived = true;
-            }
+        if (!this.firstDataChunkReceived) {
+            this.firstDataChunkReceived = true;
         }
     }
     
     private enableLiveView() {
         this.firstDataChunkReceived = false;
         
-        //TODO: throttle updates to avoid to many jumps on UI
+        // since we are fetching data from 2 different sources
+        // let's throttle updates to avoid jumpy UI
+        const onDataUpdatedThrottle = _.debounce(() => this.onDataUpdated(), 1000, { maxWait: 3000 });
 
-        const onReplicationDataUpdate = this.onDataUpdate<Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>>(d => this.replicationData = d);
-        const onEtlDataUpdate = this.onDataUpdate<Raven.Server.Documents.ETL.Stats.EtlTaskPerformanceStats>(d => this.etlData = d);
-
-        this.liveViewReplicationClient(new liveReplicationStatsWebSocketClient(this.activeDatabase(), onReplicationDataUpdate, this.dateCutoff));
-        this.liveViewEtlClient(new liveEtlStatsWebSocketClient(this.activeDatabase(), onEtlDataUpdate, this.dateCutoff));
+        this.liveViewReplicationClient(new liveReplicationStatsWebSocketClient(this.activeDatabase(), d => {
+            this.replicationData = d;
+            onDataUpdatedThrottle();
+        }, this.dateCutoff));
+        this.liveViewEtlClient(new liveEtlStatsWebSocketClient(this.activeDatabase(), d => {
+            this.etlData = d;
+            onDataUpdatedThrottle();
+        }, this.dateCutoff));
     }
 
     private checkBufferUsage() {
@@ -1019,7 +1021,7 @@ class ongoingTasksStats extends viewModelBase {
                 context.save();
 
                 // 1. Draw perf items
-                this.drawStripes(context, [perfWithCache.Details], x1, stripesYStart, yOffset, extentFunc, perfWithCache);
+                this.drawStripes(context, [perfWithCache.Details], x1, stripesYStart, yOffset, extentFunc, perfWithCache, trackName);
 
                 // 2. Draw a separating line between adjacent perf items if needed
                 if (perfIdx >= 1 && perfCompleted === perf.Started) {
@@ -1095,13 +1097,14 @@ class ongoingTasksStats extends viewModelBase {
 
     private drawStripes(context: CanvasRenderingContext2D, operations: Array<taskOperation>,
         xStart: number, yStart: number, yOffset: number, extentFunc: (duration: number) => number,
-        perfItemWithCache: performanceBaseWithCache = null) {
+        perfItemWithCache: performanceBaseWithCache, trackName: string) {
 
         let currentX = xStart;
         const length = operations.length;
         for (let i = 0; i < length; i++) {
             const op = operations[i];
             const dx = extentFunc(op.DurationInMs);
+            const isRootOperation = perfItemWithCache.Details === op;
 
             // 0. Draw item:
             context.fillStyle = this.getColorForOperation(op.Name);
@@ -1115,26 +1118,23 @@ class ongoingTasksStats extends viewModelBase {
                 }
             }
             // 2. Track is closed
-            else if (perfItemWithCache) { 
-                if (dx >= 0.8) { 
+            else if (isRootOperation) { // register only on root item
+                if (dx >= 0.8) {
                     this.hitTest.registerTrackItem(currentX, yStart, dx, ongoingTasksStats.trackHeight, perfItemWithCache, op);
-                    //TODO:this.hitTest.registerToggleTrack(currentX, yStart, dx, ongoingTasksStats.trackHeight, perfItemWithCache.Description); 
+                    this.hitTest.registerToggleTrack(currentX, yStart, dx, ongoingTasksStats.trackHeight, trackName); 
                 }
             }
 
             // 3. Draw inner/nested operations/stripes..
             if (op.Operations.length > 0) {
-                this.drawStripes(context, op.Operations, currentX, yStart + yOffset, yOffset, extentFunc, perfItemWithCache);
+                this.drawStripes(context, op.Operations, currentX, yStart + yOffset, yOffset, extentFunc, perfItemWithCache, trackName);
             }
 
             // 4. Handle errors if exist... 
-            /* TODO
-            if (perfItemWithCache) {
-                if (perfItemWithCache.Errors) {
-                    context.fillStyle = this.colors.itemWithError; 
-                    context.fillRect(currentX, yStart, dx, ongoingTasksStats.trackHeight);
-                }
-            }*/
+            if (perfItemWithCache.HasErrors && isRootOperation) {
+                context.fillStyle = this.colors.itemWithError;
+                graphHelper.drawErrorMark(context, currentX, yStart, dx);
+            }
 
             currentX += dx;
         }
@@ -1234,6 +1234,7 @@ class ongoingTasksStats extends viewModelBase {
 
         if (currentDatum !== context.item) {
             const type = context.rootStats.Type;
+            const isReplication = type === "Outgoing" || type === "Incoming";
             const isRootItem = context.rootStats.Details === context.item;
             
             let sectionName = context.item.Name;
@@ -1245,11 +1246,11 @@ class ongoingTasksStats extends viewModelBase {
                 }
             }
             
-            let tooltipHtml = `*** ${sectionName} ***<br/>`;
-            tooltipHtml += (isRootItem ? "Total duration" : "Duration") + ": " + generalUtils.formatMillis(context.item.DurationInMs) + "<br />";
+            let tooltipHtml = `<strong>*** ${sectionName} ***</strong><br/>`;
+            tooltipHtml += (isRootItem ? "Total duration" : "Duration") + ": " + generalUtils.formatMillis(context.item.DurationInMs) + "<br/>";
             
             if (isRootItem) {
-                switch (context.rootStats.Type) {
+                switch (type) {
                     case "Incoming": {
                         const elementWithData = context.rootStats as any as Raven.Client.Documents.Replication.IncomingReplicationPerformanceStats;
                         tooltipHtml += `Received last Etag: ${elementWithData.ReceivedLastEtag}<br/>`;
@@ -1266,18 +1267,102 @@ class ongoingTasksStats extends viewModelBase {
                         tooltipHtml += `Attachments read count: ${elementWithData.Network.AttachmentOutputCount}<br/>`;
                     }
                         break;
+                    case "Raven":
+                    case "Sql":
+                        const elementWithData = context.rootStats as EtlPerformanceBaseWithCache;
+                        tooltipHtml += this.prepareEtlTooltip(elementWithData);
+                        
+                }
+                
+                if (isReplication) {
+                    const baseElement = context.rootStats as Raven.Client.Documents.Replication.ReplicationPerformanceBase;
+                    if (baseElement.Errors) {
+                        tooltipHtml += `<span style=color:Crimson;"><strong>Errors:</strong></span><br/>`;
+                        baseElement.Errors.forEach(err => tooltipHtml += `Errors: ${err.Error}<br/>`);
+                    }
                 }
             }
             
-            /* TODO:
-            // Handle Errors:
-            if (baseElement.Errors) {
-                tooltipHtml += `<span style=color:Crimson;"><strong>Errors:</strong></span><br/>`;
-                baseElement.Errors.forEach(err => tooltipHtml += `Errors: ${err.Error}<br/>`);
-            }
-             */
-
             this.handleTooltip(context.item, x, y, tooltipHtml); 
+        }
+    }
+    
+    private prepareEtlTooltip(element: EtlPerformanceBaseWithCache) {
+        let tooltipHtml = "";
+        
+        if (element.BatchCompleteReason) {
+            tooltipHtml += `Batch complete reason: ${element.BatchCompleteReason}<br/>`;
+        }
+        
+        // extract
+        let extractHtml = "";
+        _.forIn(element.NumberOfExtractedItems, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
+            if (value) {
+                extractHtml += `Extracted ${ongoingTasksStats.etlItemTypeToUi(key)}: ${value.toLocaleString()}<br/>`;
+            }
+        });
+        
+        // transform
+        let transformHtml = "";
+        _.forIn(element.NumberOfTransformedItems, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
+            if (value) {
+                transformHtml += `Transformed ${ongoingTasksStats.etlItemTypeToUi(key)}: ${value.toLocaleString()}<br/>`;
+            }
+        });
+
+        if (element.TransformationErrorCount) {
+            transformHtml += `Transformation error count: ${element.TransformationErrorCount.toLocaleString()}<br/>`;
+        }
+
+        _.forIn(element.LastTransformedEtags, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
+            if (value) {
+                transformHtml += `Last transformed Etag for ${key}: ${value}<br/>`;    
+            }
+        });
+
+        _.forIn(element.LastFilteredOutEtags, (value: number, key: Raven.Server.Documents.ETL.EtlItemType) => {
+            if (value) {
+                transformHtml += `Last filtered out Etag for ${key}: ${value}<br/>`;    
+            }
+        });
+        
+        // load 
+        let loadHtml = "";
+        if (element.SuccessfullyLoaded != null) {
+            loadHtml += `Successfully loaded: ${element.SuccessfullyLoaded ? "Yes": "No"}<br/>`;
+        }
+
+        if (element.LastLoadedEtag) {
+            loadHtml += `Last loaded Etag: ${element.LastLoadedEtag}<br/>`;    
+        }
+        
+        // collect all sections
+        if (extractHtml) {
+            tooltipHtml += "*** Extract ***<br/>";
+            tooltipHtml += extractHtml;
+        }
+
+        if (transformHtml) {
+            tooltipHtml += "*** Transform ***<br/>";
+            tooltipHtml += transformHtml;
+        }
+        
+        if (loadHtml) {
+            tooltipHtml += "*** Load ***<br/>";
+            tooltipHtml += loadHtml;
+        }
+        
+        return tooltipHtml;
+    }
+    
+    static etlItemTypeToUi(value: Raven.Server.Documents.ETL.EtlItemType) {
+        switch (value) {
+            case "Document":
+                return "Documents";
+            case "Counter":
+                return "Counters";
+            default:
+                return "None";
         }
     }
 
@@ -1352,15 +1437,22 @@ class ongoingTasksStats extends viewModelBase {
         this.bufferIsFull(false);
 
         try {
-            const importedData: exportFileFormat = JSON.parse(result);
+            let importedData: exportFileFormat = JSON.parse(result);
             
-            //TODO: handle old format as well!
+            if (_.isArray(importedData)) {
+                // maybe we imported old format let's try to convert
+                importedData = {
+                    Replication: importedData as any, // we force casting here
+                    Etl: []
+                }
+            }
 
             // Data validation (currently only checking if this is an array, may do deeper validation later..
-            if (!_.isArray(importedData)) { 
+            if (!_.isObject(importedData)) { 
                 messagePublisher.reportError("Invalid replication stats file format", undefined, undefined);
             } else {
-                //TODO: this.replicationData = importedData; 
+                this.replicationData = importedData.Replication;
+                this.etlData = importedData.Etl;
 
                 this.fillCache();
                 this.prepareBrush(); 
@@ -1370,8 +1462,7 @@ class ongoingTasksStats extends viewModelBase {
 
                 this.isImport(true);
             }
-        }
-        catch (e) {
+        } catch (e) {
             messagePublisher.reportError("Failed to parse json data", undefined, undefined);
         }
     }

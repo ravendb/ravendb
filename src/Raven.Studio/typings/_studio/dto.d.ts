@@ -290,12 +290,14 @@ interface ReplicationPerformanceBaseWithCache extends Raven.Client.Documents.Rep
     CompletedAsDate: Date;
     Type: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceType;
     Description: string;
+    HasErrors: boolean;
 }
 
 interface EtlPerformanceBaseWithCache extends Raven.Server.Documents.ETL.Stats.EtlPerformanceStats {
     StartedAsDate: Date;
     CompletedAsDate: Date;
     Type: Raven.Client.Documents.Operations.ETL.EtlType;
+    HasErrors: boolean;
 }
 
 interface IndexingPerformanceOperationWithParent extends Raven.Client.Documents.Indexes.IndexingPerformanceOperation {
