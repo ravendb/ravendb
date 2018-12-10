@@ -93,6 +93,9 @@ namespace Raven.Server.Utils
                 return IsSupportedType(dictionary.Values);
             }
 
+            if (value is char[])
+                return true;
+
             if (value is IEnumerable<char>)
                 return true;
 
@@ -103,10 +106,17 @@ namespace Raven.Server.Utils
             {
                 if (ShouldTreatAsEnumerable(enumerable))
                 {
+                    var isSupportedObjects = true;
                     var objectEnumerable = value as IEnumerable<object>;
-                    var supportedEnumerable = objectEnumerable?.Select(IsSupportedType) ?? enumerable.Cast<object>().Select(IsSupportedType);
+                    if (objectEnumerable == null)
+                        EnumerableNullException();
 
-                    return supportedEnumerable.All(v => v);
+                    foreach (var x in objectEnumerable)
+                    {
+                        isSupportedObjects &= IsSupportedType(x);
+                    }
+
+                    return isSupportedObjects;
                 }
             }
 
@@ -124,7 +134,12 @@ namespace Raven.Server.Utils
                 var propertyValue = property.Value;
                 if (propertyValue is IEnumerable<object> propertyValueAsEnumerable && ShouldTreatAsEnumerable(propertyValue))
                 {
-                    isSupported &= propertyValueAsEnumerable.Select(IsSupportedType).All(v => v);
+                    var isSupportedInternal = true;
+                    foreach (var x in propertyValueAsEnumerable)
+                    {
+                        isSupportedInternal &= IsSupportedType(x);
+                    }
+                    isSupported &= isSupportedInternal;
                     continue;
                 }
 
@@ -226,7 +241,10 @@ namespace Raven.Server.Utils
 
                 return @object;
             }
-            // looks like best option
+
+            if (value is char[] chars)
+                return new string(chars);
+
             if (value is IEnumerable<char> charEnumerable)
                 return new string(charEnumerable.ToArray());
 
@@ -237,10 +255,8 @@ namespace Raven.Server.Utils
             {
                 if (ShouldTreatAsEnumerable(enumerable))
                 {
-                    return value is IEnumerable<object> objectEnumerable
-                        ? EnumerableToJsonArray(flattenArrays ? Flatten(objectEnumerable) : objectEnumerable, root, flattenArrays, recursiveLevel, engine, context)
-                        : EnumerableToJsonArray(flattenArrays ? Flatten(enumerable.Cast<object>()) : enumerable.Cast<object>(), root, flattenArrays, recursiveLevel,
-                            engine, context);
+                    var objectEnumerable = value as IEnumerable<object>;
+                    return EnumerableToJsonArray(flattenArrays ? Flatten(objectEnumerable) : objectEnumerable, root, flattenArrays, recursiveLevel, engine, context);
                 }
             }
 
@@ -280,6 +296,9 @@ namespace Raven.Server.Utils
 
         private static DynamicJsonArray EnumerableToJsonArray(IEnumerable<object> propertyEnumerable, object root, bool flattenArrays, int recursiveLevel, Engine engine, JsonOperationContext context)
         {
+            if (propertyEnumerable == null)
+                EnumerableNullException();
+
             var dja = new DynamicJsonArray();
 
             foreach (var x in propertyEnumerable)
@@ -300,6 +319,9 @@ namespace Raven.Server.Utils
 
         private static IEnumerable<object> Flatten(IEnumerable items)
         {
+            if (items == null)
+                EnumerableNullException();
+
             foreach (var item in items)
             {
                 if (item is IEnumerable enumerable && ShouldTreatAsEnumerable(enumerable))
@@ -314,6 +336,11 @@ namespace Raven.Server.Utils
 
                 yield return item;
             }
+        }
+
+        private static void EnumerableNullException()
+        {
+            throw new InvalidOperationException("Cannot enumerate on null.");
         }
 
         public static dynamic ToDynamicType(object value)
