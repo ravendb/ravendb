@@ -2647,7 +2647,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 MemberInitAsJson.ForAllTypes
             };
 
-            if (loadArg == false)
+            if (loadArg == false && _isMapReduce == false)
             {
                 Array.Resize(ref extensions, extensions.Length + 1);
 
