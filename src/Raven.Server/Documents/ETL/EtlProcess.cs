@@ -276,6 +276,8 @@ namespace Raven.Server.Documents.ETL
 
                 var batchSize = 0;
 
+                var batchStopped = false;
+
                 foreach (var item in items)
                 {
                     if (AlreadyLoadedByDifferentNode(item, state))
@@ -304,7 +306,10 @@ namespace Raven.Server.Documents.ETL
                         try
                         {
                             if (CanContinueBatch(stats, item, batchSize, context) == false)
+                            {
+                                batchStopped = true;
                                 break;
+                            }
 
                             transformer.Transform(item);
 
@@ -351,6 +356,9 @@ namespace Raven.Server.Documents.ETL
                         }
                     }
                 }
+
+                if (batchStopped == false)
+                    stats.RecordBatchCompleteReason("No more items to process");
 
                 _testMode?.DebugOutput.AddRange(transformer.GetDebugOutput());
 
