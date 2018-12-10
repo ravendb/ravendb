@@ -123,6 +123,7 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<result
         withCache.CompletedAsDate = perf.Completed ? liveReplicationStatsWebSocketClient.isoParser.parse(perf.Completed) : undefined;
         withCache.StartedAsDate = liveReplicationStatsWebSocketClient.isoParser.parse(perf.Started);
         withCache.Type = type;
+        withCache.HasErrors = perf.Errors && perf.Errors.length > 0;
         withCache.Description = description;
     }
 }
