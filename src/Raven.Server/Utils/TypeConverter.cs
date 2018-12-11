@@ -106,15 +106,15 @@ namespace Raven.Server.Utils
             {
                 if (ShouldTreatAsEnumerable(enumerable))
                 {
-                    var isSupportedObjects = true;
+                    var isSupportedEnumerable = true;
                     var objectEnumerable = (IEnumerable)value;
 
                     foreach (var x in objectEnumerable)
                     {
-                        isSupportedObjects &= IsSupportedType(x);
+                        isSupportedEnumerable &= IsSupportedType(x);
                     }
 
-                    return isSupportedObjects;
+                    return isSupportedEnumerable;
                 }
             }
 

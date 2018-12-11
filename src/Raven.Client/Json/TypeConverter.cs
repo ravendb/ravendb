@@ -65,7 +65,6 @@ namespace Raven.Client.Json
             if (value is IEnumerable)
             {
                 var objectEnumerable = (IEnumerable)value;
-
                 var dja = new DynamicJsonArray();
 
                 foreach (var x in objectEnumerable)
