@@ -79,6 +79,8 @@ namespace Raven.Server.Documents.ETL
 
         public abstract OngoingTaskConnectionStatus GetConnectionStatus();
 
+        public abstract EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext);
+
         public static EtlProcessState GetProcessState(DocumentDatabase database, string configurationName, string transformationName)
         {
             using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -115,6 +117,7 @@ namespace Raven.Server.Documents.ETL
         private PoolOfThreads.LongRunningWork _longRunningWork;
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
         private EtlStatsAggregator _lastStats;
+        private EtlProcessState _lastProcessState;
         private int _statsId;
 
         private TestMode _testMode;
@@ -500,7 +503,10 @@ namespace Raven.Server.Documents.ETL
 
         protected void UpdateMetrics(DateTime startTime, EtlStatsScope stats)
         {
-            Metrics.BatchSizeMeter.MarkSingleThreaded(stats.NumberOfExtractedItems.Sum(x => x.Value));
+            var batchSize = stats.NumberOfExtractedItems.Sum(x => x.Value);
+
+            Metrics.BatchSizeMeter.MarkSingleThreaded(batchSize);
+            Metrics.UpdateProcessedPerSecondRate(batchSize, stats.Duration);
         }
 
         public override void Reset()
@@ -592,7 +598,7 @@ namespace Raven.Server.Documents.ETL
 
                     var didWork = false;
 
-                    var state = GetProcessState(Database, Configuration.Name, Transformation.Name);
+                    var state  = _lastProcessState = GetProcessState(Database, Configuration.Name, Transformation.Name);
 
                     var loadLastProcessedEtag = state.GetLastProcessedEtagForNode(_serverStore.NodeTag);
 
@@ -999,6 +1005,88 @@ namespace Raven.Server.Documents.ETL
                 _testMode = null;
                 disableAlerts.Dispose();
             });
+        }
+
+        public override EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext)
+        {
+            var result = new EtlProcessProgress
+            {
+                TransformationName = TransformationName,
+                Disabled = Transformation.Disabled
+            };
+            
+            var performance = _lastStats?.ToPerformanceLiveStats();
+
+            result.AverageProcessedPerSecond = Metrics.GetProcessedPerSecondRate() ?? 0.0;
+
+            if (performance?.DurationInMs > 0)
+            {
+                var processedPerSecondInCurrentBatch = performance.NumberOfExtractedItems.Sum(x => x.Value) / (performance.DurationInMs / 1000);
+
+                result.AverageProcessedPerSecond = (result.AverageProcessedPerSecond + processedPerSecondInCurrentBatch) / 2;
+            }
+
+            var lastProcessedEtag = _lastProcessState.GetLastProcessedEtagForNode(_serverStore.NodeTag);
+
+            List<string> collections;
+
+            if (Transformation.ApplyToAllDocuments)
+            {
+                collections = Database.DocumentsStorage.GetCollections(documentsContext).Select(x => x.Name).ToList();
+            }
+            else
+            {
+                collections = Transformation.Collections;
+            }
+
+            long docsToProcess = 0;
+            long totalDocsCount = 0;
+
+            long docsTombstonesToProcess = 0;
+            long totalDocsTombstonesCount = 0;
+
+            long countersToProcess = 0;
+            long totalCountersCount = 0;
+
+            foreach (var collection in collections)
+            {
+                docsToProcess += Database.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, collection, lastProcessedEtag, out var total);
+                totalDocsCount += total;
+
+                docsTombstonesToProcess += Database.DocumentsStorage.GetNumberOfTombstonesToProcess(documentsContext, collection, lastProcessedEtag, out total);
+                totalDocsTombstonesCount += total;
+
+                if (ShouldTrackCounters())
+                {
+                    countersToProcess += Database.DocumentsStorage.CountersStorage.GetNumberOfCountersToProcess(documentsContext, collection, lastProcessedEtag, out total);
+                    totalCountersCount += total;
+                }
+            }
+
+            long countersTombstonesToProcess = 0;
+            long totalCountersTombstonesCount = 0;
+
+            if (ShouldTrackCounters())
+            {
+                countersTombstonesToProcess =
+                    Database.DocumentsStorage.CountersStorage.GetNumberOfTombstonesToProcess(documentsContext, lastProcessedEtag, out totalCountersTombstonesCount);
+            }
+
+            result.NumberOfDocumentsToProcess = docsToProcess;
+            result.TotalNumberOfDocuments = totalDocsCount;
+
+            result.NumberOfDocumentTombstonesToProcess = docsTombstonesToProcess;
+            result.TotalNumberOfDocumentTombstones = totalDocsTombstonesCount;
+
+            result.NumberOfCountersToProcess = countersToProcess;
+            result.TotalNumberOfCounters = totalCountersCount;
+
+            result.NumberOfCounterTombstonesToProcess = countersTombstonesToProcess;
+            result.TotalNumberOfCounterTombstones = totalCountersTombstonesCount;
+
+            result.LastProcessedEtag = Math.Max(lastProcessedEtag, performance?.GetHighestEtag() ?? 0);
+
+            return result;
         }
 
         public override void Dispose()

@@ -141,6 +141,43 @@ namespace Raven.Server.Documents
             }
         }
 
+        public long GetNumberOfCountersToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount)
+        {
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+            {
+                totalCount = 0;
+                return 0;
+            }
+
+            var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
+
+            if (table == null)
+            {
+                totalCount = 0;
+                return 0;
+            }
+
+            var indexDef = CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice];
+
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount);
+        }
+
+        public long GetNumberOfTombstonesToProcess(DocumentsOperationContext context, long afterEtag, out long totalCount)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, CountersTombstones);
+
+            if (table == null)
+            {
+                totalCount = 0;
+                return 0;
+            }
+
+            var indexDef = TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice];
+
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount);
+        }
+
         public static CounterDetail TableValueToCounterDetail(JsonOperationContext context, TableValueReader tvr)
         {
             var (doc, name) = ExtractDocIdAndName(context, tvr);

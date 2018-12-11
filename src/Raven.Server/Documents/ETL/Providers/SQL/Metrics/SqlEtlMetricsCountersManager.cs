@@ -23,11 +23,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Metrics
         {
             var json = base.ToJson();
 
-            json["TablesMetrics"] = TablesMetrics.ToDictionary(x => x.Key, x => x.Value.ToSqlEtlTableMetricsDataDictionary());
+            json[nameof(TablesMetrics)] = TablesMetrics.ToDictionary(x => x.Key, x => x.Value.ToSqlEtlTableMetricsDataDictionary());
 
             return json;
         }
-
-        
     }
 }

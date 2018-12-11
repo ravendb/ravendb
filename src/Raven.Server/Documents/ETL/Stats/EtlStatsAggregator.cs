@@ -66,7 +66,28 @@ namespace Raven.Server.Documents.ETL.Stats
                 return ToPerformanceStats();
 
             return CreatePerformanceStats(completed: false);
+        }
 
+        public EtlPerformanceStats ToPerformanceLiveStats()
+        {
+            if (_performanceStats != null)
+                return _performanceStats;
+
+            if (Scope == null || Stats == null)
+                return null;
+
+            return new EtlPerformanceStats(Scope.Duration)
+            {
+                Started = StartTime,
+                LastLoadedEtag = Stats.LastLoadedEtag,
+                LastTransformedEtags = Stats.LastTransformedEtags,
+                LastFilteredOutEtags = Stats.LastFilteredOutEtags,
+                NumberOfExtractedItems = Stats.NumberOfExtractedItems,
+                NumberOfTransformedItems = Stats.NumberOfTransformedItems,
+                TransformationErrorCount = Scope.TransformationErrorCount,
+                SuccessfullyLoaded = Stats.SuccessfullyLoaded,
+                BatchCompleteReason = Stats.BatchCompleteReason
+            };
         }
     }
 }
