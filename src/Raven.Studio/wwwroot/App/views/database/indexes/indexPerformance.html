@@ -20,10 +20,10 @@
         </div>
         <div class="flex-horizontal flex-noshrink">
             <div data-bind="visible: liveViewClient() && !bufferIsFull()">
-                <i class="global-spinner spinner-xs"></i> <small>Collecting indexing performance data... (buffer usage: <span data-bind="text: bufferUsage() + '%'"></span>)</small>
+                <small>Data buffer usage: <span data-bind="text: bufferUsage() + '%'"></span></small>
             </div>
             <div data-bind="visible: bufferIsFull">
-                <small>Buffer is full, clear graph data to continue</small>
+                <small>Data buffer is full, clear graph data to continue</small>
             </div>
             <div class="flex-separator"></div>
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
@@ -13,23 +14,19 @@ namespace Raven.Server.NotificationCenter
 {
     public class NotificationCenterWebSocketWriter : IWebsocketWriter, IDisposable
     {
-        private readonly CancellationToken _resourceShutdown;
-        private readonly NotificationsBase _notificationsBase;
-        private readonly IMemoryContextPool _contextPool;
         private readonly WebSocket _webSocket;
+        private readonly NotificationsBase _notificationsBase;
+        private readonly JsonOperationContext _context;
+        private readonly CancellationToken _resourceShutdown;
+        
         private readonly MemoryStream _ms = new MemoryStream();
-
+        
         public NotificationCenterWebSocketWriter(WebSocket webSocket, NotificationsBase notificationsBase, IMemoryContextPool contextPool, CancellationToken resourceShutdown)
         {
-            _notificationsBase = notificationsBase;
-            _contextPool = contextPool;
-            _resourceShutdown = resourceShutdown;
             _webSocket = webSocket;
-        }
-
-        public void Dispose()
-        {
-            _ms.Dispose();
+            _notificationsBase = notificationsBase;
+            contextPool.AllocateOperationContext(out _context);
+            _resourceShutdown = resourceShutdown;
         }
 
         public async Task WriteNotifications(Func<string, bool> shouldWriteByDb)
@@ -41,6 +38,7 @@ namespace Raven.Server.NotificationCenter
 
             try
             {
+                var sp = shouldWriteByDb == null ? null : Stopwatch.StartNew();
                 using (_notificationsBase.TrackActions(asyncQueue, this))
                 {
                     while (_resourceShutdown.IsCancellationRequested == false)
@@ -54,13 +52,21 @@ namespace Raven.Server.NotificationCenter
                         var tuple = await asyncQueue.TryDequeueAsync(TimeSpan.FromSeconds(5));
                         if (tuple.Item1 == false)
                         {
-                            await _webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, _resourceShutdown);
+                            await SendHeartbeat();
                             continue;
                         }
 
-                        if(shouldWriteByDb != null && 
+                        if (shouldWriteByDb != null &&
                             shouldWriteByDb((string)tuple.Item2["Database"]) == false)
+                        {
+                            if (sp.ElapsedMilliseconds > 5000)
+                            {
+                                sp.Restart();
+                                await SendHeartbeat();
+                            }
+                            
                             continue;
+                        }
 
                         await WriteToWebSocket(tuple.Item2);
                     }
@@ -75,15 +81,14 @@ namespace Raven.Server.NotificationCenter
         {
             _ms.SetLength(0);
 
-            using (_contextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, _ms))
+            using (var writer = new BlittableJsonTextWriter(_context, _ms))
             {
                 var notificationType = notification.GetType();
 
                 if (notificationType == typeof(DynamicJsonValue))
-                    context.Write(writer, notification as DynamicJsonValue);
+                    _context.Write(writer, notification as DynamicJsonValue);
                 else if (notificationType == typeof(BlittableJsonReaderObject))
-                    context.Write(writer, notification as BlittableJsonReaderObject);
+                    _context.Write(writer, notification as BlittableJsonReaderObject);
                 else
                     ThrowNotSupportedType(notification);
             }
@@ -93,9 +98,22 @@ namespace Raven.Server.NotificationCenter
             return _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _resourceShutdown);
         }
 
+        private async Task SendHeartbeat()
+        {
+            await _webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, _resourceShutdown);
+        }
+
         private static void ThrowNotSupportedType<TNotification>(TNotification notification)
         {
             throw new NotSupportedException($"Not supported notification type: {notification.GetType()}");
+        }
+
+        public void Dispose()
+        {
+            using (_ms)
+            using (_context)
+            {
+            }
         }
     }
 }

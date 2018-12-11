@@ -2652,7 +2652,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 MemberInitAsJson.ForAllTypes
             };
 
-            if (loadArg == false)
+            if (loadArg == false && _isMapReduce == false)
             {
                 Array.Resize(ref extensions, extensions.Length + 1);
 
@@ -2945,7 +2945,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             HandleKeywordsIfNeeded(ref field, ref alias);
 
             var identityProperty = _documentQuery.Conventions.GetIdentityProperty(_ofType ?? _originalQueryType);
-            if (identityProperty != null && identityProperty.Name == field)
+            if (identityProperty != null && identityProperty.Name == field && _isMapReduce == false)
             {
                 FieldsToFetch.Add(new FieldToFetch(Constants.Documents.Indexing.Fields.DocumentIdFieldName, alias));
                 return;
@@ -3150,7 +3150,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             var (fields, projections) = GetProjections();
 
-            return documentQuery.SelectFields<T>(new QueryData(fields, projections, _fromAlias, null, _loadTokens));
+            return documentQuery.SelectFields<T>(new QueryData(fields, projections, _fromAlias, null, _loadTokens, isMapReduce: _isMapReduce));
         }
 
         /// <summary>
@@ -3237,7 +3237,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             var (fields, projections) = GetProjections();
 
-            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(new QueryData(fields, projections, _fromAlias, _declareToken, _loadTokens, _declareToken != null || _jsSelectBody != null));
+            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(new QueryData(fields, projections, _fromAlias, _declareToken, _loadTokens, _declareToken != null || _jsSelectBody != null, isMapReduce: _isMapReduce));
 
             var executeQuery = GetQueryResult(finalQuery);
 

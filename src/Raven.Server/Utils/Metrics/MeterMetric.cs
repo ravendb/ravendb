@@ -75,6 +75,9 @@ namespace Raven.Server.Utils.Metrics
 
         public void Mark(long val)
         {
+            if (val == 0)
+                return;
+
             Interlocked.Add(ref _count, val);
         }
 
@@ -84,6 +87,9 @@ namespace Raven.Server.Utils.Metrics
         /// </summary>
         public void MarkSingleThreaded(long val)
         {
+            if (val == 0)
+                return;
+
             _count += val;
         }
 
@@ -103,7 +109,6 @@ namespace Raven.Server.Utils.Metrics
         {
             Mark(1L);
         }
-
 
         public DynamicJsonValue CreateMeterData(bool allResults = false, bool filterEmpty = true)
         {

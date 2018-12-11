@@ -4,7 +4,6 @@ using System.Diagnostics;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
-using Jint.Native.Json;
 using Jint.Native.Object;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
@@ -19,14 +18,15 @@ namespace Raven.Server.Documents.Patch
     public class BlittableObjectInstance : ObjectInstance
     {
         public bool Changed;
-        private readonly BlittableObjectInstance _parent;        
+        private readonly BlittableObjectInstance _parent;
+        private bool _put;
 
         public readonly DateTime? LastModified;
         public readonly string ChangeVector;
         public readonly BlittableJsonReaderObject Blittable;
         public readonly string DocumentId;
         public HashSet<string> Deletes;
-        public Dictionary<string, BlittableObjectProperty > OwnValues = 
+        public Dictionary<string, BlittableObjectProperty> OwnValues = 
             new Dictionary<string, BlittableObjectProperty>();
         public Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes;
         public Lucene.Net.Documents.Document LuceneDocument;
@@ -40,8 +40,7 @@ namespace Raven.Server.Documents.Patch
 
         public ObjectInstance GetOrCreate(string key)
         {
-            BlittableObjectProperty property;
-            if (OwnValues.TryGetValue(key, out property) == false)
+            if (OwnValues.TryGetValue(key, out var property) == false)
             {
                 property = GenerateProperty(key);
 
@@ -269,6 +268,7 @@ namespace Raven.Server.Documents.Patch
             ChangeVector = changeVector;
             Blittable = blittable;
             DocumentId = docId;
+            Prototype = engine.Object.PrototypeObject;
         }
 
 
@@ -285,16 +285,35 @@ namespace Raven.Server.Documents.Patch
         public override PropertyDescriptor GetOwnProperty(string propertyName)
         {
             if (OwnValues.TryGetValue(propertyName, out var val))
-            {
                 return val;
-            }
-                
+
             Deletes?.Remove(propertyName);
 
             val = new BlittableObjectProperty(this, propertyName);
-            
+
+            if (val.Value.IsUndefined() && 
+                DocumentId == null &&
+                _put == false)
+            {
+                return PropertyDescriptor.Undefined;
+            }
+
             OwnValues[propertyName] = val;
+
             return val;
+        }
+
+        public override void Put(string propertyName, JsValue value, bool throwOnError)
+        {
+            _put = true;
+            try
+            {
+                base.Put(propertyName, value, throwOnError);
+            }
+            finally
+            {
+                _put = false;
+            }
         }
 
         public override IEnumerable<KeyValuePair<string, PropertyDescriptor>> GetOwnProperties()

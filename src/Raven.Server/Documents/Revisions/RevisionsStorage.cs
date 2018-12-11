@@ -255,41 +255,61 @@ namespace Raven.Server.Documents.Revisions
             out RevisionsCollectionConfiguration configuration)
         {
             configuration = GetRevisionsConfiguration(collectionName.Name);
-            if (configuration.Disabled)
+
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
+                return false; // no need, since we put the revision directly from replication
+
+            if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
             {
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByCountersUpdate))
+                    return false;
+
+                if (configuration == ConflictConfiguration.Default || configuration.Disabled)
+                    return false;
+            }
+
+            if (documentFlags.Contain(DocumentFlags.Resolved))
+                return true;
+
+            if (Configuration == null)
+            {
+                documentFlags = documentFlags.Strip(DocumentFlags.HasRevisions);
                 return false;
             }
 
-            try
+            if (configuration.Disabled)
             {
-                if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) != NonPersistentDocumentFlags.FromSmuggler)
-                    return true;
-                if (existingDocument == null)
-                {
-                    if ((nonPersistentFlags & NonPersistentDocumentFlags.SkipRevisionCreation) == NonPersistentDocumentFlags.SkipRevisionCreation)
-                    {
-                        // Smuggler is configured to avoid creating new revisions during import
-                        return false;
-                    }
+                documentFlags = documentFlags.Strip(DocumentFlags.HasRevisions);
+                return false;
+            }
 
-                    // we are not going to create a revision if it's an import from v3
-                    // (since this import is going to import revisions as well)
-                    return (nonPersistentFlags & NonPersistentDocumentFlags.LegacyHasRevisions) != NonPersistentDocumentFlags.LegacyHasRevisions;
+            if (existingDocument == null)
+            {
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.SkipRevisionCreation))
+                {
+                    // Smuggler is configured to avoid creating new revisions during import
+                    return false;
                 }
 
-                // compare the contents of the existing and the new document
-                if (DocumentCompare.IsEqualTo(existingDocument, document, false) != DocumentCompareResult.NotEqual)
+                // we are not going to create a revision if it's an import from v3
+                // (since this import is going to import revisions as well)
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.LegacyHasRevisions))
                 {
-                    // no need to create a new revision, both documents have identical content
+                    documentFlags |= DocumentFlags.HasRevisions;
                     return false;
                 }
 
                 return true;
             }
-            finally
+
+            // compare the contents of the existing and the new document
+            if (DocumentCompare.IsEqualTo(existingDocument, document, false) != DocumentCompareResult.NotEqual)
             {
-                documentFlags |= DocumentFlags.HasRevisions;
+                // no need to create a new revision, both documents have identical content
+                return false;
             }
+
+            return true;
         }
 
         public void Put(DocumentsOperationContext context, string id, BlittableJsonReaderObject document,
@@ -308,8 +328,6 @@ namespace Raven.Server.Documents.Revisions
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
-                var fromReplication = (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) == NonPersistentDocumentFlags.FromReplication;
-
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
                 // We want the revision's attachments to have a lower etag than the revision itself
@@ -353,7 +371,7 @@ namespace Raven.Server.Documents.Revisions
                     document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 }
 
-                if (fromReplication)
+                if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                 {
                     void PutFromRevisionIfChangeVectorIsGreater()
                     {

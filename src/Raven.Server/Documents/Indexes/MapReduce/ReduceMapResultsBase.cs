@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     writer.IndexDocument(reduceKeyHash, output, stats, indexContext);
                 }
 
-                _index.ReducesPerSec.Mark(numberOfEntriesToReduce);
+                _index.ReducesPerSec.MarkSingleThreaded(numberOfEntriesToReduce);
                 _metrics.MapReduceIndexes.ReducedPerSec.Mark(numberOfEntriesToReduce);
 
                 stats.RecordReduceSuccesses(numberOfEntriesToReduce);
@@ -306,6 +306,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                 parentPagesToAggregate.Add(parentPage);
                             }
 
+                            _index.ReducesPerSec.MarkSingleThreaded(leafPage.NumberOfEntries);
                             _metrics.MapReduceIndexes.ReducedPerSec.Mark(leafPage.NumberOfEntries);
 
                             stats.RecordReduceSuccesses(leafPage.NumberOfEntries);
@@ -375,6 +376,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                 StoreAggregationResult(page, table, result);
                             }
 
+                            _index.ReducesPerSec.MarkSingleThreaded(page.NumberOfEntries);
                             _metrics.MapReduceIndexes.ReducedPerSec.Mark(page.NumberOfEntries);
 
                             stats.RecordReduceSuccesses(page.NumberOfEntries);

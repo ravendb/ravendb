@@ -65,6 +65,8 @@ namespace Raven.Server.Documents.ETL
 
         public abstract void NotifyAboutWork(DocumentChange documentChange, CounterChange counterChange);
 
+        public abstract bool ShouldTrackCounters();
+
         public abstract EtlPerformanceStats[] GetPerformanceStats();
 
         public string TombstoneCleanerIdentifier => $"ETL '{Name}'";
@@ -147,8 +149,6 @@ namespace Raven.Server.Documents.ETL
         protected abstract IEnumerator<TExtracted> ConvertCountersEnumerator(IEnumerator<CounterDetail> counters, string collection);
 
         protected abstract bool ShouldTrackAttachmentTombstones();
-
-        protected abstract bool ShouldTrackCounters();
 
         public virtual IEnumerable<TExtracted> Extract(DocumentsOperationContext context, long fromEtag, EtlItemType type, EtlStatsScope stats)
         {
@@ -478,7 +478,7 @@ namespace Raven.Server.Documents.ETL
 
         protected void UpdateMetrics(DateTime startTime, EtlStatsScope stats)
         {
-            Metrics.BatchSizeMeter.Mark(stats.NumberOfExtractedItems.Sum(x => x.Value));
+            Metrics.BatchSizeMeter.MarkSingleThreaded(stats.NumberOfExtractedItems.Sum(x => x.Value));
         }
 
         public override void Reset()
@@ -493,7 +493,10 @@ namespace Raven.Server.Documents.ETL
 
         public override void NotifyAboutWork(DocumentChange documentChange, CounterChange counterChange)
         {
-            if (Transformation.ApplyToAllDocuments || (documentChange != null && _collections.Contains(documentChange.CollectionName)) || counterChange != null)
+            if (documentChange != null && (Transformation.ApplyToAllDocuments || _collections.Contains(documentChange.CollectionName)))
+                _waitForChanges.Set();
+
+            if (counterChange != null && ShouldTrackCounters())
                 _waitForChanges.Set();
         }
 

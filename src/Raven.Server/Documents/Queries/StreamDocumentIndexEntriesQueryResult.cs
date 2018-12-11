@@ -10,19 +10,19 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class StreamDocumentQueryResult : StreamQueryResult<Document>
+    public class StreamDocumentIndexEntriesQueryResult : StreamQueryResult<BlittableJsonReaderObject>
     {
-        public override void AddResult(Document result)
+        public override void AddResult(BlittableJsonReaderObject result)
         {
             if (HasAnyWrites() == false)
                 StartResponseIfNeeded();
 
-            using (result.Data)
+            using (result)
                 GetWriter().AddResult(result);
             GetToken().Delay();
         }
 
-        public StreamDocumentQueryResult(HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token) : base(response, writer, token)
+        public StreamDocumentIndexEntriesQueryResult(HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer, OperationCancelToken token) : base(response, writer, token)
         {
             if (response.HasStarted)
                 throw new InvalidOperationException("You cannot start streaming because response has already started.");

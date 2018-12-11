@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class StreamJsonDocumentQueryResultWriter : IStreamDocumentQueryResultWriter
+    public class StreamJsonDocumentQueryResultWriter : IStreamQueryResultWriter<Document>
     {
         private BlittableJsonTextWriter _writer;
         private HttpResponse _response;

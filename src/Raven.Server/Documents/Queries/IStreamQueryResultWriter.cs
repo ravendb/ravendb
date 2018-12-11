@@ -1,11 +1,8 @@
 ﻿using System;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {
-    public interface IStreamDocumentQueryResultWriter : IStreamQueryResultWriter<Document>
-    {
-    }
-
     public interface IStreamQueryResultWriter<T> : IDisposable
     {
         void StartResponse();

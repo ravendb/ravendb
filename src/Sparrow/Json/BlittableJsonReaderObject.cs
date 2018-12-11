@@ -451,6 +451,31 @@ namespace Sparrow.Json
             return TryGetMember(new StringSegment(name), out result);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool TryGetObjectByIndex(int index, BlittableJsonToken expectedToken, out object result)
+        {
+            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
+
+            GetPropertyTypeAndPosition(index, metadataSize, out var token, out var position, out var propertyId);
+            if (CompareTokens(expectedToken, token) == false)
+            {
+                result = null;
+                return false;
+            }
+            result = GetObject(token, (int)(_objStart - _mem - position));
+            return true;
+        }
+
+        private bool CompareTokens(BlittableJsonToken firstToken, BlittableJsonToken secondToken)
+        {
+            var firstClearedToken = (firstToken & TypesMask);
+            var secondClearedToken = (secondToken & TypesMask);
+            if (firstClearedToken == secondClearedToken)
+                return true;
+            
+            return (firstClearedToken == BlittableJsonToken.EmbeddedBlittable && secondClearedToken == BlittableJsonToken.StartObject 
+                    || firstClearedToken == BlittableJsonToken.StartObject && secondClearedToken == BlittableJsonToken.EmbeddedBlittable);
+        }
 
         public bool TryGetMember(StringSegment name, out object result)
         {
@@ -571,11 +596,17 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetPropertyIndex(StringSegment name)
         {
+            var comparer = _context.GetLazyStringForFieldWithCaching(name);
+            return GetPropertyIndex(comparer);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int GetPropertyIndex(LazyStringValue comparer)
+        {
             if (_propCount == 0)
                 goto NotFound;
 
             int min = 0, max = _propCount - 1;
-            var comparer = _context.GetLazyStringForFieldWithCaching(name);
 
             long currentOffsetSize = _currentOffsetSize;
             long currentPropertyIdSize = _currentPropertyIdSize;
@@ -1104,46 +1135,31 @@ namespace Sparrow.Json
             if (_propCount != other._propCount)
                 return false;
 
-            if (_propCount == 0)
-                return true;
-
-            if (_isRoot == false && other._isRoot == false)
-            {
-                var buffer = new PropertiesInsertionBuffer();
-
-                GetPropertiesByInsertionOrder(buffer);
-
-                var dataStart = _objStart - buffer.Offsets[0];
-                var dataSize = _objStart - dataStart;
-
-                other.GetPropertiesByInsertionOrder(buffer);
-
-                var otherDataStart = other._objStart - buffer.Offsets[0];
-                var otherDataSize = other._objStart - otherDataStart;
-
-                if (dataSize == otherDataSize && dataSize < int.MaxValue)
-                {
-                    if (Memory.CompareInline(dataStart, otherDataStart, (int)dataSize) == 0)
-                    {
-                        // data of property values is the same, we also need to check names of properties
-                        // they as are defined in root so it requires separate check
-
-                        return HasSamePropertyNames(other);
-                    }
-                }
-            }
-            else if (_isRoot && other._isRoot)
+            if (_isRoot && other._isRoot)
             {
                 if (_size == other.Size && Memory.CompareInline(_mem, other._mem, _size) == 0)
                     return true;
             }
 
-            foreach (var propertyName in GetPropertyNames())
+            var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
+
+            for (var i = 0; i < _propCount; i++)
             {
-                if (other.TryGetMember(propertyName, out object result) == false)
+                GetPropertyTypeAndPosition(i, metadataSize, out var token, out var position, out var id);
+
+                var propertyName = GetPropertyName(id);
+
+                var otherId = other.GetPropertyIndex(propertyName);
+
+                if (otherId == -1)
                     return false;
 
-                var current = this[propertyName];
+                if (other.TryGetObjectByIndex(otherId, token, out var result) == false) 
+                    return false;
+
+                var thisId = GetPropertyIndex(propertyName);
+
+                TryGetObjectByIndex(thisId, token, out var current);
 
                 if (current == null && result == null)
                     continue;
@@ -1158,38 +1174,6 @@ namespace Sparrow.Json
         public override int GetHashCode()
         {
             return _propCount;
-        }
-
-        private bool HasSamePropertyNames(BlittableJsonReaderObject other)
-        {
-            var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
-
-            for (int i = 0; i < _propCount; i++)
-            {
-                GetPropertyTypeAndPosition(i, metadataSize, out var type, out _, out var id);
-
-                var propName = GetPropertyName(id);
-
-                if (other.Contains(propName) == false)
-                    return false;
-
-                var token = type & TypesMask;
-
-                if (token != BlittableJsonToken.StartObject && token != BlittableJsonToken.EmbeddedBlittable)
-                    continue;
-
-                if (this[propName] is BlittableJsonReaderObject current && other[propName] is BlittableJsonReaderObject otherCurrent)
-                {
-                    if (current.HasSamePropertyNames(otherCurrent) == false)
-                        return false;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-
-            return true;
         }
 
         [Conditional("DEBUG")]

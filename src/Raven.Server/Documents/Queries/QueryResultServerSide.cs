@@ -37,8 +37,4 @@ namespace Raven.Server.Documents.Queries
 
         public abstract Dictionary<string, List<CounterDetail>> GetCounterIncludes();
     }
-
-    public abstract class QueryResultServerSide : QueryResultServerSide<Document>
-    {
-    }
 }

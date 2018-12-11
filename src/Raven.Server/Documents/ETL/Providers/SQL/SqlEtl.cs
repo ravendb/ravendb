@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return false;
         }
 
-        protected override bool ShouldTrackCounters()
+        public override bool ShouldTrackCounters()
         {
             return false;
         }

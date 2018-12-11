@@ -102,7 +102,13 @@ namespace Raven.Server.Documents.Queries
             return await ExecuteQuery(res, query, documentsContext, existingResultEtag, token);
         }
 
-        private async Task<TResult> ExecuteQuery<TResult>(TResult final,IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token) where TResult : QueryResultServerSide
+        public override Task ExecuteStreamIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer,
+            OperationCancelToken token)
+        {
+            throw new NotImplementedException();
+        }
+
+        private async Task<TResult> ExecuteQuery<TResult>(TResult final,IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token) where TResult : QueryResultServerSide<Document>
         {
             if (Database.ServerStore.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable)
                 FeaturesAvailabilityException.Throw("Graph Queries");
@@ -215,7 +221,7 @@ namespace Raven.Server.Documents.Queries
 
         private static void HandleResultsWithoutSelect<TResult>(
             DocumentsOperationContext documentsContext,
-            List<Match> matchResults, TResult final) where TResult : QueryResultServerSide
+            List<Match> matchResults, TResult final) where TResult : QueryResultServerSide<Document>
         {
             foreach (var match in matchResults)
             {
@@ -239,8 +245,8 @@ namespace Raven.Server.Documents.Queries
                 final.AddResult(result);
             }
         }
-
-        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer, OperationCancelToken token)
+                
+        public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamQueryResultWriter<Document> writer, OperationCancelToken token)
         {
             var result = new StreamDocumentQueryResult(response, writer, token)
             {
