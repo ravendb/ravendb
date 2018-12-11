@@ -669,11 +669,10 @@ namespace Voron.Data.Tables
 
         public FixedSizeTree GetFixedSizeTree(TableSchema.FixedSizeSchemaIndexDef indexDef)
         {
-            var tableTree = _tx.ReadTree(Name);
-
             if (indexDef.IsGlobal)
                 return _tx.GetGlobalFixedSizeTree(indexDef.Name, sizeof(long), isIndexTree: true, newPageAllocator: _globalPageAllocator);
-
+            
+            var tableTree = _tx.ReadTree(Name);
             return GetFixedSizeTree(tableTree, indexDef.Name, sizeof(long), isGlobal: false, isIndexTree: true);
         }
 
