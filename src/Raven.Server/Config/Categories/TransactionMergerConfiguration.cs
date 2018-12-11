@@ -24,8 +24,8 @@ namespace Raven.Server.Config.Categories
                 memoryInfo.TotalPhysicalMemory / 10);
         }
 
-        [Description("EXPERT: Time to wait for the previous async commit before checking for the tx size")]
-        [DefaultValue(1000)]
+        [Description("EXPERT: Time to wait after the previous async commit is completed before checking for the tx size")]
+        [DefaultValue(0)]
         [TimeUnit(TimeUnit.Milliseconds)]
         [ConfigurationEntry("TransactionMerger.MaxTimeToWaitForPreviousTxInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting MaxTimeToWaitForPreviousTx { get; set; }

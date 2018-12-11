@@ -261,9 +261,7 @@ namespace Raven.Server
                 AbsoluteUri = $"{context.Request.Scheme}://{context.Request.Host}",
                 DatabaseName = database ?? "N/A",
                 CustomInfo = twTuple.CustomInfo,
-                Type = twTuple.Type,
-                InnerRequestsCount = 0,
-                QueryTimings = null
+                Type = twTuple.Type
             };
 
             TrafficWatchManager.DispatchMessage(twn);
@@ -301,7 +299,8 @@ namespace Raven.Server
 
             if (exception is LowMemoryException ||
                 exception is OutOfMemoryException ||
-                exception is VoronUnrecoverableErrorException)
+                exception is VoronUnrecoverableErrorException ||
+                exception is DiskFullException)
             {
                 response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
                 return;
