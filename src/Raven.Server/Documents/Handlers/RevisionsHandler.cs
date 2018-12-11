@@ -13,6 +13,7 @@ using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions.Documents.Revisions;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
@@ -78,6 +79,31 @@ namespace Raven.Server.Documents.Handlers
                     GetRevisions(context, metadataOnly);
 
                 return Task.CompletedTask;
+            }
+        }
+
+        [RavenAction("/databases/*/revisions/revert", "GET", AuthorizationStatus.ValidUser)]
+        public async Task Revert()
+        {
+            var time = GetDateTimeQueryString("point-in-time");
+            var window = GetTimeSpanQueryString("window", required: false) ?? TimeSpan.FromHours(48);
+
+            var operationId = GetLongQueryString("operationId", required: false) ?? Database.Operations.GetNextOperationId();
+            var token = CreateOperationToken();
+
+            try
+            {
+                await Database.Operations.AddOperation(
+                    Database,
+                    $"Revert database '{Database.Name}' to {time}.",
+                    Operations.Operations.OperationType.DatabaseRevert,
+                    onProgress => Task.Run(() => Database.DocumentsStorage.RevisionsStorage.RevertRevisions(time.Value, window, onProgress), token.Token), 
+                    operationId, 
+                    token: token);
+            }
+            catch (Exception)
+            {
+                HttpContext.Abort();
             }
         }
 
@@ -168,7 +194,7 @@ namespace Raven.Server.Documents.Handlers
             var sw = Stopwatch.StartNew();
 
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-            var before = GetDateTimeQueryString("before");
+            var before = GetDateTimeQueryString("before", required: false);
             var start = GetStart();
             var pageSize = GetPageSize();
 

@@ -23,7 +23,8 @@ namespace Raven.Server.Documents
         Conflicted = 0x400,
         HasCounters = 0x800,
 
-        FromClusterTransaction = 0x1000
+        FromClusterTransaction = 0x1000,
+        Reverted = 0x2000
     }
 
     [Flags]
