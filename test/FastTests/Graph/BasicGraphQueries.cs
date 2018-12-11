@@ -281,6 +281,28 @@ Limit 1,1
         }
 
         [Fact]
+        public void CanIncludeFromJavaScriptInGraphQueries()
+        {
+            var rawQuery =
+                        @"
+declare function includeProducts(doc)
+{
+    var lines = doc.Lines; // avoid eval
+    var length = lines.length; // avoid eval
+    for (let i=0; i< length; i++)
+    {
+        include(lines[i].Product);
+    }
+    return doc;
+}
+
+match (Orders as o where id() = 'orders/821-A')
+select  includeProducts(o)
+";
+            TestIncludeQuery(rawQuery);
+        }
+
+        [Fact]
         public void CanIncludeInGraphQueries()
         {
             var rawQuery =
@@ -288,6 +310,11 @@ Limit 1,1
 match (Orders where id() = 'orders/821-A')
 include Lines.Product
 ";
+            TestIncludeQuery(rawQuery);
+        }
+
+        private void TestIncludeQuery(string rawQuery)
+        {
             using (var store = GetDocumentStore())
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
@@ -298,7 +325,7 @@ include Lines.Product
                 {
                     var res = session.Advanced.RawQuery<Order>(rawQuery).ToList();
                     var numberOfRequests = session.Advanced.NumberOfRequests;
-                    var products = session.Load<Product>(new[] {"products/28-A", "products/43-A", "products/77-A"});
+                    var products = session.Load<Product>(new[] { "products/28-A", "products/43-A", "products/77-A" });
                     Assert.Equal(products.Count, 3);
                     Assert.True(products.ContainsKey("products/28-A"));
                     Assert.True(products.ContainsKey("products/43-A"));
