@@ -48,7 +48,7 @@ namespace Raven.Server.Documents
             bool done = false;
             string compactDirectory = null;
             string tmpDirectory = null;
-
+            string compactTempDirectory = null;
             try
             {
                 var documentDatabase = await _serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(_database);
@@ -69,7 +69,19 @@ namespace Raven.Server.Documents
 
                     IOExtensions.DeleteDirectory(compactDirectory);
                     IOExtensions.DeleteDirectory(tmpDirectory);
+
                     configuration.Core.DataDirectory = new PathSetting(compactDirectory);
+
+                    if (configuration.Storage.TempPath != null)
+                    {
+                        compactTempDirectory = configuration.Storage.TempPath.FullPath + "-temp-compacting";
+
+                        EnsureDirectoriesPermission(compactTempDirectory);
+                        IOExtensions.DeleteDirectory(compactTempDirectory);
+
+                        configuration.Storage.TempPath = new PathSetting(compactTempDirectory);
+                    }
+
                     using (var dst = DocumentsStorage.GetStorageEnvironmentOptionsFromConfiguration(configuration, new IoChangesNotifications(),
                         new CatastrophicFailureNotification((envId, path, exception) => throw new InvalidOperationException($"Failed to compact database {_database} ({path})", exception))))
                     {
@@ -110,6 +122,9 @@ namespace Raven.Server.Documents
                 if (done)
                 {
                     IOExtensions.DeleteDirectory(tmpDirectory);
+
+                    if (compactTempDirectory != null)
+                        IOExtensions.DeleteDirectory(compactTempDirectory);
                 }
                 _isCompactionInProgress = false;
             }
