@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
@@ -301,6 +302,9 @@ namespace Raven.Server.Documents.Revisions
 
                 return true;
             }
+
+            if (documentFlags.Contain(DocumentFlags.Reverted))
+                return true; // we always want to create a new version for a reverted document
 
             // compare the contents of the existing and the new document
             if (DocumentCompare.IsEqualTo(existingDocument, document, false) != DocumentCompareResult.NotEqual)
@@ -692,10 +696,8 @@ namespace Raven.Server.Documents.Revisions
         {
             Debug.Assert(changeVector != null, "Change vector must be set");
 
-            if (flags.Contain(DocumentFlags.HasAttachments))
-            {
-                flags &= ~DocumentFlags.HasAttachments;
-            }
+            flags.Strip(DocumentFlags.HasAttachments);
+            flags |= DocumentFlags.HasRevisions;
 
             var fromReplication = nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication);
 
@@ -845,18 +847,260 @@ namespace Raven.Server.Documents.Revisions
                 var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
                 foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, 0))
                 {
-                    var document = TableValueToRevision(context, ref tvr.Result.Reader);
-                    if (document.LastModified > max)
+                    var lastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr.Result.Reader);
+                    if (lastModified > max)
                         continue;
+
                     if (result == null ||
-                        result.LastModified < document.LastModified)
+                        result.LastModified < lastModified)
                     {
-                        result = document;
+                        result = TableValueToRevision(context, ref tvr.Result.Reader);
                     }
                 }
                 return result;
             }
+        }
 
+        public Document GetRevisionBefore(DocumentsOperationContext context, string id, DateTime max, out bool foundAfter, out bool wasConflicted)
+        {
+            foundAfter = false;
+            wasConflicted = false;
+
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
+            using (GetLastKey(context, lowerId, out Slice lastKey))
+            {
+                // Here we assume a reasonable number of revisions and scan the entire history
+                // This is because we want to handle out of order revisions from multiple nodes so the local etag
+                // order is different than the last modified order
+                Document result = null;
+                Document prev = null;
+
+                var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+                foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, 0))
+                {
+                    var lastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr.Result.Reader);
+                    if (lastModified > max)
+                    {
+                        foundAfter = true;
+                        continue;
+                    }
+
+                    if (result == null)
+                    {
+                        result = TableValueToRevision(context, ref tvr.Result.Reader);
+                        prev = result;
+                        continue;
+                    }
+
+                    if (result.LastModified < lastModified)
+                    {
+                        prev = result;
+                        result = TableValueToRevision(context, ref tvr.Result.Reader);
+                        continue;
+                    }
+
+                    if (prev.LastModified < lastModified)
+                    {
+                        prev = TableValueToRevision(context, ref tvr.Result.Reader);
+                    }
+                }
+
+                if (prev != result)
+                {
+                    // put at 8:50
+                    // conflict at 9:10
+                    // resolved at 9:30
+
+                    // revert to 9:00 should work
+                    // revert to 9:20 should fail
+
+                    if (prev.Flags.Contain(DocumentFlags.Conflicted) && result.Flags.Contain(DocumentFlags.Conflicted))
+                    {
+                        // found two successive conflicted revisions, which means we were in a conflicted state.
+                        wasConflicted = true;
+                    }
+                }
+
+                return result;
+            }
+        }
+
+
+        public class RevertProgress : IOperationProgress
+        {
+            public int ScannedRevisions;
+            public int RevertedDocuments;
+            public int ScannedDocuments;
+            public Dictionary<string, string> Warnings = new Dictionary<string, string>();
+
+            public void Warn(string id, string message)
+            {
+                Warnings[id] = message;
+            }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(ScannedRevisions)] = ScannedRevisions,
+                    [nameof(ScannedDocuments)] = ScannedDocuments,
+                    [nameof(RevertedDocuments)] = RevertedDocuments,
+                    [nameof(Warnings)] = DynamicJsonValue.Convert(Warnings)
+                };
+            }
+        }
+
+        public class RevertResult : IOperationResult
+        {
+            public RevertProgress Progress = new RevertProgress();
+            public string Message { get; }
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(Progress)] = Progress.ToJson(),
+                    [nameof(Message)] = Message,
+                    [nameof(ShouldPersist)] = ShouldPersist
+                };
+            }
+
+            public bool ShouldPersist { get; }
+        }
+
+        private const long SizeLimit = 32 * 1_024 * 1_024;
+
+        public IOperationResult RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgressAction = null)
+        {
+            var dateToBreak = before.Add(-window);
+
+            var list = new List<Document>();
+            var scannedIds = new HashSet<string>();
+            var result = new RevertResult();
+
+            var hasMore = true;
+            while (hasMore)
+            {
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
+                {
+                    hasMore = PrepareRevertedRevisions(writeCtx, before, dateToBreak ,result, list, scannedIds);
+                    WriteRevertedRevisions(list, writeCtx);
+                    onProgressAction?.Invoke(result.Progress);
+                    result.Progress.Warnings.Clear();
+                }
+            }
+
+            return result;
+        }
+
+        private void WriteRevertedRevisions(List<Document> list, DocumentsOperationContext context)
+        {
+            if (list.Count > 0)
+            {
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    foreach (var document in list)
+                    {
+                        if (document.Data != null)
+                        {
+                            _documentsStorage.Put(context, document.Id, null, document.Data, flags: DocumentFlags.Reverted);
+                        }
+                        else
+                        {
+                            using (DocumentIdWorker.GetSliceFromId(context, document.Id, out Slice lowerId))
+                            {
+                                var etag = _documentsStorage.GenerateNextEtag();
+                                var changeVector = _documentsStorage.ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, lowerId, etag);
+                                _documentsStorage.Delete(context, lowerId, document.Id, null, changeVector: changeVector, documentFlags: DocumentFlags.Reverted);
+                            }
+                        }
+                    }
+
+                    tx.Commit();
+                }
+
+                list.Clear();
+            }
+        }
+
+        private bool PrepareRevertedRevisions(DocumentsOperationContext writeCtx, DateTime before, DateTime dateToBreak, RevertResult result, List<Document> list, HashSet<string> scannedIds)
+        {
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                var revisions = new Table(RevisionsSchema, readCtx.Transaction.InnerTransaction);
+                foreach (var tvr in revisions.SeekBackwardFromLast(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice],
+                    result.Progress.ScannedRevisions))
+                {
+                    result.Progress.ScannedRevisions++;
+                    var id = TableValueToString(readCtx, (int)RevisionsTable.LowerId, ref tvr.Reader);
+
+                    if (scannedIds.Add(id) == false)
+                        continue;
+
+                    result.Progress.ScannedDocuments++;
+
+                    if (_documentsStorage.ConflictsStorage.HasConflictsFor(readCtx, id))
+                    {
+                        result.Progress.Warn(id, "The document is conflicted and wouldn't be reverted.");
+                        continue;
+                    } 
+
+                    var date = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr.Reader);
+                    if (date < dateToBreak)
+                        break;
+
+                    RestoreRevision(readCtx, writeCtx, id, before, result ,list);
+                    if (readCtx.AllocatedMemory + writeCtx.AllocatedMemory > SizeLimit)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+
+        private void RestoreRevision(DocumentsOperationContext readCtx, DocumentsOperationContext writeCtx, LazyStringValue id, DateTime before, RevertResult result, List<Document> list)
+        {
+            var revision = GetRevisionBefore(readCtx, id, before, out var foundAfter, out var wasConflicted);
+
+            if (foundAfter == false)
+                return; // no changes after the requested time or no revision was found
+
+            if (revision == null)
+            {
+                result.Progress.Warn(id, $"The oldest revision is after the '{before}'.");
+                return;
+            }
+
+            if (wasConflicted)
+            {
+                result.Progress.Warn(id, $"Skip revert, since the document was conflicted during '{before}'.");
+                return;
+            }
+
+            var collection = CollectionName.GetCollectionName(revision.Data);
+            var configuration = GetRevisionsConfiguration(collection);
+            if (configuration == _emptyConfiguration)
+            {
+                result.Progress.Warn(id, $"Revision is defined for '{collection}' collection.");
+                return;
+            }
+
+            if (configuration.Disabled)
+            {
+                result.Progress.Warn(id, $"Revision are disabled for '{collection}' collection.");
+                return;
+            }
+           
+            result.Progress.RevertedDocuments++;
+
+            revision.Data = revision.Flags.Contain(DocumentFlags.DeleteRevision) ? null : revision.Data?.Clone(writeCtx);
+            revision.LowerId = writeCtx.GetLazyString(revision.LowerId);
+            revision.Id = writeCtx.GetLazyString(revision.Id);
+
+            list.Add(revision);
         }
 
         public (Document[] Revisions, long Count) GetRevisions(DocumentsOperationContext context, string id, int start, int take)

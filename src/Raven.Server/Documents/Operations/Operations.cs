@@ -411,7 +411,10 @@ namespace Raven.Server.Documents.Operations
             MigrationFromSql,
 
             [Description("Database Migration")]
-            DatabaseMigration
+            DatabaseMigration,
+
+            [Description("Database Revert")]
+            DatabaseRevert
         }
     }
 }

@@ -1131,7 +1131,7 @@ namespace Raven.Server.Documents
                         (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
                     {
                         revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector ?? local.Tombstone.ChangeVector,
-                            modifiedTicks, nonPersistentFlags, flags);
+                            modifiedTicks, nonPersistentFlags, documentFlags);
                     }
                 }
 
@@ -1216,7 +1216,7 @@ namespace Raven.Server.Documents
                     if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
                         (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
                     {
-                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, doc.NonPersistentFlags, flags);
+                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, doc.NonPersistentFlags, documentFlags);
                     }
                 }
 
