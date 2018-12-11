@@ -194,9 +194,9 @@ namespace Raven.Server.Utils.Cpu
                 HandleError($"Can't read {propertyName} property from : {Environment.NewLine + blittable}.");
                 return false;
             }
-            if (cpuUsage < 0 || cpuUsage > 100)
+            if (cpuUsage < 0)
             {
-                HandleError($"{nameof(ExtensionPointData.MachineCpuUsage)} should be between 0 to 100 : {Environment.NewLine + blittable}.");
+                HandleError($"{nameof(ExtensionPointData.MachineCpuUsage)} can't be negative : {Environment.NewLine + blittable}.");
                 return false;
             }
 
