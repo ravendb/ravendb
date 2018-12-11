@@ -62,12 +62,11 @@ namespace Raven.Client.Json
                 return @object;
             }
 
-            if (value is IEnumerable)
+            if (value is IEnumerable enumerable)
             {
-                var objectEnumerable = (IEnumerable)value;
                 var dja = new DynamicJsonArray();
 
-                foreach (var x in objectEnumerable)
+                foreach (var x in enumerable)
                 {
                     dja.Add(ToBlittableSupportedType(x, conventions, context));
                 }

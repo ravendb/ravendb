@@ -252,10 +252,7 @@ namespace Raven.Server.Utils
             if (value is IEnumerable enumerable)
             {
                 if (ShouldTreatAsEnumerable(enumerable))
-                {
-                    var objectEnumerable = (IEnumerable)value;
-                    return EnumerableToJsonArray(flattenArrays ? Flatten(objectEnumerable) : objectEnumerable, root, flattenArrays, recursiveLevel, engine, context);
-                }
+                    return EnumerableToJsonArray(flattenArrays ? Flatten(enumerable) : enumerable, root, flattenArrays, recursiveLevel, engine, context);
             }
 
             var inner = new DynamicJsonValue();
