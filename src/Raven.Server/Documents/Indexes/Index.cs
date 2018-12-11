@@ -2986,6 +2986,8 @@ namespace Raven.Server.Documents.Indexes
 
                 _isCompactionInProgress = true;
                 PathSetting compactPath = null;
+                PathSetting tempPath = null;
+
 
                 try
                 {
@@ -2995,15 +2997,16 @@ namespace Raven.Server.Documents.Indexes
                     {
                         var environmentOptions =
                                                 (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)storageEnvironmentOptions;
-                        var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath.FullPath, null, null, DocumentDatabase.IoChanges,
+                        var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath.FullPath, environmentOptions.TempPath?.FullPath, null, DocumentDatabase.IoChanges,
                             DocumentDatabase.CatastrophicFailureNotification);
 
                         InitializeOptions(srcOptions, DocumentDatabase, Name, schemaUpgrader: false);
 
                         compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Compact");
+                        tempPath = Configuration.TempPath?.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Temp_Compact");
 
                         using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
-                            StorageEnvironmentOptions.ForPath(compactPath.FullPath, null, null, DocumentDatabase.IoChanges,
+                            StorageEnvironmentOptions.ForPath(compactPath.FullPath, tempPath?.FullPath, null, DocumentDatabase.IoChanges,
                                 DocumentDatabase.CatastrophicFailureNotification))
                         {
                             InitializeOptions(compactOptions, DocumentDatabase, Name, schemaUpgrader: false);
@@ -3025,6 +3028,9 @@ namespace Raven.Server.Documents.Indexes
 
                         IOExtensions.DeleteDirectory(environmentOptions.BasePath.FullPath);
                         IOExtensions.MoveDirectory(compactPath.FullPath, environmentOptions.BasePath.FullPath);
+
+                        if (tempPath != null)
+                            IOExtensions.DeleteDirectory(tempPath.FullPath);
                     }
 
                     result.SizeAfterCompactionInMb = CalculateIndexStorageSize().GetValue(SizeUnit.Megabytes);
