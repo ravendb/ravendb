@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -127,6 +128,26 @@ namespace Raven.Server.Documents.ETL.Handlers
                     }
                 }
             }
+        }
+
+        [RavenAction("/databases/*/etl/progress", "GET", AuthorizationStatus.ValidUser)]
+        public Task Progress()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (context.OpenReadTransaction())
+            {
+                var performance = GetProcessesToReportOn().Select(x => new EtlTaskProgress
+                {
+                    TaskName = x.Key,
+                    EtlType = x.Value.First().EtlType,
+                    ProcessesProgress = x.Value.Select(y => y.GetProgress(context)).ToArray()
+                }).ToArray();
+
+                writer.WriteEtlTaskProgress(context, performance);
+            }
+
+            return Task.CompletedTask;
         }
 
         private Dictionary<string, List<EtlProcess>> GetProcessesToReportOn()
