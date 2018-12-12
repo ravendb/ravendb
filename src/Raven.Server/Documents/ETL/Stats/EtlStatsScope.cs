@@ -46,9 +46,12 @@ namespace Raven.Server.Documents.ETL.Stats
             _stats.NumberOfExtractedItems[itemType]++;
         }
 
-        public void RecordTransformedItem(EtlItemType itemType)
+        public void RecordTransformedItem(EtlItemType itemType, bool isTombstone)
         {
-            _stats.NumberOfTransformedItems[itemType]++;
+            if (isTombstone)
+                _stats.NumberOfTransformedTombstones[itemType]++;
+            else
+                _stats.NumberOfTransformedItems[itemType]++;
         }
 
         public void RecordLastExtractedEtag(long etag, EtlItemType type)
@@ -112,6 +115,11 @@ namespace Raven.Server.Documents.ETL.Stats
         public void RecordBatchCompleteReason(string reason)
         {
             _stats.BatchCompleteReason = reason;
+        }
+
+        public bool HasBatchCompleteReason()
+        {
+            return string.IsNullOrEmpty(_stats.BatchCompleteReason) == false;
         }
 
         public long GetLastTransformedOrFilteredEtag(EtlItemType type)

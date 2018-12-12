@@ -185,9 +185,6 @@ namespace Raven.Server.Documents.ETL
                     continue;
                 }
 
-                if (config.Disabled)
-                    continue;
-
                 if (ValidateConfiguration(config, uniqueNames) == false)
                     continue;
 
@@ -198,9 +195,6 @@ namespace Raven.Server.Documents.ETL
 
                 foreach (var transform in config.Transforms)
                 {
-                    if (transform.Disabled)
-                        continue;
-
                     EtlProcess process = null;
 
                     if (sqlConfig != null)

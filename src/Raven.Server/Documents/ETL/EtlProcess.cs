@@ -145,6 +145,8 @@ namespace Raven.Server.Documents.ETL
 
             if (transformation.ApplyToAllDocuments == false)
                 _collections = new HashSet<string>(Transformation.Collections, StringComparer.OrdinalIgnoreCase);
+
+            _lastProcessState = GetProcessState(Database, Configuration.Name, Transformation.Name);
         }
 
         protected CancellationToken CancellationToken => _cts.Token;
@@ -320,7 +322,7 @@ namespace Raven.Server.Documents.ETL
 
                             Statistics.TransformationSuccess();
 
-                            stats.RecordTransformedItem(item.Type);
+                            stats.RecordTransformedItem(item.Type, item.IsDelete);
                             stats.RecordLastTransformedEtag(item.Etag, item.Type);
                             stats.RecordChangeVector(item.ChangeVector);
 
@@ -362,7 +364,7 @@ namespace Raven.Server.Documents.ETL
                     }
                 }
 
-                if (batchStopped == false)
+                if (batchStopped == false && stats.HasBatchCompleteReason() == false)
                     stats.RecordBatchCompleteReason("No more items to process");
 
                 _testMode?.DebugOutput.AddRange(transformer.GetDebugOutput());
@@ -533,7 +535,7 @@ namespace Raven.Server.Documents.ETL
             if (_longRunningWork != null)
                 return;
 
-            if (Transformation.Disabled)
+            if (Transformation.Disabled || Configuration.Disabled)
                 return;
 
             var threadName = $"{Tag} process: {Name}";
@@ -1012,22 +1014,10 @@ namespace Raven.Server.Documents.ETL
             var result = new EtlProcessProgress
             {
                 TransformationName = TransformationName,
-                Disabled = Transformation.Disabled
+                Disabled = Transformation.Disabled || Configuration.Disabled,
+                AverageProcessedPerSecond = Metrics.GetProcessedPerSecondRate() ?? 0.0
             };
             
-            var performance = _lastStats?.ToPerformanceLiveStats();
-
-            result.AverageProcessedPerSecond = Metrics.GetProcessedPerSecondRate() ?? 0.0;
-
-            if (performance?.DurationInMs > 0)
-            {
-                var processedPerSecondInCurrentBatch = performance.NumberOfExtractedItems.Sum(x => x.Value) / (performance.DurationInMs / 1000);
-
-                result.AverageProcessedPerSecond = (result.AverageProcessedPerSecond + processedPerSecondInCurrentBatch) / 2;
-            }
-
-            var lastProcessedEtag = _lastProcessState.GetLastProcessedEtagForNode(_serverStore.NodeTag);
-
             List<string> collections;
 
             if (Transformation.ApplyToAllDocuments)
@@ -1047,6 +1037,8 @@ namespace Raven.Server.Documents.ETL
 
             long countersToProcess = 0;
             long totalCountersCount = 0;
+
+            var lastProcessedEtag = _lastProcessState.GetLastProcessedEtagForNode(_serverStore.NodeTag);
 
             foreach (var collection in collections)
             {
@@ -1084,7 +1076,40 @@ namespace Raven.Server.Documents.ETL
             result.NumberOfCounterTombstonesToProcess = countersTombstonesToProcess;
             result.TotalNumberOfCounterTombstones = totalCountersTombstonesCount;
 
-            result.LastProcessedEtag = Math.Max(lastProcessedEtag, performance?.GetHighestEtag() ?? 0);
+            result.Completed = (result.NumberOfDocumentsToProcess > 0 || result.NumberOfDocumentTombstonesToProcess > 0 ||
+                                result.NumberOfCountersToProcess > 0 || result.NumberOfCounterTombstonesToProcess > 0) == false;
+
+            var performance = _lastStats?.ToPerformanceLiveStats();
+
+            if (performance != null && performance.DurationInMs > 0)
+            {
+                var processedPerSecondInCurrentBatch = performance.NumberOfExtractedItems.Sum(x => x.Value) / (performance.DurationInMs / 1000);
+
+                result.AverageProcessedPerSecond = (result.AverageProcessedPerSecond + processedPerSecondInCurrentBatch) / 2;
+
+                if (result.NumberOfDocumentsToProcess > 0)
+                    result.NumberOfDocumentsToProcess -= performance.NumberOfTransformedItems[EtlItemType.Document];
+
+                if (result.NumberOfDocumentTombstonesToProcess > 0)
+                    result.NumberOfDocumentTombstonesToProcess -= performance.NumberOfTransformedTombstones[EtlItemType.Document];
+
+                if (result.NumberOfCountersToProcess > 0)
+                    result.NumberOfCountersToProcess -= performance.NumberOfTransformedItems[EtlItemType.Counter];
+
+                if (result.NumberOfCounterTombstonesToProcess > 0)
+                    result.NumberOfCounterTombstonesToProcess -= performance.NumberOfTransformedTombstones[EtlItemType.Counter];
+
+                result.Completed = (result.NumberOfDocumentsToProcess > 0 || result.NumberOfDocumentTombstonesToProcess > 0 ||
+                                    result.NumberOfCountersToProcess > 0 || result.NumberOfCounterTombstonesToProcess > 0) == false;
+
+                if (result.Completed && performance.Completed == null)
+                {
+                    // note the above calculations of items to process subtract _transformed_ items in current batch, they aren't loaded yet
+                    // in order to indicate that load phase is still in progress we're marking that it isn't completed yet
+
+                    result.Completed = performance.SuccessfullyLoaded ?? false;
+                }
+            }
 
             return result;
         }

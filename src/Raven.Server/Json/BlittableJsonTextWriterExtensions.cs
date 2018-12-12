@@ -116,11 +116,6 @@ namespace Raven.Server.Json
                     wp.WriteDouble(processProgress.AverageProcessedPerSecond);
                     wp.WriteComma();
 
-
-                    wp.WritePropertyName(nameof(processProgress.LastProcessedEtag));
-                    wp.WriteInteger(processProgress.LastProcessedEtag);
-                    wp.WriteComma();
-
                     wp.WritePropertyName(nameof(processProgress.NumberOfDocumentsToProcess));
                     wp.WriteInteger(processProgress.NumberOfDocumentsToProcess);
                     wp.WriteComma();

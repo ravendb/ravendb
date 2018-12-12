@@ -48,6 +48,7 @@ namespace Raven.Server.Documents.ETL.Stats
                 LastFilteredOutEtags = Stats.LastFilteredOutEtags,
                 NumberOfExtractedItems = Stats.NumberOfExtractedItems,
                 NumberOfTransformedItems = Stats.NumberOfTransformedItems,
+                NumberOfTransformedTombstones = Stats.NumberOfTransformedTombstones,
                 TransformationErrorCount = Scope.TransformationErrorCount,
                 SuccessfullyLoaded = Stats.SuccessfullyLoaded,
                 BatchCompleteReason = Stats.BatchCompleteReason
@@ -79,11 +80,13 @@ namespace Raven.Server.Documents.ETL.Stats
             return new EtlPerformanceStats(Scope.Duration)
             {
                 Started = StartTime,
+                Completed = Completed ? StartTime.Add(Scope.Duration) : (DateTime?)null,
                 LastLoadedEtag = Stats.LastLoadedEtag,
                 LastTransformedEtags = Stats.LastTransformedEtags,
                 LastFilteredOutEtags = Stats.LastFilteredOutEtags,
                 NumberOfExtractedItems = Stats.NumberOfExtractedItems,
                 NumberOfTransformedItems = Stats.NumberOfTransformedItems,
+                NumberOfTransformedTombstones = Stats.NumberOfTransformedTombstones,
                 TransformationErrorCount = Scope.TransformationErrorCount,
                 SuccessfullyLoaded = Stats.SuccessfullyLoaded,
                 BatchCompleteReason = Stats.BatchCompleteReason

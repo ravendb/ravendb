@@ -16,6 +16,12 @@ namespace Raven.Server.Documents.ETL.Stats
             {EtlItemType.Counter, 0}
         };
 
+        public Dictionary<EtlItemType, int> NumberOfTransformedTombstones = new Dictionary<EtlItemType, int>()
+        {
+            {EtlItemType.Document, 0},
+            {EtlItemType.Counter, 0}
+        };
+
         public Dictionary<EtlItemType, long> LastExtractedEtags = new Dictionary<EtlItemType, long>
         {
             {EtlItemType.Document, 0},
