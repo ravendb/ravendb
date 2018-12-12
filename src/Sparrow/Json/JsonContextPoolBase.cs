@@ -60,9 +60,10 @@ namespace Sparrow.Json
                     // want to dispose the memory for this thread.
                     while (contextStack.Head != null)
                     {
-                        if (contextStack.Head.Value.InUse.Raise())
+                        var copy = contextStack.Head.Value;
+                        if (copy != null && copy.InUse.Raise())
                         {
-                            contextStack.Head.Value.Dispose();
+                            copy.Dispose();
                         }
                         contextStack.Head = contextStack.Head.Next;
                     }
