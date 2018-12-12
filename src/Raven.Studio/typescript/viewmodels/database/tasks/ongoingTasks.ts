@@ -133,6 +133,19 @@ class ongoingTasks extends viewModelBase {
         });
     }
 
+    createResponsibleNodeUrl(task: ongoingTaskListModel) {
+        return ko.pureComputed(() => {
+            const node = task.responsibleNode();
+            const db = this.activeDatabase();
+            
+            if (node && db) {
+                return node.NodeUrl + appUrl.forOngoingTasks(db);
+            }
+            
+            return "#";
+        });
+    }
+    
     private refresh() {
         return $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks());
     }
