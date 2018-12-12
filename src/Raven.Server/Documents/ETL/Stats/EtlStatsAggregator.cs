@@ -51,7 +51,8 @@ namespace Raven.Server.Documents.ETL.Stats
                 NumberOfTransformedTombstones = Stats.NumberOfTransformedTombstones,
                 TransformationErrorCount = Scope.TransformationErrorCount,
                 SuccessfullyLoaded = Stats.SuccessfullyLoaded,
-                BatchCompleteReason = Stats.BatchCompleteReason
+                BatchCompleteReason = Stats.BatchCompleteReason,
+                CurrentlyAllocated = Stats.CurrentlyAllocated,
             };
         }
 
