@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
@@ -17,6 +19,12 @@ namespace Sparrow.Json
         /// average to the same overall type of contexts
         /// </summary>
         private ConcurrentDictionary<int, ContextStack> _contextStacksByThreadId = new ConcurrentDictionary<int, ContextStack>();
+        private ThreadIdHolder[] _threadIds = Array.Empty<ThreadIdHolder>();
+
+        private class ThreadIdHolder
+        {
+            public int ThreadId;
+        }
 
         private readonly NativeMemoryCleaner<ContextStack, T> _nativeMemoryCleaner;
         private bool _disposed;
@@ -30,16 +38,35 @@ namespace Sparrow.Json
         {
             private readonly JsonContextPoolBase<T> _parent;
             int _threadId;
+            public ThreadIdHolder ThreadIdHolder;
 
             public ContextStackThreadReleaser(JsonContextPoolBase<T> parent)
             {
                 _threadId = NativeMemory.CurrentThreadStats.Id;
+                ThreadIdHolder = new ThreadIdHolder
+                {
+                    ThreadId = _threadId
+                };
                 _parent = parent;
             }
 
             ~ContextStackThreadReleaser()
             {
-                _parent._contextStacksByThreadId.TryRemove(_threadId, out _);
+                ThreadIdHolder.ThreadId = -1;
+                if (_parent._contextStacksByThreadId.TryRemove(_threadId, out var contextStack))
+                {
+                    // We expect this to be happen only when we lose a thread pool thread
+                    // which can usually only happen on long idle periods. Therefor, we 
+                    // want to dispose the memory for this thread.
+                    while (contextStack.Head != null)
+                    {
+                        if (contextStack.Head.Value.InUse.Raise())
+                        {
+                            contextStack.Head.Value.Dispose();
+                        }
+                        contextStack.Head = contextStack.Head.Next;
+                    }
+                }
             }
         }
 
@@ -52,6 +79,30 @@ namespace Sparrow.Json
             if (_releaser != null)
                 return;
             _releaser = new ContextStackThreadReleaser(this);
+
+            while (true)
+            {
+                var currentThreadId = NativeMemory.CurrentThreadStats.Id;
+                var copy = _threadIds;
+                for (int i = 0; i < copy.Length; i++)
+                {
+                    if (copy[i].ThreadId == -1)
+                    {
+                        if(Interlocked.CompareExchange(ref copy[i].ThreadId, currentThreadId, -1) == -1)
+                        {
+                            _releaser.ThreadIdHolder = copy[i];
+                            return;
+                        }
+                        return;
+                    }
+                }
+
+                var threads = new ThreadIdHolder[copy.Length + 1];
+                Array.Copy(copy, threads, copy.Length);
+                threads[copy.Length] = _releaser.ThreadIdHolder;
+                if (Interlocked.CompareExchange(ref _threadIds, threads, copy) == copy)
+                    break;
+            }
         }
   
         private class ContextStack : StackHeader<T>, IDisposable
@@ -101,7 +152,7 @@ namespace Sparrow.Json
         protected JsonContextPoolBase()
         {
             ThreadLocalCleanup.ReleaseThreadLocalState += CleanThreadLocalState;
-            _nativeMemoryCleaner = new NativeMemoryCleaner<ContextStack, T>(()=>_contextStacksByThreadId.Values,
+            _nativeMemoryCleaner = new NativeMemoryCleaner<ContextStack, T>(()=> EnumerateAllThreadContexts().ToList(),
                 LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
         }
@@ -178,6 +229,20 @@ namespace Sparrow.Json
             }
         }
 
+        private IEnumerable<ContextStack> EnumerateAllThreadContexts()
+        {
+            var copy = _threadIds;
+            for (int i = 0; i < copy.Length; i++)
+            {
+                var id = copy[i].ThreadId;
+                if (id == -1)
+                    continue;
+
+                if (_contextStacksByThreadId.TryGetValue(id, out var ctx))
+                    yield return ctx;
+            }
+        }
+
         public IDisposable AllocateOperationContext(out T context)
         {
             _cts.Token.ThrowIfCancellationRequested();
@@ -189,11 +254,11 @@ namespace Sparrow.Json
 
             if (currentThread.AvoidWorkStealing == false)
             {
-                foreach (var otherThread in _contextStacksByThreadId)
+                foreach (var otherThread in EnumerateAllThreadContexts())
                 {
-                    if (otherThread.Value == currentThread || otherThread.Value.AvoidWorkStealing)
+                    if (otherThread == currentThread || otherThread.AvoidWorkStealing)
                         continue;
-                    if (TryReuseExistingContextFrom(otherThread.Value, out context, out returnContext))
+                    if (TryReuseExistingContextFrom(otherThread, out context, out returnContext))
                         return returnContext;
                 }
             }
@@ -303,11 +368,12 @@ namespace Sparrow.Json
                 _disposed = true;
                 ThreadLocalCleanup.ReleaseThreadLocalState -= CleanThreadLocalState;
                 _nativeMemoryCleaner.Dispose();
-                foreach (var kvp in _contextStacksByThreadId)
+                foreach (var kvp in EnumerateAllThreadContexts())
                 {
-                    kvp.Value.Dispose();
+                    kvp.Dispose();
                 }
                 _contextStacksByThreadId.Clear();
+                _threadIds = Array.Empty<ThreadIdHolder>();
             }
         }
 
