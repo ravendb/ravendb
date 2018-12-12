@@ -442,6 +442,9 @@
 </script>
 
 <script type="text/html" id="etl-progress-template">
+    <div data-bind="visible: suggestNavigationToResponsibleNodeForProgress">
+        <small><i class="icon-info"></i> Navigate to <a target="_blank" href="#" data-bind="attr: { href: $root.createResponsibleNodeUrl($data) }">responsible node</a> to see task progress.</small>
+    </div>
     <div data-bind="if: showProgress">
         <div data-bind="visible: !scriptProgress().length">
             <i class="global-spinner spinner-xs"></i> Loading progress ...

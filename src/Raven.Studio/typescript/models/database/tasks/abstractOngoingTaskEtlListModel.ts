@@ -75,12 +75,19 @@ abstract class abstractOngoingTaskEtlListModel extends ongoingTaskListModel {
     showDetails = ko.observable(false);
     showProgress = ko.observable(false); // we use separate property for progress and details to smooth toggle animation, first we show progress then expand details 
 
+    canShowProgress = ko.pureComputed(() => {
+        const status = this.taskConnectionStatus();
+        return status === "Active" || status === "NotActive" || status === "Reconnect";
+    });
+    
+    suggestNavigationToResponsibleNodeForProgress = ko.pureComputed(() => this.taskConnectionStatus() === "NotOnThisNode");
+    
     connectionStringsUrl: string;
     
     scriptProgress = ko.observableArray<progressItem>([]);
 
     toggleDetails() {
-        this.showProgress(!this.showDetails() && (this.taskConnectionStatus() === "Active" || this.taskConnectionStatus() === "NotActive"));
+        this.showProgress(!this.showDetails() && this.canShowProgress());
         this.showDetails.toggle();
     }
 
