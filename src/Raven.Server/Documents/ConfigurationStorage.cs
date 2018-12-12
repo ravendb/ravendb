@@ -54,7 +54,7 @@ namespace Raven.Server.Documents
                 options.MaxScratchBufferSize = db.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
             options.PrefetchSegmentSize = db.Configuration.Storage.PrefetchBatchSize.GetValue(SizeUnit.Bytes);
             options.PrefetchResetThreshold = db.Configuration.Storage.PrefetchResetThreshold.GetValue(SizeUnit.Bytes);
-            options.JournalsSizeThreshold = db.Configuration.Storage.JournalsSizeThreshold.GetValue(SizeUnit.Bytes);
+            options.JournalsFilesAmountThreshold = db.Configuration.Storage.JournalsFilesAmountThreshold;
 
             DirectoryExecUtils.SubscribeToOnDirectoryInitializeExec(options, db.Configuration.Storage, db.Name, DirectoryExecUtils.EnvironmentType.Configuration, Logger);
             
