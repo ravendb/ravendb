@@ -28,8 +28,8 @@ namespace SlowTests.Issues
                 using (GetDocumentStore().Changes().ForAllDocuments().Subscribe(change => {{}})){}
 
                 GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
+                GC.WaitForPendingFinalizers();
 
-                await Task.Delay(1000);
                 Assert.Equal(0, count);
             }
             finally
