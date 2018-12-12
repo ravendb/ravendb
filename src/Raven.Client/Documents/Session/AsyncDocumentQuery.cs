@@ -969,5 +969,18 @@ namespace Raven.Client.Documents.Session
 
             return CreateDocumentQueryInternal<TResult>();
         }
+
+        public new IAsyncDocumentQuery<T> ContainsAll<TValue>(Expression<Func<T, IEnumerable<TValue>>> propertySelector, IEnumerable<TValue> values)
+        {
+            ContainsAll(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+            return this;
+         
+        }
+
+        public new IAsyncDocumentQuery<T> ContainsAny<TValue>(Expression<Func<T, IEnumerable<TValue>>> propertySelector, IEnumerable<TValue> values)
+        {
+            ContainsAny(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+            return this;
+        }
     }
 }

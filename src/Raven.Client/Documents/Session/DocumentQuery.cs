@@ -965,5 +965,17 @@ namespace Raven.Client.Documents.Session
         {
             throw new NotSupportedException("Cannot create an async LINQ query from DocumentQuery, you need to use AsyncDocumentQuery for that");
         }
+
+        public IDocumentQuery<T> ContainsAll<TValue>(Expression<Func<T, IEnumerable<TValue>>> propertySelector, IEnumerable<TValue> values)
+        {
+            ContainsAll(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+            return this;
+        }
+
+        public IDocumentQuery<T> ContainsAny<TValue>(Expression<Func<T, IEnumerable<TValue>>> propertySelector, IEnumerable<TValue> values)
+        {
+            ContainsAny(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+            return this;
+        }
     }
 }
