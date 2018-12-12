@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Changes
 {
@@ -20,6 +21,8 @@ namespace Raven.Client.Documents.Changes
         {
             if (_firstSet.Task.IsCompleted == false)
             {
+                var task =_firstSet.Task.IgnoreUnobservedExceptions();
+
                 connection.ContinueWith(t =>
                 {
                     if (t.IsFaulted)
@@ -27,7 +30,7 @@ namespace Raven.Client.Documents.Changes
                     else if (t.IsCanceled)
                         _firstSet.TrySetCanceled();
                     else
-                        _firstSet.SetResult(null);
+                        _firstSet.TrySetResult(null);
                 });
             }
             _connected = connection;
