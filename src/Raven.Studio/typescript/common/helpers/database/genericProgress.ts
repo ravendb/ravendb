@@ -79,7 +79,7 @@ class genericProgress {
         
         const toProcess = total - processed;
         if (toProcess === 0) {
-            return `${this.numberFormatter(total)}`;
+            return `Processed all items (${this.numberFormatter(total)})`;
         }
 
         const processedFormatted = this.numberFormatter(processed);

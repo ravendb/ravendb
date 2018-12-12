@@ -331,6 +331,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SubscriptionOpeningStrategy));
 
             // ongoing tasks - ravenDB ETL
+            scripter.AddType(typeof(EtlTaskProgress));
             scripter.AddType(typeof(OngoingTaskRavenEtlDetails));
             scripter.AddType(typeof(OngoingTaskRavenEtlListView));
             scripter.AddType(typeof(RavenEtlConfiguration));

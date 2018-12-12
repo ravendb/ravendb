@@ -180,6 +180,7 @@
                                             </li>
                                             <!-- /ko -->
                                         </ul>
+                                        <div data-bind="template: { name: 'etl-progress-template' }"></div>
                                     </div>
                                 </div>
                             </div>
@@ -228,6 +229,7 @@
                                                 </span>
                                             </li>
                                         </ul>
+                                        <div data-bind="template: { name: 'etl-progress-template' }"></div>
                                     </div>
                                 </div>
                             </div>
@@ -432,9 +434,44 @@
 <script type="text/html" id="actions-template">
     <div class="actions-container">
         <div class="actions">
-            <button class="btn btn-default" data-bind="click: toggleDetails" title="Click for details"><i class="icon-info"></i></button>
+            <button class="btn btn-default" data-bind="click: _.partial($root.toggleDetails, $data)" title="Click for details"><i class="icon-info"></i></button>
             <button class="btn btn-default" data-bind="click: editTask" title="Edit task"><i class="icon-edit"></i></button>
             <button class="btn btn-danger" data-bind="click: $root.confirmRemoveOngoingTask" title="Delete task"><i class="icon-trash"></i></button>
+        </div>
+    </div>
+</script>
+
+<script type="text/html" id="etl-progress-template">
+    <div data-bind="if: showDetails">
+        <div data-bind="foreach: scriptProgress">
+            <div data-bind="text: name"></div>
+
+            <div class="progress-overall">
+                <div class="flex-horizontal" data-bind="with: globalProgress">
+                    <h3 class="flex-grow"><span data-bind="text: formattedTimeLeftToProcess"></span></h3>
+                    <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
+                </div>
+                <div class="progress" data-bind="with: globalProgress">
+                    <div data-bind="css: { 'progress-bar-striped': !completed() && !$parent.disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !$parent.disabled(), 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                         class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                        <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div data-bind="foreach: innerProgresses">
+                        <div class="clearfix" data-bind="with: progress, visible: visible">
+                            <small class="name" data-bind="text: $parent.name"></small>
+                            <small class="percentage" data-bind="text: percentageFormatted(), css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
+                        </div>
+                        <div class="progress" data-bind="with: progress, visible: visible">
+                            <div data-bind="css: { 'progress-bar-striped': !completed() && !$parents[1].disabled(), 'progress-bar-primary': !completed(), 'active': !completed() && !$parents[1].disabled(), 'progress-bar-success': completed() }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                                 class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                                <span class="sr-only" data-bind="text: percentageFormatted() + ' Completed'"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </script>

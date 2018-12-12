@@ -14,6 +14,7 @@ import createOngoingTask = require("viewmodels/database/tasks/createOngoingTask"
 import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import deleteOngoingTaskCommand = require("commands/database/tasks/deleteOngoingTaskCommand");
 import toggleOngoingTaskCommand = require("commands/database/tasks/toggleOngoingTaskCommand");
+import etlProgressCommand = require("commands/database/tasks/etlProgressCommand");
 import databaseGroupGraph = require("models/database/dbGroup/databaseGroupGraph");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel");
@@ -30,6 +31,7 @@ class ongoingTasks extends viewModelBase {
     private graph = new databaseGroupGraph();
     
     private watchedBackups = new Map<number, number>();
+    private etlProgressWatch: number;
 
     // The Ongoing Tasks Lists:
     replicationTasks = ko.observableArray<ongoingTaskReplicationListModel>(); 
@@ -52,7 +54,7 @@ class ongoingTasks extends viewModelBase {
     
     constructor() {
         super();
-        this.bindToCurrentInstance("confirmRemoveOngoingTask", "confirmEnableOngoingTask", "confirmDisableOngoingTask");
+        this.bindToCurrentInstance("confirmRemoveOngoingTask", "confirmEnableOngoingTask", "confirmDisableOngoingTask", "toggleDetails");
 
         this.initObservables();
     }
@@ -92,6 +94,29 @@ class ongoingTasks extends viewModelBase {
         });
         
         this.graph.init($("#databaseGroupGraphContainer"));
+    }
+    
+    private fetchEtlProcess() {
+        return new etlProgressCommand(this.activeDatabase())
+            .execute()
+            .done(results => {
+                results.Results.forEach(taskProgress => {
+                    switch (taskProgress.EtlType) {
+                        case "Sql":
+                            const matchingSqlTask = this.sqlTasks().find(x => x.taskName() === taskProgress.TaskName);
+                            if (matchingSqlTask) {
+                                matchingSqlTask.updateProgress(taskProgress);
+                            }
+                            break;
+                        case "Raven":
+                            const matchingEtlTask = this.etlTasks().find(x => x.taskName() === taskProgress.TaskName);
+                            if (matchingEtlTask) {
+                                matchingEtlTask.updateProgress(taskProgress);    
+                            }
+                            break;
+                    }
+                });
+            });
     }
     
     private createShowSectionComputed(tasksContainer: KnockoutObservableArray<ongoingTaskListModel>, taskType: string) {
@@ -153,6 +178,36 @@ class ongoingTasks extends viewModelBase {
                     }
                 }
             });    
+        }
+    }
+    
+    private watchEtlProgress() {
+        if (!this.etlProgressWatch) {
+            this.fetchEtlProcess();
+            
+            let intervalId = setInterval(() => {
+                this.fetchEtlProcess();
+            }, 3000);
+            
+            this.etlProgressWatch = intervalId;
+            
+            this.registerDisposable({
+                dispose: () => {
+                    if (intervalId) {
+                        clearInterval(intervalId);
+                        intervalId = 0;
+                        this.etlProgressWatch = null;
+                    }
+                }
+            })
+        }
+    }
+    
+    toggleDetails(item: ongoingTaskListModel) {
+        item.toggleDetails();
+        
+        if (item.showDetails()) {
+            this.watchEtlProgress();
         }
     }
     
